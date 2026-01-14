@@ -204,3 +204,24 @@ f. Agrega un nuevo registro:
 g. Guarda los cambios.
 h. Espera unos minutos (puede tardar hasta 24h, pero suele ser rápido) para que se propague. Railway validará el dominio y generará el certificado SSL automáticamente.
 
+PASO 7: CREAR PRIMER USUARIO ADMIN
+Para crear el primer usuario administrador, debes ejecutar un comando en la consola de tu aplicación desplegada:
+
+Opción A: Usando Railway CLI (Desde tu PC)
+1.  Asegúrate de tener la CLI instalada y linkeada (`railway link`).
+2.  Ejecuta:
+    railway run flask create-admin <usuario> <contraseña>
+    Ejemplo: `railway run flask create-admin admin SuperClave123`
+
+Opción B: Usando SSH (Si ves "Copy SSH command")
+1.  En Railway, click "Copy SSH command".
+2.  Abre tu terminal en Windows (PowerShell o CMD).
+3.  Pega el comando y ejecuta.
+4.  Una vez dentro de la terminal remota, ejecuta:
+    flask create-admin <usuario> <contraseña>
+
+Opción C: Usando variables de entorno (Solo si no puedes usar CLI/SSH)
+(Esta opción requeriría modificar el código para crear un admin al iniciar si no existe, pero la Opción A o B son las estándar).
+
+
+
