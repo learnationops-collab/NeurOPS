@@ -585,7 +585,7 @@ def survey_mgmt():
             text=form.text.data,
             question_type=form.question_type.data,
             options=form.options.data,
-            order=form.order.data,
+            order=0, # Default order, managed by builder
             is_active=form.is_active.data,
             step=form.step.data,
             mapping_field=form.mapping_field.data if form.step.data == 'landing' else None,
