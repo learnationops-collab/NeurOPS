@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paso Final - Encuesta de Calificación</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden">
+        <div class="bg-indigo-600 p-6">
+            <h1 class="text-white text-xl font-bold">Unos pasos más...</h1>
+            <p class="text-indigo-200 text-sm mt-1">Necesitamos conocerte mejor para preparar tu sesión.</p>
+        </div>
+
+        <form method="POST" class="p-8 space-y-6">
+
+            {% if questions %}
+            {% for q in questions %}
+            <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">{{ q.text }}</label>
+                {% if q.question_type == 'text' %}
+                <input type="text" name="q_{{ q.id }}" required
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                {% elif q.question_type == 'textarea' %}
+                <textarea name="q_{{ q.id }}" required rows="3"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"></textarea>
+                {% elif q.question_type == 'select' %}
+                <select name="q_{{ q.id }}"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white">
+                    {% set opts = q.options.split(',') %}
+                    {% for opt in opts %}
+                    <option value="{{ opt }}">{{ opt }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <!-- Fallback if no questions seeded yet -->
+            <div class="p-4 bg-yellow-50 text-yellow-700 rounded-lg text-sm">
+                El administrador no ha configurado preguntas de calificación. Haz clic en continuar.
+            </div>
+            {% endif %}
+
+            <button type="submit"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition transform hover:scale-[1.02] shadow-lg text-lg">
+                Confirmar Cita
+            </button>
+        </form>
+    </div>
+
+</body>
+
+</html>

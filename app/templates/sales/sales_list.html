@@ -1,0 +1,105 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="flex h-screen overflow-hidden">
+    <!-- Include Sidebar based on Role -->
+    {% if current_user.role == 'admin' %}
+    {% include "includes/admin_sidebar.html" %}
+    {% else %}
+    <!-- Closer Sidebar -->
+    {% include "includes/closer_sidebar.html" %}
+    {% endif %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Control de Ventas</h2>
+            <a href="{{ url_for('closer.create_sale') }}"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">+ Nueva Venta</a>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+            <form action="{{ url_for('closer.sales_list') }}" method="get" class="flex flex-wrap gap-4 items-end">
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Buscar</label>
+                    <input type="text" name="search" value="{{ search or '' }}" placeholder="Nombre o Email..."
+                        class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Desde</label>
+                    <input type="date" name="start_date" value="{{ start_date or '' }}"
+                        class="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hasta</label>
+                    <input type="date" name="end_date" value="{{ end_date or '' }}"
+                        class="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <button type="submit"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm font-medium">Filtrar</button>
+                {% if search or start_date or end_date %}
+                <a href="{{ url_for('closer.sales_list') }}"
+                    class="text-gray-500 px-4 py-2 hover:text-gray-700 transition text-sm font-medium">Limpiar</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs">
+                    <tr>
+                        <th class="px-6 py-3 font-semibold">Fecha</th>
+                        <th class="px-6 py-3 font-semibold">Lead / Estudiante</th>
+                        <th class="px-6 py-3 font-semibold">Programa</th>
+                        <th class="px-6 py-3 font-semibold">Monto</th>
+                        <th class="px-6 py-3 font-semibold">Tipo</th>
+                        <th class="px-6 py-3 font-semibold">Método</th>
+                        <th class="px-6 py-3 font-semibold text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for payment in payments %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 text-gray-600 text-sm whitespace-nowrap">{{ payment.date.strftime('%Y-%m-%d
+                            %H:%M') }}</td>
+                        <td class="px-6 py-4 font-medium text-gray-900">
+                            {{ payment.enrollment.student.username }}<br>
+                            <span class="text-xs text-gray-500">{{ payment.enrollment.student.email }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-gray-700">{{ payment.enrollment.program.name }}</td>
+                        <td class="px-6 py-4 text-gray-900 font-bold">${{ "{:,.2f}".format(payment.amount) }}</td>
+                        <td class="px-6 py-4">
+                            {% if payment.payment_type == 'full' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Completo</span>
+                            {% elif payment.payment_type == 'down_payment' %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Primer Pago</span>
+                            {% elif payment.payment_type == 'installment' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">Cuota</span>
+                            {% elif payment.payment_type == 'renewal' %}
+                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">Renovación</span>
+                            {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">{{
+                                payment.payment_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-gray-600 text-sm">{{ payment.method.name if payment.method else '-' }}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="{{ url_for('closer.edit_sale', id=payment.id) }}"
+                                class="text-indigo-600 hover:text-indigo-800 mr-3 font-medium text-sm">Editar</a>
+                            <!-- Allow delete? -->
+                            <a href="{{ url_for('closer.delete_sale', id=payment.id) }}"
+                                onclick="return confirm('¿Eliminar esta venta de ${{ payment.amount }}?')"
+                                class="text-red-500 hover:text-red-700 font-medium text-sm">Eliminar</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if not payments %}
+            <div class="p-8 text-center text-gray-500">No hay ventas registradas.</div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+{% endblock %}

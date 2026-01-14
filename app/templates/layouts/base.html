@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TheLearnation - {% block title %}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        indigo: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div id="flash-messages" class="fixed top-5 right-5 z-50 space-y-2">
+        {% for message in messages %}
+        <div class="flash-message bg-indigo-600 text-white px-6 py-3 rounded shadow-lg transition-opacity duration-500">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(function () {
+            const flashContainer = document.getElementById('flash-messages');
+            if (flashContainer) {
+                // Fade out
+                const messages = flashContainer.querySelectorAll('.flash-message');
+                messages.forEach(msg => msg.classList.add('opacity-0'));
+
+                // Remove from DOM after fade transition (500ms)
+                setTimeout(() => {
+                    flashContainer.remove();
+                }, 500);
+            }
+        }, 3000); // 3 seconds
+    </script>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+    {% block scripts %}{% endblock %}
+
+</body>
+
+</html>

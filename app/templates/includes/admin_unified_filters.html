@@ -1,0 +1,73 @@
+<!-- Unified Header & Filters -->
+<div class="mb-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+            <p class="text-sm text-gray-500">{{ description or 'Gestión unificada de operaciones.' }}</p>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="border-b border-gray-200 mb-6">
+        <nav class="-mb-px flex space-x-8">
+            <a href="{{ url_for('admin.leads_list', search=search, start_date=start_date, end_date=end_date) }}" class="whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors
+                {% if request.endpoint == 'admin.leads_list' %}
+                border-indigo-500 text-indigo-600
+                {% else %}
+                border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300
+                {% endif %}">
+                Clientes
+            </a>
+
+            <!-- Tab Agendas removed per user request -->
+
+
+            <a href="{{ url_for('admin.sales_list', search=search, start_date=start_date, end_date=end_date) }}" class="whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors
+                {% if request.endpoint == 'admin.sales_list' %}
+                border-indigo-500 text-indigo-600
+                {% else %}
+                border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300
+                {% endif %}">
+                Ventas
+            </a>
+        </nav>
+    </div>
+
+    <!-- Shared Filter Bar -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <form method="get" class="flex flex-wrap gap-4 items-end">
+            <!-- Search -->
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Buscar</label>
+                <input type="text" name="search" value="{{ search or '' }}" placeholder="Nombre, email..."
+                    class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+
+            <!-- Date Range -->
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Desde</label>
+                <input type="date" name="start_date" value="{{ start_date or '' }}"
+                    class="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hasta</label>
+                <input type="date" name="end_date" value="{{ end_date or '' }}"
+                    class="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-2">
+                <button type="submit"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
+                    Filtrar
+                </button>
+                {% if search or start_date or end_date %}
+                <a href="{{ request.path }}"
+                    class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition text-sm font-medium">
+                    Limpiar
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,367 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="flex h-screen overflow-hidden">
+    {% include "includes/admin_sidebar.html" %}
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Configuración de Encuesta de Calificación</h1>
+            <a href="{{ url_for('admin.funnel_builder', target=selected_target) }}"
+                class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition flex items-center shadow-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+                Establecer Orden
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left: Existing Questions (2/3 width) -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div
+                        class="bg-gray-50 px-6 py-4 border-b border-gray-200 font-semibold text-gray-700 flex justify-between items-center">
+                        <span>Preguntas Activas</span>
+
+                        <!-- Target Filter -->
+                        <form method="GET" class="flex items-center gap-2">
+                            <select name="step" onchange="this.form.submit()"
+                                class="text-xs border-gray-300 rounded shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="all">Todas las Etapas</option>
+                                <option value="landing" {% if request.args.get('step')=='landing' %}selected{% endif %}>
+                                    Landing (Datos)</option>
+                                <option value="survey" {% if request.args.get('step')=='survey' %}selected{% endif %}>
+                                    Encuesta (Post-Cita)</option>
+                            </select>
+
+                            <select name="target" onchange="this.form.submit()" <select name="target"
+                                onchange="this.form.submit()"
+                                class="text-xs border-gray-300 rounded shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">Todos</option>
+                                {% for val, label in choices %}
+                                <option value="{{ val }}" {% if selected_target==val %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+
+                    <!-- Landing Questions -->
+                    <div class="mb-8">
+                        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 font-bold text-gray-700">
+                            Landing (Datos de Contacto)
+                        </div>
+                        {% if landing_questions %}
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-500 font-medium">
+                                <tr>
+                                    <th class="px-6 py-3 w-16">Orden</th>
+                                    <th class="px-6 py-3">Pregunta</th>
+                                    <th class="px-6 py-3">Mapeo</th>
+                                    <th class="px-6 py-3 text-center">Estado</th>
+                                    <th class="px-6 py-3 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                {% for q in landing_questions %}
+                                <tr
+                                    class="hover:bg-gray-50 transition {% if editing_id == q.id %}bg-indigo-50{% endif %}">
+                                    <td class="px-6 py-3 text-gray-500 font-mono text-xs">{{ q.order }}</td>
+                                    <td class="px-6 py-3 text-gray-900 font-medium">
+                                        {{ q.text }}
+                                        <div class="text-xs text-gray-400 mt-0.5">
+                                            {% if q.event %}<span class="text-indigo-600">Evento: {{ q.event.name
+                                                }}</span>
+                                            {% elif q.group %}<span class="text-purple-600">Grupo: {{ q.group.name
+                                                }}</span>
+                                            {% else %}Global{% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-3 text-gray-500">
+                                        {% if q.mapping_field %}
+                                        <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-mono">{{
+                                            q.mapping_field }}</span>
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td class="px-6 py-3 text-center">
+                                        {% if q.is_active %}
+                                        <svg class="w-4 h-4 text-green-500 mx-auto" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-4 h-4 text-gray-300 mx-auto" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-3 text-right flex justify-end gap-2">
+                                        <a href="{{ url_for('admin.edit_question', id=q.id) }}"
+                                            class="text-gray-400 hover:text-indigo-600" title="Editar">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+                                                </path>
+                                            </svg>
+                                        </a>
+                                        <a href="{{ url_for('admin.delete_question', id=q.id) }}"
+                                            onclick="return confirm('¿Eliminar?')"
+                                            class="text-gray-400 hover:text-red-600" title="Eliminar">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                                </path>
+                                            </svg>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="text-center py-6 text-gray-400 text-sm italic">No hay preguntas de landing
+                            configuradas.</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Survey Questions -->
+                    <div>
+                        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 font-bold text-gray-700 mt-8">
+                            Encuesta (Cualificación)
+                        </div>
+                        {% if survey_questions %}
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-500 font-medium">
+                                <tr>
+                                    <th class="px-6 py-3 w-16">Orden</th>
+                                    <th class="px-6 py-3">Pregunta</th>
+                                    <th class="px-6 py-3">Tipo</th>
+                                    <th class="px-6 py-3 text-center">Estado</th>
+                                    <th class="px-6 py-3 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                {% for q in survey_questions %}
+                                <tr
+                                    class="hover:bg-gray-50 transition {% if editing_id == q.id %}bg-indigo-50{% endif %}">
+                                    <td class="px-6 py-3 text-gray-500 font-mono text-xs">{{ q.order }}</td>
+                                    <td class="px-6 py-3 text-gray-900 font-medium">
+                                        {{ q.text }}
+                                        <div class="text-xs text-gray-400 mt-0.5">
+                                            {% if q.event %}<span class="text-indigo-600">Evento: {{ q.event.name
+                                                }}</span>
+                                            {% elif q.group %}<span class="text-purple-600">Grupo: {{ q.group.name
+                                                }}</span>
+                                            {% else %}Global{% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-3 text-gray-500">
+                                        <span class="bg-gray-100 px-2 py-0.5 rounded text-xs">{{ q.question_type
+                                            }}</span>
+                                    </td>
+                                    <td class="px-6 py-3 text-center">
+                                        {% if q.is_active %}
+                                        <svg class="w-4 h-4 text-green-500 mx-auto" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-4 h-4 text-gray-300 mx-auto" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-3 text-right flex justify-end gap-2">
+                                        <a href="{{ url_for('admin.edit_question', id=q.id) }}"
+                                            class="text-gray-400 hover:text-indigo-600" title="Editar">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+                                                </path>
+                                            </svg>
+                                        </a>
+                                        <a href="{{ url_for('admin.delete_question', id=q.id) }}"
+                                            onclick="return confirm('¿Eliminar?')"
+                                            class="text-gray-400 hover:text-red-600" title="Eliminar">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                                </path>
+                                            </svg>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="text-center py-6 text-gray-400 text-sm italic">No hay preguntas de encuesta
+                            configuradas.</div>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Right: Add Form (1/3 width) -->
+            <div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-gray-800">{{ title|default('Nueva Pregunta') }}</h2>
+                        {% if editing_id %}
+                        <a href="{{ url_for('admin.survey_mgmt') }}"
+                            class="text-xs text-gray-500 hover:text-gray-700">Cancelar</a>
+                        {% endif %}
+                    </div>
+                    <form method="POST" class="space-y-4">
+                        {{ form.hidden_tag() }}
+                        <div>
+                            {{ form.text(class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2
+                            focus:ring-indigo-500 outline-none text-sm") }}
+                        </div>
+                        <div>
+                            {{ form.target.label(class="block text-xs font-semibold text-gray-600 mb-1") }}
+                            {{ form.target(class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2
+                            focus:ring-indigo-500 outline-none text-sm bg-white") }}
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                {{ form.question_type.label(class="block text-xs font-semibold text-gray-600 mb-1") }}
+                                {{ form.question_type(class="w-full px-3 py-2 border border-gray-300 rounded
+                                focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white") }}
+                            </div>
+                            <div>
+                                {{ form.step.label(class="block text-xs font-semibold text-gray-600 mb-1") }}
+                                {{ form.step(class="w-full px-3 py-2 border border-gray-300 rounded
+                                focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white") }}
+                            </div>
+                        </div>
+                        <div x-data="{ step: '{{ form.step.data }}' }"
+                            x-effect="step = $el.closest('form').querySelector('[name=step]').value">
+                            <div x-show="step === 'landing'" class="mb-4">
+                                {{ form.mapping_field.label(class="block text-xs font-semibold text-gray-600 mb-1") }}
+                                {{ form.mapping_field(class="w-full px-3 py-2 border border-gray-300 rounded
+                                focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white") }}
+                                <p class="text-[10px] text-gray-400 mt-1">Vincula la respuesta a un campo del perfil.
+                                </p>
+                            </div>
+                        </div>
+                        <div x-data="{ 
+                            qType: '{{ form.question_type.data or 'text' }}',
+                            optionsList: [],
+                            init() {
+                                const raw = document.getElementById('options-hidden').value;
+                                if (raw) {
+                                    // Map to objects with unique ID for correct Drag n Drop tracking
+                                    this.optionsList = raw.split(',').map(s => ({
+                                        id: Math.random().toString(36).substr(2, 9),
+                                        value: s.trim()
+                                    }));
+                                }
+                                this.$watch('qType', val => {
+                                    if (val !== 'select') {
+                                        // Optional clear
+                                    }
+                                });
+                                
+                                // Initialize Sortable
+                                this.$nextTick(() => {
+                                    new Sortable(document.getElementById('dynamic-options-list'), {
+                                        handle: '.handle-option',
+                                        animation: 150,
+                                        onEnd: (evt) => {
+                                            // Sync Array Order
+                                            const item = this.optionsList.splice(evt.oldIndex, 1)[0];
+                                            this.optionsList.splice(evt.newIndex, 0, item);
+                                            this.sync();
+                                        }
+                                    });
+                                });
+                            },
+                            addOption() {
+                                this.optionsList.push({
+                                    id: Math.random().toString(36).substr(2, 9),
+                                    value: 'Nueva Opción'
+                                });
+                                this.sync();
+                            },
+                            removeOption(index) {
+                                this.optionsList.splice(index, 1);
+                                this.sync();
+                            },
+                            sync() {
+                                // Join values back to comma-separated string
+                                document.getElementById('options-hidden').value = this.optionsList.map(o => o.value).join(',');
+                            }
+                        }" x-init="init()"
+                            x-effect="qType = $el.closest('form').querySelector('[name=question_type]').value">
+
+                            <!-- Hidden Original Input -->
+                            {{ form.options(id="options-hidden", class="hidden") }}
+
+                            <div x-show="qType === 'select'" class="mb-4 bg-gray-50 p-4 rounded border border-gray-200">
+                                <label class="block text-xs font-semibold text-gray-600 mb-2">Opciones
+                                    Configurables</label>
+
+                                <div class="space-y-2 mb-3" id="dynamic-options-list">
+                                    <template x-for="(opt, index) in optionsList" :key="opt.id">
+                                        <div class="flex items-center gap-2" :data-id="opt.id">
+                                            <span class="text-gray-400 cursor-move handle-option">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2" d="M4 8h16M4 16h16"></path>
+                                                </svg>
+                                            </span>
+                                            <input type="text" x-model="opt.value" @input="sync()"
+                                                class="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-indigo-500 outline-none">
+                                            <button type="button" @click="removeOption(index)"
+                                                class="text-red-400 hover:text-red-600">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <button type="button" @click="addOption()"
+                                    class="text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-bold">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    Agregar Opción
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            {{ form.is_active(class="w-4 h-4 text-indigo-600 rounded border-gray-300
+                            focus:ring-indigo-500") }}
+                            {{ form.is_active.label(class="ml-2 text-sm text-gray-700") }}
+                        </div>
+                        {{ form.submit(class="w-full bg-indigo-600 text-white font-bold py-2 rounded
+                        hover:bg-indigo-700
+                        transition cursor-pointer") }}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- SortableJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+{% endblock %}

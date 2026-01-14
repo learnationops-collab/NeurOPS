@@ -1,0 +1,19 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Acceso Estudiante{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+    <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md text-center border border-gray-200">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Acceso Limitado</h1>
+        <p class="text-gray-600 mb-6">Hola <strong>{{ current_user.username }}</strong>. Este portal es exclusivo para
+            el personal administrativo y de ventas.</p>
+        <p class="text-gray-500 text-sm mb-8">Por favor utiliza la aplicación móvil o contacta a soporte.</p>
+
+        <a href="{{ url_for('auth.logout') }}"
+            class="inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+            Cerrar Sesión
+        </a>
+    </div>
+</div>
+{% endblock %}

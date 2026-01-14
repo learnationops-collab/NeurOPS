@@ -1,0 +1,76 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="flex h-screen overflow-hidden bg-gray-50">
+    {% include "includes/admin_sidebar.html" %}
+
+    <div class="flex-1 max-w-2xl mx-auto px-4 sm:px-6 md:px-8 py-8 overflow-y-auto">
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-6">{{ title }}</h2>
+
+            <form method="POST">
+                {{ form.hidden_tag() }}
+
+                <div class="space-y-4">
+                    <div>
+                        {{ form.amount.label(class="block text-sm font-medium text-gray-700") }}
+                        <div class="mt-1 relative rounded-md shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">$</span>
+                            </div>
+                            {{ form.amount(class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12
+                            sm:text-sm border-gray-300 rounded-md", placeholder="0.00") }}
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">USD</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        {{ form.date.label(class="block text-sm font-medium text-gray-700") }}
+                        {{ form.date(class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3
+                        focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm", type="date") }}
+                    </div>
+
+                    <div>
+                        {{ form.payment_type.label(class="block text-sm font-medium text-gray-700") }}
+                        {{ form.payment_type(class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2
+                        px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm") }}
+                    </div>
+
+                    <div>
+                        {{ form.payment_method_id.label(class="block text-sm font-medium text-gray-700") }}
+                        {{ form.payment_method_id(class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
+                        py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm") }}
+                    </div>
+
+                    <div>
+                        {{ form.reference_id.label(class="block text-sm font-medium text-gray-700") }}
+                        {{ form.reference_id(class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2
+                        px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm") }}
+                    </div>
+
+                    <div>
+                        {{ form.status.label(class="block text-sm font-medium text-gray-700") }}
+                        {{ form.status(class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3
+                        focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm") }}
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" onclick="history.back()"
+                        class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Cancelar
+                    </button>
+                    {{ form.submit(class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm
+                    text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none
+                    focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

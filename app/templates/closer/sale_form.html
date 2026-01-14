@@ -1,0 +1,54 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="flex h-screen overflow-hidden">
+    {% include "includes/closer_sidebar.html" %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-8">
+        <div class="max-w-xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">{{ title }}</h2>
+
+            <form method="POST" class="space-y-6">
+                {{ form.hidden_tag() }}
+
+                <div>
+                    {{ form.program_id.label(class="block text-sm font-medium text-gray-700 mb-1") }}
+                    {{ form.program_id(class="w-full rounded-lg border-gray-300 focus:ring-indigo-500
+                    focus:border-indigo-500 shadow-sm") }}
+                </div>
+
+                <div>
+                    {{ form.amount.label(class="block text-sm font-medium text-gray-700 mb-1") }}
+                    {{ form.amount(class="w-full rounded-lg border-gray-300 focus:ring-indigo-500
+                    focus:border-indigo-500 shadow-sm") }}
+                    <p class="text-xs text-gray-500 mt-1">Precio acordado total del programa</p>
+                </div>
+
+                <div class="border-t pt-4 mt-4">
+                    <h3 class="text-sm font-bold text-gray-900 mb-3">Primer Pago</h3>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            {{ form.payment_type.label(class="block text-sm font-medium text-gray-700 mb-1") }}
+                            {{ form.payment_type(class="w-full rounded-lg border-gray-300 focus:ring-indigo-500
+                            focus:border-indigo-500 shadow-sm") }}
+                        </div>
+                        <div>
+                            {{ form.payment_method_id.label(class="block text-sm font-medium text-gray-700 mb-1") }}
+                            {{ form.payment_method_id(class="w-full rounded-lg border-gray-300 focus:ring-indigo-500
+                            focus:border-indigo-500 shadow-sm") }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex justify-end gap-3">
+                    <a href="{{ url_for('closer.lead_detail', id=lead_id) }}"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium">Cancelar</a>
+                    {{ form.submit(class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm
+                    font-bold cursor-pointer") }}
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+{% endblock %}

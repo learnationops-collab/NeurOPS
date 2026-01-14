@@ -1,0 +1,143 @@
+DOCUMENTACIÓN DE ARQUITECTURA Y DESPLIEGUE - LEARNATION OPS
+
+1. ESPECIFICACIONES DEL PROYECTO
+--------------------------------
+Backend:
+- Lenguaje: Python 3.9+
+- Framework: Flask (Modularizado con Blueprints: 'admin', 'closer', 'booking', 'main')
+- ORM: SQLAlchemy (Flask-SQLAlchemy)
+- Migraciones: Flask-Migrate (Alembic)
+- Autenticación: Flask-Login
+- Formularios: Flask-WTF
+
+Frontend:
+- Plantillas: Jinja2 (HTML renderizado en servidor)
+- Estilos: Tailwind CSS (vía CDN o compilado, actualmente clases utilitarias en templates)
+- Interactividad: Javascript Vanilla / Alpine.js (si aplica)
+
+Base de Datos:
+- Desarrollo Local: SQLite (archivo 'instance/local.db')
+- Producción: PostgreSQL
+
+Estructura de Carpetas:
+/app
+  /admin    -> Lógica de administradores
+  /closer   -> Lógica de vendedores
+  /booking  -> Flujo de agendamiento público
+  /models.py -> Definición de tablas
+  /templates -> HTML
+  /static    -> CSS, JS, Imágenes
+/migrations  -> Historial de cambios de BD
+run.py       -> Punto de entrada
+
+2. GUÍA DE DESPLIEGUE EN HOSTINGER (VPS)
+----------------------------------------
+El siguiente flujo asume un VPS con Ubuntu 20.04/22.04, acceso Root, y el código alojado en GitHub.
+
+PASO 1: PREPARACIÓN DEL SERVIDOR
+a. Actualizar paquetes:
+   sudo apt update && sudo apt upgrade -y
+b. Instalar dependencias del sistema:
+   sudo apt install python3-pip python3-dev python3-venv libpq-dev postgresql postgresql-contrib nginx git -y
+
+PASO 2: BASE DE DATOS POSTGRESQL
+a. Cambiar usuario a postgres:
+   sudo -i -u postgres
+b. Entrar a consola PSQL:
+   psql
+c. Crear Base de Datos y Usuario:
+   CREATE DATABASE learnation_db;
+   CREATE USER learnation_user WITH PASSWORD 'tu_contraseña_segura_db';
+   GRANT ALL PRIVILEGES ON DATABASE learnation_db TO learnation_user;
+   \q
+d. Salir de postgres:
+   exit
+
+PASO 3: CLONAR PROYECTO
+a. Ir a directorio web:
+   cd /var/www
+b. Clonar repo (usar token personal o clave SSH si es privado):
+   sudo git clone https://github.com/Kerwin2712/learnation_ops.git
+   sudo chown -R $USER:$USER learnation_ops
+   cd learnation_ops
+
+PASO 4: ENTORNO PYTHON
+a. Crear entorno virtual:
+   python3 -m venv venv
+b. Activar e instalar:
+   source venv/bin/activate
+   pip install -r requirements.txt
+   pip install gunicorn psycopg2-binary
+
+PASO 5: CONFIGURACIÓN (.env)
+a. Crear archivo .env en /var/www/learnation_ops/.env
+   nano .env
+b. Contenido:
+   SECRET_KEY=clave_produccion_aleatoria
+   DATABASE_URL=postgresql://learnation_user:tu_contraseña_segura_db@localhost/learnation_db
+   FLASK_ENV=production
+
+PASO 6: MIGRACIONES INICIALES
+   flask db upgrade
+   (Esto creará las tablas en PostgreSQL basado en tus modelos)
+
+PASO 7: CONFIGURAR GUNICORN (Systemd)
+a. Crear servicio:
+   sudo nano /etc/systemd/system/learnation.service
+b. Contenido:
+   [Unit]
+   Description=Gunicorn instance to serve learnation_ops
+   After=network.target
+
+   [Service]
+   User=root
+   Group=www-data
+   WorkingDirectory=/var/www/learnation_ops
+   Environment="PATH=/var/www/learnation_ops/venv/bin"
+   ExecStart=/var/www/learnation_ops/venv/bin/gunicorn --workers 3 --bind unix:learnation.sock -m 007 run:app
+
+   [Install]
+   WantedBy=multi-user.target
+c. Iniciar servicio:
+   sudo systemctl start learnation
+   sudo systemctl enable learnation
+
+PASO 8: CONFIGURAR NGINX (Reverse Proxy)
+a. Crear config:
+   sudo nano /etc/nginx/sites-available/learnation
+b. Contenido:
+   server {
+       listen 80;
+       server_name tu-dominio.com www.tu-dominio.com; # O la IP del VPS
+
+       location / {
+           include proxy_params;
+           proxy_pass http://unix:/var/www/learnation_ops/learnation.sock;
+       }
+
+       location /static {
+           alias /var/www/learnation_ops/app/static;
+       }
+   }
+c. Activar sitio:
+   sudo ln -s /etc/nginx/sites-available/learnation /etc/nginx/sites-enabled
+   sudo nginx -t
+   sudo systemctl restart nginx
+
+PASO 9: SSL (HTTPS)
+   sudo apt install certbot python3-certbot-nginx
+   sudo certbot --nginx -d tu-dominio.com
+
+3. INTEGRACIÓN CONTINUA (GITHUB WEBHOOK)
+----------------------------------------
+Para actualizar automáticamente al hacer Push:
+1. En el VPS, asegúrate de que 'git pull' funcione sin pedir contraseña (usando SSH keys deploy key).
+2. Puedes configurar un script simple o usar GitHub Actions.
+
+Método Manual Rápido (para actualizar):
+   cd /var/www/learnation_ops
+   git pull
+   source venv/bin/activate
+   pip install -r requirements.txt  # Si hubo cambios
+   flask db upgrade                 # Si hubo cambios en BD
+   sudo systemctl restart learnation
