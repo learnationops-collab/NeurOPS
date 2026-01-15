@@ -281,3 +281,15 @@ class RecurringExpense(db.Model):
 
     def __repr__(self):
         return f'<RecurringExpense {self.description} ${self.amount}>'
+
+class UserViewSetting(db.Model):
+    __tablename__ = 'user_view_settings'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    view_name = db.Column(db.String(64), nullable=False) # e.g. 'leads_list', 'sales_list'
+    settings = db.Column(db.JSON, default={}) # Stores dict of filters
+    
+    user = db.relationship('User', backref='view_settings')
+
+    def __repr__(self):
+        return f'<ViewSetting {self.view_name} for {self.user_id}>'

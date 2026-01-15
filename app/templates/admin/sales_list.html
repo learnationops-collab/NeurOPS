@@ -157,7 +157,7 @@
                 </div>
                 <h3 class="text-lg font-medium text-gray-900">No se encontraron ventas</h3>
                 <p class="text-gray-500 mt-1">Intenta ajustar los filtros de búsqueda.</p>
-                <a href="{{ url_for('admin.sales_list') }}"
+                <a href="{{ url_for('admin.sales_list', clear=1) }}"
                     class="mt-4 inline-block text-indigo-600 font-medium hover:underline">Limpiar filtros</a>
             </div>
             {% endif %}
@@ -166,7 +166,7 @@
         <!-- Pagination Load More -->
         <div class="text-center pb-8">
             {% if pagination.has_next %}
-            <button id="loadMoreBtn"
+            <button id="loadMoreBtn" type="button"
                 class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium shadow-sm hover:bg-gray-50 hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <i class="fas fa-chevron-down mr-2 text-xs"></i>Cargar 50 ventas más
             </button>

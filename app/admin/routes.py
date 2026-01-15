@@ -5,7 +5,7 @@ from app.admin import bp
 from app.admin.forms import UserForm, SurveyQuestionForm, EventForm, ProgramForm, PaymentMethodForm, ClientEditForm, PaymentForm, ExpenseForm, RecurringExpenseForm, EventGroupForm, ManualAddForm, AdminSaleForm
 from app.closer.forms import SaleForm, LeadForm
 from app.closer.utils import send_sales_webhook
-from app.models import User, SurveyQuestion, Event, Program, PaymentMethod, db, Enrollment, Payment, Appointment, LeadProfile, Expense, RecurringExpense, EventGroup 
+from app.models import User, SurveyQuestion, Event, Program, PaymentMethod, db, Enrollment, Payment, Appointment, LeadProfile, Expense, RecurringExpense, EventGroup, UserViewSetting 
 from datetime import datetime, date, time, timedelta
 from sqlalchemy import or_
 
@@ -342,6 +342,43 @@ def delete_user(id):
 @bp.route('/leads')
 @admin_required
 def leads_list():
+    # --- Persistence Logic ---
+    view_name = 'leads_list'
+    relevant_keys = ['search', 'program', 'status', 'start_date', 'end_date', 'sort_by']
+    
+    if request.args.get('clear'):
+        setting = UserViewSetting.query.filter_by(user_id=current_user.id, view_name=view_name).first()
+        if setting:
+             db.session.delete(setting)
+             db.session.commit()
+        return redirect(url_for('admin.leads_list'))
+        
+    has_args = any(key in request.args for key in relevant_keys)
+    
+    # Check if we are paginating or loading more (in which case we shouldn't force-reload from DB, but we SHOULD save context if present)
+    is_paginating = request.args.get('page') or request.args.get('load_more')
+
+    if has_args:
+        # Save current state
+        new_settings = {k: request.args.get(k) for k in relevant_keys if request.args.get(k) is not None}
+        
+        setting = UserViewSetting.query.filter_by(user_id=current_user.id, view_name=view_name).first()
+        if not setting:
+            setting = UserViewSetting(user_id=current_user.id, view_name=view_name)
+            db.session.add(setting)
+        
+        if setting.settings != new_settings:
+            setting.settings = new_settings
+            db.session.commit()
+            
+    elif not is_paginating:
+        # Load from DB only if not navigating page/load_more and no args provided
+        setting = UserViewSetting.query.filter_by(user_id=current_user.id, view_name=view_name).first()
+        if setting and setting.settings:
+             return redirect(url_for('admin.leads_list', **setting.settings))
+
+    # --- End Persistence Logic ---
+
     # Filter Params
     search = request.args.get('search', '')
     start_date_str = request.args.get('start_date')
@@ -1379,6 +1416,36 @@ def appointments_list():
 @bp.route('/sales')
 @admin_required
 def sales_list():
+    # --- Persistence Logic ---
+    view_name = 'sales_list'
+    relevant_keys = ['search', 'start_date', 'end_date', 'program_id', 'method_id', 'payment_type']
+    
+    if request.args.get('clear'):
+        setting = UserViewSetting.query.filter_by(user_id=current_user.id, view_name=view_name).first()
+        if setting:
+             db.session.delete(setting)
+             db.session.commit()
+        return redirect(url_for('admin.sales_list'))
+
+    has_args = any(key in request.args for key in relevant_keys)
+    is_paginating = request.args.get('page') or request.args.get('load_more')
+
+    if has_args:
+        new_settings = {k: request.args.get(k) for k in relevant_keys if request.args.get(k) is not None}
+        setting = UserViewSetting.query.filter_by(user_id=current_user.id, view_name=view_name).first()
+        if not setting:
+            setting = UserViewSetting(user_id=current_user.id, view_name=view_name)
+            db.session.add(setting)
+        if setting.settings != new_settings:
+            setting.settings = new_settings
+            db.session.commit()
+            
+    elif not is_paginating:
+        setting = UserViewSetting.query.filter_by(user_id=current_user.id, view_name=view_name).first()
+        if setting and setting.settings:
+             return redirect(url_for('admin.sales_list', **setting.settings))
+    # --- End Persistence Logic ---
+
     # Filters
     search = request.args.get('search', '')
     start_date_str = request.args.get('start_date')
