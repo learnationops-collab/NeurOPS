@@ -39,7 +39,31 @@
             </div>
         </div>
 
-        <!-- Events / Links -->
+        <!-- Public Sales Link -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <h4 class="font-bold text-gray-800 mb-4">Tu Formulario de Ventas (Público)</h4>
+            <div class="border border-gray-100 rounded-lg p-3 flex flex-col gap-2 hover:bg-gray-50 transition">
+                <div class="flex justify-between items-center">
+                    <span class="font-medium text-gray-700">Reportar Venta sin Login</span>
+                    <span class="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded font-mono">Público</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <code class="text-xs bg-gray-100 px-2 py-1.5 rounded flex-1 truncate select-all text-gray-500"
+                        id="link-public-sales">
+                        {{ url_for('public_sales.lookup', closer_username=current_user.username, _external=True) }}
+                    </code>
+                    <button onclick="copyToClipboard('link-public-sales')"
+                        class="text-xs font-bold text-indigo-600 hover:text-indigo-800 uppercase px-2">
+                        Copiar
+                    </button>
+                    <a href="{{ url_for('public_sales.lookup', closer_username=current_user.username) }}"
+                        target="_blank" class="text-xs font-bold text-gray-500 hover:text-gray-800 uppercase px-2">
+                        Abrir
+                    </a>
+                </div>
+            </div>
+        </div>
+
         {% if events %}
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
             <h4 class="font-bold text-gray-800 mb-4">Links de Eventos</h4>

@@ -40,4 +40,7 @@ def create_app(config_class=Config):
     from app.booking import bp as booking_bp
     app.register_blueprint(booking_bp)
 
+    from app.public_sales import bp as public_sales_bp
+    app.register_blueprint(public_sales_bp, url_prefix='/ventas')
+
     return app

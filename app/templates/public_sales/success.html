@@ -1,0 +1,18 @@
+{% extends "public_sales/base_public.html" %}
+
+{% block content %}
+<div class="text-center py-8">
+    <div class="mb-4 flex justify-center">
+        <svg class="w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+    </div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">¡Operación Exitosa!</h2>
+    <p class="text-gray-600 mb-8">{{ message }}</p>
+
+    <a href="{{ url_for('public_sales.lookup', closer_username=closer.username) }}"
+        class="inline-block w-full bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition duration-200 font-medium">
+        Registrar Nueva Venta
+    </a>
+</div>
+{% endblock %}
