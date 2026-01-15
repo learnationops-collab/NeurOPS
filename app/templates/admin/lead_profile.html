@@ -53,56 +53,118 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
             <!-- Sales History -->
+            <!-- Sales & Payments Section (Enhanced) -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                    <h3 class="font-bold text-gray-700">Historial de Ventas</h3>
-                    <span class="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                        Total Compras: ${{ enrollments|sum(attribute='total_agreed') }}
-                    </span>
+                    <h3 class="font-bold text-gray-700">Ventas y Pagos</h3>
+                    <div class="flex gap-2">
+                        <a href="{{ url_for('admin.create_sale', lead_id=user.id, next=url_for('admin.lead_profile', id=user.id)) }}"
+                            class="text-xs bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 transition flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Nueva Venta
+                        </a>
+                        <span
+                            class="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
+                            Total: ${{ enrollments|sum(attribute='total_agreed') }}
+                        </span>
+                    </div>
                 </div>
-                <div class="p-0">
-                    {% if enrollments %}
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-gray-50 text-gray-500 border-b">
-                            <tr>
-                                <th class="px-4 py-2">Programa</th>
-                                <th class="px-4 py-2">Fecha</th>
-                                <th class="px-4 py-2 text-right">Total</th>
-                                <th class="px-4 py-2 text-right">Pagado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for enrollment in enrollments %}
-                            <tr class="border-b last:border-0 hover:bg-gray-50">
-                                <td class="px-4 py-3 font-medium">{{ enrollment.program.name }}</td>
-                                <td class="px-4 py-3 text-gray-500">{{ enrollment.enrollment_date.strftime('%Y-%m-%d')
-                                    }}</td>
-                                <td class="px-4 py-3 text-right font-medium text-gray-900">${{ enrollment.total_agreed
-                                    }}</td>
-                                <td class="px-4 py-3 text-right text-green-600">
-                                    ${{ "{:,.2f}".format(enrollment.total_paid) }}
-                                </td>
-                            </tr>
-                            <!-- Detailed Payments for this enrollment -->
-                            <tr class="bg-gray-50 text-xs">
-                                <td colspan="4" class="px-4 py-2">
-                                    <strong>Pagos:</strong>
-                                    <ul class="list-disc list-inside mt-1 text-gray-600">
-                                        {% for payment in enrollment.payments %}
-                                        <li>{{ payment.date.strftime('%Y-%m-%d') }} - {{ payment.payment_type_label }}:
-                                            <strong>${{ payment.amount }}</strong> ({{ payment.status }})
-                                        </li>
-                                        {% endfor %}
-                                    </ul>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    <p class="p-6 text-center text-gray-500">No hay ventas registradas.</p>
-                    {% endif %}
+
+                {% if enrollments %}
+                <div class="divide-y divide-gray-100">
+                    {% for enrollment in enrollments %}
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-gray-900">{{ enrollment.program.name }}</h3>
+                                <p class="text-xs text-gray-500">
+                                    Fecha: {{ enrollment.enrollment_date.strftime('%Y-%m-%d') }} •
+                                    Acordado: <span class="font-medium text-gray-700">${{ enrollment.total_agreed
+                                        }}</span>
+                                    • Closer: {{ enrollment.closer.username if enrollment.closer else 'N/A' }}
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-bold text-green-600">Pagado: ${{
+                                    "{:,.2f}".format(enrollment.total_paid) }}</p>
+                                <div class="flex flex-col items-end gap-1 mt-1">
+                                    <a href="{{ url_for('admin.add_payment', enrollment_id=enrollment.id, next=url_for('admin.lead_profile', id=user.id)) }}"
+                                        class="text-xs text-indigo-600 hover:text-indigo-800 font-medium inline-block">
+                                        + Registrar Pago
+                                    </a>
+                                    <a href="{{ url_for('admin.delete_enrollment', id=enrollment.id) }}"
+                                        onclick="return confirm('¿Estás seguro de eliminar esta inscripción y todos sus pagos? Esta acción no se puede deshacer.')"
+                                        class="text-xs text-red-400 hover:text-red-600 font-medium inline-block">
+                                        Eliminar Inscripción
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payments Table -->
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            {% if enrollment.payments %}
+                            <table class="w-full text-xs text-left">
+                                <thead>
+                                    <tr class="text-gray-500 border-b border-gray-200">
+                                        <th class="pb-2">Fecha</th>
+                                        <th class="pb-2">Monto</th>
+                                        <th class="pb-2">Tipo</th>
+                                        <th class="pb-2">Método</th>
+                                        <th class="pb-2">Closer</th>
+                                        <th class="pb-2 text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    {% for payment in enrollment.payments %}
+                                    <tr>
+                                        <td class="py-2 text-gray-600">{{ payment.date.strftime('%Y-%m-%d') }}</td>
+                                        <td class="py-2 font-medium text-gray-900">${{ payment.amount }}</td>
+                                        <td class="py-2 text-gray-500">{{ payment.payment_type_label }}</td>
+                                        <td class="py-2 text-gray-500">{{ payment.method.name if payment.method else '-'
+                                            }}</td>
+                                        <td class="py-2 text-gray-500">{{ payment.enrollment.closer.username if
+                                            payment.enrollment.closer else '-' }}</td>
+                                        <td class="py-2 text-right flex justify-end gap-2">
+                                            <a href="{{ url_for('admin.edit_payment', id=payment.id, next=url_for('admin.lead_profile', id=user.id)) }}"
+                                                class="text-gray-400 hover:text-indigo-600" title="Editar">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+                                                    </path>
+                                                </svg>
+                                            </a>
+                                            <a href="{{ url_for('admin.delete_payment', id=payment.id, next=url_for('admin.lead_profile', id=user.id)) }}"
+                                                onclick="return confirm('¿Eliminar pago?')"
+                                                class="text-gray-400 hover:text-red-500" title="Eliminar">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                                    </path>
+                                                </svg>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <p class="text-gray-400 italic text-center text-xs">Sin pagos registrados.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
+                {% else %}
+                <p class="p-6 text-center text-gray-500">No hay ventas registradas.</p>
+                {% endif %}
             </div>
 
             <!-- Appointments History -->

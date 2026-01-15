@@ -1,7 +1,10 @@
+
 from flask import render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import login_required, current_user
 from app.admin import bp
-from app.admin.forms import UserForm, SurveyQuestionForm, EventForm, ProgramForm, PaymentMethodForm, ClientEditForm, PaymentForm, ExpenseForm, RecurringExpenseForm, EventGroupForm, ManualAddForm
+from app.admin.forms import UserForm, SurveyQuestionForm, EventForm, ProgramForm, PaymentMethodForm, ClientEditForm, PaymentForm, ExpenseForm, RecurringExpenseForm, EventGroupForm, ManualAddForm, AdminSaleForm
+from app.closer.forms import SaleForm, LeadForm
+from app.closer.utils import send_sales_webhook
 from app.models import User, SurveyQuestion, Event, Program, PaymentMethod, db, Enrollment, Payment, Appointment, LeadProfile, Expense, RecurringExpense, EventGroup 
 from datetime import datetime, date, time, timedelta
 from sqlalchemy import or_
@@ -570,6 +573,7 @@ def edit_client(id):
 def add_payment(enrollment_id):
     enrollment = Enrollment.query.get_or_404(enrollment_id)
     form = PaymentForm()
+    next_url = request.args.get('next')
     
     # Populate methods
     methods = PaymentMethod.query.filter_by(is_active=True).all()
@@ -579,7 +583,7 @@ def add_payment(enrollment_id):
         payment = Payment(
             enrollment_id=enrollment.id,
             amount=form.amount.data,
-            date=datetime.combine(form.date.data, datetime.min.time()), # Convert date to datetime
+            date=datetime.combine(form.date.data, datetime.now().time()), # Use current time
             payment_type=form.payment_type.data,
             payment_method_id=form.payment_method_id.data,
             reference_id=form.reference_id.data,
@@ -588,10 +592,18 @@ def add_payment(enrollment_id):
         db.session.add(payment)
         db.session.commit()
         
+        # Webhook
+        send_sales_webhook(payment, current_user.username)
+        
         # Auto-update status
         update_user_status_after_payment(enrollment.student_id)
         
         flash('Pago registrado.')
+        if next_url:
+            return redirect(next_url)
+            
+        # Default behavior: go to edit client (legacy) or lead profile (if user came from there but no next?)
+        # Let's default to edit_client to preserve old behavior unless 'next' is used.
         return redirect(url_for('admin.edit_client', id=enrollment.student_id))
         
     return render_template('admin/payment_form.html', form=form, title=f"Nuevo Pago - {enrollment.program.name}")
@@ -636,6 +648,9 @@ def edit_payment(id):
 @bp.route('/payments/delete/<int:id>')
 @admin_required
 def delete_payment(id):
+    payment = Payment.query.get_or_404(id)
+    student_id = payment.enrollment.student_id # Store before deleting payment
+    
     db.session.delete(payment)
     db.session.commit()
     
@@ -1502,3 +1517,143 @@ def delete_payment_method(id):
         db.session.rollback()
         flash('No se puede eliminar porque tiene pagos asociados. Desactívalo mejor.')
     return redirect(url_for('admin.payment_methods_list'))
+
+@bp.route('/sales/new', methods=['GET', 'POST'])
+@admin_required
+def create_sale():
+    form = AdminSaleForm()
+    next_url = request.args.get('next')
+    
+    # Populate Choices
+    form.program_id.choices = [(p.id, f"{p.name} (${p.price})") for p in Program.query.all()]
+    form.payment_method_id.choices = [(m.id, m.name) for m in PaymentMethod.query.filter_by(is_active=True).all()]
+    
+    # Populate Closer Choices for Admin
+    closers = User.query.filter(or_(User.role == 'closer', User.role == 'admin')).all()
+    form.closer_id.choices = [(u.id, u.username) for u in closers]
+    
+    # Default closer to current user if not set
+    if not form.closer_id.data:
+        form.closer_id.data = current_user.id
+
+    # Handle GET with pre-fill
+    if request.method == 'GET':
+        lead_id = request.args.get('lead_id', type=int)
+        if lead_id:
+            lead = User.query.get(lead_id)
+            if lead:
+                form.lead_id.data = lead.id
+                form.lead_search.data = f"{lead.username} ({lead.email})"
+    
+    if form.validate_on_submit():
+        lead_id = form.lead_id.data
+        program_id = form.program_id.data
+        pay_type = form.payment_type.data
+        amount = form.amount.data
+        closer_id = form.closer_id.data
+        
+        program = Program.query.get(program_id)
+        if not program:
+             flash('Programa no encontrado.')
+             return render_template('sales/new_sale.html', form=form, title="Nueva Venta")
+
+        # Validation: Full Payment must be >= Program Price
+        if pay_type == 'full' and amount < program.price:
+             flash(f'Error: El pago completo debe ser al menos ${program.price} (Precio del Programa).')
+             return render_template('sales/new_sale.html', form=form, title="Nueva Venta")
+        
+        # Check Enrollment
+        enrollment = Enrollment.query.filter_by(student_id=lead_id, program_id=program_id, status='active').first()
+        
+        # Logic for creation/update
+        if not enrollment:
+            if pay_type in ['full', 'down_payment', 'renewal']:
+                 # Create Enrollment
+                 enrollment = Enrollment(
+                     student_id=lead_id,
+                     program_id=program_id,
+                     total_agreed=amount if pay_type == 'full' else program.price, 
+                     status='active',
+                     closer_id=closer_id 
+                 )
+                 db.session.add(enrollment)
+                 db.session.flush() # Get ID
+            else:
+                # Installment but no enrollment?
+                flash('Error: No se puede cobrar cuota sin inscripción activa. Seleccione Primer Pago o Completo.')
+                return render_template('sales/new_sale.html', form=form, title="Nueva Venta")
+        
+        # Create Payment
+        payment = Payment(
+            enrollment_id=enrollment.id,
+            payment_method_id=form.payment_method_id.data,
+            amount=amount,
+            payment_type=pay_type, 
+            status='completed'
+        )
+        db.session.add(payment)
+        
+        # Update User Role (Lead -> Student)
+        user = User.query.get(lead_id)
+        if user.role == 'lead':
+            user.role = 'student'
+            db.session.add(user)
+            
+        # --- Automate Status Logic ---
+        if not user.lead_profile:
+            profile = LeadProfile(user_id=user.id, status='new')
+            db.session.add(profile)
+        else:
+            profile = user.lead_profile
+
+        # Renewal Validation
+        if pay_type == 'renewal':
+            if profile.status != 'completed':
+                flash('Error: Solo se puede renovar si el estado del cliente es "Completado".')
+                db.session.rollback()
+                return render_template('sales/new_sale.html', form=form, title="Nueva Venta")
+            profile.status = 'renewed'
+            
+        elif pay_type == 'full':
+            profile.status = 'completed'
+            
+        elif pay_type == 'down_payment':
+            profile.status = 'pending'
+            
+        elif pay_type == 'installment':
+            db.session.flush()
+            total_paid = db.session.query(db.func.sum(Payment.amount)).filter_by(enrollment_id=enrollment.id).scalar() or 0
+            
+            if total_paid >= program.price:
+                profile.status = 'completed'
+            else:
+                if profile.status != 'completed' and profile.status != 'renewed':
+                    profile.status = 'pending'
+
+        db.session.commit()
+        
+        # Webhook
+        send_sales_webhook(payment, current_user.username)
+        
+        flash('Venta registrada exitosamente.')
+        if next_url:
+            return redirect(next_url)
+            
+        return redirect(url_for('admin.sales_list'))
+
+    return render_template('sales/new_sale.html', form=form, title="Nueva Venta", next_url=next_url)
+
+
+
+@bp.route('/enrollment/delete/<int:id>')
+@admin_required
+def delete_enrollment(id):
+    enrollment = Enrollment.query.get_or_404(id)
+    student_id = enrollment.student_id
+    
+    db.session.delete(enrollment)
+    db.session.commit()
+    
+    flash('Inscripción eliminada.')
+    return redirect(url_for('admin.lead_profile', id=student_id))
+

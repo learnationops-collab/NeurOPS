@@ -15,7 +15,7 @@
             <h2 class="text-2xl font-bold text-gray-800 mb-6">{{ title }}</h2>
 
             <form method="POST" class="space-y-6"
-                action="{{ url_for('closer.create_sale', next=next_url) if next_url else url_for('closer.create_sale') }}">
+                action="{{ url_for('admin.create_sale', next=next_url) if current_user.role == 'admin' else (url_for('closer.create_sale', next=next_url) if next_url else url_for('closer.create_sale')) }}">
                 {{ form.hidden_tag() }}
 
                 <!-- Lead Search Section -->
@@ -59,6 +59,15 @@
                         focus:border-indigo-500 shadow-sm bg-white") }}
                     </div>
                 </div>
+
+                <!-- Admin: Select Closer -->
+                {% if form.closer_id %}
+                <div>
+                    {{ form.closer_id.label(class="block text-sm font-medium text-gray-700 mb-1") }}
+                    {{ form.closer_id(class="w-full rounded-lg border-gray-300 focus:ring-indigo-500
+                    focus:border-indigo-500 shadow-sm bg-white") }}
+                </div>
+                {% endif %}
 
                 <!-- Transaction & Notes Removed per user request -->
 

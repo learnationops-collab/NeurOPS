@@ -1,4 +1,5 @@
 from flask_wtf import FlaskForm
+from app.closer.forms import SaleForm
 from wtforms import StringField, PasswordField, SelectField, SubmitField, TextAreaField, IntegerField, BooleanField, FloatField, DateField
 from wtforms.validators import DataRequired, Email, Length, Optional, NumberRange
 import datetime
@@ -104,4 +105,9 @@ class RecurringExpenseForm(FlaskForm):
     amount = FloatField('Monto Mensual', validators=[DataRequired(), NumberRange(min=0)])
     day_of_month = IntegerField('Día de Cobro (1-31)', validators=[DataRequired(), NumberRange(min=1, max=31)], default=1)
     is_active = SelectField('Estado', choices=[(1, 'Activo'), (0, 'Inactivo')], coerce=int, default=1)
+    is_active = SelectField('Estado', choices=[(1, 'Activo'), (0, 'Inactivo')], coerce=int, default=1)
     submit = SubmitField('Guardar Configuración')
+
+class AdminSaleForm(SaleForm):
+    closer_id = SelectField('Closer Asignado', coerce=int, validators=[DataRequired()])
+
