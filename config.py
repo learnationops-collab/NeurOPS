@@ -11,10 +11,11 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///local.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Increase SQLite timeout to reduce 'database is locked' errors
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "connect_args": {"timeout": 30}
-    }
+    # Increase SQLite timeout to reduce 'database is locked' errors (Only for SQLite)
+    if SQLALCHEMY_DATABASE_URI.startswith('sqlite'):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {"timeout": 30}
+        }
     
     # Webhooks
     VENTAS_WEBHOOK = os.environ.get('VENTAS_WEBHOOK')
