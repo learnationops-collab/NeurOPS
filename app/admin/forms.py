@@ -91,6 +91,7 @@ class PaymentForm(FlaskForm):
         ('pending', 'Pendiente'),
         ('failed', 'Fallido')
     ], default='completed')
+    closer_id = SelectField('Closer Asignado', coerce=int, validators=[Optional()])
     submit = SubmitField('Guardar Pago')
 
 class ExpenseForm(FlaskForm):

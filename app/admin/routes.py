@@ -579,7 +579,25 @@ def add_payment(enrollment_id):
     methods = PaymentMethod.query.filter_by(is_active=True).all()
     form.payment_method_id.choices = [(m.id, m.name) for m in methods]
     
+    # Populate Closers
+    closers = User.query.filter(or_(User.role == 'closer', User.role == 'admin')).all()
+    form.closer_id.choices = [(u.id, u.username) for u in closers]
+
+    if request.method == 'GET':
+        if enrollment.closer_id:
+            form.closer_id.data = enrollment.closer_id
+        else:
+            # Default to current user if they are a closer/admin? 
+            # Or leave empty? Let's leave empty if not assigned, or assign current user if appropriate.
+            # User request just says "falta una opcion", implying they want to set it.
+            pass
+    
     if form.validate_on_submit():
+        # Update Enrollment Closer
+        if form.closer_id.data:
+            enrollment.closer_id = form.closer_id.data
+            db.session.add(enrollment)
+            
         payment = Payment(
             enrollment_id=enrollment.id,
             amount=form.amount.data,
@@ -619,12 +637,24 @@ def edit_payment(id):
     methods = PaymentMethod.query.filter_by(is_active=True).all()
     form.payment_method_id.choices = [(m.id, m.name) for m in methods]
     
+    # Populate Closers
+    closers = User.query.filter(or_(User.role == 'closer', User.role == 'admin')).all()
+    form.closer_id.choices = [(u.id, u.username) for u in closers]
+    
     if request.method == 'GET':
          # Handle datetime to date for form
          if payment.date:
              form.date.data = payment.date.date()
+         
+         if payment.enrollment.closer_id:
+             form.closer_id.data = payment.enrollment.closer_id
     
     if form.validate_on_submit():
+        # Update Enrollment Closer
+        if form.closer_id.data:
+            payment.enrollment.closer_id = form.closer_id.data
+            db.session.add(payment.enrollment)
+
         payment.amount = form.amount.data
         payment.date = datetime.combine(form.date.data, datetime.min.time())
         payment.payment_type = form.payment_type.data
