@@ -1682,6 +1682,15 @@ def sales_list():
     total_commission = comm_query.scalar() or 0
     cash_collected = total_revenue - total_commission
 
+    # KPI Average Ticket (Only 'full' and 'down_payment')
+    # Reuse kpi_revenue structure but change filter
+    # Note: kpi_revenue query object defines sum(amount). We can reuse it.
+    avg_ticket_query = kpi_revenue.filter(Payment.payment_type.in_(['full', 'down_payment']))
+    avg_ticket_sum = avg_ticket_query.scalar() or 0
+    avg_ticket_count = avg_ticket_query.with_entities(db.func.count(Payment.id)).scalar() or 0
+    
+    avg_ticket = avg_ticket_sum / avg_ticket_count if avg_ticket_count else 0
+
     # Context Data
     all_programs = Program.query.order_by(Program.name).all()
     all_methods = PaymentMethod.query.filter_by(is_active=True).all()
@@ -1707,6 +1716,7 @@ def sales_list():
                            total_revenue=total_revenue,
                            total_commission=total_commission,
                            cash_collected=cash_collected,
+                           avg_ticket=avg_ticket,
                            total_sales_count=total_sales_count,
                            all_programs=all_programs,
                            all_methods=all_methods,
