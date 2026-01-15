@@ -7,7 +7,8 @@
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
         <!-- KPI Cards -->
         <!-- KPI Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <!-- Total Card (Small) -->
             <div
                 class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
@@ -19,6 +20,23 @@
                 <span class="text-2xl font-bold text-gray-800 z-10">{{ kpis.total }}</span>
                 <div class="mt-1 text-[10px] text-green-500 font-medium bg-green-50 px-2 py-0.5 rounded-full z-10">
                     <i class="fas fa-check-circle mr-1"></i>Filtrados
+                </div>
+            </div>
+
+            <!-- Revenue Card (New) -->
+            <div
+                class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-500 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                <div class="absolute top-0 right-0 p-2 opacity-10">
+                    <i
+                        class="fas fa-chart-line text-5xl text-blue-500 transform rotate-12 group-hover:scale-110 transition-transform"></i>
+                </div>
+                <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 z-10">Revenue</span>
+                <span class="text-2xl font-bold text-gray-900 z-10 text-center">${{
+                    "{:,.0f}".format(kpis.projected_revenue) }}</span>
+                <div class="mt-1 text-[10px] text-gray-400 font-medium z-10">
+                    <span title="Cash Collect">Cash: ${{ "{:,.0f}".format(kpis.cash_collected) }}</span>
+                    <span class="mx-1">|</span>
+                    <span title="Deuda">Deuda: ${{ "{:,.0f}".format(kpis.debt) }}</span>
                 </div>
             </div>
 
@@ -49,7 +67,12 @@
                 </div>
                 <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 z-10">Deuda Total</span>
                 <span class="text-2xl font-bold text-red-600 z-10 text-center">${{ "{:,.0f}".format(kpis.debt) }}</span>
-                <div class="mt-1 text-[10px] text-red-400 font-medium z-10">Pendiente de Cobro</div>
+                <div class="mt-1 text-[10px] text-red-400 font-medium z-10">
+                    <span title="Total Acordado">Acord.: ${{ "{:,.0f}".format(kpis.debt_agreed) }}</span>
+                    <span class="mx-1">|</span>
+                    <span title="Total Pagado (en enrolamientos con deuda)">Pag.: ${{ "{:,.0f}".format(kpis.debt_paid)
+                        }}</span>
+                </div>
             </div>
 
             <!-- Programs Card (Span 1 instead of 2 to fit row for now, or maybe make row larger) -->

@@ -47,7 +47,30 @@
         <!-- KPI Rows -->
         <div class="space-y-6 mb-8">
             <!-- Row 1: Financials -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Revenue (New) -->
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm border-l-4 border-blue-500">
+                    <div class="flex items-center">
+                        <div class="p-2 rounded-full bg-blue-50 text-blue-500">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">Revenue</p>
+                            <p class="text-2xl font-extrabold text-gray-800 mt-1">${{
+                                "{:,.2f}".format(dashboard_revenue) }}</p>
+                            <div class="text-xs text-gray-400 mt-1">
+                                <span title="Cash from Period Sales">Cash: ${{ "{:,.0f}".format(period_cash_from_sales)
+                                    }}</span>
+                                <span class="mx-1">|</span>
+                                <span title="Period Debt">Deuda: ${{ "{:,.0f}".format(period_debt) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Cash Collected -->
                 <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm border-l-4 border-indigo-500">
                     <div class="flex items-center">
@@ -60,12 +83,13 @@
                         <div class="ml-3">
                             <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">Cash Collected</p>
                             <p class="text-2xl font-extrabold text-gray-800 mt-1">${{
-                                "{:,.2f}".format(cash_collected_month) }}</p>
+                                "{:,.2f}".format(period_cash_from_sales) }}</p>
                             <div class="text-xs text-gray-400 mt-1">
-                                <span class="text-green-600 font-semibold">+${{ "{:,.2f}".format(income_month) }}</span>
+                                <span class="text-green-600 font-semibold">+${{ "{:,.2f}".format(period_gross_cash)
+                                    }}</span>
                                 Bruto
                                 <span class="mx-1">|</span>
-                                <span class="text-red-500 font-semibold">-${{ "{:,.2f}".format(total_commission_month)
+                                <span class="text-red-500 font-semibold">-${{ "{:,.2f}".format(period_commission)
                                     }}</span> Comisiones
                             </div>
                         </div>
@@ -104,7 +128,11 @@
                                 class="text-2xl font-extrabold {{ 'text-red-500' if net_profit < 0 else 'text-emerald-600' }} mt-1">
                                 ${{ "{:,.2f}".format(net_profit) }}
                             </p>
-                            <div class="text-xs text-gray-400 mt-1">Cash Collected - Gastos</div>
+                            <div class="text-xs text-gray-400 mt-1">
+                                <span title="Cash Collected">Cash: ${{ "{:,.0f}".format(cash_collected_month) }}</span>
+                                <span class="mx-1">|</span>
+                                <span title="Gastos Totales">Gastos: ${{ "{:,.0f}".format(total_expenses) }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -130,11 +158,11 @@
                     <p class="text-2xl font-extrabold text-indigo-600 mt-1">{{ "{:,.1f}".format(closing_rate) }}%</p>
                 </div>
 
-                <!-- Global Debt -->
+                <!-- Period Debt -->
                 <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">Deuda Total (Global)</p>
-                    <p class="text-2xl font-extrabold text-red-600 mt-1">${{ "{:,.2f}".format(global_debt) }}</p>
-                    <div class="text-xs text-gray-400 mt-1">Acumulado histórico</div>
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">Deuda</p>
+                    <p class="text-2xl font-extrabold text-red-600 mt-1">${{ "{:,.2f}".format(period_debt) }}</p>
+                    <div class="text-xs text-gray-400 mt-1">Periodo Seleccionado</div>
                 </div>
             </div>
         </div>

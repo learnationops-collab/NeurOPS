@@ -80,23 +80,74 @@ def dashboard():
     
     net_profit = cash_collected_month - total_expenses
     
-    # 3. Global Debt (Snapshot)
-    total_active_agreed = db.session.query(db.func.sum(Enrollment.total_agreed)).filter(
-        Enrollment.status == 'active'
-    ).scalar() or 0
-    
-    total_active_paid = db.session.query(db.func.sum(Payment.amount)).join(Enrollment).filter(
-        Enrollment.status == 'active',
-        Payment.status == 'completed'
-    ).scalar() or 0
-    
-    global_debt = total_active_agreed - total_active_paid
-    if global_debt < 0: global_debt = 0
-    
-    # 3. Active Leads Count
+    # --- Financial KPIs (Filtered by Period) ---
+
+    # --- Financial KPIs (Filtered by Period via User Registration - Cohort View) ---
+
+    # 1. Fetch Period Users (Base for Debt, Revenue, Top Debtors)
+    # We want users created between start_dt and end_dt
+    # AND who have a role that implies being a client/lead (student, lead). Closers/Admins usually don't buy, but let's include 'student' and 'lead'.
+    period_users = User.query.filter(
+        User.created_at >= start_dt,
+        User.created_at <= end_dt,
+        User.role.in_(['student', 'lead'])
+    ).all()
+
+    period_debt = 0.0
+    period_commission = 0.0
+    period_gross_cash = 0.0
+    period_revenue = 0.0 # This will now be Net Cash + Debt
+    debtors = []
+
+    for user in period_users:
+        # Calculate financials for this user
+        
+        user_debt = user.current_active_debt
+        user_gross_paid = 0.0
+        user_commission = 0.0
+        
+        # Calculate Paid & Commission from all enrollments (Lifetime value of this cohort)
+        for enr in user.enrollments:
+            # Paid sum
+            completed_payments = enr.payments.filter_by(status='completed').all()
+            for p in completed_payments:
+                user_gross_paid += p.amount
+                if p.method:
+                    comm = (p.amount * (p.method.commission_percent / 100)) + p.method.commission_fixed
+                    user_commission += comm
+        
+        user_net_cash = user_gross_paid - user_commission
+
+        # Accumulate Cohort Totals
+        period_gross_cash += user_gross_paid
+        period_commission += user_commission
+        
+        if user_debt > 0:
+            period_debt += user_debt
+            
+            # Find the main program they owe on (or just list them)
+            active_enr = user.enrollments.filter_by(status='active').first()
+            prog_name = active_enr.program.name if active_enr and active_enr.program else "Varios"
+            
+            debtors.append({
+                'student': user,
+                'program': {'name': prog_name}, 
+                'debt': user_debt
+            })
+
+    # Revenue Definition per Leads View: Net Cash + Debt
+    period_net_cash = period_gross_cash - period_commission
+    period_revenue = period_net_cash + period_debt
+
+    # Top 5 Debtors (Filtered by Period Cohort)
+    top_debtors = sorted(debtors, key=lambda x: x['debt'], reverse=True)[:10]
+
+    # 3. Global Stats (Count only)
     leads_count = User.query.filter_by(role='lead').count()
     
-    # 4. Closing Rate This Month
+    # 4. Closing Rate This Month (or Selected Period)
+    # This might also need to ideally be cohort based? (Leads from this month vs Sales from THIS MONTH's leads)
+    # But usually Closing Rate is Sales(t) / Appts(t). Let's keep it as is unless requested.
     sales_count = Enrollment.query.filter(
         Enrollment.enrollment_date >= start_dt,
         Enrollment.enrollment_date <= end_dt
@@ -111,33 +162,8 @@ def dashboard():
     closing_rate = 0
     if appts_completed > 0:
         closing_rate = (sales_count / appts_completed) * 100
+    
 
-    # 5. Top 5 Debtors
-    active_enrollments = Enrollment.query.filter_by(status='active').all()
-    debtors = []
-    for enr in active_enrollments:
-        paid = db.session.query(db.func.sum(Payment.amount)).filter(
-            Payment.enrollment_id == enr.id,
-            Payment.status == 'completed'
-        ).scalar() or 0
-        debt = enr.total_agreed - paid
-        if debt > 0:
-            debtors.append({
-                'student': enr.student,
-                'program': enr.program,
-                'total_agreed': enr.total_agreed,
-                'total_paid': paid,
-                'debt': debt
-            })
-    
-    # Sort by debt desc and take top 10
-    top_debtors = sorted(debtors, key=lambda x: x['debt'], reverse=True)[:10]
-    
-    # 6. Chart Data: Revenue Trend (Selected Period)
-    dates_labels = []
-    daily_revenue_values = []
-    
-    # Use selected dates for chart
     start_date_chart = start_date
     end_date_chart = end_date
     
@@ -261,7 +287,11 @@ def dashboard():
 
     return render_template('admin/dashboard.html',
                            income_month=income_month,
-                           global_debt=global_debt,
+                           # global_debt removed
+                           period_debt=period_debt,
+                           period_cash_from_sales=period_net_cash,
+                           period_gross_cash=period_gross_cash,
+                           period_commission=period_commission,
                            leads_count=leads_count,
                            closing_rate=closing_rate,
                            cash_collected_month=cash_collected_month,
@@ -280,7 +310,8 @@ def dashboard():
                            end_date_filter=end_date.strftime('%Y-%m-%d'),
                            total_expenses=total_expenses,
                            net_profit=net_profit,
-                           total_commission_month=total_commission_month)
+                           total_commission_month=total_commission_month,
+                           dashboard_revenue=period_revenue)
 
 # --- User Management Routes ---
 
@@ -503,6 +534,9 @@ def leads_list():
     
     active_enrollments = enr_query.all()
     total_debt = 0.0
+    total_agreed_sum = 0.0 # For subtitle
+    total_paid_debt_sum = 0.0 # For subtitle (paid amount within debt calculation context)
+    
     for enr in active_enrollments:
         # Reuse model logic for consistency
         paid = enr.total_paid
@@ -510,6 +544,11 @@ def leads_list():
         debt = agreed - paid
         if debt > 0:
             total_debt += debt
+            total_agreed_sum += agreed
+            total_paid_debt_sum += paid
+
+    # Revenue (Projected) = Cash Collect + Debt
+    projected_revenue = cash_collected + total_debt
 
     kpis = {
         'total': total_users,
@@ -518,7 +557,10 @@ def leads_list():
         'revenue': total_revenue, # Gross
         'debt': total_debt,
         'commission': total_commission,
-        'cash_collected': cash_collected # Net
+        'cash_collected': cash_collected, # Net
+        'debt_agreed': total_agreed_sum,
+        'debt_paid': total_paid_debt_sum,
+        'projected_revenue': projected_revenue
     }
     
     # Context for filters
