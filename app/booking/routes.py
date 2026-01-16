@@ -17,7 +17,11 @@ def start_booking():
     event = Event.query.filter_by(utm_source=utm_source).first()
     funnel_steps = ['contact', 'calendar', 'survey'] # Default
     
-    session.clear() # Clear specific booking session keys? prefer explicit clears
+    # session.clear() -> This logs out admins! Use selective clear.
+    keys_to_clear = ['booking_data', 'booking_event_id', 'funnel_steps', 'funnel_index', 'booking_user_id', 'current_appt_id']
+    for k in keys_to_clear:
+        session.pop(k, None)
+        
     session['booking_utm'] = utm_source
     
     # Init booking data container
@@ -72,41 +76,23 @@ def next_step():
 
 @bp.route('/booking/contact', methods=['GET', 'POST'])
 def contact_view():
-    # Fetch LANDING Questions Logic
-    query = SurveyQuestion.query.filter_by(is_active=True, step='landing')
-    event_id = session.get('booking_event_id')
-    
-    if event_id:
-        event = Event.query.get(event_id)
-        conditions = [SurveyQuestion.event_id == event.id]
-        if event and event.group_id:
-             conditions.append(SurveyQuestion.event_group_id == event.group_id)
-        global_condition = (SurveyQuestion.event_id == None) & (SurveyQuestion.event_group_id == None)
-        conditions.append(global_condition)
-        query = query.filter(or_(*conditions))
-    else:
-        query = query.filter((SurveyQuestion.event_id == None) & (SurveyQuestion.event_group_id == None))
-        
-    landing_questions = query.order_by(SurveyQuestion.order).all()
+    # Helper to clean phone
+    def clean_phone(code, number):
+        if not number: return None
+        return f"{code} {number}".strip()
 
     if request.method == 'POST':
-        name, email, phone, instagram = None, None, None, None
-        survey_answers_to_save = []
+        name = request.form.get('name')
+        email = request.form.get('email')
+        phone_code = request.form.get('phone_code')
+        phone_number = request.form.get('phone')
+        instagram = request.form.get('instagram')
         
-        for q in landing_questions:
-            ans = request.form.get(f'q_{q.id}')
-            if not ans: continue
-            
-            if q.mapping_field == 'name': name = ans
-            elif q.mapping_field == 'email': email = ans
-            elif q.mapping_field == 'phone': phone = ans
-            elif q.mapping_field == 'instagram': instagram = ans
-            else:
-                survey_answers_to_save.append({'question_id': q.id, 'answer': ans})
-        
-        if not email:
-            flash('Error: El correo es obligatorio.')
-            return render_template('booking/landing.html', utm=session.get('booking_utm'), questions=landing_questions)
+        full_phone = clean_phone(phone_code, phone_number)
+
+        if not email or not name:
+            flash('Nombre y Correo son obligatorios.')
+            return render_template('booking/landing.html', utm=session.get('booking_utm'))
 
         # Create/Find User
         user = User.query.filter_by(email=email).first()
@@ -119,34 +105,31 @@ def contact_view():
             db.session.add(user)
             db.session.flush()
             
-            profile = LeadProfile(user_id=user.id, phone=phone, instagram=instagram, utm_source=utm_source)
+            # New leads start as 'new' status
+            profile = LeadProfile(user_id=user.id, phone=full_phone, instagram=instagram, utm_source=utm_source, status='new')
             db.session.add(profile)
             db.session.commit()
         else:
             if user.lead_profile:
-                if phone: user.lead_profile.phone = phone
+                if full_phone: user.lead_profile.phone = full_phone
                 if instagram: user.lead_profile.instagram = instagram
                 user.lead_profile.utm_source = utm_source 
             else:
-                profile = LeadProfile(user_id=user.id, phone=phone, instagram=instagram, utm_source=utm_source)
+                profile = LeadProfile(user_id=user.id, phone=full_phone, instagram=instagram, utm_source=utm_source, status='new')
                 db.session.add(profile)
+            
+            # Update name if provided
             if name: user.username = name
             db.session.commit()
             
         session['booking_user_id'] = user.id
         
-        # FLUSH CACHED DATA
+        # FLUSH CACHED DATA (If any from previous steps, though unlikely here)
         _flush_session_data(user.id)
-        
-        # Save extra landing answers
-        for sa in survey_answers_to_save:
-            new_ans = SurveyAnswer(lead_id=user.id, question_id=sa['question_id'], answer=sa['answer'])
-            db.session.add(new_ans)
-        db.session.commit()
         
         return redirect(url_for('booking.next_step'))
         
-    return render_template('booking/landing.html', utm=session.get('booking_utm'), questions=landing_questions)
+    return render_template('booking/landing.html', utm=session.get('booking_utm'))
 
 def _flush_session_data(user_id):
     """Saves cached slot/answers to DB for this user."""
@@ -176,6 +159,13 @@ def _flush_session_data(user_id):
             
             # Trigger Webhook
             send_calendar_webhook(appt, 'created')
+            
+            # Update User Status to 'agenda' (but keep role as 'lead')
+            user = User.query.get(user_id)
+            if user and user.lead_profile:
+                user.lead_profile.status = 'agenda'
+                db.session.add(user.lead_profile)
+                db.session.commit()
             
             # Clear slot from session
             bdata['slot'] = None
@@ -266,6 +256,8 @@ def select_slot():
         
     # Check if User exists
     user_id = session.get('booking_user_id')
+    print(f"DEBUG: select_slot user_id={user_id}")
+    
     if user_id:
         # Create immediately
         appt = Appointment(
@@ -278,6 +270,22 @@ def select_slot():
         db.session.add(appt)
         db.session.commit()
         session['current_appt_id'] = appt.id
+        
+        # Update User Status to 'agenda'
+        user = User.query.get(user_id)
+        if user:
+            print(f"DEBUG: User found {user.username}. Profile: {user.lead_profile}")
+            if user.lead_profile:
+                print(f"DEBUG: Updating status from {user.lead_profile.status} to agenda")
+                user.lead_profile.status = 'agenda'
+                db.session.add(user.lead_profile)
+                db.session.commit()
+                print("DEBUG: Status committed")
+            else:
+                 print("DEBUG: No lead_profile found")
+        else:
+             print("DEBUG: User not found in DB")
+            
         send_calendar_webhook(appt, 'created')
     else:
         # Cache in Session

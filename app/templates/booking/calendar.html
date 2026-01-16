@@ -42,6 +42,18 @@
 
         <!-- Calendar Side -->
         <div class="p-8 md:w-2/3 overflow-y-auto w-full">
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
             <h3 class="text-lg font-bold text-gray-800 mb-6">Selecciona una fecha y hora</h3>
 
             {% if not schedule %}
@@ -62,6 +74,7 @@
                         class="p-4 grid grid-cols-3 sm:grid-cols-4 gap-2 hidden group-open:block">
                         {% for time in day.slots %}
                         <form action="{{ url_for('booking.select_slot') }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                             <input type="hidden" name="date" value="{{ day.date }}">
                             <input type="hidden" name="time" value="{{ time.strftime('%H:%M') }}">
                             <button type="submit"

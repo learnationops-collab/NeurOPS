@@ -54,6 +54,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <select name="status" onchange="this.form.submit()" class="text-xs rounded-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 py-1 pl-2 pr-6 font-bold cursor-pointer hover:bg-opacity-80
                 {% if lead.lead_profile.status == 'new' %}bg-gray-100 text-gray-600
+                {% elif lead.lead_profile.status == 'agenda' %}bg-indigo-100 text-indigo-700
                 {% elif lead.lead_profile.status == 'pending' %}bg-yellow-100 text-yellow-700
                 {% elif lead.lead_profile.status == 'completed' %}bg-green-100 text-green-700
                 {% elif lead.lead_profile.status == 'renewed' %}bg-purple-100 text-purple-700
@@ -61,6 +62,8 @@
                 {% else %}bg-gray-100 text-gray-600{% endif %}">
                 <option value="new" {% if lead.lead_profile.status=='new' %}selected{% endif %}>
                     Nuevo</option>
+                <option value="agenda" {% if lead.lead_profile.status=='agenda' %}selected{% endif %}>Agendado
+                </option>
                 <option value="pending" {% if lead.lead_profile.status=='pending' %}selected{% endif %}>Pendiente
                 </option>
                 <option value="completed" {% if lead.lead_profile.status=='completed' %}selected{% endif %}>Completado

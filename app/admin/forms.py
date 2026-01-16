@@ -69,6 +69,7 @@ class ClientEditForm(FlaskForm):
     status = SelectField('Estado', choices=[
         ('new', 'Nuevo'), 
         ('pending', 'Pendiente'), 
+        ('agenda', 'Agenda'),
         ('completed', 'Completado'), 
         ('renewed', 'Renovado'), 
         ('canceled', 'Cancelado')

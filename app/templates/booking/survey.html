@@ -22,7 +22,18 @@
             <p class="text-indigo-200 text-sm mt-1">Necesitamos conocerte mejor para preparar tu sesión.</p>
         </div>
 
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+            {% for message in messages %}
+            <div>{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
         <form method="POST" class="p-8 space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
             {% if questions %}
             {% for q in questions %}
@@ -37,7 +48,11 @@
                 {% elif q.question_type == 'select' %}
                 <select name="q_{{ q.id }}"
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white">
+                    {% set opts = q.options.split('|') %}
+                    {% if opts|length == 1 and ',' in q.options %}
+                    {# Fallback for legacy comma-separated options #}
                     {% set opts = q.options.split(',') %}
+                    {% endif %}
                     {% for opt in opts %}
                     <option value="{{ opt }}">{{ opt }}</option>
                     {% endfor %}

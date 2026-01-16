@@ -262,8 +262,16 @@
                             init() {
                                 const raw = document.getElementById('options-hidden').value;
                                 if (raw) {
+                                    // Robust Split: Check for pipe first (new format), else comma (legacy)
+                                    let items = [];
+                                    if (raw.includes('|')) {
+                                        items = raw.split('|');
+                                    } else {
+                                        items = raw.split(',');
+                                    }
+
                                     // Map to objects with unique ID for correct Drag n Drop tracking
-                                    this.optionsList = raw.split(',').map(s => ({
+                                    this.optionsList = items.map(s => ({
                                         id: Math.random().toString(36).substr(2, 9),
                                         value: s.trim()
                                     }));
@@ -300,8 +308,8 @@
                                 this.sync();
                             },
                             sync() {
-                                // Join values back to comma-separated string
-                                document.getElementById('options-hidden').value = this.optionsList.map(o => o.value).join(',');
+                                // Join values back to PIPE-separated string (allows commas in text)
+                                document.getElementById('options-hidden').value = this.optionsList.map(o => o.value).join('|');
                             }
                         }" x-init="init()"
                             x-effect="qType = $el.closest('form').querySelector('[name=question_type]').value">
