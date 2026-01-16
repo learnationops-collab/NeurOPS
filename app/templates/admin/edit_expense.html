@@ -1,0 +1,52 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="flex h-screen overflow-hidden">
+    {% include "includes/admin_sidebar.html" %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
+        <div class="container mx-auto px-6 py-8">
+            <h3 class="text-3xl font-medium text-gray-700 mb-6">Editar Gasto</h3>
+
+            <div class="bg-white rounded-lg shadow-md p-6 max-w-lg">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-4">
+                        {{ form.description.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                        {{ form.description(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                        leading-tight focus:outline-none focus:shadow-outline") }}
+                    </div>
+
+                    <div class="mb-4">
+                        {{ form.amount.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                        {{ form.amount(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                        leading-tight focus:outline-none focus:shadow-outline") }}
+                    </div>
+
+                    <div class="mb-4">
+                        {{ form.category.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                        {{ form.category(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                        leading-tight focus:outline-none focus:shadow-outline bg-white") }}
+                    </div>
+
+                    <div class="mb-6">
+                        {{ form.date.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                        {{ form.date(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700
+                        leading-tight focus:outline-none focus:shadow-outline") }}
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        {{ form.submit(class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded
+                        focus:outline-none focus:shadow-outline cursor-pointer") }}
+                        <a href="{{ url_for('admin.finances') }}"
+                            class="inline-block align-baseline font-bold text-sm text-indigo-600 hover:text-indigo-800">
+                            Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

@@ -1476,6 +1476,8 @@ def finances():
         )
         db.session.add(expense)
         db.session.commit()
+        if request.args.get('ajax'):
+            return jsonify({'success': True})
         flash('Gasto registrado.')
         return redirect(url_for('admin.finances'))
 
@@ -1518,6 +1520,22 @@ def finances():
     s_date_val = start_date_str if start_date_str else start_date.strftime('%Y-%m-%d')
     e_date_val = end_date_str if end_date_str else end_date.strftime('%Y-%m-%d')
 
+    if request.args.get('ajax'):
+        active_recurring = sum(r.amount for r in recurring_expenses if r.is_active)
+        return jsonify({
+            'html_expenses': render_template('admin/partials/expenses_table.html', expenses=expenses),
+            'html_recurring': render_template('admin/partials/recurring_table.html', recurring_expenses=recurring_expenses),
+            'kpis': {
+                'total_expenses': "{:,.2f}".format(total_expenses),
+                'active_recurring': "{:,.2f}".format(active_recurring),
+                'cash_collected': "{:,.2f}".format(cash_collected),
+                'gross_revenue': "{:,.2f}".format(gross_revenue),
+                'total_commission': "{:,.2f}".format(total_commission),
+                'net_profit': "{:,.2f}".format(net_profit),
+                'net_profit_positive': net_profit >= 0
+            }
+        })
+
     return render_template('admin/finances.html',
                            start_date=s_date_val,
                            end_date=e_date_val,
@@ -1544,8 +1562,12 @@ def add_recurring_expense():
         )
         db.session.add(rexp)
         db.session.commit()
+        if request.args.get('ajax'):
+             return jsonify({'success': True})
         flash('Gasto fijo configurado.')
     else:
+        if request.args.get('ajax'):
+             return jsonify({'success': False, 'errors': form.errors}), 400
         flash('Error al agregar gasto fijo. Verifique los datos.')
     return redirect(url_for('admin.finances'))
 
@@ -1588,8 +1610,81 @@ def generate_monthly_expenses():
                 pass
                 
     db.session.commit()
+    if request.args.get('ajax'):
+        return jsonify({'success': True, 'message': f'Se generaron {count} gastos fijos.'})
     flash(f'Se generaron {count} gastos fijos para este mes.')
     return redirect(url_for('admin.finances'))
+
+@bp.route('/admin/recurring-expense/delete/<int:id>', methods=['POST'])
+@admin_required
+def delete_recurring_expense(id):
+    rex = RecurringExpense.query.get_or_404(id)
+    db.session.delete(rex)
+    db.session.commit()
+    if request.args.get('ajax'):
+        return jsonify({'success': True})
+    flash('Gasto fijo eliminado correctamente.')
+    return redirect(url_for('admin.finances'))
+
+@bp.route('/admin/recurring-expense/toggle/<int:id>', methods=['POST'])
+@admin_required
+def toggle_recurring_expense(id):
+    rex = RecurringExpense.query.get_or_404(id)
+    rex.is_active = not rex.is_active
+    db.session.commit()
+    status = 'activado' if rex.is_active else 'desactivado'
+    if request.args.get('ajax'):
+        return jsonify({'success': True})
+    flash(f'Gasto fijo {status} correctamente.')
+    return redirect(url_for('admin.finances'))
+
+@bp.route('/admin/expense/delete/<int:id>', methods=['POST'])
+@admin_required
+def delete_expense(id):
+    expense = Expense.query.get_or_404(id)
+    db.session.delete(expense)
+    db.session.commit()
+    if request.args.get('ajax'):
+        return jsonify({'success': True})
+    flash('Gasto eliminado correctamente.')
+    return redirect(url_for('admin.finances'))
+
+@bp.route('/admin/expense/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_expense(id):
+    expense = Expense.query.get_or_404(id)
+    form = ExpenseForm(obj=expense) # Pre-fill form
+    
+    if form.validate_on_submit():
+        form.populate_obj(expense) # Update object
+        db.session.commit()
+        flash('Gasto actualizado correctamente.')
+        return redirect(url_for('admin.finances'))
+        
+    return render_template('admin/edit_expense.html', form=form, expense=expense)
+
+@bp.route('/admin/recurring-expense/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_recurring_expense(id):
+    rex = RecurringExpense.query.get_or_404(id)
+    # Convert bool is_active to int for select field if needed, or let wtforms handle coerce
+    form = RecurringExpenseForm(obj=rex)
+    
+    # Manually set is_active data if needed because boolean vs int mismatch common in wtforms select with coerce
+    if request.method == 'GET':
+        form.is_active.data = 1 if rex.is_active else 0
+
+    if form.validate_on_submit():
+        rex.description = form.description.data
+        rex.amount = form.amount.data
+        rex.day_of_month = form.day_of_month.data
+        rex.is_active = bool(form.is_active.data)
+        
+        db.session.commit()
+        flash('Configuración de gasto fijo actualizada.')
+        return redirect(url_for('admin.finances'))
+        
+    return render_template('admin/edit_recurring_expense.html', form=form, rex=rex)
 
 @bp.route('/appointments')
 @admin_required
