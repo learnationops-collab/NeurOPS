@@ -21,6 +21,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(256))
     role = db.Column(db.String(20), default=ROLE_LEAD)
+    timezone = db.Column(db.String(50), default='America/La_Paz') # New Timezone Support
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -256,7 +257,8 @@ class Appointment(db.Model):
     closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     lead_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True) # Check nullable first to avoid migration issues? Let's say nullable=True for now.
-    start_time = db.Column(db.DateTime, nullable=False)
+    # Timezone Note: stored in UTC (naive datetime, but logic treats as UTC)
+    start_time = db.Column(db.DateTime, index=True)
     status = db.Column(db.String(20), default='scheduled') # scheduled, completed, canceled, no_show
 
 class Availability(db.Model):

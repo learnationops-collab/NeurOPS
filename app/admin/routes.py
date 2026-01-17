@@ -435,18 +435,30 @@ def create_user():
     return render_template('admin/user_form.html', form=form, title='Nuevo Usuario')
 
 @bp.route('/users/edit/<int:id>', methods=['GET', 'POST'])
-@admin_required
+@login_required
 def edit_user(id):
+    if current_user.role != 'admin':
+        flash('Acceso denegado.')
+        return redirect(url_for('admin.dashboard'))
     user = User.query.get_or_404(id)
     form = UserForm(obj=user)
+    
+    # Populate Timezone Choices
+    import pytz
+    form.timezone.choices = [(tz, tz) for tz in pytz.common_timezones]
+    
+    if request.method == 'GET' and not form.timezone.data:
+         form.timezone.data = user.timezone or 'America/La_Paz'
+
     if form.validate_on_submit():
         user.username = form.username.data
         user.email = form.email.data
         user.role = form.role.data
+        user.timezone = form.timezone.data # Save timezone
         if form.password.data:
             user.set_password(form.password.data)
         db.session.commit()
-        flash(f'Usuario {user.username} actualizado.')
+        flash('Usuario actualizado exitosamente.')
         return redirect(url_for('admin.users_list'))
     return render_template('admin/user_form.html', form=form, title='Editar Usuario')
 

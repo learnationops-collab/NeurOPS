@@ -590,23 +590,56 @@ def update_appt_status(id, status):
 @bp.route('/dashboard')
 @closer_required
 def dashboard():
-    today = date.today()
-    today_start = datetime.combine(today, time.min)
-    today_end = datetime.combine(today, time.max)
+    import pytz # Import strictly for template usage if needed
     
-    # Agendas Hoy
-    today_appointments = Appointment.query.filter(
+    # 1. KPIs
+    # Today's calls
+    tz_name = current_user.timezone or 'America/La_Paz'
+    try:
+        closer_tz = pytz.timezone(tz_name)
+    except:
+        closer_tz = pytz.timezone('America/La_Paz')
+        
+    now_local = datetime.now(closer_tz)
+    today_local = now_local.date()
+    
+    start_local = closer_tz.localize(datetime.combine(today_local, time.min))
+    end_local = closer_tz.localize(datetime.combine(today_local, time.max))
+    
+    start_utc = start_local.astimezone(pytz.UTC).replace(tzinfo=None)
+    end_utc = end_local.astimezone(pytz.UTC).replace(tzinfo=None)
+    
+    todays_calls_count = Appointment.query.filter(
         Appointment.closer_id == current_user.id,
-        Appointment.start_time >= today_start,
-        Appointment.start_time <= today_end,
+        Appointment.start_time >= start_utc,
+        Appointment.start_time <= end_utc,
         Appointment.status != 'canceled'
-    ).all()
+    ).count()
     
-    # Next Calls
-    now = datetime.now()
+    # Pending Followups (Leads not contacted? Or manual task?)
+    # ... (existing logic)
+    
+    pending_followups = User.query.filter(
+        User.lead_profile.has(assigned_closer_id=current_user.id),
+        User.lead_profile.has(status='pending')
+    ).count() # Just an example
+    
+    # Sales this month
+    # Need month start/end in local -> UTC
+    month_start_local = closer_tz.localize(datetime(today_local.year, today_local.month, 1))
+    # ... logic for month end
+    month_start_utc = month_start_local.astimezone(pytz.UTC).replace(tzinfo=None)
+    
+    sales_this_month = Enrollment.query.filter(
+        Enrollment.closer_id == current_user.id,
+        Enrollment.enrollment_date >= month_start_utc
+    ).count()
+    
+    # Next Calls (Upcoming)
+    # Filter: start_time > now_utc
     next_calls = Appointment.query.filter(
         Appointment.closer_id == current_user.id,
-        Appointment.start_time >= now,
+        Appointment.start_time > datetime.utcnow(),
         Appointment.status != 'canceled'
     ).order_by(Appointment.start_time).limit(5).all()
     
@@ -618,37 +651,33 @@ def dashboard():
     active_enrollments = Enrollment.query.filter_by(status='active').all()
     debtors = []
     for enr in active_enrollments:
-        paid = db.session.query(db.func.sum(Payment.amount)).filter(
-            Payment.enrollment_id == enr.id,
-            Payment.status == 'completed'
-        ).scalar() or 0
-        debt = enr.total_agreed - paid
-        if debt > 0:
-            debtors.append({
-                'student': enr.student,
-                'program': enr.program,
-                'total_agreed': enr.total_agreed,
-                'total_paid': paid,
-                'debt': debt
-            })
-    
+        # Check if student is assigned to this closer?
+        # Or if enrollment is assigned to this closer?
+        # Let's filter by enrollment.closer_id == current just to be safe/consistent
+        if enr.closer_id == current_user.id:
+            paid = db.session.query(db.func.sum(Payment.amount)).filter(
+                Payment.enrollment_id == enr.id,
+                Payment.status == 'completed'
+            ).scalar() or 0
+            debt = enr.total_agreed - paid
+            if debt > 0:
+                debtors.append({
+                    'student': enr.student,
+                    'program': enr.program,
+                    'total_agreed': enr.total_agreed,
+                    'total_paid': paid,
+                    'debt': debt
+                })
     top_debtors = sorted(debtors, key=lambda x: x['debt'], reverse=True)[:5]
-    
-    # 6. Calculate Monthly Sales (Attribution Strategy)
-    # Logic: Sum total_agreed of Enrollments created this month 
-    # WHERE the student generally belongs to this closer.
-    # Attribution: The closer with the most recent 'completed' appointment before enrollment.
-    
-    first_day_month = datetime.combine(today.replace(day=1), time.min)
     
     # 6. Calculate Monthly Sales (Explicit Assignment)
     # Logic: Sum total_agreed of Enrollments created this month AND assigned to this closer.
     
-    first_day_month = datetime.combine(today.replace(day=1), time.min)
+    first_day_month = month_start_utc
     
     month_enrollments = Enrollment.query.filter(
         Enrollment.enrollment_date >= first_day_month,
-        Enrollment.enrollment_date <= today_end,
+        Enrollment.enrollment_date <= end_utc,
         Enrollment.status != 'dropped',
         Enrollment.closer_id == current_user.id # Explicit check
     ).all()
@@ -660,7 +689,7 @@ def dashboard():
     month_appointments_count = Appointment.query.filter(
         Appointment.closer_id == current_user.id,
         Appointment.start_time >= first_day_month,
-        Appointment.start_time <= today_end,
+        Appointment.start_time <= end_utc,
         Appointment.status == 'completed'
     ).count()
     
@@ -669,12 +698,13 @@ def dashboard():
         closing_rate = (monthly_sales_count / month_appointments_count) * 100
 
     return render_template('closer/dashboard.html', 
-                           today_appointments=today_appointments, 
+                           today_appointments_count=todays_calls_count, 
                            next_calls=next_calls,
                            events=events,
                            top_debtors=top_debtors,
                            monthly_sales=monthly_sales,
-                           closing_rate=closing_rate)
+                           closing_rate=closing_rate,
+                           pytz=pytz)
 
 @bp.route('/calendar', methods=['GET'])
 @closer_required

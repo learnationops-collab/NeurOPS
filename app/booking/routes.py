@@ -171,34 +171,35 @@ def _flush_session_data(user_id):
     # 1. Flush Slot -> Appointment
     slot = bdata.get('slot')
     if slot:
-        # Re-check availability? strictly yes
-        # For MVP, assume still free or fail gracefully.
-        
-        start_time = datetime.strptime(f"{slot['date']} {slot['time']}", "%Y-%m-%d %H:%M:%S")
-        
-        # Check duplicate
-        exists = Appointment.query.filter_by(closer_id=slot['closer_id'], start_time=start_time).filter(Appointment.status!='canceled').first()
-        if not exists:
-            appt = Appointment(
-                closer_id=slot['closer_id'],
-                lead_id=user_id,
-                start_time=start_time,
-                status='scheduled', # or pending_survey? if survey not done yet
-                event_id=session.get('booking_event_id')
-            )
-            db.session.add(appt)
-            db.session.commit()
-            session['current_appt_id'] = appt.id
+        utc_iso = slot.get('utc_iso')
+        if utc_iso:
+            start_time = datetime.fromisoformat(utc_iso.replace('Z', '+00:00')).replace(tzinfo=None)
             
-            # Trigger Webhook
-            send_calendar_webhook(appt, 'created')
-            
-            # Update User Status automatically
-            user = User.query.get(user_id)
-            if user:
-                user.update_status_based_on_debt()
-            
-            # Clear slot from session
+            # Check duplicate
+            exists = Appointment.query.filter_by(closer_id=slot['closer_id'], start_time=start_time).filter(Appointment.status!='canceled').first()
+            if not exists:
+                appt = Appointment(
+                    closer_id=slot['closer_id'],
+                    lead_id=user_id,
+                    start_time=start_time,
+                    status='scheduled', # or pending_survey? if survey not done yet
+                    event_id=session.get('booking_event_id')
+                )
+                db.session.add(appt)
+                db.session.commit()
+                session['current_appt_id'] = appt.id
+                
+                # Trigger Webhook
+                send_calendar_webhook(appt, 'created')
+                
+                # Update User Status automatically
+                user = User.query.get(user_id)
+                if user:
+                    user.update_status_based_on_debt()
+                
+                # Clear slot from session
+                bdata['slot'] = None
+                session['booking_data'] = bdata
             bdata['slot'] = None
             session['booking_data'] = bdata
 
@@ -227,88 +228,106 @@ def _flush_session_data(user_id):
 
 @bp.route('/booking/calendar')
 def calendar_view():
-    # Logic same as before for fetching slots
+    import pytz
+    
+    # 1. Fetch Availability (Stored in Closer's Local Time - assumed per closer)
+    # Optimization: Filter roughly by date range first
     today = date.today()
     end_date = today + timedelta(days=14)
     availabilities = Availability.query.filter(Availability.date >= today, Availability.date <= end_date).all()
+    
+    # 2. Fetch Appointments (Stored in UTC)
+    # Need to filter effectively in UTC, so convert range to UTC
+    # Since we don't know closer TZ yet, just fetch broad range
     appointments = Appointment.query.filter(
-        Appointment.start_time >= datetime.combine(today, time.min),
-        Appointment.start_time <= datetime.combine(end_date, time.max),
+        Appointment.start_time >= datetime.utcnow(),
+        Appointment.start_time <= datetime.utcnow() + timedelta(days=15),
         Appointment.status != 'canceled'
     ).all()
     
     booked_slots = set()
     for appt in appointments:
+        # appt.start_time is naive but implicitly UTC
         booked_slots.add((appt.closer_id, appt.start_time))
         
-    daily_slots = {}
-    for i in range(15):
-        d = today + timedelta(days=i)
-        daily_slots[d] = set()
+    daily_slots_utc = {} # Key: Date (User's perspective? No, keep simple list) -> actually list of objects
+    # We will send a flat list of available slots in UTC to the frontend
+    # and let JS handle the Grouping by Day (Client Time)
+    
+    available_slots_utc = []
     
     for av in availabilities:
-        slot_dt = datetime.combine(av.date, av.start_time)
-        if slot_dt < datetime.now(): continue
-        if (av.closer_id, slot_dt) not in booked_slots:
-            daily_slots[av.date].add(av.start_time)
+        closer = av.closer
+        if not closer: continue
+        
+        # Get Closer Timezone
+        try:
+            closer_tz = pytz.timezone(closer.timezone or 'America/La_Paz')
+        except pytz.UnknownTimeZoneError:
+            closer_tz = pytz.timezone('America/La_Paz')
             
-    sorted_schedule = []
-    days_map = {0:'Lunes', 1:'Martes', 2:'Miércoles', 3:'Jueves', 4:'Viernes', 5:'Sábado', 6:'Domingo'}
-    months_map = {1:'Enero', 2:'Febrero', 3:'Marzo', 4:'Abril', 5:'Mayo', 6:'Junio', 7:'Julio', 8:'Agosto', 9:'Septiembre', 10:'Octubre', 11:'Noviembre', 12:'Diciembre'}
-
-    for d in sorted(daily_slots.keys()):
-        times = sorted(list(daily_slots[d]))
-        if times:
-            display_str = f"{days_map[d.weekday()]} {d.day} de {months_map[d.month]}"
-            sorted_schedule.append({'date': d, 'display': display_str, 'slots': times})
+        # Create Local Datetime
+        local_dt = datetime.combine(av.date, av.start_time) # Naive
+        local_dt = closer_tz.localize(local_dt) # Aware (Closer Time)
+        
+        # Convert to UTC
+        utc_dt = local_dt.astimezone(pytz.UTC).replace(tzinfo=None) # Make naive UTC for comparison with DB
+        
+        # Filter Past
+        if utc_dt < datetime.utcnow(): continue
+        
+        # Check Booking (utc_dt)
+        if (av.closer_id, utc_dt) not in booked_slots:
+            available_slots_utc.append({
+                'utc_iso': utc_dt.isoformat() + 'Z', # Explicit Z for JS
+                'closer_id': av.closer_id,
+                'ts': utc_dt.timestamp()
+            })
             
-    return render_template('booking/calendar.html', schedule=sorted_schedule)
+    # Sort by time
+    available_slots_utc.sort(key=lambda x: x['ts'])
+    
+    # We pass raw slots to frontend, JS will group them
+    return render_template('booking/calendar.html', slots_json=available_slots_utc)
 
 @bp.route('/booking/select', methods=['POST'])
 def select_slot():
-    date_str = request.form.get('date')
-    time_str = request.form.get('time')
-    selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    selected_time = datetime.strptime(time_str, '%H:%M').time()
+    import pytz
+    # We expect 'utc_iso' or explicit components. Let's rely on 'utc_iso' from frontend if possible, 
+    # OR we can reconstruct if frontend sends localized date/time + offset?
+    # Simplest: Frontend sends 'closer_id' AND 'utc_iso' for the chosen slot.
+    # But wait, original flow picked closer dynamically. 
+    # With UTC slots pre-calculated in calendar_view, each slot already belongs to a specific closer.
     
-    # Find closer
-    candidates = Availability.query.filter_by(date=selected_date, start_time=selected_time).all()
-    chosen_closer_id = None
+    utc_iso = request.form.get('utc_iso')
+    closer_id = request.form.get('closer_id')
     
-    # 1. Try Preferred Closer
-    preferred_id = session.get('preferred_closer_id')
-    if preferred_id:
-        for cand in candidates:
-            if cand.closer_id == preferred_id:
-                appt_time = datetime.combine(selected_date, selected_time)
-                conflict = Appointment.query.filter_by(closer_id=cand.closer_id, start_time=appt_time).filter(Appointment.status != 'canceled').first()
-                if not conflict:
-                    chosen_closer_id = cand.closer_id
-                    break
+    if not utc_iso or not closer_id:
+        flash('Error en la selección de horario. Intente nuevamente.')
+        return redirect(url_for('booking.calendar_view'))
+        
+    start_time_utc = datetime.fromisoformat(utc_iso.replace('Z', '+00:00')).replace(tzinfo=None) # Naive UTC
+    chosen_closer_id = int(closer_id)
+
+    # Double Check Availability (Concurrency)
+    # Since Availability is Local, and Appointment is UTC, we must verify logic carefully.
+    # Actually, we trusted the 'calendar_view' calculation.
+    # Let's check overlap with Appointment (UTC)
+    conflict = Appointment.query.filter_by(closer_id=chosen_closer_id, start_time=start_time_utc).filter(Appointment.status != 'canceled').first()
     
-    # 2. Fallback to Any Available
-    if not chosen_closer_id:
-        for cand in candidates:
-            appt_time = datetime.combine(selected_date, selected_time)
-            conflict = Appointment.query.filter_by(closer_id=cand.closer_id, start_time=appt_time).filter(Appointment.status != 'canceled').first()
-            if not conflict:
-                chosen_closer_id = cand.closer_id
-                break
-            
-    if not chosen_closer_id:
+    if conflict:
         flash('Lo sentimos, este horario acaba de ser ocupado.')
         return redirect(url_for('booking.calendar_view'))
         
     # Check if User exists
     user_id = session.get('booking_user_id')
-    print(f"DEBUG: select_slot user_id={user_id}")
     
     if user_id:
-        # Create immediately
+        # Create immediately (in UTC)
         appt = Appointment(
             closer_id=chosen_closer_id,
             lead_id=user_id,
-            start_time=datetime.combine(selected_date, selected_time),
+            start_time=start_time_utc, # Stored as UTC
             status='scheduled',
             event_id=session.get('booking_event_id')
         )
@@ -323,15 +342,17 @@ def select_slot():
             
         send_calendar_webhook(appt, 'created')
     else:
-        # Cache in Session
+        # Save to session (UTC) and redirect
         bdata = session.get('booking_data', {})
         bdata['slot'] = {
-            'date': date_str,
-            'time': f"{selected_time.hour}:{selected_time.minute:02d}:00", # Stringify
+            'utc_iso': utc_iso,
             'closer_id': chosen_closer_id
         }
         session['booking_data'] = bdata
-    
+        _flush_session_data(user_id) # Won't flush if user_id None, just saves to session
+        
+        return redirect(url_for('booking.next_step'))
+        
     return redirect(url_for('booking.next_step'))
 
 @bp.route('/booking/survey', methods=['GET', 'POST'])
