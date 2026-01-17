@@ -10,31 +10,56 @@ def send_calendar_webhook(appointment, action):
         appointment: The Appointment model instance.
         action: String describing the action ('created', 'rescheduled', 'canceled', 'status_changed').
     """
-    webhook_url = os.environ.get('CALENDAR_WEBHOOK_URL')
+    # Dynamic Integration
+    from app.models import Integration
+    integration = Integration.query.filter_by(key='calendar').first()
+    webhook_url = None
     
+    if integration:
+        if integration.active_env == 'prod':
+            webhook_url = integration.url_prod
+        else:
+            webhook_url = integration.url_dev
+            
+    # Fallback to Config (optional, or just Env for backward compat if desired, but let's stick to Integration primarily)
     if not webhook_url:
-        print(f"[{action}] Webhook URL not configured. Skipping sync for Appt ID {appointment.id}")
+        webhook_url = os.environ.get('CALENDAR_WEBHOOK_URL')
+
+    if not webhook_url:
+        print(f"[{action}] Calendar Webhook URL not configured. Skipping sync for Appt ID {appointment.id}")
         return
 
+    # Payload Enrichment
+    lead = appointment.lead
+    closer = appointment.closer
+    lead_profile = lead.lead_profile
+    
     payload = {
         'action': action,
         'appointment_id': appointment.id,
-        'lead_name': appointment.lead.username,
-        'lead_email': appointment.lead.email,
-        'closer_name': appointment.closer.username,
-        'closer_email': appointment.closer.email,
+        # User Data
+        'lead_name': lead.username,
+        'lead_email': lead.email,
+        'lead_phone': lead_profile.phone if lead_profile else '',
+        'lead_instagram': lead_profile.instagram if lead_profile else '',
+        'lead_role': lead.role,
+        # Closer Data
+        'closer_name': closer.username,
+        'closer_email': closer.email,
+        # Appointment Details
         'start_time': appointment.start_time.isoformat(),
         'status': appointment.status,
+        # Context
         'event_name': appointment.event.name if appointment.event else 'General',
-        # Add any other relevant fields
+        'utm_source': lead_profile.utm_source if lead_profile else 'direct'
     }
 
     try:
         response = requests.post(webhook_url, json=payload, timeout=5)
         response.raise_for_status()
-        print(f"Webhook sent successfully for Appt {appointment.id} [{action}]")
+        print(f"Calendar Webhook sent successfully for Appt {appointment.id} [{action}]")
     except Exception as e:
-        print(f"Failed to send webhook for Appt {appointment.id}: {e}")
+        print(f"Failed to send calendar webhook for Appt {appointment.id}: {e}")
 
 def send_sales_webhook(payment, closer_name):
     """
@@ -56,7 +81,7 @@ def send_sales_webhook(payment, closer_name):
             
     # Fallback to Config if DB entry not found or empty (though we create it on admin view)
     if not webhook_url:
-         webhook_url = current_app.config.get('VENTAS_WEBHOOK')
+        webhook_url = current_app.config.get('VENTAS_WEBHOOK')
 
     if not webhook_url:
         print("Sales Webhook URL not configured (DB or Config).", flush=True)

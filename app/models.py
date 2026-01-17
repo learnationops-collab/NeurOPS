@@ -73,7 +73,14 @@ class User(UserMixin, db.Model):
         return total_debt
 
     def update_status_based_on_debt(self):
-        """Updates the user's lead profile status based on current debt and enrollments."""
+        """
+        Updates the user's lead profile status based on current debt, enrollments, and appointments.
+        Priority:
+        1. Pending (Debts) - Active enrollments with debt.
+        2. Completed - Active enrollments with NO debt.
+        3. Scheduled - No enrollments/payments, but has future appointments.
+        4. New - No payments, no enrollments, no future appointments. (Or if canceled appt and nothing else)
+        """
         if not self.lead_profile:
             # Create profile if missing
             profile = LeadProfile(user_id=self.id)
@@ -83,21 +90,50 @@ class User(UserMixin, db.Model):
         has_enrollments = self.enrollments.count() > 0
         debt = self.current_active_debt
         
+        # Check for ANY payments (to distinguish 'new' from others)
+        # Efficiently check if any completed payment exists
+        # self.enrollments is dynamic, so we can iterate or join
+        has_payments = False
+        for enr in self.enrollments:
+            if enr.payments.filter_by(status='completed').count() > 0:
+                has_payments = True
+                break
+        
+        # Check for Future Appointments (Agendado)
+        # Explicit import to avoid circular dependency if placed at top, usually safe inside method or use string
+        # 'Appointment' is defined in this file (models.py), so it's safe.
+        now = datetime.now()
+        has_future_appointment = self.appointments_as_lead.filter(
+            Appointment.start_time > now, 
+            Appointment.status == 'scheduled'
+        ).count() > 0
+
         new_status = self.lead_profile.status
         
-        if not has_enrollments:
-            # No enrollments -> New
-            new_status = 'new'
-        elif debt > 0:
-            # Has debt -> Pending
+        # Logic Hierarchy
+        if debt > 0:
+            # Priority 1: Has debt -> Pending (Pendiente)
             new_status = 'pending'
-        elif debt <= 0 and has_enrollments:
-            # No debt but has enrollments -> Completed
+        elif has_enrollments and debt <= 0:
+             # Priority 2: Has enrollments but NO debt -> Completed (Completo)
             new_status = 'completed'
-            
+        elif has_future_appointment:
+            # Priority 3: No enrollments/debt but has future appointment -> Scheduled (Agendado)
+            new_status = 'agenda'
+        elif not has_payments:
+             # Priority 4: No payments, no enrollments, no future appt -> New (Nuevo)
+             # What if they have past appointments but canceled? -> Nuevo
+             new_status = 'new'
+        else:
+            # Fallback (Has payments but no active enrollment? Dropped?)
+            # Keep as is or default? Let's leave as is if none match, or 'new'.
+            pass
+
         if new_status != self.lead_profile.status:
             self.lead_profile.status = new_status
             db.session.add(self.lead_profile)
+            # DB Commit should be handled by caller usually, but method name implies action.
+            # Original method had commit. Let's keep it to ensure it saves.
             db.session.commit()
 
 

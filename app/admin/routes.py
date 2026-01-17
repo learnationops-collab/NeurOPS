@@ -2232,39 +2232,52 @@ def delete_enrollment(id):
 @bp.route('/integrations', methods=['GET', 'POST'])
 @admin_required
 def integrations():
-    # Only handling 'sales' integration for now as requested
-    integration = Integration.query.filter_by(key='sales').first()
+    # Define available integration keys and default names
+    integration_config = {
+        'sales': 'Ventas',
+        'calendar': 'Agendamiento'
+    }
+
+    # Auto-create missing integrations
+    for key, name in integration_config.items():
+        exists = Integration.query.filter_by(key=key).first()
+        if not exists:
+            new_int = Integration(
+                key=key,
+                name=name,
+                url_dev='',
+                url_prod='',
+                active_env='dev'
+            )
+            db.session.add(new_int)
+    db.session.commit()
     
-    # Init if missing (auto-creation logic)
-    if not integration:
-        integration = Integration(
-            key='sales',
-            name='Ventas',
-            url_dev='',
-            url_prod='',
-            active_env='dev'
-        )
-        db.session.add(integration)
-        db.session.commit()
+    # Fetch all
+    integrations_list = Integration.query.all()
+    # To Dict for easy access if needed, or just pass list
     
     if request.method == 'POST':
-        integration.url_dev = request.form.get('url_dev')
-        integration.url_prod = request.form.get('url_prod')
+        # Identify which integration is being updated
+        # We assume form fields are prefixed or we loop
+        # Simple approach: Form submits ONE integration update at a time via hidden field 'key'
+        key = request.form.get('key')
+        integration = Integration.query.filter_by(key=key).first()
         
-        # Checkbox handling
-        # User wants a button to switch? Or radio?
-        # User requested: "dos espacios para poner el link webhook de desarrollo y de test y un boton para cambiar de uno a otro"
-        # Let's interpret "Activo" as radio or toggle.
-        
-        active_env = request.form.get('active_env') # 'dev' or 'prod'
-        if active_env in ['dev', 'prod']:
-            integration.active_env = active_env
+        if integration:
+            integration.url_dev = request.form.get('url_dev')
+            integration.url_prod = request.form.get('url_prod')
             
-        db.session.commit()
-        flash('Integraciones actualizadas.')
+            # Active Env Radio
+            active_env = request.form.get('active_env')
+            if active_env in ['dev', 'prod']:
+                integration.active_env = active_env
+                
+            db.session.commit()
+            flash(f'Integración {integration.name} actualizada.')
+        
         return redirect(url_for('admin.integrations'))
         
-    return render_template('admin/integrations.html', integration=integration)
+    return render_template('admin/integrations.html', integrations=integrations_list)
 
 @bp.route('/database')
 @admin_required

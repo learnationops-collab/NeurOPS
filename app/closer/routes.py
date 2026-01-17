@@ -498,6 +498,10 @@ def create_appointment():
         db.session.add(appt)
         db.session.commit()
         
+        # Auto-update status
+        if appt.lead:
+            appt.lead.update_status_based_on_debt()
+        
         # Webhook
         send_calendar_webhook(appt, 'created')
         
@@ -534,6 +538,10 @@ def edit_appointment(id):
             
         db.session.commit()
         
+        # Auto-update status
+        if appt.lead:
+            appt.lead.update_status_based_on_debt()
+        
         # Webhook
         send_calendar_webhook(appt, 'rescheduled')
         
@@ -559,6 +567,10 @@ def update_appt_status(id, status):
         
     appt.status = status
     db.session.commit()
+    
+    # Auto-update status based on new appointment state
+    if appt.lead:
+        appt.lead.update_status_based_on_debt()
     
     msg_map = {
         'completed': 'Cita marcada como Realizada.',

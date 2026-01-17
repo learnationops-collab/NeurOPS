@@ -78,7 +78,7 @@
                     <div class="flex items-center gap-2">
                         <code class="text-xs bg-gray-100 px-2 py-1.5 rounded flex-1 truncate select-all text-gray-500"
                             id="link-{{ event.id }}">
-                            {{ url_for('booking.start_booking', utm_source=event.utm_source, _external=True) }}
+                            {{ url_for('booking.start_booking', utm_source=event.utm_source, ref=current_user.id, _external=True) }}
                         </code>
                         <button onclick="copyToClipboard('link-{{ event.id }}')"
                             class="text-xs font-bold text-indigo-600 hover:text-indigo-800 uppercase px-2">

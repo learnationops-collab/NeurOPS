@@ -24,6 +24,27 @@ def start_booking():
         
     session['booking_utm'] = utm_source
     
+    # Check for referral (Closer Preference)
+    # 1. Explicit 'ref' arg (e.g. ?utm_source=vsl&ref=123)
+    ref_id = request.args.get('ref')
+    if ref_id:
+        try:
+            session['preferred_closer_id'] = int(ref_id)
+        except ValueError:
+            pass
+            
+    # 2. 'referral_' in utm_source
+    elif utm_source and utm_source.startswith('referral_'):
+        try:
+            closer_id = int(utm_source.split('_')[1])
+            session['preferred_closer_id'] = closer_id
+        except (IndexError, ValueError):
+            session.pop('preferred_closer_id', None)
+    
+    # If neither, clear it (unless we want to persist? No, typically one-shot)
+    if not ref_id and not (utm_source and utm_source.startswith('referral_')):
+         session.pop('preferred_closer_id', None)
+    
     # Init booking data container
     session['booking_data'] = {
         'answers': [],  # list of {question_id, answer}
@@ -100,20 +121,17 @@ def contact_view():
         
         if not user:
             temp_pass = str(uuid.uuid4())
-            base_username = email
-            if len(base_username) > 64:
-                base_username = base_username[:64]
+            base_username = name or email.split('@')[0] or "Lead"
+            if len(base_username) > 60:
+                base_username = base_username[:60]
             
             username = base_username
             # Ensure uniqueness
             while User.query.filter_by(username=username).first():
                 import random
                 suffix = f"_{random.randint(1000, 9999)}"
-                # Ensure suffix fits
-                if len(base_username) + len(suffix) > 64:
-                    username = base_username[:64-len(suffix)] + suffix
-                else:
-                    username = base_username + suffix
+                # Ensure suffix fits (already trimmed base to 60, suffix is 5 chars max usually)
+                username = f"{base_username}{suffix}"[:64]
             
             user = User(username=username, email=email, role='lead')
             user.set_password(temp_pass)
@@ -175,12 +193,10 @@ def _flush_session_data(user_id):
             # Trigger Webhook
             send_calendar_webhook(appt, 'created')
             
-            # Update User Status to 'agenda' (but keep role as 'lead')
+            # Update User Status automatically
             user = User.query.get(user_id)
-            if user and user.lead_profile:
-                user.lead_profile.status = 'agenda'
-                db.session.add(user.lead_profile)
-                db.session.commit()
+            if user:
+                user.update_status_based_on_debt()
             
             # Clear slot from session
             bdata['slot'] = None
@@ -258,12 +274,26 @@ def select_slot():
     # Find closer
     candidates = Availability.query.filter_by(date=selected_date, start_time=selected_time).all()
     chosen_closer_id = None
-    for cand in candidates:
-        appt_time = datetime.combine(selected_date, selected_time)
-        conflict = Appointment.query.filter_by(closer_id=cand.closer_id, start_time=appt_time).filter(Appointment.status != 'canceled').first()
-        if not conflict:
-            chosen_closer_id = cand.closer_id
-            break
+    
+    # 1. Try Preferred Closer
+    preferred_id = session.get('preferred_closer_id')
+    if preferred_id:
+        for cand in candidates:
+            if cand.closer_id == preferred_id:
+                appt_time = datetime.combine(selected_date, selected_time)
+                conflict = Appointment.query.filter_by(closer_id=cand.closer_id, start_time=appt_time).filter(Appointment.status != 'canceled').first()
+                if not conflict:
+                    chosen_closer_id = cand.closer_id
+                    break
+    
+    # 2. Fallback to Any Available
+    if not chosen_closer_id:
+        for cand in candidates:
+            appt_time = datetime.combine(selected_date, selected_time)
+            conflict = Appointment.query.filter_by(closer_id=cand.closer_id, start_time=appt_time).filter(Appointment.status != 'canceled').first()
+            if not conflict:
+                chosen_closer_id = cand.closer_id
+                break
             
     if not chosen_closer_id:
         flash('Lo sentimos, este horario acaba de ser ocupado.')
@@ -286,20 +316,10 @@ def select_slot():
         db.session.commit()
         session['current_appt_id'] = appt.id
         
-        # Update User Status to 'agenda'
+        # Update User Status automatically
         user = User.query.get(user_id)
         if user:
-            print(f"DEBUG: User found {user.username}. Profile: {user.lead_profile}")
-            if user.lead_profile:
-                print(f"DEBUG: Updating status from {user.lead_profile.status} to agenda")
-                user.lead_profile.status = 'agenda'
-                db.session.add(user.lead_profile)
-                db.session.commit()
-                print("DEBUG: Status committed")
-            else:
-                 print("DEBUG: No lead_profile found")
-        else:
-             print("DEBUG: User not found in DB")
+            user.update_status_based_on_debt()
             
         send_calendar_webhook(appt, 'created')
     else:
