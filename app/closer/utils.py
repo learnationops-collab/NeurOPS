@@ -47,7 +47,10 @@ def send_calendar_webhook(appointment, action):
         'closer_name': closer.username,
         'closer_email': closer.email,
         # Appointment Details
-        'start_time': appointment.start_time.isoformat(),
+        # Force -04:00 (Bolivia/Local) Timezone for GCal 
+        # (Since app uses naive dates assumed to be local)
+        'start_time': f"{appointment.start_time.isoformat()}-04:00",
+        'time_zone': 'America/La_Paz', # Helpful context for GCal
         'status': appointment.status,
         # Context
         'event_name': appointment.event.name if appointment.event else 'General',
