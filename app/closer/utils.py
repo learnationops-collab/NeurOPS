@@ -93,7 +93,9 @@ def send_sales_webhook(payment, closer_name):
         'programa': payment.enrollment.program.name,
         'metodo_pago': payment.method.name if payment.method else 'Desconocido',
         'fecha': payment.date.isoformat(),
-        'transaction_id': payment.transaction_id or ''
+        'transaction_id': payment.transaction_id or '',
+        'comision': round(commission, 2),
+        'valor_programa': payment.enrollment.total_agreed
     }
     
     # Debug log
