@@ -2,13 +2,14 @@ import requests
 import os
 from flask import current_app
 
-def send_calendar_webhook(appointment, action):
+def send_calendar_webhook(appointment, action, old_start_time=None):
     """
     Sends appointment data to an external webhook for Google Calendar sync.
     
     Args:
         appointment: The Appointment model instance.
         action: String describing the action ('created', 'rescheduled', 'canceled', 'status_changed').
+        old_start_time: (Optional) Datetime of the appointment BEFORE the change (for finding event to update).
     """
     # Dynamic Integration
     from app.models import Integration
@@ -21,7 +22,7 @@ def send_calendar_webhook(appointment, action):
         else:
             webhook_url = integration.url_dev
             
-    # Fallback to Config (optional, or just Env for backward compat if desired, but let's stick to Integration primarily)
+    # Fallback to Config
     if not webhook_url:
         webhook_url = os.environ.get('CALENDAR_WEBHOOK_URL')
 
@@ -47,14 +48,16 @@ def send_calendar_webhook(appointment, action):
         'closer_name': closer.username,
         'closer_email': closer.email,
         # Appointment Details
-        # Force -04:00 (Bolivia/Local) Timezone for GCal 
-        # (Since app uses naive dates assumed to be local)
-        'start_time': f"{appointment.start_time.isoformat()}-04:00",
-        'time_zone': 'America/La_Paz', # Helpful context for GCal
+        # Force -04:00 (Bolivia/Local) Timezone for GCal (since app uses naive dates assumed to be local/UTC normalized)
+        # Note: appointment.start_time is UTC.
+        'start_time': f"{appointment.start_time.isoformat()}Z",
+        'time_zone': 'America/La_Paz', # Helpful context
         'status': appointment.status,
         # Context
         'event_name': appointment.event.name if appointment.event else 'General',
-        'utm_source': lead_profile.utm_source if lead_profile else 'direct'
+        'utm_source': lead_profile.utm_source if lead_profile else 'direct',
+        # Changes
+        'old_start_time': f"{old_start_time.isoformat()}Z" if old_start_time else None
     }
 
     try:

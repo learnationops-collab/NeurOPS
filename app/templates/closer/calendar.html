@@ -268,10 +268,11 @@
         });
 
         if (slots.length === 0) {
-            alert('No hay bloques seleccionados para guardar. (Debug: Array vacío)');
-            btn.innerText = 'Guardar Cambios';
-            btn.disabled = false;
-            return;
+            if (!confirm('¿Estás seguro que deseas borrar toda tu disponibilidad para esta semana?')) {
+                btn.innerText = 'Guardar Cambios';
+                btn.disabled = false;
+                return;
+            }
         }
 
         // Current week Start date for backend to know what range to wipe

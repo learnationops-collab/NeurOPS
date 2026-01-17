@@ -529,6 +529,10 @@ def edit_appointment(id):
         
     if form.validate_on_submit():
         start_dt = datetime.combine(form.date.data, form.time.data)
+        
+        # Capture old time for webhook if rescheduling
+        old_start_time = appt.start_time if appt.start_time != start_dt else None
+        
         appt.lead_id = form.lead_id.data
         appt.start_time = start_dt
         # If it was canceled, maybe reset to scheduled? 
@@ -543,7 +547,7 @@ def edit_appointment(id):
             appt.lead.update_status_based_on_debt()
         
         # Webhook
-        send_calendar_webhook(appt, 'rescheduled')
+        send_calendar_webhook(appt, 'rescheduled', old_start_time=old_start_time)
         
         flash('Cita reagendada.')
         return redirect(url_for('closer.dashboard'))
