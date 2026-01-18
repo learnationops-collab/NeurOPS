@@ -317,11 +317,7 @@ def daily_report():
     kpi_scheduled = len(appointments_today)
     kpi_completed = sum(1 for a in appointments_today if a.status == 'completed')
     kpi_no_show = sum(1 for a in appointments_today if a.status == 'no_show')
-    kpi_canceled = sum(1 for a in appointments_today if a.status == 'canceled')
-
-    # Debug Flash
-    flash(f"Debug: Buscando citas entre {start_utc} y {end_utc} (UTC). Encontradas: {len(appointments_today)}")
-
+    
     # 2. Sales & Cash
     # Filter payments made today on enrollments owned by this closer
     # Need to be careful: Enrollment closer_id vs Payment Date

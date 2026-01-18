@@ -110,7 +110,8 @@
                     </span>
                 </h4>
                 {% if next_calls %}
-                <div class="divide-y divide-gray-100">
+                {% if next_calls %}
+                <ul class="divide-y divide-gray-100">
                     {% for call in next_calls %}
                     {% set tz = pytz.timezone(current_user.timezone or 'America/La_Paz') %}
                     {% set local_time = call.start_time.replace(tzinfo=pytz.utc).astimezone(tz) %}
@@ -170,60 +171,59 @@
                             </a>
                         </div>
                     </li>
-                </div>
+                    {% endfor %}
+                </ul>
             </div>
-            {% endfor %}
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                No hay llamadas pendientes por ahora.
+            </div>
+            {% endif %}
         </div>
-        {% else %}
-        <div class="text-center py-8 text-gray-500">
-            No hay llamadas pendientes por ahora.
+
+        <!-- Top 5 Debtors -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h4 class="font-bold text-gray-800">Top 5 Clientes Deudores</h4>
+            </div>
+
+            {% if top_debtors %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="text-gray-500 font-medium border-b border-gray-100">
+                        <tr>
+                            <th class="pb-3">Cliente</th>
+                            <th class="pb-3">Programa</th>
+                            <th class="pb-3 text-right">Deuda</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        {% for d in top_debtors %}
+                        <tr class="group hover:bg-gray-50 transition">
+                            <td class="py-3 font-medium text-gray-800">
+                                {{ d.student.username }}
+                                <span class="block text-xs text-gray-400 font-normal">{{ d.student.email }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <a href="{{ url_for('booking.start_booking', utm_source='referral_' ~ current_user.id, _external=True) }}"
+                                    target="_blank" class="text-indigo-600 hover:text-indigo-900">
+                                    Link de Agendamiento
+                                </a>
+                            </td>
+                            <td class="py-3 text-right font-mono font-bold text-red-500">
+                                ${{ "{:,.2f}".format(d.debt) }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500 text-sm">
+                No hay clientes con deuda pendiente.
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
-</div>
-
-<!-- Top 5 Debtors -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-    <div class="flex justify-between items-center mb-4">
-        <h4 class="font-bold text-gray-800">Top 5 Clientes Deudores</h4>
-    </div>
-
-    {% if top_debtors %}
-    <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
-            <thead class="text-gray-500 font-medium border-b border-gray-100">
-                <tr>
-                    <th class="pb-3">Cliente</th>
-                    <th class="pb-3">Programa</th>
-                    <th class="pb-3 text-right">Deuda</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-50">
-                {% for d in top_debtors %}
-                <tr class="group hover:bg-gray-50 transition">
-                    <td class="py-3 font-medium text-gray-800">
-                        {{ d.student.username }}
-                        <span class="block text-xs text-gray-400 font-normal">{{ d.student.email }}</span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <a href="{{ url_for('booking.start_booking', utm_source='referral_' ~ current_user.id, _external=True) }}"
-                            target="_blank" class="text-indigo-600 hover:text-indigo-900">
-                            Link de Agendamiento
-                        </a>
-                    </td>
-                    <td class="py-3 text-right font-mono font-bold text-red-500">
-                        ${{ "{:,.2f}".format(d.debt) }}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="text-center py-8 text-gray-500 text-sm">
-        No hay clientes con deuda pendiente.
-    </div>
-    {% endif %}
-</div>
 </div>
 
 </main>
