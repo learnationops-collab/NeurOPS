@@ -53,15 +53,15 @@ def closer_stats():
     
     for r in stats_records:
         # Approximate mapping from new model to old structure where possible
-        total_stats['calls_scheduled'] += r.calls_scheduled
-        total_stats['calls_completed'] += r.calls_completed
-        total_stats['calls_noshow'] += r.calls_no_show
-        total_stats['calls_canceled'] += r.calls_canceled
+        total_stats['calls_scheduled'] += (r.calls_scheduled or 0)
+        total_stats['calls_completed'] += (r.calls_completed or 0)
+        total_stats['calls_noshow'] += (r.calls_no_show or 0)
+        total_stats['calls_canceled'] += (r.calls_canceled or 0)
         
-        total_stats['sales_count'] += r.sales_count
-        total_stats['sales_amount'] += r.sales_amount
-        total_stats['cash_collected'] += r.cash_collected
-        total_stats['self_generated'] += r.self_generated_bookings
+        total_stats['sales_count'] += (r.sales_count or 0)
+        total_stats['sales_amount'] += (r.sales_amount or 0)
+        total_stats['cash_collected'] += (r.cash_collected or 0)
+        total_stats['self_generated'] += (r.self_generated_bookings or 0)
 
     # Define rates based on new simplified model
     def safe_div(n, d): return (n / d * 100) if d > 0 else 0
@@ -1477,9 +1477,9 @@ def stats_closer():
     stats = query.all()
     
     # Totals (Aggregations)
-    total_sales = sum(s.sales_count for s in stats)
-    total_cash = sum(s.cash_collected for s in stats)
-    total_calls = sum(s.calls_completed for s in stats)
+    total_sales = sum((s.sales_count or 0) for s in stats)
+    total_cash = sum((s.cash_collected or 0) for s in stats)
+    total_calls = sum((s.calls_completed or 0) for s in stats)
     
     closing_rate = (total_sales / total_calls * 100) if total_calls > 0 else 0
     
