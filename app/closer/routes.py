@@ -317,6 +317,7 @@ def daily_report():
     kpi_scheduled = len(appointments_today)
     kpi_completed = sum(1 for a in appointments_today if a.status == 'completed')
     kpi_no_show = sum(1 for a in appointments_today if a.status == 'no_show')
+    kpi_canceled = sum(1 for a in appointments_today if a.status == 'canceled')
     
     # 2. Sales & Cash
     # Filter payments made today on enrollments owned by this closer
