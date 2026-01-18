@@ -531,14 +531,23 @@ def create_appointment():
         form.lead_id.data = lead_id
 
     if form.validate_on_submit():
-        # TODO: Validate closer availability? 
+        # Validate closer availability? 
         # For manual override, we assume the closer knows what they are doing.
-        start_dt = datetime.combine(form.date.data, form.time.data)
+        
+        # Timezone Handling: Input is Local, DB is UTC
+        tz_name = current_user.timezone or 'America/La_Paz'
+        try:
+            user_tz = pytz.timezone(tz_name)
+        except:
+            user_tz = pytz.timezone('America/La_Paz')
+            
+        local_dt = user_tz.localize(datetime.combine(form.date.data, form.time.data))
+        start_utc = local_dt.astimezone(pytz.UTC).replace(tzinfo=None)
         
         appt = Appointment(
             closer_id=current_user.id,
             lead_id=form.lead_id.data,
-            start_time=start_dt,
+            start_time=start_utc,
             status='scheduled' # Created manually => confirmed
         )
         db.session.add(appt)
@@ -574,13 +583,21 @@ def edit_appointment(id):
         form.time.data = appt.start_time.time()
         
     if form.validate_on_submit():
-        start_dt = datetime.combine(form.date.data, form.time.data)
+        # Timezone Handling: Input is Local, DB is UTC
+        tz_name = current_user.timezone or 'America/La_Paz'
+        try:
+            user_tz = pytz.timezone(tz_name)
+        except:
+            user_tz = pytz.timezone('America/La_Paz')
+            
+        local_dt = user_tz.localize(datetime.combine(form.date.data, form.time.data))
+        start_utc = local_dt.astimezone(pytz.UTC).replace(tzinfo=None)
         
         # Capture old time for webhook if rescheduling
-        old_start_time = appt.start_time if appt.start_time != start_dt else None
+        old_start_time = appt.start_time if appt.start_time != start_utc else None
         
         appt.lead_id = form.lead_id.data
-        appt.start_time = start_dt
+        appt.start_time = start_utc
         # If it was canceled, maybe reset to scheduled? 
         # User implies rescheduling.
         if appt.status == 'canceled':
