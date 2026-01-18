@@ -1444,6 +1444,8 @@ def create_program():
         except Exception:
             db.session.rollback()
             flash('Error: El nombre del programa ya existe.')
+
+    return render_template('admin/program_form.html', form=form, title="Nuevo Programa")
             
 @bp.route('/stats/closer')
 @admin_required
