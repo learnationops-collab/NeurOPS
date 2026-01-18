@@ -79,15 +79,17 @@
                     <tr class="hover:bg-gray-50">
                         <td class="px-4 py-3 font-medium">{{ stat.date.strftime('%Y-%m-%d') }}</td>
                         <td class="px-4 py-3">{{ stat.closer.username }}</td>
-                        <td class="px-4 py-3 text-center bg-blue-50/50">{{ stat.calls_scheduled }}</td>
-                        <td class="px-4 py-3 text-center bg-blue-50/50 font-bold">{{ stat.calls_completed }}</td>
-                        <td class="px-4 py-3 text-center bg-red-50/50 text-red-600">{{ stat.calls_no_show }}</td>
-                        <td class="px-4 py-3 text-center bg-gray-50/50 text-gray-500">{{ stat.calls_canceled }}</td>
-                        <td class="px-4 py-3 text-center bg-green-50/50 font-bold text-green-700">{{ stat.sales_count }}
+                        <td class="px-4 py-3 text-center bg-blue-50/50">{{ stat.calls_scheduled or 0 }}</td>
+                        <td class="px-4 py-3 text-center bg-blue-50/50 font-bold">{{ stat.calls_completed or 0 }}</td>
+                        <td class="px-4 py-3 text-center bg-red-50/50 text-red-600">{{ stat.calls_no_show or 0 }}</td>
+                        <td class="px-4 py-3 text-center bg-gray-50/50 text-gray-500">{{ stat.calls_canceled or 0 }}
+                        </td>
+                        <td class="px-4 py-3 text-center bg-green-50/50 font-bold text-green-700">{{ stat.sales_count or
+                            0 }}
                         </td>
                         <td class="px-4 py-3 text-center bg-green-50/50 text-green-700">${{
-                            "{:,.0f}".format(stat.sales_amount) }}</td>
-                        <td class="px-4 py-3 text-center">{{ stat.self_generated_bookings }}</td>
+                            "{:,.0f}".format(stat.sales_amount or 0) }}</td>
+                        <td class="px-4 py-3 text-center">{{ stat.self_generated_bookings or 0 }}</td>
                     </tr>
                     {% else %}
                     <tr>
