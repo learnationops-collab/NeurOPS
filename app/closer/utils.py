@@ -1,73 +1,123 @@
-import requests
-import os
-from flask import current_app
+from app.google_auth.utils import get_calendar_service
+from app import db
+from datetime import timedelta
 
 def send_calendar_webhook(appointment, action, old_start_time=None):
     """
-    Sends appointment data to an external webhook for Google Calendar sync.
+    Syncs appointment with Google Calendar (Closer's Account).
+    Replaces old n8n webhook.
     
     Args:
-        appointment: The Appointment model instance.
-        action: String describing the action ('created', 'rescheduled', 'canceled', 'status_changed').
-        old_start_time: (Optional) Datetime of the appointment BEFORE the change (for finding event to update).
+        appointment: Appointment model instance
+        action: 'created', 'rescheduled', 'canceled', 'status_changed'
+        old_start_time: Not used for direct API update usually, but kept for signature compatibility
     """
-    # Dynamic Integration
-    from app.models import Integration
-    integration = Integration.query.filter_by(key='calendar').first()
-    webhook_url = None
+    service = get_calendar_service(appointment.closer_id)
+    print(f"DEBUG: Starting GCal Sync for Appt {appointment.id} (Closer {appointment.closer_id})", flush=True)
     
-    if integration:
-        if integration.active_env == 'prod':
-            webhook_url = integration.url_prod
-        else:
-            webhook_url = integration.url_dev
-            
-    # Fallback to Config
-    if not webhook_url:
-        webhook_url = os.environ.get('CALENDAR_WEBHOOK_URL')
-
-    if not webhook_url:
-        print(f"[{action}] Calendar Webhook URL not configured. Skipping sync for Appt ID {appointment.id}")
+    if not service:
+        print(f"Skipping Calendar Sync: No Google Token for Closer {appointment.closer_id}", flush=True)
         return
 
-    # Payload Enrichment
-    lead = appointment.lead
-    closer = appointment.closer
-    lead_profile = lead.lead_profile
-    
-    payload = {
-        'action': action,
-        'appointment_id': appointment.id,
-        # User Data
-        'lead_name': lead.username,
-        'lead_email': lead.email,
-        'lead_phone': lead_profile.phone if lead_profile else '',
-        'lead_instagram': lead_profile.instagram if lead_profile else '',
-        'lead_role': lead.role,
-        # Closer Data
-        'closer_name': closer.username,
-        'closer_email': closer.email,
-        # Appointment Details
-        # Force -04:00 (Bolivia/Local) Timezone for GCal (since app uses naive dates assumed to be local/UTC normalized)
-        # Note: appointment.start_time is UTC.
-        'start_time': f"{appointment.start_time.isoformat()}Z",
-        'time_zone': 'America/La_Paz', # Helpful context
-        'status': appointment.status,
-        # Context
-        'event_name': appointment.event.name if appointment.event else 'General',
-        'utm_source': lead_profile.utm_source if lead_profile else 'direct',
-        # Changes
-        'old_start_time': f"{old_start_time.isoformat()}Z" if old_start_time else None,
-        # Helper for Event Title
-        'summary': f"{lead.username} y {closer.username}"
-    }
+    # Helper to format time as UTC ISO for Google
+    def to_iso(dt):
+        return dt.isoformat() + 'Z'
 
     try:
-        response = requests.post(webhook_url, json=payload, timeout=5)
-        response.raise_for_status()
-        print(f"Calendar Webhook sent successfully for Appt {appointment.id} [{action}]")
+        # Determine duration (Default 45 mins per previous guide, or use Event settings if available)
+        duration_minutes = 45 
+        # If we had appointment.end_time we would use it.
+        
+        start_dt = appointment.start_time
+        end_dt = start_dt + timedelta(minutes=duration_minutes)
+        
+        lead = appointment.lead
+        closer = appointment.closer
+        profile = lead.lead_profile
+        
+        summary = f"Cita: {lead.username} con {closer.username}"
+        description = (
+            f"Cliente: {lead.username}\n"
+            f"Email: {lead.email}\n"
+            f"Tel: {profile.phone if profile else 'N/A'}\n"
+            f"Rol: {lead.role}\n"
+            f"Estado: {appointment.status}"
+        )
+        
+        print(f"DEBUG: Adding attendee {lead.email} to event", flush=True)
+
+        event_body = {
+            'summary': summary,
+            'description': description,
+            'start': {
+                'dateTime': to_iso(start_dt),
+                'timeZone': 'UTC', 
+            },
+            'end': {
+                'dateTime': to_iso(end_dt),
+                'timeZone': 'UTC',
+            },
+            'attendees': [
+                {'email': lead.email, 'responseStatus': 'needsAction'},
+                # Closer is organizer, implied attendee usually, or add explicit:
+                # {'email': closer.email, 'responseStatus': 'accepted'} 
+            ],
+            'reminders': {
+                'useDefault': False,
+                'overrides': [
+                    {'method': 'email', 'minutes': 24 * 60},
+                    {'method': 'popup', 'minutes': 30},
+                ],
+            },
+        }
+
+        # Handling Actions
+        if action == 'canceled' or appointment.status == 'canceled':
+            if appointment.google_event_id:
+                try:
+                    service.events().delete(calendarId='primary', eventId=appointment.google_event_id).execute()
+                    appointment.google_event_id = None
+                    db.session.commit()
+                    print(f"GCal Event deleted for Appt {appointment.id}")
+                except Exception as e:
+                    print(f"Error deleting GCal event: {e}")
+            return
+
+        # Create or Update
+        if appointment.google_event_id:
+            try:
+                # Try update
+                service.events().patch(
+                    calendarId='primary', 
+                    eventId=appointment.google_event_id, 
+                    body=event_body,
+                    sendUpdates='all'
+                ).execute()
+                print(f"GCal Event updated for Appt {appointment.id}")
+            except Exception as e:
+                # If 404/Gone, recreate?
+                print(f"Error updating GCal event (might be deleted), trying recreate: {e}")
+                # Fallback to create
+                new_event = service.events().insert(
+                    calendarId='primary', 
+                    body=event_body,
+                    sendUpdates='all'
+                ).execute()
+                appointment.google_event_id = new_event.get('id')
+                db.session.commit()
+        else:
+            # Create
+            new_event = service.events().insert(
+                calendarId='primary', 
+                body=event_body,
+                sendUpdates='all'
+            ).execute()
+            appointment.google_event_id = new_event.get('id')
+            db.session.commit()
+            print(f"GCal Event created for Appt {appointment.id}")
+
     except Exception as e:
-        print(f"Failed to send calendar webhook for Appt {appointment.id}: {e}")
+        print(f"Critical GCal Sync Error for Appt {appointment.id}: {e}")
 
 def send_sales_webhook(payment, closer_name):
     """

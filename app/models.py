@@ -260,6 +260,7 @@ class Appointment(db.Model):
     # Timezone Note: stored in UTC (naive datetime, but logic treats as UTC)
     start_time = db.Column(db.DateTime, index=True)
     status = db.Column(db.String(20), default='scheduled') # scheduled, completed, canceled, no_show
+    google_event_id = db.Column(db.String(255), nullable=True) # Store GCal Event ID for updates
 
 class Availability(db.Model):
     __tablename__ = 'availability'

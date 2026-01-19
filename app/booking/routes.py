@@ -234,7 +234,12 @@ def calendar_view():
     # Optimization: Filter roughly by date range first
     today = date.today()
     end_date = today + timedelta(days=14)
-    availabilities = Availability.query.filter(Availability.date >= today, Availability.date <= end_date).all()
+    # Filter by date AND ensure role is 'closer' (exclude admins)
+    availabilities = Availability.query.join(Availability.closer).filter(
+        Availability.date >= today, 
+        Availability.date <= end_date,
+        User.role == 'closer'
+    ).all()
     
     # 2. Fetch Appointments (Stored in UTC)
     # Need to filter effectively in UTC, so convert range to UTC
@@ -256,6 +261,9 @@ def calendar_view():
     
     available_slots_utc = []
     
+    unique_slots = {}
+    preferred_id = session.get('preferred_closer_id')
+
     for av in availabilities:
         closer = av.closer
         if not closer: continue
@@ -278,11 +286,25 @@ def calendar_view():
         
         # Check Booking (utc_dt)
         if (av.closer_id, utc_dt) not in booked_slots:
-            available_slots_utc.append({
-                'utc_iso': utc_dt.isoformat() + 'Z', # Explicit Z for JS
-                'closer_id': av.closer_id,
-                'ts': utc_dt.timestamp()
-            })
+            ts_key = utc_dt
+            
+            # If not present, add it
+            if ts_key not in unique_slots:
+                unique_slots[ts_key] = {
+                    'utc_iso': utc_dt.isoformat() + 'Z', # Explicit Z for JS
+                    'closer_id': av.closer_id,
+                    'ts': utc_dt.timestamp()
+                }
+            # If present, check if we should swap for preferred closer
+            elif preferred_id and av.closer_id == preferred_id:
+                 unique_slots[ts_key]['closer_id'] = av.closer_id
+            
+    available_slots_utc = list(unique_slots.values())
+    
+    # DEBUG: Print what we are sending
+    print(f"DEBUG SLOTS sending to frontend ({len(available_slots_utc)}):")
+    for s in available_slots_utc:
+        print(f"  -> {s['utc_iso']} (Closer {s['closer_id']})")
             
     # Sort by time
     available_slots_utc.sort(key=lambda x: x['ts'])

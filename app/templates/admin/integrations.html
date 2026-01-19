@@ -22,16 +22,19 @@
             <div class="mb-6 border-b border-gray-200">
                 <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                     {% for integration in integrations %}
+                    {% if integration.key != 'calendar' %}
                     <button onclick="openTab(event, 'tab-{{ integration.key }}')"
                         class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm {% if loop.first %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
                         {{ integration.name }}
                     </button>
+                    {% endif %}
                     {% endfor %}
                 </nav>
             </div>
 
             <!-- Tabs Content -->
             {% for integration in integrations %}
+            {% if integration.key != 'calendar' %}
             <div id="tab-{{ integration.key }}" class="tab-content {% if not loop.first %}hidden{% endif %}">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div class="flex items-center gap-3 mb-6">
@@ -104,6 +107,7 @@
                     </form>
                 </div>
             </div>
+            {% endif %}
             {% endfor %}
 
             <!-- Other Connections Placeholder -->
