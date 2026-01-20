@@ -19,24 +19,50 @@ def dashboard():
     s_date_val = start_date_arg if start_date_arg else data['dates']['start'].strftime('%Y-%m-%d')
     e_date_val = end_date_arg if end_date_arg else data['dates']['end'].strftime('%Y-%m-%d')
     
+    # Calculate missing KPIs for template
+    income = data['financials']['income']
+    cash = data['financials']['cash_collected']
+    commissions = income - cash
+    
+    # Placeholder Chart Data (To be implemented fully in Service later)
+    # Keeping it empty for now to unblock rendering
+    
     return render_template('admin/dashboard.html',
-                           start_date=data['dates']['start'], # Date Objects for display logic? 
+                           start_date=data['dates']['start'],
                            end_date=data['dates']['end'],
-                           period_start=s_date_val, # Strings for inputs
+                           period_start=s_date_val,
                            period_end=e_date_val,
-                           selected_period=period,
+                           current_period=period,
+                           start_date_filter=s_date_val,
+                           end_date_filter=e_date_val,
+                           
                            # Financials
-                           income_month=data['financials']['income'],
-                           cash_collected_month=data['financials']['cash_collected'],
-                           net_profit=data['financials']['net_profit'],
+                           dashboard_revenue=(cash + data['cohort']['p_debt']), # "Revenue" = Cash + Debt
+                           period_cash_from_sales=cash,
+                           period_gross_cash=income,
+                           period_commission=commissions,
                            total_expenses=data['financials']['total_expenses'],
+                           net_profit=data['financials']['net_profit'],
+                           cash_collected_month=cash, 
+                           
                            # Cohort / CRM
-                           active_leads_count=data['cohort']['active_leads'],
+                           leads_count=data['cohort']['active_leads'],
                            period_debt=data['cohort']['p_debt'],
                            top_debtors=data['cohort']['top_debtors'],
-                           # Calculated fields for display
-                           revenue=data['financials']['cash_collected'] + data['cohort']['p_debt'] # Approx Revenue
+                           closing_rate=0.0, # TODO: Calculate
+                           
+                           # Charts (Placeholders)
+                           dates_labels=[],
+                           daily_revenue_values=[],
+                           prog_labels=[],
+                           prog_values=[],
+                           status_labels=[],
+                           status_values=[],
+                           method_labels=[],
+                           method_values=[],
+                           recent_activity=[]
                            )
+
 
 @bp.route('/admin/closer-stats')
 @login_required
@@ -111,4 +137,16 @@ def appointments_list():
                            appointments=appointments,
                            start_date=start_date,
                            end_date=end_date)
+
+@bp.route('/appointments/delete/<int:id>')
+@admin_required
+def delete_appointment(id):
+    from app.models import Appointment, db
+    appt = Appointment.query.get_or_404(id)
+    db.session.delete(appt)
+    db.session.commit()
+    from flask import flash, redirect, url_for
+    flash('Cita eliminada.')
+    return redirect(url_for('admin.appointments_list'))
+
 

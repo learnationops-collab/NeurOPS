@@ -2,7 +2,7 @@ from flask import render_template, redirect, url_for, flash, request, jsonify
 from app.admin import bp
 from app.decorators import admin_required
 from app.admin.forms import SurveyQuestionForm, EventForm, ProgramForm, EventGroupForm
-from app.models import SurveyQuestion, Event, Program, EventGroup, db
+from app.models import SurveyQuestion, Event, Program, EventGroup, db, PaymentMethod, DailyReportQuestion
 from sqlalchemy import or_
 
 # --- Survey Management Routes ---
@@ -397,5 +397,149 @@ def delete_program(id):
         
     db.session.delete(program)
     db.session.commit()
+    db.session.commit()
     flash('Programa eliminado.')
     return redirect(url_for('admin.programs_list'))
+
+# --- Daily Report Config Routes ---
+
+from app.models import DailyReportQuestion
+
+@bp.route('/questions', methods=['GET', 'POST'])
+@admin_required
+def daily_report_questions():
+    if request.method == 'POST':
+        text = request.form.get('text')
+        q_type = request.form.get('question_type', 'text')
+        is_active = True if request.form.get('is_active') else False
+        
+        if text:
+            # Auto order: last + 1
+            last = DailyReportQuestion.query.order_by(DailyReportQuestion.order.desc()).first()
+            order = (last.order + 1) if last else 1
+            
+            q = DailyReportQuestion(text=text, question_type=q_type, is_active=is_active, order=order)
+            db.session.add(q)
+            db.session.commit()
+            flash('Pregunta creada.')
+            
+        return redirect(url_for('admin.daily_report_questions'))
+
+    questions = DailyReportQuestion.query.order_by(DailyReportQuestion.order).all()
+    return render_template('admin/questions_list.html', questions=questions)
+
+@bp.route('/questions/delete/<int:id>')
+@admin_required
+def delete_daily_question(id):
+    q = DailyReportQuestion.query.get_or_404(id)
+    db.session.delete(q)
+    db.session.commit()
+    flash('Pregunta eliminada.')
+    return redirect(url_for('admin.daily_report_questions'))
+
+@bp.route('/questions/toggle/<int:id>')
+@admin_required
+def toggle_daily_question(id):
+    q = DailyReportQuestion.query.get_or_404(id)
+    q.is_active = not q.is_active
+    db.session.commit()
+    status = "activada" if q.is_active else "desactivada"
+    flash(f'Pregunta {status}.')
+    return redirect(url_for('admin.daily_report_questions'))
+
+@bp.route('/questions/reorder', methods=['POST'])
+@admin_required
+def reorder_daily_questions():
+    order_data = request.json.get('order', [])
+    for idx, q_id in enumerate(order_data):
+        q = DailyReportQuestion.query.get(q_id)
+        if q:
+            q.order = idx + 1
+    db.session.commit()
+    return jsonify({'status': 'success'})
+
+@bp.route('/questions/edit/<int:id>', methods=['POST'])
+@admin_required
+def edit_daily_question(id):
+    q = DailyReportQuestion.query.get_or_404(id)
+    q.text = request.form.get('text')
+    q.question_type = request.form.get('type')
+    db.session.commit()
+    flash('Pregunta actualizada.')
+    return redirect(url_for('admin.daily_report_questions'))
+
+# --- Payment Method Management Routes ---
+
+from app.admin.forms import PaymentMethodForm
+from app.models import PaymentMethod
+
+@bp.route('/payment-methods')
+@admin_required
+def payment_methods_list():
+    methods = PaymentMethod.query.all()
+    return render_template('admin/payment_methods_list.html', methods=methods)
+
+@bp.route('/payment-methods/create', methods=['GET', 'POST'])
+@admin_required
+def create_payment_method():
+    form = PaymentMethodForm()
+    if form.validate_on_submit():
+        pm = PaymentMethod(
+            name=form.name.data,
+            commission_percent=form.commission_percent.data,
+            commission_fixed=form.commission_fixed.data,
+            is_active=form.is_active.data
+        )
+        db.session.add(pm)
+        try:
+            db.session.commit()
+            flash('Método de pago creado.')
+            return redirect(url_for('admin.payment_methods_list'))
+        except Exception:
+            db.session.rollback()
+            flash('Error al crear.')
+            
+    return render_template('admin/payment_method_form.html', form=form, title="Nuevo Método")
+
+@bp.route('/payment-methods/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_payment_method(id):
+    pm = PaymentMethod.query.get_or_404(id)
+    form = PaymentMethodForm(obj=pm)
+    
+    if form.validate_on_submit():
+        pm.name = form.name.data
+        pm.commission_percent = form.commission_percent.data
+        pm.commission_fixed = form.commission_fixed.data
+        pm.is_active = form.is_active.data
+        
+        db.session.commit()
+        flash('Método actualizado.')
+        return redirect(url_for('admin.payment_methods_list'))
+        
+    return render_template('admin/payment_method_form.html', form=form, title="Editar Método")
+
+@bp.route('/payment-methods/toggle/<int:id>')
+@admin_required
+def toggle_payment_method(id):
+    pm = PaymentMethod.query.get_or_404(id)
+    pm.is_active = not pm.is_active
+    db.session.commit()
+    status = "activado" if pm.is_active else "desactivado"
+    flash(f'Método {status}.')
+    return redirect(url_for('admin.payment_methods_list'))
+
+@bp.route('/payment-methods/delete/<int:id>')
+@admin_required
+def delete_payment_method(id):
+    pm = PaymentMethod.query.get_or_404(id)
+    if pm.payments.count() > 0:
+        flash('No se puede eliminar método con pagos asociados.')
+        return redirect(url_for('admin.payment_methods_list'))
+        
+    db.session.delete(pm)
+    db.session.commit()
+    flash('Método eliminado.')
+    return redirect(url_for('admin.payment_methods_list'))
+
+

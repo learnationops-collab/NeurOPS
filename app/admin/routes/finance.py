@@ -4,8 +4,10 @@ from app.admin import bp
 from app import db # Still needed for some direct query if service doesn't cover all edge cases, but trying to minimize
 from app.decorators import admin_required
 from app.services.financial_service import FinancialService
-from app.admin.forms import ExpenseForm, RecurringExpenseForm
-from app.models import Expense, RecurringExpense # Needed for form object population
+from app.admin.forms import ExpenseForm, RecurringExpenseForm, AdminSaleForm
+from app.models import Expense, RecurringExpense, Program, PaymentMethod, Enrollment, Payment, User, LeadProfile
+from app.closer.utils import send_sales_webhook
+from sqlalchemy import or_
 
 @bp.route('/finances', methods=['GET', 'POST'])
 @admin_required
@@ -323,3 +325,252 @@ def delete_payment(id):
         return redirect(next_url)
         
     return redirect(url_for('admin.edit_client', id=student_id))
+
+@bp.route('/sales')
+@admin_required
+def sales_list():
+    search = request.args.get('search', '')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    method_filter = request.args.get('method')
+    type_filter = request.args.get('type')
+    program_filter = request.args.get('program')
+    
+    query = Payment.query.join(
+        Enrollment, Payment.enrollment_id == Enrollment.id
+    ).join(
+        User, Enrollment.student_id == User.id
+    )
+
+    if start_date_str: query = query.filter(Payment.date >= datetime.strptime(start_date_str, '%Y-%m-%d'))
+    if end_date_str: query = query.filter(Payment.date < datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1))
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(or_(User.username.ilike(search_term), User.email.ilike(search_term)))
+    if method_filter: query = query.filter(Payment.payment_method_id == method_filter)
+    if type_filter: query = query.filter(Payment.payment_type == type_filter)
+    if program_filter: query = query.filter(Enrollment.program_id == program_filter)
+
+    query = query.order_by(Payment.date.desc())
+    
+    page = request.args.get('page', 1, type=int)
+    pagination = query.paginate(page=page, per_page=50, error_out=False)
+    payments = pagination.items
+    start_index = (page - 1) * 50
+    
+    is_load_more = request.args.get('load_more')
+    is_ajax = request.args.get('ajax')
+
+    # KPI Calculation Logic
+    stats_query = db.session.query(
+        db.func.sum(Payment.amount),
+        db.func.count(Payment.id),
+        db.func.sum((Payment.amount * (PaymentMethod.commission_percent / 100.0)) + PaymentMethod.commission_fixed)
+    ).join(Enrollment, Payment.enrollment_id == Enrollment.id).join(User, Enrollment.student_id == User.id).outerjoin(PaymentMethod, Payment.payment_method_id == PaymentMethod.id)
+
+    if start_date_str: stats_query = stats_query.filter(Payment.date >= datetime.strptime(start_date_str, '%Y-%m-%d'))
+    if end_date_str: stats_query = stats_query.filter(Payment.date < datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1))
+    if search: stats_query = stats_query.filter(or_(User.username.ilike(f"%{search}%"), User.email.ilike(f"%{search}%")))
+    if method_filter: stats_query = stats_query.filter(Payment.payment_method_id == method_filter)
+    if type_filter: stats_query = stats_query.filter(Payment.payment_type == type_filter)
+    if program_filter: stats_query = stats_query.filter(Enrollment.program_id == program_filter)
+    
+    total_gross, count, fees = stats_query.first()
+    total_gross = total_gross or 0.0
+    fees = fees or 0.0
+    count = count or 0
+    cash_collected_val = total_gross - fees
+    avg_ticket = (total_gross / count) if count > 0 else 0.0
+
+    kpis = {
+        'sales_count': count,
+        'total_revenue': "{:,.2f}".format(total_gross),
+        'cash_collected': "{:,.2f}".format(cash_collected_val),
+        'avg_ticket': "{:,.2f}".format(avg_ticket)
+    }
+
+    if is_load_more and not is_ajax:
+         return render_template('admin/partials/sales_rows.html', payments=payments, start_index=start_index)
+        
+    if is_ajax:
+         return jsonify({
+            'html': render_template('admin/partials/sales_rows.html', payments=payments, start_index=start_index),
+            'kpis': kpis,
+            'has_next': pagination.has_next,
+            'next_page': pagination.next_num
+         })
+         
+    methods = PaymentMethod.query.filter_by(is_active=True).all()
+    programs = Program.query.all()
+    closers = User.query.filter_by(role='closer').all()
+    payment_types = [
+        ('full', 'Pago Completo'),
+        ('down_payment', 'Primer Pago'),
+        ('installment', 'Cuota'),
+        ('renewal', 'Renovación')
+    ]
+    
+    return render_template('admin/sales_list.html', 
+                           payments=payments, 
+                           pagination=pagination,
+                           # Pass explicit variables for initial load as template expects them at top level too
+                           total_sales_count=count,
+                           total_revenue=total_gross,
+                           cash_collected=cash_collected_val,
+                           avg_ticket=avg_ticket,
+                           
+                           start_date=start_date_str, 
+                           end_date=end_date_str,
+                           search=search,
+                           method_id=method_filter,
+                           payment_type=type_filter,
+                           program_id=program_filter,
+                           
+                           all_methods=methods,
+                           all_programs=programs,
+                           payment_types=payment_types,
+                           closers=closers,
+                           start_index=start_index)
+
+
+@bp.route('/sale/new', methods=['GET', 'POST'])
+@admin_required
+def create_sale():
+    form = AdminSaleForm()
+    # Populate Choices
+    form.program_id.choices = [(p.id, f"{p.name} (${p.price})") for p in Program.query.filter_by(is_active=True).all()]
+    form.payment_method_id.choices = [(m.id, m.name) for m in PaymentMethod.query.filter_by(is_active=True).all()]
+    form.closer_id.choices = [(u.id, u.username) for u in User.query.filter(or_(User.role == 'closer', User.role == 'admin')).all()]
+    
+    # Handle GET initial data
+    if request.method == 'GET':
+        lead_id = request.args.get('lead_id', type=int)
+        if lead_id:
+            lead = User.query.get(lead_id)
+            if lead:
+                form.lead_id.data = lead.id
+                form.lead_search.data = f"{lead.username} ({lead.email})"
+    
+    if form.validate_on_submit():
+        lead_id = form.lead_id.data
+        program_id = form.program_id.data
+        pay_type = form.payment_type.data
+        amount = form.amount.data
+        closer_id = form.closer_id.data
+        
+        program = Program.query.get(program_id)
+        
+        # Validation
+        if pay_type == 'full' and amount < program.price:
+             flash(f'Error: El pago completo debe ser al menos ${program.price}.')
+             return render_template('sales/new_sale.html', form=form, title="Nueva Venta (Admin)")
+
+        # Enrollment Logic
+        enrollment = Enrollment.query.filter_by(student_id=lead_id, program_id=program_id, status='active').first()
+        
+        if not enrollment:
+            if pay_type in ['full', 'down_payment', 'renewal']:
+                 enrollment = Enrollment(
+                     student_id=lead_id,
+                     program_id=program_id,
+                     total_agreed=amount if pay_type == 'full' else program.price,
+                     status='active',
+                     closer_id=closer_id
+                 )
+                 db.session.add(enrollment)
+                 db.session.flush()
+            else:
+                flash('Error: No se puede cobrar cuota sin inscripción activa.')
+                return render_template('sales/new_sale.html', form=form, title="Nueva Venta (Admin)")
+        else:
+            # Update closer if changed/reassigned
+             if enrollment.closer_id != closer_id:
+                 enrollment.closer_id = closer_id
+                 db.session.add(enrollment)
+        
+        # Payment Logic
+        payment = Payment(
+            enrollment_id=enrollment.id,
+            payment_method_id=form.payment_method_id.data,
+            amount=amount,
+            payment_type=pay_type, 
+            status='completed',
+            date=datetime.now()
+        )
+        db.session.add(payment)
+        
+        # User Status Logic
+        user = User.query.get(lead_id)
+        # Promote lead to student if applicable
+        if user.role == 'lead':
+            user.role = 'student'
+            db.session.add(user)
+            
+        if not user.lead_profile:
+            profile = LeadProfile(user_id=user.id, status='new')
+            db.session.add(profile)
+        else:
+            profile = user.lead_profile
+
+        if pay_type == 'renewal':
+            if profile.status != 'completed':
+                flash('Error: Solo se puede renovar si el cliente está completado.')
+                db.session.rollback()
+                return render_template('sales/new_sale.html', form=form, title="Nueva Venta (Admin)")
+            profile.status = 'renewed'
+        elif pay_type == 'full':
+            profile.status = 'completed'
+        elif pay_type == 'down_payment':
+            profile.status = 'pending'
+        elif pay_type == 'installment':
+             db.session.flush()
+             total_paid = db.session.query(db.func.sum(Payment.amount)).filter_by(enrollment_id=enrollment.id).scalar() or 0
+             if total_paid >= program.price:
+                 profile.status = 'completed'
+             else:
+                 if profile.status != 'completed' and profile.status != 'renewed':
+                     profile.status = 'pending'
+                     
+        db.session.commit()
+        
+        # Webhook
+        closer_name = User.query.get(closer_id).username if closer_id else 'Admin'
+        send_sales_webhook(payment, closer_name)
+        
+        flash('Venta registrada exitosamente (Admin).')
+        return redirect(url_for('admin.sales_list'))
+        
+
+    return render_template('sales/new_sale.html', form=form, title="Nueva Venta (Admin)")
+
+@bp.route('/sales/bulk_assign', methods=['POST'])
+@admin_required
+def bulk_assign_sales_closer():
+    closer_id = request.form.get('closer_id')
+    payment_ids = request.form.getlist('payment_ids')
+    
+    if not closer_id:
+        flash('Debe seleccionar un closer.')
+        return redirect(url_for('admin.sales_list'))
+        
+    if not payment_ids:
+        flash('Debe seleccionar al menos una venta.')
+        return redirect(url_for('admin.sales_list'))
+        
+    closer = User.query.get(closer_id)
+    if not closer or closer.role not in ['closer', 'admin']:
+         flash('Closer inválido.')
+         return redirect(url_for('admin.sales_list'))
+         
+    count = 0
+    for pid in payment_ids:
+        payment = Payment.query.get(pid)
+        if payment and payment.enrollment:
+            if payment.enrollment.closer_id != closer.id:
+                payment.enrollment.closer_id = closer.id
+                db.session.add(payment.enrollment)
+                count += 1
+                
+    db.session.commit()
+    flash(f'{count} ventas reasignadas a {closer.username}.')
+    return redirect(url_for('admin.sales_list'))

@@ -129,11 +129,21 @@ class DashboardService(BaseService):
                         # For simplicity here:
             
             if user_debt > 0:
+                # Find program(s) with debt
+                debt_programs = []
+                for enr in user.enrollments:
+                     paid = enr.total_paid
+                     agreed = enr.total_agreed if enr.total_agreed is not None else (enr.program.price if enr.program else 0.0)
+                     if agreed > paid:
+                         p_name = enr.program.name if enr.program else "Unknown"
+                         if p_name not in debt_programs: debt_programs.append(p_name)
+                         
+                prog_display = ", ".join(debt_programs) if debt_programs else "N/A"
+
                 debtors.append({
-                    'id': user.id,
-                    'username': user.username,
+                    'student': user,
                     'debt': user_debt,
-                    'email': user.email
+                    'program': {'name': prog_display}
                 })
         
         # Sort Top Debtors

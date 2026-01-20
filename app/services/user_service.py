@@ -219,10 +219,13 @@ class UserService(BaseService):
             'total': total_users,
             'statuses': dict(status_counts),
             'programs': dict(program_counts),
+            'total_statuses': sum(x[1] for x in status_counts),
+            'total_programs': sum(x[1] for x in program_counts),
             'revenue': gross_collected, # Gross Revenue (Cash)
             'debt': total_debt,
             'commission': commissions,
             'cash_collected': cash_collected, # Net Cash
             'projected_revenue': projected_revenue,
-            'debt_breakdown': {'agreed': total_agreed, 'paid': total_paid_debt_ctx}
+            'debt_agreed': total_agreed,
+            'debt_paid': total_paid_debt_ctx
         }

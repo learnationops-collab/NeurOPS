@@ -3,7 +3,7 @@ import io
 from flask import render_template, redirect, url_for, flash, request, send_file
 from werkzeug.utils import secure_filename
 from app.admin import bp
-from app.admin.routes import admin_required
+from app.decorators import admin_required
 from app import db
 from app.models import User, LeadProfile, Program, Enrollment, Payment, PaymentMethod
 from datetime import datetime

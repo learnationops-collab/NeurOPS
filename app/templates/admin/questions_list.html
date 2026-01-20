@@ -60,7 +60,7 @@
                                     {% endif %}
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <a href="{{ url_for('admin.toggle_daily_report_question', id=q.id) }}"
+                                    <a href="{{ url_for('admin.toggle_daily_question', id=q.id) }}"
                                         title="{{ 'Desactivar' if q.is_active else 'Activar' }}" class="inline-flex items-center p-1.5 rounded-full transition-colors
                                               {% if q.is_active %} bg-green-100 text-green-600 hover:bg-green-200 
                                               {% else %} bg-gray-100 text-gray-400 hover:bg-gray-200 {% endif %}">
@@ -92,7 +92,7 @@
                                                 d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                                         </svg>
                                     </button>
-                                    <a href="{{ url_for('admin.delete_daily_report_question', id=q.id) }}"
+                                    <a href="{{ url_for('admin.delete_daily_question', id=q.id) }}"
                                         onclick="return confirm('¿Estás seguro de eliminar esta pregunta? Se perderán las respuestas asociadas.')"
                                         class="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors inline-block"
                                         title="Eliminar">
@@ -124,7 +124,7 @@
             <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
                 <div class="mt-3">
                     <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Nueva Pregunta</h3>
-                    <form action="{{ url_for('admin.create_daily_report_question') }}" method="POST">
+                    <form action="{{ url_for('admin.daily_report_questions') }}" method="POST">
                         <div class="mb-4">
                             <label class="block text-gray-700 text-sm font-bold mb-2">Pregunta</label>
                             <input type="text" name="text" required
@@ -132,7 +132,7 @@
                         </div>
                         <div class="mb-4">
                             <label class="block text-gray-700 text-sm font-bold mb-2">Tipo de Respuesta</label>
-                            <select name="type"
+                            <select name="question_type"
                                 class="shadow border rounded w-full py-2 px-3 text-gray-700 bg-white focus:outline-none focus:shadow-outline">
                                 <option value="text">Texto Libre</option>
                                 <option value="boolean">Sí / No</option>
@@ -200,7 +200,7 @@
 
         // Dynamically set action url
         const form = document.getElementById('editQuestionForm');
-        form.action = "{{ url_for('admin.edit_daily_report_question', id=0) }}".replace('0', id);
+        form.action = "{{ url_for('admin.edit_daily_question', id=0) }}".replace('0', id);
 
         document.getElementById('editQuestionModal').classList.remove('hidden');
     }
