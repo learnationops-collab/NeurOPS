@@ -2347,7 +2347,8 @@ def integrations():
     # Define available integration keys and default names
     integration_config = {
         'sales': 'Ventas',
-        'calendar': 'Agendamiento'
+        'calendar': 'Agendamiento',
+        'agenda': 'Agenda'
     }
 
     # Auto-create missing integrations

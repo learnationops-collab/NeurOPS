@@ -15,13 +15,22 @@ def send_calendar_webhook(appointment, action, old_start_time=None):
     service = get_calendar_service(appointment.closer_id)
     print(f"DEBUG: Starting GCal Sync for Appt {appointment.id} (Closer {appointment.closer_id})", flush=True)
     
-    if not service:
-        print(f"Skipping Calendar Sync: No Google Token for Closer {appointment.closer_id}", flush=True)
-        return
-
     # Helper to format time as UTC ISO for Google
     def to_iso(dt):
         return dt.isoformat() + 'Z'
+
+    # --- New Agenda Webhook Integration (Independent of GCal) ---
+    if action in ['created', 'rescheduled']:
+        try:
+            # Determine specific event type for payload
+            event_type = 'agendada' if action == 'created' else 'reagendada'
+            send_agenda_webhook(appointment, event_type)
+        except Exception as e:
+            print(f"Error sending Agenda Webhook for Appt {appointment.id}: {e}", flush=True)
+
+    if not service:
+        print(f"Skipping Calendar Sync: No Google Token for Closer {appointment.closer_id}", flush=True)
+        return
 
     try:
         # Determine duration (Default 45 mins per previous guide, or use Event settings if available)
@@ -123,6 +132,77 @@ def send_calendar_webhook(appointment, action, old_start_time=None):
 
     except Exception as e:
         print(f"Critical GCal Sync Error for Appt {appointment.id}: {e}")
+
+def send_agenda_webhook(appointment, event_type):
+    """
+    Sends appointment data to the 'Agenda' integration webhook.
+    
+    Args:
+        appointment: Appointment model instance
+        event_type: 'agendada' or 'reagendada'
+    """
+    from flask import current_app
+    from app.models import Integration
+    import requests
+
+    # 1. Fetch Configuration
+    integration = Integration.query.filter_by(key='agenda').first()
+    webhook_url = None
+    
+    if integration:
+        if integration.active_env == 'prod':
+            webhook_url = integration.url_prod
+        else:
+            webhook_url = integration.url_dev
+            
+    if not webhook_url:
+        print("Agenda Webhook URL not configured.", flush=True)
+        return
+
+    # 2. Prepare Data
+    lead = appointment.lead
+    closer = appointment.closer
+    profile = lead.lead_profile
+    
+    # helper to split name
+    parts = lead.username.split(' ')
+    first_name = parts[0] if parts else ''
+    
+    # Safe checks
+    phone = profile.phone if profile else 'N/A'
+    source = profile.utm_source if profile else 'Desconocido'
+    
+    # Timezone? 
+    # Current User model has timezone field. Lead might rely on default or profile setting if we added one.
+    # The requirement says "Zona geografica". We'll use user.timezone or default.
+    timezone = lead.timezone or 'Desconocida'
+    
+    formatted_date = appointment.start_time.strftime('%d/%m/%Y %H:%M') # UTC? usually clients want local but valid iso is safer. 
+    # Request said "DD/MM/YYYY". Let's give them that + Time? Or just Date?
+    # "Fecha de la agenda (DD/MM/YYYY)"
+    # Let's send full ISO too just in case? Or adhere strictly to requirement.
+    # Let's do DD/MM/YYYY HH:MM to be useful.
+    
+    payload = {
+        'nombre_completo': lead.username,
+        'primer_nombre': first_name,
+        'numero_telefono': phone,
+        'fuente': source,
+        'fecha_agenda': appointment.start_time.strftime('%d/%m/%Y'),
+        'hora_agenda': appointment.start_time.strftime('%H:%M'), # Adding time for utility
+        'closer': closer.username,
+        'zona_geografica': timezone,
+        'tipo_evento': event_type
+    }
+    
+    print(f"Sending Agenda Webhook Payload ({event_type}): {payload}", flush=True)
+    
+    try:
+        response = requests.post(webhook_url, json=payload, timeout=5)
+        response.raise_for_status()
+        print(f"Agenda Webhook sent successfully for Appt {appointment.id}", flush=True)
+    except Exception as e:
+        print(f"Failed to send agenda webhook: {e}", flush=True)
 
 def send_sales_webhook(payment, closer_name):
     """
