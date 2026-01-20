@@ -246,4 +246,54 @@ def edit_client(id):
         flash(res['message'])
 
     enrollments = user.enrollments.all()
-    return render_template('admin/client_edit.html', user=user, form=form, enrollments=enrollments)
+
+@bp.route('/users/bulk_delete', methods=['POST'])
+@admin_required
+def bulk_delete_users():
+    user_ids = request.form.getlist('user_ids')
+    
+    if not user_ids:
+        flash('No se seleccionaron usuarios.')
+        return redirect(url_for('admin.leads_list'))
+        
+    count = 0
+    for uid in user_ids:
+        if str(uid) == str(current_user.id):
+            continue # Don't delete yourself
+            
+        res, code = UserService.delete_user(uid, current_user.id)
+        if res['success']:
+            count += 1
+            
+    flash(f'{count} usuarios eliminados correctamente.')
+    return redirect(url_for('admin.leads_list'))
+
+@bp.route('/users/bulk_assign', methods=['POST'])
+@admin_required
+def bulk_assign_closer():
+    closer_id = request.form.get('closer_id')
+    user_ids = request.form.getlist('user_ids')
+    
+    if not closer_id or not user_ids:
+        flash('Seleccione un Closer y al menos un cliente.')
+        return redirect(url_for('admin.leads_list'))
+        
+    closer = User.query.get(closer_id)
+    if not closer or closer.role != 'closer':
+        flash('Closer inválido.')
+        return redirect(url_for('admin.leads_list'))
+        
+    count = 0
+    for uid in user_ids:
+        user = User.query.get(uid)
+        if user:
+            if not user.lead_profile:
+                profile = LeadProfile(user_id=user.id)
+                db.session.add(profile)
+            user.lead_profile.assigned_closer_id = closer.id
+            count += 1
+            
+    db.session.commit()
+    flash(f'{count} clientes asignados a {closer.username}.')
+    return redirect(url_for('admin.leads_list'))
+

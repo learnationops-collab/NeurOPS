@@ -182,3 +182,144 @@ def edit_recurring_expense(id):
         return redirect(url_for('admin.finances'))
         
     return render_template('admin/edit_recurring_expense.html', form=form, rex=rex)
+
+# --- Payment Management (Enrollments) ---
+
+from app.admin.forms import PaymentForm
+from app.models import Enrollment, Payment, PaymentMethod, User
+from app.closer.utils import send_sales_webhook
+from sqlalchemy import or_
+
+@bp.route('/payments/add/<int:enrollment_id>', methods=['GET', 'POST'])
+@admin_required
+def add_payment(enrollment_id):
+    enrollment = Enrollment.query.get_or_404(enrollment_id)
+    form = PaymentForm()
+    next_url = request.args.get('next')
+    
+    # Populate methods
+    methods = PaymentMethod.query.filter_by(is_active=True).all()
+    form.payment_method_id.choices = [(m.id, m.name) for m in methods]
+    
+    # Populate Closers
+    closers = User.query.filter(or_(User.role == 'closer', User.role == 'admin')).all()
+    form.closer_id.choices = [(u.id, u.username) for u in closers]
+
+    if request.method == 'GET':
+        if enrollment.closer_id:
+            form.closer_id.data = enrollment.closer_id
+    
+    if form.validate_on_submit():
+        # Update Enrollment Closer
+        if form.closer_id.data:
+            enrollment.closer_id = form.closer_id.data
+            db.session.add(enrollment)
+            
+        payment = Payment(
+            enrollment_id=enrollment.id,
+            amount=form.amount.data,
+            date=datetime.combine(form.date.data, datetime.now().time()), # Use current time
+            payment_type=form.payment_type.data,
+            payment_method_id=form.payment_method_id.data,
+            reference_id=form.reference_id.data,
+            status=form.status.data
+        )
+        db.session.add(payment)
+        db.session.commit()
+        
+        # Webhook
+        send_sales_webhook(payment, request.user_agent.string) # Passing context or cleaner way
+        # Note: legacy used current_user.username, but webhook util expects... ?
+        # Checked legacy: send_sales_webhook(payment, current_user.username)
+        # Let's use current_user.username if available
+        from flask_login import current_user
+        send_sales_webhook(payment, current_user.username)
+        
+        # Auto-update status
+        user = User.query.get(enrollment.student_id)
+        if user:
+            user.update_status_based_on_debt()
+        
+        flash('Pago registrado.')
+        if next_url:
+            return redirect(next_url)
+            
+        return redirect(url_for('admin.edit_client', id=enrollment.student_id))
+        
+    return render_template('admin/payment_form.html', form=form, title=f"Nuevo Pago - {enrollment.program.name}")
+
+@bp.route('/payments/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_payment(id):
+    payment = Payment.query.get_or_404(id)
+    form = PaymentForm(obj=payment)
+    
+    methods = PaymentMethod.query.filter_by(is_active=True).all()
+    form.payment_method_id.choices = [(m.id, m.name) for m in methods]
+    
+    # Populate Closers
+    closers = User.query.filter(or_(User.role == 'closer', User.role == 'admin')).all()
+    form.closer_id.choices = [(u.id, u.username) for u in closers]
+    
+    if request.method == 'GET':
+         if payment.date:
+             form.date.data = payment.date.date()
+         
+         if payment.enrollment.closer_id:
+             form.closer_id.data = payment.enrollment.closer_id
+    
+    if form.validate_on_submit():
+        if form.closer_id.data:
+            payment.enrollment.closer_id = form.closer_id.data
+            db.session.add(payment.enrollment)
+
+        payment.amount = form.amount.data
+        payment.date = datetime.combine(form.date.data, datetime.min.time())
+        payment.payment_type = form.payment_type.data
+        payment.payment_method_id = form.payment_method_id.data
+        payment.reference_id = form.reference_id.data
+        payment.status = form.status.data
+        
+        db.session.commit()
+        
+        # Auto-update status
+        user = User.query.get(payment.enrollment.student_id)
+        if user:
+            user.update_status_based_on_debt()
+        
+        flash('Pago actualizado.')
+        
+        next_url = request.args.get('next')
+        if next_url:
+            return redirect(next_url)
+            
+        return redirect(url_for('admin.edit_client', id=payment.enrollment.student_id))
+        
+    return render_template('admin/payment_form.html', form=form, title="Editar Pago")
+
+@bp.route('/payments/delete/<int:id>')
+@admin_required
+def delete_payment(id):
+    payment = Payment.query.get_or_404(id)
+    enrollment = payment.enrollment
+    student_id = enrollment.student_id
+    
+    db.session.delete(payment)
+    db.session.flush()
+    
+    if enrollment.payments.count() == 0:
+        db.session.delete(enrollment)
+        
+    db.session.commit()
+    
+    user = User.query.get(student_id)
+    if user:
+        user.update_status_based_on_debt()
+    
+    flash('Pago eliminado.')
+    
+    next_url = request.args.get('next')
+    if next_url:
+        return redirect(next_url)
+        
+    return redirect(url_for('admin.edit_client', id=student_id))
