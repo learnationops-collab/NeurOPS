@@ -15,73 +15,7 @@ from functools import wraps
 # Decorator to ensure admin access
 
 
-@bp.route('/admin/closer-stats')
-@login_required
-@role_required('admin')
-def closer_stats():
-    # filters
-    start_date_str = request.args.get('start_date', (datetime.today() - timedelta(days=30)).strftime('%Y-%m-%d'))
-    end_date_str = request.args.get('end_date', datetime.today().strftime('%Y-%m-%d'))
-    closer_id = request.args.get('closer_id', '')
-    
-    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-    
-    # query
-    query = CloserDailyStats.query.filter(CloserDailyStats.date >= start_date, CloserDailyStats.date <= end_date)
-    
-    if closer_id:
-        query = query.filter(CloserDailyStats.closer_id == int(closer_id))
-        
-    stats_records = query.order_by(CloserDailyStats.date.desc()).all()
-    
-    # KPIs Calculation
-    total_stats = {
-        'slots': 0, 'slots_used': 0, 
-        'calls_scheduled': 0, 'calls_completed': 0, 'calls_noshow': 0, 'calls_canceled': 0,
-        'sales_count': 0, 'sales_amount': 0, 'cash_collected': 0,
-        'self_generated': 0
-    }
-    
-    for r in stats_records:
-        # Approximate mapping from new model to old structure where possible
-        total_stats['calls_scheduled'] += (r.calls_scheduled or 0)
-        total_stats['calls_completed'] += (r.calls_completed or 0)
-        total_stats['calls_noshow'] += (r.calls_no_show or 0)
-        total_stats['calls_canceled'] += (r.calls_canceled or 0)
-        
-        total_stats['sales_count'] += (r.sales_count or 0)
-        total_stats['sales_amount'] += (r.sales_amount or 0)
-        total_stats['cash_collected'] += (r.cash_collected or 0)
-        total_stats['self_generated'] += (r.self_generated_bookings or 0)
 
-    # Define rates based on new simplified model
-    def safe_div(n, d): return (n / d * 100) if d > 0 else 0
-    
-    kpis = {
-        'show_rate': safe_div(total_stats['calls_completed'], total_stats['calls_scheduled']),
-        'closing_rate': safe_div(total_stats['sales_count'], total_stats['calls_completed']),
-        'avg_ticket': (total_stats['sales_amount'] / total_stats['sales_count']) if total_stats['sales_count'] > 0 else 0
-    }
-    
-    closers = User.query.filter_by(role='closer').all()
-    
-    # Redirect to the new improved stats view if this old one is too broken/deprecated?
-    # Or render a simplified version. For now, let's keep it but simplified.
-    # Actually, the user asked to FIX the error about slots.
-    # User said: "slots totales son los bloques totales del dia y los slots disponibles solo lo que quedaron sin agendar"
-    # We do NOT have 'total slots' in the new model. We only have scheduled calls.
-    # So we cannot calculate 'slots available' without knowing total capacity.
-    # I will assume slots = calls_scheduled for now to prevent error, or 0.
-    
-    return render_template('admin/closer_stats.html', 
-                           stats=stats_records, 
-                           kpis=kpis, 
-                           total=total_stats,
-                           closers=closers,
-                           start_date=start_date_str,
-                           end_date=end_date_str,
-                           selected_closer=closer_id)
 
 @bp.route('/dashboard')
 @admin_required

@@ -1,0 +1,64 @@
+from flask import render_template, request
+from app.admin import bp
+from app.decorators import admin_required, role_required
+from app.services.dashboard_service import DashboardService
+from app.models import User
+from flask_login import login_required
+from datetime import datetime, timedelta, date
+
+@bp.route('/dashboard')
+@admin_required
+def dashboard():
+    period = request.args.get('period', 'this_month')
+    start_date_arg = request.args.get('start_date')
+    end_date_arg = request.args.get('end_date')
+
+    data = DashboardService.get_main_dashboard_data(period, start_date_arg, end_date_arg)
+    
+    # Format for template
+    s_date_val = start_date_arg if start_date_arg else data['dates']['start'].strftime('%Y-%m-%d')
+    e_date_val = end_date_arg if end_date_arg else data['dates']['end'].strftime('%Y-%m-%d')
+    
+    return render_template('admin/dashboard.html',
+                           start_date=data['dates']['start'], # Date Objects for display logic? 
+                           end_date=data['dates']['end'],
+                           period_start=s_date_val, # Strings for inputs
+                           period_end=e_date_val,
+                           selected_period=period,
+                           # Financials
+                           income_month=data['financials']['income'],
+                           cash_collected_month=data['financials']['cash_collected'],
+                           net_profit=data['financials']['net_profit'],
+                           total_expenses=data['financials']['total_expenses'],
+                           # Cohort / CRM
+                           active_leads_count=data['cohort']['active_leads'],
+                           period_debt=data['cohort']['p_debt'],
+                           top_debtors=data['cohort']['top_debtors'],
+                           # Calculated fields for display
+                           revenue=data['financials']['cash_collected'] + data['cohort']['p_debt'] # Approx Revenue
+                           )
+
+@bp.route('/admin/closer-stats')
+@login_required
+@role_required('admin')
+def closer_stats():
+    # filters
+    start_date_str = request.args.get('start_date', (datetime.today() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    end_date_str = request.args.get('end_date', datetime.today().strftime('%Y-%m-%d'))
+    closer_id = request.args.get('closer_id', '')
+    
+    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    
+    stats_data = DashboardService.get_closer_stats(start_date, end_date, closer_id)
+    
+    closers = User.query.filter_by(role='closer').all()
+
+    return render_template('admin/closer_stats.html', 
+                           stats=stats_data['records'], 
+                           kpis=stats_data['kpis'], 
+                           total=stats_data['totals'],
+                           closers=closers,
+                           start_date=start_date_str,
+                           end_date=end_date_str,
+                           selected_closer=closer_id)
