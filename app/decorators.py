@@ -13,3 +13,13 @@ def role_required(role):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+def admin_required(f):
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if current_user.role != 'admin':
+            flash('No tienes permiso para acceder a esta página.')
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return decorated_function

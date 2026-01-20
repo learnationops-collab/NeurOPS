@@ -7,21 +7,13 @@ from app.closer.utils import send_sales_webhook
 from app.models import User, CloserDailyStats, SurveyQuestion, Event, Program, PaymentMethod, db, Enrollment, Payment, Appointment, LeadProfile, Expense, RecurringExpense, EventGroup, UserViewSetting, Integration, DailyReportQuestion 
 from datetime import datetime, date, time, timedelta
 from sqlalchemy import or_
-from app.decorators import role_required
+from app.decorators import role_required, admin_required
 
 
 from functools import wraps
 
 # Decorator to ensure admin access
-def admin_required(f):
-    @wraps(f)
-    @login_required
-    def decorated_function(*args, **kwargs):
-        if current_user.role != 'admin':
-            flash('No tienes permiso para acceder a esta página.')
-            return redirect(url_for('main.index'))
-        return f(*args, **kwargs)
-    return decorated_function
+
 
 @bp.route('/admin/closer-stats')
 @login_required
@@ -2341,56 +2333,7 @@ def delete_enrollment(id):
     flash('Inscripción eliminada.')
     return redirect(url_for('admin.lead_profile', id=student_id))
 
-@bp.route('/integrations', methods=['GET', 'POST'])
-@admin_required
-def integrations():
-    # Define available integration keys and default names
-    integration_config = {
-        'sales': 'Ventas',
-        'calendar': 'Agendamiento',
-        'agenda': 'Agenda'
-    }
 
-    # Auto-create missing integrations
-    for key, name in integration_config.items():
-        exists = Integration.query.filter_by(key=key).first()
-        if not exists:
-            new_int = Integration(
-                key=key,
-                name=name,
-                url_dev='',
-                url_prod='',
-                active_env='dev'
-            )
-            db.session.add(new_int)
-    db.session.commit()
-    
-    # Fetch all
-    integrations_list = Integration.query.all()
-    # To Dict for easy access if needed, or just pass list
-    
-    if request.method == 'POST':
-        # Identify which integration is being updated
-        # We assume form fields are prefixed or we loop
-        # Simple approach: Form submits ONE integration update at a time via hidden field 'key'
-        key = request.form.get('key')
-        integration = Integration.query.filter_by(key=key).first()
-        
-        if integration:
-            integration.url_dev = request.form.get('url_dev')
-            integration.url_prod = request.form.get('url_prod')
-            
-            # Active Env Radio
-            active_env = request.form.get('active_env')
-            if active_env in ['dev', 'prod']:
-                integration.active_env = active_env
-                
-            db.session.commit()
-            flash(f'Integración {integration.name} actualizada.')
-        
-        return redirect(url_for('admin.integrations'))
-        
-    return render_template('admin/integrations.html', integrations=integrations_list)
 
 @bp.route('/database')
 @admin_required
