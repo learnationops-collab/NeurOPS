@@ -3,7 +3,7 @@ from app.admin import bp
 from app.decorators import admin_required, role_required
 from app.services.user_service import UserService
 from app.admin.forms import UserForm, ManualAddForm, ClientEditForm
-from app.models import User, LeadProfile, Program, UserViewSetting, db
+from app.models import User, LeadProfile, Program, UserViewSetting, Enrollment, Appointment, db
 from flask_login import current_user, login_required
 import pytz
 
@@ -246,6 +246,24 @@ def edit_client(id):
         flash(res['message'])
 
     enrollments = user.enrollments.all()
+    return render_template('admin/client_form.html', form=form, user=user)
+
+@bp.route('/enrollment/delete/<int:id>')
+@admin_required
+def delete_enrollment(id):
+    enrollment = Enrollment.query.get_or_404(id)
+    user_id = enrollment.student_id
+    
+    db.session.delete(enrollment)
+    db.session.commit()
+    
+    # Update status if needed
+    user = User.query.get(user_id)
+    # Check if any active enrollments remain, else set to new/pending?
+    # For now, minimal implementation as per request to fix the error.
+    
+    flash('Inscripción eliminada.')
+    return redirect(url_for('admin.lead_profile', id=user_id))
 
 @bp.route('/users/bulk_delete', methods=['POST'])
 @admin_required

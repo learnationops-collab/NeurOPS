@@ -1,5 +1,5 @@
 from app import db
-from app.models import CloserDailyStats, Payment, User, Expense, Enrollment
+from app.models import CloserDailyStats, Payment, User, Expense, Enrollment, Program, PaymentMethod, LeadProfile
 from app.services.base import BaseService
 from datetime import datetime, date, time, timedelta
 from sqlalchemy import or_
@@ -160,6 +160,66 @@ class DashboardService(BaseService):
         
         cohort_revenue = 0 # To be calculated if needed, or just use Cash Collected + Debt
         
+        # Chart Data Implementation
+        
+        # 1. Daily Revenue (Cash Flow based on Payments in period)
+        daily_rev_q = db.session.query(
+            db.func.date(Payment.date).label('day'),
+            db.func.sum(Payment.amount)
+        ).filter(Payment.date >= start_date, Payment.date <= end_date, Payment.status == 'completed') \
+         .group_by('day').all()
+         
+        # Format for Chart.js (Fill missing dates with 0)
+        chart_dates = []
+        chart_revs = []
+        
+        # Create a dict for lookups
+        rev_dict = {str(r[0]): float(r[1]) for r in daily_rev_q}
+        
+        current_d = start_date
+        end_d = end_date
+        delta = timedelta(days=1)
+        
+        while current_d <= end_d:
+            d_str = str(current_d)
+            chart_dates.append(d_str)
+            chart_revs.append(rev_dict.get(d_str, 0.0))
+            current_d += delta
+            
+        # 2. Sales by Program (In Period)
+        prog_q = db.session.query(
+             Program.name,
+             db.func.count(Enrollment.id)
+        ).join(Enrollment.program) \
+         .filter(Enrollment.enrollment_date >= start_date, Enrollment.enrollment_date <= end_date, Enrollment.status == 'active') \
+         .group_by(Program.name).all()
+         
+        prog_labels = [p[0] for p in prog_q]
+        prog_values = [p[1] for p in prog_q]
+        
+        # 3. Client Status (Snapshot - Current State of ALL active leads? Or Period? Usually Period Cohort or All Active)
+        # "Distribución de Estatus" usually refers to the funnel snapshot. Let's use ALL active/valid leads/students.
+        status_q = db.session.query(
+            LeadProfile.status,
+            db.func.count(LeadProfile.id)
+        ).group_by(LeadProfile.status).all()
+        
+        # Filter None or empty
+        status_data = {s[0]: s[1] for s in status_q if s[0]}
+        status_labels = list(status_data.keys())
+        status_values = list(status_data.values())
+        
+        # 4. Payment Methods (In Period)
+        meth_q = db.session.query(
+            PaymentMethod.name,
+            db.func.count(Payment.id) 
+        ).join(Payment.method) \
+         .filter(Payment.date >= start_date, Payment.date <= end_date, Payment.status == 'completed') \
+         .group_by(PaymentMethod.name).all()
+         
+        meth_labels = [m[0] for m in meth_q]
+        meth_values = [m[1] for m in meth_q]
+
         return {
             'dates': {'start': start_date, 'end': end_date},
             'financials': {
@@ -172,5 +232,15 @@ class DashboardService(BaseService):
                 'active_leads': len(period_users),
                 'p_debt': period_debt,
                 'top_debtors': top_debtors
+            },
+            'charts': {
+                'dates_labels': chart_dates,
+                'revenue_values': chart_revs,
+                'prog_labels': prog_labels,
+                'prog_values': prog_values,
+                'status_labels': status_labels,
+                'status_values': status_values,
+                'method_labels': meth_labels,
+                'method_values': meth_values
             }
         }

@@ -51,16 +51,17 @@ def dashboard():
                            top_debtors=data['cohort']['top_debtors'],
                            closing_rate=0.0, # TODO: Calculate
                            
-                           # Charts (Placeholders)
-                           dates_labels=[],
-                           daily_revenue_values=[],
-                           prog_labels=[],
-                           prog_values=[],
-                           status_labels=[],
-                           status_values=[],
-                           method_labels=[],
-                           method_values=[],
-                           recent_activity=[]
+                           # Charts
+                           dates_labels=data['charts']['dates_labels'],
+                           daily_revenue_values=data['charts']['revenue_values'],
+                           prog_labels=data['charts']['prog_labels'],
+                           prog_values=data['charts']['prog_values'],
+                           status_labels=data['charts']['status_labels'],
+                           status_values=data['charts']['status_values'],
+                           method_labels=data['charts']['method_labels'],
+                           method_values=data['charts']['method_values'],
+                           
+                           recent_activity=[] # TODO: Implement recent activity logic if needed, or remove
                            )
 
 
