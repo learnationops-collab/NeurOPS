@@ -1,4 +1,5 @@
 from app.models import User, LeadProfile, Enrollment, Appointment, Payment, PaymentMethod, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Event, db
+from app.services.dashboard_service import DashboardService
 from sqlalchemy import or_
 from datetime import datetime, time, timedelta, date
 import pytz
@@ -163,17 +164,30 @@ class CloserService:
         end_utc = end_local.astimezone(pytz.UTC).replace(tzinfo=None)
         
         # 1. KPIs Today
-        # Calls
-        appointments_today = Appointment.query.filter(
-            Appointment.closer_id == closer_id,
-            Appointment.start_time >= start_utc,
-            Appointment.start_time <= end_utc
-        ).all()
+        # Use centralized logic for activity metrics (Consistency)
+        detailed_metrics = DashboardService.get_detailed_closer_metrics(start_utc, end_utc, closer_id)
         
-        kpi_scheduled = len(appointments_today)
-        kpi_completed = sum(1 for a in appointments_today if a.status == 'completed')
-        kpi_no_show = sum(1 for a in appointments_today if a.status == 'no_show')
-        kpi_canceled = sum(1 for a in appointments_today if a.status == 'canceled')
+        # Activity from Detailed Metrics
+        kpi_scheduled = detailed_metrics['agendas']['total_agendas']
+        kpi_completed = detailed_metrics['agendas']['completed']
+        kpi_no_show = detailed_metrics['agendas']['no_show']
+        kpi_canceled = detailed_metrics['agendas']['canceled']
+        
+        # New Detailed Metrics
+        kpi_presentations = detailed_metrics['agendas']['presentations']
+        kpi_reschedules = detailed_metrics['agendas']['rescheduled']
+        
+        sec_agendas = detailed_metrics['agendas']['second_agendas']
+        kpi_second_agendas_total = sec_agendas['total']
+        kpi_second_agendas_completed = sec_agendas.get('completed', 0)
+        kpi_second_agendas_noshow = sec_agendas.get('no_show', 0)
+        kpi_second_agendas_canceled = sec_agendas.get('canceled', 0)
+        
+        # Sales Count from Detailed (Verify consistency?)
+        # detailed_metrics['sales'] is count.
+        
+        # Financials (Amount/Cash) - Keep separate or enhance Service later. Keeping local for now to ensure we get specific "New Enrollments Today" logic correct.
+        # (Service uses Enrollment date logic too, so it matches).
         
         # Sales Count & Amount (New Enrollments Today)
         new_enrollments = Enrollment.query.filter(
@@ -196,9 +210,13 @@ class CloserService:
         kpi_cash_collected = sum(p.amount for p in payments_today)
         
         # Calculated Rates
-        kpi_show_rate = (kpi_completed / kpi_scheduled * 100) if kpi_scheduled > 0 else 0
-        kpi_closing_rate = (kpi_sales_count / kpi_completed * 100) if kpi_completed > 0 else 0
+        kpi_show_rate = detailed_metrics['kpis']['show_up_rate']
+        kpi_closing_rate = detailed_metrics['kpis']['closing_rate_global']
         kpi_avg_ticket = (kpi_sales_amount / kpi_sales_count) if kpi_sales_count > 0 else 0
+        
+        # Additional Rates
+        kpi_presentation_rate = detailed_metrics['kpis']['presentation_rate']
+        kpi_closing_on_pres = detailed_metrics['kpis']['closing_rate_presentation']
         
         # 2. Commissions & Monthly Rates
         month_start_local = user_tz.localize(datetime(today_local.year, today_local.month, 1))
@@ -297,7 +315,14 @@ class CloserService:
                 'cash_collected': kpi_cash_collected,
                 'show_rate': kpi_show_rate,
                 'closing_rate': kpi_closing_rate,
-                'avg_ticket': kpi_avg_ticket
+                'avg_ticket': kpi_avg_ticket,
+                'presentations': kpi_presentations,
+                'reschedules': kpi_reschedules,
+                'second_agendas': kpi_second_agendas_total,
+                'second_agendas_completed': kpi_second_agendas_completed,
+                'second_agendas_noshow': kpi_second_agendas_noshow,
+                'second_agendas_canceled': kpi_second_agendas_canceled,
+                'closing_rate_pres': kpi_closing_on_pres
             },
             'commission': {
                 'month': commission_month,

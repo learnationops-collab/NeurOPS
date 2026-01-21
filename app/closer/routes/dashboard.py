@@ -151,6 +151,16 @@ def daily_report():
                            kpi_completed=data['kpis']['completed'],
                            kpi_no_show=data['kpis']['no_show'],
                            kpi_canceled=data['kpis']['canceled'],
+                           
+                           # New Advanced Metrics
+                           kpi_presentations=data['kpis'].get('presentations', 0),
+                           kpi_reschedules=data['kpis'].get('reschedules', 0),
+                           kpi_second_agendas=data['kpis'].get('second_agendas', 0),
+                           kpi_second_agendas_completed=data['kpis'].get('second_agendas_completed', 0),
+                           kpi_second_agendas_noshow=data['kpis'].get('second_agendas_noshow', 0),
+                           kpi_second_agendas_canceled=data['kpis'].get('second_agendas_canceled', 0),
+                           kpi_closing_rate_pres=data['kpis'].get('closing_rate_pres', 0),
+                           
                            kpi_sales_count=data['kpis']['sales_count'],
                            kpi_sales_amount=data['kpis']['sales_amount'],
                            kpi_cash_collected=data['kpis']['cash_collected'],
