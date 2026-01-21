@@ -249,5 +249,4 @@ def thank_you():
     user_id = session.get('booking_user_id')
     if user_id: _flush_session_data(user_id)
     
-    utm_source = session.get('booking_utm', 'direct')
-    return redirect(url_for('booking.start_booking', utm_source=utm_source))
+    return redirect("https://www.videoask.com/f0izqogih")
