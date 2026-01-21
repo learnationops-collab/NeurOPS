@@ -153,6 +153,7 @@ class LeadProfile(db.Model):
     # Assignment
     assigned_closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     assigned_closer = db.relationship('User', foreign_keys=[assigned_closer_id], backref='assigned_leads')
+    is_pinned = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return f'<LeadProfile {self.user_id}>'

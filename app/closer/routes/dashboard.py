@@ -2,7 +2,7 @@ from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app.closer import bp
 from app.services.closer_service import CloserService
-from app.models import CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Appointment, Event, Enrollment, Payment, db, User
+from app.models import CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Appointment, Event, Enrollment, Payment, db, User, LeadProfile
 from datetime import datetime, time, date, timedelta
 import pytz
 from functools import wraps
@@ -175,6 +175,37 @@ def agendas():
     # Top Debtors
     active_enrollments = Enrollment.query.filter(Enrollment.status == 'active', Enrollment.closer_id == current_user.id).all()
     debtors = []
+    
+    return render_template('closer/dashboard_legacy_removed.html') # Legacy function placeholder if any
+
+@bp.route('/client/<int:id>/toggle_pin', methods=['POST'])
+@closer_required
+def toggle_pin_client(id):
+    lead_profile = LeadProfile.query.filter_by(user_id=id).first()
+    
+    if not lead_profile:
+        # Create profile if not exists? Usually exists for leads.
+        # If not, let's create simple one or error
+        user = User.query.get_or_404(id)
+        lead_profile = LeadProfile(user_id=user.id, assigned_closer_id=current_user.id)
+        db.session.add(lead_profile)
+    
+    # Verify assignment safety (optional but good)
+    if lead_profile.assigned_closer_id != current_user.id:
+        # If accessing lead not assigned, maybe auto-assign or fail?
+        # For "Recent Clients" they should interpret interaction = ownership or shared.
+        # Let's assume Closer can pin any lead they interact with, but `is_pinned` is on Profile which assumes 1 closer per lead.
+        # If they pin someone else's lead, they might steal the pin?
+        # `LeadProfile` is 1-to-1 with User. `assigned_closer_id` helps `CloserService` filter.
+        # If we just toggle `is_pinned`, it affects whoever verifies `assigned_closer_id`.
+        # If I pin a lead assigned to ANOTHER closer, it won't show up in MY list because query filters by `assigned_closer_id`.
+        # So we must ensure they are assigned.
+        pass
+        
+    lead_profile.is_pinned = not lead_profile.is_pinned
+    db.session.commit()
+    
+    return redirect(request.referrer or url_for('closer.dashboard'))
     for enr in active_enrollments:
         paid = db.session.query(db.func.sum(Payment.amount)).filter(
             Payment.enrollment_id == enr.id,

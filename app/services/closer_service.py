@@ -283,6 +283,7 @@ class CloserService:
         completed_steps = processed_agendas + report_done
         daily_progress = (completed_steps / total_steps * 100) if total_steps > 0 else 0
         
+        
         # 4. Lists
         from sqlalchemy.orm import aliased
         
@@ -300,13 +301,46 @@ class CloserService:
             Appointment.status == 'scheduled'
         ).order_by(Appointment.start_time.asc()).limit(20).all()
 
-        recent_clients = User.query.filter(User.role.in_(['lead', 'student'])).filter(
-            or_(
-                User.enrollments.any(Enrollment.closer_id == closer_id),
-                User.appointments_as_lead.any(Appointment.closer_id == closer_id),
-                User.lead_profile.has(assigned_closer_id=closer_id)
-            )
-        ).order_by(User.created_at.desc()).limit(15).all()
+        # Recent Clients + Pinned (Prioritized)
+        # Strategy: Fetch Pinned first, then fill rest with Recent up to 10
+        limit_clients = 10
+        
+        # Pinned Clients
+        pinned_query = User.query.join(LeadProfile, LeadProfile.user_id == User.id).filter(
+            LeadProfile.assigned_closer_id == closer_id,
+            LeadProfile.is_pinned == True
+        ).order_by(User.created_at.desc())
+        
+        pinned_clients = pinned_query.all()
+        
+        # Recent Clients (excluding pinned to avoid dupes if mixed, but usually pinned are old leads too)
+        # We want "Fast Access", so pinned are always shown. 
+        # Recent are filling the rest.
+        
+        slots_remaining = max(0, limit_clients - len(pinned_clients))
+        
+        recent_clients_list = []
+        if slots_remaining > 0:
+             pinned_ids = [u.id for u in pinned_clients]
+             
+             recent_query = User.query.filter(User.role.in_(['lead', 'student'])).filter(
+                or_(
+                    User.enrollments.any(Enrollment.closer_id == closer_id),
+                    User.appointments_as_lead.any(Appointment.closer_id == closer_id),
+                    User.lead_profile.has(assigned_closer_id=closer_id)
+                )
+             )
+             
+             if pinned_ids:
+                 recent_query = recent_query.filter(~User.id.in_(pinned_ids))
+                 
+             recent_clients_list = recent_query.order_by(User.created_at.desc()).limit(slots_remaining).all()
+        
+        # Combine
+        # Visuals in template will need to distinguish pinned? Or simply separate?
+        # User said "column of recent clients... limit 10... fix clients".
+        # A single list is best. Pinned on top.
+        final_client_list = pinned_clients + recent_clients_list
 
         return {
             'kpis': {
@@ -338,7 +372,7 @@ class CloserService:
             },
             'progress': daily_progress,
             'upcoming_agendas': upcoming_agendas,
-            'recent_clients': recent_clients,
+            'recent_clients': final_client_list,
             'today_stats': today_stats,
             'dates': {
                 'today_local': today_local,

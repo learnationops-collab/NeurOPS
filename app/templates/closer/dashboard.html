@@ -159,30 +159,54 @@
                 {% if recent_clients %}
                 {% for client in recent_clients %}
                 <div
-                    class="bg-white border border-gray-100 rounded-lg p-3 shadow-sm hover:shadow-md transition group relative">
+                    class="bg-white border {{ 'border-yellow-200 bg-yellow-50' if client.lead_profile.is_pinned else 'border-gray-100' }} rounded-lg p-3 shadow-sm hover:shadow-md transition group relative">
                     <div class="flex justify-between items-start mb-2">
                         <span class="bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">{{
                             client.lead_profile.status or 'Nuevo' }}</span>
-                        <div class="relative">
-                            <button class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z">
-                                    </path>
-                                </svg>
-                            </button>
-                            <div
-                                class="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 hidden group-hover:block">
-                                <a href="{{ url_for('closer.create_sale', lead_id=client.id) }}"
-                                    class="block px-4 py-2 text-xs text-green-600 hover:bg-gray-50 font-bold">Nueva
-                                    Venta</a>
-                                {% set active_enr = client.enrollments.filter_by(status='active').first() %}
-                                {% if active_enr %}
-                                <a href="{{ url_for('closer.add_payment', id=active_enr.id) }}"
-                                    class="block px-4 py-2 text-xs text-indigo-600 hover:bg-gray-50">Agregar Pago</a>
-                                {% endif %}
-                                <a href="{{ url_for('closer.create_appointment', lead_id=client.id) }}"
-                                    class="block px-4 py-2 text-xs text-blue-600 hover:bg-gray-50">Agendar</a>
+                        <div class="flex items-center gap-1">
+                            <!-- Toggle Pin Form -->
+                            <form method="POST" action="{{ url_for('closer.toggle_pin_client', id=client.id) }}"
+                                class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit"
+                                    class="p-1 rounded-full hover:bg-gray-200 transition {{ 'text-yellow-500' if client.lead_profile.is_pinned else 'text-gray-300 hover:text-gray-500' }}"
+                                    title="{{ 'Desfijar' if client.lead_profile.is_pinned else 'Fijar' }}">
+                                    <!-- Use a pin icon -->
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            d="M16 5V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v1h-1v2h1v7H6v2h12v-2h-2V7h1V5h-1zM9 5h6v7h-6V5z" />
+                                        <!-- Simpler Pin Shape or use heroicons push-pin -->
+                                        <path d="M5,9v2h2v7.5l-2.5,2.5v1h11v-1l-2.5-2.5V11h2V9H5z" fill="none"
+                                            class="hidden" />
+                                        <!-- Heroicons Push Pin Solid/Outline combo -->
+                                        <path
+                                            d="M15 11.25l-3-3m0 0l-3.75 3.75M12 8.25V2.25c0-1.242 1.008-2.25 2.25-2.25h.75A2.25 2.25 0 0117.25 2.25v6h1.5a2.25 2.25 0 012.25 2.25v.75a2.25 2.25 0 01-2.25 2.25h-5.25v7.5l2.25 2.25v.75H6.75v-.75l2.25-2.25v-7.5H3.75A2.25 2.25 0 011.5 11.25v-.75a2.25 2.25 0 012.25-2.25h1.5z" />
+                                    </svg>
+                                </button>
+                            </form>
+
+                            <div class="relative">
+                                <button class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z">
+                                        </path>
+                                    </svg>
+                                </button>
+                                <div
+                                    class="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 hidden group-hover:block">
+                                    <a href="{{ url_for('closer.create_sale', lead_id=client.id) }}"
+                                        class="block px-4 py-2 text-xs text-green-600 hover:bg-gray-50 font-bold">Nueva
+                                        Venta</a>
+                                    {% set active_enr = client.enrollments.filter_by(status='active').first() %}
+                                    {% if active_enr %}
+                                    <a href="{{ url_for('closer.add_payment', id=active_enr.id) }}"
+                                        class="block px-4 py-2 text-xs text-indigo-600 hover:bg-gray-50">Agregar
+                                        Pago</a>
+                                    {% endif %}
+                                    <a href="{{ url_for('closer.create_appointment', lead_id=client.id) }}"
+                                        class="block px-4 py-2 text-xs text-blue-600 hover:bg-gray-50">Agendar</a>
+                                </div>
                             </div>
                         </div>
                     </div>
