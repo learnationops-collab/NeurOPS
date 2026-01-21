@@ -2,7 +2,7 @@ from flask import render_template, redirect, url_for, flash, request, jsonify
 from app.admin import bp
 from app.decorators import admin_required
 from app.admin.forms import SurveyQuestionForm, EventForm, ProgramForm, EventGroupForm
-from app.models import SurveyQuestion, Event, Program, EventGroup, db, PaymentMethod, DailyReportQuestion
+from app.models import SurveyQuestion, Event, Program, EventGroup, db, PaymentMethod, DailyReportQuestion, DailyReportAnswer
 from sqlalchemy import or_
 
 # --- Survey Management Routes ---
@@ -432,9 +432,13 @@ def daily_report_questions():
 @admin_required
 def delete_daily_question(id):
     q = DailyReportQuestion.query.get_or_404(id)
+    
+    # Manually cascade delete answers associated with this question
+    num_answers = DailyReportAnswer.query.filter_by(question_id=id).delete()
+    
     db.session.delete(q)
     db.session.commit()
-    flash('Pregunta eliminada.')
+    flash(f'Pregunta eliminada (y {num_answers} respuestas asociadas).')
     return redirect(url_for('admin.daily_report_questions'))
 
 @bp.route('/questions/toggle/<int:id>')
