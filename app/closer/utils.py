@@ -185,6 +185,10 @@ def send_agenda_webhook(appointment, event_type):
     # Let's send full ISO too just in case? Or adhere strictly to requirement.
     # Let's do DD/MM/YYYY HH:MM to be useful.
     
+    # Calculate appointment count (numero_agenda)
+    from app.models import Appointment
+    appt_count = Appointment.query.filter_by(lead_id=lead.id).count()
+
     payload = {
         'nombre_completo': lead.username,
         'primer_nombre': first_name,
@@ -194,7 +198,8 @@ def send_agenda_webhook(appointment, event_type):
         'hora_agenda': appointment.start_time.strftime('%H:%M'), # Adding time for utility
         'closer': closer.username,
         'zona_geografica': timezone,
-        'tipo_evento': event_type
+        'tipo_evento': event_type,
+        'numero_agenda': appt_count
     }
     
     print(f"Sending Agenda Webhook Payload ({event_type}): {payload}", flush=True)
