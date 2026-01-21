@@ -25,6 +25,14 @@
             </div>
             {% endif %}
             {% endif %}
+
+            <!-- Closer Info Added Here -->
+            {% if lead.lead_profile and lead.lead_profile.assigned_closer %}
+            <div class="flex items-center gap-1 mt-1 text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded w-fit">
+                <i class="fas fa-user-tie w-4"></i>
+                <span class="font-semibold">{{ lead.lead_profile.assigned_closer.username }}</span>
+            </div>
+            {% endif %}
         </div>
     </td>
     <td class="px-6 py-4">
