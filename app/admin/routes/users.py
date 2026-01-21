@@ -246,7 +246,7 @@ def edit_client(id):
         flash(res['message'])
 
     enrollments = user.enrollments.all()
-    return render_template('admin/client_form.html', form=form, user=user)
+    return render_template('admin/client_edit.html', form=form, user=user)
 
 @bp.route('/enrollment/delete/<int:id>')
 @admin_required
