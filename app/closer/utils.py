@@ -1,6 +1,8 @@
 from app.google_auth.utils import get_calendar_service
 from app import db
 from datetime import timedelta
+import requests
+from flask import current_app
 
 def send_calendar_webhook(appointment, action, old_start_time=None):
     """
