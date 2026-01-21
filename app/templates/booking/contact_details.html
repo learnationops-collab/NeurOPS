@@ -35,14 +35,16 @@
 
             <!-- Name -->
             <div>
-                <label for="name" class="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                <label for="name" class="block text-sm font-medium text-gray-700">Nombre Completo <span
+                        class="text-red-500">*</span></label>
                 <input type="text" name="name" id="name" value="{{ data.name or '' }}" required
                     class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border">
             </div>
 
             <!-- Phone -->
             <div>
-                <label for="phone" class="block text-sm font-medium text-gray-700">WhatsApp / Teléfono</label>
+                <label for="phone" class="block text-sm font-medium text-gray-700">WhatsApp / Teléfono <span
+                        class="text-red-500">*</span></label>
                 <div class="mt-1 flex rounded-md shadow-sm">
                     <select name="phone_code"
                         class="focus:ring-indigo-500 focus:border-indigo-500 h-full py-2 pl-2 pr-7 border-transparent bg-transparent text-gray-500 sm:text-sm rounded-md border-r border-gray-300 w-[110px]">
@@ -74,11 +76,11 @@
             <!-- Instagram -->
             <div>
                 <label for="instagram" class="block text-sm font-medium text-gray-700">Usuario de Instagram <span
-                        class="text-gray-400 font-normal">(Opcional)</span></label>
+                        class="text-red-500">*</span></label>
                 <div class="mt-1 flex rounded-md shadow-sm">
                     <span
                         class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">@</span>
-                    <input type="text" name="instagram" id="instagram" value="{{ data.instagram or '' }}"
+                    <input type="text" name="instagram" id="instagram" value="{{ data.instagram or '' }}" required
                         class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-r-md sm:text-sm border-gray-300 p-2 border"
                         placeholder="usuario">
                 </div>

@@ -88,6 +88,15 @@ def contact_details_view():
         # Phone cleaning
         code = request.form.get('phone_code')
         phone = request.form.get('phone')
+        
+        # VALIDATION
+        if not data['name'] or not data['instagram'] or not phone:
+             flash('Por favor completa todos los campos obligatorios (Nombre, Teléfono e Instagram).', 'error')
+             # Re-render with existing data
+             if phone:
+                  data['phone'] = phone
+                  data['phone_code'] = code
+             return render_template('booking/contact_details.html', data=data)
         if phone:
              data['phone'] = f"{code} {phone}".strip() if code else phone
         else:

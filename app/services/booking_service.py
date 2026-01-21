@@ -139,6 +139,16 @@ class BookingService:
                 )
                 db.session.add(profile)
         
+        # 3. Assign Closer if NOT assigned
+        if user.lead_profile and not user.lead_profile.assigned_closer_id:
+             import random
+             # Simple random assignment for now
+             closers = User.query.filter_by(role='closer').all()
+             if closers:
+                 selected = random.choice(closers)
+                 user.lead_profile.assigned_closer_id = selected.id
+                 db.session.add(user.lead_profile)
+        
         db.session.commit()
         return user
 

@@ -10,7 +10,7 @@ class NewClientForm(FlaskForm):
     username = StringField('Nombre Completo', validators=[DataRequired(), Length(min=2, max=64)])
     email = StringField('Email', validators=[DataRequired(), Email()])
     phone = StringField('Teléfono', validators=[DataRequired()])
-    instagram = StringField('Instagram', validators=[Optional()])
+    instagram = StringField('Instagram', validators=[DataRequired()])
     submit = SubmitField('Registrar Cliente')
 
 class PublicSaleForm(FlaskForm):
