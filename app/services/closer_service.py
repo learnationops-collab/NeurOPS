@@ -168,20 +168,24 @@ class CloserService:
         detailed_metrics = DashboardService.get_detailed_closer_metrics(start_utc, end_utc, closer_id)
         
         # Activity from Detailed Metrics
-        kpi_scheduled = detailed_metrics['agendas']['total_agendas']
-        kpi_completed = detailed_metrics['agendas']['completed']
-        kpi_no_show = detailed_metrics['agendas']['no_show']
-        kpi_canceled = detailed_metrics['agendas']['canceled']
+        agendas = detailed_metrics['agendas']
+        first = agendas['first_agendas']
+        second = agendas['second_agendas']
+        
+        kpi_scheduled = agendas['total_agendas']
+        kpi_completed = first['completed'] + second['completed']
+        kpi_no_show = first['no_show'] + second['no_show']
+        kpi_canceled = first['canceled'] + second['canceled']
         
         # New Detailed Metrics
-        kpi_presentations = detailed_metrics['agendas']['presentations']
-        kpi_reschedules = detailed_metrics['agendas']['rescheduled']
+        kpi_presentations = agendas['presentations']
+        kpi_reschedules = first['rescheduled'] + second['rescheduled']
         
-        sec_agendas = detailed_metrics['agendas']['second_agendas']
+        sec_agendas = second
         kpi_second_agendas_total = sec_agendas['total']
-        kpi_second_agendas_completed = sec_agendas.get('completed', 0)
-        kpi_second_agendas_noshow = sec_agendas.get('no_show', 0)
-        kpi_second_agendas_canceled = sec_agendas.get('canceled', 0)
+        kpi_second_agendas_completed = sec_agendas['completed']
+        kpi_second_agendas_noshow = sec_agendas['no_show']
+        kpi_second_agendas_canceled = sec_agendas['canceled']
         
         # Sales Count from Detailed (Verify consistency?)
         # detailed_metrics['sales'] is count.

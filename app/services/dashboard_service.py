@@ -34,81 +34,40 @@ class DashboardService(BaseService):
         
         # 2. Appointment Stats
         stats = {
-            'total_agendas': 0,
-            'completed': 0,
-            'no_show': 0,
-            'canceled': 0,
-            'rescheduled': 0, # marked as is_reschedule=True (these are NEW dates)
-            # 'reprogrammings': ? User asked "cantidad de reprogramaciones". 
-            # Usually reschedule implies an old one was moved. `is_reschedule` tags the NEW one.
-            # So count(is_reschedule) = # of times a call was moved TO this period? 
-            # Or # of requests? Let's count `is_reschedule` as "Calls that are Result of Reschedule".
+            'total_agendas': 0, # Global count
             'presentations': 0,
             
-            'second_agendas': { # Agendas with sequence > 1
-                'total': 0, 'completed': 0, 'no_show': 0, 'canceled': 0
+            'first_agendas': { # Was 'total_agendas' in legacy view conceptually? Let's be explicit
+                'total': 0, 'completed': 0, 'no_show': 0, 'canceled': 0, 'rescheduled': 0
+            },
+            'second_agendas': {
+                'total': 0, 'completed': 0, 'no_show': 0, 'canceled': 0, 'rescheduled': 0
             }
         }
         
-        # Pre-fetch sequences? 
-        # Optimized approach: We iterate `total_appts`. For each, we check if it's > 1st.
-        # N+1 problem if we query per appt. 
-        # We can fetch (id, count_prev) via subquery or just fetch all historical for these leads?
-        # Let's trust `is_reschedule` helps distinguish repeated attempts logic, but "Second Agenda" implies Sales Cycle logic (Follow up).
-        # Let's verify Sequence Number logic.
-        # We can implement a helper or simple check:
-        # For KPI dashboard, maybe approximation is fine?
-        # Let's do a bulk query for sequence map if closer_id is set.
+        # Helper to categorize
+        def update_bucket(bucket, status):
+            bucket['total'] += 1
+            if status == 'completed': bucket['completed'] += 1
+            elif status == 'no_show': bucket['no_show'] += 1
+            elif status == 'canceled': bucket['canceled'] += 1
+            elif status == 'rescheduled': bucket['rescheduled'] += 1
         
-        # Map Appointment ID -> Sequence Number
-        # Subquery approach for all appointments in range
-        from sqlalchemy.orm import aliased
-        APP = aliased(Appointment)
-        
-        # This calculates rank for each appointment in the period
-        # But rank needs global history.
-        # Complex to do efficiently in python for many rows.
-        # Let's assume for now "Second Agenda" is any appointment where lead has an older appointment.
-        
-        # Second Agendas Logic
-        # 1. Identify leads with history BEFORE this period
-        lead_ids = [a.lead_id for a in total_appts]
-        leads_with_history_ids = set()
-        if lead_ids:
-             hist_q = db.session.query(Appointment.lead_id).filter(
-                 Appointment.lead_id.in_(lead_ids),
-                 Appointment.start_time < start_date,
-                 Appointment.status != 'canceled'
-             ).distinct().all()
-             leads_with_history_ids = {l[0] for l in hist_q}
-             
-        # 2. Iterate and Count (Handling in-period sequence)
-        total_appts.sort(key=lambda x: x.start_time)
         seen_leads_in_period = set()
 
         for appt in total_appts:
             stats['total_agendas'] += 1
-            if appt.status == 'completed': stats['completed'] += 1
-            if appt.status == 'no_show': stats['no_show'] += 1
-            if appt.status == 'canceled': stats['canceled'] += 1
-            
-            if appt.is_reschedule: stats['rescheduled'] += 1
             if appt.presentation_done: stats['presentations'] += 1
             
-            # Second Agenda Check
-            is_second = False
-            if appt.lead_id in leads_with_history_ids:
-                is_second = True
-            elif appt.lead_id in seen_leads_in_period:
-                is_second = True # 2nd+ appearance in this period
+            # Determine Type
+            # Default to First if None
+            a_type = appt.appointment_type or 'Primera agenda'
             
-            seen_leads_in_period.add(appt.lead_id)
-            
-            if is_second:
-                stats['second_agendas']['total'] += 1
-                if appt.status == 'completed': stats['second_agendas']['completed'] += 1
-                if appt.status == 'no_show': stats['second_agendas']['no_show'] += 1
-                if appt.status == 'canceled': stats['second_agendas']['canceled'] += 1
+            if a_type == 'Segunda agenda':
+                update_bucket(stats['second_agendas'], appt.status)
+            else:
+                # Primera agenda
+                update_bucket(stats['first_agendas'], appt.status)
 
         # 3. Sales
         sales_count = Enrollment.query.filter(*sale_filters).count()
@@ -116,13 +75,20 @@ class DashboardService(BaseService):
         # 4. Percentages
         def safe_div(n, d): return (n / d * 100) if d > 0 else 0
         
+        # KPIs based on First Agendas? Or Total?
+        # Usually Closing Rate is Total Sales / Total Completed Calls (Mixed 1st/2nd)
+        total_completed = stats['first_agendas']['completed'] + stats['second_agendas']['completed']
+        total_scheduled = stats['first_agendas']['total'] + stats['second_agendas']['total']
+        total_canceled = stats['first_agendas']['canceled'] + stats['second_agendas']['canceled']
+        total_rescheduled = stats['first_agendas']['rescheduled'] + stats['second_agendas']['rescheduled']
+        
         kpis = {
-            'show_up_rate': safe_div(stats['completed'], stats['total_agendas']),
-            'presentation_rate': safe_div(stats['presentations'], stats['completed']),
-            'closing_rate_global': safe_div(sales_count, stats['completed']), # Cierres / Completadas
+            'show_up_rate': safe_div(total_completed, total_scheduled),
+            'presentation_rate': safe_div(stats['presentations'], total_completed),
+            'closing_rate_global': safe_div(sales_count, total_completed), # Cierres / Completadas
             'closing_rate_presentation': safe_div(sales_count, stats['presentations']), # Cierres / Presentaciones
-            'cancellation_rate': safe_div(stats['canceled'], stats['total_agendas']),
-            'reschedule_rate': safe_div(stats['rescheduled'], stats['total_agendas'])
+            'cancellation_rate': safe_div(total_canceled, total_scheduled),
+            'reschedule_rate': safe_div(total_rescheduled, total_scheduled)
         }
         
         return {
