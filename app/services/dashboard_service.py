@@ -1,10 +1,137 @@
 from app import db
-from app.models import CloserDailyStats, Payment, User, Expense, Enrollment, Program, PaymentMethod, LeadProfile
+from app.models import CloserDailyStats, Payment, User, Expense, Enrollment, Program, PaymentMethod, LeadProfile, Appointment, Availability
 from app.services.base import BaseService
 from datetime import datetime, date, time, timedelta
 from sqlalchemy import or_
 
 class DashboardService(BaseService):
+    @staticmethod
+    def get_detailed_closer_metrics(start_date, end_date, closer_id=None):
+        # Ensure datetimes
+        if isinstance(start_date, date): start_date = datetime.combine(start_date, time.min)
+        if isinstance(end_date, date): end_date = datetime.combine(end_date, time.max)
+        
+        # Base Filters
+        appt_filters = [Appointment.start_time >= start_date, Appointment.start_time <= end_date]
+        avail_filters = [Availability.date >= start_date.date(), Availability.date <= end_date.date()]
+        sale_filters = [Enrollment.enrollment_date >= start_date, Enrollment.enrollment_date <= end_date, Enrollment.status == 'active']
+        
+        if closer_id:
+            appt_filters.append(Appointment.closer_id == closer_id)
+            avail_filters.append(Availability.closer_id == closer_id)
+            sale_filters.append(Enrollment.closer_id == closer_id)
+            
+        # 1. Slots Stats
+        slots_defined_count = Availability.query.filter(*avail_filters).count()
+        # Slots are 1 hour usually. If availability tracks ranges, we count rows if they are 1-slot-per-row, 
+        # OR duration. Assumed 1 row = 1 slot based on `calendar.py` logic (loop input slots).
+        
+        total_appts_query = Appointment.query.filter(*appt_filters)
+        total_appts = total_appts_query.all()
+        
+        slots_used = len(total_appts)
+        slots_available = max(0, slots_defined_count - slots_used)
+        
+        # 2. Appointment Stats
+        stats = {
+            'total_agendas': 0,
+            'completed': 0,
+            'no_show': 0,
+            'canceled': 0,
+            'rescheduled': 0, # marked as is_reschedule=True (these are NEW dates)
+            # 'reprogrammings': ? User asked "cantidad de reprogramaciones". 
+            # Usually reschedule implies an old one was moved. `is_reschedule` tags the NEW one.
+            # So count(is_reschedule) = # of times a call was moved TO this period? 
+            # Or # of requests? Let's count `is_reschedule` as "Calls that are Result of Reschedule".
+            'presentations': 0,
+            
+            'second_agendas': { # Agendas with sequence > 1
+                'total': 0, 'completed': 0, 'no_show': 0, 'canceled': 0
+            }
+        }
+        
+        # Pre-fetch sequences? 
+        # Optimized approach: We iterate `total_appts`. For each, we check if it's > 1st.
+        # N+1 problem if we query per appt. 
+        # We can fetch (id, count_prev) via subquery or just fetch all historical for these leads?
+        # Let's trust `is_reschedule` helps distinguish repeated attempts logic, but "Second Agenda" implies Sales Cycle logic (Follow up).
+        # Let's verify Sequence Number logic.
+        # We can implement a helper or simple check:
+        # For KPI dashboard, maybe approximation is fine?
+        # Let's do a bulk query for sequence map if closer_id is set.
+        
+        # Map Appointment ID -> Sequence Number
+        # Subquery approach for all appointments in range
+        from sqlalchemy.orm import aliased
+        APP = aliased(Appointment)
+        
+        # This calculates rank for each appointment in the period
+        # But rank needs global history.
+        # Complex to do efficiently in python for many rows.
+        # Let's assume for now "Second Agenda" is any appointment where lead has an older appointment.
+        
+        # Second Agendas Logic
+        # 1. Identify leads with history BEFORE this period
+        lead_ids = [a.lead_id for a in total_appts]
+        leads_with_history_ids = set()
+        if lead_ids:
+             hist_q = db.session.query(Appointment.lead_id).filter(
+                 Appointment.lead_id.in_(lead_ids),
+                 Appointment.start_time < start_date,
+                 Appointment.status != 'canceled'
+             ).distinct().all()
+             leads_with_history_ids = {l[0] for l in hist_q}
+             
+        # 2. Iterate and Count (Handling in-period sequence)
+        total_appts.sort(key=lambda x: x.start_time)
+        seen_leads_in_period = set()
+
+        for appt in total_appts:
+            stats['total_agendas'] += 1
+            if appt.status == 'completed': stats['completed'] += 1
+            if appt.status == 'no_show': stats['no_show'] += 1
+            if appt.status == 'canceled': stats['canceled'] += 1
+            
+            if appt.is_reschedule: stats['rescheduled'] += 1
+            if appt.presentation_done: stats['presentations'] += 1
+            
+            # Second Agenda Check
+            is_second = False
+            if appt.lead_id in leads_with_history_ids:
+                is_second = True
+            elif appt.lead_id in seen_leads_in_period:
+                is_second = True # 2nd+ appearance in this period
+            
+            seen_leads_in_period.add(appt.lead_id)
+            
+            if is_second:
+                stats['second_agendas']['total'] += 1
+                if appt.status == 'completed': stats['second_agendas']['completed'] += 1
+                if appt.status == 'no_show': stats['second_agendas']['no_show'] += 1
+                if appt.status == 'canceled': stats['second_agendas']['canceled'] += 1
+
+        # 3. Sales
+        sales_count = Enrollment.query.filter(*sale_filters).count()
+        
+        # 4. Percentages
+        def safe_div(n, d): return (n / d * 100) if d > 0 else 0
+        
+        kpis = {
+            'show_up_rate': safe_div(stats['completed'], stats['total_agendas']),
+            'presentation_rate': safe_div(stats['presentations'], stats['completed']),
+            'closing_rate_global': safe_div(sales_count, stats['completed']), # Cierres / Completadas
+            'closing_rate_presentation': safe_div(sales_count, stats['presentations']), # Cierres / Presentaciones
+            'cancellation_rate': safe_div(stats['canceled'], stats['total_agendas']),
+            'reschedule_rate': safe_div(stats['rescheduled'], stats['total_agendas'])
+        }
+        
+        return {
+            'slots': {'total': slots_defined_count, 'available': slots_available, 'used': slots_used},
+            'agendas': stats,
+            'sales': sales_count,
+            'kpis': kpis
+        }
+
     @staticmethod
     def get_closer_stats(start_date, end_date, closer_id=None):
         query = CloserDailyStats.query.filter(CloserDailyStats.date >= start_date, CloserDailyStats.date <= end_date)

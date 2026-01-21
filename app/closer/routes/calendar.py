@@ -177,6 +177,9 @@ def edit_appointment(id):
         if appt.status == 'canceled':
             appt.status = 'scheduled'
             
+        if old_start_time:
+             appt.is_reschedule = True
+            
         db.session.commit()
         
         if appt.lead:
@@ -203,6 +206,12 @@ def update_appt_status(id, status):
         return redirect(url_for('closer.dashboard'))
         
     appt.status = status
+    
+    # Advanced Metrics: Capture Presentation
+    if status == 'completed':
+        presentation = request.args.get('presentation') == 'true'
+        appt.presentation_done = presentation
+        
     db.session.commit()
     
     if appt.lead:

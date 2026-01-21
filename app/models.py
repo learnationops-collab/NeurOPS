@@ -261,6 +261,13 @@ class Appointment(db.Model):
     start_time = db.Column(db.DateTime, index=True)
     status = db.Column(db.String(20), default='scheduled') # scheduled, completed, canceled, no_show
     google_event_id = db.Column(db.String(255), nullable=True) # Store GCal Event ID for updates
+    
+    # Advanced Metrics
+    presentation_done = db.Column(db.Boolean, default=False)
+    is_reschedule = db.Column(db.Boolean, default=False)
+    rescheduled_from_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=True)
+    
+    rescheduled_from = db.relationship('Appointment', remote_side=[id], backref='rescheduled_to')
 
 class Availability(db.Model):
     __tablename__ = 'availability'
@@ -386,8 +393,9 @@ class CloserDailyStats(db.Model):
     sales_amount = db.Column(db.Float, default=0.0)
     cash_collected = db.Column(db.Float, default=0.0)
     
-    # Legacy / Manual Metrics (Optional, keep if needed for now)
-    self_generated_bookings = db.Column(db.Integer, default=0) 
+    # Manual Input by Closer
+    slots_defined = db.Column(db.Integer, default=0) # Total slots opened/marked by closer
+    self_generated_bookings = db.Column(db.Integer, default=0)  
     
     # Removed qualitative columns (win_of_day, etc) in favor of DailyReportAnswer
     

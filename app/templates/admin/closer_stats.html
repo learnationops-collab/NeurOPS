@@ -5,11 +5,34 @@
     {% include "includes/admin_sidebar.html" %}
 
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
-        <h1 class="text-2xl font-bold text-gray-800 mb-6">Estadísticas de Closers (Manual)</h1>
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Métricas de Closers</h1>
 
         <!-- Filter Bar -->
         <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
-            <form method="get" class="flex flex-wrap gap-4 items-end">
+            <form method="get" class="flex flex-wrap gap-4 items-end" id="filterForm">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Periodo</label>
+                    <select name="period" id="periodSelect" onchange="toggleDates()"
+                        class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500">
+                        <option value="today" {% if period=='today' %}selected{% endif %}>Hoy</option>
+                        <option value="this_month" {% if period=='this_month' %}selected{% endif %}>Este Mes</option>
+                        <option value="custom" {% if period=='custom' %}selected{% endif %}>Personalizado</option>
+                    </select>
+                </div>
+
+                <div id="customDates" class="flex gap-4" style="{% if period != 'custom' %}display:none;{% endif %}">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                        <input type="date" name="start_date" value="{{ start_date }}"
+                            class="border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                        <input type="date" name="end_date" value="{{ end_date }}"
+                            class="border-gray-300 rounded-md shadow-sm">
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Closer</label>
                     <select name="closer_id" class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500">
@@ -20,85 +43,180 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-                    <input type="date" name="start_date" value="{{ start_date }}"
-                        class="border-gray-300 rounded-md shadow-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-                    <input type="date" name="end_date" value="{{ end_date }}"
-                        class="border-gray-300 rounded-md shadow-sm">
-                </div>
+
                 <button type="submit"
                     class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Filtrar</button>
             </form>
+
+            <script>
+                function toggleDates() {
+                    const select = document.getElementById('periodSelect');
+                    const dates = document.getElementById('customDates');
+                    if (select.value === 'custom') {
+                        dates.style.display = 'flex';
+                    } else {
+                        dates.style.display = 'none';
+                        // Optional: Auto-submit when switching to preset? 
+                        // User might want to change Closer first. Let's keep manual submit or auto-submit on preset change.
+                        // "Hagamoslo simple: Boton Filtrar siempre"
+                    }
+                }
+            </script>
         </div>
 
-        <!-- KPI Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
-                <div class="text-xs text-gray-500 uppercase font-bold">Show Rate</div>
-                <div class="text-2xl font-bold text-gray-800">{{ "%.1f"|format(kpis.show_rate) }}%</div>
-                <div class="text-xs text-gray-400">{{ total.calls_completed }} / {{ total.calls_scheduled }}</div>
+        <!-- Row 1: Volume & Capacity -->
+        <h3 class="text-lg font-bold text-gray-700 mb-2">Volumen y Capacidad</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Slots -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">Slots (Disponibilidad)</p>
+                        <h2 class="text-3xl font-bold text-gray-800 mt-1">{{ metrics.slots.total }}</h2>
+                    </div>
+                    <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-4 text-sm">
+                    <div class="bg-gray-50 p-2 rounded">
+                        <span class="block text-gray-500 text-xs">Agendados</span>
+                        <span class="font-bold text-gray-800">{{ metrics.slots.used }}</span>
+                    </div>
+                    <div class="bg-green-50 p-2 rounded">
+                        <span class="block text-green-600 text-xs">Libres</span>
+                        <span class="font-bold text-green-700">{{ metrics.slots.available }}</span>
+                    </div>
+                </div>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500">
-                <div class="text-xs text-gray-500 uppercase font-bold">Closing Rate</div>
-                <div class="text-2xl font-bold text-gray-800">{{ "%.1f"|format(kpis.closing_rate) }}%</div>
-                <div class="text-xs text-gray-400">Sobre Completadas</div>
+
+            <!-- Agendas Total -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">Agendas Totales</p>
+                        <h2 class="text-3xl font-bold text-gray-800 mt-1">{{ metrics.agendas.total_agendas }}</h2>
+                    </div>
+                    <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Completadas</span>
+                        <span class="font-bold text-gray-800">{{ metrics.agendas.completed }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">No Show</span>
+                        <span class="font-bold text-red-600">{{ metrics.agendas.no_show }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Canceladas</span>
+                        <span class="font-bold text-gray-600">{{ metrics.agendas.canceled }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Reprogramadas (Nuevas)</span>
+                        <span class="font-bold text-blue-600">{{ metrics.agendas.rescheduled }}</span>
+                    </div>
+                </div>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-500">
-                <div class="text-xs text-gray-500 uppercase font-bold">Ticket Promedio</div>
-                <div class="text-2xl font-bold text-gray-800">${{ "%.0f"|format(kpis.avg_ticket) }}</div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-purple-500">
-                <div class="text-xs text-gray-500 uppercase font-bold">Ventas Totales</div>
-                <div class="text-2xl font-bold text-gray-800">{{ total.sales_count }}</div>
-                <div class="text-xs text-gray-400">${{ "{:,.0f}".format(total.cash_collected) }} Cash</div>
+
+            <!-- Second Agendas -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">Segundas Agendas</p>
+                        <h2 class="text-3xl font-bold text-gray-800 mt-1">{{ metrics.agendas.second_agendas.total }}
+                        </h2>
+                    </div>
+                    <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Completadas</span>
+                        <span class="font-bold text-gray-800">{{ metrics.agendas.second_agendas.completed }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">No Show</span>
+                        <span class="font-bold text-red-600">{{ metrics.agendas.second_agendas.no_show }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Canceladas</span>
+                        <span class="font-bold text-gray-600">{{ metrics.agendas.second_agendas.canceled }}</span>
+                    </div>
+                    <div class="h-4"></div> <!-- Spacer align -->
+                </div>
             </div>
         </div>
 
-        <!-- Detailed Table -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto">
-            <table class="w-full text-left text-sm whitespace-nowrap">
-                <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs">
-                    <tr>
-                        <th class="px-4 py-3">Fecha</th>
-                        <th class="px-4 py-3">Closer</th>
-                        <th class="px-4 py-3 text-center bg-blue-50">Agenda</th>
-                        <th class="px-4 py-3 text-center bg-blue-50">Completadas</th>
-                        <th class="px-4 py-3 text-center bg-red-50">No Show</th>
-                        <th class="px-4 py-3 text-center bg-gray-50">Cancel</th>
-                        <th class="px-4 py-3 text-center bg-green-50">Ventas</th>
-                        <th class="px-4 py-3 text-center bg-green-50">Monto</th>
-                        <th class="px-4 py-3 text-center">Self Gen</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    {% for stat in stats %}
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 font-medium">{{ stat.date.strftime('%Y-%m-%d') }}</td>
-                        <td class="px-4 py-3">{{ stat.closer.username }}</td>
-                        <td class="px-4 py-3 text-center bg-blue-50/50">{{ stat.calls_scheduled or 0 }}</td>
-                        <td class="px-4 py-3 text-center bg-blue-50/50 font-bold">{{ stat.calls_completed or 0 }}</td>
-                        <td class="px-4 py-3 text-center bg-red-50/50 text-red-600">{{ stat.calls_no_show or 0 }}</td>
-                        <td class="px-4 py-3 text-center bg-gray-50/50 text-gray-500">{{ stat.calls_canceled or 0 }}
-                        </td>
-                        <td class="px-4 py-3 text-center bg-green-50/50 font-bold text-green-700">{{ stat.sales_count or
-                            0 }}
-                        </td>
-                        <td class="px-4 py-3 text-center bg-green-50/50 text-green-700">${{
-                            "{:,.0f}".format(stat.sales_amount or 0) }}</td>
-                        <td class="px-4 py-3 text-center">{{ stat.self_generated_bookings or 0 }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="9" class="p-8 text-center text-gray-500">No hay reportes en este periodo.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Row 2: Conversion -->
+        <h3 class="text-lg font-bold text-gray-700 mb-2">Conversión y Resultados</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Presentations -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-l-4 border-l-indigo-500">
+                <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Presentaciones</div>
+                <div class="text-3xl font-bold text-indigo-900">{{ metrics.agendas.presentations }}</div>
+                <div class="mt-2 text-xs text-indigo-600 font-medium">
+                    {{ "%.1f"|format(metrics.kpis.presentation_rate) }}% de Completadas
+                </div>
+            </div>
+
+            <!-- Sales -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-l-4 border-l-green-500">
+                <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Cierres (Ventas)</div>
+                <div class="text-3xl font-bold text-green-900">{{ metrics.sales }}</div>
+                <div class="mt-2 text-xs text-green-600 font-medium">
+                    {{ "%.1f"|format(metrics.kpis.closing_rate_presentation) }}% de Presentaciones
+                </div>
+            </div>
+
+            <!-- Show Up Rate -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-l-4 border-l-blue-500">
+                <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Show Up Rate</div>
+                <div class="text-3xl font-bold text-blue-900">{{ "%.1f"|format(metrics.kpis.show_up_rate) }}%</div>
+                <div class="mt-2 text-xs text-blue-600 font-medium">
+                    Completadas / Totales
+                </div>
+            </div>
+
+            <!-- Closing Rate Global -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-l-4 border-l-purple-500">
+                <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Cierre Global</div>
+                <div class="text-3xl font-bold text-purple-900">{{ "%.1f"|format(metrics.kpis.closing_rate_global) }}%
+                </div>
+                <div class="mt-2 text-xs text-purple-600 font-medium">
+                    Cierres / Completadas
+                </div>
+            </div>
         </div>
+
+        <!-- Row 3: Negative KPIs -->
+        <h3 class="text-lg font-bold text-gray-700 mb-2">Métricas Operativas</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+                <p class="text-xs text-gray-500 uppercase">Tasa Cancelación</p>
+                <p class="text-xl font-bold text-gray-700">{{ "%.1f"|format(metrics.kpis.cancellation_rate) }}%</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+                <p class="text-xs text-gray-500 uppercase">Tasa Reprogramación</p>
+                <p class="text-xl font-bold text-gray-700">{{ "%.1f"|format(metrics.kpis.reschedule_rate) }}%</p>
+            </div>
+        </div>
+
     </main>
 </div>
 {% endblock %}

@@ -109,7 +109,8 @@
                                 <!-- Dropdown Implementation with simple focus-within/hover usually tricky in pure CSS for click, using group-hover for simplicity or needs JS. Going with simple hover compatible structure or JS toggle -->
                                 <div
                                     class="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 hidden group-hover:block">
-                                    <a href="{{ url_for('closer.update_appt_status', id=call.id, status='completed') }}"
+                                    <a href="#"
+                                        onclick="markCompleted('{{ url_for('closer.update_appt_status', id=call.id, status='completed') }}'); return false;"
                                         class="block px-4 py-2 text-xs text-green-600 hover:bg-gray-50">Completada</a>
                                     <a href="{{ url_for('closer.update_appt_status', id=call.id, status='no_show') }}"
                                         class="block px-4 py-2 text-xs text-orange-600 hover:bg-gray-50">No Show</a>
@@ -278,4 +279,22 @@
     }
 </style>
 
+<script>
+    function markCompleted(baseUrl) {
+        if (!confirm("¿Confirmar que la cita fue completada?")) return;
+
+        // Custom modal or simple confirm would be better, but confirm is limited to OK/Cancel.
+        // User asked: "debe preguntarle al closer si presento el programa"
+        // Let's use a creative confirm: "Aceptar = SI Presentó, Cancelar = NO Presentó"
+        // But we need a way to cancel the action entirely.
+        // Standard JS confirm/prompt is limiting.
+        // Let's use a safe approach:
+        // 1. Confirm completion? (Yes/No) -> If No, abort.
+        // 2. Confirm Presentation? (Yes/No) -> If Yes -> true, If No -> false.
+
+        const presented = confirm("¿Se presentó la oferta al cliente?\n\nAceptar: SÍ (Hubo presentación)\nCancelar: NO (Solo conversación)");
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        window.location.href = baseUrl + separator + "presentation=" + (presented ? "true" : "false");
+    }
+</script>
 {% endblock %}

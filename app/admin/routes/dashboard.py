@@ -70,25 +70,53 @@ def dashboard():
 @role_required('admin')
 def closer_stats():
     # filters
-    start_date_str = request.args.get('start_date', (datetime.today() - timedelta(days=30)).strftime('%Y-%m-%d'))
-    end_date_str = request.args.get('end_date', datetime.today().strftime('%Y-%m-%d'))
+    period = request.args.get('period', 'this_month')
     closer_id = request.args.get('closer_id', '')
     
-    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    today = date.today()
     
-    stats_data = DashboardService.get_closer_stats(start_date, end_date, closer_id)
+    if period == 'today':
+        start_date = today
+        end_date = today
+    elif period == 'this_month':
+        start_date = today.replace(day=1)
+        next_month = today.replace(day=28) + timedelta(days=4)
+        end_date = next_month - timedelta(days=next_month.day)
+    else: # custom
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        
+        if start_date_str and end_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                 # Fallback
+                 start_date = today.replace(day=1)
+                 end_date = today
+        else:
+            # Default to this month if custom selected but no dates
+            start_date = today.replace(day=1)
+            next_month = today.replace(day=28) + timedelta(days=4)
+            end_date = next_month - timedelta(days=next_month.day)
+
+    # Convert back to string for input values if needed, actually template uses date objects usually or strings
+    start_date_str = start_date.strftime('%Y-%m-%d')
+    end_date_str = end_date.strftime('%Y-%m-%d')
+    
+    # stats_data = DashboardService.get_closer_stats(start_date, end_date, closer_id)
+    # Using new Detailed Metrics
+    metrics = DashboardService.get_detailed_closer_metrics(start_date, end_date, closer_id if closer_id else None)
     
     closers = User.query.filter_by(role='closer').all()
 
     return render_template('admin/closer_stats.html', 
-                           stats=stats_data['records'], 
-                           kpis=stats_data['kpis'], 
-                           total=stats_data['totals'],
+                           metrics=metrics,
                            closers=closers,
                            start_date=start_date_str,
                            end_date=end_date_str,
-                           selected_closer=closer_id)
+                           selected_closer=closer_id,
+                           period=period)
 
 @bp.route('/appointments')
 @admin_required
