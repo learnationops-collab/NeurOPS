@@ -61,7 +61,7 @@ def dashboard():
                            method_labels=data['charts']['method_labels'],
                            method_values=data['charts']['method_values'],
                            
-                           recent_activity=[] # TODO: Implement recent activity logic if needed, or remove
+                           recent_activity=data.get('recent_activity', [])
                            )
 
 

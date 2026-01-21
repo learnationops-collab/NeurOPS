@@ -219,8 +219,62 @@ class DashboardService(BaseService):
          
         meth_labels = [m[0] for m in meth_q]
         meth_values = [m[1] for m in meth_q]
+        
+        # 5. Recent Activity (Leads, Sales, Payments)
+        activity = []
+        limit = 10
+        
+        # Recent Leads
+        rec_leads = db.session.query(User).filter(
+            User.created_at >= start_dt, User.created_at <= end_dt,
+            User.role.in_(['lead', 'student'])
+        ).order_by(User.created_at.desc()).limit(limit).all()
+        
+        for u in rec_leads:
+            activity.append({
+                'type': 'lead',
+                'time': u.created_at,
+                'message': 'Nuevo Lead',
+                'sub': u.username,
+                'icon': 'user-add'
+            })
+            
+        # Recent Sales
+        rec_sales = db.session.query(Enrollment).filter(
+            Enrollment.enrollment_date >= start_dt, Enrollment.enrollment_date <= end_dt,
+            Enrollment.status != 'dropped'
+        ).order_by(Enrollment.enrollment_date.desc()).limit(limit).all()
+        
+        for e in rec_sales:
+            activity.append({
+                'type': 'sale',
+                'time': e.enrollment_date,
+                'message': f'Venta: {e.program.name if e.program else "Programa"}',
+                'sub': e.student.username if e.student else "-",
+                'icon': 'academic-cap'
+            })
+            
+        # Recent Payments
+        rec_payments = db.session.query(Payment).filter(
+            Payment.date >= start_dt, Payment.date <= end_dt,
+            Payment.status == 'completed'
+        ).order_by(Payment.date.desc()).limit(limit).all()
+        
+        for p in rec_payments:
+            activity.append({
+                'type': 'payment',
+                'time': p.date,
+                'message': f'Pago: ${p.amount:,.0f}',
+                'sub': p.enrollment.student.username if p.enrollment and p.enrollment.student else "-",
+                'icon': 'currency-dollar'
+            })
+            
+        # Sort and Slice
+        activity.sort(key=lambda x: x['time'], reverse=True)
+        recent_activity = activity[:10]
 
         return {
+            'recent_activity': recent_activity,
             'dates': {'start': start_date, 'end': end_date},
             'financials': {
                 'income': income,
