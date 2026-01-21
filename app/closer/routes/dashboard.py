@@ -213,16 +213,24 @@ def agendas():
     closing_rate = (monthly_sales_count / month_appointments_count * 100) if month_appointments_count > 0 else 0
     
     # Lists - Agendas (All, Ordered by Priority)
+    from sqlalchemy.orm import aliased
     order_map = {'scheduled': 0, 'completed': 1, 'no_show': 2, 'canceled': 3}
     
-    all_appointments = Appointment.query.filter(
+    # Global Sequence Number Subquery (Count of ALL previous appointments for this lead, regardless of closer)
+    ApptPrev = aliased(Appointment)
+    seq_subq = db.session.query(db.func.count(ApptPrev.id)).filter(
+        ApptPrev.lead_id == Appointment.lead_id,
+        ApptPrev.start_time <= Appointment.start_time
+    ).correlate(Appointment).label('seq_num')
+    
+    # Query (Appt, seq_num)
+    results = db.session.query(Appointment, seq_subq).filter(
         Appointment.closer_id == current_user.id
     ).all()
     
     # Sort: Status Priority -> Start Time
-    # Note: For efficiency with large tables, this should be SQL-based, but for <1000 items Python sort is fine.
-    # We sort all then take top 15.
-    sorted_appointments = sorted(all_appointments, key=lambda x: (order_map.get(x.status, 4), x.start_time))
+    # x is tuple (Appointment, seq_num)
+    sorted_appointments = sorted(results, key=lambda x: (order_map.get(x[0].status, 4), x[0].start_time))
     next_calls = sorted_appointments[:15]
     
     events = Event.query.filter_by(is_active=True).all()

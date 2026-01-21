@@ -262,7 +262,16 @@ class CloserService:
         daily_progress = (completed_steps / total_steps * 100) if total_steps > 0 else 0
         
         # 4. Lists
-        upcoming_agendas = Appointment.query.filter(
+        from sqlalchemy.orm import aliased
+        
+        # Sequence Number Subquery
+        ApptPrev = aliased(Appointment)
+        seq_subq = db.session.query(db.func.count(ApptPrev.id)).filter(
+            ApptPrev.lead_id == Appointment.lead_id,
+            ApptPrev.start_time <= Appointment.start_time
+        ).correlate(Appointment).label('seq_num')
+        
+        upcoming_agendas = db.session.query(Appointment, seq_subq).filter(
             Appointment.closer_id == closer_id,
             Appointment.start_time >= start_utc,
             Appointment.start_time <= end_utc,

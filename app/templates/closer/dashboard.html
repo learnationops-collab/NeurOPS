@@ -83,7 +83,7 @@
                 </div>
                 <div class="overflow-y-auto p-4 space-y-3 flex-1 custom-scrollbar">
                     {% if upcoming_agendas %}
-                    {% for call in upcoming_agendas %}
+                    {% for call, seq_num in upcoming_agendas %}
                     {% set tz = pytz.timezone(current_user.timezone or 'America/La_Paz') %}
                     {% set local_time = call.start_time.replace(tzinfo=pytz.utc).astimezone(tz) %}
                     {% set is_past = call.start_time < datetime.utcnow() %} <div
@@ -122,7 +122,12 @@
                             </div>
                         </div>
                         <a href="{{ url_for('closer.lead_detail', id=call.lead_id) }}" class="block">
-                            <h5 class="font-bold text-gray-800 text-sm truncate">{{ call.lead.username }}</h5>
+                            <h5 class="font-bold text-gray-800 text-sm truncate">
+                                {{ call.lead.username }}
+                                <span
+                                    class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">#{{
+                                    seq_num }}</span>
+                            </h5>
                             <p class="text-xs text-gray-500 truncate">{{ call.event.name if call.event else 'General' }}
                             </p>
                         </a>

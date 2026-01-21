@@ -108,31 +108,46 @@ def appointments_list():
         end_date = None
 
     # We need Appointment model and db
-    from app.models import Appointment, db
+    from app.models import Appointment, db, User
     
-    query = db.session.query(Appointment, User).join(User, Appointment.closer_id == User.id).order_by(Appointment.start_time.desc())
+    # Sequence Number (1st, 2nd, etc.) per Client
+    # We use a window function for this.
+    # Note: query(Appointment, User, sequence_num)
+    
+    seq_col = db.func.row_number().over(
+        partition_by=Appointment.lead_id, 
+        order_by=Appointment.start_time
+    ).label('seq_num')
+    
+    base_query = db.session.query(Appointment, User, seq_col).join(User, Appointment.closer_id == User.id)
     
     search = request.args.get('search')
     if search:
         search_term = f"%{search}%"
         LeadUser = db.aliased(User)
-        query = db.session.query(Appointment, User).join(User, Appointment.closer_id == User.id).join(LeadUser, Appointment.lead_id == LeadUser.id, isouter=True).filter(
+        base_query = base_query.join(LeadUser, Appointment.lead_id == LeadUser.id, isouter=True).filter(
             db.or_(
                 User.username.ilike(search_term),
                 LeadUser.username.ilike(search_term),
                 LeadUser.email.ilike(search_term)
             )
-        ).order_by(Appointment.start_time.desc())
+        )
 
+    # Apply date filters
     if start_date:
         start_dt = datetime.combine(start_date, time.min)
-        query = query.filter(Appointment.start_time >= start_dt)
+        base_query = base_query.filter(Appointment.start_time >= start_dt)
         
     if end_date:
         end_dt = datetime.combine(end_date, time.max)
-        query = query.filter(Appointment.start_time <= end_dt)
-
-    appointments = query.all()
+        base_query = base_query.filter(Appointment.start_time <= end_dt)
+        
+    # Order by start time desc for display
+    # Note: Using subquery might be safer if we want proper sorting of the final list while keeping row_number correct relative to history.
+    # However, row_number().over() is calculated *before* ORDER BY of the main query usually in SQL logical order if not careful, 
+    # but here sequence is PART of the SELECT, so it is calculated per row based on partition.
+    # Simply ordering the result DESC will just reorder the rows, seq_num remains attached to the row.
+    appointments = base_query.order_by(Appointment.start_time.desc()).all()
 
     return render_template('admin/appointments_list.html', 
                            appointments=appointments,
