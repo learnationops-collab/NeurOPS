@@ -212,12 +212,18 @@ def agendas():
     
     closing_rate = (monthly_sales_count / month_appointments_count * 100) if month_appointments_count > 0 else 0
     
-    # Lists
-    next_calls = Appointment.query.filter(
-        Appointment.closer_id == current_user.id,
-        Appointment.start_time > datetime.utcnow(),
-        Appointment.status == 'scheduled'
-    ).order_by(Appointment.start_time).limit(5).all()
+    # Lists - Agendas (All, Ordered by Priority)
+    order_map = {'scheduled': 0, 'completed': 1, 'no_show': 2, 'canceled': 3}
+    
+    all_appointments = Appointment.query.filter(
+        Appointment.closer_id == current_user.id
+    ).all()
+    
+    # Sort: Status Priority -> Start Time
+    # Note: For efficiency with large tables, this should be SQL-based, but for <1000 items Python sort is fine.
+    # We sort all then take top 15.
+    sorted_appointments = sorted(all_appointments, key=lambda x: (order_map.get(x.status, 4), x.start_time))
+    next_calls = sorted_appointments[:15]
     
     events = Event.query.filter_by(is_active=True).all()
     

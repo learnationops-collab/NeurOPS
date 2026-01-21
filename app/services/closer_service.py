@@ -265,6 +265,7 @@ class CloserService:
         upcoming_agendas = Appointment.query.filter(
             Appointment.closer_id == closer_id,
             Appointment.start_time >= start_utc,
+            Appointment.start_time <= end_utc,
             Appointment.status == 'scheduled'
         ).order_by(Appointment.start_time.asc()).limit(20).all()
 
