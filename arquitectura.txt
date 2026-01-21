@@ -1,227 +1,106 @@
-DOCUMENTACIÓN DE ARQUITECTURA Y DESPLIEGUE - LEARNATION OPS
+DOCUMENTACIÓN DE ARQUITECTURA - LEARNATION OPS
 
-1. ESPECIFICACIONES DEL PROYECTO
+1. ESPECIFICACIONES TÉCNICAS
 --------------------------------
 Backend:
 - Lenguaje: Python 3.9+
-- Framework: Flask (Modularizado con Blueprints: 'admin', 'closer', 'booking', 'main')
+- Framework: Flask (Modularizado con Blueprints)
 - ORM: SQLAlchemy (Flask-SQLAlchemy)
 - Migraciones: Flask-Migrate (Alembic)
-- Autenticación: Flask-Login
+- Autenticación: Flask-Login, Google OAuth
 - Formularios: Flask-WTF
+- Integraciones: Google Calendar API, Webhooks (n8n/Make)
 
 Frontend:
-- Plantillas: Jinja2 (HTML renderizado en servidor)
-- Estilos: Tailwind CSS (vía CDN o compilado, actualmente clases utilitarias en templates)
-- Interactividad: Javascript Vanilla / Alpine.js (si aplica)
+- Renderizado: Server-Side (Jinja2)
+- Estilos: Tailwind CSS (Clases utilitarias) + CSS Vanilla (`main.css`)
+- Scripting: Javascript Vanilla (para modales, AJAX simple)
 
 Base de Datos:
-- Desarrollo Local: SQLite (archivo 'instance/local.db')
+- Desarrollo Local: SQLite (`instance/local.db`)
 - Producción: PostgreSQL
 
-Estructura de Carpetas:
+2. ESTRUCTURA DE ARCHIVOS ACTUAL
+--------------------------------
 /app
-  /admin    -> Lógica de administradores
-  /closer   -> Lógica de vendedores
-  /booking  -> Flujo de agendamiento público
-  /models.py -> Definición de tablas
-  /templates -> HTML
-  /static    -> CSS, JS, Imágenes
-/migrations  -> Historial de cambios de BD
-run.py       -> Punto de entrada
+  /__init__.py        -> Factoría de Aplicación (create_app), Configuración de extensiones
+  /models.py          -> Definición de Modelos (User, Payment, Enrollment, etc.)
+  /decorators.py      -> Decoradores de permisos (@admin_required, @role_required)
+  
+  /admin              -> Blueprint 'admin' (Gestión Global)
+    /__init__.py
+    /forms.py         -> Formularios de Admin (UserForm, PaymentForm)
+    /routes/          -> Rutas modularizadas
+       /dashboard.py      -> Vista principal y KPIs
+       /finance.py        -> Ventas, Gastos, Pagos
+       /users.py          -> Gestión de Leads, Estudiantes, Closers
+       /configuration.py  -> Configuración de Sistema
+       /integrations.py   -> Configuración de Webhooks/APIs
+  
+  /closer             -> Blueprint 'closer' (Panel de Ventas)
+    /__init__.py
+    /forms.py         -> Formularios de Venta
+    /utils.py         -> Lógica de Webhooks y Google Calendar
+    /routes/          -> Rutas modularizadas
+       /dashboard.py      -> KPIs personales
+       /sales.py          -> Registro de ventas y mis ventas
+       /calendar.py       -> Gestión de disponibilidad
 
-2. GUÍA DE DESPLIEGUE EN HOSTINGER (VPS)
+  /booking            -> Blueprint 'booking' (Agendamiento Público)
+    /__init__.py
+    /routes.py        -> Flujo de identificación, encuesta y selección de horario
+
+  /services           -> Capa de Lógica de Negocio (Business Logic)
+    /base.py              -> Clase Base
+    /user_service.py      -> Lógica de Usuarios y Leads
+    /financial_service.py -> Cálculos financieros y reportes
+    /dashboard_service.py -> Agregación de datos para Dashboards
+    /closer_service.py    -> Métricas y lógica específica de closer
+    /booking_service.py   -> Lógica de agendamiento y slots
+    /integration_service.py -> Manejo de integraciones
+
+  /templates          -> Archivos HTML (Jinja2)
+    /admin/           -> Vistas de Admin
+    /closer/          -> Vistas de Closer
+    /booking/         -> Vistas del Funnel de Agendamiento
+    /sales/           -> Vistas compartidas de ventas
+    /layouts/         -> Base templates (base.html, base_booking.html)
+    /includes/        -> Fragmentos (sidebars, navbars, filters)
+
+  /static             -> Assets estáticos (CSS, JS, Img)
+
+/migrations           -> Scripts de migración de BD
+config.py             -> Configuración de entornos (Variables, Secret Keys)
+run.py                -> Punto de entrada de la aplicación
+
+3. FLUJO DE TRABAJO EN EQUIPO (WORKFLOW)
 ----------------------------------------
-El siguiente flujo asume un VPS con Ubuntu 20.04/22.04, acceso Root, y el código alojado en GitHub.
+Para mantener el orden y la calidad del código trabajando en equipo, se recomienda seguir el siguiente flujo:
 
-PASO 1: PREPARACIÓN DEL SERVIDOR
-a. Actualizar paquetes:
-   sudo apt update && sudo apt upgrade -y
-b. Instalar dependencias del sistema:
-   sudo apt install python3-pip python3-dev python3-venv libpq-dev postgresql postgresql-contrib nginx git -y
+A. Ramas (Branches):
+   - `main`: Rama de producción. Código estable y funcional. NO commitear directamente aquí.
+   - `develop`: Rama de integración principal. Aquí se mezclan las nuevas características antes de pasar a main.
+   - `feature/nombre-funcionalidad`: Ramas temporales creadas desde `develop` para desarrollar una característica específica (ej: `feature/webhook-agenda`).
+   - `fix/nombre-bug`: Ramas para corregir errores (ej: `fix/error-dashboard`).
 
-PASO 2: BASE DE DATOS POSTGRESQL
-a. Cambiar usuario a postgres:
-   sudo -i -u postgres
-b. Entrar a consola PSQL:
-   psql
-c. Crear Base de Datos y Usuario:
-   CREATE DATABASE learnation_db;
-   CREATE USER learnation_user WITH PASSWORD 'tu_contraseña_segura_db';
-   GRANT ALL PRIVILEGES ON DATABASE learnation_db TO learnation_user;
-   \q
-d. Salir de postgres:
-   exit
+B. Proceso de Desarrollo:
+   1. Actualizar localmente: `git checkout develop` -> `git pull origin develop`.
+   2. Crear rama: `git checkout -b feature/nueva-función`.
+   3. Desarrollar: Escribir código, probar localmente.
+   4. Commit: `git add .` -> `git commit -m "Descripción clara del cambio"`.
+   5. Push: `git push origin feature/nueva-función`.
+   6. Pull Request (PR): Abrir un PR en GitHub de `feature/...` hacia `develop`.
+   7. Code Review: Otro miembro del equipo revisa el código.
+   8. Merge: Una vez aprobado, se fusiona a `develop`.
 
-PASO 3: CLONAR PROYECTO
-a. Ir a directorio web:
-   cd /var/www
-b. Clonar repo (usar token personal o clave SSH si es privado):
-   sudo git clone https://github.com/Kerwin2712/learnation_ops.git
-   sudo chown -R $USER:$USER learnation_ops
-   cd learnation_ops
+C. Base de Datos:
+   - Si modificas `models.py`, genera una migración LOCALMENTE:
+     `flask db migrate -m "Descripción del cambio"`
+   - Revisa el archivo generado en `/migrations/versions`.
+   - Aplica la migración: `flask db upgrade`.
+   - Sube el archivo de migración al repositorio junto con tu código.
 
-PASO 4: ENTORNO PYTHON
-a. Crear entorno virtual:
-   python3 -m venv venv
-b. Activar e instalar:
-   source venv/bin/activate
-   pip install -r requirements.txt
-   pip install gunicorn psycopg2-binary
-
-PASO 5: CONFIGURACIÓN (.env)
-a. Crear archivo .env en /var/www/learnation_ops/.env
-   nano .env
-b. Contenido:
-   SECRET_KEY=clave_produccion_aleatoria
-   DATABASE_URL=postgresql://learnation_user:tu_contraseña_segura_db@localhost/learnation_db
-   FLASK_ENV=production
-
-PASO 6: MIGRACIONES INICIALES
-   flask db upgrade
-   (Esto creará las tablas en PostgreSQL basado en tus modelos)
-
-PASO 7: CONFIGURAR GUNICORN (Systemd)
-a. Crear servicio:
-   sudo nano /etc/systemd/system/learnation.service
-b. Contenido:
-   [Unit]
-   Description=Gunicorn instance to serve learnation_ops
-   After=network.target
-
-   [Service]
-   User=root
-   Group=www-data
-   WorkingDirectory=/var/www/learnation_ops
-   Environment="PATH=/var/www/learnation_ops/venv/bin"
-   ExecStart=/var/www/learnation_ops/venv/bin/gunicorn --workers 3 --bind unix:learnation.sock -m 007 run:app
-
-   [Install]
-   WantedBy=multi-user.target
-c. Iniciar servicio:
-   sudo systemctl start learnation
-   sudo systemctl enable learnation
-
-PASO 8: CONFIGURAR NGINX (Reverse Proxy)
-a. Crear config:
-   sudo nano /etc/nginx/sites-available/learnation
-b. Contenido:
-   server {
-       listen 80;
-       server_name tu-dominio.com www.tu-dominio.com; # O la IP del VPS
-
-       location / {
-           include proxy_params;
-           proxy_pass http://unix:/var/www/learnation_ops/learnation.sock;
-       }
-
-       location /static {
-           alias /var/www/learnation_ops/app/static;
-       }
-   }
-c. Activar sitio:
-   sudo ln -s /etc/nginx/sites-available/learnation /etc/nginx/sites-enabled
-   sudo nginx -t
-   sudo systemctl restart nginx
-
-PASO 9: SSL (HTTPS)
-   sudo apt install certbot python3-certbot-nginx
-   sudo certbot --nginx -d tu-dominio.com
-
-3. INTEGRACIÓN CONTINUA (GITHUB WEBHOOK)
-----------------------------------------
-Para actualizar automáticamente al hacer Push:
-1. En el VPS, asegúrate de que 'git pull' funcione sin pedir contraseña (usando SSH keys deploy key).
-2. Puedes configurar un script simple o usar GitHub Actions.
-
-Método Manual Rápido (para actualizar):
-   cd /var/www/learnation_ops
-   git pull
-   source venv/bin/activate
-   pip install -r requirements.txt  # Si hubo cambios
-   flask db upgrade                 # Si hubo cambios en BD
-   sudo systemctl restart learnation
-
-4. GUÍA DE DESPLIEGUE EN RAILWAY (PAAS)
----------------------------------------
-Esta guía explica cómo desplegar el proyecto en Railway.app, configurar la base de datos PostgreSQL y conectar un subdominio de Hostinger.
-
-PASO 1: PREPARACIÓN DEL PROYECTO (Ya realizado)
-a. Asegurarse de tener 'gunicorn' en requirements.txt.
-b. Tener un archivo 'Procfile' con el contenido: web: gunicorn run:app
-c. Hacer commit y push de estos cambios a GitHub.
-
-PASO 2: CREAR PROYECTO EN RAILWAY
-a. Ir a https://railway.app/ y hacer login (preferiblemente con GitHub).
-b. Click en "New Project" -> "Deploy from GitHub repo".
-c. Seleccionar el repositorio 'NeurOPS'.
-d. Click en "Deploy Now".
-
-PASO 3: BASE DE DATOS POSTGRESQL
-a. En la vista del proyecto en Railway, click derecho en el lienzo (o botón "New") -> "Database" -> "Add PostgreSQL".
-b. Esto creará un servicio de base de datos. Espera a que se inicie.
-c. Click en el servicio de PostgreSQL -> Pestaña "Variables".
-d. Copia la variable `DATABASE_URL`.
-
-PASO 4: CONFIGURAR VARIABLES DE ENTORNO
-a. Click en el servicio de tu aplicación (el repo de GitHub).
-b. Ve a la pestaña "Variables".
-c. Agrega las siguientes variables:
-   - DATABASE_URL: (Pega el valor copiado del servicio de PostgreSQL)
-   - SECRET_KEY: (Genera una clave segura)
-   - FLASK_ENV: production
-   - FLASK_APP: run.py
-d. Railway redeteatrá los cambios y reiniciará el despliegue automáticamente.
-
-PASO 5: MIGRACIONES (Base de datos)
-a. Una vez desplegado, ve a la pestaña "Settings" del servicio de la aplicación.
-b. Busca la sección "Deploy" -> "Start Command".
-c. Puedes modificar el comando de inicio para ejecutar migraciones antes de iniciar, o usar la CLI de Railway.
-   Opción Recomendada (Build Command):
-   En "Build Command" (si existe) o usando la consola de Railway:
-   1. Instala Railway CLI localmente: npm i -g @railway/cli
-   2. Login: railway login
-   3. Link: railway link (selecciona tu proyecto)
-   4. Ejecutar migración: railway run flask db upgrade
-   
-   Alternativa rápida (sin CLI):
-   Cambiar el "Start Command" en Railway settings temporalmente a:
-   flask db upgrade && gunicorn run:app
-   (Esto ejecutará migraciones en cada reinicio, lo cual es aceptable).
-
-PASO 6: CONFIGURAR SUBDOMINIO (HOSTINGER)
-a. En Railway, servicio de la aplicación -> Settings -> Networking -> Public Networking.
-b. Click en "Generate Domain" (te dará algo como `neurops-production.up.railway.app`).
-c. Click en "Custom Domain" -> Escribe tu subdominio (ej: `app.midominio.com`).
-d. Railway te dará un registro CNAME o A para configurar. Normalmente es un CNAME apuntando al dominio de Railway.
-
-e. Ve a Hostinger -> Panel de Control -> Dominios -> DNS / Zone Editor.
-f. Agrega un nuevo registro:
-   - Tipo: CNAME
-   - Nombre: app (o el subdominio que elegiste)
-   - Objetivo/Target: (El dominio que te dio Railway, ej: neurops-project.up.railway.app)
-   - TTL: 3600 (o por defecto)
-g. Guarda los cambios.
-h. Espera unos minutos (puede tardar hasta 24h, pero suele ser rápido) para que se propague. Railway validará el dominio y generará el certificado SSL automáticamente.
-
-PASO 7: CREAR PRIMER USUARIO ADMIN
-Para crear el primer usuario administrador, debes ejecutar un comando en la consola de tu aplicación desplegada:
-
-Opción A: Usando Railway CLI (Desde tu PC)
-1.  Asegúrate de tener la CLI instalada y linkeada (`railway link`).
-2.  Ejecuta:
-    railway run flask create-admin <usuario> <contraseña>
-    Ejemplo: `railway run flask create-admin admin SuperClave123`
-
-Opción B: Usando SSH (Si ves "Copy SSH command")
-1.  En Railway, click "Copy SSH command".
-2.  Abre tu terminal en Windows (PowerShell o CMD).
-3.  Pega el comando y ejecuta.
-4.  Una vez dentro de la terminal remota, ejecuta:
-    flask create-admin <usuario> <contraseña>
-
-Opción C: Usando variables de entorno (Solo si no puedes usar CLI/SSH)
-(Esta opción requeriría modificar el código para crear un admin al iniciar si no existe, pero la Opción A o B son las estándar).
-
-
-
+D. Buenas Prácticas:
+   - Mantener la lógica pesada en `/services`, no en las rutas.
+   - Usar nombres de variables descriptivos en Inglés (estándar de código) aunque los comentarios sean en español.
+   - No subir archivos confidenciales (`.env`, `instance/local.db`, `__pycache__`).
