@@ -98,11 +98,24 @@ def dashboard():
 
 
 
+@bp.route('/client/<int:id>/toggle_pin', methods=['POST'])
+@closer_required
+def toggle_pin_client(id):
+    lead_profile = LeadProfile.query.filter_by(user_id=id).first()
+    
+    if not lead_profile:
+        user = User.query.get_or_404(id)
+        lead_profile = LeadProfile(user_id=user.id, assigned_closer_id=current_user.id)
+        db.session.add(lead_profile)
+    
+    lead_profile.is_pinned = not lead_profile.is_pinned
+    db.session.commit()
+    
+    return redirect(request.referrer or url_for('closer.dashboard'))
+
 @bp.route('/agendas')
 @closer_required
 def agendas():
-    import pytz
-    
     tz_name = current_user.timezone or 'America/La_Paz'
     try:
         closer_tz = pytz.timezone(tz_name)
@@ -117,6 +130,10 @@ def agendas():
     start_utc = start_local.astimezone(pytz.UTC).replace(tzinfo=None)
     end_utc = end_local.astimezone(pytz.UTC).replace(tzinfo=None)
     
+    # Month Start
+    month_start_local = closer_tz.localize(datetime(today_local.year, today_local.month, 1))
+    month_start_utc = month_start_local.astimezone(pytz.UTC).replace(tzinfo=None)
+
     # KPIs for Agendas View
     todays_calls_count = Appointment.query.filter(
         Appointment.closer_id == current_user.id,
@@ -125,20 +142,16 @@ def agendas():
         Appointment.status != 'canceled'
     ).count()
     
-    # Month Sales
-    month_start_local = closer_tz.localize(datetime(today_local.year, today_local.month, 1))
-    month_start_utc = month_start_local.astimezone(pytz.UTC).replace(tzinfo=None)
-    
+    # Month Sales for context
     month_enrollments = Enrollment.query.filter(
         Enrollment.enrollment_date >= month_start_utc,
-        Enrollment.enrollment_date <= end_utc, # until now/end of today
+        Enrollment.enrollment_date <= end_utc,
         Enrollment.status != 'dropped',
         Enrollment.closer_id == current_user.id
     ).all()
-    
     monthly_sales = sum(e.total_agreed for e in month_enrollments)
     monthly_sales_count = len(month_enrollments)
-    
+
     # Closing Rate
     month_appointments_count = Appointment.query.filter(
         Appointment.closer_id == current_user.id,
@@ -146,29 +159,27 @@ def agendas():
         Appointment.start_time <= end_utc,
         Appointment.status == 'completed'
     ).count()
-    
     closing_rate = (monthly_sales_count / month_appointments_count * 100) if month_appointments_count > 0 else 0
-    
-    # Lists - Agendas (All, Ordered by Priority)
+
+    # Lists - Agendas
     from sqlalchemy.orm import aliased
     order_map = {'scheduled': 0, 'completed': 1, 'no_show': 2, 'canceled': 3}
     
-    # Global Sequence Number Subquery (Count of ALL previous appointments for this lead, regardless of closer)
     ApptPrev = aliased(Appointment)
     seq_subq = db.session.query(db.func.count(ApptPrev.id)).filter(
         ApptPrev.lead_id == Appointment.lead_id,
         ApptPrev.start_time <= Appointment.start_time
     ).correlate(Appointment).label('seq_num')
     
-    # Query (Appt, seq_num)
     results = db.session.query(Appointment, seq_subq).filter(
         Appointment.closer_id == current_user.id
     ).all()
     
-    # Sort: Status Priority -> Start Time
-    # x is tuple (Appointment, seq_num)
     sorted_appointments = sorted(results, key=lambda x: (order_map.get(x[0].status, 4), x[0].start_time))
-    next_calls = sorted_appointments[:15]
+    next_calls = sorted_appointments # All for agendas view? Limit? Usually agendas view shows all relative to today or recent.
+    # The previous code had slice [:15] but maybe for dashboard. 
+    # Let's keep it limited or paginated if it gets heavy, or slice for now as per previous trace.
+    next_calls = sorted_appointments[:50] 
     
     events = Event.query.filter_by(is_active=True).all()
     
@@ -176,36 +187,6 @@ def agendas():
     active_enrollments = Enrollment.query.filter(Enrollment.status == 'active', Enrollment.closer_id == current_user.id).all()
     debtors = []
     
-    return render_template('closer/dashboard_legacy_removed.html') # Legacy function placeholder if any
-
-@bp.route('/client/<int:id>/toggle_pin', methods=['POST'])
-@closer_required
-def toggle_pin_client(id):
-    lead_profile = LeadProfile.query.filter_by(user_id=id).first()
-    
-    if not lead_profile:
-        # Create profile if not exists? Usually exists for leads.
-        # If not, let's create simple one or error
-        user = User.query.get_or_404(id)
-        lead_profile = LeadProfile(user_id=user.id, assigned_closer_id=current_user.id)
-        db.session.add(lead_profile)
-    
-    # Verify assignment safety (optional but good)
-    if lead_profile.assigned_closer_id != current_user.id:
-        # If accessing lead not assigned, maybe auto-assign or fail?
-        # For "Recent Clients" they should interpret interaction = ownership or shared.
-        # Let's assume Closer can pin any lead they interact with, but `is_pinned` is on Profile which assumes 1 closer per lead.
-        # If they pin someone else's lead, they might steal the pin?
-        # `LeadProfile` is 1-to-1 with User. `assigned_closer_id` helps `CloserService` filter.
-        # If we just toggle `is_pinned`, it affects whoever verifies `assigned_closer_id`.
-        # If I pin a lead assigned to ANOTHER closer, it won't show up in MY list because query filters by `assigned_closer_id`.
-        # So we must ensure they are assigned.
-        pass
-        
-    lead_profile.is_pinned = not lead_profile.is_pinned
-    db.session.commit()
-    
-    return redirect(request.referrer or url_for('closer.dashboard'))
     for enr in active_enrollments:
         paid = db.session.query(db.func.sum(Payment.amount)).filter(
             Payment.enrollment_id == enr.id,
@@ -221,7 +202,7 @@ def toggle_pin_client(id):
                 'debt': debt
             })
     top_debtors = sorted(debtors, key=lambda x: x['debt'], reverse=True)[:5]
-    
+
     return render_template('closer/agendas.html', 
                            today_appointments_count=todays_calls_count, 
                            next_calls=next_calls,
