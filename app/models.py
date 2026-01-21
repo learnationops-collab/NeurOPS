@@ -262,6 +262,9 @@ class Appointment(db.Model):
     status = db.Column(db.String(20), default='scheduled') # scheduled, completed, canceled, no_show
     google_event_id = db.Column(db.String(255), nullable=True) # Store GCal Event ID for updates
     
+    # New: Appointment Type ("Primera agenda", "Segunda agenda")
+    appointment_type = db.Column(db.String(50), default='Primera agenda')
+
     # Advanced Metrics
     presentation_done = db.Column(db.Boolean, default=False)
     is_reschedule = db.Column(db.Boolean, default=False)

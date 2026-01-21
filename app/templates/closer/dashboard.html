@@ -96,6 +96,9 @@
                                 {% if is_past and call.status == 'scheduled' %}
                                 <span
                                     class="text-[10px] font-bold text-red-500 bg-red-100 px-1.5 py-0.5 rounded">Atrasada</span>
+                                {% elif call.status == 'rescheduled' %}
+                                <span
+                                    class="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">Reagendada</span>
                                 {% endif %}
                             </div>
                             <div class="relative">
@@ -131,6 +134,8 @@
                             </h5>
                             <p class="text-xs text-gray-500 truncate">{{ call.event.name if call.event else 'General' }}
                             </p>
+                            <span class="text-[10px] text-gray-400 border border-gray-200 rounded px-1">{{
+                                call.appointment_type or 'Primera agenda' }}</span>
                         </a>
                 </div>
                 {% endfor %}

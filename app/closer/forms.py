@@ -13,6 +13,10 @@ class AppointmentForm(FlaskForm):
     lead_id = SelectField('Lead', coerce=int, validators=[DataRequired()])
     date = DateField('Fecha', validators=[DataRequired()])
     time = TimeField('Hora', validators=[DataRequired()])
+    appointment_type = SelectField('Tipo de Agenda', choices=[
+        ('Primera agenda', 'Primera agenda'),
+        ('Segunda agenda', 'Segunda agenda')
+    ], default='Primera agenda', validators=[DataRequired()])
     submit = SubmitField('Agendar Cita')
 
 class SaleForm(FlaskForm):

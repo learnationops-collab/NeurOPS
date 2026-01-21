@@ -114,7 +114,8 @@ def create_appointment():
             closer_id=current_user.id,
             lead_id=form.lead_id.data,
             start_time=start_utc,
-            status='scheduled'
+            status='scheduled',
+            appointment_type=form.appointment_type.data
         )
         db.session.add(appt)
         db.session.commit()
@@ -159,6 +160,8 @@ def edit_appointment(id):
         except:
             form.date.data = appt.start_time.date()
             form.time.data = appt.start_time.time()
+            
+        form.appointment_type.data = appt.appointment_type or 'Primera agenda'
         
     if form.validate_on_submit():
         tz_name = current_user.timezone or 'America/La_Paz'
@@ -172,22 +175,41 @@ def edit_appointment(id):
         
         old_start_time = appt.start_time if appt.start_time != start_utc else None
         
-        appt.lead_id = form.lead_id.data
-        appt.start_time = start_utc
-        if appt.status == 'canceled':
-            appt.status = 'scheduled'
-            
         if old_start_time:
-             appt.is_reschedule = True
+             # Create new appointment for the reschedule
+             new_appt = Appointment(
+                 closer_id=current_user.id,
+                 lead_id=form.lead_id.data,
+                 start_time=start_utc,
+                 status='scheduled',
+                 appointment_type=form.appointment_type.data,
+                 google_event_id=appt.google_event_id, # Transfer GCal ID
+                 rescheduled_from_id=appt.id,
+                 is_reschedule=True
+             )
+             
+             # Archive old appointment
+             appt.status = 'rescheduled'
+             appt.google_event_id = None # Release GCal ID
+             
+             db.session.add(new_appt)
+             db.session.commit()
+             
+             # Sync GCal (Updates event because new_appt has the same google_event_id)
+             send_calendar_webhook(new_appt, 'rescheduled', old_start_time=old_start_time)
+             
+             flash('Cita reagendada (Se ha creado una nueva cita).')
+        else:
+            # Just updating details, no time change
+            appt.lead_id = form.lead_id.data
+            appt.appointment_type = form.appointment_type.data
             
-        db.session.commit()
-        
-        if appt.lead:
-            appt.lead.update_status_based_on_debt()
-        
-        send_calendar_webhook(appt, 'rescheduled', old_start_time=old_start_time)
-        
-        flash('Cita reagendada.')
+            if appt.status == 'canceled':
+                appt.status = 'scheduled'
+                
+            db.session.commit()
+            flash('Detalles de la cita actualizados.')
+            
         return redirect(url_for('closer.dashboard'))
         
     return render_template('closer/appointment_form.html', form=form, title="Editar Cita")
