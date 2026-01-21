@@ -186,12 +186,12 @@ class DashboardService(BaseService):
             chart_revs.append(rev_dict.get(d_str, 0.0))
             current_d += delta
             
-        # 2. Sales by Program (In Period)
+        # 2. Sales by Program (In Period) - COHORT BASED (User Registration Date)
         prog_q = db.session.query(
              Program.name,
              db.func.count(Enrollment.id)
-        ).join(Enrollment.program) \
-         .filter(Enrollment.enrollment_date >= start_date, Enrollment.enrollment_date <= end_date, Enrollment.status == 'active') \
+        ).join(Enrollment.program).join(Enrollment.student) \
+         .filter(User.created_at >= start_dt, User.created_at <= end_dt, Enrollment.status == 'active') \
          .group_by(Program.name).all()
          
         prog_labels = [p[0] for p in prog_q]
@@ -214,7 +214,7 @@ class DashboardService(BaseService):
             PaymentMethod.name,
             db.func.count(Payment.id) 
         ).join(Payment.method) \
-         .filter(Payment.date >= start_date, Payment.date <= end_date, Payment.status == 'completed') \
+         .filter(Payment.date >= start_dt, Payment.date <= end_dt, Payment.status == 'completed') \
          .group_by(PaymentMethod.name).all()
          
         meth_labels = [m[0] for m in meth_q]

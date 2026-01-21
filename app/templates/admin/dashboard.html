@@ -470,11 +470,11 @@
         if (e.target.value === 'program') {
             progContainer.classList.remove('hidden');
             methContainer.classList.add('hidden');
-            progTitle.textContent = 'Ventas por Programa (Este Mes)';
+            progTitle.textContent = 'Ventas por Programa';
         } else {
             progContainer.classList.add('hidden');
             methContainer.classList.remove('hidden');
-            progTitle.textContent = 'Ventas por Método (Este Mes)';
+            progTitle.textContent = 'Ventas por Método';
         }
     });
 
@@ -488,7 +488,7 @@
         if (e.target.value === 'revenue') {
             revContainer.classList.remove('hidden');
             statContainer.classList.add('hidden');
-            title.textContent = 'Ingresos (Últimos 30 Días)';
+            title.textContent = 'Ingresos';
         } else {
             revContainer.classList.add('hidden');
             statContainer.classList.remove('hidden');
