@@ -15,3 +15,5 @@
 6. **Entorno de Trabajo**:
     - Mantener el directorio de trabajo limpio.
     - Eliminar archivos de prueba o scripts de un solo uso antes de hacer commit (o usar .gitignore).
+
+# Este es un comentario de prueba para un test de push/pull.
