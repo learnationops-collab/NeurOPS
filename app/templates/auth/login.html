@@ -28,8 +28,10 @@
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
                 <div class="mt-1">
-                    {{ form.password(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2
-                    focus:ring-indigo-500 focus:border-indigo-500 outline-none transition", placeholder="••••••••") }}
+                    {{ form.password(type="password", class="w-full px-4 py-2 border border-gray-300 rounded-lg
+                    focus:ring-2
+                    focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-gray-900",
+                    placeholder="••••••••", style="color: #111827;") }}
                     {% for error in form.password.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ error }}</p>
                     {% endfor %}

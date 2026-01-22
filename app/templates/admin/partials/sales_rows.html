@@ -1,5 +1,5 @@
 {% for p in payments %}
-<tr class="hover:bg-gray-50 transition">
+<tr class="hover:bg-gray-50 transition group">
     <td class="px-6 py-4">
         <input type="checkbox" name="payment_ids" value="{{ p.id }}"
             class="rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
@@ -9,8 +9,14 @@
     </td>
     <td class="px-6 py-4 text-sm text-gray-900">{{ p.date.strftime('%Y-%m-%d') }}</td>
     <td class="px-6 py-4">
-        <div class="font-medium text-gray-900">{{ p.enrollment.student.username }}</div>
-        <div class="text-xs text-gray-500">{{ p.enrollment.student.email }}</div>
+        <a href="{{ url_for('closer.lead_detail', id=p.enrollment.student.id) }}" class="hover:underline">
+            <div
+                class="font-medium text-gray-900 dark:text-white group-hover:text-gray-900 hover:text-indigo-600 dark:hover:text-indigo-400">
+                {{
+                p.enrollment.student.username }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600">{{
+                p.enrollment.student.email }}</div>
+        </a>
     </td>
     <td class="px-6 py-4 text-sm text-gray-600">{{ p.enrollment.program.name }}</td>
     <td class="px-6 py-4 text-sm font-bold text-green-600 text-right">${{ "{:,.2f}".format(p.amount) }}</td>
