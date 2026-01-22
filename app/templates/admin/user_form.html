@@ -3,12 +3,15 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-    <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow border border-gray-200">
+<div
+    class="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4 transition-colors duration-300">
+    <div
+        class="max-w-md w-full space-y-8 bg-white dark:bg-gray-800 p-8 rounded-xl shadow border border-gray-200 dark:border-gray-700">
         <div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">{{ title }}</h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                <a href="{{ url_for('admin.users_list') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">{{ title }}</h2>
+            <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+                <a href="{{ url_for('admin.users_list') }}"
+                    class="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
                     ← Volver a la lista
                 </a>
             </p>
@@ -17,45 +20,58 @@
             {{ form.hidden_tag() }}
             <div class="rounded-md shadow-sm -space-y-px">
                 <div class="mb-4">
-                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                    <label for="username"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Usuario</label>
                     {{ form.username(class="appearance-none rounded relative block w-full px-3 py-2 border
-                    border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500
+                    border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900
+                    dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-indigo-500
                     focus:border-indigo-500 focus:z-10 sm:text-sm") }}
                     {% for error in form.username.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ error }}</p>
                     {% endfor %}
                 </div>
                 <div class="mb-4">
-                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <label for="email"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                     {{ form.email(class="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300
-                    placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500
+                    dark:border-gray-600
+                    placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white
+                    dark:bg-gray-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500
                     focus:z-10 sm:text-sm") }}
                     {% for error in form.email.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ error }}</p>
                     {% endfor %}
                 </div>
                 <div class="mb-4">
-                    <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+                    <label for="role"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rol</label>
                     {{ form.role(class="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300
-                    placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500
+                    dark:border-gray-600
+                    placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white
+                    dark:bg-gray-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500
                     focus:z-10 sm:text-sm") }}
                 </div>
                 <!-- Timezone Field -->
                 <div class="mb-4">
-                    <label for="timezone" class="block text-sm font-medium text-gray-700 mb-1">Zona Horaria</label>
+                    <label for="timezone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Zona
+                        Horaria</label>
                     {{ form.timezone(class="appearance-none rounded relative block w-full px-3 py-2 border
-                    border-gray-300
-                    placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500
+                    border-gray-300 dark:border-gray-600
+                    placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white
+                    dark:bg-gray-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500
                     focus:z-10 sm:text-sm") }}
                     {% for error in form.timezone.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ error }}</p>
                     {% endfor %}
                 </div>
                 <div class="mb-4">
-                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña {% if 'Editar'
+                    <label for="password"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contraseña {% if
+                        'Editar'
                         in title %}(Dejar en blanco para mantener){% endif %}</label>
                     {{ form.password(class="appearance-none rounded relative block w-full px-3 py-2 border
-                    border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500
+                    border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900
+                    dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-indigo-500
                     focus:border-indigo-500 focus:z-10 sm:text-sm") }}
                     {% for error in form.password.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ error }}</p>

@@ -39,6 +39,10 @@ def dashboard():
     tz_name = current_user.timezone or 'America/La_Paz'
     data = CloserService.get_dashboard_data(current_user.id, tz_name)
     
+    # Fetch Pinned Appointments
+    pinned_appointments = Appointment.query.filter(Appointment.closer_id == current_user.id, Appointment.is_pinned == True).all()
+
+    
     questions = DailyReportQuestion.query.filter_by(is_active=True).order_by(DailyReportQuestion.order).all()
     today_stats = data['today_stats']
     
@@ -93,6 +97,7 @@ def dashboard():
                            recent_clients=data['recent_clients'],
                            questions=questions,
                            today_stats=today_stats,
+                           pinned_appointments=pinned_appointments,
                            datetime=datetime,
                            pytz=pytz)
 
@@ -112,6 +117,20 @@ def toggle_pin_client(id):
     db.session.commit()
     
     return redirect(request.referrer or url_for('closer.dashboard'))
+
+@bp.route('/appointment/<int:id>/toggle_pin', methods=['POST'])
+@closer_required
+def toggle_pin_appointment(id):
+    appt = Appointment.query.get_or_404(id)
+    if appt.closer_id != current_user.id:
+        flash('No tienes permiso.')
+        return redirect(url_for('closer.dashboard'))
+        
+    appt.is_pinned = not appt.is_pinned
+    db.session.commit()
+    # Return to referrer or dashboard
+    return redirect(request.referrer or url_for('closer.dashboard'))
+
 
 @bp.route('/agendas')
 @closer_required
@@ -163,7 +182,7 @@ def agendas():
 
     # Lists - Agendas
     from sqlalchemy.orm import aliased
-    order_map = {'scheduled': 0, 'completed': 1, 'no_show': 2, 'canceled': 3}
+    order_map = {'confirmed': -1, 'scheduled': 0, 'completed': 1, 'no_show': 2, 'canceled': 3}
     
     ApptPrev = aliased(Appointment)
     seq_subq = db.session.query(db.func.count(ApptPrev.id)).filter(

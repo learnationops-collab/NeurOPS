@@ -4,19 +4,23 @@
 <div class="flex h-screen overflow-hidden">
     {% include "includes/admin_sidebar.html" %}
 
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+    <main
+        class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
 
         <!-- KPI Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
             <!-- Total Sales Count -->
             <div
-                class="bg-white rounded-xl shadow-sm p-5 border border-gray-100 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
                 <div class="absolute top-0 right-0 p-4 opacity-10">
                     <i
                         class="fas fa-shopping-cart text-6xl text-blue-500 transform rotate-12 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 z-10">Total Ventas</span>
-                <span id="kpi-sales-count" class="text-3xl font-bold text-gray-800 z-10">{{ total_sales_count }}</span>
+                <span
+                    class="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 z-10">Total
+                    Ventas</span>
+                <span id="kpi-sales-count" class="text-3xl font-bold text-gray-800 dark:text-white z-10">{{
+                    total_sales_count }}</span>
                 <div class="mt-2 text-xs text-blue-500 font-medium bg-blue-50 px-2 py-1 rounded-full z-10">
                     <i class="fas fa-receipt mr-1"></i>Registros
                 </div>
@@ -24,27 +28,32 @@
 
             <!-- Gross Revenue -->
             <div
-                class="bg-white rounded-xl shadow-sm p-5 border border-gray-100 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
                 <div class="absolute top-0 right-0 p-4 opacity-10">
                     <i
                         class="fas fa-dollar-sign text-6xl text-gray-500 transform rotate-12 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 z-10">Ingresos Brutos</span>
-                <span id="kpi-revenue" class="text-3xl font-bold text-gray-800 z-10 text-center">${{
+                <span
+                    class="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 z-10">Ingresos
+                    Brutos</span>
+                <span id="kpi-revenue" class="text-3xl font-bold text-gray-800 dark:text-white z-10 text-center">${{
                     "{:,.2f}".format(total_revenue)
                     }}</span>
             </div>
 
             <!-- Cash Collected -->
             <div
-                class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-l-4 border-green-500 dark:border-green-600 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
                 <div class="absolute top-0 right-0 p-4 opacity-10">
                     <i
                         class="fas fa-wallet text-6xl text-green-500 transform rotate-12 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 z-10">Cash Collected
+                <span
+                    class="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 z-10">Cash
+                    Collected
                     (Neto)</span>
-                <span id="kpi-cash-collected" class="text-3xl font-bold text-gray-900 z-10 text-center">${{
+                <span id="kpi-cash-collected"
+                    class="text-3xl font-bold text-gray-900 dark:text-white z-10 text-center">${{
                     "{:,.2f}".format(cash_collected)
                     }}</span>
                 <div class="mt-2 text-xs text-gray-400 font-medium z-10">Ingresos - Comisiones</div>
@@ -52,13 +61,15 @@
 
             <!-- Average Ticket -->
             <div
-                class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-purple-500 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border-l-4 border-purple-500 dark:border-purple-500 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
                 <div class="absolute top-0 right-0 p-4 opacity-10">
                     <i
                         class="fas fa-tag text-6xl text-purple-500 transform rotate-12 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 z-10">Ticket Promedio</span>
-                <span id="kpi-avg-ticket" class="text-3xl font-bold text-gray-900 z-10 text-center">${{
+                <span
+                    class="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 z-10">Ticket
+                    Promedio</span>
+                <span id="kpi-avg-ticket" class="text-3xl font-bold text-gray-900 dark:text-white z-10 text-center">${{
                     "{:,.2f}".format(avg_ticket)
                     }}</span>
                 <div class="mt-2 text-xs text-gray-400 font-medium z-10">Completos + 1er Pago</div>
@@ -66,8 +77,9 @@
         </div>
 
         <!-- Filters & Actions -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-            <div class="flex justify-end mb-4 border-b border-gray-100 pb-2">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
+            <div class="flex justify-end mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
                 <a href="{{ url_for('admin.create_sale') }}"
                     class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition flex items-center gap-2">
                     <i class="fas fa-plus"></i> Nueva Venta Manual
@@ -82,22 +94,23 @@
 
                 <!-- Search -->
                 <div class="md:col-span-3">
-                    <label class="block text-xs font-medium text-gray-500 mb-1">Buscar Cliente</label>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Buscar
+                        Cliente</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-search text-gray-400"></i>
                         </span>
                         <input type="text" name="search" value="{{ search }}"
-                            class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-shadow"
+                            class="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-transparent transition-shadow bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             placeholder="Nombre, Email...">
                     </div>
                 </div>
 
                 <!-- Program Filter -->
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-medium text-gray-500 mb-1">Programa</label>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Programa</label>
                     <select name="program_id"
-                        class="block w-full pl-2 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-shadow bg-white">
+                        class="block w-full pl-2 pr-8 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-shadow bg-white dark:bg-gray-700">
                         <option value="">Todos</option>
                         {% for prog in all_programs %}
                         <option value="{{ prog.id }}" {% if program_id|string==prog.id|string %}selected{% endif %}>{{
@@ -108,9 +121,9 @@
 
                 <!-- Payment Type Filter -->
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-medium text-gray-500 mb-1">Tipo de Pago</label>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo de Pago</label>
                     <select name="payment_type"
-                        class="block w-full pl-2 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-shadow bg-white">
+                        class="block w-full pl-2 pr-8 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-shadow bg-white dark:bg-gray-700">
                         <option value="">Todos</option>
                         {% for code, label in payment_types %}
                         <option value="{{ code }}" {% if payment_type==code %}selected{% endif %}>{{ label }}</option>
@@ -120,9 +133,9 @@
 
                 <!-- Method Filter -->
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-medium text-gray-500 mb-1">Método</label>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Método</label>
                     <select name="method_id"
-                        class="block w-full pl-2 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-shadow bg-white">
+                        class="block w-full pl-2 pr-8 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-shadow bg-white dark:bg-gray-700">
                         <option value="">Todos</option>
                         {% for m in all_methods %}
                         <option value="{{ m.id }}" {% if method_id|string==m.id|string %}selected{% endif %}>{{ m.name
@@ -134,14 +147,14 @@
                 <!-- Date Range -->
                 <div class="md:col-span-3 grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Desde</label>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Desde</label>
                         <input type="date" name="start_date" value="{{ start_date }}"
-                            class="block w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500">
+                            class="block w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Hasta</label>
                         <input type="date" name="end_date" value="{{ end_date }}"
-                            class="block w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500">
+                            class="block w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                 </div>
             </form>
@@ -150,11 +163,13 @@
         <!-- Sales Table -->
         <form id="bulkForm" method="POST" action="{{ url_for('admin.bulk_assign_sales_closer') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <div class="flex items-center gap-4 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <span class="text-sm font-medium text-gray-700"><i class="fas fa-tasks mr-2"></i>Acciones en
+            <div
+                class="flex items-center gap-4 mb-4 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300"><i
+                        class="fas fa-tasks mr-2"></i>Acciones en
                     Lote:</span>
                 <select name="closer_id" required
-                    class="block w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                    class="block w-64 pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     <option value="">Asignar Closer...</option>
                     {% for c in closers %}
                     <option value="{{ c.id }}">{{ c.username }}</option>
@@ -166,14 +181,16 @@
                 </button>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+            <div
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs">
+                        <thead
+                            class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-300 uppercase text-xs">
                             <tr>
                                 <th class="px-6 py-3 font-semibold tracking-wider w-4">
                                     <input type="checkbox" id="selectAll"
-                                        class="rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                        class="rounded text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
                                 </th>
                                 <th class="px-6 py-3 font-semibold tracking-wider w-8">#</th>
                                 <th class="px-6 py-3 font-semibold tracking-wider">Fecha</th>
@@ -185,7 +202,8 @@
                                 <th class="px-6 py-3 font-semibold tracking-wider text-right">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100 bg-white">
+                        <tbody
+                            class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                             {% include "admin/partials/sales_rows.html" %}
                         </tbody>
                     </table>
@@ -209,7 +227,7 @@
         <div class="text-center pb-8">
             {% if pagination.has_next %}
             <button id="loadMoreBtn" type="button"
-                class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium shadow-sm hover:bg-gray-50 hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-2 rounded-full font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <i class="fas fa-chevron-down mr-2 text-xs"></i>Cargar 50 ventas más
             </button>
             {% endif %}

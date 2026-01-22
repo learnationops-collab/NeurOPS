@@ -38,10 +38,10 @@ class DashboardService(BaseService):
             'presentations': 0,
             
             'first_agendas': { # Was 'total_agendas' in legacy view conceptually? Let's be explicit
-                'total': 0, 'completed': 0, 'no_show': 0, 'canceled': 0, 'rescheduled': 0
+                'total': 0, 'completed': 0, 'no_show': 0, 'canceled': 0, 'rescheduled': 0, 'scheduled': 0, 'confirmed': 0
             },
             'second_agendas': {
-                'total': 0, 'completed': 0, 'no_show': 0, 'canceled': 0, 'rescheduled': 0
+                'total': 0, 'completed': 0, 'no_show': 0, 'canceled': 0, 'rescheduled': 0, 'scheduled': 0, 'confirmed': 0
             }
         }
         
@@ -52,6 +52,8 @@ class DashboardService(BaseService):
             elif status == 'no_show': bucket['no_show'] += 1
             elif status == 'canceled': bucket['canceled'] += 1
             elif status == 'rescheduled': bucket['rescheduled'] += 1
+            elif status == 'scheduled': bucket['scheduled'] += 1
+            elif status == 'confirmed': bucket['confirmed'] += 1
         
         seen_leads_in_period = set()
 

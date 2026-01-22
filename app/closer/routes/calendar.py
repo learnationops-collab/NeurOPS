@@ -222,7 +222,7 @@ def update_appt_status(id, status):
         flash('No tienes permiso para modificar esta cita.')
         return redirect(url_for('closer.dashboard'))
         
-    valid_statuses = ['scheduled', 'completed', 'canceled', 'no_show']
+    valid_statuses = ['scheduled', 'completed', 'canceled', 'no_show', 'confirmed']
     if status not in valid_statuses:
         flash('Estado inválido.')
         return redirect(url_for('closer.dashboard'))
@@ -242,7 +242,8 @@ def update_appt_status(id, status):
     msg_map = {
         'completed': 'Cita marcada como Realizada.',
         'canceled': 'Cita cancelada.',
-        'no_show': 'Cita marcada como No Show.'
+        'no_show': 'Cita marcada como No Show.',
+        'confirmed': 'Cita confirmada exitosamente.'
     }
     
     send_calendar_webhook(appt, 'canceled' if status == 'canceled' else 'status_changed')

@@ -4,17 +4,21 @@
 <div class="flex h-screen overflow-hidden">
     {% include "includes/admin_sidebar.html" %}
 
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+    <main
+        class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
+        {% include "admin/includes/settings_nav.html" %}
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">Programas</h2>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Programas</h2>
             <a href="{{ url_for('admin.create_program') }}"
                 class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">+ Nuevo
                 Programa</a>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <table class="w-full text-left">
-                <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs">
+                <thead
+                    class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-300 uppercase text-xs">
                     <tr>
                         <th class="px-6 py-3 font-semibold">Nombre del Programa</th>
                         <th class="px-6 py-3 font-semibold">Precio ($USD)</th>
@@ -22,11 +26,12 @@
                         <th class="px-6 py-3 font-semibold text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     {% for program in programs %}
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ program.name }}</td>
-                        <td class="px-6 py-4 text-gray-600">${{ "{:,.2f}".format(program.price) }}</td>
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ program.name }}</td>
+                        <td class="px-6 py-4 text-gray-600 dark:text-gray-300">${{ "{:,.2f}".format(program.price) }}
+                        </td>
                         <td class="px-6 py-4">
                             <a href="{{ url_for('admin.toggle_program_status', id=program.id) }}"
                                 title="Clic para cambiar estado">
@@ -45,7 +50,7 @@
                         </td>
                         <td class="px-6 py-4 text-right flex justify-end gap-2">
                             <a href="{{ url_for('admin.edit_program', id=program.id) }}"
-                                class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50 transition"
+                                class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 p-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition"
                                 title="Editar">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                     stroke="currentColor">
@@ -55,7 +60,7 @@
                             </a>
                             <a href="{{ url_for('admin.delete_program', id=program.id) }}"
                                 onclick="return confirm('¿Eliminar programa {{ program.name }}?')"
-                                class="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition"
+                                class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition"
                                 title="Eliminar">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                     stroke="currentColor">
@@ -69,7 +74,7 @@
                 </tbody>
             </table>
             {% if not programs %}
-            <div class="p-8 text-center text-gray-500">No hay programas creados.</div>
+            <div class="p-8 text-center text-gray-500 dark:text-gray-400">No hay programas creados.</div>
             {% endif %}
         </div>
     </main>

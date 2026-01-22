@@ -1,6 +1,6 @@
 <!-- Sidebar with Alpine.js -->
 <aside
-    class="bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out hidden md:flex relative"
+    class="bg-slate-900 dark:bg-white text-slate-300 dark:text-gray-600 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out hidden md:flex relative border-r border-transparent dark:border-gray-200"
     x-data="sidebar" :class="expanded ? 'w-64' : 'w-20'">
 
     <!-- Toggle Button -->
@@ -15,8 +15,8 @@
     </button>
 
     <!-- Header / Logo -->
-    <div class="h-16 flex items-center justify-center border-b border-slate-800">
-        <div class="font-bold text-white tracking-tight flex items-center gap-2 overflow-hidden px-4"
+    <div class="h-16 flex items-center justify-center border-b border-slate-800 dark:border-gray-200">
+        <div class="font-bold text-white dark:text-gray-800 tracking-tight flex items-center gap-2 overflow-hidden px-4"
             :class="expanded ? 'w-full' : 'justify-center'">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-500 flex-shrink-0" fill="none"
                 viewBox="0 0 24 24" stroke="currentColor">
@@ -33,13 +33,13 @@
         <!-- Section Label -->
         <div class="px-2 text-xs font-bold text-gray-500 uppercase mb-2 mt-2 truncate" x-show="expanded" x-transition>
             Principal</div>
-        <div class="h-px bg-slate-800 my-2 mx-2" x-show="!expanded"></div>
+        <div class="h-px bg-slate-800 dark:bg-gray-200 my-2 mx-2" x-show="!expanded"></div>
 
         <!-- Dashboard -->
         <a href="{{ url_for('admin.dashboard') }}" data-tooltip="Dashboard"
             class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.dashboard' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if request.endpoint == 'admin.dashboard' %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -65,7 +65,7 @@
         <a href="{{ url_for('admin.users_list') }}" data-tooltip="Usuarios"
             class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.users_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 text-white font-medium{% endif %}">
+            class="{% if request.endpoint == 'admin.users_list' %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -77,13 +77,13 @@
         <!-- Section Label -->
         <div class="px-2 text-xs font-bold text-gray-500 uppercase mt-6 mb-2 truncate" x-show="expanded" x-transition>
             Gestión</div>
-        <div class="h-px bg-slate-800 my-2 mx-2" x-show="!expanded"></div>
+        <div class="h-px bg-slate-800 dark:bg-gray-200 my-2 mx-2" x-show="!expanded"></div>
 
         <!-- Clientes -->
         <a href="{{ url_for('admin.leads_list') }}" data-tooltip="Clientes"
             class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.leads_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if request.endpoint == 'admin.leads_list' %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -96,7 +96,7 @@
         <a href="{{ url_for('admin.appointments_list') }}" data-tooltip="Agendas"
             class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.appointments_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if request.endpoint == 'admin.appointments_list' %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -109,7 +109,7 @@
         <a href="{{ url_for('admin.sales_list') }}" data-tooltip="Ventas"
             class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.sales_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if request.endpoint == 'admin.sales_list' %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -122,7 +122,7 @@
         <a href="{{ url_for('admin.closer_stats') }}" data-tooltip="Stats Closers"
             class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.closer_stats' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if request.endpoint == 'admin.closer_stats' %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -134,13 +134,28 @@
         <!-- Config Section -->
         <div class="px-2 text-xs font-bold text-gray-500 uppercase mt-4 truncate" x-show="expanded" x-transition>
             Configuración</div>
-        <div class="h-px bg-slate-800 my-2 mx-2" x-show="!expanded"></div>
+        <div class="h-px bg-slate-800 dark:bg-gray-200 my-2 mx-2" x-show="!expanded"></div>
 
-        <!-- Encuesta -->
-        <a href="{{ url_for('admin.survey_mgmt') }}" data-tooltip="Encuesta"
+        <!-- Configuración Unificada -->
+        <a href="{{ url_for('admin.events_list') }}" data-tooltip="Configuración"
             class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if 'survey' in request.endpoint %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if request.endpoint in ['admin.events_list', 'admin.edit_event', 'admin.event_groups', 'admin.edit_event_group', 'admin.programs_list', 'admin.survey_mgmt', 'admin.daily_report_questions', 'admin.payment_methods_list', 'admin.edit_payment_method'] %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Configuración</span>
+        </a>
+
+        <!-- Encuesta (OCULTO) -->
+        <a href="{{ url_for('admin.survey_mgmt') }}" data-tooltip="Encuesta"
+            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative hidden"
+            :class="expanded ? 'justify-start' : 'justify-center'"
+            class="{% if 'survey' in request.endpoint %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -149,11 +164,11 @@
             <span x-show="expanded" class="whitespace-nowrap transition-opacity">Encuesta Leads</span>
         </a>
 
-        <!-- Preguntas Reporte Diario -->
+        <!-- Preguntas Reporte Diario (OCULTO) -->
         <a href="{{ url_for('admin.daily_report_questions') }}" data-tooltip="Preguntas Reporte"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
+            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative hidden"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if 'questions' in request.endpoint %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if 'questions' in request.endpoint %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -162,11 +177,11 @@
             <span x-show="expanded" class="whitespace-nowrap transition-opacity">Preguntas Reporte</span>
         </a>
 
-        <!-- Eventos -->
+        <!-- Eventos (OCULTO) -->
         <a href="{{ url_for('admin.events_list') }}" data-tooltip="Eventos"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
+            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative hidden"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if 'event' in request.endpoint %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if 'event' in request.endpoint %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -175,11 +190,11 @@
             <span x-show="expanded" class="whitespace-nowrap transition-opacity">Eventos</span>
         </a>
 
-        <!-- Grupos de Eventos -->
+        <!-- Grupos de Eventos (OCULTO) -->
         <a href="{{ url_for('admin.event_groups') }}" data-tooltip="Grupos de Eventos"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
+            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative hidden"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if 'groups' in request.endpoint %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if 'groups' in request.endpoint %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -188,11 +203,11 @@
             <span x-show="expanded" class="whitespace-nowrap transition-opacity">Grupos de Eventos</span>
         </a>
 
-        <!-- Programas -->
+        <!-- Programas (OCULTO) -->
         <a href="{{ url_for('admin.programs_list') }}" data-tooltip="Programas"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
+            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative hidden"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.programs_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if request.endpoint == 'admin.programs_list' %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -201,11 +216,11 @@
             <span x-show="expanded" class="whitespace-nowrap transition-opacity">Programas</span>
         </a>
 
-        <!-- Métodos Pago -->
+        <!-- Métodos Pago (OCULTO) -->
         <a href="{{ url_for('admin.payment_methods_list') }}" data-tooltip="Métodos Pago"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
+            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative hidden"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.payment_methods_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if request.endpoint == 'admin.payment_methods_list' %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -215,10 +230,11 @@
         </a>
 
         <!-- Importación -->
+        <!-- Importación (OCULTO) -->
         <a href="{{ url_for('admin.import_dashboard') }}" data-tooltip="Importar Datos"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
+            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative hidden"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.import_dashboard' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if request.endpoint == 'admin.import_dashboard' %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -228,10 +244,11 @@
         </a>
 
         <!-- Integraciones -->
+        <!-- Integraciones (OCULTO) -->
         <a href="{{ url_for('admin.integrations') }}" data-tooltip="Integraciones"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
+            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative hidden"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.integrations' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="{% if request.endpoint == 'admin.integrations' %}bg-indigo-900/50 dark:bg-indigo-50 text-indigo-300 dark:text-indigo-600 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 dark:hover:bg-gray-100{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -242,7 +259,7 @@
     </nav>
 
     <!-- Footer / User -->
-    <div class="pt-4 border-t border-slate-700 pb-4">
+    <div class="pt-4 border-t border-slate-700 dark:border-gray-200 pb-4">
         <div class="flex items-center gap-3 mb-4 px-2 transition-all"
             :class="expanded ? 'justify-start' : 'justify-center'">
             <div class="w-8 h-8 rounded-full bg-indigo-500 flex flex-shrink-0 items-center justify-center text-white font-bold cursor-default"
@@ -250,12 +267,12 @@
                 {{ current_user.username[:1].upper() }}
             </div>
             <div x-show="expanded" class="overflow-hidden">
-                <p class="text-white text-xs font-bold truncate">{{ current_user.username }}</p>
-                <p class="text-xs text-gray-500">Admin</p>
+                <p class="text-white dark:text-gray-800 text-xs font-bold truncate">{{ current_user.username }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Admin</p>
             </div>
         </div>
         <a href="{{ url_for('auth.logout') }}"
-            class="block mx-2 bg-slate-800 hover:bg-red-600 text-white text-center py-2 rounded text-xs transition flex items-center justify-center gap-2"
+            class="block mx-2 bg-slate-800 dark:bg-gray-100 hover:bg-red-600 dark:hover:bg-red-500 text-white dark:text-gray-600 text-center py-2 rounded text-xs transition flex items-center justify-center gap-2"
             title="Cerrar Sesión">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor" x-show="!expanded">

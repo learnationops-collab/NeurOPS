@@ -4,20 +4,24 @@
 <div class="flex h-screen overflow-hidden">
     {% include "includes/admin_sidebar.html" %}
 
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+    <main
+        class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
         <!-- KPI Cards -->
         <!-- KPI Cards -->
         <!-- KPI Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <!-- Total Card (Small) -->
             <div
-                class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-700 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
                 <div class="absolute top-0 right-0 p-2 opacity-10">
                     <i
                         class="fas fa-users text-5xl text-indigo-500 transform rotate-12 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 z-10">Total Clientes</span>
-                <span id="kpi-total" class="text-2xl font-bold text-gray-800 z-10">{{ kpis.total }}</span>
+                <span
+                    class="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 z-10">Total
+                    Clientes</span>
+                <span id="kpi-total" class="text-2xl font-bold text-gray-800 dark:text-white z-10">{{ kpis.total
+                    }}</span>
                 <div class="mt-1 text-[10px] text-green-500 font-medium bg-green-50 px-2 py-0.5 rounded-full z-10">
                     <i class="fas fa-check-circle mr-1"></i>Filtrados
                 </div>
@@ -25,13 +29,15 @@
 
             <!-- Revenue Card (New) -->
             <div
-                class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-500 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border-l-4 border-blue-500 dark:border-blue-600 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
                 <div class="absolute top-0 right-0 p-2 opacity-10">
                     <i
                         class="fas fa-chart-line text-5xl text-blue-500 transform rotate-12 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 z-10">Revenue</span>
-                <span id="kpi-projected-revenue" class="text-2xl font-bold text-gray-900 z-10 text-center">${{
+                <span
+                    class="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 z-10">Revenue</span>
+                <span id="kpi-projected-revenue"
+                    class="text-2xl font-bold text-gray-900 dark:text-white z-10 text-center">${{
                     "{:,.0f}".format(kpis.projected_revenue) }}</span>
                 <div class="mt-1 text-[10px] text-gray-400 font-medium z-10">
                     <span title="Cash Collect">Cash: $<span id="kpi-revenue-cash">{{
@@ -44,14 +50,17 @@
 
             <!-- Cash Collect Card -->
             <div
-                class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-green-500 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border-l-4 border-green-500 dark:border-green-600 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
                 <div class="absolute top-0 right-0 p-2 opacity-10">
                     <i
                         class="fas fa-dollar-sign text-5xl text-green-500 transform rotate-12 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 z-10">Cash Collect
+                <span
+                    class="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 z-10">Cash
+                    Collect
                     (Neto)</span>
-                <span id="kpi-cash-collected" class="text-2xl font-bold text-gray-900 z-10 text-center">${{
+                <span id="kpi-cash-collected"
+                    class="text-2xl font-bold text-gray-900 dark:text-white z-10 text-center">${{
                     "{:,.0f}".format(kpis.cash_collected) }}</span>
                 <div class="mt-1 text-[10px] text-gray-500 font-medium z-10">
                     <span title="Ingresos Brutos">Ing.: $<span id="kpi-gross-revenue">{{ "{:,.0f}".format(kpis.revenue)
@@ -64,13 +73,15 @@
 
             <!-- Debt Card -->
             <div
-                class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-red-500 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border-l-4 border-red-500 dark:border-red-600 flex flex-col justify-center items-center relative overflow-hidden group hover:shadow-md transition-shadow">
                 <div class="absolute top-0 right-0 p-2 opacity-10">
                     <i
                         class="fas fa-hand-holding-usd text-5xl text-red-500 transform rotate-12 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 z-10">Deuda Total</span>
-                <span id="kpi-total-debt" class="text-2xl font-bold text-red-600 z-10 text-center">${{
+                <span
+                    class="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest mb-1 z-10">Deuda
+                    Total</span>
+                <span id="kpi-total-debt" class="text-2xl font-bold text-red-600 dark:text-red-400 z-10 text-center">${{
                     "{:,.0f}".format(kpis.debt) }}</span>
                 <div class="mt-1 text-[10px] text-red-400 font-medium z-10">
                     <span title="Total Acordado">Acord.: $<span id="kpi-debt-agreed">{{
@@ -87,16 +98,16 @@
         <!-- Programs Row (Moved from top grid) -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
             <div
-                class="bg-white rounded-xl shadow-sm p-5 border border-gray-100 md:col-span-4 hover:shadow-md transition-shadow">
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700 md:col-span-4 hover:shadow-md transition-shadow">
                 <div id="kpi-programs-list" class="flex items-center gap-4 overflow-x-auto pb-2 custom-scrollbar">
                     <span
                         class="text-gray-400 text-xs font-bold uppercase tracking-widest flex-shrink-0">Inscripciones:</span>
                     {% for prog, count in kpis.programs.items() %}
                     <div
-                        class="flex items-center bg-gray-50 rounded-full px-3 py-1 flex-shrink-0 border border-gray-100">
+                        class="flex items-center bg-gray-50 dark:bg-gray-700 rounded-full px-3 py-1 flex-shrink-0 border border-gray-100 dark:border-gray-600">
                         <span class="w-2 h-2 rounded-full mr-2 bg-indigo-400"></span>
-                        <span class="capitalize text-gray-600 text-xs mr-2">{{ prog }}</span>
-                        <span class="font-bold text-gray-800 text-xs">{{ count }}</span>
+                        <span class="capitalize text-gray-600 dark:text-gray-300 text-xs mr-2">{{ prog }}</span>
+                        <span class="font-bold text-gray-800 dark:text-white text-xs">{{ count }}</span>
                         {% if kpis.total_programs > 0 %}
                         <span class="text-[10px] text-gray-400 ml-1">({{ (count / kpis.total_programs * 100)|round|int
                             }}%)</span>
@@ -112,7 +123,7 @@
         <!-- Statuses Row -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div
-                class="bg-white rounded-xl shadow-sm p-5 border border-gray-100 md:col-span-4 hover:shadow-md transition-shadow">
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700 md:col-span-4 hover:shadow-md transition-shadow">
                 <div id="kpi-statuses-list" class="flex items-center gap-4 overflow-x-auto pb-2 custom-scrollbar">
                     <span
                         class="text-gray-400 text-xs font-bold uppercase tracking-widest flex-shrink-0">Estados:</span>
@@ -139,13 +150,15 @@
         </div>
 
         <!-- Filtering and Search -->
-        <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+        <div
+            class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6 border border-gray-200 dark:border-gray-700">
             <form id="filterForm" method="get" action="{{ url_for('admin.leads_list') }}"
                 class="flex flex-wrap gap-4 items-end">
 
                 <!-- Search -->
                 <div class="flex-1 min-w-[200px]">
-                    <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+                    <label for="search"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Buscar</label>
                     <div class="relative rounded-md shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span class="text-gray-500 sm:text-sm">
@@ -153,16 +166,17 @@
                             </span>
                         </div>
                         <input type="text" name="search" id="search" value="{{ search }}"
-                            class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                            class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
                             placeholder="Nombre, Email...">
                     </div>
                 </div>
 
                 <!-- Program Filter -->
                 <div class="w-40">
-                    <label for="program" class="block text-sm font-medium text-gray-700 mb-1">Programa</label>
+                    <label for="program"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Programa</label>
                     <select name="program" id="program"
-                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                         <option value="">Todos</option>
                         {% for prog in all_programs %}
                         <option value="{{ prog.id }}" {% if program_filter==prog.id|string %}selected{% endif %}>{{
@@ -173,9 +187,10 @@
 
                 <!-- Status Filter -->
                 <div class="w-40">
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                    <label for="status"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado</label>
                     <select name="status" id="status"
-                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                         <option value="">Todos</option>
                         {% for stat in all_statuses %}
                         <option value="{{ stat }}" {% if status_filter==stat %}selected{% endif %}>{{ stat|capitalize }}
@@ -186,21 +201,24 @@
 
                 <!-- Date Range -->
                 <div class="w-32">
-                    <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                    <label for="start_date"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Desde</label>
                     <input type="date" name="start_date" id="start_date" value="{{ start_date }}"
-                        class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                 </div>
                 <div class="w-32">
-                    <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                    <label for="end_date"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hasta</label>
                     <input type="date" name="end_date" id="end_date" value="{{ end_date }}"
-                        class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        class="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                 </div>
 
                 <!-- Sorting -->
                 <div class="w-48">
-                    <label for="sort_by" class="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
+                    <label for="sort_by" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ordenar
+                        por</label>
                     <select name="sort_by" id="sort_by"
-                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                         <option value="newest" {% if sort_by=='newest' %}selected{% endif %}>Más Recientes</option>
                         <option value="oldest" {% if sort_by=='oldest' %}selected{% endif %}>Más Antiguos</option>
                         <option value="a-z" {% if sort_by=='a-z' %}selected{% endif %}>Nombre (A-Z)</option>
@@ -211,7 +229,7 @@
                 <!-- Actions -->
                 <div class="flex items-center gap-2 pb-0.5">
                     <a href="{{ url_for('admin.leads_list', clear=1) }}"
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Limpiar
                     </a>
                 </div>
@@ -230,10 +248,11 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
             <!-- Bulk Actions Bar -->
-            <div class="bg-gray-100 p-2 rounded-t-xl border-b border-gray-200 flex items-center gap-4 mb-0">
+            <div
+                class="bg-gray-100 dark:bg-gray-700 p-2 rounded-t-xl border-b border-gray-200 dark:border-gray-600 flex items-center gap-4 mb-0">
                 <i class="fas fa-level-up-alt transform rotate-90 text-gray-400 ml-2"></i>
                 <select name="closer_id"
-                    class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                    class="text-sm border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
                     <option value="">Asignar a Closer...</option>
                     {% for c in closers %}
                     <option value="{{ c.id }}">{{ c.username }}</option>
@@ -247,19 +266,21 @@
                 <div class="h-6 w-px bg-gray-300 mx-2"></div>
 
                 <button type="submit"
-                    class="text-red-600 hover:text-red-800 text-sm font-medium flex items-center gap-1"
+                    class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium flex items-center gap-1"
                     onclick="return confirm('¿Eliminar seleccionados?')">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
             </div>
 
-            <div class="bg-white rounded-b-xl shadow-sm border border-gray-200 border-t-0 overflow-hidden">
+            <div
+                class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-0 overflow-hidden">
                 <table class="w-full text-left">
-                    <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs">
+                    <thead
+                        class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-300 uppercase text-xs">
                         <tr>
                             <th class="px-6 py-3 font-semibold">
                                 <input type="checkbox" id="selectAll"
-                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                    class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700">
                             </th>
                             <th class="px-6 py-3 font-semibold">#</th>
                             <th class="px-6 py-3 font-semibold">Info</th>
@@ -273,7 +294,7 @@
                             <th class="px-6 py-3 font-semibold text-right">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
                         {% include "admin/partials/leads_rows.html" %}
                     </tbody>
                 </table>
