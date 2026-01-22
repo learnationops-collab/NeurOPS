@@ -4,47 +4,54 @@
 <div class="flex h-screen overflow-hidden">
     {% include "includes/closer_sidebar.html" %}
 
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-8">
-        <div class="max-w-xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">{{ title }}</h2>
+    <main
+        class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-8 transition-colors duration-300">
+        <div
+            class="max-w-xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">{{ title }}</h2>
 
             <form method="POST" class="space-y-6">
                 {{ form.hidden_tag() }}
 
                 <div>
-                    {{ form.username.label(class="block text-sm font-medium text-gray-700 mb-1") }}
-                    {{ form.username(class="w-full rounded-lg border-gray-300 focus:ring-indigo-500
-                    focus:border-indigo-500 shadow-sm") }}
+                    {{ form.username.label(class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1") }}
+                    {{ form.username(class="w-full rounded-lg border-gray-300 dark:border-gray-600 focus:ring-indigo-500
+                    focus:border-indigo-500 shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white") }}
                     {% for error in form.username.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ error }}</p>
+                    <p class="text-red-500 dark:text-red-400 text-xs mt-1">{{ error }}</p>
                     {% endfor %}
                 </div>
 
                 <div>
-                    {{ form.email.label(class="block text-sm font-medium text-gray-700 mb-1") }}
-                    {{ form.email(class="w-full rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500
-                    shadow-sm") }}
+                    {{ form.email.label(class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1") }}
+                    {{ form.email(class="w-full rounded-lg border-gray-300 dark:border-gray-600 focus:ring-indigo-500
+                    focus:border-indigo-500
+                    shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white") }}
                     {% for error in form.email.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ error }}</p>
+                    <p class="text-red-500 dark:text-red-400 text-xs mt-1">{{ error }}</p>
                     {% endfor %}
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        {{ form.phone.label(class="block text-sm font-medium text-gray-700 mb-1") }}
-                        {{ form.phone(class="w-full rounded-lg border-gray-300 focus:ring-indigo-500
-                        focus:border-indigo-500 shadow-sm") }}
+                        {{ form.phone.label(class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1") }}
+                        {{ form.phone(class="w-full rounded-lg border-gray-300 dark:border-gray-600
+                        focus:ring-indigo-500
+                        focus:border-indigo-500 shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white") }}
                     </div>
                     <div>
-                        {{ form.instagram.label(class="block text-sm font-medium text-gray-700 mb-1") }}
-                        {{ form.instagram(class="w-full rounded-lg border-gray-300 focus:ring-indigo-500
-                        focus:border-indigo-500 shadow-sm", placeholder="usuario sin @") }}
+                        {{ form.instagram.label(class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1")
+                        }}
+                        {{ form.instagram(class="w-full rounded-lg border-gray-300 dark:border-gray-600
+                        focus:ring-indigo-500
+                        focus:border-indigo-500 shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
+                        placeholder="usuario sin @") }}
                     </div>
                 </div>
 
                 <div class="pt-4 flex justify-end gap-3">
                     <a href="{{ url_for('closer.leads_list') }}"
-                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium">Cancelar</a>
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors">Cancelar</a>
                     {{ form.submit(class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm
                     font-bold cursor-pointer") }}
                 </div>

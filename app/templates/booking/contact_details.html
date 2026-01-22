@@ -1,7 +1,8 @@
 {% extends "layouts/base_booking.html" %}
 
 {% block content %}
-<div class="max-w-xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden mt-10">
+<div
+    class="max-w-xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden mt-10 border border-gray-200 dark:border-gray-700">
     <div class="px-6 py-8">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -14,10 +15,10 @@
         {% endif %}
         {% endwith %}
 
-        <h2 class="text-2xl font-bold text-gray-800 mb-2">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">
             {% if data.name %}Verifica tus Datos{% else %}Completa tu Perfil{% endif %}
         </h2>
-        <p class="text-gray-600 mb-8">
+        <p class="text-gray-600 dark:text-gray-400 mb-8">
             {% if data.name %}Confirma que tu información de contacto esté actualizada.{% else %}Cuéntanos un poco más
             sobre ti.{% endif %}
         </p>
@@ -27,27 +28,27 @@
 
             <!-- Email (Read Only or Hidden if existing) -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Correo Electrónico</label>
                 <input type="email" value="{{ data.email or '' }}" disabled
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 sm:text-sm">
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 sm:text-sm">
                 <!-- If new user, we might need to send it back if not using session strictly, logic handles session['booking_email_input'] -->
             </div>
 
             <!-- Name -->
             <div>
-                <label for="name" class="block text-sm font-medium text-gray-700">Nombre Completo <span
-                        class="text-red-500">*</span></label>
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre Completo
+                    <span class="text-red-500 dark:text-red-400">*</span></label>
                 <input type="text" name="name" id="name" value="{{ data.name or '' }}" required
-                    class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border">
+                    class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
             </div>
 
             <!-- Phone -->
             <div>
-                <label for="phone" class="block text-sm font-medium text-gray-700">WhatsApp / Teléfono <span
-                        class="text-red-500">*</span></label>
+                <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">WhatsApp /
+                    Teléfono <span class="text-red-500 dark:text-red-400">*</span></label>
                 <div class="mt-1 flex rounded-md shadow-sm">
                     <select name="phone_code"
-                        class="focus:ring-indigo-500 focus:border-indigo-500 h-full py-2 pl-2 pr-7 border-transparent bg-transparent text-gray-500 sm:text-sm rounded-md border-r border-gray-300 w-[110px]">
+                        class="focus:ring-indigo-500 focus:border-indigo-500 h-full py-2 pl-2 pr-7 border-transparent bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300 sm:text-sm rounded-md border-r border-gray-300 dark:border-gray-600 w-[110px]">
                         {% set countries = [
                         ('+51', '🇵🇪 PER'), ('+52', '🇲🇽 MEX'), ('+57', '🇨🇴 COL'), ('+56', '🇨🇱 CHL'),
                         ('+54', '🇦🇷 ARG'), ('+34', '🇪🇸 ESP'), ('+1', '🇺🇸 USA'), ('+502', '🇬🇹 GTM'),
@@ -68,20 +69,20 @@
                         <option value="" {% if not current_code %}selected{% endif %}>Otro</option>
                     </select>
                     <input type="tel" name="phone" id="phone" value="{{ data.phone or '' }}" required
-                        class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-r-md sm:text-sm border-gray-300 p-2 border"
+                        class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-r-md sm:text-sm border-gray-300 dark:border-gray-600 p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         placeholder="987 654 321">
                 </div>
             </div>
 
             <!-- Instagram -->
             <div>
-                <label for="instagram" class="block text-sm font-medium text-gray-700">Usuario de Instagram <span
-                        class="text-red-500">*</span></label>
+                <label for="instagram" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Usuario de
+                    Instagram <span class="text-red-500 dark:text-red-400">*</span></label>
                 <div class="mt-1 flex rounded-md shadow-sm">
                     <span
-                        class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">@</span>
+                        class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 sm:text-sm">@</span>
                     <input type="text" name="instagram" id="instagram" value="{{ data.instagram or '' }}" required
-                        class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-r-md sm:text-sm border-gray-300 p-2 border"
+                        class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-r-md sm:text-sm border-gray-300 dark:border-gray-600 p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         placeholder="usuario">
                 </div>
             </div>
