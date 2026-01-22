@@ -47,13 +47,7 @@ def send_calendar_webhook(appointment, action, old_start_time=None):
         profile = lead.lead_profile
         
         summary = f"Cita: {lead.username} con {closer.username}"
-        description = (
-            f"Cliente: {lead.username}\n"
-            f"Email: {lead.email}\n"
-            f"Tel: {profile.phone if profile else 'N/A'}\n"
-            f"Rol: {lead.role}\n"
-            f"Estado: {appointment.status}"
-        )
+        description = ""  # Sin descripción para no exponer información innecesaria al cliente
         
         print(f"DEBUG: Adding attendee {lead.email} to event", flush=True)
 
