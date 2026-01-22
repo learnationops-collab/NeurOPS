@@ -2,7 +2,7 @@ from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.closer import bp
 from app.services.closer_service import CloserService
-from app.models import User, LeadProfile, Program, Event, SurveyAnswer, SurveyQuestion, Appointment, Enrollment, db
+from app.models import User, LeadProfile, Program, Event, SurveyAnswer, SurveyQuestion, Appointment, Enrollment, LeadComment, db
 from app.closer.forms import LeadForm
 import uuid
 from sqlalchemy import or_
@@ -96,7 +96,39 @@ def lead_detail(id):
     
     appointments = Appointment.query.filter_by(lead_id=lead.id).order_by(Appointment.start_time.desc()).all()
     
-    return render_template('closer/lead_detail.html', lead=lead, profile=profile, landing_answers=landing_answers, survey_answers=survey_answers, appointments=appointments, funnel_steps=funnel_steps)
+    comments = lead.comments.order_by(LeadComment.created_at.desc()).all()
+    
+    return render_template('closer/lead_detail.html', lead=lead, profile=profile, landing_answers=landing_answers, survey_answers=survey_answers, appointments=appointments, funnel_steps=funnel_steps, comments=comments)
+
+@bp.route('/lead/<int:id>/comments/partial')
+@closer_required
+def get_comments_partial(id):
+    lead = User.query.get_or_404(id)
+    comments = lead.comments.order_by(LeadComment.created_at.desc()).all()
+    return render_template('closer/partials/comments_list.html', comments=comments)
+
+@bp.route('/lead/<int:id>/comment', methods=['POST'])
+@closer_required
+def add_comment(id):
+    lead = User.query.get_or_404(id)
+    text = request.form.get('text')
+    
+    if text:
+        comment = LeadComment(
+            lead_id=lead.id,
+            author_id=current_user.id,
+            text=text
+        )
+        db.session.add(comment)
+        db.session.commit()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+             return jsonify({'status': 'success', 'message': 'Comentario agregado'})
+        flash('Comentario agregado.')
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+         return jsonify({'status': 'error', 'message': 'Texto requerido'}), 400
+         
+    return redirect(url_for('closer.lead_detail', id=id))
 
 @bp.route('/leads/add', methods=['GET', 'POST'])
 @closer_required

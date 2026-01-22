@@ -143,6 +143,17 @@
                                             </svg>
                                         </button>
                                     </form>
+                                    <button type="button"
+                                        onclick="openNotesModal('{{ call.lead.id }}', '{{ call.lead.username }}')"
+                                        class="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        title="Notas Rápidas">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                            </path>
+                                        </svg>
+                                    </button>
+
                                     <button
                                         class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,6 +245,17 @@
                                             </svg>
                                         </button>
                                     </form>
+
+                                    <button type="button"
+                                        onclick="openNotesModal('{{ call.lead.id }}', '{{ call.lead.username }}')"
+                                        class="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        title="Notas Rápidas">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                            </path>
+                                        </svg>
+                                    </button>
                                 </div>
                         </div>
                         {% endfor %}
@@ -283,6 +305,16 @@
                                     </svg>
                                 </button>
                             </form>
+
+                            <button type="button" onclick="openNotesModal('{{ client.id }}', '{{ client.username }}')"
+                                class="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                                title="Notas Rápidas">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
+                            </button>
 
                             <div class="relative">
                                 <button class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
@@ -440,10 +472,119 @@
     }
 </style>
 
+<!-- Quick Notes Modal -->
+<div id="notesModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"
+            onclick="closeNotesModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div
+            class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                            Notas: <span id="modalLeadName"></span>
+                        </h3>
+                        <div class="mt-4">
+                            <!-- Comments List Partial Container -->
+                            <div id="modalCommentsList"
+                                class="max-h-60 overflow-y-auto mb-4 custom-scrollbar text-left text-sm">
+                                <p class="text-gray-400 italic">Cargando...</p>
+                            </div>
+                            <!-- Add Comment Form -->
+                            <form id="modalNoteForm" onsubmit="submitNote(event)">
+                                <textarea id="modalNoteText" rows="3"
+                                    class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                                    placeholder="Escribe una nota rápida..."></textarea>
+                                <div class="mt-2 flex justify-end">
+                                    <button type="submit"
+                                        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                                        Guardar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button"
+                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    onclick="closeNotesModal()">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
+    let currentLeadId = null;
+
+    function openNotesModal(leadId, leadName) {
+        currentLeadId = leadId;
+        document.getElementById('modalLeadName').innerText = leadName;
+        document.getElementById('notesModal').classList.remove('hidden');
+        loadComments(leadId);
+        // Focus textarea
+        setTimeout(() => document.getElementById('modalNoteText').focus(), 100);
+    }
+
+    function closeNotesModal() {
+        document.getElementById('notesModal').classList.add('hidden');
+        currentLeadId = null;
+        document.getElementById('modalCommentsList').innerHTML = '<p class="text-gray-400 italic">Cargando...</p>';
+    }
+
+    function loadComments(leadId) {
+        fetch(`/closer/lead/${leadId}/comments/partial`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('modalCommentsList').innerHTML = html;
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('modalCommentsList').innerHTML = '<p class="text-red-500">Error cargando notas.</p>';
+            });
+    }
+
+    function submitNote(e) {
+        e.preventDefault();
+        if (!currentLeadId) return;
+
+        const text = document.getElementById('modalNoteText').value;
+        if (!text.trim()) return;
+
+        const formData = new FormData();
+        formData.append('text', text);
+        formData.append('csrf_token', "{{ csrf_token() }}");
+
+        fetch(`/closer/lead/${currentLeadId}/comment`, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('modalNoteText').value = '';
+                    loadComments(currentLeadId);
+                } else {
+                    alert('Error al guardar: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error de conexión');
+            });
+    }
+
     function markCompleted(baseUrl) {
         if (!confirm("¿Confirmar que la cita fue completada?")) return;
         const presented = confirm("¿Se presentó la oferta al cliente?\n\nAceptar: SÍ (Hubo presentación)\nCancelar: NO (Solo conversación)");

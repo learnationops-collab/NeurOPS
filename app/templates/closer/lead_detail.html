@@ -222,6 +222,54 @@
 
             <!-- Right Column: Info & History (1/3) -->
             <div class="space-y-6">
+                <!-- Comments Section -->
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                    <h3
+                        class="font-bold text-gray-800 dark:text-white mb-4 text-sm uppercase flex justify-between items-center">
+                        Notas / Comentarios
+                    </h3>
+
+                    <!-- Comment Form -->
+                    <form action="{{ url_for('closer.add_comment', id=lead.id) }}" method="POST" class="mb-6">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="relative">
+                            <textarea name="text" rows="3"
+                                class="w-full text-sm border-gray-200 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white placeholder-gray-400"
+                                placeholder="Escribe una nota importante..." required></textarea>
+                            <button type="submit"
+                                class="absolute bottom-2 right-2 bg-indigo-600 text-white p-1.5 rounded-md hover:bg-indigo-700 transition"
+                                title="Guardar comentario">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Comments List -->
+                    <div class="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
+                        {% if comments %}
+                        {% for comment in comments %}
+                        <div
+                            class="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 border border-gray-100 dark:border-gray-700">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-xs text-indigo-600 dark:text-indigo-400">{{
+                                    comment.author.username }}</span>
+                                <span class="text-[10px] text-gray-400">{{ comment.created_at.strftime('%d %b %H:%M')
+                                    }}</span>
+                            </div>
+                            <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ comment.text }}
+                            </p>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-sm text-gray-400 text-center italic">No hay comentarios aún.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Appointment History -->
                 <div
                     class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">

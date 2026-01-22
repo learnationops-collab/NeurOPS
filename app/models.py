@@ -428,3 +428,17 @@ class GoogleCalendarToken(db.Model):
 
     def __repr__(self):
         return f'<GoogleToken for User {self.user_id}>'
+
+class LeadComment(db.Model):
+    __tablename__ = 'lead_comments'
+    id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    lead = db.relationship('User', foreign_keys=[lead_id], backref=db.backref('comments', lazy='dynamic', cascade="all, delete-orphan"))
+    author = db.relationship('User', foreign_keys=[author_id])
+
+    def __repr__(self):
+        return f'<LeadComment {self.id} by {self.author_id} on {self.lead_id}>'

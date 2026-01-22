@@ -23,18 +23,18 @@ def closer_required(f):
 def calendar():
     week_offset = request.args.get('offset', 0, type=int)
     today = date.today()
-    start_of_week = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
-    match_dates = [start_of_week + timedelta(days=i) for i in range(7)]
+    start_of_period = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset * 2)
+    match_dates = [start_of_period + timedelta(days=i) for i in range(14)]
     
     availabilities = Availability.query.filter(
         Availability.closer_id == current_user.id,
-        Availability.date >= start_of_week,
+        Availability.date >= start_of_period,
         Availability.date <= match_dates[-1]
     ).all()
     
     appointments = Appointment.query.filter(
         Appointment.closer_id == current_user.id,
-        Appointment.start_time >= datetime.combine(start_of_week, time.min),
+        Appointment.start_time >= datetime.combine(start_of_period, time.min),
         Appointment.start_time <= datetime.combine(match_dates[-1], time.max),
         Appointment.status != 'canceled'
     ).all()
@@ -60,7 +60,7 @@ def update_availability():
 
     week_start_str = data.get('week_start')
     week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
-    week_end = week_start + timedelta(days=6)
+    week_end = week_start + timedelta(days=13)
     
     try:
         Availability.query.filter(
