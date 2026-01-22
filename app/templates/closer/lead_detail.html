@@ -2,7 +2,11 @@
 
 {% block content %}
 <div class="flex h-screen overflow-hidden">
+    {% if current_user.role == 'admin' %}
+    {% include "includes/admin_sidebar.html" %}
+    {% else %}
     {% include "includes/closer_sidebar.html" %}
+    {% endif %}
 
     <main
         class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-8 transition-colors duration-300">

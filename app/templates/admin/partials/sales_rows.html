@@ -9,7 +9,7 @@
     </td>
     <td class="px-6 py-4 text-sm text-gray-900">{{ p.date.strftime('%Y-%m-%d') }}</td>
     <td class="px-6 py-4">
-        <a href="{{ url_for('closer.lead_detail', id=p.enrollment.student.id) }}" class="hover:underline">
+        <a href="{{ url_for('admin.lead_profile', id=p.enrollment.student.id) }}" class="hover:underline">
             <div
                 class="font-medium text-gray-900 dark:text-white group-hover:text-gray-900 hover:text-indigo-600 dark:hover:text-indigo-400">
                 {{
