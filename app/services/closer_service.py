@@ -18,16 +18,20 @@ class CloserService:
         status_filter = filters.get('status')
         sort_by = filters.get('sort_by', 'newest')
 
-        # Base Query: Users assigned to this closer
+        # Base Query: Users who are leads or students
         query = User.query.filter(User.role.in_(['lead', 'student']))
         
-        query = query.filter(
-            or_(
-                User.enrollments.any(Enrollment.closer_id == closer_id),
-                User.appointments_as_lead.any(Appointment.closer_id == closer_id),
-                User.lead_profile.has(assigned_closer_id=closer_id)
+        # Access Logic:
+        # 1. Admin: Sees everyone
+        # 2. Closer: Sees assigned leads OR students they sold to
+        from flask_login import current_user
+        if current_user.role != 'admin':
+            query = query.filter(
+                or_(
+                    User.enrollments.any(Enrollment.closer_id == closer_id),
+                    User.lead_profile.has(assigned_closer_id=closer_id)
+                )
             )
-        )
 
         # Filters
         if status_filter:
@@ -81,13 +85,16 @@ class CloserService:
             if search: q = q.filter(or_(model.username.ilike(f"%{search}%"), model.email.ilike(f"%{search}%")))
             return q
 
-        # 1. Total Users Count (Filtered)
+        # Access Logic:
+        # 1. Admin: Sees everyone
+        # 2. Closer: Sees assigned leads OR students they sold to
+        from flask_login import current_user
         kpi_query = User.query.filter(User.role.in_(['lead', 'student']))
-        kpi_query = kpi_query.filter(or_(
-            User.enrollments.any(Enrollment.closer_id == closer_id), 
-            User.appointments_as_lead.any(Appointment.closer_id == closer_id),
-            User.lead_profile.has(assigned_closer_id=closer_id)
-        ))
+        if current_user.role != 'admin':
+            kpi_query = kpi_query.filter(or_(
+                User.enrollments.any(Enrollment.closer_id == closer_id), 
+                User.lead_profile.has(assigned_closer_id=closer_id)
+            ))
         kpi_query = apply_lead_filters(kpi_query)
         total_users = kpi_query.count()
 
@@ -323,13 +330,16 @@ class CloserService:
         if slots_remaining > 0:
              pinned_ids = [u.id for u in pinned_clients]
              
-             recent_query = User.query.filter(User.role.in_(['lead', 'student'])).filter(
-                or_(
-                    User.enrollments.any(Enrollment.closer_id == closer_id),
-                    User.appointments_as_lead.any(Appointment.closer_id == closer_id),
-                    User.lead_profile.has(assigned_closer_id=closer_id)
-                )
-             )
+             from flask_login import current_user
+             recent_query = User.query.filter(User.role.in_(['lead', 'student']))
+             
+             if current_user.role != 'admin':
+                 recent_query = recent_query.filter(
+                    or_(
+                        User.enrollments.any(Enrollment.closer_id == closer_id),
+                        User.lead_profile.has(assigned_closer_id=closer_id)
+                    )
+                 )
              
              if pinned_ids:
                  recent_query = recent_query.filter(~User.id.in_(pinned_ids))

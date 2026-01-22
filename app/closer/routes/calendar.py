@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.closer import bp
-from app.models import Availability, Appointment, User, db
+from app.models import Availability, Appointment, User, LeadProfile, db
 from app.closer.forms import AppointmentForm
 from app.closer.utils import send_calendar_webhook
 from datetime import datetime, time, timedelta, date
@@ -93,7 +93,11 @@ def update_availability():
 @closer_required
 def create_appointment():
     form = AppointmentForm()
-    leads = User.query.filter_by(role='lead').order_by(User.username).all()
+    # Filter leads by assignment if closer
+    leads_query = User.query.filter_by(role='lead')
+    if current_user.role != 'admin':
+        leads_query = leads_query.join(LeadProfile).filter(LeadProfile.assigned_closer_id == current_user.id)
+    leads = leads_query.order_by(User.username).all()
     form.lead_id.choices = [(l.id, f"{l.username} ({l.email})") for l in leads]
     
     lead_id = request.args.get('lead_id', type=int)
@@ -139,7 +143,11 @@ def edit_appointment(id):
          return redirect(url_for('closer.dashboard'))
          
     form = AppointmentForm()
-    leads = User.query.filter_by(role='lead').order_by(User.username).all()
+    # Filter leads by assignment if closer
+    leads_query = User.query.filter_by(role='lead')
+    if current_user.role != 'admin':
+        leads_query = leads_query.join(LeadProfile).filter(LeadProfile.assigned_closer_id == current_user.id)
+    leads = leads_query.order_by(User.username).all()
     form.lead_id.choices = [(l.id, f"{l.username} ({l.email})") for l in leads]
     
     if request.method == 'GET':

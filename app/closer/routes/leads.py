@@ -79,6 +79,14 @@ def lead_detail(id):
         flash('Usuario no es un lead válido.')
         return redirect(url_for('closer.leads_list'))
         
+    # Security Check: Only Admin or Assigned Closer/Enrollment Closer
+    if current_user.role != 'admin':
+        is_assigned = lead.lead_profile and lead.lead_profile.assigned_closer_id == current_user.id
+        has_enrollment = lead.enrollments.filter_by(closer_id=current_user.id).count() > 0
+        if not is_assigned and not has_enrollment:
+            flash('No tienes permiso para ver este lead.')
+            return redirect(url_for('closer.leads_list'))
+        
     profile = lead.lead_profile
     
     # Funnel Steps
@@ -235,7 +243,7 @@ def search_leads():
         return jsonify({'results': []})
         
     search = f"%{query}%"
-    leads = User.query.outerjoin(LeadProfile, User.id == LeadProfile.user_id).filter(
+    base_query = User.query.outerjoin(LeadProfile, User.id == LeadProfile.user_id).filter(
         User.role == 'lead',
         or_(
             User.username.ilike(search),
@@ -243,7 +251,18 @@ def search_leads():
             LeadProfile.phone.ilike(search),
             LeadProfile.instagram.ilike(search)
         )
-    ).limit(10).all()
+    )
+
+    # Filter by assignment if not admin
+    if current_user.role != 'admin':
+        base_query = base_query.filter(
+            or_(
+                User.enrollments.any(Enrollment.closer_id == current_user.id),
+                LeadProfile.assigned_closer_id == current_user.id
+            )
+        )
+
+    leads = base_query.limit(10).all()
     
     results = []
     for lead in leads:
