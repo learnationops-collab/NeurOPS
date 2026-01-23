@@ -2,6 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
+from flask_cors import CORS
 from config import Config
 
 # Initialize extensions
@@ -11,6 +12,15 @@ login = LoginManager()
 login.login_view = 'auth.login'
 login.login_message = 'Por favor inicia sesión para acceder a esta página.'
 
+@login.unauthorized_handler
+def unauthorized():
+    from flask import request, jsonify
+    if request.path.startswith('/api/'):
+        return jsonify({"message": "Unauthorized"}), 401
+    from flask import redirect, url_for, flash
+    flash(login.login_message)
+    return redirect(url_for(login.login_view))
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -18,11 +28,14 @@ def create_app(config_class=Config):
     # Enable CSRF Protection globally
     from flask_wtf.csrf import CSRFProtect
     csrf = CSRFProtect(app)
-
+    
     # Init extensions with app
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
+    
+    # Enable CORS
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     # Register Blueprints
     from app.routes import main
@@ -45,5 +58,9 @@ def create_app(config_class=Config):
 
     from app.google_auth import bp as google_auth_bp
     app.register_blueprint(google_auth_bp, url_prefix='/google')
+
+    from app.api import bp as api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
+    csrf.exempt(api_bp)
 
     return app

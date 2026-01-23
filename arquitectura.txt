@@ -6,101 +6,48 @@ Backend:
 - Lenguaje: Python 3.9+
 - Framework: Flask (Modularizado con Blueprints)
 - ORM: SQLAlchemy (Flask-SQLAlchemy)
-- Migraciones: Flask-Migrate (Alembic)
-- Autenticación: Flask-Login, Google OAuth
-- Formularios: Flask-WTF
-- Integraciones: Google Calendar API, Webhooks (n8n/Make)
+- Migraciones: Flask-Migrate
+- API: RESTful (JSON)
 
 Frontend:
-- Renderizado: Server-Side (Jinja2)
-- Estilos: Tailwind CSS (Clases utilitarias) + CSS Vanilla (`main.css`)
-- Scripting: Javascript Vanilla (para modales, AJAX simple)
+- Framework: React (Vite)
+- Estilos: Tailwind CSS
+- Iconografía: Lucide React
 
 Base de Datos:
-- Desarrollo Local: SQLite (`instance/local.db`)
+- Desarrollo Local: SQLite
 - Producción: PostgreSQL
 
 2. ESTRUCTURA DE ARCHIVOS ACTUAL
 --------------------------------
 /app
-  /__init__.py        -> Factoría de Aplicación (create_app), Configuración de extensiones
-  /models.py          -> Definición de Modelos (User, Payment, Enrollment, etc.)
-  /decorators.py      -> Decoradores de permisos (@admin_required, @role_required)
-  
-  /admin              -> Blueprint 'admin' (Gestión Global)
-    /__init__.py
-    /forms.py         -> Formularios de Admin (UserForm, PaymentForm)
-    /routes/          -> Rutas modularizadas
-       /dashboard.py      -> Vista principal y KPIs
-       /finance.py        -> Ventas, Gastos, Pagos
-       /users.py          -> Gestión de Leads, Estudiantes, Closers
-       /configuration.py  -> Configuración de Sistema
-       /integrations.py   -> Configuración de Webhooks/APIs
-  
-  /closer             -> Blueprint 'closer' (Panel de Ventas)
-    /__init__.py
-    /forms.py         -> Formularios de Venta
-    /utils.py         -> Lógica de Webhooks y Google Calendar
-    /routes/          -> Rutas modularizadas
-       /dashboard.py      -> KPIs personales
-       /sales.py          -> Registro de ventas y mis ventas
-       /calendar.py       -> Gestión de disponibilidad
-
-  /booking            -> Blueprint 'booking' (Agendamiento Público)
-    /__init__.py
-    /routes.py        -> Flujo de identificación, encuesta y selección de horario
-
+  /api                -> Blueprint principal de API JSON
+    /auth.py          -> Endpoints de login/logout/me
+    /admin.py         -> Endpoints de datos administrativos
+  /admin              -> Lógica de Admin (ahora sirve datos vía API)
+  /closer             -> Lógica de Closer
   /services           -> Capa de Lógica de Negocio (Business Logic)
-    /base.py              -> Clase Base
-    /user_service.py      -> Lógica de Usuarios y Leads
-    /financial_service.py -> Cálculos financieros y reportes
-    /dashboard_service.py -> Agregación de datos para Dashboards
-    /closer_service.py    -> Métricas y lógica específica de closer
-    /booking_service.py   -> Lógica de agendamiento y slots
-    /integration_service.py -> Manejo de integraciones
+  /models.py          -> Modelos de BD
+  /__init__.py        -> Configuración (CORS, CSRF exemptions para API)
 
-  /templates          -> Archivos HTML (Jinja2)
-    /admin/           -> Vistas de Admin
-    /closer/          -> Vistas de Closer
-    /booking/         -> Vistas del Funnel de Agendamiento
-    /sales/           -> Vistas compartidas de ventas
-    /layouts/         -> Base templates (base.html, base_booking.html)
-    /includes/        -> Fragmentos (sidebars, navbars, filters)
+/frontend             -> Aplicación React SPA
+  /src
+    /components       -> Layouts y componentes reutilizables
+    /pages            -> Vistas principales (Dashboard, Login)
+    /services         -> Clientes API (Axios) y AuthService
+    /App.jsx          -> Routing
+    /main.jsx         -> Punto de entrada
+  /package.json       -> Dependencias Node.js
+  /vite.config.js     -> Configuración de compilación y proxy
+  /tailwind.config.cjs -> Configuración de estilos
 
-  /static             -> Assets estáticos (CSS, JS, Img)
+/migrations           -> Migraciones de BD
+.gitignore            -> Excluye node_modules, env, instance, etc.
+run.py                -> Servidor Flask
+config.py             -> Variables de entorno
 
-/migrations           -> Scripts de migración de BD
-config.py             -> Configuración de entornos (Variables, Secret Keys)
-run.py                -> Punto de entrada de la aplicación
-
-3. FLUJO DE TRABAJO EN EQUIPO (WORKFLOW)
+3. FLUJO DE TRABAJO
 ----------------------------------------
-Para mantener el orden y la calidad del código trabajando en equipo, se recomienda seguir el siguiente flujo:
-
-A. Ramas (Branches):
-   - `main`: Rama de producción. Código estable y funcional. NO commitear directamente aquí.
-   - `develop`: Rama de integración principal. Aquí se mezclan las nuevas características antes de pasar a main.
-   - `feature/nombre-funcionalidad`: Ramas temporales creadas desde `develop` para desarrollar una característica específica (ej: `feature/webhook-agenda`).
-   - `fix/nombre-bug`: Ramas para corregir errores (ej: `fix/error-dashboard`).
-
-B. Proceso de Desarrollo:
-   1. Actualizar localmente: `git checkout develop` -> `git pull origin develop`.
-   2. Crear rama: `git checkout -b feature/nueva-función`.
-   3. Desarrollar: Escribir código, probar localmente.
-   4. Commit: `git add .` -> `git commit -m "Descripción clara del cambio"`.
-   5. Push: `git push origin feature/nueva-función`.
-   6. Pull Request (PR): Abrir un PR en GitHub de `feature/...` hacia `develop`.
-   7. Code Review: Otro miembro del equipo revisa el código.
-   8. Merge: Una vez aprobado, se fusiona a `develop`.
-
-C. Base de Datos:
-   - Si modificas `models.py`, genera una migración LOCALMENTE:
-     `flask db migrate -m "Descripción del cambio"`
-   - Revisa el archivo generado en `/migrations/versions`.
-   - Aplica la migración: `flask db upgrade`.
-   - Sube el archivo de migración al repositorio junto con tu código.
-
-D. Buenas Prácticas:
-   - Mantener la lógica pesada en `/services`, no en las rutas.
-   - Usar nombres de variables descriptivos en Inglés (estándar de código) aunque los comentarios sean en español.
-   - No subir archivos confidenciales (`.env`, `instance/local.db`, `__pycache__`).
+- Desarrollo Frontend: `cd frontend && npm run dev` (Vite proxy a :5000)
+- Desarrollo Backend: `python run.py`
+- Producción: Las dependencias se instalan en el servidor (`npm install` / `pip install`), NO se suben al repositorio.
