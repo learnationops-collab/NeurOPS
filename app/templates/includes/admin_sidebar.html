@@ -28,217 +28,134 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 space-y-2 py-4 px-2 overflow-y-auto overflow-x-hidden sidebar-scroll">
+    <nav class="flex-1 space-y-2 py-4 px-2 overflow-y-auto overflow-x-hidden sidebar-scroll"
+        x-data="{ openSection: '{{ 'ops' if request.endpoint in ['admin.leads_list', 'admin.appointments_list', 'admin.sales_list', 'admin.stats_closer', 'admin.finances', 'admin.mock_generator'] else ('config' if request.endpoint in ['admin.users_list', 'admin.survey_mgmt', 'admin.daily_report_questions', 'admin.events_list', 'admin.event_groups', 'admin.programs_list', 'admin.payment_methods_list', 'admin.import_dashboard', 'admin.integrations'] else 'main') }}' }">
 
-        <!-- Section Label -->
+        <!-- 1. DASHBOARD -->
         <div class="px-2 text-xs font-bold text-gray-500 uppercase mb-2 mt-2 truncate" x-show="expanded" x-transition>
             Principal</div>
-        <div class="h-px bg-slate-800 my-2 mx-2" x-show="!expanded"></div>
-
-        <!-- Dashboard -->
         <a href="{{ url_for('admin.dashboard') }}" data-tooltip="Dashboard"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.dashboard' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
+            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative {% if request.endpoint == 'admin.dashboard' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}"
+            :class="expanded ? 'justify-start' : 'justify-center'">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
             </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Dashboard</span>
+            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Dashboard Global</span>
         </a>
 
-        <!-- Finanzas -->
-        <a href="{{ url_for('admin.finances') }}" data-tooltip="Finanzas"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{{ 'bg-indigo-700 text-white' if request.endpoint == 'admin.finances' else 'text-indigo-200 hover:bg-indigo-700 hover:text-white' }}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Finanzas</span>
-        </a>
+        <!-- 2. VENTAS (Analysis) -->
+        <div class="mt-4">
+            <div class="px-2 text-xs font-bold text-gray-500 uppercase mb-2 mt-2 truncate" x-show="expanded"
+                x-transition>
+                Ventas</div>
+            <a href="{{ url_for('admin.sales_list', tab='resumen') }}" data-tooltip="Análisis de Ventas"
+                class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative {% if request.endpoint == 'admin.sales_list' and request.args.get('tab') == 'resumen' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}"
+                :class="expanded ? 'justify-start' : 'justify-center'">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span x-show="expanded" class="whitespace-nowrap transition-opacity">Resumen / Análisis</span>
+            </a>
+            <a href="{{ url_for('admin.stats_closer') }}" data-tooltip="Stats Closers"
+                class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative {% if request.endpoint == 'admin.stats_closer' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}"
+                :class="expanded ? 'justify-start' : 'justify-center'">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span x-show="expanded" class="whitespace-nowrap transition-opacity">Stats Closers</span>
+            </a>
+        </div>
 
-        <!-- Usuarios -->
-        <a href="{{ url_for('admin.users_list') }}" data-tooltip="Usuarios"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.users_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800 text-white font-medium{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Usuarios</span>
-        </a>
+        <div class="mt-4">
+            <a href="{{ url_for('admin.leads_list') }}" data-tooltip="Bases de Datos"
+                class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative {% if request.endpoint in ['admin.leads_list', 'admin.appointments_list'] or (request.endpoint == 'admin.sales_list' and request.args.get('tab') != 'resumen') %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}"
+                :class="expanded ? 'justify-start' : 'justify-center'">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                </svg>
+                <span x-show="expanded" class="whitespace-nowrap transition-opacity">Bases de Datos</span>
+            </a>
+        </div>
 
-        <!-- Section Label -->
-        <div class="px-2 text-xs font-bold text-gray-500 uppercase mt-6 mb-2 truncate" x-show="expanded" x-transition>
-            Gestión</div>
-        <div class="h-px bg-slate-800 my-2 mx-2" x-show="!expanded"></div>
+        <!-- 4. OPERACIONES -->
+        <div class="mt-4">
+            <div class="px-2 text-xs font-bold text-gray-500 uppercase mb-2 mt-2 truncate" x-show="expanded"
+                x-transition>
+                Operaciones</div>
+            <a href="{{ url_for('admin.operations_dashboard') }}" data-tooltip="Centro de Operaciones"
+                class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative {% if 'operations_' in request.endpoint %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}"
+                :class="expanded ? 'justify-start' : 'justify-center'">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+                <span x-show="expanded" class="whitespace-nowrap transition-opacity">Migración / Limpieza</span>
+            </a>
+        </div>
 
-        <!-- Clientes -->
-        <a href="{{ url_for('admin.leads_list') }}" data-tooltip="Clientes"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.leads_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Clientes</span>
-        </a>
-
-        <!-- Agendas -->
-        <a href="{{ url_for('admin.appointments_list') }}" data-tooltip="Agendas"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.appointments_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Agendas</span>
-        </a>
-
-        <!-- Ventas -->
-        <a href="{{ url_for('admin.sales_list') }}" data-tooltip="Ventas"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.sales_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Ventas</span>
-        </a>
-
-        <!-- Stats Closers -->
-        <a href="{{ url_for('admin.closer_stats') }}" data-tooltip="Stats Closers"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.closer_stats' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Stats Closers</span>
-        </a>
-
-        <!-- Config Section -->
-        <div class="px-2 text-xs font-bold text-gray-500 uppercase mt-4 truncate" x-show="expanded" x-transition>
-            Configuración</div>
-        <div class="h-px bg-slate-800 my-2 mx-2" x-show="!expanded"></div>
-
-        <!-- Encuesta -->
-        <a href="{{ url_for('admin.survey_mgmt') }}" data-tooltip="Encuesta"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if 'survey' in request.endpoint %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Encuesta Leads</span>
-        </a>
-
-        <!-- Preguntas Reporte Diario -->
-        <a href="{{ url_for('admin.daily_report_questions') }}" data-tooltip="Preguntas Reporte"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if 'questions' in request.endpoint %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Preguntas Reporte</span>
-        </a>
-
-        <!-- Eventos -->
-        <a href="{{ url_for('admin.events_list') }}" data-tooltip="Eventos"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if 'event' in request.endpoint %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Eventos</span>
-        </a>
-
-        <!-- Grupos de Eventos -->
-        <a href="{{ url_for('admin.event_groups') }}" data-tooltip="Grupos de Eventos"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if 'groups' in request.endpoint %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Grupos de Eventos</span>
-        </a>
-
-        <!-- Programas -->
-        <a href="{{ url_for('admin.programs_list') }}" data-tooltip="Programas"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.programs_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Programas</span>
-        </a>
-
-        <!-- Métodos Pago -->
-        <a href="{{ url_for('admin.payment_methods_list') }}" data-tooltip="Métodos Pago"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.payment_methods_list' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Métodos Pago</span>
-        </a>
-
-        <!-- Importación -->
-        <a href="{{ url_for('admin.import_dashboard') }}" data-tooltip="Importar Datos"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.import_dashboard' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Importar Datos</span>
-        </a>
-
-        <!-- Integraciones -->
-        <a href="{{ url_for('admin.integrations') }}" data-tooltip="Integraciones"
-            class="flex items-center gap-3 p-2 rounded transition-colors duration-200 group relative"
-            :class="expanded ? 'justify-start' : 'justify-center'"
-            class="{% if request.endpoint == 'admin.integrations' %}bg-indigo-900/50 text-indigo-300 border-l-2 border-indigo-500{% else %}hover:bg-slate-800{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <span x-show="expanded" class="whitespace-nowrap transition-opacity">Integraciones</span>
-        </a>
-
+        <!-- 5. CONFIGURACIÓN -->
+        <div class="mt-4">
+            <button @click="openSection = (openSection === 'config' ? '' : 'config')"
+                class="w-full flex items-center justify-between p-2 rounded hover:bg-slate-800 transition-colors group"
+                :class="openSection === 'config' ? 'text-white' : 'text-slate-400'">
+                <div class="flex items-center gap-3" :class="expanded ? 'justify-start' : 'justify-center'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 flex-shrink-0" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span x-show="expanded" class="font-bold text-xs uppercase tracking-wider">Configuración</span>
+                </div>
+                <svg x-show="expanded" xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4 transition-transform duration-200"
+                    :class="openSection === 'config' ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            <div x-show="openSection === 'config'" x-collapse class="mt-1 space-y-1 ml-4"
+                :class="expanded ? 'block' : 'hidden'">
+                <a href="{{ url_for('admin.users_list') }}"
+                    class="flex items-center gap-3 p-2 rounded text-sm hover:text-white transition-colors {% if request.endpoint == 'admin.users_list' %}text-indigo-400 font-bold{% endif %}">
+                    <span>Usuarios</span>
+                </a>
+                <a href="{{ url_for('admin.survey_mgmt') }}"
+                    class="flex items-center gap-3 p-2 rounded text-sm hover:text-white transition-colors {% if 'survey' in request.endpoint %}text-indigo-400 font-bold{% endif %}">
+                    <span>Encuesta Leads</span>
+                </a>
+                <a href="{{ url_for('admin.daily_report_questions') }}"
+                    class="flex items-center gap-3 p-2 rounded text-sm hover:text-white transition-colors {% if 'questions' in request.endpoint %}text-indigo-400 font-bold{% endif %}">
+                    <span>Preguntas Reporte</span>
+                </a>
+                <a href="{{ url_for('admin.events_list') }}"
+                    class="flex items-center gap-3 p-2 rounded text-sm hover:text-white transition-colors {% if 'event' in request.endpoint %}text-indigo-400 font-bold{% endif %}">
+                    <span>Eventos & Grupos</span>
+                </a>
+                <a href="{{ url_for('admin.programs_list') }}"
+                    class="flex items-center gap-3 p-2 rounded text-sm hover:text-white transition-colors {% if request.endpoint == 'admin.programs_list' %}text-indigo-400 font-bold{% endif %}">
+                    <span>Programas</span>
+                </a>
+                <a href="{{ url_for('admin.payment_methods_list') }}"
+                    class="flex items-center gap-3 p-2 rounded text-sm hover:text-white transition-colors {% if request.endpoint == 'admin.payment_methods_list' %}text-indigo-400 font-bold{% endif %}">
+                    <span>Métodos Pago</span>
+                </a>
+                <a href="{{ url_for('admin.integrations') }}"
+                    class="flex items-center gap-3 p-2 rounded text-sm hover:text-white transition-colors {% if request.endpoint == 'admin.integrations' %}text-indigo-400 font-bold{% endif %}">
+                    <span>Integraciones</span>
+                </a>
+            </div>
+        </div>
     </nav>
 
     <!-- Footer / User -->

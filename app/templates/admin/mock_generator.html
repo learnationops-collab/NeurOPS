@@ -1,0 +1,72 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Generador de Datos Ficticios{% endblock %}
+
+{% block content %}
+<div class="flex h-screen overflow-hidden">
+    {% include "includes/admin_sidebar.html" %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+        <div class="max-w-3xl mx-auto">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Generador de Datos Masivos</h1>
+            <p class="text-gray-500 mb-8">Herramienta para crear datos de prueba en el entorno de desarrollo.</p>
+
+            <div class="bg-amber-50 border-l-4 border-amber-400 p-4 mb-8">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-amber-700">
+                            <strong>Advertencia:</strong> Esta acción inyectará datos falsos en la base de datos actual.
+                            Úsalo solo en entornos de prueba o desarrollo.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white shadow rounded-lg p-6">
+                <form action="{{ url_for('admin.mock_generator') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <div class="space-y-6">
+                        <div>
+                            <label for="quantity" class="block text-sm font-medium text-gray-700">Cantidad de Leads a
+                                Generar</label>
+                            <div class="mt-1">
+                                <input type="number" name="quantity" id="quantity" value="5" min="1" max="50"
+                                    class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                <p class="mt-2 text-xs text-gray-500">Se generarán leads con perfiles y citas asociadas
+                                    para hoy.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="include_sales" name="include_sales" type="checkbox" checked
+                                    class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="include_sales" class="font-medium text-gray-700">Generar Ventas y
+                                    Pagos</label>
+                                <p class="text-gray-500">Si se marca, aproximadamente 1 de cada 3 leads simulados se
+                                    convertirá en venta con pago completo.</p>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-100 flex justify-end">
+                            <button type="submit"
+                                class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Generar Datos
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

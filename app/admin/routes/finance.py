@@ -327,6 +327,7 @@ def delete_payment(id):
     return redirect(url_for('admin.edit_client', id=student_id))
 
 @bp.route('/sales')
+@bp.route('/sales/analysis')
 @admin_required
 def sales_list():
     search = request.args.get('search', '')
@@ -403,6 +404,50 @@ def sales_list():
     methods = PaymentMethod.query.filter_by(is_active=True).all()
     programs = Program.query.all()
     closers = User.query.filter_by(role='closer').all()
+    # --- Program Analysis (New) ---
+    program_analysis = []
+    
+    # Clone filters for aggregation (reusing stats_query base would be ideal but it joins differently?)
+    # reusing the logic from stats_query but grouping by Program
+    
+    prog_stats_query = db.session.query(
+        Program.name,
+        db.func.sum(Payment.amount),
+        db.func.count(Payment.id),
+        db.func.sum((Payment.amount * (PaymentMethod.commission_percent / 100.0)) + PaymentMethod.commission_fixed)
+    ).join(Enrollment, Payment.enrollment_id == Enrollment.id).join(Program, Enrollment.program_id == Program.id).join(User, Enrollment.student_id == User.id).outerjoin(PaymentMethod, Payment.payment_method_id == PaymentMethod.id)
+
+    # Apply same filters
+    if start_date_str: prog_stats_query = prog_stats_query.filter(Payment.date >= datetime.strptime(start_date_str, '%Y-%m-%d'))
+    if end_date_str: prog_stats_query = prog_stats_query.filter(Payment.date < datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1))
+    if search: prog_stats_query = prog_stats_query.filter(or_(User.username.ilike(f"%{search}%"), User.email.ilike(f"%{search}%")))
+    if method_filter: prog_stats_query = prog_stats_query.filter(Payment.payment_method_id == method_filter)
+    if type_filter: prog_stats_query = prog_stats_query.filter(Payment.payment_type == type_filter)
+    if program_filter: prog_stats_query = prog_stats_query.filter(Enrollment.program_id == program_filter)
+    
+    prog_stats = prog_stats_query.group_by(Program.name).all()
+    
+    # Calculate totals for verify (should match main KPIs)
+    # Process
+    for p_name, p_gross, p_count, p_fees in prog_stats:
+        p_gross = p_gross or 0.0
+        p_fees = p_fees or 0.0
+        p_count = p_count or 0
+        p_cash = p_gross - p_fees
+        p_avg = (p_gross / p_count) if p_count > 0 else 0.0
+        p_pct = (p_count / count * 100) if count > 0 else 0.0
+        
+        program_analysis.append({
+            'name': p_name,
+            'count': p_count,
+            'pct': p_pct,
+            'cash': p_cash,
+            'ticket': p_avg
+        })
+        
+    # Sort by cash collected desc
+    program_analysis.sort(key=lambda x: x['cash'], reverse=True)
+
     payment_types = [
         ('full', 'Pago Completo'),
         ('down_payment', 'Primer Pago'),
@@ -430,7 +475,8 @@ def sales_list():
                            all_programs=programs,
                            payment_types=payment_types,
                            closers=closers,
-                           start_index=start_index)
+                           start_index=start_index,
+                           program_analysis=program_analysis)
 
 
 @bp.route('/sale/new', methods=['GET', 'POST'])

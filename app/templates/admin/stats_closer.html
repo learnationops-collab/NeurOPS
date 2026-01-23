@@ -44,21 +44,26 @@
 
             <!-- Totals Cards -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <dt class="text-sm font-medium text-gray-500 truncate">Ventas Totales</dt>
-                    <dd class="mt-1 text-3xl font-bold text-gray-900">{{ total_sales }}</dd>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <dt class="text-xs font-bold text-gray-500 uppercase tracking-wider truncate">Ventas Totales</dt>
+                    <dd class="mt-2 text-3xl font-black text-slate-800">{{ total_sales }}</dd>
+                    <div class="mt-2 h-1 w-12 bg-indigo-500 rounded"></div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <dt class="text-sm font-medium text-gray-500 truncate">Cash Collected</dt>
-                    <dd class="mt-1 text-3xl font-bold text-green-600">${{ ":,.0f".format(total_cash) }}</dd>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <dt class="text-xs font-bold text-gray-500 uppercase tracking-wider truncate">Recaudación Net</dt>
+                    <dd class="mt-2 text-3xl font-black text-emerald-600">${{ "{:,.0f}".format(total_cash) }}</dd>
+                    <div class="mt-2 h-1 w-12 bg-emerald-500 rounded"></div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <dt class="text-sm font-medium text-gray-500 truncate">Llamadas (Completed)</dt>
-                    <dd class="mt-1 text-3xl font-bold text-blue-600">{{ total_calls }}</dd>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <dt class="text-xs font-bold text-gray-500 uppercase tracking-wider truncate">Llamadas (OK)</dt>
+                    <dd class="mt-2 text-3xl font-black text-blue-600">{{ total_calls }}</dd>
+                    <div class="mt-2 h-1 w-12 bg-blue-500 rounded"></div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <dt class="text-sm font-medium text-gray-500 truncate">Tasa de Cierre</dt>
-                    <dd class="mt-1 text-3xl font-bold text-purple-600">{{ "%.1f"|format(closing_rate) }}%</dd>
+                <div
+                    class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow transition-shadow">
+                    <dt class="text-xs font-bold text-gray-500 uppercase tracking-wider truncate">Tasa de Cierre</dt>
+                    <dd class="mt-2 text-3xl font-black text-purple-600">{{ "%.1f"|format(closing_rate) }}%</dd>
+                    <div class="mt-2 h-1 w-12 bg-purple-500 rounded"></div>
                 </div>
             </div>
 

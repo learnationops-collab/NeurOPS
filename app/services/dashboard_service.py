@@ -362,11 +362,31 @@ class DashboardService(BaseService):
                 'icon': 'currency-dollar'
             })
             
+        # 5. Today's Reported Stats (Aggregation from CloserDailyStats)
+        today_ds = db.session.query(
+            db.func.sum(CloserDailyStats.calls_scheduled).label('scheduled'),
+            db.func.sum(CloserDailyStats.calls_completed).label('completed'),
+            db.func.sum(CloserDailyStats.sales_count).label('sales'),
+            db.func.sum(CloserDailyStats.cash_collected).label('cash')
+        ).filter(CloserDailyStats.date == today).first()
+        
+        # 6. Actual Agendas Today (from Appointment model)
+        today_appts_count = Appointment.query.filter(
+            db.func.date(Appointment.start_time) == today
+        ).count()
+
         # Sort and Slice
         activity.sort(key=lambda x: x['time'], reverse=True)
         recent_activity = activity[:10]
 
         return {
+            'today_stats': {
+                'reported_scheduled': today_ds.scheduled or 0,
+                'reported_completed': today_ds.completed or 0,
+                'reported_sales': today_ds.sales or 0,
+                'reported_cash': today_ds.cash or 0,
+                'actual_appts': today_appts_count
+            },
             'recent_activity': recent_activity,
             'dates': {'start': start_date, 'end': end_date},
             'financials': {

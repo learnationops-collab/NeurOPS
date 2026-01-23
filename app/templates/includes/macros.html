@@ -1,0 +1,67 @@
+{# app/templates/includes/macros.html #}
+
+{% macro kpi_card(title, value, id, icon_path=None, subtitle=None, border_color='blue-500', bg_color='blue-50',
+text_color='blue-500', extra_info=None) %}
+<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm border-l-4 border-{{ border_color }}"
+    data-tile-id="{{ id }}" x-show="isVisible('{{ id }}')">
+    <div class="flex items-center">
+        {% if icon_path %}
+        <div class="p-2 rounded-full bg-{{ bg_color }} text-{{ text_color }}">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}" />
+            </svg>
+        </div>
+        {% endif %}
+        <div class="ml-3">
+            <p class="text-xs text-gray-500 font-bold uppercase tracking-wide">{{ title }}</p>
+            <p class="text-2xl font-extrabold text-gray-800 mt-1">{{ value }}</p>
+            {% if subtitle %}
+            <div class="text-xs text-gray-400 mt-1">
+                {{ subtitle|safe }}
+            </div>
+            {% endif %}
+            {% if extra_info %}
+            <div class="text-xs mt-1">
+                {{ extra_info|safe }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro chart_card(title, canvas_id, tile_id, selectors=None) %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-tile-id="{{ tile_id }}"
+    x-show="isVisible('{{ tile_id }}')">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-gray-800" id="{{ canvas_id }}Title">{{ title }}</h3>
+        {% if selectors %}
+        <select id="{{ canvas_id }}Selector"
+            class="border rounded px-2 py-1 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            {% for value, label in selectors %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+    </div>
+    <div class="relative h-64 flex justify-center">
+        {{ caller() }}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro table_card(title, tile_id, footer_link=None, footer_text=None) %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-tile-id="{{ tile_id }}"
+    x-show="isVisible('{{ tile_id }}')">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-gray-800">{{ title }}</h3>
+        {% if footer_link %}
+        <a href="{{ footer_link }}" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">{{ footer_text or
+            'Ver Todos' }}</a>
+        {% endif %}
+    </div>
+    <div class="overflow-x-auto">
+        {{ caller() }}
+    </div>
+</div>
+{% endmacro %}

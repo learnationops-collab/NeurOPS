@@ -2,9 +2,9 @@ from flask import render_template, request
 from app.admin import bp
 from app.decorators import admin_required, role_required
 from app.services.dashboard_service import DashboardService
-from app.models import User
+from app.models import User, CloserDailyStats, DailyReportQuestion
 from flask_login import login_required
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, time
 
 @bp.route('/dashboard')
 @admin_required
@@ -61,7 +61,9 @@ def dashboard():
                            method_labels=data['charts']['method_labels'],
                            method_values=data['charts']['method_values'],
                            
-                           recent_activity=data.get('recent_activity', [])
+                           recent_activity=data.get('recent_activity', []),
+                           today_stats=data.get('today_stats', {}),
+                           now=datetime.now()
                            )
 
 
@@ -194,3 +196,109 @@ def delete_appointment(id):
     return redirect(url_for('admin.appointments_list'))
 
 
+
+@bp.route('/stats/closer')
+@admin_required
+def stats_closer():
+    today = date.today()
+    
+    # Filters
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    closer_id = request.args.get('closer_id')
+    
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            start_date = today.replace(day=1)
+    else:
+        start_date = today.replace(day=1)
+        
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            end_date = today
+    else:
+        end_date = today
+        
+    # Query Stats
+    query = CloserDailyStats.query.filter(
+        CloserDailyStats.date >= start_date,
+        CloserDailyStats.date <= end_date
+    ).order_by(CloserDailyStats.date.desc())
+    
+    if closer_id:
+        query = query.filter(CloserDailyStats.closer_id == closer_id)
+        
+    stats = query.all()
+    
+    # Totals (Aggregations)
+    total_sales = sum((s.sales_count or 0) for s in stats)
+    total_cash = sum((s.cash_collected or 0) for s in stats)
+    total_calls = sum((s.calls_completed or 0) for s in stats)
+    
+    closing_rate = (total_sales / total_calls * 100) if total_calls > 0 else 0
+    
+    closers = User.query.filter_by(role='closer').all()
+    questions = DailyReportQuestion.query.order_by(DailyReportQuestion.order).all()
+    
+    # Calculate totals for questions
+    questions_totals = {}
+    for q in questions:
+        if q.question_type == 'number':
+            # Sum all answers for this question
+            total = 0
+            for s in stats:
+                ans = s.answers.filter_by(question_id=q.id).first()
+                if ans and ans.answer:
+                    try:
+                        total += float(ans.answer)
+                    except ValueError:
+                        pass
+            questions_totals[q.id] = total
+            
+        elif q.question_type == 'boolean':
+            # Count "Yes" answers
+            count = 0
+            for s in stats:
+                ans = s.answers.filter_by(question_id=q.id).first()
+                if ans and (ans.answer == 'true' or ans.answer == '1' or ans.answer == 'Sí'):
+                    count += 1
+            questions_totals[q.id] = count
+        else:
+            questions_totals[q.id] = None
+
+    return render_template('admin/stats_closer.html', 
+                           stats=stats, 
+                           total_sales=total_sales,
+                           total_cash=total_cash,
+                           total_calls=total_calls,
+                           closing_rate=closing_rate,
+                           closers=closers,
+                           questions=questions,
+                           questions_totals=questions_totals,
+                           start_date=start_date.strftime('%Y-%m-%d'),
+                           end_date=end_date.strftime('%Y-%m-%d'))
+
+
+@bp.route('/mock-generator', methods=['GET', 'POST'])
+@admin_required
+def mock_generator():
+    from app.services.mock_data_service import MockDataService
+    from flask import flash, redirect, url_for
+    
+    if request.method == 'POST':
+        try:
+            qty = int(request.form.get('quantity', 5))
+            sales = request.form.get('include_sales') == 'on'
+            
+            msg = MockDataService.generate_bulk_data(lead_count=qty, create_sales=sales)
+            flash(f'Éxito: {msg}', 'success')
+        except Exception as e:
+            flash(f'Error generando datos: {str(e)}', 'error')
+            
+        return redirect(url_for('admin.mock_generator'))
+        
+    return render_template('admin/mock_generator.html')

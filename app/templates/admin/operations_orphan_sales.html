@@ -1,0 +1,80 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Ventas Huérfanas - Asignación Manual{% endblock %}
+
+{% block content %}
+<div class="flex h-screen overflow-hidden" x-data="{ searchEmail: '' }">
+    {% include "includes/admin_sidebar.html" %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+        <header class="mb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Ventas Huérfanas</h1>
+                <p class="text-gray-500 text-sm">Estas ventas fueron importadas pero el email no coincidió con ningún
+                    Lead existente.</p>
+            </div>
+            <a href="{{ url_for('admin.operations_dashboard') }}"
+                class="text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Volver a Operaciones
+            </a>
+        </header>
+
+        {% if orphans %}
+        <div class="grid grid-cols-1 gap-6">
+            {% for item in orphans %}
+            <div
+                class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row items-center gap-6">
+                <!-- Info Venta -->
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-full">Huérfana</span>
+                        <span class="text-gray-400 text-sm">{{ item.payment.date.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                    <h3 class="font-bold text-gray-800 text-lg">{{ item.program }}</h3>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <span class="text-2xl font-bold text-green-600">${{ "{:,.2f}".format(item.payment.amount)
+                            }}</span>
+                        <span class="text-sm text-gray-500">original: {{ item.orphan_user.email }}</span>
+                    </div>
+                </div>
+
+                <!-- Action Form -->
+                <div class="flex-1 w-full md:w-auto">
+                    <form action="{{ url_for('admin.operations_assign_sale', payment_id=item.payment.id) }}"
+                        method="POST" class="flex gap-2 items-end">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Asignar a Usuario Real
+                                (Email)</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-user text-gray-300"></i>
+                                </span>
+                                <input type="email" name="target_email" required
+                                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="ejemplo@email.com">
+                            </div>
+                        </div>
+                        <button type="submit"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition h-10">
+                            Asignar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+                <i class="fas fa-check text-green-600 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">¡Todo en orden!</h3>
+            <p class="text-gray-500 max-w-md mx-auto">
+                No hay ventas huérfanas pendientes. Todas las ventas importadas están correctamente vinculadas a un
+                usuario.
+            </p>
+        </div>
+        {% endif %}
+    </main>
+</div>
+{% endblock %}

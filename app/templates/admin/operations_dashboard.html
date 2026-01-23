@@ -1,0 +1,174 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Operaciones - Migración de Datos{% endblock %}
+
+{% block content %}
+<div class="flex h-screen overflow-hidden" x-data="{ 
+    showWipeModal: false,
+    activeTab: 'calls' 
+}">
+    {% include "includes/admin_sidebar.html" %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Centro de Operaciones y Migración</h1>
+            <p class="text-gray-500 mt-2">Herramientas para importación masiva, limpieza y unificación de datos.</p>
+        </header>
+
+        <!-- Danger Zone -->
+        <div class="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-red-700 flex items-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i> Zona de Peligro
+                    </h3>
+                    <p class="text-red-600 text-sm mt-1">
+                        Estas acciones son destructivas e irreversibles. Úsalas solo al inicio de una migración.
+                    </p>
+                </div>
+                <button @click="showWipeModal = true"
+                    class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-bold shadow-sm transition flex items-center">
+                    <i class="fas fa-trash-alt mr-2"></i> Resetear Base de Datos
+                </button>
+            </div>
+        </div>
+
+        <!-- Import Workflow -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="border-b border-gray-200 bg-gray-50">
+                <nav class="flex -mb-px">
+                    <button @click="activeTab = 'calls'"
+                        :class="activeTab === 'calls' ? 'border-indigo-500 text-indigo-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                        class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm transition-all">
+                        1. Importar Llamadas (Base Leads)
+                    </button>
+                    <button @click="activeTab = 'sales'"
+                        :class="activeTab === 'sales' ? 'border-indigo-500 text-indigo-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                        class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm transition-all">
+                        2. Importar Ventas (Vincular)
+                    </button>
+                </nav>
+            </div>
+
+            <div class="p-8">
+                <!-- STEP 1: CALLS -->
+                <div x-show="activeTab === 'calls'" x-transition:enter="transition ease-out duration-200">
+                    <div class="flex flex-col md:flex-row gap-8 items-start">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Importar Base de Leads (Llamadas)</h3>
+                            <p class="text-gray-500 mb-4 text-sm">
+                                Sube el archivo de Llamadas/Agendas. El sistema usará el <strong>Email</strong> como
+                                identificador único para crear usuarios y perfiles.
+                            </p>
+
+                            <form action="{{ url_for('admin.operations_import_calls_precheck') }}" method="POST"
+                                enctype="multipart/form-data" class="space-y-4">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div
+                                    class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition cursor-pointer relative">
+                                    <input type="file" name="file" required accept=".csv"
+                                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <i class="fas fa-file-csv text-4xl text-gray-400 mb-3"></i>
+                                    <p class="text-gray-600 font-medium">Arrastra tu archivo CSV aquí</p>
+                                    <p class="text-xs text-gray-400 mt-1">o haz click para seleccionar</p>
+                                </div>
+                                <button type="submit"
+                                    class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition">
+                                    Subir y Mapear Columnas
+                                </button>
+                            </form>
+                        </div>
+                        <div class="md:w-1/3 bg-blue-50 p-6 rounded-xl border border-blue-100">
+                            <h4 class="font-bold text-blue-800 mb-2">Reglas de Importación</h4>
+                            <ul class="text-sm text-blue-700 space-y-2 list-disc pl-4">
+                                <li>Si el Email no existe, se crea un nuevo Usuario.</li>
+                                <li>Si ya existe, se actualizan sus datos de contacto.</li>
+                                <li>Se crea un registro de Cita para cada fila.</li>
+                                <li>Los duplicados de email se unifican bajo el mismo usuario.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: SALES -->
+                <div x-show="activeTab === 'sales'" style="display: none;"
+                    x-transition:enter="transition ease-out duration-200">
+                    <div class="flex flex-col md:flex-row gap-8 items-start">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Importar Ventas y Vincular</h3>
+                            <p class="text-gray-500 mb-4 text-sm">
+                                Sube el archivo de Ventas. El sistema buscará el <strong>Email</strong> en la base de
+                                datos de Leads creada en el paso 1.
+                            </p>
+
+                            <form action="{{ url_for('admin.operations_import_sales_precheck') }}" method="POST"
+                                enctype="multipart/form-data" class="space-y-4">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div
+                                    class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition cursor-pointer relative">
+                                    <input type="file" name="file" required accept=".csv"
+                                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <i class="fas fa-file-invoice-dollar text-4xl text-gray-400 mb-3"></i>
+                                    <p class="text-gray-600 font-medium">Arrastra tu archivo CSV aquí</p>
+                                    <p class="text-xs text-gray-400 mt-1">o haz click para seleccionar</p>
+                                </div>
+                                <button type="submit"
+                                    class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition">
+                                    Subir y Mapear Columnas
+                                </button>
+                            </form>
+                        </div>
+                        <div class="md:w-1/3 bg-green-50 p-6 rounded-xl border border-green-100">
+                            <h4 class="font-bold text-green-800 mb-2">Reglas de Vinculación</h4>
+                            <ul class="text-sm text-green-700 space-y-2 list-disc pl-4">
+                                <li>Se busca al usuario por Email.</li>
+                                <li>Si se encuentra, se registra la venta a su nombre.</li>
+                                <li><strong>Si NO se encuentra</strong>: Se crea una "Venta Huérfana".</li>
+                                <li>Podrás asignar manualmente las ventas huérfanas después.</li>
+                            </ul>
+
+                            <div class="mt-4 pt-4 border-t border-green-200">
+                                <a href="{{ url_for('admin.operations_orphan_sales') }}"
+                                    class="block text-center bg-white border border-green-300 text-green-700 font-bold py-2 rounded hover:bg-green-50 transition">
+                                    Gestionar Ventas Huérfanas
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Wipe Modal -->
+    <div x-show="showWipeModal" style="display: none;"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 text-center" @click.away="showWipeModal = false">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">¿Estás absolutamente seguro?</h3>
+            <p class="text-sm text-gray-500 mb-6">
+                Esta acción eliminará <strong>TODOS</strong> los leads, ventas, citas, pagos y reportes de la base de
+                datos. Solo se conservarán las cuentas de Administrador y Closers.
+                <br><br>
+                <strong>Esta acción no se puede deshacer.</strong>
+            </p>
+            <div class="flex gap-3 justify-center">
+                <button @click="showWipeModal = false"
+                    class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition">
+                    Cancelar
+                </button>
+                <form action="{{ url_for('admin.operations_wipe_data') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit"
+                        class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition">
+                        Sí, borrar todo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

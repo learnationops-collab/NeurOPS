@@ -78,7 +78,7 @@
 
                 <!-- Step 4: Payments -->
                 <div class="bg-white rounded-lg shadow-md p-6">
-                    <h4 class="text-xl font-semibold mb-2">4. Pagos</h4>
+                    <h4 class="text-xl font-semibold mb-2">4. Pagos (General)</h4>
                     <p class="text-gray-600 mb-4 text-sm">Sube el archivo <code>payments_clean.csv</code>. Crea
                         enrollments y
                         registros de pago.</p>
@@ -95,6 +95,30 @@
                         <button type="submit"
                             class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
                             Importar Pagos
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Step 5: The View (Special) -->
+                <div class="bg-white rounded-lg shadow-md p-6 border-2 border-indigo-500 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-indigo-500 text-white text-xs font-bold px-2 py-1">NUEVO</div>
+                    <h4 class="text-xl font-semibold mb-2 text-indigo-700">5. Ventas 'The View'</h4>
+                    <p class="text-gray-600 mb-4 text-sm">Importador específico para el formato
+                        <code>The View - Ventas_DB.csv</code>.
+                        Crea usuarios, enrollments y pagos automáticamente.</p>
+                    <form action="{{ url_for('admin.import_view_sales') }}" method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <div class="mb-4">
+                            <input type="file" name="file" accept=".csv" class="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-indigo-50 file:text-indigo-700
+                        hover:file:bg-indigo-100" required>
+                        </div>
+                        <button type="submit"
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow-lg transition-transform transform hover:-translate-y-0.5">
+                            <i class="fas fa-file-import mr-2"></i>Importar The View
                         </button>
                     </form>
                 </div>

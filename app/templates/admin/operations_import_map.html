@@ -1,0 +1,109 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Mapeo de Columnas - Importación{% endblock %}
+
+{% block content %}
+<div class="flex h-screen overflow-hidden">
+    {% include "includes/admin_sidebar.html" %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+        <header class="mb-8">
+            <h1 class="text-2xl font-bold text-gray-800">
+                {% if import_type == 'calls' %}
+                Importar Llamadas: Mapeo de Campos
+                {% else %}
+                Importar Ventas: Mapeo de Campos
+                {% endif %}
+            </h1>
+            <p class="text-gray-500 text-sm mt-1">
+                Asocia las columnas de tu archivo CSV con los campos de la base de datos.
+            </p>
+        </header>
+
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <form action="{{ url_for('admin.operations_import_execute') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="import_type" value="{{ import_type }}">
+                    <input type="hidden" name="filename" value="{{ filename }}">
+
+                    <div class="p-6 space-y-6">
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4">
+                            <div class="flex">
+                                <div class="ml-3">
+                                    <p class="text-sm text-blue-700">
+                                        Hemos detectado <strong>{{ csv_headers|length }}</strong> columnas en tu
+                                        archivo.
+                                        Por favor, selecciona qué columna corresponde a cada campo requerido.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {% for field_key, field_label in required_fields.items() %}
+                            <div
+                                class="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-white transition-colors">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">
+                                    {{ field_label }} <span class="text-red-500">*</span>
+                                </label>
+                                <select name="map_{{ field_key }}" required
+                                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                    <option value="">-- Seleccionar Columna CSV --</option>
+                                    {% for header in csv_headers %}
+                                    <option value="{{ header }}" {% if header|lower==field_key|lower or
+                                        header|lower==field_label|lower %}selected{% endif %}>
+                                        {{ header }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <p class="text-xs text-gray-400 mt-2">
+                                    Ejemplo del CSV: <span class="font-mono text-gray-600">{{ preview_row.get(field_key,
+                                        'N/A') }}</span>
+                                </p>
+                            </div>
+                            {% endfor %}
+
+                            <!-- Optional Fields -->
+                            {% if optional_fields %}
+                            <div class="col-span-1 md:col-span-2 mt-4">
+                                <h4 class="font-bold text-gray-500 text-sm uppercase tracking-wider mb-4 border-b pb-2">
+                                    Campos Opcionales</h4>
+                            </div>
+                            {% for field_key, field_label in optional_fields.items() %}
+                            <div
+                                class="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-white transition-colors">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">
+                                    {{ field_label }}
+                                </label>
+                                <select name="map_{{ field_key }}"
+                                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                    <option value="">-- No Importar / Vacío --</option>
+                                    {% for header in csv_headers %}
+                                    <option value="{{ header }}" {% if header|lower==field_key|lower %}selected{% endif
+                                        %}>
+                                        {{ header }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+                        <a href="{{ url_for('admin.operations_dashboard') }}"
+                            class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Cancelar
+                        </a>
+                        <button type="submit"
+                            class="px-6 py-2 bg-indigo-600 border border-transparent rounded-lg text-sm font-bold text-white hover:bg-indigo-700 shadow-sm">
+                            Confirmar e Importar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
