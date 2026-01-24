@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/AdminDashboard';
 import LoginPage from './pages/LoginPage';
+import EmergencyCreatePage from './pages/EmergencyCreatePage';
 import AnalysisPage from './pages/AnalysisPage';
 import DatabasePage from './pages/DatabasePage';
 import SettingsPage from './pages/SettingsPage';
@@ -14,6 +15,8 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
+
 
         {/* Protected Admin Routes */}
         <Route
