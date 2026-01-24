@@ -6,7 +6,7 @@ Backend:
 - Lenguaje: Python 3.9+
 - Framework: Flask (API-only)
 - ORM: SQLAlchemy (Flask-SQLAlchemy)
-- Migraciones: Flask-Migrate
+- Migraciones: Flask-Migrate (Alembic con batch mode para SQLite)
 - API: RESTful (JSON)
 
 Frontend:
@@ -23,35 +23,34 @@ Base de Datos:
 /app
   /api                -> Blueprints de API JSON
     /auth.py          -> Endpoints de login/logout/me
-    /admin.py         -> Endpoints de datos administrativos (Master DB)
-    /closer.py        -> Endpoints para Closers
-  /services           -> Capa de Lógica de Negocio (Business Logic)
-  /models.py          -> Modelos de BD (SQLAlchemy)
-  /decorators.py      -> Decoradores de roles (admin_required)
-  /__init__.py        -> Configuración (CORS, CSRF exemptions para API, SPA routing)
+    /admin.py         -> Endpoints de datos administrativos y Operaciones
+    /closer.py        -> Endpoints para Closers (Dashboard, Leads)
+    /public.py        -> Endpoints públicos (Booking, Encuestas)
+  /services           -> Capa de Lógica de Negocio
+    /admin_ops_service.py -> Generación de datos mock y limpieza
+    /user_service.py      -> Gestión de Usuarios y Clientes
+    /booking_service.py   -> Lógica de agendamiento
+  /models.py          -> Modelos de BD (User = System, Client = Business)
+  /__init__.py        -> Configuración con Naming Convention para Migraciones
 
 /frontend             -> Aplicación React SPA (Vite)
   /src
-    /components       -> Layouts (MainLayout) y componentes UI
-    /pages            -> Vistas principales (Main Board, Analysis, DB, Settings)
-    /services         -> api.js (Axios)
-    /App.jsx          -> Routing Central (4 pilares Admin + Closer)
-  /dist               -> Build de producción (servido por Flask)
+    /pages
+      /OperationsPage.jsx -> Herramientas de administración de datos
+      /AdminDashboard.jsx -> Dashboard principal
+    /components
+      /MainLayout.jsx    -> Sidebar dinámico por rol
+  /dist               -> Build de producción
 
-/migrations           -> Migraciones de BD (Flask-Migrate)
-run.py                -> Servidor Flask
-config.py             -> Variables de entorno
-arquitectura.txt      -> Este documento
-
-3. FLUJO DE TRABAJO
+3. MODELO DE DATOS (NUEVO)
 ----------------------------------------
-- Desarrollo Frontend: `cd frontend && npm run dev`
-- Desarrollo Backend: `python run.py`
-- Build Producción: `cd frontend && npm run build` (mueve archivos a dist para que Flask los sirva)
+- User: Solo para personal del sistema (Admins, Closers).
+- Client: Entidad de negocio (Leads, Estudiantes). Independiente de roles de login.
+- Appointment: Vincula a un Closer (User) con un Client.
+- Enrollment: Vincula a un Closer (User) con un Client y un Program.
+- SurveyAnswer: Vincula respuestas a un Client.
 
-4. ENDPOINTS CLAVE
+4. FLUJO DE TRABAJO
 ----------------------------------------
-- /api/auth/*: Autenticación
-- /api/admin/db/*: Gestión de Base de Datos Maestro (Programas, Pagos, Agendas)
-- /api/admin/finance/*: Análisis financiero y ventas
-- /api/closer/*: Dashboard y métricas para Closers
+- Mock Data: Usar pestaña "Operaciones" en Admin para poblar el sistema rápidamente.
+- Migraciones: `flask db migrate` y `flask db upgrade` siempre habilitados.

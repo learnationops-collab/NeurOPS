@@ -9,6 +9,8 @@ import SettingsPage from './pages/SettingsPage';
 import CloserDashboard from './pages/CloserDashboard';
 import CloserLeadsPage from './pages/CloserLeadsPage';
 import CloserSettingsPage from './pages/CloserSettingsPage';
+import OperationsPage from './pages/OperationsPage';
+import BookingPage from './pages/BookingPage';
 import './index.css';
 
 function App() {
@@ -17,6 +19,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
+        <Route path="/book/:username/:event_slug" element={<BookingPage />} />
 
 
         {/* Protected Admin Routes */}
@@ -49,6 +52,14 @@ function App() {
           element={
             <MainLayout>
               <SettingsPage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/admin/operations"
+          element={
+            <MainLayout>
+              <OperationsPage />
             </MainLayout>
           }
         />

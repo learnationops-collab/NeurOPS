@@ -1,0 +1,411 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import api from '../services/api';
+import {
+    Calendar,
+    Clock,
+    User,
+    Mail,
+    Phone,
+    CheckCircle2,
+    Loader2,
+    AlertCircle,
+    ChevronRight,
+    ChevronLeft,
+    CheckCircle,
+    Globe,
+    CalendarDays
+} from 'lucide-react';
+
+const BookingPage = () => {
+    const { username, event_slug } = useParams();
+    const [searchParams] = useSearchParams();
+
+    // States
+    const [loading, setLoading] = useState(true);
+    const [booking, setBooking] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [error, setError] = useState(null);
+    const [currentStep, setCurrentStep] = useState(1);
+
+    // Data from API
+    const [eventInfo, setEventInfo] = useState(null);
+    const [questions, setQuestions] = useState([]);
+    const [availability, setAvailability] = useState([]);
+    const [closerName, setCloserName] = useState('');
+
+    // Grouping availability by date
+    const groupedAvailability = useMemo(() => {
+        const groups = {};
+        availability.forEach(slot => {
+            if (!groups[slot.date]) groups[slot.date] = [];
+            groups[slot.date].push(slot);
+        });
+        return groups;
+    }, [availability]);
+
+    const availableDates = useMemo(() => Object.keys(groupedAvailability).sort(), [groupedAvailability]);
+    const [selectedDate, setSelectedDate] = useState(null);
+
+    // Form States
+    const [contactData, setContactData] = useState({ name: '', email: '', phone: '' });
+    const [surveyAnswers, setSurveyAnswers] = useState({});
+    const [selectedSlot, setSelectedSlot] = useState(null);
+
+    useEffect(() => {
+        fetchFunnelData();
+    }, [username, event_slug]);
+
+    useEffect(() => {
+        if (availableDates.length > 0 && !selectedDate) {
+            setSelectedDate(availableDates[0]);
+        }
+    }, [availableDates, selectedDate]);
+
+    const fetchFunnelData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await api.get(`/public/funnel/@${username}/${event_slug}`);
+            setEventInfo(res.data.event);
+            setQuestions(res.data.questions);
+            setAvailability(res.data.availability);
+            setCloserName(res.data.closer_name);
+        } catch (err) {
+            console.error(err);
+            setError(err.response?.data?.error || "No se pudo cargar la página de agendamiento.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const nextStep = () => {
+        if (currentStep === 1) {
+            if (questions.length === 0) setCurrentStep(3);
+            else setCurrentStep(2);
+        } else if (currentStep === 2) {
+            setCurrentStep(3);
+        }
+    };
+
+    const prevStep = () => {
+        if (currentStep === 3) {
+            if (questions.length === 0) setCurrentStep(1);
+            else setCurrentStep(2);
+        } else if (currentStep === 2) {
+            setCurrentStep(1);
+        }
+    };
+
+    const handleBook = async () => {
+        if (!selectedSlot) return;
+        setBooking(true);
+        setError(null);
+        try {
+            const payload = {
+                ...contactData,
+                timestamp: selectedSlot.timestamp,
+                event_id: eventInfo.id,
+                survey_answers: surveyAnswers,
+                utm_source: searchParams.get('utm_source') || eventInfo.utm_source,
+                utm_medium: searchParams.get('utm_medium'),
+                utm_campaign: searchParams.get('utm_campaign')
+            };
+            await api.post(`/public/book/@${username}`, payload);
+            setSuccess(true);
+        } catch (err) {
+            setError(err.response?.data?.error || "Error al confirmar el agendamiento.");
+        } finally {
+            setBooking(false);
+        }
+    };
+
+    if (loading) return (
+        <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6">
+            <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+            <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px] animate-pulse">Cargando Experiencia...</p>
+        </div>
+    );
+
+    if (success) return (
+        <div className="min-h-screen bg-black flex items-center justify-center p-6">
+            <div className="max-w-md w-full bg-slate-900/40 rounded-[3rem] p-12 text-center border border-white/5 shadow-2xl backdrop-blur-3xl animate-in zoom-in-95 duration-500">
+                <div className="w-24 h-24 bg-green-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.1)]">
+                    <CheckCircle2 className="w-14 h-14 text-green-500" />
+                </div>
+                <h1 className="text-4xl font-black text-white italic mb-4 uppercase tracking-tighter">¡BRUTAL!</h1>
+                <p className="text-slate-400 mb-10 font-medium">
+                    Tu sesión con <span className="text-indigo-400 font-bold">@{username}</span> ha sido reservada.
+                </p>
+                <div className="bg-white/[0.02] p-8 rounded-[2rem] border border-white/5 mb-10 text-left space-y-4 shadow-inner">
+                    <div className="flex items-center gap-4 text-sm">
+                        <Calendar className="w-5 h-5 text-indigo-400" />
+                        <span className="text-white font-bold">{new Date(selectedSlot.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                        <Clock className="w-5 h-5 text-indigo-400" />
+                        <span className="text-white font-bold">{selectedSlot.start_time} HS</span>
+                    </div>
+                </div>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-indigo-900/40 uppercase tracking-widest text-xs active:scale-95"
+                >
+                    Finalizar
+                </button>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen bg-black text-slate-100 flex flex-col font-sans selection:bg-indigo-500/30">
+            <div className="max-w-2xl mx-auto w-full p-6 md:p-12 flex-1 flex flex-col justify-center">
+
+                {/* Stepper */}
+                <div className="flex items-center justify-between mb-16 gap-3">
+                    {[1, 2, 3].map((step) => {
+                        const isCompleted = currentStep > step;
+                        const isActive = currentStep === step;
+                        return (
+                            <div key={step} className="flex-1 flex flex-col items-center gap-3">
+                                <div className={`h-1.5 w-full rounded-full transition-all duration-700 ${isCompleted ? 'bg-indigo-500' : isActive ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.6)]' : 'bg-white/5'
+                                    }`} />
+                                <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isActive ? 'text-indigo-400' : 'text-slate-700'
+                                    }`}>Fase {step}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Step 1: Contact */}
+                {currentStep === 1 && (
+                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                        <header className="text-center space-y-3">
+                            <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter">COMENCEMOS</h2>
+                            <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.5em]">Tus credenciales de acceso</p>
+                        </header>
+
+                        <div className="bg-slate-900/20 backdrop-blur-2xl border border-white/5 p-10 rounded-[3rem] shadow-2xl space-y-8">
+                            <div className="space-y-6">
+                                <FormInput
+                                    label="Nombre Completo"
+                                    icon={<User size={20} />}
+                                    placeholder="Ej: John Wick"
+                                    value={contactData.name}
+                                    onChange={(v) => setContactData({ ...contactData, name: v })}
+                                />
+                                <FormInput
+                                    label="WhatsApp / Móvil"
+                                    type="tel"
+                                    icon={<Phone size={20} />}
+                                    placeholder="+54 9 ..."
+                                    value={contactData.phone}
+                                    onChange={(v) => setContactData({ ...contactData, phone: v })}
+                                />
+                                <FormInput
+                                    label="Email Corporativo"
+                                    type="email"
+                                    icon={<Mail size={20} />}
+                                    placeholder="tu@negocio.com"
+                                    value={contactData.email}
+                                    onChange={(v) => setContactData({ ...contactData, email: v })}
+                                />
+                            </div>
+
+                            <button
+                                onClick={nextStep}
+                                disabled={!contactData.name || !contactData.email || !contactData.phone}
+                                className="w-full h-18 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-20 text-white font-black rounded-[1.5rem] transition-all flex items-center justify-center gap-4 active:scale-95 shadow-2xl shadow-indigo-900/40 uppercase tracking-widest text-xs"
+                            >
+                                Siguiente <ChevronRight size={20} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 2: Survey */}
+                {currentStep === 2 && (
+                    <div className="space-y-10 animate-in fade-in slide-in-from-right-6 duration-700">
+                        <header className="text-center space-y-3">
+                            <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter">CALIFICACIÓN</h2>
+                            <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.5em]">Personalizando tu experiencia</p>
+                        </header>
+
+                        <div className="bg-slate-900/20 backdrop-blur-2xl border border-white/5 p-10 rounded-[3rem] shadow-2xl space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                            {questions.map((q) => (
+                                <div key={q.id} className="space-y-4">
+                                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{q.text}</label>
+                                    {q.type === 'select' ? (
+                                        <select
+                                            className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold appearance-none cursor-pointer"
+                                            value={surveyAnswers[q.id] || ''}
+                                            onChange={(e) => setSurveyAnswers({ ...surveyAnswers, [q.id]: e.target.value })}
+                                        >
+                                            <option value="" className="bg-slate-900">Seleccionar...</option>
+                                            {q.options?.split(',').map(opt => (
+                                                <option key={opt} value={opt} className="bg-slate-900">{opt}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input
+                                            type={q.type}
+                                            className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold placeholder:text-slate-700"
+                                            placeholder="..."
+                                            value={surveyAnswers[q.id] || ''}
+                                            onChange={(e) => setSurveyAnswers({ ...surveyAnswers, [q.id]: e.target.value })}
+                                        />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-6">
+                            <button onClick={prevStep} className="h-18 w-24 bg-white/5 hover:bg-white/10 text-white rounded-[1.5rem] flex items-center justify-center transition-all border border-white/5"><ChevronLeft size={24} /></button>
+                            <button
+                                onClick={nextStep}
+                                className="flex-1 h-18 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-[1.5rem] transition-all flex items-center justify-center gap-4 uppercase tracking-widest text-xs shadow-2xl shadow-indigo-900/40"
+                            >
+                                CONTINUAR <ChevronRight size={20} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 3: Calendar Grid */}
+                {currentStep === 3 && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-6 duration-700">
+                        <header className="text-center space-y-3">
+                            <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter">RESERVAR</h2>
+                            <div className="flex items-center justify-center gap-4 text-slate-500 font-bold uppercase text-[10px] tracking-[0.3em]">
+                                <Clock size={12} className="text-indigo-500" />
+                                <span>{eventInfo?.duration} MINUTOS</span>
+                                <div className="w-1 h-1 bg-slate-700 rounded-full"></div>
+                                <Globe size={12} className="text-indigo-500" />
+                                <span>UTC-3</span>
+                            </div>
+                        </header>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-900/20 backdrop-blur-2xl border border-white/5 p-8 rounded-[3rem] shadow-2xl min-h-[400px]">
+                            {/* Date Selector */}
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Seleccionar Fecha</h4>
+                                <div className="grid grid-cols-1 gap-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {availableDates.map(dateStr => {
+                                        const d = new Date(dateStr + "T00:00:00");
+                                        const isActive = selectedDate === dateStr;
+                                        return (
+                                            <button
+                                                key={dateStr}
+                                                onClick={() => setSelectedDate(dateStr)}
+                                                className={`p-5 rounded-2xl border transition-all text-left flex items-center justify-between transition-all group ${isActive
+                                                        ? 'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-900/40'
+                                                        : 'bg-white/[0.02] border-white/5 text-slate-400 hover:bg-white/5'
+                                                    }`}
+                                            >
+                                                <div>
+                                                    <p className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-white/60' : 'text-slate-600'}`}>
+                                                        {d.toLocaleDateString('es-ES', { weekday: 'long' })}
+                                                    </p>
+                                                    <p className="font-bold text-sm">
+                                                        {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+                                                    </p>
+                                                </div>
+                                                <ChevronRight size={16} className={`transition-transform ${isActive ? 'translate-x-1' : 'opacity-0'}`} />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Time Selector */}
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Bloques Disponibles</h4>
+                                {selectedDate ? (
+                                    <div className="grid grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {groupedAvailability[selectedDate]?.map(slot => (
+                                            <button
+                                                key={slot.timestamp}
+                                                onClick={() => setSelectedSlot(slot)}
+                                                className={`p-4 rounded-xl border text-center font-black text-sm transition-all ${selectedSlot?.timestamp === slot.timestamp
+                                                        ? 'bg-indigo-500 border-indigo-300 text-white shadow-lg'
+                                                        : 'bg-white/[0.03] border-white/5 text-slate-500 hover:text-white hover:border-white/10'
+                                                    }`}
+                                            >
+                                                {slot.start_time}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-[10px] font-black text-slate-700 uppercase tracking-widest italic">
+                                        Elige una fecha
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {error && (
+                            <div className="p-5 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-4 text-rose-400 animate-in shake duration-500">
+                                <AlertCircle className="w-6 h-6 shrink-0" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">{error}</p>
+                            </div>
+                        )}
+
+                        <div className="flex gap-6">
+                            <button onClick={prevStep} className="h-18 w-24 bg-white/5 hover:bg-white/10 text-white rounded-[1.5rem] flex items-center justify-center transition-all border border-white/5"><ChevronLeft size={24} /></button>
+                            <button
+                                onClick={handleBook}
+                                disabled={!selectedSlot || booking}
+                                className="flex-1 h-18 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-20 text-white font-black rounded-[1.5rem] transition-all flex items-center justify-center gap-4 uppercase tracking-widest text-xs shadow-2xl shadow-indigo-900/40"
+                            >
+                                {booking ? <Loader2 className="animate-spin" /> : 'CONFIRMAR AGENDAMIENTO'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <footer className="mt-20 text-center space-y-2 opacity-30">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em]">NeurOPS Intelligent Scheduling System</p>
+                    <p className="text-[8px] font-bold text-slate-700 uppercase tracking-[0.2em]">© 2026 LeadOps Automation. All Rights Reserved.</p>
+                </footer>
+            </div>
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;400;700;900&display=swap');
+                body { font-family: 'Outfit', sans-serif; }
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
+                @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes slide-in-from-bottom { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+                @keyframes slide-in-from-right { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+                @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+                .animate-in { animation: initial 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+                .fade-in { animation-name: fade-in; }
+                .slide-in-from-bottom-6 { animation-name: slide-in-from-bottom; }
+                .slide-in-from-right-6 { animation-name: slide-in-from-right; }
+                .shake { animation-name: shake; animation-duration: 0.4s; }
+            `}} />
+        </div>
+    );
+};
+
+const FormInput = ({ label, icon, placeholder, value, onChange, type = "text" }) => (
+    <div className="space-y-3">
+        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{label}</label>
+        <div className="relative group">
+            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-indigo-500 transition-colors">
+                {icon}
+            </div>
+            <input
+                type={type}
+                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 pl-16 pr-6 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold placeholder:text-slate-700"
+                placeholder={placeholder}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+            />
+        </div>
+    </div>
+);
+
+export default BookingPage;

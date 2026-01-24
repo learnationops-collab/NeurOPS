@@ -10,9 +10,6 @@ def load_user(id):
 # Roles as Constants
 ROLE_ADMIN = 'admin'
 ROLE_CLOSER = 'closer'
-ROLE_LEAD = 'lead'
-ROLE_AGENDA = 'agenda'
-ROLE_STUDENT = 'student'
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -20,23 +17,12 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(256))
-    role = db.Column(db.String(20), default=ROLE_LEAD)
-    timezone = db.Column(db.String(50), default='America/La_Paz') # New Timezone Support
+    role = db.Column(db.String(20), default=ROLE_CLOSER)
+    timezone = db.Column(db.String(50), default='America/La_Paz')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
-    # Relationships
-    lead_profile = db.relationship('LeadProfile', backref='user', uselist=False, cascade="all, delete-orphan", foreign_keys='LeadProfile.user_id')
-    enrollments = db.relationship('Enrollment', foreign_keys='Enrollment.student_id', backref='student', lazy='dynamic', cascade="all, delete-orphan")
-    
-    # For Closers: appointments/leads they handle
+    # Relationships for Closers
     appointments_as_closer = db.relationship('Appointment', foreign_keys='Appointment.closer_id', backref='closer', lazy='dynamic')
-    # For Leads: their appointments
-    appointments_as_lead = db.relationship('Appointment', foreign_keys='Appointment.lead_id', backref='lead', lazy='dynamic', cascade="all, delete-orphan")
-    
-    # Survey Answers
-    survey_answers = db.relationship('SurveyAnswer', foreign_keys='SurveyAnswer.lead_id', backref='lead_user', lazy='dynamic', cascade="all, delete-orphan")
-
     availability = db.relationship('Availability', backref='closer', lazy='dynamic', cascade="all, delete-orphan")
 
     def set_password(self, password):
@@ -48,139 +34,31 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
-    @property
-    def total_lifetime_paid(self):
-        """Sum of all payments made by this user across all enrollments."""
-        total = 0
-        # Iterate enrollments (dynamic relationship)
-        for enr in self.enrollments:
-            total += enr.total_paid
-        return total
-
-    @property
-    def current_active_debt(self):
-        """Sum of outstanding debt on ACTIVE enrollments only."""
-        total_debt = 0
-        # Filter for active only
-        active_enrollments = self.enrollments.filter_by(status='active')
-        for enr in active_enrollments:
-            paid = enr.total_paid
-            # Ensure we don't count negative debt (overpayment) as debt, unless desired? 
-            # Usually debt is max(0, agreed - paid)
-            agreed = enr.total_agreed if enr.total_agreed is not None else (enr.program.price if enr.program else 0.0)
-            debt = agreed - paid
-            if debt > 0:
-                total_debt += debt
-        return total_debt
-
-    def update_status_based_on_debt(self):
-        """
-        Updates the user's lead profile status based on current debt, enrollments, and appointments.
-        Priority:
-        1. Pending (Debts) - Active enrollments with debt.
-        2. Completed - Active enrollments with NO debt.
-        3. Scheduled - No enrollments/payments, but has future appointments.
-        4. New - No payments, no enrollments, no future appointments. (Or if canceled appt and nothing else)
-        """
-        if not self.lead_profile:
-            # Create profile if missing
-            profile = LeadProfile(user_id=self.id)
-            db.session.add(profile)
-            self.lead_profile = profile
-        
-        has_enrollments = self.enrollments.count() > 0
-        debt = self.current_active_debt
-        
-        # Check for ANY payments (to distinguish 'new' from others)
-        # Efficiently check if any completed payment exists
-        # self.enrollments is dynamic, so we can iterate or join
-        has_payments = False
-        for enr in self.enrollments:
-            if enr.payments.filter_by(status='completed').count() > 0:
-                has_payments = True
-                break
-        
-        # Check for Future Appointments (Agendado)
-        # Explicit import to avoid circular dependency if placed at top, usually safe inside method or use string
-        # 'Appointment' is defined in this file (models.py), so it's safe.
-        now = datetime.now()
-        has_future_appointment = self.appointments_as_lead.filter(
-            Appointment.start_time > now, 
-            Appointment.status == 'scheduled'
-        ).count() > 0
-
-        new_status = self.lead_profile.status
-        
-        # Logic Hierarchy
-        if debt > 0:
-            # Priority 1: Has debt -> Pending (Pendiente)
-            new_status = 'pending'
-        elif has_enrollments and debt <= 0:
-             # Priority 2: Has enrollments but NO debt -> Completed (Completo)
-            new_status = 'completed'
-        elif has_future_appointment:
-            # Priority 3: No enrollments/debt but has future appointment -> Scheduled (Agendado)
-            new_status = 'agenda'
-        elif not has_payments:
-             # Priority 4: No payments, no enrollments, no future appt -> New (Nuevo)
-             # What if they have past appointments but canceled? -> Nuevo
-             new_status = 'new'
-        else:
-            # Fallback (Has payments but no active enrollment? Dropped?)
-            # Keep as is or default? Let's leave as is if none match, or 'new'.
-            pass
-
-        if new_status != self.lead_profile.status:
-            self.lead_profile.status = new_status
-            db.session.add(self.lead_profile)
-            # DB Commit should be handled by caller usually, but method name implies action.
-            # Original method had commit. Let's keep it to ensure it saves.
-            db.session.commit()
-
-
-class LeadProfile(db.Model):
-    __tablename__ = 'lead_profiles'
+class Client(db.Model):
+    __tablename__ = 'clients'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
+    full_name = db.Column(db.String(120))
+    email = db.Column(db.String(120), index=True, unique=True)
     phone = db.Column(db.String(20))
     instagram = db.Column(db.String(64))
-    utm_source = db.Column(db.String(64)) # e.g., 'elias', 'vsl', 'workshop'
-    status = db.Column(db.String(20), default='new') 
-    notes = db.Column(db.Text)
-
-    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Assignment
-    assigned_closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    assigned_closer = db.relationship('User', foreign_keys=[assigned_closer_id], backref='assigned_leads')
-    is_pinned = db.Column(db.Boolean, default=False)
+    # Relationships
+    enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
+    appointments = db.relationship('Appointment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
+    survey_answers = db.relationship('SurveyAnswer', backref='client', lazy='dynamic', cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f'<LeadProfile {self.user_id}>'
-
-class EventGroup(db.Model):
-    __tablename__ = 'event_groups'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
-    funnel_steps = db.Column(db.JSON, default=['contact', 'calendar', 'survey'])
-    
-    events = db.relationship('Event', backref='group', lazy='dynamic')
-    questions = db.relationship('SurveyQuestion', backref='group', lazy='dynamic')
-
-    def __repr__(self):
-        return f'<EventGroup {self.name}>'
+        return f'<Client {self.full_name or self.email}>'
 
 class Event(db.Model):
     __tablename__ = 'events'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
-    utm_source = db.Column(db.String(64), unique=True, nullable=False) # e.g. 'vsl', 'workshop', 'elias'
+    utm_source = db.Column(db.String(64), unique=True, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
-    group_id = db.Column(db.Integer, db.ForeignKey('event_groups.id'), nullable=True)
-    funnel_steps = db.Column(db.JSON, default=['contact', 'calendar', 'survey'])
-
-    
-    appointments = db.relationship('Appointment', backref='event', lazy='dynamic')
+    duration_minutes = db.Column(db.Integer, default=30)
+    buffer_minutes = db.Column(db.Integer, default=15)
 
     def __repr__(self):
         return f'<Event {self.name}>'
@@ -191,7 +69,6 @@ class Program(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     price = db.Column(db.Float, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
-    # Description removed per user request
 
     enrollments = db.relationship('Enrollment', backref='program', lazy='dynamic')
 
@@ -201,21 +78,17 @@ class Program(db.Model):
 class Enrollment(db.Model):
     __tablename__ = 'enrollments'
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
     program_id = db.Column(db.Integer, db.ForeignKey('programs.id'), nullable=False)
+    closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     enrollment_date = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='active') # active, completed, dropped
-    total_agreed = db.Column(db.Float) # The price agreed upon (might differ from list price)
 
     payments = db.relationship('Payment', backref='enrollment', lazy='dynamic', cascade="all, delete-orphan")
     
-    # New: Explicit closer association
-    closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    closer = db.relationship('User', foreign_keys=[closer_id], backref='sales_made')
+    closer_rel = db.relationship('User', foreign_keys=[closer_id], backref='sales_made')
 
     @property
     def total_paid(self):
-        # Calculate total paid amount for completed payments
         completed_payments = self.payments.filter_by(status='completed').all()
         return sum(p.amount for p in completed_payments)
 
@@ -223,8 +96,8 @@ class PaymentMethod(db.Model):
     __tablename__ = 'payment_methods'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
-    commission_percent = db.Column(db.Float, default=0.0) # e.g. 2.9 for 2.9%
-    commission_fixed = db.Column(db.Float, default=0.0) # e.g. 0.30 for $0.30
+    commission_percent = db.Column(db.Float, default=0.0)
+    commission_fixed = db.Column(db.Float, default=0.0)
     is_active = db.Column(db.Boolean, default=True)
     
     payments = db.relationship('Payment', backref='method', lazy='dynamic')
@@ -233,48 +106,22 @@ class Payment(db.Model):
     __tablename__ = 'payments'
     id = db.Column(db.Integer, primary_key=True)
     enrollment_id = db.Column(db.Integer, db.ForeignKey('enrollments.id'), nullable=False)
-    payment_method_id = db.Column(db.Integer, db.ForeignKey('payment_methods.id'), nullable=True) # made nullable for migration but should be required
+    payment_method_id = db.Column(db.Integer, db.ForeignKey('payment_methods.id'), nullable=True)
     amount = db.Column(db.Float, nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
-    transaction_id = db.Column(db.String(100)) # Optional external ID reference
-    payment_type = db.Column(db.String(20)) # full, down_payment, installment, renewal
-    reference_id = db.Column(db.String(100))
-    status = db.Column(db.String(20), default='completed') # completed, pending, failed
-
-    @property
-    def payment_type_label(self):
-        labels = {
-            'full': 'Pago Completo',
-            'down_payment': 'Primer Pago',
-            'installment': 'Cuota',
-            'renewal': 'Renovación',
-            'deposit': 'Seña'
-        }
-        return labels.get(self.payment_type, self.payment_type)
+    payment_type = db.Column(db.String(20)) # Primer Pago, Renovación, Pago Completo, Cuota, Seña
+    status = db.Column(db.String(20), default='completed')
 
 class Appointment(db.Model):
     __tablename__ = 'appointments'
     id = db.Column(db.Integer, primary_key=True)
     closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    lead_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True) # Check nullable first to avoid migration issues? Let's say nullable=True for now.
-    # Timezone Note: stored in UTC (naive datetime, but logic treats as UTC)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
     start_time = db.Column(db.DateTime, index=True)
-    status = db.Column(db.String(20), default='scheduled') # scheduled, completed, canceled, no_show
-    google_event_id = db.Column(db.String(255), nullable=True) # Store GCal Event ID for updates
-    
-    # Pinned Status
-    is_pinned = db.Column(db.Boolean, default=False)
-    
-    # New: Appointment Type ("Primera agenda", "Segunda agenda")
+    status = db.Column(db.String(20), default='scheduled')
+    origin = db.Column(db.String(100)) # VSL, Closer, etc.
     appointment_type = db.Column(db.String(50), default='Primera agenda')
-
-    # Advanced Metrics
-    presentation_done = db.Column(db.Boolean, default=False)
-    is_reschedule = db.Column(db.Boolean, default=False)
-    rescheduled_from_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=True)
-    
-    rescheduled_from = db.relationship('Appointment', remote_side=[id], backref='rescheduled_to')
+    is_pinned = db.Column(db.Boolean, default=False)
 
 class Availability(db.Model):
     __tablename__ = 'availability'
@@ -284,31 +131,29 @@ class Availability(db.Model):
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
 
-    def __repr__(self):
-        return f'<Availability Date={self.date} {self.start_time}-{self.end_time}>'
+class WeeklyAvailability(db.Model):
+    __tablename__ = 'weekly_availability'
+    id = db.Column(db.Integer, primary_key=True)
+    closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    day_of_week = db.Column(db.Integer, nullable=False) 
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
 
 class SurveyQuestion(db.Model):
     __tablename__ = 'survey_questions'
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.String(255), nullable=False)
-    question_type = db.Column(db.String(50), default='text') # text, boolean, select
-    options = db.Column(db.Text) # JSON string or comma-separated for select options
+    question_type = db.Column(db.String(50), default='text')
+    options = db.Column(db.Text)
     order = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
-    mapping_field = db.Column(db.String(50), nullable=True) # name, email, phone, instagram
-    step = db.Column(db.String(20), default='survey') # landing, survey
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True) # None = Global if group also None
-    event_group_id = db.Column(db.Integer, db.ForeignKey('event_groups.id'), nullable=True) # Link to group
-    
-    event = db.relationship('Event', backref='questions')
-    
-    def __repr__(self):
-        return f'<Question {self.text}>'
+    mapping_field = db.Column(db.String(50), nullable=True)
 
 class SurveyAnswer(db.Model):
     __tablename__ = 'survey_answers'
     id = db.Column(db.Integer, primary_key=True)
-    lead_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False) 
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False) 
     question_id = db.Column(db.Integer, db.ForeignKey('survey_questions.id'), nullable=False)
     answer = db.Column(db.Text)
     appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'))
@@ -322,57 +167,24 @@ class Expense(db.Model):
     description = db.Column(db.String(255), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
-    category = db.Column(db.String(50), default='variable') # fixed (from recurring), variable
-    is_recurring = db.Column(db.Boolean, default=False) # True if it came from a recurring template
-
-    def __repr__(self):
-        return f'<Expense {self.description} ${self.amount}>'
+    category = db.Column(db.String(50), default='variable')
+    is_recurring = db.Column(db.Boolean, default=False)
 
 class RecurringExpense(db.Model):
     __tablename__ = 'recurring_expenses'
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(255), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    day_of_month = db.Column(db.Integer, default=1) # Day to generate the expense
+    day_of_month = db.Column(db.Integer, default=1)
     is_active = db.Column(db.Boolean, default=True)
-
-    def __repr__(self):
-        return f'<RecurringExpense {self.description} ${self.amount}>'
-
-class UserViewSetting(db.Model):
-    __tablename__ = 'user_view_settings'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    view_name = db.Column(db.String(64), nullable=False) # e.g. 'leads_list', 'sales_list'
-    settings = db.Column(db.JSON, default={}) # Stores dict of filters
-    
-    user = db.relationship('User', backref='view_settings')
-
-    def __repr__(self):
-        return f'<ViewSetting {self.view_name} for {self.user_id}>'
-
-class Integration(db.Model):
-    __tablename__ = 'integrations'
-    id = db.Column(db.Integer, primary_key=True)
-    key = db.Column(db.String(50), unique=True, nullable=False) # e.g. 'sales'
-    name = db.Column(db.String(100), nullable=False) # e.g. 'Ventas'
-    url_dev = db.Column(db.String(255))
-    url_prod = db.Column(db.String(255))
-    active_env = db.Column(db.String(10), default='dev') # 'dev' or 'prod'
-
-    def __repr__(self):
-        return f'<Integration {self.name} ({self.active_env})>'
 
 class DailyReportQuestion(db.Model):
     __tablename__ = 'daily_report_questions'
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.String(255), nullable=False)
-    question_type = db.Column(db.String(50), default='text') # text, number, boolean
+    question_type = db.Column(db.String(50), default='text')
     order = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
-
-    def __repr__(self):
-        return f'<DailyReportQuestion {self.text}>'
 
 class DailyReportAnswer(db.Model):
     __tablename__ = 'daily_report_answers'
@@ -390,9 +202,8 @@ class CloserDailyStats(db.Model):
     closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
     
-    # Automated KPIs (Snapshots)
-    calls_scheduled = db.Column(db.Integer, default=0) # Total Scheduled for this day
-    calls_completed = db.Column(db.Integer, default=0) # Total Completed
+    calls_scheduled = db.Column(db.Integer, default=0)
+    calls_completed = db.Column(db.Integer, default=0)
     calls_no_show = db.Column(db.Integer, default=0)
     calls_canceled = db.Column(db.Integer, default=0)
     
@@ -400,45 +211,20 @@ class CloserDailyStats(db.Model):
     sales_amount = db.Column(db.Float, default=0.0)
     cash_collected = db.Column(db.Float, default=0.0)
     
-    # Manual Input by Closer
-    slots_defined = db.Column(db.Integer, default=0) # Total slots opened/marked by closer
+    slots_defined = db.Column(db.Integer, default=0)
     self_generated_bookings = db.Column(db.Integer, default=0)  
     
-    # Removed qualitative columns (win_of_day, etc) in favor of DailyReportAnswer
-    
     closer = db.relationship('User', backref=db.backref('daily_stats', lazy='dynamic'))
-
     __table_args__ = (db.UniqueConstraint('closer_id', 'date', name='_closer_date_uc'),)
-
-    def __repr__(self):
-        return f'<CloserDailyStats {self.closer_id} on {self.date}>'
 
 class GoogleCalendarToken(db.Model):
     __tablename__ = 'google_calendar_tokens'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
-    # Storing the entire credentials object as a JSON blob is often easiest for restoration
     token_json = db.Column(db.Text, nullable=False) 
-    # Preference for which calendar to sync events to
     google_calendar_id = db.Column(db.String(255), default='primary')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
     user = db.relationship('User', backref=db.backref('google_token', uselist=False, cascade="all, delete-orphan"))
 
-    def __repr__(self):
-        return f'<GoogleToken for User {self.user_id}>'
-
-class LeadComment(db.Model):
-    __tablename__ = 'lead_comments'
-    id = db.Column(db.Integer, primary_key=True)
-    lead_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    text = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    lead = db.relationship('User', foreign_keys=[lead_id], backref=db.backref('comments', lazy='dynamic', cascade="all, delete-orphan"))
-    author = db.relationship('User', foreign_keys=[author_id])
-
-    def __repr__(self):
-        return f'<LeadComment {self.id} by {self.author_id} on {self.lead_id}>'
+# Removed ClientComment as user said "No crees todavía la tabla para comentarios, lo vamos a hacer luego"

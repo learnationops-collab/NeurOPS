@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Settings, Shield, User, LogOut, Bell, Key, Plus, Trash2, ClipboardCheck, Loader2, Check, X } from 'lucide-react';
+import { Settings, Shield, User, LogOut, Bell, Key, Plus, Trash2, ClipboardCheck, Loader2, Check, X, Package, CreditCard } from 'lucide-react';
 import UsersPage from './UsersPage';
 import ReportQuestionsManager from '../components/ReportQuestionsManager';
+import ProgramsManager from '../components/ProgramsManager';
+import PaymentMethodsManager from '../components/PaymentMethodsManager';
 
 const SettingsPage = () => {
     const [activeSection, setActiveSection] = useState('team');
@@ -10,6 +12,8 @@ const SettingsPage = () => {
     const sections = [
         { id: 'profile', label: 'Mi Cuenta', icon: User },
         { id: 'team', label: 'Gestion de Equipo', icon: Shield },
+        { id: 'programs', label: 'Programas', icon: Package },
+        { id: 'payment_methods', label: 'Metodos de Pago', icon: CreditCard },
         { id: 'questions', label: 'Preguntas de Reporte', icon: ClipboardCheck },
         { id: 'integrations', label: 'Integraciones', icon: Key },
     ];
@@ -65,6 +69,18 @@ const SettingsPage = () => {
                                 Or simplify it. Let's just render the team list 
                                 directly or import the component logic. */}
                             <UsersPage />
+                        </div>
+                    )}
+
+                    {activeSection === 'programs' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                            <ProgramsManager />
+                        </div>
+                    )}
+
+                    {activeSection === 'payment_methods' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                            <PaymentMethodsManager />
                         </div>
                     )}
 

@@ -10,7 +10,8 @@ import {
     LogOut,
     Bell,
     DollarSign,
-    Shield
+    Shield,
+    Zap
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import api from '../services/api';
@@ -50,6 +51,7 @@ const MainLayout = ({ children }) => {
         { icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard' },
         { icon: BarChart3, label: 'Analisis Detallado', path: '/admin/analysis' },
         { icon: Database, label: 'Bases de Datos', path: '/admin/database' },
+        { icon: Zap, label: 'Operaciones', path: '/admin/operations' },
         { icon: Settings, label: 'Configuracion', path: '/admin/settings' },
     ] : [
         { icon: LayoutDashboard, label: 'Resumen Diario', path: '/closer/dashboard' },

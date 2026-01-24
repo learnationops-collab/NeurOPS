@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import NewSaleModal from '../components/NewSaleModal';
 import api from '../services/api';
 import {
     Activity,
@@ -16,7 +18,9 @@ import {
     ChevronRight,
     Search,
     MessageSquare,
-    PhoneCall
+    PhoneCall,
+    Zap,
+    Plus
 } from 'lucide-react';
 
 const CloserDashboard = () => {
@@ -37,6 +41,7 @@ const CloserDashboard = () => {
     const [answers, setAnswers] = useState({});
     const [submitting, setSubmitting] = useState(false);
     const [feedback, setFeedback] = useState(null);
+    const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
 
     useEffect(() => {
         fetchDashboard();
@@ -174,10 +179,19 @@ const CloserDashboard = () => {
                     {/* Sales of the Day */}
                     <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-2xl">
                         <div className="px-8 py-6 border-b border-slate-800 bg-slate-800/20 flex justify-between items-center">
-                            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
-                                <BarChart3 size={14} className="text-emerald-500" />
-                                Ventas del Día
-                            </h3>
+                            <div className="flex items-center gap-3">
+                                <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                    <BarChart3 size={14} className="text-emerald-500" />
+                                    Ventas del Día
+                                </h3>
+                                <button
+                                    onClick={() => setIsSaleModalOpen(true)}
+                                    className="w-6 h-6 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-lg flex items-center justify-center transition-all group/plus"
+                                    title="Declarar Venta"
+                                >
+                                    <Plus size={14} className="group-hover/plus:scale-110 transition-transform" />
+                                </button>
+                            </div>
                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-800 px-3 py-1 rounded-full">
                                 {data.sales_today.length} Ventas
                             </span>
@@ -238,10 +252,19 @@ const CloserDashboard = () => {
                     {/* Agendas of the Day */}
                     <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-2xl">
                         <div className="px-8 py-6 border-b border-slate-800 bg-slate-800/20 flex justify-between items-center">
-                            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
-                                <Calendar size={14} className="text-indigo-400" />
-                                Agendas de Hoy
-                            </h3>
+                            <div className="flex items-center gap-3">
+                                <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                    <Calendar size={14} className="text-indigo-400" />
+                                    Agendas de Hoy
+                                </h3>
+                                <Link
+                                    to="/closer/leads"
+                                    className="w-6 h-6 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-500 hover:text-white rounded-lg flex items-center justify-center transition-all group/plus"
+                                    title="Nueva Agenda"
+                                >
+                                    <Plus size={14} className="group-hover/plus:scale-110 transition-transform" />
+                                </Link>
+                            </div>
                             <button className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:bg-indigo-500/10 px-3 py-1 rounded-full transition-all flex items-center gap-1">
                                 Ver todas <ChevronRight size={12} />
                             </button>
@@ -303,6 +326,8 @@ const CloserDashboard = () => {
                         </div>
                         <TrendingUp className="absolute -right-8 -bottom-8 text-white/10" size={180} />
                     </div>
+
+
 
                     {/* Questionnaire Form */}
                     <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-2xl">
@@ -401,7 +426,6 @@ const CloserDashboard = () => {
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-sm font-black text-white truncate">{client.username}</p>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase truncate group-hover:text-indigo-400">{client.status}</p>
                                     </div>
                                 </div>
                                 <div className="mt-4 flex gap-2 pt-4 border-t border-slate-800/50 group-hover:border-indigo-500/10">
@@ -417,6 +441,12 @@ const CloserDashboard = () => {
                     </div>
                 </div>
             </section>
+
+            <NewSaleModal
+                isOpen={isSaleModalOpen}
+                onClose={() => setIsSaleModalOpen(false)}
+                onSuccess={fetchDashboard}
+            />
         </div>
     );
 };

@@ -24,7 +24,6 @@ const CloserLeadsPage = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [search, setSearch] = useState('');
-
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -38,7 +37,6 @@ const CloserLeadsPage = () => {
             const endpoint = activeTab === 'agendas' ? '/closer/agendas' : '/closer/sales';
             const res = await api.get(`${endpoint}?page=${page}&search=${search}`);
 
-            // Ensure data key exists and is array
             const tabData = Array.isArray(res.data.data) ? res.data.data : [];
 
             setData(prev => ({ ...prev, [activeTab]: tabData }));
@@ -61,7 +59,7 @@ const CloserLeadsPage = () => {
         <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase">Gestionar Leads</h1>
+                    <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase">Base de Datos</h1>
                     <p className="text-slate-400 font-medium uppercase text-xs tracking-[0.2em]">Historial completo de ventas y agendamientos</p>
                 </div>
                 <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-800 backdrop-blur-md">

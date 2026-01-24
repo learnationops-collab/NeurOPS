@@ -14,16 +14,24 @@ def seed_database():
         if admin_user:
             print(f"🔄 Usuario admin encontrado. Reseteando contraseña y asegurando rol admin...")
             admin_user.set_password("admin123")
-            admin_user.role = ROLE_ADMIN
-        else:
-            print(f"👤 Creando nuevo superadmin: {admin_email}")
-            admin_user = User(
-                username="admin",
-                email=admin_email,
-                role=ROLE_ADMIN
-            )
-            admin_user.set_password("admin123")
             db.session.add(admin_user)
+            
+        # 1.1 Crear / Resetear Closer
+        closer_email = "closer@learnation.com"
+        closer_user = User.query.filter_by(email=closer_email).first()
+        if closer_user:
+            print(f"🔄 Usuario closer encontrado. Reseteando contraseña...")
+            closer_user.set_password("closer123")
+            closer_user.role = 'closer'
+        else:
+            print(f"👤 Creando nuevo closer: {closer_email}")
+            closer_user = User(
+                username="closer",
+                email=closer_email,
+                role='closer'
+            )
+            closer_user.set_password("closer123")
+            db.session.add(closer_user)
             
         # 2. Programas Iniciales
         programs = [
