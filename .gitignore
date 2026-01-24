@@ -209,3 +209,10 @@ marimo/_lsp/
 # Local Development Scripts
 my_scripts
 test
+
+# React Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+node_modules/
