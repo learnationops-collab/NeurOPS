@@ -25,19 +25,27 @@ const CloserLeadsPage = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [search, setSearch] = useState('');
 
+    const [error, setError] = useState(null);
+
     useEffect(() => {
         fetchData();
     }, [activeTab, page]);
 
     const fetchData = async () => {
         setLoading(true);
+        setError(null);
         try {
             const endpoint = activeTab === 'agendas' ? '/api/closer/agendas' : '/api/closer/sales';
             const res = await api.get(`${endpoint}?page=${page}&search=${search}`);
-            setData(prev => ({ ...prev, [activeTab]: res.data.data }));
-            setTotalPages(res.data.pages);
+
+            // Ensure data key exists and is array
+            const tabData = Array.isArray(res.data.data) ? res.data.data : [];
+
+            setData(prev => ({ ...prev, [activeTab]: tabData }));
+            setTotalPages(res.data.pages || 1);
         } catch (err) {
             console.error("Error fetching leads data", err);
+            setError("Error al cargar los datos. Por favor reintenta.");
         } finally {
             setLoading(false);
         }
@@ -100,7 +108,12 @@ const CloserLeadsPage = () => {
 
             {/* Main Table Database */}
             <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-800/50 overflow-hidden shadow-2xl overflow-x-auto">
-                {loading ? (
+                {error ? (
+                    <div className="p-20 flex flex-col items-center justify-center text-rose-400 gap-4">
+                        <p className="font-bold uppercase tracking-widest text-xs">{error}</p>
+                        <button onClick={fetchData} className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg text-xs font-black uppercase tracking-widest transition-all">Reintentar</button>
+                    </div>
+                ) : loading ? (
                     <div className="p-20 flex justify-center items-center">
                         <Loader2 className="animate-spin text-indigo-500" size={40} />
                     </div>
@@ -125,7 +138,7 @@ const CloserLeadsPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/50">
-                            {data[activeTab].length > 0 ? data[activeTab].map(item => (
+                            {data[activeTab]?.length > 0 ? data[activeTab].map(item => (
                                 <tr key={item.id} className="hover:bg-slate-800/20 transition-all group">
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-4">
@@ -151,7 +164,7 @@ const CloserLeadsPage = () => {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest ${item.status === 'completed' ? 'text-emerald-400' :
-                                                        item.status === 'scheduled' ? 'text-indigo-400' : 'text-slate-500'
+                                                    item.status === 'scheduled' ? 'text-indigo-400' : 'text-slate-500'
                                                     }`}>
                                                     {item.status === 'completed' ? <CheckCircle2 size={12} /> : item.status === 'canceled' ? <XCircle size={12} /> : <Clock size={12} />}
                                                     {item.status}
