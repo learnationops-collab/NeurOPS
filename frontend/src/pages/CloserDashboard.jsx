@@ -20,8 +20,20 @@ import {
 } from 'lucide-react';
 
 const CloserDashboard = () => {
-    const [data, setData] = useState(null);
+    // Safe initial state matching API structure
+    const [data, setData] = useState({
+        kpis: {},
+        commission: {},
+        rates: {},
+        progress: 0,
+        agendas_today: [],
+        sales_today: [],
+        report_questions: [],
+        recent_clients: [],
+        today_stats: null
+    });
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [answers, setAnswers] = useState({});
     const [submitting, setSubmitting] = useState(false);
     const [feedback, setFeedback] = useState(null);
@@ -31,20 +43,31 @@ const CloserDashboard = () => {
     }, []);
 
     const fetchDashboard = async () => {
+        setLoading(true);
+        setError(null);
         try {
             const res = await api.get('/api/closer/dashboard');
-            setData(res.data);
-            // Initialize answers if they exist in today_stats or empty
-            if (res.data.today_stats && res.data.today_stats.answers) {
-                // If answers come as a list or dict, map them here. 
-                // Currently API returns 'today_stats' which is a Model object? 
-                // We need to ensure 'closer.py' serializes it properly.
-                // Assuming it might come as serialized dict later:
-                // const initialAnswers = ...
-                // setAnswers(initialAnswers);
+            // Merge with default structure to ensure keys exist
+            const safeData = {
+                kpis: res.data.kpis || {},
+                commission: res.data.commission || {},
+                rates: res.data.rates || {},
+                progress: res.data.progress || 0,
+                agendas_today: res.data.agendas_today || [],
+                sales_today: res.data.sales_today || [],
+                report_questions: res.data.report_questions || [],
+                recent_clients: res.data.recent_clients || [],
+                today_stats: res.data.today_stats || null
+            };
+            setData(safeData);
+
+            // Initialize answers safely
+            if (safeData.today_stats?.answers) {
+                setAnswers(safeData.today_stats.answers);
             }
         } catch (err) {
             console.error("Error fetching dashboard", err);
+            setError("No se pudo cargar la información. Revisa tu conexión.");
         } finally {
             setLoading(false);
         }
@@ -61,13 +84,33 @@ const CloserDashboard = () => {
         try {
             await api.post('/api/closer/daily-report', { answers });
             setFeedback({ type: 'success', text: 'Reporte diario guardado' });
-            fetchDashboard(); // Refresh progress
+            fetchDashboard();
         } catch (err) {
             setFeedback({ type: 'error', text: 'Error al guardar el reporte' });
         } finally {
             setSubmitting(false);
         }
     };
+
+    if (loading) return (
+        <div className="flex items-center justify-center p-20 min-h-screen">
+            <Loader2 className="animate-spin text-indigo-500" size={48} />
+        </div>
+    );
+
+    if (error) return (
+        <div className="flex flex-col items-center justify-center p-20 min-h-screen space-y-4">
+            <div className="bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 text-rose-400 font-bold uppercase tracking-widest text-xs">
+                {error}
+            </div>
+            <button
+                onClick={fetchDashboard}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black uppercase tracking-widest text-xs transition-all"
+            >
+                Reintentar
+            </button>
+        </div>
+    );
 
     if (loading) return (
         <div className="flex items-center justify-center p-20 min-h-screen">
@@ -140,7 +183,7 @@ const CloserDashboard = () => {
                             </span>
                         </div>
                         <div className="divide-y divide-slate-800/50 max-h-[400px] overflow-y-auto custom-scrollbar">
-                            {data.sales_today.length > 0 ? data.sales_today.map(sale => (
+                            {data.sales_today?.length > 0 ? data.sales_today.map(sale => (
                                 <div key={sale.id} className="px-8 py-6 hover:bg-slate-800/30 transition-all group">
                                     <div className="flex justify-between items-center">
                                         <div>
@@ -204,7 +247,7 @@ const CloserDashboard = () => {
                             </button>
                         </div>
                         <div className="divide-y divide-slate-800/50 max-h-[400px] overflow-y-auto custom-scrollbar">
-                            {data.agendas_today.length > 0 ? data.agendas_today.map(appt => (
+                            {data.agendas_today?.length > 0 ? data.agendas_today.map(appt => (
                                 <div key={appt.id} className="px-8 py-6 hover:bg-slate-800/30 transition-all flex items-center justify-between group">
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center border border-slate-700 text-xs font-black text-white">
@@ -271,7 +314,7 @@ const CloserDashboard = () => {
                             <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Completa al finalizar tu jornada</p>
                         </div>
                         <form onSubmit={handleSubmitReport} className="p-8 space-y-6">
-                            {data.report_questions.map(q => (
+                            {data.report_questions?.map(q => (
                                 <div key={q.id} className="space-y-2">
                                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">{q.text}</label>
                                     {q.type === 'number' ? (
@@ -348,7 +391,7 @@ const CloserDashboard = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                        {data.recent_clients.map(client => (
+                        {data.recent_clients?.map(client => (
                             <div key={client.id} className="group bg-slate-800/30 hover:bg-indigo-600/10 p-5 rounded-2xl border border-slate-700/50 hover:border-indigo-500/30 transition-all cursor-pointer">
                                 <div className="flex items-center gap-4">
                                     <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-lg">
