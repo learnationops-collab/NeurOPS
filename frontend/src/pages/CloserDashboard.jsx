@@ -322,6 +322,7 @@ const CloserDashboard = () => {
                                             type="number"
                                             className="w-full px-5 py-4 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold"
                                             placeholder="0"
+                                            value={answers[q.id] || ''}
                                             onChange={(e) => handleAnswerChange(q.id, e.target.value)}
                                         />
                                     ) : q.type === 'boolean' ? (
@@ -342,6 +343,7 @@ const CloserDashboard = () => {
                                             rows="2"
                                             className="w-full px-5 py-4 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold resize-none"
                                             placeholder="Escribe aquí..."
+                                            value={answers[q.id] || ''}
                                             onChange={(e) => handleAnswerChange(q.id, e.target.value)}
                                         ></textarea>
                                     )}

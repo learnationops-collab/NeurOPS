@@ -155,10 +155,15 @@ def submit_report():
     # Save answers
     answers = data.get('answers', {})
     for q_id, val in answers.items():
-        # Clear existing
-        DailyReportAnswer.query.filter_by(daily_stats_id=stats.id, question_id=q_id).delete()
-        ans = DailyReportAnswer(daily_stats_id=stats.id, question_id=q_id, answer=str(val))
-        db.session.add(ans)
+        # Cast q_id to int to match DB type
+        try:
+            q_id_int = int(q_id)
+            # Clear existing
+            DailyReportAnswer.query.filter_by(daily_stats_id=stats.id, question_id=q_id_int).delete()
+            ans = DailyReportAnswer(daily_stats_id=stats.id, question_id=q_id_int, answer=str(val))
+            db.session.add(ans)
+        except ValueError:
+            continue
         
     db.session.commit()
     return jsonify({"message": "Reporte guardado con exito"}), 200
