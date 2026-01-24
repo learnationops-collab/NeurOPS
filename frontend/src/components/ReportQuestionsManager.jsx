@@ -1,3 +1,7 @@
+import { useState, useEffect } from 'react';
+import api from '../services/api';
+import { Loader2, Settings, Trash2 } from 'lucide-react';
+
 const ReportQuestionsManager = () => {
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -161,3 +165,5 @@ const ReportQuestionsManager = () => {
         </div>
     );
 };
+
+export default ReportQuestionsManager;
