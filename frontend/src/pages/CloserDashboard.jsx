@@ -46,7 +46,7 @@ const CloserDashboard = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get('/api/closer/dashboard');
+            const res = await api.get('/closer/dashboard');
             // Merge with default structure to ensure keys exist
             const safeData = {
                 kpis: res.data.kpis || {},
@@ -82,7 +82,7 @@ const CloserDashboard = () => {
         setSubmitting(true);
         setFeedback(null);
         try {
-            await api.post('/api/closer/daily-report', { answers });
+            await api.post('/closer/daily-report', { answers });
             setFeedback({ type: 'success', text: 'Reporte diario guardado' });
             fetchDashboard();
         } catch (err) {

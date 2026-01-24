@@ -35,7 +35,7 @@ const CloserLeadsPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const endpoint = activeTab === 'agendas' ? '/api/closer/agendas' : '/api/closer/sales';
+            const endpoint = activeTab === 'agendas' ? '/closer/agendas' : '/closer/sales';
             const res = await api.get(`${endpoint}?page=${page}&search=${search}`);
 
             // Ensure data key exists and is array

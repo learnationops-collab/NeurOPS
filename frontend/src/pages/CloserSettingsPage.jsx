@@ -31,7 +31,7 @@ const CloserSettingsPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get('/api/closer/availability');
+            const res = await api.get('/closer/availability');
             // Ensure availability is always an array
             setAvailability(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
@@ -46,7 +46,7 @@ const CloserSettingsPage = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            await api.post('/api/closer/availability', { action: 'add', ...newSlot });
+            await api.post('/closer/availability', { action: 'add', ...newSlot });
             setNewSlot({ date: '', start_time: '', end_time: '' });
             fetchAvailability();
         } catch (err) {
@@ -59,7 +59,7 @@ const CloserSettingsPage = () => {
     const handleDeleteSlot = async (id) => {
         if (!window.confirm("¿Eliminar este horario?")) return;
         try {
-            await api.post('/api/closer/availability', { action: 'delete', id });
+            await api.post('/closer/availability', { action: 'delete', id });
             fetchAvailability();
         } catch (err) {
             alert("Error al eliminar horario");
