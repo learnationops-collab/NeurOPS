@@ -7,7 +7,8 @@ import AnalysisPage from './pages/AnalysisPage';
 import DatabasePage from './pages/DatabasePage';
 import SettingsPage from './pages/SettingsPage';
 import CloserDashboard from './pages/CloserDashboard';
-import AgendaPage from './pages/AgendaPage';
+import CloserLeadsPage from './pages/CloserLeadsPage';
+import CloserSettingsPage from './pages/CloserSettingsPage';
 import './index.css';
 
 function App() {
@@ -62,10 +63,18 @@ function App() {
           }
         />
         <Route
-          path="/closer/agenda"
+          path="/closer/leads"
           element={
             <MainLayout>
-              <AgendaPage />
+              <CloserLeadsPage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/closer/settings"
+          element={
+            <MainLayout>
+              <CloserSettingsPage />
             </MainLayout>
           }
         />

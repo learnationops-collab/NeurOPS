@@ -25,17 +25,55 @@ def get_dashboard():
         "progress": data['progress']
     }
     
-    # Agendas
-    serialized['upcoming_agendas'] = []
+    # Agendas Today
+    serialized['agendas_today'] = []
     for appt, seq in data['upcoming_agendas']:
-        serialized['upcoming_agendas'].append({
+        serialized['agendas_today'].append({
             "id": appt.id,
             "lead_name": appt.lead.username if appt.lead else "Unknown",
             "start_time": appt.start_time.isoformat(),
             "status": appt.status,
+            "type": appt.appointment_type,
             "seq_num": seq
         })
         
+    # Sales Today (Detailed)
+    serialized['sales_today'] = []
+    # We can fetch them here or add to Service. Let's add to Service for cleanliness if possible, 
+    # but for speed let's just use the data already in the context if we enhance get_dashboard_data.
+    # Actually CloserService already has the logic for new_enrollments today.
+    # Let's just fetch them again here or update the service.
+    
+    from app.models import Enrollment, User
+    # Re-using start_utc/end_utc logic from data['dates']
+    start_utc = data['dates']['start_utc']
+    # end_utc is start_utc + 1 day
+    from datetime import timedelta
+    end_utc = start_utc + timedelta(days=1)
+    
+    sales = Enrollment.query.filter(
+        Enrollment.closer_id == current_user.id,
+        Enrollment.enrollment_date >= start_utc,
+        Enrollment.enrollment_date < end_utc
+    ).all()
+    
+    for s in sales:
+        serialized['sales_today'].append({
+            "id": s.id,
+            "student_name": s.student.username,
+            "program_name": s.program.name,
+            "amount": s.total_agreed,
+            "time": s.enrollment_date.isoformat()
+        })
+    
+    # Questions
+    questions = DailyReportQuestion.query.filter_by(is_active=True).order_by(DailyReportQuestion.order).all()
+    serialized['report_questions'] = [{
+        "id": q.id,
+        "text": q.text,
+        "type": q.question_type
+    } for q in questions]
+
     # Recent Clients
     serialized['recent_clients'] = []
     for u in data['recent_clients']:
@@ -113,3 +151,95 @@ def submit_report():
         
     db.session.commit()
     return jsonify({"message": "Reporte guardado con exito"}), 200
+
+@bp.route('/agendas', methods=['GET'])
+@login_required
+def get_all_agendas():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    page = request.args.get('page', 1, type=int)
+    from app.models import Appointment
+    pagination = Appointment.query.filter_by(closer_id=current_user.id).order_by(Appointment.start_time.desc()).paginate(page=page, per_page=50)
+    
+    return jsonify({
+        "data": [{
+            "id": a.id,
+            "lead_name": a.lead.username if a.lead else "Unknown",
+            "date": a.start_time.isoformat(),
+            "status": a.status,
+            "type": a.appointment_type
+        } for a in pagination.items],
+        "total": pagination.total,
+        "pages": pagination.pages
+    }), 200
+
+@bp.route('/sales', methods=['GET'])
+@login_required
+def get_all_sales():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    page = request.args.get('page', 1, type=int)
+    from app.models import Enrollment
+    pagination = Enrollment.query.filter_by(closer_id=current_user.id).order_by(Enrollment.enrollment_date.desc()).paginate(page=page, per_page=50)
+    
+    return jsonify({
+        "data": [{
+            "id": s.id,
+            "student_name": s.student.username if s.student else "Unknown",
+            "program_name": s.program.name if s.program else "Unknown",
+            "amount": s.total_agreed,
+            "date": s.enrollment_date.isoformat(),
+            "status": s.status
+        } for s in pagination.items],
+        "total": pagination.total,
+        "pages": pagination.pages
+    }), 200
+
+@bp.route('/availability', methods=['GET', 'POST'])
+@login_required
+def manage_availability():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    from app.models import Availability
+    from datetime import datetime, time
+    
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        # Simple implementation: replace all for a date or similar
+        # For now, let's just allow adding one slot or clearing
+        action = data.get('action', 'add')
+        
+        if action == 'add':
+            date_str = data.get('date')
+            start_str = data.get('start_time')
+            end_str = data.get('end_time')
+            
+            new_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            new_start = datetime.strptime(start_str, '%H:%M').time()
+            new_end = datetime.strptime(end_str, '%H:%M').time()
+            
+            avail = Availability(
+                closer_id=current_user.id,
+                date=new_date,
+                start_time=new_start,
+                end_time=new_end
+            )
+            db.session.add(avail)
+        elif action == 'delete':
+            avail_id = data.get('id')
+            Availability.query.filter_by(id=avail_id, closer_id=current_user.id).delete()
+            
+        db.session.commit()
+        return jsonify({"message": "Disponibilidad actualizada"}), 200
+        
+    # GET
+    availability = Availability.query.filter_by(closer_id=current_user.id).order_by(Availability.date.desc(), Availability.start_time.asc()).all()
+    return jsonify([{
+        "id": a.id,
+        "date": a.date.isoformat(),
+        "start_time": a.start_time.strftime('%H:%M'),
+        "end_time": a.end_time.strftime('%H:%M')
+    } for a in availability]), 200

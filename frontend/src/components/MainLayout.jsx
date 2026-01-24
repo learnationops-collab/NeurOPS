@@ -52,9 +52,9 @@ const MainLayout = ({ children }) => {
         { icon: Database, label: 'Bases de Datos', path: '/admin/database' },
         { icon: Settings, label: 'Configuracion', path: '/admin/settings' },
     ] : [
-        { icon: LayoutDashboard, label: 'Mi Agenda', path: '/closer/dashboard' },
-        { icon: Users, label: 'Mis Leads', path: '/closer/agenda' },
-        { icon: Settings, label: 'Configuracion', path: '/admin/settings' },
+        { icon: LayoutDashboard, label: 'Resumen Diario', path: '/closer/dashboard' },
+        { icon: Database, label: 'Gestionar Leads', path: '/closer/leads' },
+        { icon: Settings, label: 'Configuracion', path: '/closer/settings' },
     ];
 
 
