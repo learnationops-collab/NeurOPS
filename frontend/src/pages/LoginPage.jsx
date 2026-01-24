@@ -17,10 +17,17 @@ const LoginPage = () => {
     setError(null);
     try {
       const data = await authService.login(username, password);
-      if (data.user.role === 'admin') {
+      // Store user info for UI persistence
+      localStorage.setItem('user', JSON.stringify(data.user));
+      const { role } = data.user;
+
+      if (role === 'admin') {
         navigate('/admin/dashboard');
+      } else if (role === 'closer' || role === 'agenda') {
+        navigate('/closer/dashboard');
       } else {
-        setError('Acceso restringido a administradores.');
+        // Fallback for other roles if they have access to the panel
+        navigate('/closer/dashboard');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Usuario o contraseña incorrectos');

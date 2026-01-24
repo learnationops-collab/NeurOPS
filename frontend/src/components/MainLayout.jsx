@@ -33,6 +33,8 @@ const SidebarItem = ({ icon: Icon, label, path, active, collapsed }) => (
 const MainLayout = ({ children }) => {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
+    const user = JSON.parse(localStorage.getItem('user') || '{"username": "Usuario", "role": "closer"}');
+
 
     const handleLogout = async () => {
         try {
@@ -44,12 +46,17 @@ const MainLayout = ({ children }) => {
         }
     };
 
-    const menuItems = [
+    const menuItems = user.role === 'admin' ? [
         { icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard' },
         { icon: BarChart3, label: 'Analisis Detallado', path: '/admin/analysis' },
         { icon: Database, label: 'Bases de Datos', path: '/admin/database' },
         { icon: Settings, label: 'Configuracion', path: '/admin/settings' },
+    ] : [
+        { icon: LayoutDashboard, label: 'Mi Agenda', path: '/closer/dashboard' },
+        { icon: Users, label: 'Mis Leads', path: '/closer/agenda' },
+        { icon: Settings, label: 'Configuracion', path: '/admin/settings' },
     ];
+
 
     return (
         <div className="flex h-screen bg-[#0f172a] text-slate-200 overflow-hidden w-full selection:bg-indigo-500/30">
@@ -111,8 +118,8 @@ const MainLayout = ({ children }) => {
 
                         <div className="flex items-center gap-4 group cursor-pointer">
                             <div className="text-right hidden sm:block">
-                                <p className="text-sm font-black text-white leading-tight">Admin User</p>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Superadmin</p>
+                                <p className="text-sm font-black text-white leading-tight">{user.username}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{user.role}</p>
                             </div>
                             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-lg shadow-lg group-hover:scale-105 transition-transform">
                                 A
