@@ -1,106 +1,57 @@
-DOCUMENTACIÓN DE ARQUITECTURA - LEARNATION OPS
+DOCUMENTACIÓN DE ARQUITECTURA - LEARNATION WORKERS
 
 1. ESPECIFICACIONES TÉCNICAS
 --------------------------------
 Backend:
 - Lenguaje: Python 3.9+
-- Framework: Flask (Modularizado con Blueprints)
+- Framework: Flask (API-only)
 - ORM: SQLAlchemy (Flask-SQLAlchemy)
-- Migraciones: Flask-Migrate (Alembic)
-- Autenticación: Flask-Login, Google OAuth
-- Formularios: Flask-WTF
-- Integraciones: Google Calendar API, Webhooks (n8n/Make)
+- Migraciones: Flask-Migrate
+- API: RESTful (JSON)
 
 Frontend:
-- Renderizado: Server-Side (Jinja2)
-- Estilos: Tailwind CSS (Clases utilitarias) + CSS Vanilla (`main.css`)
-- Scripting: Javascript Vanilla (para modales, AJAX simple)
+- Framework: React (Vite)
+- Estilos: Tailwind CSS
+- Iconografía: Lucide React
 
 Base de Datos:
-- Desarrollo Local: SQLite (`instance/local.db`)
+- Desarrollo Local: SQLite (instance/local.db)
 - Producción: PostgreSQL
 
 2. ESTRUCTURA DE ARCHIVOS ACTUAL
 --------------------------------
 /app
-  /__init__.py        -> Factoría de Aplicación (create_app), Configuración de extensiones
-  /models.py          -> Definición de Modelos (User, Payment, Enrollment, etc.)
-  /decorators.py      -> Decoradores de permisos (@admin_required, @role_required)
-  
-  /admin              -> Blueprint 'admin' (Gestión Global)
-    /__init__.py
-    /forms.py         -> Formularios de Admin (UserForm, PaymentForm)
-    /routes/          -> Rutas modularizadas
-       /dashboard.py      -> Vista principal y KPIs
-       /finance.py        -> Ventas, Gastos, Pagos
-       /users.py          -> Gestión de Leads, Estudiantes, Closers
-       /configuration.py  -> Configuración de Sistema
-       /integrations.py   -> Configuración de Webhooks/APIs
-  
-  /closer             -> Blueprint 'closer' (Panel de Ventas)
-    /__init__.py
-    /forms.py         -> Formularios de Venta
-    /utils.py         -> Lógica de Webhooks y Google Calendar
-    /routes/          -> Rutas modularizadas
-       /dashboard.py      -> KPIs personales
-       /sales.py          -> Registro de ventas y mis ventas
-       /calendar.py       -> Gestión de disponibilidad
-
-  /booking            -> Blueprint 'booking' (Agendamiento Público)
-    /__init__.py
-    /routes.py        -> Flujo de identificación, encuesta y selección de horario
-
+  /api                -> Blueprints de API JSON
+    /auth.py          -> Endpoints de login/logout/me
+    /admin.py         -> Endpoints de datos administrativos (Master DB)
+    /closer.py        -> Endpoints para Closers
   /services           -> Capa de Lógica de Negocio (Business Logic)
-    /base.py              -> Clase Base
-    /user_service.py      -> Lógica de Usuarios y Leads
-    /financial_service.py -> Cálculos financieros y reportes
-    /dashboard_service.py -> Agregación de datos para Dashboards
-    /closer_service.py    -> Métricas y lógica específica de closer
-    /booking_service.py   -> Lógica de agendamiento y slots
-    /integration_service.py -> Manejo de integraciones
+  /models.py          -> Modelos de BD (SQLAlchemy)
+  /decorators.py      -> Decoradores de roles (admin_required)
+  /__init__.py        -> Configuración (CORS, CSRF exemptions para API, SPA routing)
 
-  /templates          -> Archivos HTML (Jinja2)
-    /admin/           -> Vistas de Admin
-    /closer/          -> Vistas de Closer
-    /booking/         -> Vistas del Funnel de Agendamiento
-    /sales/           -> Vistas compartidas de ventas
-    /layouts/         -> Base templates (base.html, base_booking.html)
-    /includes/        -> Fragmentos (sidebars, navbars, filters)
+/frontend             -> Aplicación React SPA (Vite)
+  /src
+    /components       -> Layouts (MainLayout) y componentes UI
+    /pages            -> Vistas principales (Main Board, Analysis, DB, Settings)
+    /services         -> api.js (Axios)
+    /App.jsx          -> Routing Central (4 pilares Admin + Closer)
+  /dist               -> Build de producción (servido por Flask)
 
-  /static             -> Assets estáticos (CSS, JS, Img)
+/migrations           -> Migraciones de BD (Flask-Migrate)
+run.py                -> Servidor Flask
+config.py             -> Variables de entorno
+arquitectura.txt      -> Este documento
 
-/migrations           -> Scripts de migración de BD
-config.py             -> Configuración de entornos (Variables, Secret Keys)
-run.py                -> Punto de entrada de la aplicación
-
-3. FLUJO DE TRABAJO EN EQUIPO (WORKFLOW)
+3. FLUJO DE TRABAJO
 ----------------------------------------
-Para mantener el orden y la calidad del código trabajando en equipo, se recomienda seguir el siguiente flujo:
+- Desarrollo Frontend: `cd frontend && npm run dev`
+- Desarrollo Backend: `python run.py`
+- Build Producción: `cd frontend && npm run build` (mueve archivos a dist para que Flask los sirva)
 
-A. Ramas (Branches):
-   - `main`: Rama de producción. Código estable y funcional. NO commitear directamente aquí.
-   - `develop`: Rama de integración principal. Aquí se mezclan las nuevas características antes de pasar a main.
-   - `feature/nombre-funcionalidad`: Ramas temporales creadas desde `develop` para desarrollar una característica específica (ej: `feature/webhook-agenda`).
-   - `fix/nombre-bug`: Ramas para corregir errores (ej: `fix/error-dashboard`).
-
-B. Proceso de Desarrollo:
-   1. Actualizar localmente: `git checkout develop` -> `git pull origin develop`.
-   2. Crear rama: `git checkout -b feature/nueva-función`.
-   3. Desarrollar: Escribir código, probar localmente.
-   4. Commit: `git add .` -> `git commit -m "Descripción clara del cambio"`.
-   5. Push: `git push origin feature/nueva-función`.
-   6. Pull Request (PR): Abrir un PR en GitHub de `feature/...` hacia `develop`.
-   7. Code Review: Otro miembro del equipo revisa el código.
-   8. Merge: Una vez aprobado, se fusiona a `develop`.
-
-C. Base de Datos:
-   - Si modificas `models.py`, genera una migración LOCALMENTE:
-     `flask db migrate -m "Descripción del cambio"`
-   - Revisa el archivo generado en `/migrations/versions`.
-   - Aplica la migración: `flask db upgrade`.
-   - Sube el archivo de migración al repositorio junto con tu código.
-
-D. Buenas Prácticas:
-   - Mantener la lógica pesada en `/services`, no en las rutas.
-   - Usar nombres de variables descriptivos en Inglés (estándar de código) aunque los comentarios sean en español.
-   - No subir archivos confidenciales (`.env`, `instance/local.db`, `__pycache__`).
+4. ENDPOINTS CLAVE
+----------------------------------------
+- /api/auth/*: Autenticación
+- /api/admin/db/*: Gestión de Base de Datos Maestro (Programas, Pagos, Agendas)
+- /api/admin/finance/*: Análisis financiero y ventas
+- /api/closer/*: Dashboard y métricas para Closers
