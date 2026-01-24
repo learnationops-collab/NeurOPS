@@ -19,3 +19,7 @@ class Config:
     
     # Webhooks
     VENTAS_WEBHOOK = os.environ.get('VENTAS_WEBHOOK')
+
+    # Security & Sessions
+    SESSION_COOKIE_NAME = 'learnation_workers_session'
+    REMEMBER_COOKIE_NAME = 'learnation_workers_remember'

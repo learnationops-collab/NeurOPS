@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Users, DollarSign, TrendingUp, Activity } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Activity, Plus } from 'lucide-react';
+import NewSaleModal from '../components/NewSaleModal';
 
 const KPICard = ({ title, value, subtitle, icon: Icon, color }) => (
   <div className="bg-slate-800/50 backdrop-blur-md p-6 rounded-3xl border border-slate-700 shadow-xl">
@@ -25,13 +26,19 @@ const AdminDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
+    fetchDashboard();
+  }, []);
+
+  const fetchDashboard = () => {
+    setLoading(true);
     api.get("/admin/dashboard")
       .then(r => setData(r.data))
       .catch(e => setError(e.response?.data?.message || "Error al cargar datos"))
       .finally(() => setLoading(false));
-  }, []);
+  };
 
   if (loading) {
     return (
@@ -59,9 +66,18 @@ const AdminDashboard = () => {
           <h1 className="text-4xl font-black text-white italic tracking-tighter">Panel Principal</h1>
           <p className="text-slate-400 font-medium uppercase text-xs tracking-[0.2em]">Vista General del Negocio</p>
         </div>
-        <div className="p-1 bg-slate-800 rounded-2xl border border-slate-700 flex gap-1">
-          <button className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/20">Este Mes</button>
-          <button className="px-4 py-2 text-slate-400 text-xs font-bold hover:text-white transition-colors">Personalizado</button>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-6 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all active:scale-95"
+          >
+            <Plus size={20} />
+            <span>Nueva Venta</span>
+          </button>
+          <div className="p-1 bg-slate-800 rounded-2xl border border-slate-700 flex gap-1 items-center">
+            <button className="px-4 py-2 bg-slate-700 text-white text-xs font-bold rounded-xl">Este Mes</button>
+            <button className="px-4 py-2 text-slate-400 text-xs font-bold hover:text-white transition-colors">Personalizado</button>
+          </div>
         </div>
       </header>
 
@@ -115,6 +131,12 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      <NewSaleModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={fetchDashboard}
+      />
     </div>
   );
 };

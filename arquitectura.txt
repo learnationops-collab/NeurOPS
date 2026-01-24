@@ -1,10 +1,10 @@
-DOCUMENTACIÓN DE ARQUITECTURA - LEARNATION OPS
+DOCUMENTACIÓN DE ARQUITECTURA - LEARNATION WORKERS
 
 1. ESPECIFICACIONES TÉCNICAS
 --------------------------------
 Backend:
 - Lenguaje: Python 3.9+
-- Framework: Flask (Modularizado con Blueprints)
+- Framework: Flask (API-only)
 - ORM: SQLAlchemy (Flask-SQLAlchemy)
 - Migraciones: Flask-Migrate
 - API: RESTful (JSON)
@@ -15,39 +15,43 @@ Frontend:
 - Iconografía: Lucide React
 
 Base de Datos:
-- Desarrollo Local: SQLite
+- Desarrollo Local: SQLite (instance/local.db)
 - Producción: PostgreSQL
 
 2. ESTRUCTURA DE ARCHIVOS ACTUAL
 --------------------------------
 /app
-  /api                -> Blueprint principal de API JSON
+  /api                -> Blueprints de API JSON
     /auth.py          -> Endpoints de login/logout/me
-    /admin.py         -> Endpoints de datos administrativos
-  /admin              -> Lógica de Admin (ahora sirve datos vía API)
-  /closer             -> Lógica de Closer
+    /admin.py         -> Endpoints de datos administrativos (Master DB)
+    /closer.py        -> Endpoints para Closers
   /services           -> Capa de Lógica de Negocio (Business Logic)
-  /models.py          -> Modelos de BD
-  /__init__.py        -> Configuración (CORS, CSRF exemptions para API)
+  /models.py          -> Modelos de BD (SQLAlchemy)
+  /decorators.py      -> Decoradores de roles (admin_required)
+  /__init__.py        -> Configuración (CORS, CSRF exemptions para API, SPA routing)
 
-/frontend             -> Aplicación React SPA
+/frontend             -> Aplicación React SPA (Vite)
   /src
-    /components       -> Layouts y componentes reutilizables
-    /pages            -> Vistas principales (Dashboard, Login)
-    /services         -> Clientes API (Axios) y AuthService
-    /App.jsx          -> Routing
-    /main.jsx         -> Punto de entrada
-  /package.json       -> Dependencias Node.js
-  /vite.config.js     -> Configuración de compilación y proxy
-  /tailwind.config.cjs -> Configuración de estilos
+    /components       -> Layouts (MainLayout) y componentes UI
+    /pages            -> Vistas principales (Main Board, Analysis, DB, Settings)
+    /services         -> api.js (Axios)
+    /App.jsx          -> Routing Central (4 pilares Admin + Closer)
+  /dist               -> Build de producción (servido por Flask)
 
-/migrations           -> Migraciones de BD
-.gitignore            -> Excluye node_modules, env, instance, etc.
+/migrations           -> Migraciones de BD (Flask-Migrate)
 run.py                -> Servidor Flask
 config.py             -> Variables de entorno
+arquitectura.txt      -> Este documento
 
 3. FLUJO DE TRABAJO
 ----------------------------------------
-- Desarrollo Frontend: `cd frontend && npm run dev` (Vite proxy a :5000)
+- Desarrollo Frontend: `cd frontend && npm run dev`
 - Desarrollo Backend: `python run.py`
-- Producción: Las dependencias se instalan en el servidor (`npm install` / `pip install`), NO se suben al repositorio.
+- Build Producción: `cd frontend && npm run build` (mueve archivos a dist para que Flask los sirva)
+
+4. ENDPOINTS CLAVE
+----------------------------------------
+- /api/auth/*: Autenticación
+- /api/admin/db/*: Gestión de Base de Datos Maestro (Programas, Pagos, Agendas)
+- /api/admin/finance/*: Análisis financiero y ventas
+- /api/closer/*: Dashboard y métricas para Closers

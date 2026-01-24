@@ -33,8 +33,8 @@ const LoginPage = () => {
     <div className="min-h-screen w-full bg-[#0f172a] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-black text-white tracking-widest italic">
-            NEURO<span className="text-indigo-500">OPS</span>
+          <h1 className="text-4xl font-black text-white tracking-widest italic uppercase">
+            LEARNATION<span className="text-indigo-500"> WORKERS</span>
           </h1>
           <p className="text-slate-400 mt-2 font-medium uppercase tracking-tighter">Panel de Gestión</p>
         </div>

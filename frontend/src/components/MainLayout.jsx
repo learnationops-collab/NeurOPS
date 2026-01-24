@@ -8,16 +8,19 @@ import {
     ChevronLeft,
     ChevronRight,
     LogOut,
-    Bell
+    Bell,
+    DollarSign,
+    Shield
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import api from '../services/api';
 
 const SidebarItem = ({ icon: Icon, label, path, active, collapsed }) => (
     <Link
         to={path}
         className={`flex items-center gap-4 p-4 mx-3 rounded-2xl transition-all duration-300 ${active
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-bold scale-[1.02]'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-100'
+            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-bold scale-[1.02]'
+            : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-100'
             }`}
     >
         <div className="flex-shrink-0">
@@ -31,11 +34,20 @@ const MainLayout = ({ children }) => {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
 
+    const handleLogout = async () => {
+        try {
+            await api.post('/auth/logout');
+            window.location.href = '/login';
+        } catch (err) {
+            console.error("Logout failed", err);
+            window.location.href = '/login';
+        }
+    };
+
     const menuItems = [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
+        { icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard' },
+        { icon: BarChart3, label: 'Analisis Detallado', path: '/admin/analysis' },
         { icon: Database, label: 'Bases de Datos', path: '/admin/database' },
-        { icon: BarChart3, label: 'Estadisticas', path: '/admin/stats' },
-        { icon: Users, label: 'Usuarios', path: '/admin/users' },
         { icon: Settings, label: 'Configuracion', path: '/admin/settings' },
     ];
 
@@ -48,8 +60,8 @@ const MainLayout = ({ children }) => {
                         <div className="w-4 h-4 bg-white rounded-sm rotate-45"></div>
                     </div>
                     {!collapsed && (
-                        <span className="ml-4 text-2xl font-black text-white italic tracking-tighter">
-                            NEURO<span className="text-indigo-500 font-black">OPS</span>
+                        <span className="ml-4 text-2xl font-black text-white italic tracking-tighter uppercase whitespace-nowrap">
+                            LEARN<span className="text-indigo-500 font-black">ATION</span>
                         </span>
                     )}
                 </div>
@@ -89,7 +101,13 @@ const MainLayout = ({ children }) => {
                             <span className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-500 rounded-full"></span>
                         </button>
 
-                        <div className="h-8 w-[1px] bg-slate-800"></div>
+                        <button
+                            onClick={handleLogout}
+                            className="text-slate-500 hover:text-rose-500 transition-colors p-2 hover:bg-rose-500/10 rounded-xl"
+                            title="Cerrar Sesion"
+                        >
+                            <LogOut size={20} />
+                        </button>
 
                         <div className="flex items-center gap-4 group cursor-pointer">
                             <div className="text-right hidden sm:block">
