@@ -17,12 +17,23 @@ def get_dashboard():
     tz = current_user.timezone or 'America/La_Paz'
     data = CloserService.get_dashboard_data(current_user.id, tz)
     
+    # Serialize today_stats manually if present
+    today_stats_serialized = None
+    if data.get('today_stats'):
+        ts = data['today_stats']
+        today_stats_serialized = {
+            "id": ts.id,
+            "date": ts.date.isoformat(),
+            "answers": {a.question_id: a.answer for a in ts.answers}
+        }
+
     # Process data for JSON serialization
     serialized = {
         "kpis": data['kpis'],
         "commission": data['commission'],
         "rates": data['rates'],
-        "progress": data['progress']
+        "progress": data['progress'],
+        "today_stats": today_stats_serialized
     }
     
     # Agendas Today

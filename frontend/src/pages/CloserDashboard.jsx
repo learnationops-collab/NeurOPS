@@ -36,9 +36,12 @@ const CloserDashboard = () => {
             setData(res.data);
             // Initialize answers if they exist in today_stats or empty
             if (res.data.today_stats && res.data.today_stats.answers) {
-                const initialAnswers = {};
-                // Note: logic might need adjusting depending on how answers are returned
-                setData(prev => ({ ...prev }));
+                // If answers come as a list or dict, map them here. 
+                // Currently API returns 'today_stats' which is a Model object? 
+                // We need to ensure 'closer.py' serializes it properly.
+                // Assuming it might come as serialized dict later:
+                // const initialAnswers = ...
+                // setAnswers(initialAnswers);
             }
         } catch (err) {
             console.error("Error fetching dashboard", err);
