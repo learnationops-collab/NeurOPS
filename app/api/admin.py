@@ -433,9 +433,16 @@ def manage_events():
     } for ev in events]), 200
 
 @bp.route('/admin/db/questions', methods=['GET', 'POST'])
+@bp.route('/admin/db/questions/<int:id>', methods=['DELETE'])
 @login_required
 @admin_required
-def manage_questions():
+def manage_questions(id=None):
+    if request.method == 'DELETE':
+        q = DailyReportQuestion.query.get_or_404(id)
+        db.session.delete(q)
+        db.session.commit()
+        return jsonify({"message": "Pregunta eliminada"}), 200
+        
     if request.method == 'POST':
         data = request.get_json() or {}
         id = data.get('id')

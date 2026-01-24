@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Settings, Shield, User, LogOut, Bell, Key, Plus, Trash2 } from 'lucide-react';
+import { Settings, Shield, User, LogOut, Bell, Key, Plus, Trash2, ClipboardCheck, Loader2, Check, X } from 'lucide-react';
 import UsersPage from './UsersPage';
+import ReportQuestionsManager from '../components/ReportQuestionsManager';
 
 const SettingsPage = () => {
     const [activeSection, setActiveSection] = useState('team');
@@ -9,6 +10,7 @@ const SettingsPage = () => {
     const sections = [
         { id: 'profile', label: 'Mi Cuenta', icon: User },
         { id: 'team', label: 'Gestion de Equipo', icon: Shield },
+        { id: 'questions', label: 'Preguntas de Reporte', icon: ClipboardCheck },
         { id: 'integrations', label: 'Integraciones', icon: Key },
     ];
 
@@ -63,6 +65,12 @@ const SettingsPage = () => {
                                 Or simplify it. Let's just render the team list 
                                 directly or import the component logic. */}
                             <UsersPage />
+                        </div>
+                    )}
+
+                    {activeSection === 'questions' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                            <ReportQuestionsManager />
                         </div>
                     )}
 
