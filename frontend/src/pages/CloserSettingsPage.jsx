@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import ThemeSelector from '../components/ui/ThemeSelector';
 import {
     Clock,
     Calendar,
@@ -26,8 +27,12 @@ import {
     Zap,
     Columns,
     Layers,
-    DollarSign
+    DollarSign,
+    Palette
 } from 'lucide-react';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
 
 const DAYS_ES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const SLOTS = Array.from({ length: 48 }, (_, i) => {
@@ -181,51 +186,52 @@ const CloserSettingsPage = () => {
     };
 
     if (loading) return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-black gap-6">
-            <Loader2 className="w-16 h-16 text-indigo-500 animate-spin" />
-            <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px]">Cargando Sistema...</p>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-main gap-6">
+            <Loader2 className="w-16 h-16 text-primary animate-spin" />
+            <p className="text-muted font-black uppercase tracking-[0.3em] text-[10px]">Cargando Sistema...</p>
         </div>
     );
 
     if (error) return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-black gap-6">
-            <div className="p-10 bg-rose-500/10 border border-rose-500/20 rounded-[3rem] text-center space-y-4">
-                <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
-                <h3 className="text-xl font-black text-white italic uppercase">{error}</h3>
-                <button
-                    onClick={fetchInitialData}
-                    className="px-8 py-3 bg-white text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all"
-                >
-                    Reintentar Conexión
-                </button>
-            </div>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-main gap-6">
+            <Card variant="surface" className="p-10 text-center space-y-6 border-accent/20">
+                <AlertCircle className="w-12 h-12 text-accent mx-auto" />
+                <h3 className="text-xl font-black text-base italic uppercase">{error}</h3>
+                <Button onClick={fetchInitialData} variant="primary">Reintentar Conexión</Button>
+            </Card>
         </div>
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700 bg-black min-h-screen">
+        <div className="p-8 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700 min-h-screen">
 
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-10">
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-base pb-10">
                 <div className="space-y-4">
                     <div className="flex items-center gap-4">
-                        <div className="w-3 h-10 bg-gradient-to-b from-indigo-500 to-blue-600 rounded-full shadow-[0_0_20px_rgba(79,70,229,0.4)]"></div>
-                        <h1 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none">Settings Central</h1>
+                        <div className="w-3 h-10 bg-primary rounded-full shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)]"></div>
+                        <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none">Settings Central</h1>
                     </div>
-                    <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.45em] ml-7">Optimiza tu flujo de agendamiento</p>
+                    <p className="text-muted font-bold uppercase text-[10px] tracking-[0.45em] ml-7">Optimiza tu flujo de agendamiento</p>
                 </div>
 
-                <div className="flex bg-slate-900/40 p-1.5 rounded-[2rem] border border-white/5 backdrop-blur-3xl shadow-2xl">
+                <div className="flex bg-surface p-1.5 rounded-[2rem] border border-base backdrop-blur-3xl shadow-2xl">
                     <button
                         onClick={() => setActiveTab('availability')}
-                        className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'availability' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-900/40' : 'text-slate-500 hover:text-white'}`}
+                        className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'availability' ? 'bg-primary text-white shadow-xl shadow-primary/40' : 'text-muted hover:text-base'}`}
                     >
                         <CalendarDays size={16} /> Horarios Semanales
                     </button>
                     <button
                         onClick={() => setActiveTab('links')}
-                        className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'links' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-900/40' : 'text-slate-500 hover:text-white'}`}
+                        className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'links' ? 'bg-primary text-white shadow-xl shadow-primary/40' : 'text-muted hover:text-base'}`}
                     >
                         <Zap size={16} /> Links & Embudos
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('appearance')}
+                        className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'appearance' ? 'bg-primary text-white shadow-xl shadow-primary/40' : 'text-muted hover:text-base'}`}
+                    >
+                        <Palette size={16} /> Apariencia
                     </button>
                 </div>
             </header>
@@ -237,17 +243,17 @@ const CloserSettingsPage = () => {
                     <div className="space-y-10 animate-in slide-in-from-bottom-6 duration-500">
 
                         {/* Quick Fill Section */}
-                        <section className="bg-gradient-to-br from-slate-900/40 to-indigo-950/10 rounded-[3rem] border border-white/5 p-10 backdrop-blur-2xl shadow-2xl">
+                        <Card variant="surface" className="p-10 border-primary/10">
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10">
                                 <div className="space-y-2">
-                                    <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
-                                        <Zap className="text-indigo-500" size={24} /> Llenado Rápido
+                                    <h3 className="text-2xl font-black text-base italic tracking-tighter uppercase flex items-center gap-3">
+                                        <Zap className="text-primary" size={24} /> Llenado Rápido
                                     </h3>
-                                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Establece un horario fijo para varios días a la vez</p>
+                                    <p className="text-muted text-[10px] font-bold uppercase tracking-widest">Establece un horario fijo para varios días a la vez</p>
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-6">
-                                    <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5">
+                                    <div className="flex bg-main p-1.5 rounded-2xl border border-base">
                                         {DAYS_ES.map((day, idx) => {
                                             const isSelected = quickFill.days.includes(idx);
                                             return (
@@ -257,7 +263,7 @@ const CloserSettingsPage = () => {
                                                         const newDays = isSelected ? quickFill.days.filter(d => d !== idx) : [...quickFill.days, idx];
                                                         setQuickFill({ ...quickFill, days: newDays });
                                                     }}
-                                                    className={`w-10 h-10 rounded-xl text-[10px] font-black flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white/5'}`}
+                                                    className={`w-10 h-10 rounded-xl text-[10px] font-black flex items-center justify-center transition-all ${isSelected ? 'bg-primary text-white shadow-lg' : 'text-muted hover:bg-surface-hover hover:text-base'}`}
                                                 >
                                                     {day.substring(0, 1)}
                                                 </button>
@@ -270,53 +276,56 @@ const CloserSettingsPage = () => {
                                             type="time"
                                             value={quickFill.start}
                                             onChange={(e) => setQuickFill({ ...quickFill, start: e.target.value })}
-                                            className="bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+                                            className="bg-main border border-base rounded-xl px-4 py-2.5 text-xs font-black text-base outline-none focus:ring-1 focus:ring-primary transition-all"
                                         />
-                                        <span className="text-slate-600 font-black text-xs">A</span>
+                                        <span className="text-muted font-black text-xs">A</span>
                                         <input
                                             type="time"
                                             value={quickFill.end}
                                             onChange={(e) => setQuickFill({ ...quickFill, end: e.target.value })}
-                                            className="bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+                                            className="bg-main border border-base rounded-xl px-4 py-2.5 text-xs font-black text-base outline-none focus:ring-1 focus:ring-primary transition-all"
                                         />
                                     </div>
 
-                                    <button
+                                    <Button
                                         onClick={handleQuickFill}
-                                        className="px-8 h-12 bg-white text-black hover:bg-indigo-50 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-xl"
+                                        variant="primary"
+                                        className="h-12 px-8"
                                     >
                                         Aplicar Horario
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
-                        </section>
+                        </Card>
 
                         {/* Interactive Grid */}
-                        <section className="bg-slate-900/20 rounded-[3rem] border border-white/5 p-10 relative overflow-hidden">
+                        <Card variant="surface" className="p-10">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
                                 <div>
-                                    <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase mb-2">Editor de Disponibilidad</h3>
+                                    <h3 className="text-2xl font-black text-base italic tracking-tighter uppercase mb-2">Editor de Disponibilidad</h3>
                                     <div className="flex items-center gap-2">
-                                        <Info size={12} className="text-indigo-400" />
-                                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Haz click en los bloques de 30 minutos para activar tu agenda</p>
+                                        <Info size={12} className="text-primary" />
+                                        <p className="text-muted text-[10px] font-bold uppercase tracking-widest">Haz click en los bloques de 30 minutos para activar tu agenda</p>
                                     </div>
                                 </div>
-                                <button
+                                <Button
                                     onClick={handleSaveWeekly}
-                                    disabled={submitting}
-                                    className="px-12 h-16 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest flex items-center gap-4 transition-all active:scale-95 shadow-[0_20px_40px_rgba(79,70,229,0.3)] border border-indigo-400/20"
+                                    loading={submitting}
+                                    variant="primary"
+                                    className="h-16 px-12"
+                                    icon={Save}
                                 >
-                                    {submitting ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} /> Guardar Configuración</>}
-                                </button>
+                                    Guardar Configuración
+                                </Button>
                             </div>
 
-                            <div className="relative border border-white/5 rounded-[2.5rem] overflow-hidden bg-slate-950/40 backdrop-blur-xl shadow-inner">
+                            <div className="relative border border-base rounded-[2.5rem] overflow-hidden bg-main/50 backdrop-blur-xl shadow-inner">
                                 {/* Grid Header */}
-                                <div className="grid grid-cols-8 border-b border-white/5">
-                                    <div className="p-5 bg-white/[0.02]"></div>
+                                <div className="grid grid-cols-8 border-b border-base">
+                                    <div className="p-5 bg-surface-hover/20"></div>
                                     {DAYS_ES.map(day => (
-                                        <div key={day} className="p-5 text-center border-l border-white/5 bg-white/[0.01]">
-                                            <span className="text-[11px] font-black text-indigo-400 uppercase tracking-widest">
+                                        <div key={day} className="p-5 text-center border-l border-base bg-surface-hover/10">
+                                            <span className="text-[11px] font-black text-primary uppercase tracking-widest">
                                                 {day}
                                             </span>
                                         </div>
@@ -326,9 +335,9 @@ const CloserSettingsPage = () => {
                                 {/* Grid Body */}
                                 <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
                                     {SLOTS.map(timeStr => (
-                                        <div key={timeStr} className="grid grid-cols-8 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.01] transition-colors">
-                                            <div className="p-3 text-center flex flex-col items-center justify-center opacity-40 border-r border-white/5">
-                                                <span className="text-[10px] font-black text-white tracking-widest">
+                                        <div key={timeStr} className="grid grid-cols-8 border-b border-base/50 last:border-0 hover:bg-surface-hover/10 transition-colors">
+                                            <div className="p-3 text-center flex flex-col items-center justify-center opacity-40 border-r border-base">
+                                                <span className="text-[10px] font-black text-base tracking-widest">
                                                     {timeStr}
                                                 </span>
                                             </div>
@@ -338,14 +347,14 @@ const CloserSettingsPage = () => {
                                                     <div
                                                         key={dayIdx}
                                                         onClick={() => toggleSlot(dayIdx, timeStr)}
-                                                        className={`h-12 border-l border-white/[0.02] transition-all cursor-pointer flex items-center justify-center relative group/box ${active ? 'bg-indigo-600/20' : 'hover:bg-indigo-500/5'}`}
+                                                        className={`h-12 border-l border-base/30 transition-all cursor-pointer flex items-center justify-center relative group/box ${active ? 'bg-primary/20' : 'hover:bg-primary/5'}`}
                                                     >
                                                         {active && (
-                                                            <div className="absolute inset-2 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-lg shadow-[0_0_15px_rgba(79,70,229,0.3)] flex items-center justify-center animate-in zoom-in duration-200">
+                                                            <div className="absolute inset-2 bg-primary rounded-lg shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)] flex items-center justify-center animate-in zoom-in duration-200">
                                                                 <Check size={14} className="text-white" />
                                                             </div>
                                                         )}
-                                                        <div className="opacity-0 group-hover/box:opacity-100 text-[8px] font-black text-indigo-400/50 uppercase tracking-tighter transition-opacity pointer-events-none">
+                                                        <div className="opacity-0 group-hover/box:opacity-100 text-[8px] font-black text-primary/50 uppercase tracking-tighter transition-opacity pointer-events-none">
                                                             {active ? 'Eliminar' : 'Activar'}
                                                         </div>
                                                     </div>
@@ -355,66 +364,72 @@ const CloserSettingsPage = () => {
                                     ))}
                                 </div>
                             </div>
-                        </section>
+                        </Card>
                     </div>
                 )}
 
                 {/* --- Events & Links Tab --- */}
                 {activeTab === 'links' && (
                     <div className="space-y-12 animate-in slide-in-from-bottom-6 duration-500">
-                        <section className="bg-slate-900/40 p-10 rounded-[3rem] border border-white/5 backdrop-blur-3xl shadow-2xl">
+                        <Card variant="surface" className="p-10 border-primary/10">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-10">
                                 <div>
-                                    <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-2">Herramientas Manuales</h3>
-                                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Registros rápidos fuera de los embudos automáticos</p>
+                                    <h3 className="text-3xl font-black text-base italic tracking-tighter uppercase mb-2">Herramientas Manuales</h3>
+                                    <p className="text-muted text-xs font-bold uppercase tracking-widest">Registros rápidos fuera de los embudos automáticos</p>
                                 </div>
                                 <div className="flex gap-4">
-                                    <Link
+                                    <Button
+                                        as={Link}
                                         to="/closer/sales/new"
-                                        className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-3 transition-all active:scale-95 shadow-lg shadow-emerald-900/20"
+                                        variant="ghost"
+                                        className="bg-success text-white border-success hover:bg-success/80 h-14 px-8"
+                                        icon={DollarSign}
                                     >
-                                        <DollarSign size={16} /> Declarar Venta Manual
-                                    </Link>
-                                    <Link
+                                        Declarar Venta Manual
+                                    </Button>
+                                    <Button
+                                        as={Link}
                                         to="/closer/leads"
-                                        className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-3 transition-all active:scale-95 shadow-lg shadow-indigo-900/20"
+                                        variant="primary"
+                                        className="h-14 px-8"
+                                        icon={Calendar}
                                     >
-                                        <Calendar size={16} /> Nueva Agenda Manual
-                                    </Link>
+                                        Nueva Agenda Manual
+                                    </Button>
                                 </div>
                             </div>
-                        </section>
+                        </Card>
 
-                        <section className="bg-slate-900/40 p-10 rounded-[3rem] border border-white/5 backdrop-blur-3xl shadow-2xl">
-                            <div className="mb-12">
-                                <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-2">Configuración de Embudos</h3>
-                                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Personaliza la duración, descansos y obtén tus links únicos</p>
+                        <section className="space-y-10">
+                            <div className="mb-4">
+                                <h3 className="text-3xl font-black text-base italic tracking-tighter uppercase mb-2">Configuración de Embudos</h3>
+                                <p className="text-muted text-xs font-bold uppercase tracking-widest">Personaliza la duración, descansos y obtén tus links únicos</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                                 {events.length > 0 ? events.map((ev) => (
-                                    <div key={ev.id} className="relative group/card bg-black/40 border border-white/5 p-8 rounded-[2.5rem] flex flex-col justify-between hover:border-indigo-500/30 transition-all duration-500 shadow-2xl">
+                                    <Card key={ev.id} variant="surface" className="flex flex-col justify-between group/card border-base hover:border-primary/30 transition-all duration-500 shadow-2xl p-8">
 
                                         <div className="space-y-8">
                                             <div className="flex items-start justify-between">
-                                                <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-500 border border-indigo-500/20 group-hover/card:bg-indigo-600 group-hover/card:text-white transition-all shadow-inner">
+                                                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20 group-hover/card:bg-primary group-hover/card:text-white transition-all shadow-inner">
                                                     <LinkIcon size={28} />
                                                 </div>
-                                                <div className="px-4 py-1.5 bg-indigo-500/10 text-indigo-400 text-[9px] font-black rounded-full border border-indigo-500/20 uppercase tracking-widest">
+                                                <Badge variant="primary" className="font-black px-4 py-1.5 uppercase items-center flex">
                                                     {ev.utm_source}
-                                                </div>
+                                                </Badge>
                                             </div>
 
                                             <div className="space-y-2">
-                                                <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none">{ev.name}</h3>
-                                                <div className="h-1 w-12 bg-indigo-600 rounded-full"></div>
+                                                <h3 className="text-2xl font-black text-base italic tracking-tighter uppercase leading-none">{ev.name}</h3>
+                                                <div className="h-1 w-12 bg-primary rounded-full"></div>
                                             </div>
 
                                             <div className="grid grid-cols-1 gap-6 pt-4">
                                                 <div className="space-y-3">
                                                     <div className="flex items-center justify-between">
-                                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Duración de Sesión</label>
-                                                        <span className="text-indigo-400 text-xs font-black">{ev.duration_minutes || 30}m</span>
+                                                        <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">Duración de Sesión</label>
+                                                        <span className="text-primary text-xs font-black">{ev.duration_minutes || 30}m</span>
                                                     </div>
                                                     <input
                                                         type="range"
@@ -423,14 +438,14 @@ const CloserSettingsPage = () => {
                                                         step="15"
                                                         value={ev.duration_minutes || 30}
                                                         onChange={(e) => handleUpdateEvent(ev.id, 'duration_minutes', e.target.value)}
-                                                        className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                                        className="w-full h-1.5 bg-base rounded-lg appearance-none cursor-pointer accent-primary"
                                                     />
                                                 </div>
 
                                                 <div className="space-y-3">
                                                     <div className="flex items-center justify-between">
-                                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Descanso entre Citas</label>
-                                                        <span className="text-blue-400 text-xs font-black">{ev.buffer_minutes || 0}m</span>
+                                                        <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">Descanso entre Citas</label>
+                                                        <span className="text-primary/70 text-xs font-black">{ev.buffer_minutes || 0}m</span>
                                                     </div>
                                                     <input
                                                         type="range"
@@ -439,50 +454,61 @@ const CloserSettingsPage = () => {
                                                         step="5"
                                                         value={ev.buffer_minutes || 0}
                                                         onChange={(e) => handleUpdateEvent(ev.id, 'buffer_minutes', e.target.value)}
-                                                        className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                                                        className="w-full h-1.5 bg-base rounded-lg appearance-none cursor-pointer accent-primary/70"
                                                     />
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="mt-12 space-y-4">
-                                            <div className="bg-indigo-950/20 border border-indigo-500/10 p-5 rounded-2xl flex flex-col gap-2 group/url cursor-default">
-                                                <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">URL de Agendamiento</span>
-                                                <p className="text-[11px] text-white font-bold truncate opacity-80 italic">
+                                            <div className="bg-primary/5 border border-primary/10 p-5 rounded-2xl flex flex-col gap-2 group/url cursor-default">
+                                                <span className="text-[9px] font-black text-primary uppercase tracking-widest">URL de Agendamiento</span>
+                                                <p className="text-[11px] text-base font-bold truncate opacity-80 italic">
                                                     {window.location.origin}/book/{user?.username}/{ev.utm_source}
                                                 </p>
                                             </div>
 
                                             <div className="flex gap-4">
-                                                <button
+                                                <Button
                                                     onClick={() => handleCopyLink(ev.utm_source)}
-                                                    className={`flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 transition-all active:scale-95 ${copiedId === ev.utm_source
-                                                        ? 'bg-green-600 text-white shadow-lg'
-                                                        : 'bg-white text-black hover:bg-slate-200 shadow-xl'
-                                                        }`}
+                                                    variant={copiedId === ev.utm_source ? 'primary' : 'ghost'}
+                                                    className={`flex-1 h-14 ${copiedId === ev.utm_source ? 'bg-success border-success' : 'border-base text-base'}`}
+                                                    icon={copiedId === ev.utm_source ? Check : Copy}
                                                 >
-                                                    {copiedId === ev.utm_source ? <Check size={18} /> : <Copy size={18} />}
                                                     {copiedId === ev.utm_source ? 'LINK COPIADO' : 'COPIAR LINK'}
-                                                </button>
-                                                <a
+                                                </Button>
+                                                <Button
+                                                    as="a"
                                                     href={`/book/${user?.username}/${ev.utm_source}`}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl flex items-center justify-center transition-all shadow-xl shadow-indigo-900/20"
-                                                >
-                                                    <ExternalLink size={20} />
-                                                </a>
+                                                    variant="primary"
+                                                    className="w-14 h-14 p-0 shadow-xl shadow-primary/20"
+                                                    icon={ExternalLink}
+                                                />
                                             </div>
                                         </div>
-                                    </div>
+                                    </Card>
                                 )) : (
-                                    <div className="col-span-full py-20 bg-black/40 border border-white/5 rounded-[3rem] text-center space-y-4 border-dashed">
-                                        <AlertCircle className="w-12 h-12 text-slate-700 mx-auto" />
-                                        <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-xs">No se encontraron embudos configurados</p>
+                                    <div className="col-span-full py-20 bg-surface/40 border border-base border-dashed rounded-[3rem] text-center space-y-4">
+                                        <AlertCircle className="w-12 h-12 text-muted mx-auto" />
+                                        <p className="text-muted font-black uppercase tracking-[0.2em] text-xs">No se encontraron embudos configurados</p>
                                     </div>
                                 )}
                             </div>
                         </section>
+                    </div>
+                )}
+
+                {activeTab === 'appearance' && (
+                    <div className="animate-in slide-in-from-bottom-6 duration-500 space-y-10">
+                        <Card variant="surface" className="p-10">
+                            <div className="mb-12">
+                                <h3 className="text-3xl font-black text-base italic tracking-tighter uppercase mb-2">Apariencia del Sistema</h3>
+                                <p className="text-muted text-xs font-bold uppercase tracking-widest">Personaliza el look & feel de tu dashboard</p>
+                            </div>
+                            <ThemeSelector />
+                        </Card>
                     </div>
                 )}
             </main>

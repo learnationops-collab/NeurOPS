@@ -11,6 +11,7 @@ import CloserLeadsPage from './pages/CloserLeadsPage';
 import CloserSettingsPage from './pages/CloserSettingsPage';
 import OperationsPage from './pages/OperationsPage';
 import BookingPage from './pages/BookingPage';
+import StyleGuidePage from './pages/StyleGuidePage';
 import './index.css';
 
 function App() {
@@ -60,6 +61,14 @@ function App() {
           element={
             <MainLayout>
               <OperationsPage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/admin/style-guide"
+          element={
+            <MainLayout>
+              <StyleGuidePage />
             </MainLayout>
           }
         />

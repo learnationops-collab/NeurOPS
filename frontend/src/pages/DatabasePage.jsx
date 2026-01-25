@@ -16,9 +16,11 @@ import {
     ChevronLeft,
     ChevronRight,
     Filter,
-    Save,
     Trash2
 } from 'lucide-react';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
 
 const DatabasePage = () => {
     const [activeTab, setActiveTab] = useState('programs');
@@ -104,7 +106,7 @@ const DatabasePage = () => {
             'questions': ['ID', 'Texto', 'Tipo', 'Orden', 'Estado']
         };
         return (headers[activeTab] || []).map(h => (
-            <th key={h} className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">{h}</th>
+            <th key={h} className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest">{h}</th>
         ));
     };
 
@@ -116,15 +118,15 @@ const DatabasePage = () => {
             return <input type="text" className="bg-slate-800 border-none rounded px-2 py-1 text-white w-full" value={editForm[field] || ''} onChange={(e) => setEditForm({ ...editForm, [field]: e.target.value })} />;
         }
 
-        if (type === 'status') return <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${item[field] ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{item[field] ? 'Activo' : 'Inactivo'}</span>;
-        if (type === 'price') return <span className="text-emerald-500 font-bold">${item[field]}</span>;
-        return <span className="text-slate-300">{item[field]}</span>;
+        if (type === 'status') return <Badge variant={item[field] ? 'success' : 'neutral'}>{item[field] ? 'Activo' : 'Inactivo'}</Badge>;
+        if (type === 'price') return <span className="text-secondary font-bold">${item[field]}</span>;
+        return <span className="text-base/80">{item[field]}</span>;
     };
 
     const renderRow = (item) => {
         if (activeTab === 'programs') return (
             <>
-                <td className="px-8 py-5 text-indigo-500 font-black">#{item.id}</td>
+                <td className="px-8 py-5 text-primary font-black">#{item.id}</td>
                 <td className="px-8 py-5">{renderCell(item, 'name')}</td>
                 <td className="px-8 py-5">{renderCell(item, 'price', 'number')}</td>
                 <td className="px-8 py-5">{renderCell(item, 'is_active', 'status')}</td>
@@ -132,7 +134,7 @@ const DatabasePage = () => {
         );
         if (activeTab === 'payment-methods') return (
             <>
-                <td className="px-8 py-5 text-indigo-500 font-black">#{item.id}</td>
+                <td className="px-8 py-5 text-primary font-black">#{item.id}</td>
                 <td className="px-8 py-5">{renderCell(item, 'name')}</td>
                 <td className="px-8 py-5">{renderCell(item, 'fee_percent', 'number')}%</td>
                 <td className="px-8 py-5">${renderCell(item, 'fee_fixed', 'number')}</td>
@@ -141,36 +143,36 @@ const DatabasePage = () => {
         );
         if (activeTab === 'leads_raw') return (
             <>
-                <td className="px-8 py-5 text-indigo-500 font-black">#{item.id}</td>
+                <td className="px-8 py-5 text-primary font-black">#{item.id}</td>
                 <td className="px-8 py-5">{renderCell(item, 'full_name')}</td>
                 <td className="px-8 py-5">{renderCell(item, 'email')}</td>
                 <td className="px-8 py-5">
-                    <p className="text-xs text-white">{renderCell(item, 'phone')}</p>
-                    <p className="text-[10px] text-indigo-400">{renderCell(item, 'instagram')}</p>
+                    <p className="text-xs text-base">{renderCell(item, 'phone')}</p>
+                    <p className="text-[10px] text-primary">{renderCell(item, 'instagram')}</p>
                 </td>
-                <td className="px-8 py-5 text-[10px] text-slate-500 uppercase">{new Date(item.created_at).toLocaleDateString()}</td>
+                <td className="px-8 py-5 text-[10px] text-muted uppercase">{new Date(item.created_at).toLocaleDateString()}</td>
             </>
         );
         if (activeTab === 'sales_raw') return (
             <>
-                <td className="px-8 py-5 text-indigo-500 font-black">#{item.id}</td>
-                <td className="px-8 py-5 text-[10px] text-slate-500 uppercase">{new Date(item.date).toLocaleDateString()}</td>
+                <td className="px-8 py-5 text-primary font-black">#{item.id}</td>
+                <td className="px-8 py-5 text-[10px] text-muted uppercase">{new Date(item.date).toLocaleDateString()}</td>
                 <td className="px-8 py-5">
-                    <p className="text-white font-bold text-sm tracking-tight">{item.student}</p>
-                    <p className="text-[10px] text-indigo-500 font-black uppercase">{item.program}</p>
+                    <p className="text-base font-bold text-sm tracking-tight">{item.student}</p>
+                    <p className="text-[10px] text-primary font-black uppercase">{item.program}</p>
                 </td>
-                <td className="px-8 py-5 text-emerald-400 font-black">${renderCell(item, 'amount', 'number')}</td>
+                <td className="px-8 py-5 text-secondary font-black">${renderCell(item, 'amount', 'number')}</td>
                 <td className="px-8 py-5">{renderCell(item, 'payment_type')}</td>
-                <td className="px-8 py-5 text-[10px] text-slate-400 uppercase font-black">{item.method}</td>
+                <td className="px-8 py-5 text-[10px] text-muted uppercase font-black">{item.method}</td>
             </>
         );
         if (activeTab === 'agendas') return (
             <>
-                <td className="px-8 py-5 text-indigo-500 font-black">#{item.id}</td>
-                <td className="px-8 py-5 text-xs text-slate-300 font-bold">{editingId === item.id ? renderCell(item, 'start_time', 'datetime') : new Date(item.start_time).toLocaleString()}</td>
+                <td className="px-8 py-5 text-primary font-black">#{item.id}</td>
+                <td className="px-8 py-5 text-xs text-base/80 font-bold">{editingId === item.id ? renderCell(item, 'start_time', 'datetime') : new Date(item.start_time).toLocaleString()}</td>
                 <td className="px-8 py-5">
-                    <p className="text-white font-bold text-sm">{item.lead}</p>
-                    <p className="text-[10px] text-indigo-500 font-black uppercase">Closer: {item.closer}</p>
+                    <p className="text-base font-bold text-sm">{item.lead}</p>
+                    <p className="text-[10px] text-primary font-black uppercase">Closer: {item.closer}</p>
                 </td>
                 <td className="px-8 py-5">{renderCell(item, 'status')}</td>
                 <td className="px-8 py-5">{renderCell(item, 'origin')}</td>
@@ -178,7 +180,7 @@ const DatabasePage = () => {
         );
         if (activeTab === 'questions') return (
             <>
-                <td className="px-8 py-5 text-indigo-500 font-black">#{item.id}</td>
+                <td className="px-8 py-5 text-primary font-black">#{item.id}</td>
                 <td className="px-8 py-5">{renderCell(item, 'text')}</td>
                 <td className="px-8 py-5">{renderCell(item, 'type')}</td>
                 <td className="px-8 py-5">{renderCell(item, 'order', 'number')}</td>
@@ -191,18 +193,18 @@ const DatabasePage = () => {
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
             <header className="flex justify-between items-end">
-                <div>
-                    <h1 className="text-3xl font-black text-white italic tracking-tighter">Bases de Datos Maestro</h1>
-                    <p className="text-slate-400 font-medium uppercase text-xs tracking-[0.2em]">Gestión integral de la infraestructura de datos</p>
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-black text-base italic tracking-tighter">Bases de Datos Maestro</h1>
+                    <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Gestión integral de la infraestructura de datos</p>
                 </div>
             </header>
 
-            <div className="flex flex-wrap gap-2 p-1 bg-slate-800/20 border border-slate-800/50 rounded-2xl overflow-x-auto">
+            <div className="flex flex-wrap gap-2 p-1 bg-surface border border-base rounded-2xl overflow-x-auto">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => { setActiveTab(tab.id); cancelEditing(); }}
-                        className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:text-white'}`}
+                        className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-base'}`}
                     >
                         <tab.icon size={14} />
                         {tab.label}
@@ -212,9 +214,9 @@ const DatabasePage = () => {
 
             <div className="flex gap-4 items-center">
                 <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
                     <input
-                        className="w-full bg-slate-900/60 border border-slate-800 rounded-2xl pl-11 pr-4 py-4 text-white outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full bg-surface border border-base rounded-2xl pl-11 pr-4 py-4 text-base text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all font-bold placeholder:opacity-50"
                         placeholder="Buscar registros..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -223,41 +225,41 @@ const DatabasePage = () => {
                     />
                 </div>
                 {pagination.pages > 1 && (
-                    <div className="flex bg-slate-800/40 rounded-xl p-1 border border-slate-800">
-                        <button disabled={pagination.page === 1} onClick={() => fetchData(pagination.page - 1)} className="p-2 text-slate-400 hover:text-white disabled:opacity-20"><ChevronLeft size={20} /></button>
-                        <div className="px-4 flex items-center text-[10px] font-black text-white uppercase tracking-widest">{pagination.page} / {pagination.pages}</div>
-                        <button disabled={pagination.page === pagination.pages} onClick={() => fetchData(pagination.page + 1)} className="p-2 text-slate-400 hover:text-white disabled:opacity-20"><ChevronRight size={20} /></button>
+                    <div className="flex bg-surface rounded-xl p-1 border border-base">
+                        <button disabled={pagination.page === 1} onClick={() => fetchData(pagination.page - 1)} className="p-2 text-muted hover:text-base disabled:text-muted/20 transition-all"><ChevronLeft size={20} /></button>
+                        <div className="px-4 flex items-center text-[10px] font-black text-base uppercase tracking-widest">{pagination.page} / {pagination.pages}</div>
+                        <button disabled={pagination.page === pagination.pages} onClick={() => fetchData(pagination.page + 1)} className="p-2 text-muted hover:text-base disabled:text-muted/20 transition-all"><ChevronRight size={20} /></button>
                     </div>
                 )}
             </div>
 
-            <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-2xl">
+            <Card variant="surface" padding="p-0 overflow-hidden">
                 {loading ? (
-                    <div className="p-32 text-center text-slate-600 font-black uppercase tracking-[0.5em] animate-pulse">Sincronizando Nodo...</div>
+                    <div className="p-32 text-center text-muted font-black uppercase tracking-[0.5em] animate-pulse">Sincronizando Nodo...</div>
                 ) : (
                     <div className="overflow-x-auto min-h-[400px]">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-slate-800 bg-slate-800/10">
+                                <tr className="border-b border-base bg-surface-hover">
                                     {renderHeader()}
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800/30">
+                            <tbody className="divide-y divide-base">
                                 {data.map(item => (
-                                    <tr key={item.id} className={`hover:bg-slate-800/10 transition-all group ${editingId === item.id ? 'bg-indigo-600/5' : ''}`}>
+                                    <tr key={item.id} className={`hover:bg-surface-hover/50 transition-all group ${editingId === item.id ? 'bg-primary/5' : ''}`}>
                                         {renderRow(item)}
                                         <td className="px-8 py-5 text-right">
                                             <div className="flex justify-end gap-2">
                                                 {editingId === item.id ? (
                                                     <>
-                                                        <button onClick={handleSave} className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg"><Save size={16} /></button>
-                                                        <button onClick={cancelEditing} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg"><X size={16} /></button>
+                                                        <button onClick={handleSave} className="p-2 text-success hover:bg-success/10 rounded-lg"><Save size={16} /></button>
+                                                        <button onClick={cancelEditing} className="p-2 text-accent hover:bg-accent/10 rounded-lg"><X size={16} /></button>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <button onClick={() => startEditing(item)} className="p-2 text-slate-500 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit3 size={16} /></button>
-                                                        {activeTab === 'agendas' && <button onClick={() => handleDelete(item.id)} className="p-2 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>}
+                                                        <button onClick={() => startEditing(item)} className="p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit3 size={16} /></button>
+                                                        {activeTab === 'agendas' && <button onClick={() => handleDelete(item.id)} className="p-2 text-muted hover:text-accent hover:bg-accent/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>}
                                                     </>
                                                 )}
                                             </div>
@@ -268,7 +270,7 @@ const DatabasePage = () => {
                         </table>
                     </div>
                 )}
-            </div>
+            </Card>
         </div>
     );
 };

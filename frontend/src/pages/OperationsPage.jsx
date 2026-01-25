@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
 import { Database, Trash2, Zap, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
+import Button from '../components/ui/Button';
+import Card, { CardHeader, CardContent } from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
 
 const OperationsPage = () => {
     const [loading, setLoading] = useState(false);
@@ -35,40 +37,40 @@ const OperationsPage = () => {
         }
     };
 
-    const inputClass = "w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
+    const inputClass = "w-full bg-main border border-base rounded-2xl px-5 py-4 text-base focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold";
 
     return (
-        <div className="p-6 md:p-8 space-y-8 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                        <Database className="text-blue-500" />
+        <div className="p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                <div className="space-y-1">
+                    <h1 className="text-4xl font-black text-base italic tracking-tighter flex items-center gap-3">
+                        <Database className="text-primary" />
                         Operaciones de Sistema
                     </h1>
-                    <p className="text-slate-400 mt-1">Gestión de datos masivos y herramientas de desarrollo.</p>
+                    <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Gestión de datos masivos y herramientas de desarrollo</p>
                 </div>
-            </div>
+            </header>
 
             {message.text && (
-                <div className={`p-4 rounded-xl flex items-center gap-3 ${message.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>
+                <div className={`p-5 rounded-2xl flex items-center gap-4 border transition-all ${message.type === 'success' ? 'bg-success/10 text-success border-success/20' : 'bg-accent/10 text-accent border-accent/20'}`}>
                     {message.type === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
-                    <span className="font-medium">{message.text}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest leading-relaxed">{message.text}</span>
                 </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Mock Data Generator */}
-                <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 shadow-xl">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-3 bg-blue-500/10 rounded-xl">
-                            <Zap className="text-blue-500" />
+                <Card variant="surface" className="relative group">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="p-4 bg-primary/10 rounded-2xl">
+                            <Zap className="text-primary" size={24} />
                         </div>
-                        <h2 className="text-xl font-semibold text-white">Generador de Datos Ficticios</h2>
+                        <h2 className="text-xl font-black text-base italic tracking-tighter uppercase">Generador de Datos Ficticios</h2>
                     </div>
 
-                    <div className="space-y-4 mb-8">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1.5 ml-1">Cant. de Leads (Clientes)</label>
+                    <div className="space-y-6 mb-10">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Cant. de Leads (Clientes)</label>
                             <input
                                 type="number"
                                 value={counts.leads}
@@ -76,8 +78,8 @@ const OperationsPage = () => {
                                 className={inputClass}
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1.5 ml-1">Cant. de Agendas</label>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Cant. de Agendas</label>
                             <input
                                 type="number"
                                 value={counts.agendas}
@@ -85,8 +87,8 @@ const OperationsPage = () => {
                                 className={inputClass}
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1.5 ml-1">Cant. de Ventas (Enrollments)</label>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Cant. de Ventas (Enrollments)</label>
                             <input
                                 type="number"
                                 value={counts.sales}
@@ -96,53 +98,55 @@ const OperationsPage = () => {
                         </div>
                     </div>
 
-                    <button
+                    <Button
                         onClick={handleGenerate}
-                        disabled={loading}
-                        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                        loading={loading}
+                        variant="primary"
+                        className="w-full h-16"
+                        icon={Zap}
                     >
-                        {loading ? <RefreshCw className="animate-spin" size={20} /> : <Zap size={20} />}
                         Generar Datos de Prueba
-                    </button>
-                    <p className="text-xs text-slate-500 mt-4 text-center">
-                        * Los datos se distribuirán aleatoriamente entre los Closers existentes.
+                    </Button>
+                    <p className="text-[10px] text-muted mt-6 text-center font-bold uppercase tracking-widest opacity-50">
+                        * Los datos se distribuirán aleatoriamente entre los Closers.
                     </p>
-                </div>
+                </Card>
 
                 {/* Danger Zone */}
-                <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-1 bg-rose-500 text-[10px] font-bold text-white uppercase tracking-widest -rotate-45 translate-x-4 translate-y-2 w-24 text-center">
-                        Peligro
+                <Card variant="surface" className="relative group border-accent/20">
+                    <div className="absolute top-8 right-8">
+                        <Badge variant="accent" className="font-black px-4 py-1.5">PELIGRO</Badge>
                     </div>
 
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-3 bg-rose-500/10 rounded-xl">
-                            <Trash2 className="text-rose-500" />
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="p-4 bg-accent/10 rounded-2xl">
+                            <Trash2 className="text-accent" size={24} />
                         </div>
-                        <h2 className="text-xl font-semibold text-white">Zona de Limpieza</h2>
+                        <h2 className="text-xl font-black text-base italic tracking-tighter uppercase">Zona de Limpieza</h2>
                     </div>
 
-                    <p className="text-slate-400 mb-8 leading-relaxed">
-                        Esta herramienta eliminará **TODOS** los registros de Clientes, Agendas, Ventas, Pagos y Encuestas.
-                        Los usuarios administradores y closers **NO** serán afectados.
+                    <p className="text-muted mb-10 leading-relaxed font-bold uppercase text-[10px] tracking-widest">
+                        Esta herramienta eliminará <span className="text-base">TODOS</span> los registros de Clientes, Agendas, Ventas, Pagos y Encuestas.
+                        Los usuarios administradores y closers <span className="text-base">NO</span> serán afectados.
                     </p>
 
-                    <div className="p-4 bg-rose-500/5 rounded-xl border border-rose-500/10 mb-8">
-                        <div className="flex gap-3 text-rose-500 text-sm">
-                            <AlertTriangle size={18} className="shrink-0" />
-                            <span>Esta acción es irreversible. Se recomienda usar solo en entornos de desarrollo o pruebas.</span>
+                    <div className="p-5 bg-accent/5 rounded-2xl border border-accent/10 mb-10">
+                        <div className="flex gap-4 text-accent">
+                            <AlertTriangle size={20} className="shrink-0" />
+                            <span className="text-[10px] font-black uppercase tracking-widest leading-relaxed">Esta acción es irreversible. Se recomienda usar solo en entornos de desarrollo o pruebas.</span>
                         </div>
                     </div>
 
-                    <button
+                    <Button
                         onClick={handleClear}
-                        disabled={loading}
-                        className="w-full bg-rose-600/10 hover:bg-rose-600 border border-rose-500/20 hover:border-rose-500 text-rose-500 hover:text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                        loading={loading}
+                        variant="ghost"
+                        className="w-full h-16 border-accent/20 text-accent hover:bg-accent hover:text-white hover:border-accent"
+                        icon={Trash2}
                     >
-                        {loading ? <RefreshCw className="animate-spin" size={20} /> : <Trash2 size={20} />}
-                        Limpiar Base de Datos de Negocio
-                    </button>
-                </div>
+                        Limpiar Base de Datos
+                    </Button>
+                </Card>
             </div>
         </div>
     );

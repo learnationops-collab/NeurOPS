@@ -16,6 +16,9 @@ import {
     Globe,
     CalendarDays
 } from 'lucide-react';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
 
 const BookingPage = () => {
     const { username, event_slug } = useParams();
@@ -121,44 +124,45 @@ const BookingPage = () => {
     };
 
     if (loading) return (
-        <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6">
-            <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
-            <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px] animate-pulse">Cargando Experiencia...</p>
+        <div className="min-h-screen bg-main flex flex-col items-center justify-center gap-6">
+            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+            <p className="text-muted font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Cargando Experiencia...</p>
         </div>
     );
 
     if (success) return (
-        <div className="min-h-screen bg-black flex items-center justify-center p-6">
-            <div className="max-w-md w-full bg-slate-900/40 rounded-[3rem] p-12 text-center border border-white/5 shadow-2xl backdrop-blur-3xl animate-in zoom-in-95 duration-500">
-                <div className="w-24 h-24 bg-green-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.1)]">
-                    <CheckCircle2 className="w-14 h-14 text-green-500" />
+        <div className="min-h-screen bg-main flex items-center justify-center p-6">
+            <Card variant="surface" className="max-w-md w-full p-12 text-center border-success/20 shadow-2xl backdrop-blur-3xl animate-in zoom-in-95 duration-500">
+                <div className="w-24 h-24 bg-success/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-success/20 shadow-[0_0_30px_rgba(var(--success-rgb),0.1)]">
+                    <CheckCircle2 className="w-14 h-14 text-success" />
                 </div>
-                <h1 className="text-4xl font-black text-white italic mb-4 uppercase tracking-tighter">¡BRUTAL!</h1>
-                <p className="text-slate-400 mb-10 font-medium">
-                    Tu sesión con <span className="text-indigo-400 font-bold">@{username}</span> ha sido reservada.
+                <h1 className="text-4xl font-black text-base italic mb-4 uppercase tracking-tighter">¡BRUTAL!</h1>
+                <p className="text-muted mb-10 font-bold uppercase text-[10px] tracking-widest">
+                    Tu sesión con <span className="text-primary font-black">@{username}</span> ha sido reservada.
                 </p>
-                <div className="bg-white/[0.02] p-8 rounded-[2rem] border border-white/5 mb-10 text-left space-y-4 shadow-inner">
+                <div className="bg-main/50 p-8 rounded-[2rem] border border-base mb-10 text-left space-y-4 shadow-inner">
                     <div className="flex items-center gap-4 text-sm">
-                        <Calendar className="w-5 h-5 text-indigo-400" />
-                        <span className="text-white font-bold">{new Date(selectedSlot.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                        <Calendar className="w-5 h-5 text-primary" />
+                        <span className="text-base font-black italic">{new Date(selectedSlot.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
-                        <Clock className="w-5 h-5 text-indigo-400" />
-                        <span className="text-white font-bold">{selectedSlot.start_time} HS</span>
+                        <Clock className="w-5 h-5 text-primary" />
+                        <span className="text-base font-black italic">{selectedSlot.start_time} HS</span>
                     </div>
                 </div>
-                <button
+                <Button
                     onClick={() => window.location.reload()}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-indigo-900/40 uppercase tracking-widest text-xs active:scale-95"
+                    variant="primary"
+                    className="w-full h-16"
                 >
                     Finalizar
-                </button>
-            </div>
+                </Button>
+            </Card>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-black text-slate-100 flex flex-col font-sans selection:bg-indigo-500/30">
+        <div className="min-h-screen bg-main text-base flex flex-col font-sans selection:bg-primary/30">
             <div className="max-w-2xl mx-auto w-full p-6 md:p-12 flex-1 flex flex-col justify-center">
 
                 {/* Stepper */}
@@ -168,9 +172,9 @@ const BookingPage = () => {
                         const isActive = currentStep === step;
                         return (
                             <div key={step} className="flex-1 flex flex-col items-center gap-3">
-                                <div className={`h-1.5 w-full rounded-full transition-all duration-700 ${isCompleted ? 'bg-indigo-500' : isActive ? 'bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.6)]' : 'bg-white/5'
+                                <div className={`h-1.5 w-full rounded-full transition-all duration-700 ${isCompleted ? 'bg-primary' : isActive ? 'bg-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.6)]' : 'bg-base'
                                     }`} />
-                                <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isActive ? 'text-indigo-400' : 'text-slate-700'
+                                <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isActive ? 'text-primary' : 'text-muted'
                                     }`}>Fase {step}</span>
                             </div>
                         );
@@ -181,11 +185,11 @@ const BookingPage = () => {
                 {currentStep === 1 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
                         <header className="text-center space-y-3">
-                            <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter">COMENCEMOS</h2>
-                            <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.5em]">Tus credenciales de acceso</p>
+                            <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">COMENCEMOS</h2>
+                            <p className="text-muted font-black uppercase text-[10px] tracking-[0.5em] ml-1">Tus credenciales de acceso</p>
                         </header>
 
-                        <div className="bg-slate-900/20 backdrop-blur-2xl border border-white/5 p-10 rounded-[3rem] shadow-2xl space-y-8">
+                        <Card variant="surface" className="p-10 shadow-2xl space-y-8">
                             <div className="space-y-6">
                                 <FormInput
                                     label="Nombre Completo"
@@ -212,14 +216,16 @@ const BookingPage = () => {
                                 />
                             </div>
 
-                            <button
+                            <Button
                                 onClick={nextStep}
                                 disabled={!contactData.name || !contactData.email || !contactData.phone}
-                                className="w-full h-18 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-20 text-white font-black rounded-[1.5rem] transition-all flex items-center justify-center gap-4 active:scale-95 shadow-2xl shadow-indigo-900/40 uppercase tracking-widest text-xs"
+                                variant="primary"
+                                className="w-full h-18 text-base tracking-widest"
+                                icon={ChevronRight}
                             >
-                                Siguiente <ChevronRight size={20} />
-                            </button>
-                        </div>
+                                Siguiente
+                            </Button>
+                        </Card>
                     </div>
                 )}
 
@@ -227,29 +233,29 @@ const BookingPage = () => {
                 {currentStep === 2 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-right-6 duration-700">
                         <header className="text-center space-y-3">
-                            <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter">CALIFICACIÓN</h2>
-                            <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.5em]">Personalizando tu experiencia</p>
+                            <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">CALIFICACIÓN</h2>
+                            <p className="text-muted font-black uppercase text-[10px] tracking-[0.5em] ml-1">Personalizando tu experiencia</p>
                         </header>
 
-                        <div className="bg-slate-900/20 backdrop-blur-2xl border border-white/5 p-10 rounded-[3rem] shadow-2xl space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                        <Card variant="surface" className="p-10 shadow-2xl space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
                             {questions.map((q) => (
                                 <div key={q.id} className="space-y-4">
-                                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{q.text}</label>
+                                    <label className="text-[11px] font-black text-muted uppercase tracking-widest ml-1">{q.text}</label>
                                     {q.type === 'select' ? (
                                         <select
-                                            className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold appearance-none cursor-pointer"
+                                            className="w-full bg-main border border-base rounded-2xl py-5 px-6 text-base outline-none focus:ring-2 focus:ring-primary/50 transition-all font-black appearance-none cursor-pointer"
                                             value={surveyAnswers[q.id] || ''}
                                             onChange={(e) => setSurveyAnswers({ ...surveyAnswers, [q.id]: e.target.value })}
                                         >
-                                            <option value="" className="bg-slate-900">Seleccionar...</option>
+                                            <option value="" className="bg-surface">Seleccionar...</option>
                                             {q.options?.split(',').map(opt => (
-                                                <option key={opt} value={opt} className="bg-slate-900">{opt}</option>
+                                                <option key={opt} value={opt} className="bg-surface">{opt}</option>
                                             ))}
                                         </select>
                                     ) : (
                                         <input
                                             type={q.type}
-                                            className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold placeholder:text-slate-700"
+                                            className="w-full bg-main border border-base rounded-2xl py-5 px-6 text-base outline-none focus:ring-2 focus:ring-primary/50 transition-all font-black placeholder:text-muted/30"
                                             placeholder="..."
                                             value={surveyAnswers[q.id] || ''}
                                             onChange={(e) => setSurveyAnswers({ ...surveyAnswers, [q.id]: e.target.value })}
@@ -257,16 +263,18 @@ const BookingPage = () => {
                                     )}
                                 </div>
                             ))}
-                        </div>
+                        </Card>
 
                         <div className="flex gap-6">
-                            <button onClick={prevStep} className="h-18 w-24 bg-white/5 hover:bg-white/10 text-white rounded-[1.5rem] flex items-center justify-center transition-all border border-white/5"><ChevronLeft size={24} /></button>
-                            <button
+                            <Button onClick={prevStep} variant="ghost" className="h-18 w-24 p-0 border-base" icon={ChevronLeft} />
+                            <Button
                                 onClick={nextStep}
-                                className="flex-1 h-18 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-[1.5rem] transition-all flex items-center justify-center gap-4 uppercase tracking-widest text-xs shadow-2xl shadow-indigo-900/40"
+                                variant="primary"
+                                className="flex-1 h-18 text-base tracking-widest"
+                                icon={ChevronRight}
                             >
-                                CONTINUAR <ChevronRight size={20} />
-                            </button>
+                                CONTINUAR
+                            </Button>
                         </div>
                     </div>
                 )}
@@ -275,20 +283,20 @@ const BookingPage = () => {
                 {currentStep === 3 && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-right-6 duration-700">
                         <header className="text-center space-y-3">
-                            <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter">RESERVAR</h2>
-                            <div className="flex items-center justify-center gap-4 text-slate-500 font-bold uppercase text-[10px] tracking-[0.3em]">
-                                <Clock size={12} className="text-indigo-500" />
+                            <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">RESERVAR</h2>
+                            <div className="flex items-center justify-center gap-4 text-muted font-black uppercase text-[10px] tracking-[0.3em] ml-1">
+                                <Clock size={12} className="text-primary" />
                                 <span>{eventInfo?.duration} MINUTOS</span>
-                                <div className="w-1 h-1 bg-slate-700 rounded-full"></div>
-                                <Globe size={12} className="text-indigo-500" />
+                                <div className="w-1 h-1 bg-primary/30 rounded-full"></div>
+                                <Globe size={12} className="text-primary" />
                                 <span>UTC-3</span>
                             </div>
                         </header>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-900/20 backdrop-blur-2xl border border-white/5 p-8 rounded-[3rem] shadow-2xl min-h-[400px]">
+                        <Card variant="surface" className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 shadow-2xl min-h-[400px]">
                             {/* Date Selector */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Seleccionar Fecha</h4>
+                                <h4 className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Seleccionar Fecha</h4>
                                 <div className="grid grid-cols-1 gap-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                                     {availableDates.map(dateStr => {
                                         const d = new Date(dateStr + "T00:00:00");
@@ -298,19 +306,19 @@ const BookingPage = () => {
                                                 key={dateStr}
                                                 onClick={() => setSelectedDate(dateStr)}
                                                 className={`p-5 rounded-2xl border transition-all text-left flex items-center justify-between transition-all group ${isActive
-                                                        ? 'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-900/40'
-                                                        : 'bg-white/[0.02] border-white/5 text-slate-400 hover:bg-white/5'
+                                                    ? 'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-900/40'
+                                                    : 'bg-white/[0.02] border-white/5 text-slate-400 hover:bg-white/5'
                                                     }`}
                                             >
-                                                <div>
-                                                    <p className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-white/60' : 'text-slate-600'}`}>
+                                                <div className="group-hover:translate-x-1 transition-transform">
+                                                    <p className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-white/60' : 'text-muted'}`}>
                                                         {d.toLocaleDateString('es-ES', { weekday: 'long' })}
                                                     </p>
-                                                    <p className="font-bold text-sm">
+                                                    <p className="font-black italic text-base">
                                                         {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
                                                     </p>
                                                 </div>
-                                                <ChevronRight size={16} className={`transition-transform ${isActive ? 'translate-x-1' : 'opacity-0'}`} />
+                                                <ChevronRight size={16} className={`transition-all duration-300 ${isActive ? 'translate-x-0 opacity-100' : '-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-50'}`} />
                                             </button>
                                         );
                                     })}
@@ -319,7 +327,7 @@ const BookingPage = () => {
 
                             {/* Time Selector */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Bloques Disponibles</h4>
+                                <h4 className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Bloques Disponibles</h4>
                                 {selectedDate ? (
                                     <div className="grid grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                                         {groupedAvailability[selectedDate]?.map(slot => (
@@ -327,8 +335,8 @@ const BookingPage = () => {
                                                 key={slot.timestamp}
                                                 onClick={() => setSelectedSlot(slot)}
                                                 className={`p-4 rounded-xl border text-center font-black text-sm transition-all ${selectedSlot?.timestamp === slot.timestamp
-                                                        ? 'bg-indigo-500 border-indigo-300 text-white shadow-lg'
-                                                        : 'bg-white/[0.03] border-white/5 text-slate-500 hover:text-white hover:border-white/10'
+                                                    ? 'bg-primary border-primary text-white shadow-lg'
+                                                    : 'bg-main border-base text-muted hover:text-base hover:border-primary/30'
                                                     }`}
                                             >
                                                 {slot.start_time}
@@ -336,36 +344,38 @@ const BookingPage = () => {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="h-full flex items-center justify-center text-[10px] font-black text-slate-700 uppercase tracking-widest italic">
+                                    <div className="h-full flex items-center justify-center text-[10px] font-black text-muted uppercase tracking-widest italic opacity-30">
                                         Elige una fecha
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        </Card>
 
                         {error && (
-                            <div className="p-5 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-4 text-rose-400 animate-in shake duration-500">
+                            <div className="p-5 bg-accent/10 border border-accent/20 rounded-2xl flex items-center gap-4 text-accent animate-in shake duration-500">
                                 <AlertCircle className="w-6 h-6 shrink-0" />
                                 <p className="text-[10px] font-black uppercase tracking-widest">{error}</p>
                             </div>
                         )}
 
                         <div className="flex gap-6">
-                            <button onClick={prevStep} className="h-18 w-24 bg-white/5 hover:bg-white/10 text-white rounded-[1.5rem] flex items-center justify-center transition-all border border-white/5"><ChevronLeft size={24} /></button>
-                            <button
+                            <Button onClick={prevStep} variant="ghost" className="h-18 w-24 p-0 border-base" icon={ChevronLeft} />
+                            <Button
                                 onClick={handleBook}
                                 disabled={!selectedSlot || booking}
-                                className="flex-1 h-18 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-20 text-white font-black rounded-[1.5rem] transition-all flex items-center justify-center gap-4 uppercase tracking-widest text-xs shadow-2xl shadow-indigo-900/40"
+                                loading={booking}
+                                variant="primary"
+                                className="flex-1 h-18 text-base tracking-widest"
                             >
-                                {booking ? <Loader2 className="animate-spin" /> : 'CONFIRMAR AGENDAMIENTO'}
-                            </button>
+                                CONFIRMAR AGENDAMIENTO
+                            </Button>
                         </div>
                     </div>
                 )}
 
-                <footer className="mt-20 text-center space-y-2 opacity-30">
-                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em]">NeurOPS Intelligent Scheduling System</p>
-                    <p className="text-[8px] font-bold text-slate-700 uppercase tracking-[0.2em]">© 2026 LeadOps Automation. All Rights Reserved.</p>
+                <footer className="mt-20 text-center space-y-2 opacity-50">
+                    <p className="text-[9px] font-black text-muted uppercase tracking-[0.4em]">NeurOPS Intelligent Scheduling System</p>
+                    <p className="text-[8px] font-bold text-muted/50 uppercase tracking-[0.2em]">© 2026 LeadOps Automation. All Rights Reserved.</p>
                 </footer>
             </div>
 
@@ -392,14 +402,14 @@ const BookingPage = () => {
 
 const FormInput = ({ label, icon, placeholder, value, onChange, type = "text" }) => (
     <div className="space-y-3">
-        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{label}</label>
+        <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">{label}</label>
         <div className="relative group">
-            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-indigo-500 transition-colors">
+            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-muted/50 group-focus-within:text-primary transition-colors">
                 {icon}
             </div>
             <input
                 type={type}
-                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 pl-16 pr-6 text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-bold placeholder:text-slate-700"
+                className="w-full bg-main border border-base rounded-2xl py-5 pl-16 pr-6 text-base outline-none focus:ring-2 focus:ring-primary/50 transition-all font-black placeholder:text-muted/20"
                 placeholder={placeholder}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}

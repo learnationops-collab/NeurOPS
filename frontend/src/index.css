@@ -3,27 +3,108 @@
 @tailwind utilities;
 
 :root {
-    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    /* Fonts */
+    --font-main: 'Outfit', 'Inter', system-ui, sans-serif;
+
+    /* Colors - Default Dark Premium */
+    --color-bg: #030712;
+    --color-surface: #0f172a;
+    --color-surface-hover: #1e293b;
+
+    --color-primary: #6366f1;
+    /* Indigo 500 */
+    --color-primary-hover: #4f46e5;
+
+    --color-secondary: #10b981;
+    /* Emerald 500 */
+    --color-secondary-hover: #059669;
+
+    --color-accent: #f43f5e;
+    /* Rose 500 */
+
+    --color-text-base: #f8fafc;
+    --color-text-muted: #94a3b8;
+
+    --color-border: rgba(255, 255, 255, 0.05);
+    --color-border-hover: rgba(255, 255, 255, 0.1);
+
+    /* Glassmorphism Tokens */
+    --glass-bg: rgba(15, 23, 42, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-blur: 16px;
+    --glass-opacity: 0.6;
+
+    /* Forms & Shapes */
+    --radius-main: 1.5rem;
+    --radius-round: 3rem;
+    --radius-button: 1rem;
+
+    /* Animation */
+    --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-main: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    font-family: var(--font-main);
     line-height: 1.5;
     font-weight: 400;
-
-    color-scheme: light dark;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #0f172a;
-
-    font-synthesis: none;
+    color: var(--color-text-base);
+    background-color: var(--color-bg);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
     margin: 0;
-    display: flex;
-    min-width: 320px;
     min-height: 100vh;
+    background-color: var(--color-bg);
 }
 
 #root {
     width: 100%;
+}
+
+/* Custom Utilities for Glass */
+@layer utilities {
+    .glass-effect {
+        background: var(--glass-bg);
+        backdrop-filter: blur(var(--glass-blur));
+        border: 1px solid var(--glass-border);
+    }
+}
+
+/* Light Theme Overrides */
+.theme-light {
+    --color-bg: #f8fafc;
+    --color-surface: #ffffff;
+    --color-surface-hover: #f1f5f9;
+
+    --color-primary: #3b82f6;
+    --color-primary-hover: #2563eb;
+
+    --color-text-base: #0f172a;
+    --color-text-muted: #64748b;
+
+    --color-border: rgba(0, 0, 0, 0.05);
+    --color-border-hover: rgba(0, 0, 0, 0.1);
+
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.05);
+}
+
+/* Vibrant / Neon Theme Overrides */
+.theme-vibrant {
+    --color-bg: #09090b;
+    --color-surface: #18181b;
+
+    --color-primary: #d946ef;
+    /* Fuchsia */
+    --color-primary-hover: #c026d3;
+
+    --color-secondary: #06b6d4;
+    /* Cyan */
+
+    --glass-bg: rgba(217, 70, 239, 0.05);
+    --glass-border: rgba(217, 70, 239, 0.2);
+    --glass-blur: 20px;
+
+    --radius-main: 2rem;
 }

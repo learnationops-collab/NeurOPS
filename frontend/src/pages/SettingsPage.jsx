@@ -4,7 +4,8 @@ import { Settings, Shield, User, LogOut, Bell, Key, Plus, Trash2, ClipboardCheck
 import UsersPage from './UsersPage';
 import ReportQuestionsManager from '../components/ReportQuestionsManager';
 import ProgramsManager from '../components/ProgramsManager';
-import PaymentMethodsManager from '../components/PaymentMethodsManager';
+import { Palette } from 'lucide-react';
+import Card from '../components/ui/Card';
 
 const SettingsPage = () => {
     const [activeSection, setActiveSection] = useState('team');
@@ -15,6 +16,7 @@ const SettingsPage = () => {
         { id: 'programs', label: 'Programas', icon: Package },
         { id: 'payment_methods', label: 'Metodos de Pago', icon: CreditCard },
         { id: 'questions', label: 'Preguntas de Reporte', icon: ClipboardCheck },
+        { id: 'appearance', label: 'Apariencia', icon: Palette },
         { id: 'integrations', label: 'Integraciones', icon: Key },
     ];
 
@@ -28,10 +30,10 @@ const SettingsPage = () => {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10">
-            <header>
-                <h1 className="text-3xl font-black text-white italic tracking-tighter">Configuracion del Sistema</h1>
-                <p className="text-slate-400 font-medium uppercase text-xs tracking-[0.2em]">Preferencias y administracion global</p>
+        <div className="p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
+            <header className="space-y-1">
+                <h1 className="text-4xl font-black text-base italic tracking-tighter">Configuración del Sistema</h1>
+                <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Preferencias y administración global</p>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
@@ -42,21 +44,21 @@ const SettingsPage = () => {
                             key={section.id}
                             onClick={() => setActiveSection(section.id)}
                             className={`w-full flex items-center gap-4 p-5 rounded-3xl transition-all ${activeSection === section.id
-                                ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20'
-                                : 'text-slate-500 hover:bg-slate-800/50 hover:text-white'
+                                ? 'bg-primary text-white shadow-xl shadow-primary/20'
+                                : 'text-muted hover:bg-surface-hover hover:text-base'
                                 }`}
                         >
                             <section.icon size={20} />
                             <span className="text-xs font-black uppercase tracking-widest">{section.label}</span>
                         </button>
                     ))}
-                    <div className="pt-4 mt-4 border-t border-slate-800">
+                    <div className="pt-4 mt-4 border-t border-base">
                         <button
                             onClick={handleLogout}
-                            className="w-full flex items-center gap-4 p-5 rounded-3xl text-rose-500 hover:bg-rose-500/10 transition-all"
+                            className="w-full flex items-center gap-4 p-5 rounded-3xl text-accent hover:bg-accent/10 transition-all"
                         >
                             <LogOut size={20} />
-                            <span className="text-xs font-black uppercase tracking-widest">Cerrar Sesion</span>
+                            <span className="text-xs font-black uppercase tracking-widest">Cerrar Sesión</span>
                         </button>
                     </div>
                 </div>
@@ -91,22 +93,36 @@ const SettingsPage = () => {
                     )}
 
                     {activeSection === 'profile' && (
-                        <div className="bg-slate-900/40 p-10 rounded-[2.5rem] border border-slate-800 space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 text-center py-20">
-                            <div className="w-24 h-24 bg-indigo-600 rounded-3xl mx-auto flex items-center justify-center text-3xl font-black text-white shadow-2xl">A</div>
+                        <Card variant="surface" className="p-10 space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 text-center py-20">
+                            <div className="w-24 h-24 bg-primary rounded-3xl mx-auto flex items-center justify-center text-3xl font-black text-white shadow-2xl">A</div>
                             <div className="space-y-2">
-                                <h3 className="text-xl font-black text-white">Admin User</h3>
-                                <p className="text-sm text-slate-500">admin@learnation.com</p>
+                                <h3 className="text-xl font-black text-base">Admin User</h3>
+                                <p className="text-sm text-muted">admin@learnation.com</p>
                             </div>
-                            <button className="px-8 py-3 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all border border-slate-700">Cambiar Contraseña</button>
-                        </div>
+                            <button className="px-8 py-3 bg-base hover:bg-surface-hover text-base text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all border border-base">Cambiar Contraseña</button>
+                        </Card>
                     )}
 
                     {activeSection === 'integrations' && (
                         <div className="p-10 text-center space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
-                            <div className="w-20 h-20 bg-slate-800 rounded-3xl mx-auto flex items-center justify-center text-slate-500">
+                            <div className="w-20 h-20 bg-surface rounded-3xl mx-auto flex items-center justify-center text-muted border border-base">
                                 <Key size={32} />
                             </div>
-                            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Modulos de Integracion (Beta)</p>
+                            <p className="text-muted font-bold uppercase tracking-widest text-xs">Módulos de Integración (Beta)</p>
+                        </div>
+                    )}
+
+                    {activeSection === 'appearance' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500 space-y-8">
+                            <div className="bg-surface p-10 rounded-[2.5rem] border border-base space-y-6">
+                                <div>
+                                    <h3 className="text-xl font-black text-base italic uppercase tracking-tight">Personalización de Interfaz</h3>
+                                    <p className="text-xs text-muted font-bold uppercase tracking-widest mt-1">Elige el tema que mejor se adapte a tu flujo de trabajo</p>
+                                </div>
+                                <div className="pt-4">
+                                    <ThemeSelector />
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>

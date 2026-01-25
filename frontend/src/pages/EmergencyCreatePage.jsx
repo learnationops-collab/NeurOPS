@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Shield, UserPlus, Key, Lock, CheckCircle, AlertCircle } from 'lucide-react';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
 
 const EmergencyCreatePage = () => {
     const [formData, setFormData] = useState({
@@ -32,34 +34,34 @@ const EmergencyCreatePage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-[#1e293b] rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden">
-                <div className="bg-gradient-to-r from-red-600 to-orange-600 p-6 flex items-center gap-4">
+        <div className="min-h-screen bg-main flex items-center justify-center p-4">
+            <Card variant="surface" className="max-w-md w-full overflow-hidden p-0 border-accent/20">
+                <div className="bg-accent p-8 flex items-center gap-4">
                     <Shield className="text-white w-10 h-10" />
                     <div>
-                        <h1 className="text-white text-xl font-bold">Acceso de Emergencia</h1>
-                        <p className="text-red-100 text-xs">Creación de usuario maestro</p>
+                        <h1 className="text-white text-xl font-black uppercase italic tracking-tighter">Acceso de Emergencia</h1>
+                        <p className="text-white/70 font-bold uppercase text-[10px] tracking-widest leading-none mt-1">Creación de usuario maestro</p>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
                     {status.message && (
-                        <div className={`p-4 rounded-lg flex items-center gap-3 ${status.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        <div className={`p-4 rounded-xl flex items-center gap-3 ${status.type === 'success' ? 'bg-success/10 text-success border border-success/20' : 'bg-accent/10 text-accent border border-accent/20'
                             }`}>
                             {status.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-                            <span className="text-sm font-medium">{status.message}</span>
+                            <span className="text-sm font-black uppercase tracking-widest">{status.message}</span>
                         </div>
                     )}
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Código Secreto</label>
+                            <label className="block text-muted text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-1">Código Secreto</label>
                             <div className="relative">
-                                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                                <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-muted/50 w-5 h-5" />
                                 <input
                                     type="password"
                                     required
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-11 pr-4 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-mono"
+                                    className="w-full bg-main border border-base rounded-xl py-4 pl-12 pr-4 text-base placeholder-muted/20 focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all font-mono font-black"
                                     placeholder="••••••••"
                                     value={formData.secret}
                                     onChange={(e) => setFormData({ ...formData, secret: e.target.value })}
@@ -68,13 +70,13 @@ const EmergencyCreatePage = () => {
                         </div>
 
                         <div>
-                            <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Nuevo Usuario</label>
+                            <label className="block text-muted text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-1">Nuevo Usuario</label>
                             <div className="relative">
-                                <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                                <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 text-muted/50 w-5 h-5" />
                                 <input
                                     type="text"
                                     required
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-11 pr-4 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all"
+                                    className="w-full bg-main border border-base rounded-xl py-4 pl-12 pr-4 text-base placeholder-muted/20 focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all font-black"
                                     placeholder="Nombre de usuario"
                                     value={formData.username}
                                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
@@ -83,13 +85,13 @@ const EmergencyCreatePage = () => {
                         </div>
 
                         <div>
-                            <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Contraseña</label>
+                            <label className="block text-muted text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-1">Contraseña</label>
                             <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted/50 w-5 h-5" />
                                 <input
                                     type="password"
                                     required
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-11 pr-4 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all"
+                                    className="w-full bg-main border border-base rounded-xl py-4 pl-12 pr-4 text-base placeholder-muted/20 focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all font-black"
                                     placeholder="Contraseña"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -98,9 +100,9 @@ const EmergencyCreatePage = () => {
                         </div>
 
                         <div>
-                            <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Rol del Usuario</label>
+                            <label className="block text-muted text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-1">Rol del Usuario</label>
                             <select
-                                className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all appearance-none cursor-pointer"
+                                className="w-full bg-main border border-base rounded-xl py-4 px-4 text-base focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all appearance-none cursor-pointer font-black uppercase"
                                 value={formData.role}
                                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                             >
@@ -112,16 +114,17 @@ const EmergencyCreatePage = () => {
                         </div>
                     </div>
 
-                    <button
+                    <Button
                         type="submit"
-                        disabled={loading}
-                        className={`w-full py-4 rounded-xl font-bold text-white transition-all shadow-lg ${loading ? 'bg-slate-700 cursor-not-allowed' : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 active:scale-[0.98] shadow-red-500/20'
-                            }`}
+                        loading={loading}
+                        variant="primary"
+                        className="w-full h-16 bg-accent border-accent hover:bg-accent/80 text-white"
+                        icon={UserPlus}
                     >
-                        {loading ? 'Procesando...' : 'Crear Usuario'}
-                    </button>
+                        Crear Usuario Maestro
+                    </Button>
                 </form>
-            </div>
+            </Card>
         </div>
     );
 };
