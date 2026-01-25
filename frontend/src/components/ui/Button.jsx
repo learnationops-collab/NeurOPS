@@ -28,10 +28,12 @@ const Button = ({
         xl: "px-10 py-6 text-sm"
     };
 
+    const Component = props.as || 'button';
+
     return (
-        <button
+        <Component
             className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
-            disabled={disabled || loading}
+            disabled={Component === 'button' ? (disabled || loading) : undefined}
             {...props}
         >
             {loading ? (
@@ -42,7 +44,7 @@ const Button = ({
                     {children}
                 </>
             )}
-        </button>
+        </Component>
     );
 };
 

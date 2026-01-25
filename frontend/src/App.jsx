@@ -9,6 +9,7 @@ import SettingsPage from './pages/SettingsPage';
 import CloserDashboard from './pages/CloserDashboard';
 import CloserLeadsPage from './pages/CloserLeadsPage';
 import CloserSettingsPage from './pages/CloserSettingsPage';
+import CloserNewSalePage from './pages/CloserNewSalePage';
 import OperationsPage from './pages/OperationsPage';
 import BookingPage from './pages/BookingPage';
 import StyleGuidePage from './pages/StyleGuidePage';
@@ -95,6 +96,14 @@ function App() {
           element={
             <MainLayout>
               <CloserSettingsPage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/closer/sales/new"
+          element={
+            <MainLayout>
+              <CloserNewSalePage />
             </MainLayout>
           }
         />
