@@ -14,7 +14,7 @@ def get_dashboard():
         return jsonify({"message": "Forbidden"}), 403
         
     tz = current_user.timezone or 'America/La_Paz'
-    data = CloserService.get_dashboard_data(current_user.id, tz)
+    data = CloserService.get_dashboard_data(current_user.id, tz, is_admin=(current_user.role == 'admin'))
     
     today_stats_serialized = None
     if data.get('today_stats'):

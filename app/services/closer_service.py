@@ -104,7 +104,7 @@ class CloserService:
         }
 
     @staticmethod
-    def get_dashboard_data(closer_id, timezone_name='America/La_Paz'):
+    def get_dashboard_data(closer_id, timezone_name='America/La_Paz', is_admin=False):
         try: user_tz = pytz.timezone(timezone_name)
         except: user_tz = pytz.timezone('America/La_Paz')
             
@@ -149,9 +149,8 @@ class CloserService:
             Appointment.start_time >= start_utc, Appointment.start_time <= end_utc
         ).order_by(Appointment.start_time.asc()).limit(20).all()
 
-        from flask_login import current_user
         recent_query = Client.query
-        if current_user.role != 'admin':
+        if not is_admin:
             recent_query = recent_query.filter(or_(
                 Client.enrollments.any(Enrollment.closer_id == closer_id),
                 Client.appointments.any(Appointment.closer_id == closer_id)

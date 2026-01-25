@@ -132,18 +132,12 @@ class Appointment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'))
     start_time = db.Column(db.DateTime, index=True)
     status = db.Column(db.String(20), default='scheduled')
-    google_event_id = db.Column(db.String(255))
-    presentation_done = db.Column(db.Boolean, default=False)
-    is_reschedule = db.Column(db.Boolean, default=False)
-    rescheduled_from_id = db.Column(db.Integer, db.ForeignKey('appointments.id'))
     origin = db.Column(db.String(100)) # VSL, Closer, etc.
     appointment_type = db.Column(db.String(50), default='Primera agenda')
     is_pinned = db.Column(db.Boolean, default=False)
 
-    rescheduled_from = db.relationship('Appointment', remote_side=[id], backref='reschedules')
 
 class Availability(db.Model):
     __tablename__ = 'availability'
