@@ -35,6 +35,7 @@ def get_dashboard():
         serialized['agendas_today'].append({
             "id": appt.id,
             "lead_name": appt.client.full_name or appt.client.email if appt.client else "Unknown",
+            "phone": appt.client.phone if appt.client else "",
             "start_time": appt.start_time.isoformat(),
             "status": appt.status,
             "type": appt.appointment_type,
@@ -180,3 +181,40 @@ def register_sale():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+@bp.route('/appointments/<int:id>', methods=['PATCH'])
+@login_required
+def update_appointment(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    
+    appt = Appointment.query.get_or_404(id)
+    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    data = request.get_json() or {}
+    if 'start_time' in data:
+        try:
+            # Format usually comes as ISO from frontend
+            appt.start_time = datetime.fromisoformat(data['start_time'].replace('Z', ''))
+        except ValueError:
+            return jsonify({"error": "Invalid date format"}), 400
+            
+    db.session.commit()
+    return jsonify({"message": "Agenda actualizada con éxito"}), 200
+
+@bp.route('/slots', methods=['GET'])
+@login_required
+def get_slots():
+    slots = CloserService.get_available_slots(current_user.id)
+    return jsonify(slots), 200
+
+@bp.route('/appointments/<int:id>/process', methods=['POST'])
+@login_required
+def process_agenda(id):
+    data = request.get_json() or {}
+    try:
+        CloserService.process_agenda(current_user.id, id, data)
+        return jsonify({"message": "Agenda procesada"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400

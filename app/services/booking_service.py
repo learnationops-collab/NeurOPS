@@ -6,12 +6,9 @@ import pytz
 class BookingService:
     @staticmethod
     def get_available_slots_utc(start_date, end_date, preferred_closer_id=None):
-        availabilities = Availability.query.join(Availability.closer).filter(
-            Availability.date >= start_date, 
-            Availability.date <= end_date,
-            User.role == 'closer'
-        ).all()
+        from app.models import WeeklyAvailability
         
+        # Get all appointments in range to avoid double booking
         appointments = Appointment.query.filter(
             Appointment.start_time >= datetime.combine(start_date, time.min),
             Appointment.start_time <= datetime.combine(end_date, time.max) + timedelta(days=1),
@@ -23,28 +20,57 @@ class BookingService:
             booked_slots.add((appt.closer_id, appt.start_time))
             
         unique_slots = {}
-        for av in availabilities:
-            closer = av.closer
-            if not closer: continue
+        
+        # Iterate through each day in the range
+        current_date = start_date
+        while current_date <= end_date:
+            # 1. Check for specific overrides in Availability table for this day
+            day_avs = Availability.query.filter_by(date=current_date)
+            if preferred_closer_id:
+                day_avs = day_avs.filter_by(closer_id=preferred_closer_id)
             
-            try: closer_tz = pytz.timezone(closer.timezone or 'America/La_Paz')
-            except: closer_tz = pytz.timezone('America/La_Paz')
+            day_avs = day_avs.all()
+            
+            if day_avs:
+                # Use specific offsets if they exist
+                for av in day_avs:
+                    BookingService._process_slot(av.closer, current_date, av.start_time, booked_slots, unique_slots, preferred_closer_id)
+            else:
+                # 2. Fallback to WeeklyAvailability
+                day_of_week = current_date.weekday() # 0 = Monday, etc.
+                weekly_query = WeeklyAvailability.query.filter_by(day_of_week=day_of_week, is_active=True)
+                if preferred_closer_id:
+                    weekly_query = weekly_query.filter_by(closer_id=preferred_closer_id)
                 
-            local_dt = closer_tz.localize(datetime.combine(av.date, av.start_time))
-            utc_dt = local_dt.astimezone(pytz.UTC).replace(tzinfo=None)
+                weekly_slots = weekly_query.all()
+                for ws in weekly_slots:
+                    BookingService._process_slot(ws.closer, current_date, ws.start_time, booked_slots, unique_slots, preferred_closer_id)
             
-            if utc_dt < datetime.utcnow(): continue
-            
-            if (av.closer_id, utc_dt) not in booked_slots:
-                ts_key = utc_dt
-                if ts_key not in unique_slots:
-                    unique_slots[ts_key] = {'utc_iso': utc_dt.isoformat() + 'Z', 'closer_id': av.closer_id, 'ts': utc_dt.timestamp()}
-                elif preferred_closer_id and av.closer_id == preferred_closer_id:
-                     unique_slots[ts_key]['closer_id'] = av.closer_id
+            current_date += timedelta(days=1)
         
         available_slots = list(unique_slots.values())
         available_slots.sort(key=lambda x: x['ts'])
         return available_slots
+
+    @staticmethod
+    def _process_slot(closer, date_val, time_val, booked_slots, unique_slots, preferred_closer_id):
+        if not closer: return
+        
+        try: closer_tz = pytz.timezone(closer.timezone or 'America/La_Paz')
+        except: closer_tz = pytz.timezone('America/La_Paz')
+            
+        local_dt = closer_tz.localize(datetime.combine(date_val, time_val))
+        utc_dt = local_dt.astimezone(pytz.UTC).replace(tzinfo=None)
+        
+        # Avoid past slots (with 5 min buffer)
+        if utc_dt < datetime.utcnow() - timedelta(minutes=5): return
+        
+        if (closer.id, utc_dt) not in booked_slots:
+            ts_key = utc_dt
+            if ts_key not in unique_slots:
+                unique_slots[ts_key] = {'utc_iso': utc_dt.isoformat() + 'Z', 'closer_id': closer.id, 'ts': utc_dt.timestamp()}
+            elif preferred_closer_id and closer.id == preferred_closer_id:
+                 unique_slots[ts_key]['closer_id'] = closer.id
 
     @staticmethod
     def create_or_update_client(data, client_id=None):
