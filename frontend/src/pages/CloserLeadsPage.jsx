@@ -25,6 +25,9 @@ const CloserLeadsPage = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [search, setSearch] = useState('');
     const [error, setError] = useState(null);
+    const [editingId, setEditingId] = useState(null);
+    const [editStartTime, setEditStartTime] = useState('');
+    const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -53,6 +56,19 @@ const CloserLeadsPage = () => {
         e.preventDefault();
         setPage(1);
         fetchData();
+    };
+
+    const handleUpdateDate = async (id) => {
+        setUpdating(true);
+        try {
+            await api.patch(`/closer/appointments/${id}`, { start_time: editStartTime });
+            setEditingId(null);
+            fetchData();
+        } catch (err) {
+            alert("Error al actualizar la fecha");
+        } finally {
+            setUpdating(false);
+        }
     };
 
     return (
@@ -147,11 +163,43 @@ const CloserLeadsPage = () => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-6">
-                                        <div className="flex items-center gap-2 text-slate-400 font-medium">
-                                            <Calendar size={14} className="text-indigo-500/50" />
-                                            <span className="text-sm">{new Date(item.date).toLocaleDateString()}</span>
-                                            <span className="text-[10px] opacity-50 ml-1">{new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
+                                        {editingId === item.id ? (
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="datetime-local"
+                                                    className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white text-[10px] outline-none focus:ring-1 focus:ring-indigo-500"
+                                                    value={editStartTime}
+                                                    onChange={(e) => setEditStartTime(e.target.value)}
+                                                />
+                                                <button
+                                                    onClick={() => handleUpdateDate(item.id)}
+                                                    disabled={updating}
+                                                    className="p-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 transition-all disabled:opacity-50"
+                                                >
+                                                    {updating ? <Loader2 size={12} className="animate-spin" /> : <p className="text-[9px] font-black uppercase tracking-widest px-1">OK</p>}
+                                                </button>
+                                                <button
+                                                    onClick={() => setEditingId(null)}
+                                                    className="p-1.5 bg-slate-800 text-slate-400 rounded-md hover:bg-slate-700 transition-all"
+                                                >
+                                                    <p className="text-[9px] font-black uppercase tracking-widest px-1">X</p>
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div
+                                                onClick={() => {
+                                                    if (activeTab === 'agendas') {
+                                                        setEditingId(item.id);
+                                                        setEditStartTime(item.date ? item.date.substring(0, 16) : '');
+                                                    }
+                                                }}
+                                                className={`flex items-center gap-2 text-slate-400 font-medium ${activeTab === 'agendas' ? 'cursor-pointer hover:text-white transition-colors' : ''}`}
+                                            >
+                                                <Calendar size={14} className="text-indigo-500/50" />
+                                                <span className="text-sm">{new Date(item.date).toLocaleDateString()}</span>
+                                                <span className="text-[10px] opacity-50 ml-1">{new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </div>
+                                        )}
                                     </td>
                                     {activeTab === 'agendas' ? (
                                         <>

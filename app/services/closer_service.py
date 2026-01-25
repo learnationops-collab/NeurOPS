@@ -146,7 +146,7 @@ class CloserService:
 
         upcoming = Appointment.query.filter(
             Appointment.closer_id == closer_id,
-            Appointment.start_time >= start_utc, Appointment.start_time <= end_utc, Appointment.status.in_(['scheduled', 'confirmed'])
+            Appointment.start_time >= start_utc, Appointment.start_time <= end_utc
         ).order_by(Appointment.start_time.asc()).limit(20).all()
 
         from flask_login import current_user
@@ -219,3 +219,56 @@ class CloserService:
             "payment_methods": [{"id": m.id, "name": m.name} for m in methods],
             "leads": [{"id": l.id, "username": l.full_name or l.email, "email": l.email} for l in leads]
         }
+    @staticmethod
+    def get_available_slots(closer_id, days=7):
+        # We'll use BookingService logic but restricted to this closer
+        from app.services.booking_service import BookingService
+        start_date = date.today()
+        end_date = start_date + timedelta(days=days)
+        return BookingService.get_available_slots_utc(start_date, end_date, preferred_closer_id=closer_id)
+
+    @staticmethod
+    def process_agenda(closer_id, appt_id, data):
+        from app.models import Appointment, db
+        from app.services.booking_service import BookingService
+        
+        appt = Appointment.query.get_or_404(appt_id)
+        if appt.closer_id != closer_id:
+            raise Exception("No tienes permiso sobre esta agenda")
+            
+        new_status = data.get('status') # Completada, Primera Agenda, Cancelada, No Show, Reprogramada
+        reschedule_date = data.get('reschedule_date') # ISO string
+        
+        # Logic: 
+        # - "Completada" -> status 'completed'
+        # - "Cancelada" -> status 'canceled'
+        # - "No Show" -> status 'no_show'
+        # - "Reprogramada" -> Old appt becomes 'reprogrammed', new one created as 'Primera agenda'
+        # - "Primera Agenda" -> Old appt becomes 'completed', new one created as 'Segunda agenda'
+
+        if new_status == 'Completada':
+            appt.status = 'completed'
+        elif new_status == 'Cancelada':
+            appt.status = 'canceled'
+        elif new_status == 'No Show':
+            appt.status = 'no_show'
+        elif new_status == 'Reprogramada':
+            if not reschedule_date: raise Exception("Fecha de reagenda requerida")
+            appt.status = 'reprogrammed'
+            # Create new Primera Agenda
+            new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
+            BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
+            # Find the new appt and set its type (create_appointment defaults to Primera if we follow standard, let's fix type)
+            new_appt = Appointment.query.filter_by(closer_id=appt.closer_id, client_id=appt.client_id, start_time=new_dt).first()
+            if new_appt: new_appt.appointment_type = 'Primera agenda'
+        elif new_status == 'Primera Agenda':
+            if not reschedule_date: raise Exception("Fecha de segunda agenda requerida")
+            appt.status = 'completed'
+            # Create new Segunda Agenda
+            new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
+            BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
+            new_appt = Appointment.query.filter_by(closer_id=appt.closer_id, client_id=appt.client_id, start_time=new_dt).first()
+            if new_appt: new_appt.appointment_type = 'Segunda agenda'
+        
+        db.session.commit()
+        return appt

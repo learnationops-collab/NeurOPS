@@ -24,6 +24,7 @@ class User(UserMixin, db.Model):
     # Relationships for Closers
     appointments_as_closer = db.relationship('Appointment', foreign_keys='Appointment.closer_id', backref='closer', lazy='dynamic')
     availability = db.relationship('Availability', backref='closer', lazy='dynamic', cascade="all, delete-orphan")
+    weekly_availability = db.relationship('WeeklyAvailability', backref='closer', lazy='dynamic', cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

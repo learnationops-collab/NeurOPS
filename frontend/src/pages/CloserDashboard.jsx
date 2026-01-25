@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import NewSaleModal from '../components/NewSaleModal';
 import api from '../services/api';
+import AgendaManagerModal from '../components/AgendaManagerModal';
 import {
     Activity,
     Calendar,
@@ -42,6 +43,8 @@ const CloserDashboard = () => {
     const [submitting, setSubmitting] = useState(false);
     const [feedback, setFeedback] = useState(null);
     const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+    const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
+    const [selectedAgenda, setSelectedAgenda] = useState(null);
 
     useEffect(() => {
         fetchDashboard();
@@ -271,9 +274,12 @@ const CloserDashboard = () => {
                         </div>
                         <div className="divide-y divide-slate-800/50 max-h-[400px] overflow-y-auto custom-scrollbar">
                             {data.agendas_today?.length > 0 ? data.agendas_today.map(appt => (
-                                <div key={appt.id} className="px-8 py-6 hover:bg-slate-800/30 transition-all flex items-center justify-between group">
+                                <div
+                                    onClick={() => { setSelectedAgenda(appt); setIsAgendaModalOpen(true); }}
+                                    className="px-8 py-6 hover:bg-slate-800/30 transition-all flex items-center justify-between group cursor-pointer"
+                                >
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center border border-slate-700 text-xs font-black text-white">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center border border-slate-700 text-xs font-black text-white group-hover:bg-indigo-600 group-hover:border-indigo-500 transition-all">
                                             {new Date(appt.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </div>
                                         <div>
@@ -282,9 +288,9 @@ const CloserDashboard = () => {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button className="p-2 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all" title="Ver Perfil">
+                                        <div className="p-2 text-slate-500 group-hover:text-indigo-400 transition-all">
                                             <ArrowUpRight size={18} />
-                                        </button>
+                                        </div>
                                     </div>
                                 </div>
                             )) : (
@@ -445,6 +451,12 @@ const CloserDashboard = () => {
             <NewSaleModal
                 isOpen={isSaleModalOpen}
                 onClose={() => setIsSaleModalOpen(false)}
+                onSuccess={fetchDashboard}
+            />
+            <AgendaManagerModal
+                isOpen={isAgendaModalOpen}
+                appointment={selectedAgenda}
+                onClose={() => { setIsAgendaModalOpen(false); setSelectedAgenda(null); }}
                 onSuccess={fetchDashboard}
             />
         </div>

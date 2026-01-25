@@ -112,6 +112,7 @@ const DatabasePage = () => {
         if (editingId === item.id) {
             if (type === 'checkbox') return <input type="checkbox" checked={editForm[field]} onChange={(e) => setEditForm({ ...editForm, [field]: e.target.checked })} />;
             if (type === 'number') return <input type="number" step="0.01" className="bg-slate-800 border-none rounded px-2 py-1 text-white w-20" value={editForm[field]} onChange={(e) => setEditForm({ ...editForm, [field]: parseFloat(e.target.value) })} />;
+            if (type === 'datetime') return <input type="datetime-local" className="bg-slate-800 border-none rounded px-2 py-1 text-white text-xs" value={editForm[field] ? (editForm[field].includes('Z') ? editForm[field].split('.')[0] : editForm[field].substring(0, 16)) : ''} onChange={(e) => setEditForm({ ...editForm, [field]: e.target.value })} />;
             return <input type="text" className="bg-slate-800 border-none rounded px-2 py-1 text-white w-full" value={editForm[field] || ''} onChange={(e) => setEditForm({ ...editForm, [field]: e.target.value })} />;
         }
 
@@ -166,7 +167,7 @@ const DatabasePage = () => {
         if (activeTab === 'agendas') return (
             <>
                 <td className="px-8 py-5 text-indigo-500 font-black">#{item.id}</td>
-                <td className="px-8 py-5 text-xs text-slate-300 font-bold">{new Date(item.date).toLocaleString()}</td>
+                <td className="px-8 py-5 text-xs text-slate-300 font-bold">{editingId === item.id ? renderCell(item, 'start_time', 'datetime') : new Date(item.start_time).toLocaleString()}</td>
                 <td className="px-8 py-5">
                     <p className="text-white font-bold text-sm">{item.lead}</p>
                     <p className="text-[10px] text-indigo-500 font-black uppercase">Closer: {item.closer}</p>

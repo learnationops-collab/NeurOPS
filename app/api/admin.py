@@ -183,7 +183,7 @@ def manage_db_agendas():
         term = f"%{search}%"
         query = query.filter(or_(Client.full_name.ilike(term), Client.email.ilike(term)))
     pagination = query.order_by(Appointment.start_time.desc()).paginate(page=page, per_page=50, error_out=False)
-    return jsonify({"total": pagination.total, "pages": pagination.pages, "data": [{"id": a.id, "lead": a.client.full_name or a.client.email, "closer": a.closer.username, "date": a.start_time.isoformat(), "status": a.status, "origin": a.origin} for a in pagination.items]}), 200
+    return jsonify({"total": pagination.total, "pages": pagination.pages, "data": [{"id": a.id, "lead": a.client.full_name or a.client.email, "closer": a.closer.username, "start_time": a.start_time.isoformat(), "status": a.status, "origin": a.origin} for a in pagination.items]}), 200
 
 @bp.route('/admin/db/sales_raw', methods=['GET', 'POST'])
 @login_required
