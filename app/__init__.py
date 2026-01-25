@@ -17,7 +17,7 @@ naming_convention = {
 
 # Initialize extensions
 db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
-migrate = Migrate(render_as_batch=True)
+migrate = Migrate()
 login = LoginManager()
 login.login_view = 'auth.login'
 login.login_message = 'Por favor inicia sesión para acceder a esta página.'
@@ -41,7 +41,9 @@ def create_app(config_class=Config):
     from flask_wtf.csrf import CSRFProtect
     csrf = CSRFProtect(app)
     db.init_app(app)
-    migrate.init_app(app, db)
+    # Solo usar render_as_batch para SQLite (desarrollo local)
+    is_sqlite = app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('sqlite')
+    migrate.init_app(app, db, render_as_batch=is_sqlite)
     login.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
