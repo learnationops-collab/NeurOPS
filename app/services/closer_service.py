@@ -219,14 +219,6 @@ class CloserService:
             "leads": [{"id": l.id, "username": l.full_name or l.email, "email": l.email} for l in leads]
         }
     @staticmethod
-    def get_available_slots(closer_id, days=7):
-        # We'll use BookingService logic but restricted to this closer
-        from app.services.booking_service import BookingService
-        start_date = date.today()
-        end_date = start_date + timedelta(days=days)
-        return BookingService.get_available_slots_utc(start_date, end_date, preferred_closer_id=closer_id)
-
-    @staticmethod
     def process_agenda(closer_id, appt_id, data):
         from app.models import Appointment, db
         from app.services.booking_service import BookingService
@@ -271,3 +263,5 @@ class CloserService:
         
         db.session.commit()
         return appt
+
+

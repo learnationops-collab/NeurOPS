@@ -218,3 +218,43 @@ def process_agenda(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+@bp.route('/events', methods=['GET'])
+@login_required
+def get_events():
+    events = Event.query.filter_by(is_active=True).all()
+    return jsonify([{
+        "id": e.id,
+        "name": e.name,
+        "utm_source": e.utm_source,
+        "duration_minutes": e.duration_minutes,
+        "buffer_minutes": e.buffer_minutes
+    } for e in events]), 200
+
+@bp.route('/events/<int:id>', methods=['PATCH'])
+@login_required
+def update_event(id):
+    # Allows updating event settings
+    event = Event.query.get_or_404(id)
+    data = request.get_json() or {}
+    
+    if 'duration_minutes' in data:
+        event.duration_minutes = data['duration_minutes']
+    if 'buffer_minutes' in data:
+        event.buffer_minutes = data['buffer_minutes']
+        
+    db.session.commit()
+    return jsonify({"message": "Evento actualizado"}), 200
+
+@bp.route('/availability', methods=['GET'])
+@login_required
+def get_availability():
+    # Returns specific date overrides (Availability model)
+    # Note: Availability model needs to be imported if not already avaiable in context (it is imported at top of file)
+    from app.models import Availability
+    avails = Availability.query.filter_by(closer_id=current_user.id).all()
+    return jsonify([{
+        "date": a.date.isoformat(),
+        "start": a.start_time.strftime('%H:%M'),
+        "end": a.end_time.strftime('%H:%M')
+    } for a in avails]), 200
