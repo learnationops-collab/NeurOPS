@@ -51,6 +51,15 @@ class Client(db.Model):
     def __repr__(self):
         return f'<Client {self.full_name or self.email}>'
 
+class EventGroup(db.Model):
+    __tablename__ = 'event_groups'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    events = db.relationship('Event', backref='group', lazy='dynamic')
+
+    def __repr__(self):
+        return f'<EventGroup {self.name}>'
+
 class Event(db.Model):
     __tablename__ = 'events'
     id = db.Column(db.Integer, primary_key=True)
@@ -59,6 +68,11 @@ class Event(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     duration_minutes = db.Column(db.Integer, default=30)
     buffer_minutes = db.Column(db.Integer, default=15)
+    group_id = db.Column(db.Integer, db.ForeignKey('event_groups.id'))
+    funnel_steps = db.Column(db.JSON)
+    min_score = db.Column(db.Integer, default=0)
+    redirect_url_fail = db.Column(db.String(255))
+    redirect_url_success = db.Column(db.String(255))
 
     def __repr__(self):
         return f'<Event {self.name}>'
@@ -117,11 +131,18 @@ class Appointment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'))
     start_time = db.Column(db.DateTime, index=True)
     status = db.Column(db.String(20), default='scheduled')
+    google_event_id = db.Column(db.String(255))
+    presentation_done = db.Column(db.Boolean, default=False)
+    is_reschedule = db.Column(db.Boolean, default=False)
+    rescheduled_from_id = db.Column(db.Integer, db.ForeignKey('appointments.id'))
     origin = db.Column(db.String(100)) # VSL, Closer, etc.
     appointment_type = db.Column(db.String(50), default='Primera agenda')
     is_pinned = db.Column(db.Boolean, default=False)
+
+    rescheduled_from = db.relationship('Appointment', remote_side=[id], backref='reschedules')
 
 class Availability(db.Model):
     __tablename__ = 'availability'
@@ -227,4 +248,75 @@ class GoogleCalendarToken(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user = db.relationship('User', backref=db.backref('google_token', uselist=False, cascade="all, delete-orphan"))
 
-# Removed ClientComment as user said "No crees todavía la tabla para comentarios, lo vamos a hacer luego"
+class Integration(db.Model):
+    __tablename__ = 'integrations'
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    url_dev = db.Column(db.String(255))
+    url_prod = db.Column(db.String(255))
+    active_env = db.Column(db.String(10), default='dev')
+
+class Pipeline(db.Model):
+    __tablename__ = 'pipelines'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    stages = db.relationship('PipelineStage', backref='pipeline', lazy='dynamic')
+
+class PipelineStage(db.Model):
+    __tablename__ = 'pipeline_stages'
+    id = db.Column(db.Integer, primary_key=True)
+    pipeline_id = db.Column(db.Integer, db.ForeignKey('pipelines.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    order = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+
+class UserViewSetting(db.Model):
+    __tablename__ = 'user_view_settings'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    view_name = db.Column(db.String(64), nullable=False)
+    settings = db.Column(db.JSON)
+
+class Campaign(db.Model):
+    __tablename__ = 'campaigns'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    external_id = db.Column(db.String(100))
+    status = db.Column(db.String(20))
+    ad_groups = db.relationship('AdGroup', backref='campaign', lazy='dynamic')
+
+class AdGroup(db.Model):
+    __tablename__ = 'ad_groups'
+    id = db.Column(db.Integer, primary_key=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('campaigns.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    external_id = db.Column(db.String(100))
+    status = db.Column(db.String(20))
+
+class MarketingBudget(db.Model):
+    __tablename__ = 'marketing_budgets'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    budget = db.Column(db.Float, default=0.0)
+    spent = db.Column(db.Float, default=0.0)
+    source = db.Column(db.String(50))
+
+class ClientComment(db.Model):
+    __tablename__ = 'client_comments'
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Ad(db.Model):
+    __tablename__ = 'ads'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    external_id = db.Column(db.String(100))
+    status = db.Column(db.String(20))
+    total_spend = db.Column(db.Float, default=0.0)
+    ad_group_id = db.Column(db.Integer, db.ForeignKey('ad_groups.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'))
