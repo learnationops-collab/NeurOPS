@@ -145,7 +145,7 @@ class ImportService:
 
                 stats["success"] += 1
             except Exception as e:
-                print(f"[Import Error Row {index+2}] {e}") # DEBUG
+                # Error is captured in stats, no need to print to avoid log overflow
                 stats["errors"].append({"row": index + 2, "error": str(e)})
 
         if not dry_run:
