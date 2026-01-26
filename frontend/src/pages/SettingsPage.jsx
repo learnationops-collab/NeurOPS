@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Settings, Shield, User, LogOut, Bell, Key, Plus, Trash2, ClipboardCheck, Loader2, Check, X, Package, CreditCard } from 'lucide-react';
+import { Settings, Shield, User, LogOut, Bell, Key, Plus, Trash2, ClipboardCheck, Loader2, Check, X, Package, CreditCard, Palette, Layers } from 'lucide-react';
 import UsersPage from './UsersPage';
 import ReportQuestionsManager from '../components/ReportQuestionsManager';
 import ProgramsManager from '../components/ProgramsManager';
-import { Palette } from 'lucide-react';
+import FunnelsManager from '../components/FunnelsManager';
+import PaymentMethodsManager from '../components/PaymentMethodsManager';
 import Card from '../components/ui/Card';
+import ThemeSelector from '../components/ui/ThemeSelector';
 
 const SettingsPage = () => {
     const [activeSection, setActiveSection] = useState('team');
@@ -15,6 +17,7 @@ const SettingsPage = () => {
         { id: 'team', label: 'Gestion de Equipo', icon: Shield },
         { id: 'programs', label: 'Programas', icon: Package },
         { id: 'payment_methods', label: 'Metodos de Pago', icon: CreditCard },
+        { id: 'funnels', label: 'Embudos y Eventos', icon: Layers },
         { id: 'questions', label: 'Preguntas de Reporte', icon: ClipboardCheck },
         { id: 'appearance', label: 'Apariencia', icon: Palette },
         { id: 'integrations', label: 'Integraciones', icon: Key },
@@ -67,9 +70,6 @@ const SettingsPage = () => {
                 <div className="lg:col-span-3">
                     {activeSection === 'team' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                            {/* Reuse the UsersPage component directly here? 
-                                Or simplify it. Let's just render the team list 
-                                directly or import the component logic. */}
                             <UsersPage />
                         </div>
                     )}
@@ -89,6 +89,12 @@ const SettingsPage = () => {
                     {activeSection === 'questions' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                             <ReportQuestionsManager />
+                        </div>
+                    )}
+
+                    {activeSection === 'funnels' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500 text-left">
+                            <FunnelsManager />
                         </div>
                     )}
 

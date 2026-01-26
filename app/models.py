@@ -165,6 +165,10 @@ class SurveyQuestion(db.Model):
     order = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
     mapping_field = db.Column(db.String(50), nullable=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True)
+    step = db.Column(db.String(20), default='first_survey') # 'first_survey', 'second_survey'
+    
+    event = db.relationship('Event', backref='questions')
 
 class SurveyAnswer(db.Model):
     __tablename__ = 'survey_answers'

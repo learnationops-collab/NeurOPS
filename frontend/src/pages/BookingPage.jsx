@@ -69,14 +69,16 @@ const BookingPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get(`/public/funnel/@${username}/${event_slug}`);
+            // Updated route to use only event_slug (utm_source)
+            const res = await api.get(`/public/funnel/${event_slug}`);
             setEventInfo(res.data.event);
             setQuestions(res.data.questions);
             setAvailability(res.data.availability);
             setCloserName(res.data.closer_name);
         } catch (err) {
             console.error(err);
-            setError(err.response?.data?.error || "No se pudo cargar la página de agendamiento.");
+            const msg = err.response?.data?.error || err.message || "Error al conectar con el servidor.";
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -114,7 +116,7 @@ const BookingPage = () => {
                 utm_medium: searchParams.get('utm_medium'),
                 utm_campaign: searchParams.get('utm_campaign')
             };
-            await api.post(`/public/book/@${username}`, payload);
+            await api.post(`/public/book`, payload);
             setSuccess(true);
         } catch (err) {
             setError(err.response?.data?.error || "Error al confirmar el agendamiento.");
@@ -164,6 +166,16 @@ const BookingPage = () => {
     return (
         <div className="min-h-screen bg-main text-base flex flex-col font-sans selection:bg-primary/30">
             <div className="max-w-2xl mx-auto w-full p-6 md:p-12 flex-1 flex flex-col justify-center">
+
+                {error && (
+                    <div className="mb-10 p-6 bg-red-500/10 border border-red-500/20 rounded-3xl flex items-center gap-4 text-red-500 animate-in fade-in zoom-in-95 duration-500">
+                        <AlertCircle className="w-8 h-8 shrink-0" />
+                        <div className="space-y-1">
+                            <p className="font-black uppercase tracking-widest text-xs">Error de Conexión</p>
+                            <p className="text-[10px] font-medium opacity-80 uppercase tracking-tight">{error}</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Stepper */}
                 <div className="flex items-center justify-between mb-16 gap-3">

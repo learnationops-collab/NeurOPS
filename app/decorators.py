@@ -19,6 +19,9 @@ def admin_required(f):
     @login_required
     def decorated_function(*args, **kwargs):
         if current_user.role != 'admin':
+            from flask import request, jsonify
+            if request.path.startswith('/api/'):
+                return jsonify({"error": "Admin role required"}), 403
             flash('No tienes permiso para acceder a esta página.')
             return redirect(url_for('main.index'))
         return f(*args, **kwargs)

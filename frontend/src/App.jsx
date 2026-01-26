@@ -23,6 +23,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
         <Route path="/book/:username/:event_slug" element={<BookingPage />} />
+        <Route path="/book/:event_slug" element={<BookingPage />} />
 
 
         {/* Protected Admin Routes */}
