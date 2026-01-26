@@ -112,6 +112,10 @@ class CloserService:
         today_local = now_local.date()
         start_utc = user_tz.localize(datetime.combine(today_local, time.min)).astimezone(pytz.UTC).replace(tzinfo=None)
         end_utc = user_tz.localize(datetime.combine(today_local, time.max)).astimezone(pytz.UTC).replace(tzinfo=None)
+
+        print(f"[DEBUG] Closer: {closer_id}, TZ: {timezone_name}")
+        print(f"[DEBUG] Today Local: {today_local}")
+        print(f"[DEBUG] UTC Range: {start_utc} to {end_utc}")
         
         detailed_metrics = DashboardService.get_detailed_closer_metrics(start_utc, end_utc, closer_id)
         
