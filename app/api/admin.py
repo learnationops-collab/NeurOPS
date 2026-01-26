@@ -257,7 +257,6 @@ def generate_mock_data():
         sale_count=data.get('sales', 5)
     )
     return jsonify({"message": message}), 200 if success else 400
-    return jsonify({"message": message}), 200 if success else 400
 
 # --- Admin Funnel Management ---
 

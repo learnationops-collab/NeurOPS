@@ -16,7 +16,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Filter,
-    Trash2
+    Trash2,
+    Save
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
