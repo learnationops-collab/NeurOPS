@@ -24,40 +24,77 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import AdvancedImportTool from '../components/AdvancedImportTool';
 import { FileUp } from 'lucide-react';
+import DateRangeFilter from '../components/DateRangeFilter';
+import MultiSelectFilter from '../components/MultiSelectFilter';
+import usePersistentFilters from '../hooks/usePersistentFilters';
 
 const DatabasePage = () => {
-    const [activeTab, setActiveTab] = useState('programs');
+    const [activeTab, setActiveTab] = useState('leads_raw'); // Default to leads for visibility
     const [data, setData] = useState([]);
     const [pagination, setPagination] = useState({ page: 1, total: 0, pages: 1 });
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState({});
+    const [showFilters, setShowFilters] = useState(false);
+
+    // Persistent Filters for each tab? ideally separated or unified
+    // For simplicity, we can use one hook object but keyed by tab?
+    // Let's use simpler approach: one filter state object reset on tab change or managed by hook?
+    // We'll use local state for simplicity here or a hook with a key that includes activeTab
+    const { filters, updateFilter, setFilters } = usePersistentFilters(`admin_${activeTab}`, {
+        dateRange: { type: 'all', start: '', end: '' },
+        status: [],
+        program: [],
+        payment_method: [],
+        payment_type: [],
+        closer: [],
+        origin: [],
+        sort_by: 'newest'
+    });
 
     const tabs = [
-        { id: 'programs', label: 'Programas', icon: Package, endpoint: '/admin/db/programs' },
-        { id: 'payment-methods', label: 'Metodos de Pago', icon: CreditCard, endpoint: '/admin/db/payment-methods' },
         { id: 'leads_raw', label: 'Leads / Clientes', icon: Users, endpoint: '/admin/db/leads_raw' },
         { id: 'sales_raw', label: 'Ventas (Pagos)', icon: TrendingUp, endpoint: '/admin/db/sales_raw' },
         { id: 'agendas', label: 'Agenda General', icon: Calendar, endpoint: '/admin/db/agendas' },
+        { id: 'programs', label: 'Programas', icon: Package, endpoint: '/admin/db/programs' },
+        { id: 'payment-methods', label: 'Metodos de Pago', icon: CreditCard, endpoint: '/admin/db/payment-methods' },
         { id: 'questions', label: 'Reporte Diario (Q)', icon: HelpCircle, endpoint: '/admin/db/questions' },
         { id: 'import', label: 'Importaciones', icon: FileUp, endpoint: null },
     ];
 
     useEffect(() => {
+        // Reset specific filters when switching if needed, or let them persist per tab
         fetchData(1);
-    }, [activeTab]);
+    }, [activeTab, filters]);
 
     const fetchData = async (page = 1) => {
         try {
             setLoading(true);
             const tab = tabs.find(t => t.id === activeTab);
-            if (!tab.endpoint) {
-                setData([]);
+            if (!tab?.endpoint) {
+                if (tab.id !== 'import') setData([]);
                 setLoading(false);
                 return;
             }
-            const res = await api.get(tab.endpoint, { params: { page, search } });
+
+            const params = {
+                page,
+                search,
+                start_date: filters.dateRange?.start,
+                end_date: filters.dateRange?.end,
+                ...filters // spread others like sort_by
+            };
+
+            // Format list filters
+            if (filters.status?.length) params.status = filters.status.join(',');
+            if (filters.payment_method?.length) params.payment_method = filters.payment_method.join(',');
+            if (filters.payment_type?.length) params.payment_type = filters.payment_type.join(',');
+            if (filters.closer?.length) params.closer = filters.closer.join(',');
+            if (filters.origin?.length) params.origin = filters.origin.join(',');
+            // Program filter?
+
+            const res = await api.get(tab.endpoint, { params });
 
             if (res.data.data) {
                 setData(res.data.data);
@@ -73,39 +110,27 @@ const DatabasePage = () => {
         }
     };
 
-    const startEditing = (item) => {
-        setEditingId(item.id);
-        setEditForm({ ...item });
-    };
-
-    const cancelEditing = () => {
-        setEditingId(null);
-        setEditForm({});
-    };
-
-    const handleSave = async () => {
+    // ... editing logic ...
+    const startEditing = (item) => { setEditingId(item.id); setEditForm({ ...item }); };
+    const cancelEditing = () => { setEditingId(null); setEditForm({}); };
+    const handleSave = async () => { /* ... existing ... */
         try {
             const tab = tabs.find(t => t.id === activeTab);
             await api.post(tab.endpoint, editForm);
             setEditingId(null);
             fetchData(pagination.page);
-        } catch (err) {
-            alert("Error al guardar cambios");
-        }
+        } catch (err) { alert("Error al guardar cambios"); }
     };
-
-    const handleDelete = async (id) => {
+    const handleDelete = async (id) => { /* ... existing ... */
         if (!window.confirm("¿Seguro que deseas eliminar este registro?")) return;
         try {
             const tab = tabs.find(t => t.id === activeTab);
             await api.delete(`${tab.endpoint}?id=${id}`);
             fetchData(pagination.page);
-        } catch (err) {
-            alert("No se pudo eliminar el registro");
-        }
+        } catch (err) { alert("No se pudo eliminar el registro"); }
     };
 
-    const renderHeader = () => {
+    const renderHeader = () => { /* ... existing ... */
         const headers = {
             'programs': ['ID', 'Nombre', 'Precio', 'Estado'],
             'payment-methods': ['ID', 'Nombre', 'Fee %', 'Fee Fixed', 'Estado'],
@@ -119,7 +144,7 @@ const DatabasePage = () => {
         ));
     };
 
-    const renderCell = (item, field, type = 'text') => {
+    const renderCell = (item, field, type = 'text') => { /* ... existing ... */
         if (editingId === item.id) {
             if (type === 'checkbox') return <input type="checkbox" checked={editForm[field]} onChange={(e) => setEditForm({ ...editForm, [field]: e.target.checked })} />;
             if (type === 'number') return <input type="number" step="0.01" className="bg-slate-800 border-none rounded px-2 py-1 text-white w-20" value={editForm[field]} onChange={(e) => setEditForm({ ...editForm, [field]: parseFloat(e.target.value) })} />;
@@ -132,7 +157,74 @@ const DatabasePage = () => {
         return <span className="text-base/80">{item[field]}</span>;
     };
 
-    const renderRow = (item) => {
+    const statusOptions = [
+        { value: 'scheduled', label: 'Programada' },
+        { value: 'completed', label: 'Completada' },
+        { value: 'no_show', label: 'No Show' },
+        { value: 'canceled', label: 'Cancelada' },
+        { value: 'sold', label: 'Ventada' }
+    ];
+
+    const paymentMethods = [
+        { value: 'Stripe', label: 'Stripe' },
+        { value: 'PayPal', label: 'PayPal' },
+        { value: 'Transferencia', label: 'Transferencia' }
+    ];
+
+    const paymentTypes = [
+        { value: 'Full', label: 'Pago Completo' },
+        { value: 'Installment', label: 'Cuota' },
+        { value: 'Down Payment', label: 'Seña' }
+    ];
+
+    const originOptions = [
+        { value: 'Manual Closer', label: 'Manual' },
+        { value: 'Calendly', label: 'Calendly' },
+        { value: 'Website', label: 'Web' }
+    ];
+
+    const renderFilters = () => {
+        if (!showFilters) return null;
+
+        return (
+            <div className="bg-surface border border-base rounded-[1.5rem] p-6 mb-8 animate-in slide-in-from-top-4 fade-in duration-300 flex flex-wrap gap-4 items-center">
+                <DateRangeFilter value={filters.dateRange} onChange={(val) => updateFilter('dateRange', val)} />
+
+                {activeTab === 'leads_raw' && (
+                    <div className="flex bg-slate-900 rounded-xl p-1 border border-slate-800">
+                        {['newest', 'oldest', 'a-z', 'z-a'].map(opt => (
+                            <button
+                                key={opt}
+                                onClick={() => updateFilter('sort_by', opt)}
+                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${filters.sort_by === opt ? 'bg-primary text-white' : 'text-muted hover:text-white'}`}
+                            >
+                                {opt === 'newest' ? 'Recientes' : opt === 'oldest' ? 'Antiguos' : opt.toUpperCase()}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {activeTab === 'sales_raw' && (
+                    <>
+                        <MultiSelectFilter label="Tipo" options={paymentTypes} value={filters.payment_type} onChange={(val) => updateFilter('payment_type', val)} />
+                        <MultiSelectFilter label="Método" options={paymentMethods} value={filters.payment_method} onChange={(val) => updateFilter('payment_method', val)} />
+                    </>
+                )}
+
+                {activeTab === 'agendas' && (
+                    <>
+                        <MultiSelectFilter label="Estado" options={statusOptions} value={filters.status} onChange={(val) => updateFilter('status', val)} />
+                        <MultiSelectFilter label="Origen" options={originOptions} value={filters.origin} onChange={(val) => updateFilter('origin', val)} />
+                        {/* Closer filter could be dynamic input or dropdown if we fetched closers */}
+                    </>
+                )}
+
+                <Button variant="ghost" className="text-rose-500 ml-auto" onClick={() => setFilters({ dateRange: { type: 'all' }, sort_by: 'newest' })}>Limpiar</Button>
+            </div>
+        );
+    };
+
+    const renderRow = (item) => { /* ... existing */
         if (activeTab === 'programs') return (
             <>
                 <td className="px-8 py-5 text-primary font-black">#{item.id}</td>
@@ -196,7 +288,7 @@ const DatabasePage = () => {
                 <td className="px-8 py-5">{renderCell(item, 'is_active', 'status')}</td>
             </>
         );
-        return null;
+        return null; // For questions or others
     };
 
     return (
@@ -221,6 +313,21 @@ const DatabasePage = () => {
                 ))}
             </div>
 
+            {(activeTab === 'leads_raw' || activeTab === 'sales_raw' || activeTab === 'agendas') && (
+                <div className="flex gap-4">
+                    <Button
+                        variant="ghost"
+                        icon={Filter}
+                        className={`border-base ${showFilters ? 'bg-surface text-primary border-primary' : 'text-muted'}`}
+                        onClick={() => setShowFilters(!showFilters)}
+                    >
+                        Filtros Avanzados
+                    </Button>
+                </div>
+            )}
+
+            {renderFilters()}
+
             <div className="flex gap-4 items-center">
                 <div className="relative flex-1">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
@@ -241,6 +348,7 @@ const DatabasePage = () => {
                     </div>
                 )}
             </div>
+            {/* ... Rest of JSX ... */}
 
             {activeTab === 'import' ? (
                 <AdvancedImportTool />

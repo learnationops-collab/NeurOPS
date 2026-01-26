@@ -209,11 +209,24 @@ def manage_db_leads():
     
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    sort_by = request.args.get('sort_by', 'newest')
+
     query = Client.query
     if search:
         term = f"%{search}%"
         query = query.filter(or_(Client.full_name.ilike(term), Client.email.ilike(term)))
-    pagination = query.order_by(Client.created_at.desc()).paginate(page=page, per_page=50, error_out=False)
+    
+    if start_date: query = query.filter(Client.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
+    if end_date: query = query.filter(Client.created_at < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+
+    if sort_by == 'oldest': query = query.order_by(Client.created_at.asc())
+    elif sort_by == 'a-z': query = query.order_by(Client.full_name.asc())
+    elif sort_by == 'z-a': query = query.order_by(Client.full_name.desc())
+    else: query = query.order_by(Client.created_at.desc())
+
+    pagination = query.paginate(page=page, per_page=50, error_out=False)
     return jsonify({"total": pagination.total, "pages": pagination.pages, "data": [{"id": c.id, "full_name": c.full_name, "email": c.email, "phone": c.phone, "instagram": c.instagram, "created_at": c.created_at.isoformat()} for c in pagination.items]}), 200
 
 @bp.route('/admin/db/agendas', methods=['GET', 'POST', 'DELETE'])
@@ -239,10 +252,32 @@ def manage_db_agendas():
     
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
-    query = Appointment.query.join(Client)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    status_filter = request.args.get('status')
+    closer_filter = request.args.get('closer')
+    origin_filter = request.args.get('origin')
+
+    query = Appointment.query.join(Client).join(User, Appointment.closer_id == User.id)
     if search:
         term = f"%{search}%"
         query = query.filter(or_(Client.full_name.ilike(term), Client.email.ilike(term)))
+    
+    if start_date: query = query.filter(Appointment.start_time >= datetime.strptime(start_date, '%Y-%m-%d'))
+    if end_date: query = query.filter(Appointment.start_time < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+
+    if status_filter:
+        statuses = status_filter.split(',')
+        if statuses: query = query.filter(Appointment.status.in_(statuses))
+    
+    if closer_filter:
+        closers = closer_filter.split(',')
+        if closers: query = query.filter(User.username.in_(closers))
+
+    if origin_filter:
+        origins = origin_filter.split(',')
+        if origins: query = query.filter(Appointment.origin.in_(origins))
+
     pagination = query.order_by(Appointment.start_time.desc()).paginate(page=page, per_page=50, error_out=False)
     return jsonify({"total": pagination.total, "pages": pagination.pages, "data": [{"id": a.id, "lead": a.client.full_name or a.client.email, "closer": a.closer.username, "start_time": a.start_time.isoformat(), "status": a.status, "origin": a.origin} for a in pagination.items]}), 200
 
@@ -263,16 +298,37 @@ def manage_db_sales():
         
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
-    query = Payment.query.join(Enrollment).join(Client)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    payment_type_filter = request.args.get('payment_type')
+    payment_method_filter = request.args.get('payment_method')
+
+    # Join PaymentMethod via Payment.payment_method (assuming it's set up)
+    # Payment model: payment_method_id is FK. 
+    # Use outerjoin to be safe
+    query = Payment.query.join(Enrollment).join(Client).outerjoin(PaymentMethod, Payment.payment_method_id == PaymentMethod.id)
+    
     if search:
         term = f"%{search}%"
         query = query.filter(or_(Client.full_name.ilike(term), Client.email.ilike(term)))
+    
+    if start_date: query = query.filter(Payment.date >= datetime.strptime(start_date, '%Y-%m-%d'))
+    if end_date: query = query.filter(Payment.date < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+    
+    if payment_type_filter:
+        types = payment_type_filter.split(',')
+        if types: query = query.filter(Payment.payment_type.in_(types))
+    
+    if payment_method_filter:
+        methods = payment_method_filter.split(',')
+        if methods: query = query.filter(PaymentMethod.name.in_(methods))
+
     pagination = query.order_by(Payment.date.desc()).paginate(page=page, per_page=50, error_out=False)
     return jsonify({"total": pagination.total, "pages": pagination.pages, "data": [{
         "id": p.id, "date": p.date.isoformat(), 
         "student": p.enrollment.client.full_name or p.enrollment.client.email,
         "program": p.enrollment.program.name,
-        "amount": float(p.amount), "payment_type": p.payment_type, "method": p.method.name if p.method else "N/A"
+        "amount": float(p.amount), "payment_type": p.payment_type, "method": p.payment_method.name if p.payment_method else "N/A"
     } for p in pagination.items]}), 200
 
 @bp.route('/admin/db/questions', methods=['GET', 'POST'])
