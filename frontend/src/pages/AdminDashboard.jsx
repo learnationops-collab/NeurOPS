@@ -2,24 +2,27 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Users, DollarSign, TrendingUp, Activity, Plus } from 'lucide-react';
 import NewSaleModal from '../components/NewSaleModal';
+import Button from '../components/ui/Button';
+import Card, { CardHeader, CardContent } from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
 
 const KPICard = ({ title, value, subtitle, icon: Icon, color }) => (
-  <div className="bg-slate-800/50 backdrop-blur-md p-6 rounded-3xl border border-slate-700 shadow-xl">
+  <Card variant="surface" className="group">
     <div className="flex justify-between items-start mb-4">
       <div className={`p-4 rounded-2xl bg-opacity-10 ${color.bg} ${color.text}`}>
         <Icon size={28} />
       </div>
       <div className="flex flex-col items-end">
-        <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">{title}</span>
-        <h3 className="text-3xl font-black text-white mt-1">{value}</h3>
+        <span className="text-muted text-[10px] font-black uppercase tracking-widest">{title}</span>
+        <h3 className="text-3xl font-black text-base italic tracking-tighter mt-1">{value}</h3>
       </div>
     </div>
     {subtitle && (
-      <div className="pt-4 border-t border-slate-700/50 mt-2">
-        <p className="text-slate-500 text-xs font-bold uppercase tracking-tighter">{subtitle}</p>
+      <div className="pt-4 border-t border-base mt-2">
+        <p className="text-muted text-[10px] font-bold uppercase tracking-widest">{subtitle}</p>
       </div>
     )}
-  </div>
+  </Card>
 );
 
 const AdminDashboard = () => {
@@ -43,8 +46,8 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-indigo-500 font-bold uppercase tracking-widest text-sm">Cargando Datos...</p>
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-primary font-bold uppercase tracking-widest text-sm">Cargando Datos...</p>
       </div>
     );
   }
@@ -60,23 +63,23 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-10">
-      <header className="flex justify-between items-center">
+    <div className="p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-white italic tracking-tighter">Panel Principal</h1>
-          <p className="text-slate-400 font-medium uppercase text-xs tracking-[0.2em]">Vista General del Negocio</p>
+          <h1 className="text-4xl font-black text-base italic tracking-tighter">Panel Principal</h1>
+          <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Vista General del Negocio</p>
         </div>
         <div className="flex gap-4">
-          <button
+          <Button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-6 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all active:scale-95"
+            variant="primary"
+            icon={Plus}
           >
-            <Plus size={20} />
-            <span>Nueva Venta</span>
-          </button>
-          <div className="p-1 bg-slate-800 rounded-2xl border border-slate-700 flex gap-1 items-center">
-            <button className="px-4 py-2 bg-slate-700 text-white text-xs font-bold rounded-xl">Este Mes</button>
-            <button className="px-4 py-2 text-slate-400 text-xs font-bold hover:text-white transition-colors">Personalizado</button>
+            Nueva Venta
+          </Button>
+          <div className="p-1 px-1.5 bg-surface rounded-2xl border border-base flex gap-1 items-center">
+            <Badge variant="primary" className="cursor-pointer">Este Mes</Badge>
+            <span className="text-muted text-[10px] font-bold uppercase px-2 cursor-pointer hover:text-base">Personalizado</span>
           </div>
         </div>
       </header>
@@ -113,23 +116,25 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-slate-800/30 rounded-[2.5rem] border border-slate-800 p-8 h-80 flex items-center justify-center">
-          <p className="text-slate-600 font-bold uppercase tracking-widest italic">Graficos Tendencia</p>
-        </div>
-        <div className="bg-slate-800/30 rounded-[2.5rem] border border-slate-800 p-8 h-80 flex flex-col">
-          <h3 className="text-white font-black uppercase text-sm tracking-widest mb-6 border-b border-slate-800 pb-4">Actividad Reciente</h3>
-          <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+        <Card variant="surface" className="lg:col-span-2 h-80 flex items-center justify-center bg-main">
+          <p className="text-muted font-bold uppercase tracking-widest italic opacity-20">Graficos Tendencia</p>
+        </Card>
+        <Card variant="surface" className="h-80 flex flex-col" padding="p-0">
+          <CardHeader className="px-8 py-6 border-b border-base bg-surface-hover mb-0">
+            <h3 className="text-base font-black uppercase text-xs tracking-widest">Actividad Reciente</h3>
+          </CardHeader>
+          <CardContent className="flex-1 overflow-y-auto space-y-4 p-8 custom-scrollbar">
             {data.recent_activity.map((activity, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+              <div key={i} className="flex items-center gap-4 group">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_var(--color-primary)]"></div>
                 <div className="flex-1">
-                  <p className="text-slate-300 text-xs font-bold">{activity.message}</p>
-                  <p className="text-slate-500 text-[10px] uppercase">{activity.sub}</p>
+                  <p className="text-base text-xs font-bold">{activity.message}</p>
+                  <p className="text-muted text-[10px] uppercase">{activity.sub}</p>
                 </div>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       <NewSaleModal

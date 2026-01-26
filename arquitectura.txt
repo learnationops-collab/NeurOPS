@@ -11,8 +11,11 @@ Backend:
 
 Frontend:
 - Framework: React (Vite)
-- Estilos: Tailwind CSS
+- Estilos: Tailwind CSS + Design Tokens (CSS Variables)
+- Componentes UI: Custom UI Kit (src/components/ui)
 - Iconografía: Lucide React
+- Temas: Dynamic Multi-theme System (Context-based)
+- REGLAS: Ver ANTIGRAVITY_RULES.md para coherencia visual y técnica
 
 Base de Datos:
 - Desarrollo Local: SQLite (instance/local.db)

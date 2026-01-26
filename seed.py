@@ -15,6 +15,15 @@ def seed_database():
             print(f"🔄 Usuario admin encontrado. Reseteando contraseña y asegurando rol admin...")
             admin_user.set_password("admin123")
             db.session.add(admin_user)
+        else:
+            print(f"👤 Creando nuevo admin: {admin_email}")
+            admin_user = User(
+                username="admin",
+                email=admin_email,
+                role=ROLE_ADMIN
+            )
+            admin_user.set_password("admin123")
+            db.session.add(admin_user)
             
         # 1.1 Crear / Resetear Closer
         closer_email = "closer@learnation.com"

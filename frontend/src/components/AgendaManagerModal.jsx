@@ -12,6 +12,7 @@ import {
     Loader2,
     Check
 } from 'lucide-react';
+import Button from './ui/Button';
 
 const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
     const [status, setStatus] = useState('');
@@ -22,11 +23,11 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
     const [error, setError] = useState(null);
 
     const statuses = [
-        { id: 'Completada', label: 'Completada', icon: CheckCircle2, color: 'text-emerald-400' },
-        { id: 'Primera Agenda', label: 'Primera Agenda (OK)', icon: CheckCircle2, color: 'text-emerald-500' },
-        { id: 'No Show', label: 'No Show', icon: XCircle, color: 'text-rose-400' },
-        { id: 'Cancelada', label: 'Cancelada', icon: XCircle, color: 'text-slate-500' },
-        { id: 'Reprogramada', label: 'Reprogramada', icon: RefreshCw, color: 'text-indigo-400' }
+        { id: 'Completada', label: 'Completada', icon: CheckCircle2, color: 'text-success' },
+        { id: 'Primera Agenda', label: 'Primera Agenda (OK)', icon: CheckCircle2, color: 'text-success' },
+        { id: 'No Show', label: 'No Show', icon: XCircle, color: 'text-accent' },
+        { id: 'Cancelada', label: 'Cancelada', icon: XCircle, color: 'text-muted' },
+        { id: 'Reprogramada', label: 'Reprogramada', icon: RefreshCw, color: 'text-primary' }
     ];
 
     useEffect(() => {
@@ -75,52 +76,49 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
     const showReschedule = status === 'Reprogramada' || status === 'Primera Agenda';
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-            <div className="w-full max-w-lg bg-[#0f172a] border border-white/5 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
+            <div className="w-full max-w-lg bg-surface border border-base rounded-[2.5rem] shadow-2xl relative overflow-hidden">
                 {/* Header */}
-                <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                <div className="p-8 border-b border-base flex justify-between items-center">
                     <div>
-                        <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">Gestionar Agenda</h2>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Status Protocol v2.0</p>
+                        <h2 className="text-2xl font-black text-base italic uppercase tracking-tighter">Gestionar Agenda</h2>
+                        <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-1">Status Protocol v2.0</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-all">
+                    <button onClick={onClose} className="p-2 hover:bg-surface-hover rounded-full text-muted hover:text-base transition-all">
                         <X size={20} />
                     </button>
                 </div>
 
                 <div className="p-8 space-y-8">
                     {/* Lead Info */}
-                    <div className="bg-black/20 p-6 rounded-3xl border border-white/5 flex justify-between items-center">
+                    <div className="bg-main p-6 rounded-3xl border border-base flex justify-between items-center">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center font-black text-white shadow-lg shadow-indigo-600/20">
+                            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center font-black text-white shadow-lg shadow-primary/20">
                                 {appointment.lead_name[0]}
                             </div>
                             <div>
-                                <p className="text-white font-black tracking-tight">{appointment.lead_name}</p>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase">{appointment.type}</p>
+                                <p className="text-base font-black tracking-tight">{appointment.lead_name}</p>
+                                <p className="text-[10px] text-muted font-bold uppercase">{appointment.type}</p>
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <a href={`https://wa.me/${appointment.phone}`} target="_blank" className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl hover:bg-emerald-500 hover:text-white transition-all">
+                            <a href={`https://wa.me/${appointment.phone}`} target="_blank" className="p-2.5 bg-success/10 text-success rounded-xl hover:bg-success hover:text-white transition-all">
                                 <MessageSquare size={16} />
-                            </a>
-                            <a href="#" className="p-2.5 bg-pink-500/10 text-pink-500 rounded-xl hover:bg-pink-500 hover:text-white transition-all">
-                                <Instagram size={16} />
                             </a>
                         </div>
                     </div>
 
                     {/* Status Selection */}
                     <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Cambiar Estado</label>
+                        <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Cambiar Estado</label>
                         <div className="grid grid-cols-2 gap-3">
                             {statuses.map(s => (
                                 <button
                                     key={s.id}
                                     onClick={() => { setStatus(s.id); setRescheduleDate(''); }}
-                                    className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${status === s.id ? 'bg-white text-black border-white shadow-lg' : 'bg-black/20 border-white/5 text-slate-400 hover:text-white hover:border-white/10'}`}
+                                    className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${status === s.id ? 'bg-primary text-white border-primary shadow-lg' : 'bg-main border-base text-muted hover:text-base hover:border-muted/20'}`}
                                 >
-                                    <s.icon size={16} className={status === s.id ? 'text-black' : s.color} />
+                                    <s.icon size={16} className={status === s.id ? 'text-white' : s.color} />
                                     <span className="text-[10px] font-black uppercase tracking-widest leading-none">{s.label}</span>
                                 </button>
                             ))}
@@ -130,13 +128,13 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
                     {/* Reschedule Section */}
                     {showReschedule && (
                         <div className="space-y-3 animate-in slide-in-from-top-4 duration-300">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">
                                 {status === 'Reprogramada' ? 'Nueva Fecha de Reagenda' : 'Fecha para Segunda Agenda'}
                             </label>
                             {loadingSlots ? (
-                                <div className="p-8 bg-black/20 rounded-2xl flex flex-col items-center gap-4">
-                                    <Loader2 className="animate-spin text-indigo-500" size={20} />
-                                    <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Calculando disponibilidad...</p>
+                                <div className="p-8 bg-main rounded-2xl flex flex-col items-center gap-4">
+                                    <Loader2 className="animate-spin text-primary" size={20} />
+                                    <p className="text-[9px] font-bold text-muted uppercase tracking-widest">Calculando disponibilidad...</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar p-1">
@@ -147,14 +145,14 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
                                             <button
                                                 key={slot.utc_iso}
                                                 onClick={() => setRescheduleDate(slot.utc_iso)}
-                                                className={`p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20' : 'bg-black/40 border-white/5 text-slate-400 hover:text-white hover:bg-white/5'}`}
+                                                className={`p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${isSelected ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'bg-main border-base text-muted hover:text-base hover:bg-surface-hover'}`}
                                             >
                                                 {dt.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} - {dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </button>
                                         );
                                     }) : (
-                                        <div className="col-span-2 p-8 text-center bg-black/20 rounded-2xl">
-                                            <p className="text-[9px] font-black text-rose-500/70 uppercase tracking-widest">Sin horarios disponibles</p>
+                                        <div className="col-span-2 p-8 text-center bg-main rounded-2xl">
+                                            <p className="text-[9px] font-black text-accent/70 uppercase tracking-widest">Sin horarios disponibles</p>
                                         </div>
                                     )}
                                 </div>
@@ -169,18 +167,16 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
                     )}
 
                     {/* Action Button */}
-                    <button
+                    <Button
                         onClick={handleProcess}
-                        disabled={submitting || !status || (showReschedule && !rescheduleDate)}
-                        className={`w-full py-5 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl ${submitting || !status || (showReschedule && !rescheduleDate) ? 'bg-slate-800 text-slate-600' : 'bg-white text-black hover:bg-indigo-500 hover:text-white'}`}
+                        loading={submitting}
+                        disabled={!status || (showReschedule && !rescheduleDate)}
+                        variant="primary"
+                        className="w-full py-5 h-16"
+                        icon={Check}
                     >
-                        {submitting ? <Loader2 className="animate-spin" size={20} /> : (
-                            <>
-                                <Check size={18} />
-                                Confirmar Protocolo
-                            </>
-                        )}
-                    </button>
+                        Confirmar Protocolo
+                    </Button>
                 </div>
             </div>
         </div>

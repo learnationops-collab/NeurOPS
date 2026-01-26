@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
-from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client
+from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment
 from app.decorators import role_required
 from datetime import date, timedelta, datetime
 
@@ -14,7 +14,7 @@ def get_dashboard():
         return jsonify({"message": "Forbidden"}), 403
         
     tz = current_user.timezone or 'America/La_Paz'
-    data = CloserService.get_dashboard_data(current_user.id, tz)
+    data = CloserService.get_dashboard_data(current_user.id, tz, is_admin=(current_user.role == 'admin'))
     
     today_stats_serialized = None
     if data.get('today_stats'):
@@ -42,18 +42,21 @@ def get_dashboard():
             "seq_num": seq
         })
         
-    # Sales Today
-    sales = Enrollment.query.filter(
+    # Sales Today: Any enrollment that had a payment today
+    sales = Enrollment.query.join(Payment).filter(
         Enrollment.closer_id == current_user.id,
-        Enrollment.enrollment_date >= date.today()
-    ).all()
+        Payment.date >= date.today()
+    ).distinct().all()
     
     for s in sales:
+        total_paid = s.total_paid
+        price = s.program.price if s.program else 0.0
         serialized['sales_today'].append({
             "id": s.id,
             "student_name": s.client.full_name or s.client.email if s.client else "Unknown",
             "program_name": s.program.name if s.program else "Unknown",
-            "amount": s.program.price if s.program else 0.0,
+            "amount": total_paid,
+            "debt": max(0, price - total_paid),
             "time": s.enrollment_date.isoformat()
         })
     
@@ -160,6 +163,40 @@ def manage_weekly_availability():
         result[day].append({"start": wa.start_time.strftime('%H:%M'), "end": wa.end_time.strftime('%H:%M')})
     return jsonify(result), 200
 
+@bp.route('/leads/<int:id>/payment-status', methods=['GET'])
+@login_required
+def get_lead_payment_status(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    return jsonify(CloserService.get_lead_payment_status(id)), 200
+
+@bp.route('/enrollments/<int:id>', methods=['GET', 'DELETE'])
+@login_required
+def get_or_delete_enrollment(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    if request.method == 'DELETE':
+        CloserService.delete_enrollment(id)
+        return jsonify({"message": "Venta eliminada"}), 200
+    return jsonify(CloserService.get_enrollment_details(id)), 200
+
+@bp.route('/enrollments/<int:id>/payments', methods=['POST'])
+@login_required
+def add_payment(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    data = request.get_json() or {}
+    CloserService.add_payment(id, data)
+    return jsonify({"message": "Pago añadido"}), 201
+
+@bp.route('/payments/<int:id>', methods=['DELETE'])
+@login_required
+def delete_payment(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    CloserService.delete_payment(id)
+    return jsonify({"message": "Pago eliminado"}), 200
+
 @bp.route('/sale-metadata', methods=['GET'])
 @login_required
 def get_sale_metadata():
@@ -200,8 +237,57 @@ def update_appointment(id):
             return jsonify({"error": "Invalid date format"}), 400
             
     db.session.commit()
+    db.session.commit()
     return jsonify({"message": "Agenda actualizada con éxito"}), 200
 
+@bp.route('/appointments', methods=['POST'])
+@login_required
+def create_appointment():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    
+    data = request.get_json() or {}
+    start_time_str = data.get('start_time')
+    lead_id = data.get('lead_id')
+    client_data = data.get('client_data')
+    appt_type = data.get('type', 'Manual Closer')
+    status = data.get('status', 'scheduled')
+    
+    if not start_time_str:
+        return jsonify({"error": "Faltan datos requeridos (start_time)"}), 400
+
+    if not lead_id and not client_data:
+        return jsonify({"error": "Debe seleccionar un cliente o crear uno nuevo"}), 400
+        
+    try:
+        from app.services.booking_service import BookingService
+        
+        if not lead_id and client_data:
+            client = BookingService.create_or_update_client(client_data)
+            lead_id = client.id
+            
+        start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
+        
+        # BookingService create_appointment signature: (client_id, closer_id, start_time_utc, origin='manual', status='scheduled')
+        appt = BookingService.create_appointment(
+            client_id=lead_id,
+            closer_id=current_user.id,
+            start_time=start_time,
+            origin='Manual Closer',
+            status=status
+        )
+        
+        if not appt:
+             return jsonify({"error": "Ya existe una agenda en ese horario"}), 409
+        
+        if appt_type:
+            appt.appointment_type = appt_type
+            db.session.commit()
+            
+        return jsonify({"message": "Agenda creada", "id": appt.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
 @bp.route('/slots', methods=['GET'])
 @login_required
 def get_slots():
@@ -218,3 +304,43 @@ def process_agenda(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+@bp.route('/events', methods=['GET'])
+@login_required
+def get_events():
+    events = Event.query.filter_by(is_active=True).all()
+    return jsonify([{
+        "id": e.id,
+        "name": e.name,
+        "utm_source": e.utm_source,
+        "duration_minutes": e.duration_minutes,
+        "buffer_minutes": e.buffer_minutes
+    } for e in events]), 200
+
+@bp.route('/events/<int:id>', methods=['PATCH'])
+@login_required
+def update_event(id):
+    # Allows updating event settings
+    event = Event.query.get_or_404(id)
+    data = request.get_json() or {}
+    
+    if 'duration_minutes' in data:
+        event.duration_minutes = data['duration_minutes']
+    if 'buffer_minutes' in data:
+        event.buffer_minutes = data['buffer_minutes']
+        
+    db.session.commit()
+    return jsonify({"message": "Evento actualizado"}), 200
+
+@bp.route('/availability', methods=['GET'])
+@login_required
+def get_availability():
+    # Returns specific date overrides (Availability model)
+    # Note: Availability model needs to be imported if not already avaiable in context (it is imported at top of file)
+    from app.models import Availability
+    avails = Availability.query.filter_by(closer_id=current_user.id).all()
+    return jsonify([{
+        "date": a.date.isoformat(),
+        "start": a.start_time.strftime('%H:%M'),
+        "end": a.end_time.strftime('%H:%M')
+    } for a in avails]), 200

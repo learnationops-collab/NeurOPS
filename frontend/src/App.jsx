@@ -9,8 +9,11 @@ import SettingsPage from './pages/SettingsPage';
 import CloserDashboard from './pages/CloserDashboard';
 import CloserLeadsPage from './pages/CloserLeadsPage';
 import CloserSettingsPage from './pages/CloserSettingsPage';
+import CloserNewSalePage from './pages/CloserNewSalePage';
+import CloserNewAppointmentPage from './pages/CloserNewAppointmentPage';
 import OperationsPage from './pages/OperationsPage';
 import BookingPage from './pages/BookingPage';
+import StyleGuidePage from './pages/StyleGuidePage';
 import './index.css';
 
 function App() {
@@ -20,6 +23,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
         <Route path="/book/:username/:event_slug" element={<BookingPage />} />
+        <Route path="/book/:event_slug" element={<BookingPage />} />
 
 
         {/* Protected Admin Routes */}
@@ -63,6 +67,14 @@ function App() {
             </MainLayout>
           }
         />
+        <Route
+          path="/admin/style-guide"
+          element={
+            <MainLayout>
+              <StyleGuidePage />
+            </MainLayout>
+          }
+        />
 
         {/* Protected Closer Routes */}
         <Route
@@ -86,6 +98,22 @@ function App() {
           element={
             <MainLayout>
               <CloserSettingsPage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/closer/sales/new"
+          element={
+            <MainLayout>
+              <CloserNewSalePage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/closer/appointments/new"
+          element={
+            <MainLayout>
+              <CloserNewAppointmentPage />
             </MainLayout>
           }
         />

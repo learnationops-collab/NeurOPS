@@ -17,8 +17,13 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('enrollments', sa.Column('closer_id', sa.Integer(), nullable=True))
-    op.create_foreign_key('fk_enrollments_closer_id_users', 'enrollments', 'users', ['closer_id'], ['id'])
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = [c['name'] for c in inspector.get_columns('enrollments')]
+    
+    if 'closer_id' not in columns:
+        op.add_column('enrollments', sa.Column('closer_id', sa.Integer(), nullable=True))
+        op.create_foreign_key('fk_enrollments_closer_id_users', 'enrollments', 'users', ['closer_id'], ['id'])
 
 
 def downgrade():

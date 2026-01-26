@@ -104,7 +104,7 @@ class CloserService:
         }
 
     @staticmethod
-    def get_dashboard_data(closer_id, timezone_name='America/La_Paz'):
+    def get_dashboard_data(closer_id, timezone_name='America/La_Paz', is_admin=False):
         try: user_tz = pytz.timezone(timezone_name)
         except: user_tz = pytz.timezone('America/La_Paz')
             
@@ -112,6 +112,10 @@ class CloserService:
         today_local = now_local.date()
         start_utc = user_tz.localize(datetime.combine(today_local, time.min)).astimezone(pytz.UTC).replace(tzinfo=None)
         end_utc = user_tz.localize(datetime.combine(today_local, time.max)).astimezone(pytz.UTC).replace(tzinfo=None)
+
+        print(f"[DEBUG] Closer: {closer_id}, TZ: {timezone_name}")
+        print(f"[DEBUG] Today Local: {today_local}")
+        print(f"[DEBUG] UTC Range: {start_utc} to {end_utc}")
         
         detailed_metrics = DashboardService.get_detailed_closer_metrics(start_utc, end_utc, closer_id)
         
@@ -149,9 +153,8 @@ class CloserService:
             Appointment.start_time >= start_utc, Appointment.start_time <= end_utc
         ).order_by(Appointment.start_time.asc()).limit(20).all()
 
-        from flask_login import current_user
         recent_query = Client.query
-        if current_user.role != 'admin':
+        if not is_admin:
             recent_query = recent_query.filter(or_(
                 Client.enrollments.any(Enrollment.closer_id == closer_id),
                 Client.appointments.any(Appointment.closer_id == closer_id)
@@ -187,13 +190,19 @@ class CloserService:
 
     @staticmethod
     def register_sale(closer_id, client_id, data):
-        enrollment = Enrollment(
-            client_id=client_id,
-            program_id=data.get('program_id'),
-            closer_id=closer_id
-        )
-        db.session.add(enrollment)
-        db.session.flush()
+        program_id = data.get('program_id')
+        
+        # Look for existing active enrollment for this client and program
+        enrollment = Enrollment.query.filter_by(client_id=client_id, program_id=program_id).first()
+        
+        if not enrollment:
+            enrollment = Enrollment(
+                client_id=client_id,
+                program_id=program_id,
+                closer_id=closer_id
+            )
+            db.session.add(enrollment)
+            db.session.flush()
         
         payment = Payment(
             enrollment_id=enrollment.id,
@@ -272,3 +281,151 @@ class CloserService:
         
         db.session.commit()
         return appt
+
+    @staticmethod
+    def get_lead_payment_status(client_id):
+        client = Client.query.get_or_404(client_id)
+        
+        enrollment = Enrollment.query.filter_by(client_id=client_id).order_by(Enrollment.enrollment_date.desc()).first()
+        
+        if not enrollment:
+            return {
+                "allowed_types": ["down_payment", "first_payment", "full"],
+                "has_debt": False,
+                "total_paid": 0,
+                "program_id": None
+            }
+        
+        payments = enrollment.payments.filter_by(status='completed').all()
+        payment_types = [p.payment_type for p in payments]
+        
+        program_price = enrollment.program.price if enrollment.program else 0.0
+        total_paid = sum(p.amount for p in payments)
+        has_debt = total_paid < program_price
+        
+        payload = {
+            "has_debt": has_debt,
+            "total_paid": total_paid,
+            "program_id": enrollment.program_id,
+            "program_price": program_price
+        }
+        
+        if not payments:
+            payload["allowed_types"] = ["down_payment", "first_payment", "full"]
+            return payload
+            
+        if not has_debt or 'full' in payment_types:
+            payload["allowed_types"] = ["renewal"]
+            return payload
+ 
+        if 'first_payment' in payment_types:
+            payload["allowed_types"] = ["installment"]
+            return payload
+ 
+        if 'down_payment' in payment_types:
+            payload["allowed_types"] = ["first_payment", "full"]
+            return payload
+            
+        payload["allowed_types"] = ["installment", "renewal"]
+        return payload
+ 
+    @staticmethod
+    def get_enrollment_details(enrollment_id):
+        from app.models import SurveyQuestion
+        import json
+        
+        enrollment = Enrollment.query.get_or_404(enrollment_id)
+        client = enrollment.client
+        
+        # 1. Payments
+        payments = []
+        for p in enrollment.payments:
+            payments.append({
+                "id": p.id,
+                "amount": p.amount,
+                "date": p.date.isoformat(),
+                "type": p.payment_type,
+                "method": p.method.name if p.method else "N/A",
+                "status": p.status,
+                "method_id": p.payment_method_id
+            })
+            
+        # 2. Appointments
+        appointments = []
+        for a in client.appointments.order_by(Appointment.start_time.desc()):
+            appointments.append({
+                "id": a.id,
+                "start_time": a.start_time.isoformat(),
+                "status": a.status,
+                "type": a.appointment_type,
+                "origin": a.origin
+            })
+            
+        # 3. Survey Answers + Scores
+        survey_data = []
+        for sa in client.survey_answers:
+            points = 0
+            q = sa.question
+            if q and q.options:
+                try:
+                    opts = json.loads(q.options)
+                    if isinstance(opts, list):
+                        for opt in opts:
+                            if str(opt.get('text')) == str(sa.answer):
+                                points = int(opt.get('points', 0))
+                                break
+                except: pass
+                
+            survey_data.append({
+                "question": q.text if q else "Pregunta eliminada",
+                "answer": sa.answer,
+                "points": points
+            })
+            
+        return {
+            "id": enrollment.id,
+            "client": {
+                "id": client.id,
+                "name": client.full_name,
+                "email": client.email,
+                "phone": client.phone,
+                "instagram": client.instagram
+            },
+            "program": {
+                "id": enrollment.program_id,
+                "name": enrollment.program.name if enrollment.program else "N/A",
+                "price": enrollment.program.price if enrollment.program else 0.0
+            },
+            "payments": payments,
+            "appointments": appointments,
+            "survey": survey_data,
+            "total_paid": enrollment.total_paid
+        }
+ 
+    @staticmethod
+    def add_payment(enrollment_id, data):
+        enrollment = Enrollment.query.get_or_404(enrollment_id)
+        payment = Payment(
+            enrollment_id=enrollment.id,
+            payment_method_id=data.get('payment_method_id'),
+            amount=data.get('amount'),
+            payment_type=data.get('payment_type'),
+            status='completed'
+        )
+        db.session.add(payment)
+        db.session.commit()
+        return payment
+ 
+    @staticmethod
+    def delete_payment(payment_id):
+        payment = Payment.query.get_or_404(payment_id)
+        db.session.delete(payment)
+        db.session.commit()
+        return True
+ 
+    @staticmethod
+    def delete_enrollment(enrollment_id):
+        enrollment = Enrollment.query.get_or_404(enrollment_id)
+        db.session.delete(enrollment)
+        db.session.commit()
+        return True
