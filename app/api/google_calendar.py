@@ -22,8 +22,8 @@ def login():
     # If I change login route, it's fine.
     # But callback route must match Google Console.
     
-    # Prioritize environment variable if set (e.g. for localhost:5173)
-    redirect_uri = os.environ.get('REDIRECT_URI_DEV')
+    # Prioritize environment variable if set (e.g. for localhost:5173 or Prod)
+    redirect_uri = os.environ.get('REDIRECT_URI_PROD') or os.environ.get('REDIRECT_URI_DEV')
     if not redirect_uri:
         base_url = request.url_root.rstrip('/')
         redirect_uri = f"{base_url}/google/callback"
