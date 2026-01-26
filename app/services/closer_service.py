@@ -259,9 +259,59 @@ class CloserService:
             new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
             BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
             new_appt = Appointment.query.filter_by(closer_id=appt.closer_id, client_id=appt.client_id, start_time=new_dt).first()
-            if new_appt: new_appt.appointment_type = 'Segunda agenda'
-        
         db.session.commit()
         return appt
 
+    @staticmethod
+    def get_lead_payment_status(client_id):
+        client = Client.query.get_or_404(client_id)
+        
+        enrollment = Enrollment.query.filter_by(client_id=client_id).order_by(Enrollment.enrollment_date.desc()).first()
+        
+        if not enrollment:
+            return {
+                "allowed_types": ["down_payment", "first_payment", "full"],
+                "has_debt": False,
+                "total_paid": 0
+            }
+        
+        payments = enrollment.payments.filter_by(status='completed').all()
+        payment_types = [p.payment_type for p in payments]
+        
+        program_price = enrollment.program.price if enrollment.program else 0.0
+        total_paid = sum(p.amount for p in payments)
+        has_debt = total_paid < program_price
+        
+        if not payments:
+            return {
+                "allowed_types": ["down_payment", "first_payment", "full"],
+                "has_debt": True,
+                "total_paid": 0
+            }
+            
+        if not has_debt or 'full' in payment_types:
+            return {
+                "allowed_types": ["renewal"],
+                "has_debt": False,
+                "total_paid": total_paid
+            }
 
+        if 'first_payment' in payment_types:
+            return {
+                "allowed_types": ["installment"],
+                "has_debt": True,
+                "total_paid": total_paid
+            }
+
+        if 'down_payment' in payment_types:
+            return {
+                "allowed_types": ["first_payment", "full"],
+                "has_debt": True,
+                "total_paid": total_paid
+            }
+            
+        return {
+            "allowed_types": ["installment", "renewal"],
+            "has_debt": True,
+            "total_paid": total_paid
+        }

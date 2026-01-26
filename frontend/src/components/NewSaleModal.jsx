@@ -29,14 +29,17 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
         program_id: '',
         payment_amount: '',
         payment_method_id: '',
-        payment_type: 'full'
+        payment_type: ''
     });
+    const [allowedPaymentTypes, setAllowedPaymentTypes] = useState([]);
+    const [loadingStatus, setLoadingStatus] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             fetchMetadata();
             setStep(1);
             setError(null);
+            setAllowedPaymentTypes([]);
         }
     }, [isOpen]);
 
@@ -49,6 +52,26 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
             setError("Error al cargar datos necesarios.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleLeadSelect = async (lead) => {
+        setFormData({ ...formData, lead_id: lead.id, payment_type: '' });
+        setStep(2);
+        setLoadingStatus(true);
+        try {
+            const res = await api.get(`/closer/leads/${lead.id}/payment-status`);
+            console.log("Payment status for lead:", lead.id, res.data);
+            setAllowedPaymentTypes(res.data.allowed_types);
+            if (res.data.allowed_types.length > 0) {
+                setFormData(prev => ({ ...prev, payment_type: res.data.allowed_types[0] }));
+            }
+        } catch (err) {
+            console.error("Error fetching payment status", err);
+            // Fallback to basic options for new lead if API fails
+            setAllowedPaymentTypes(['full', 'first_payment', 'down_payment']);
+        } finally {
+            setLoadingStatus(false);
         }
     };
 
@@ -155,7 +178,7 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
                                                     <button
                                                         key={l.id}
                                                         type="button"
-                                                        onClick={() => { setFormData({ ...formData, lead_id: l.id }); setStep(2); }}
+                                                        onClick={() => handleLeadSelect(l)}
                                                         className={`w-full p-4 flex items-center justify-between hover:bg-surface-hover transition-all text-left ${formData.lead_id === l.id ? 'bg-primary/10' : ''}`}
                                                     >
                                                         <div>
@@ -221,17 +244,37 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
 
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Tipo de Pago</label>
-                                            <div className="grid grid-cols-3 gap-4">
-                                                {['full', 'down_payment', 'installment'].map(type => (
-                                                    <button
-                                                        key={type}
-                                                        type="button"
-                                                        onClick={() => setFormData({ ...formData, payment_type: type })}
-                                                        className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${formData.payment_type === type ? 'bg-primary border-primary text-white shadow-lg' : 'bg-main border-base text-muted hover:text-base'}`}
-                                                    >
-                                                        {type === 'full' ? 'Completo' : type === 'down_payment' ? 'Seña' : 'Cuota'}
-                                                    </button>
-                                                ))}
+                                            <div className="grid grid-cols-2 md:col-span-4 gap-4">
+                                                {loadingStatus ? (
+                                                    <div className="col-span-2 md:col-span-4 py-6 flex flex-col items-center justify-center gap-3 bg-main/50 rounded-2xl border border-base border-dashed">
+                                                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                                                        <span className="text-[9px] font-black uppercase text-muted tracking-[0.2em]">Analizando Historial...</span>
+                                                    </div>
+                                                ) : (
+                                                    ['full', 'first_payment', 'down_payment', 'installment', 'renewal'].map(type => {
+                                                        const isAllowed = allowedPaymentTypes.includes(type);
+                                                        if (!isAllowed) return null;
+
+                                                        const labels = {
+                                                            full: 'Completo',
+                                                            first_payment: 'Primer Pago',
+                                                            down_payment: 'Seña',
+                                                            installment: 'Cuota',
+                                                            renewal: 'Renovación'
+                                                        };
+
+                                                        return (
+                                                            <button
+                                                                key={type}
+                                                                type="button"
+                                                                onClick={() => setFormData({ ...formData, payment_type: type })}
+                                                                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${formData.payment_type === type ? 'bg-primary border-primary text-white shadow-lg' : 'bg-main border-base text-muted hover:text-base'}`}
+                                                            >
+                                                                {labels[type]}
+                                                            </button>
+                                                        );
+                                                    })
+                                                )}
                                             </div>
                                         </div>
                                     </div>
