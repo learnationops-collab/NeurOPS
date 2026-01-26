@@ -42,6 +42,16 @@ def get_dashboard():
             "seq_num": seq
         })
         
+    # Custom Sort: Pending (scheduled), Reprogramada, Completada, No Show, Cancelada
+    status_order = {
+        'scheduled': 1, 'pending': 1, 
+        'Reprogramada': 2, 'rescheduled': 2,
+        'Completada': 3, 'completed': 3, 'Primera Agenda': 3,
+        'No Show': 4, 'no_show': 4,
+        'Cancelada': 5, 'cancelled': 5
+    }
+    serialized['agendas_today'].sort(key=lambda x: status_order.get(x['status'], 99))
+        
     # Sales Today: Any enrollment that had a payment today
     sales = Enrollment.query.join(Payment).filter(
         Enrollment.closer_id == current_user.id,

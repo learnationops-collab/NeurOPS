@@ -293,7 +293,19 @@ const CloserDashboard = () => {
                                         </div>
                                         <div>
                                             <p className="text-base font-black">{appt.lead_name}</p>
-                                            <p className="text-[10px] text-muted font-bold uppercase">{appt.type}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <p className="text-[10px] text-muted font-bold uppercase">{appt.type}</p>
+                                                <Badge
+                                                    variant={
+                                                        ['Completada', 'Primera Agenda'].includes(appt.status) ? 'success' :
+                                                            appt.status === 'scheduled' ? 'primary' :
+                                                                ['Cancelada', 'No Show'].includes(appt.status) ? 'accent' : 'neutral'
+                                                    }
+                                                    className="px-2 py-0.5 text-[8px]"
+                                                >
+                                                    {appt.status || 'scheduled'}
+                                                </Badge>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="p-2 text-muted group-hover:text-primary transition-all">
