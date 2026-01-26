@@ -15,11 +15,37 @@ import {
     CheckCircle,
     Globe,
     CalendarDays,
-    Instagram
+    Instagram,
+    ChevronDown
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+
+const COUNTRY_CODES = [
+    { code: '+54', country: 'Argentina', flag: '🇦🇷' },
+    { code: '+591', country: 'Bolivia', flag: '🇧🇴' },
+    { code: '+55', country: 'Brasil', flag: '🇧🇷' },
+    { code: '+56', country: 'Chile', flag: '🇨🇱' },
+    { code: '+57', country: 'Colombia', flag: '🇨🇴' },
+    { code: '+506', country: 'Costa Rica', flag: '🇨🇷' },
+    { code: '+53', country: 'Cuba', flag: '🇨🇺' },
+    { code: '+593', country: 'Ecuador', flag: '🇪🇨' },
+    { code: '+503', country: 'El Salvador', flag: '🇸🇻' },
+    { code: '+34', country: 'España', flag: '🇪🇸' },
+    { code: '+1', country: 'Estados Unidos', flag: '🇺🇸' },
+    { code: '+502', country: 'Guatemala', flag: '🇬🇹' },
+    { code: '+504', country: 'Honduras', flag: '🇭🇳' },
+    { code: '+52', country: 'México', flag: '🇲🇽' },
+    { code: '+505', country: 'Nicaragua', flag: '🇳🇮' },
+    { code: '+507', country: 'Panamá', flag: '🇵🇦' },
+    { code: '+595', country: 'Paraguay', flag: '🇵🇾' },
+    { code: '+51', country: 'Perú', flag: '🇵🇪' },
+    { code: '+1', country: 'Puerto Rico', flag: '🇵🇷' },
+    { code: '+1', country: 'Rep. Dominicana', flag: '🇩🇴' },
+    { code: '+598', country: 'Uruguay', flag: '🇺🇾' },
+    { code: '+58', country: 'Venezuela', flag: '🇻🇪' },
+];
 
 const BookingPage = () => {
     const { username, event_slug } = useParams();
@@ -54,6 +80,7 @@ const BookingPage = () => {
 
     // Form States
     const [contactData, setContactData] = useState({ name: '', email: '', phone: '', instagram: '' });
+    const [phonePrefix, setPhonePrefix] = useState('+54');
     const [surveyAnswers, setSurveyAnswers] = useState({});
     const [selectedSlot, setSelectedSlot] = useState(null);
 
@@ -71,7 +98,6 @@ const BookingPage = () => {
         setLoading(true);
         setError(null);
         try {
-            // Updated route to use only event_slug (utm_source)
             const res = await api.get(`/public/funnel/${event_slug}`);
             setEventInfo(res.data.event);
             setQuestions(res.data.questions);
@@ -135,6 +161,7 @@ const BookingPage = () => {
         try {
             const payload = {
                 ...contactData,
+                phone: `${phonePrefix} ${contactData.phone}`,
                 timestamp: selectedSlot.ts,
                 event_id: eventInfo.id,
                 closer_id: selectedSlot.closer_id,
@@ -270,14 +297,41 @@ const BookingPage = () => {
                                     value={contactData.name}
                                     onChange={(v) => setContactData({ ...contactData, name: v })}
                                 />
-                                <FormInput
-                                    label="WhatsApp / Móvil (Obligatorio)"
-                                    type="tel"
-                                    icon={<Phone size={20} />}
-                                    placeholder="+54 9 ..."
-                                    value={contactData.phone}
-                                    onChange={(v) => setContactData({ ...contactData, phone: v })}
-                                />
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">WhatsApp / Móvil (Obligatorio)</label>
+                                    <div className="flex gap-3">
+                                        <div className="relative group">
+                                            <select
+                                                className="h-full bg-main border border-base rounded-2xl py-5 px-4 text-xs font-black outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none pr-10 cursor-pointer min-w-[120px]"
+                                                value={phonePrefix}
+                                                onChange={(e) => setPhonePrefix(e.target.value)}
+                                            >
+                                                {COUNTRY_CODES.map(c => (
+                                                    <option key={`${c.country}-${c.code}`} value={c.code}>
+                                                        {c.flag} {c.code}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none group-focus-within:text-primary transition-colors">
+                                                <ChevronDown size={14} />
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 relative group">
+                                            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-muted/50 group-focus-within:text-primary transition-colors">
+                                                <Phone size={20} />
+                                            </div>
+                                            <input
+                                                type="tel"
+                                                className="w-full bg-main border border-base rounded-2xl py-5 pl-16 pr-6 text-base outline-none focus:ring-2 focus:ring-primary/50 transition-all font-black placeholder:text-muted/20"
+                                                placeholder="911 2233 4455"
+                                                value={contactData.phone}
+                                                onChange={(e) => setContactData({ ...contactData, phone: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <FormInput
                                     label="Instagram / Usuario (Obligatorio)"
                                     icon={<Instagram size={20} />}
