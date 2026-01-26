@@ -258,6 +258,7 @@ class Integration(db.Model):
     url_dev = db.Column(db.String(255))
     url_prod = db.Column(db.String(255))
     active_env = db.Column(db.String(10), default='dev')
+    payload_config = db.Column(db.JSON, default={})
 
 class Pipeline(db.Model):
     __tablename__ = 'pipelines'

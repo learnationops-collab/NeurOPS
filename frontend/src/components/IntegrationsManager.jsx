@@ -1,6 +1,7 @@
+import PayloadConfigModal from './PayloadConfigModal';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Key, Save, Loader2, Globe, Server, Check, AlertCircle } from 'lucide-react';
+import { Key, Save, Loader2, Globe, Server, Check, AlertCircle, Trash2, Settings2 } from 'lucide-react';
 import Button from './ui/Button';
 
 const IntegrationsManager = () => {
@@ -9,6 +10,10 @@ const IntegrationsManager = () => {
     const [integrations, setIntegrations] = useState([]);
     const [message, setMessage] = useState(null);
     const [error, setError] = useState(null);
+
+    // Modal State
+    const [configModalOpen, setConfigModalOpen] = useState(false);
+    const [currentConfigInt, setCurrentConfigInt] = useState(null);
 
     useEffect(() => {
         fetchIntegrations();
@@ -53,10 +58,48 @@ const IntegrationsManager = () => {
         }
     };
 
+    const handleDelete = async (id) => {
+        if (!window.confirm("¿Seguro que quieres eliminar esta integración?")) return;
+        setLoading(true);
+        try {
+            await api.delete(`/admin/integrations?id=${id}`);
+            setMessage("Integración eliminada");
+            fetchIntegrations();
+        } catch (err) {
+            setError(err.response?.data?.error || "Error al eliminar");
+            setLoading(false);
+        }
+    };
+
     const updateIntegration = (index, field, value) => {
         const newInts = [...integrations];
         newInts[index][field] = value;
         setIntegrations(newInts);
+    };
+
+    const openConfigModal = (integration, index) => {
+        setCurrentConfigInt({ ...integration, index });
+        setConfigModalOpen(true);
+    };
+
+    const savePayloadConfig = async (newConfig) => {
+        if (!currentConfigInt) return;
+
+        // Update local state first to reflect changes immediately or just save directly
+        const updatedInt = { ...currentConfigInt, payload_config: newConfig };
+
+        // Save to backend
+        setSaving(true);
+        try {
+            await api.post('/admin/integrations', updatedInt);
+            setMessage("Configuración de datos actualizada");
+            setConfigModalOpen(false);
+            fetchIntegrations(); // Refresh
+        } catch (err) {
+            setError("Error al guardar configuración de datos");
+        } finally {
+            setSaving(false);
+        }
     };
 
     if (loading) return <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto text-primary" /></div>;
@@ -130,14 +173,33 @@ const IntegrationsManager = () => {
                                     </div>
                                 </div>
 
-                                <Button
-                                    onClick={() => handleSave(integration)}
-                                    loading={saving}
-                                    icon={Save}
-                                    variant="primary"
-                                >
-                                    Guardar Configuración
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => openConfigModal(integration, index)}
+                                        className="p-3 bg-base hover:bg-surface-hover text-muted hover:text-base rounded-xl transition-all border border-transparent hover:border-base"
+                                        title="Configurar Datos Enviados"
+                                    >
+                                        <Settings2 size={20} />
+                                    </button>
+
+                                    {integration.id && (
+                                        <button
+                                            onClick={() => handleDelete(integration.id)}
+                                            className="p-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl transition-all"
+                                            title="Eliminar Integración"
+                                        >
+                                            <Trash2 size={20} />
+                                        </button>
+                                    )}
+                                    <Button
+                                        onClick={() => handleSave(integration)}
+                                        loading={saving}
+                                        icon={Save}
+                                        variant="primary"
+                                    >
+                                        Guardar Configuración
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -156,6 +218,14 @@ const IntegrationsManager = () => {
                     <span className="text-xs font-bold">{error}</span>
                 </div>
             )}
+
+            <PayloadConfigModal
+                isOpen={configModalOpen}
+                onClose={() => setConfigModalOpen(false)}
+                onSave={savePayloadConfig}
+                initialConfig={currentConfigInt?.payload_config || {}}
+                loading={saving}
+            />
         </div>
     );
 };

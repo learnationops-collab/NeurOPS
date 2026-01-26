@@ -261,10 +261,17 @@ def generate_mock_data():
         sale_count=data.get('sales', 5)
     )
     return jsonify({"message": message}), 200 if success else 400
-@bp.route('/admin/integrations', methods=['GET', 'POST'])
+@bp.route('/admin/integrations', methods=['GET', 'POST', 'DELETE'])
 @login_required
 @admin_required
 def manage_integrations():
+    if request.method == 'DELETE':
+        id = request.args.get('id')
+        i = Integration.query.get_or_404(id)
+        db.session.delete(i)
+        db.session.commit()
+        return jsonify({"message": "Integración eliminada"}), 200
+
     if request.method == 'POST':
         data = request.get_json() or {}
         id = data.get('id')
@@ -275,6 +282,7 @@ def manage_integrations():
              i.url_dev = data.get('url_dev', i.url_dev)
              i.url_prod = data.get('url_prod', i.url_prod)
              i.active_env = data.get('active_env', i.active_env)
+             i.payload_config = data.get('payload_config', i.payload_config)
         else:
             # Check for unique key
             if Integration.query.filter_by(key=data.get('key')).first():
@@ -285,7 +293,8 @@ def manage_integrations():
                 name=data.get('name'),
                 url_dev=data.get('url_dev'),
                 url_prod=data.get('url_prod'),
-                active_env=data.get('active_env', 'dev')
+                active_env=data.get('active_env', 'dev'),
+                payload_config=data.get('payload_config', {})
             )
             db.session.add(i)
         
@@ -294,7 +303,8 @@ def manage_integrations():
         
     return jsonify([{
         "id": i.id, "key": i.key, "name": i.name, 
-        "url_dev": i.url_dev, "url_prod": i.url_prod, "active_env": i.active_env
+        "url_dev": i.url_dev, "url_prod": i.url_prod, "active_env": i.active_env,
+        "payload_config": i.payload_config
     } for i in Integration.query.all()]), 200
 
 # --- Admin Funnel Management ---

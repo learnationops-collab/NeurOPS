@@ -248,7 +248,7 @@ class CloserService:
                         client_name = enrollment.client.full_name or "Sin Nombre"
                         first_name = client_name.split(' ')[0] if client_name else ""
                         
-                        payload = {
+                        raw_payload = {
                             "cliente": client_name,
                             "first_name": first_name,
                             "telefono": enrollment.client.phone,
@@ -260,11 +260,29 @@ class CloserService:
                             "programa": enrollment.program.name if enrollment.program else "Desconocido",
                             "metodo_pago": pm.name if pm else "N/A",
                             "fecha": datetime.now().isoformat(),
-                            "transaction_id": "", # Placeholder or add if available in future
+                            "transaction_id": "",
                             "comision": round(fees, 2),
                             "valor_programa": enrollment.program.price if enrollment.program else 0.0
                         }
                         
+                        # Apply Configuration
+                        config = sales_webhook.payload_config or {}
+                        # If config is empty, send everything (default behavior)
+                        if not config:
+                             payload = raw_payload
+                        else:
+                             payload = {}
+                             for key, val in raw_payload.items():
+                                 # Config structure expected: { key: { enabled: bool, label: string } } or simple { key: bool }
+                                 # Let's assume simple { key: bool } for enabled status for now, or check for existence
+                                 if config.get(key, True): # Default to true if not specified? Or strict? 
+                                     # Let's go with: if config exists, only send keys that are true.
+                                     # Actually, better: if config is populated, only send keys present and true.
+                                     # But for backward compat/init, if empty send all.
+                                     
+                                     if config.get(key):
+                                         payload[key] = val
+
                         # Fire and forget (or log error)
                         try:
                             requests.post(url, json=payload, timeout=5)
