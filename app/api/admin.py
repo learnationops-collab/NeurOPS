@@ -5,7 +5,11 @@ from app.services.user_service import UserService
 from app.services.financial_service import FinancialService
 from app.services.dashboard_service import DashboardService
 from app.services.admin_ops_service import AdminOperationService
+from app.services.import_service import ImportService
 from app.decorators import admin_required
+import pandas as pd
+import io
+import json
 from app.models import Program, db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, DailyReportQuestion, Appointment, Integration
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
@@ -501,3 +505,42 @@ def delete_event_question(id):
     db.session.delete(q)
     db.session.commit()
     return jsonify({"message": "Pregunta eliminada"}), 200
+
+# --- Advanced Import Tools ---
+
+@bp.route('/admin/import/config', methods=['GET'])
+@login_required
+@admin_required
+def get_import_config():
+    return jsonify(ImportService.get_config()), 200
+
+@bp.route('/admin/import/validate', methods=['POST'])
+@login_required
+@admin_required
+def validate_import():
+    file = request.files.get('file')
+    target = request.form.get('target')
+    mapping = json.loads(request.form.get('mapping', '{}'))
+    
+    if not file or not target:
+        return jsonify({"message": "Faltan datos"}), 400
+        
+    df = pd.read_csv(io.StringIO(file.read().decode('utf-8')))
+    report = ImportService.validate(df, target, mapping)
+    return jsonify(report), 200
+
+@bp.route('/admin/import/execute', methods=['POST'])
+@login_required
+@admin_required
+def execute_import():
+    file = request.files.get('file')
+    target = request.form.get('target')
+    mapping = json.loads(request.form.get('mapping', '{}'))
+    options = json.loads(request.form.get('options', '{}'))
+    
+    if not file or not target:
+        return jsonify({"message": "Faltan datos"}), 400
+        
+    df = pd.read_csv(io.StringIO(file.read().decode('utf-8')))
+    result = ImportService.execute(df, target, mapping, options)
+    return jsonify(result), 200
