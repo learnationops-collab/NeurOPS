@@ -5,12 +5,13 @@ from datetime import datetime
 class ImportService:
     CONFIG = {
         'leads': {
-            'required': ['email'],
+            'required': ['email', 'created_at'],
             'fields': [
                 {'name': 'full_name', 'label': 'Nombre Completo'},
                 {'name': 'email', 'label': 'Correo Electrónico', 'required': True},
                 {'name': 'phone', 'label': 'Teléfono'},
-                {'name': 'instagram', 'label': 'Instagram'}
+                {'name': 'instagram', 'label': 'Instagram'},
+                {'name': 'created_at', 'label': 'Fecha de Registro', 'required': True}
             ],
             'entities': {}
         },
@@ -162,6 +163,17 @@ class ImportService:
     def _process_lead(data, update_existing, dry_run):
         email = data.get('email')
         if not email: raise Exception("Email missing")
+        
+        # Parse created_at strictly
+        created_str = data.get('created_at')
+        if not created_str:
+             raise Exception("Fecha de Registro (created_at) es obligatoria")
+
+        try:
+            # Use pandas for robust parsing, assuming day-first for ambiguous cases (common in Latam)
+            created_at = pd.to_datetime(created_str, dayfirst=True).to_pydatetime()
+        except Exception:
+            raise Exception(f"Formato de fecha inválido: '{created_str}'. Use DD/MM/YYYY o YYYY-MM-DD")
 
         client = Client.query.filter_by(email=email).first()
         if not client:
@@ -169,13 +181,16 @@ class ImportService:
                 full_name=data.get('full_name') or email.split('@')[0],
                 email=email,
                 phone=data.get('phone'),
-                instagram=data.get('instagram')
+                instagram=data.get('instagram'),
+                created_at=created_at
             )
             db.session.add(client)
         elif update_existing:
             if data.get('full_name'): client.full_name = data.get('full_name')
             if data.get('phone'): client.phone = data.get('phone')
             if data.get('instagram'): client.instagram = data.get('instagram')
+            # Always update created_at if provided in import, allows fixing dates
+            client.created_at = created_at
 
     @staticmethod
     def _process_sale(data, resolutions, dry_run):
