@@ -5,7 +5,7 @@ import UsersPage from './UsersPage';
 import ReportQuestionsManager from '../components/ReportQuestionsManager';
 import ProgramsManager from '../components/ProgramsManager';
 import FunnelsManager from '../components/FunnelsManager';
-import PaymentMethodsManager from '../components/PaymentMethodsManager';
+import IntegrationsManager from '../components/IntegrationsManager';
 import Card from '../components/ui/Card';
 import ThemeSelector from '../components/ui/ThemeSelector';
 
@@ -110,12 +110,7 @@ const SettingsPage = () => {
                     )}
 
                     {activeSection === 'integrations' && (
-                        <div className="p-10 text-center space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
-                            <div className="w-20 h-20 bg-surface rounded-3xl mx-auto flex items-center justify-center text-muted border border-base">
-                                <Key size={32} />
-                            </div>
-                            <p className="text-muted font-bold uppercase tracking-widest text-xs">Módulos de Integración (Beta)</p>
-                        </div>
+                        <IntegrationsManager />
                     )}
 
                     {activeSection === 'appearance' && (

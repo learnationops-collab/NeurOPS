@@ -6,7 +6,7 @@ from app.services.financial_service import FinancialService
 from app.services.dashboard_service import DashboardService
 from app.services.admin_ops_service import AdminOperationService
 from app.decorators import admin_required
-from app.models import Program, db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, DailyReportQuestion, Appointment
+from app.models import Program, db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, DailyReportQuestion, Appointment, Integration
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
 
@@ -257,6 +257,41 @@ def generate_mock_data():
         sale_count=data.get('sales', 5)
     )
     return jsonify({"message": message}), 200 if success else 400
+@bp.route('/admin/integrations', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_integrations():
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        id = data.get('id')
+        if id:
+             i = Integration.query.get_or_404(id)
+             i.key = data.get('key', i.key)
+             i.name = data.get('name', i.name)
+             i.url_dev = data.get('url_dev', i.url_dev)
+             i.url_prod = data.get('url_prod', i.url_prod)
+             i.active_env = data.get('active_env', i.active_env)
+        else:
+            # Check for unique key
+            if Integration.query.filter_by(key=data.get('key')).first():
+                 return jsonify({"error": "Integration key already exists"}), 400
+            
+            i = Integration(
+                key=data.get('key'),
+                name=data.get('name'),
+                url_dev=data.get('url_dev'),
+                url_prod=data.get('url_prod'),
+                active_env=data.get('active_env', 'dev')
+            )
+            db.session.add(i)
+        
+        db.session.commit()
+        return jsonify({"message": "Integración guardada"}), 200
+        
+    return jsonify([{
+        "id": i.id, "key": i.key, "name": i.name, 
+        "url_dev": i.url_dev, "url_prod": i.url_prod, "active_env": i.active_env
+    } for i in Integration.query.all()]), 200
 
 # --- Admin Funnel Management ---
 
