@@ -244,6 +244,13 @@ def book_appointment():
         # Trigger Agenda Webhook
         BookingService.trigger_agenda_webhook(appt, event)
 
+        # Sync with Google Calendar
+        try:
+            from app.services.google_service import GoogleService
+            GoogleService.create_event(appt.closer_id, appt)
+        except Exception as e:
+            print(f"GCal Sync Error (Public): {e}")
+
         return jsonify({
             "message": "Booking successful", 
             "id": appt.id,

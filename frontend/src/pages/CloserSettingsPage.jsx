@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import ThemeSelector from '../components/ui/ThemeSelector';
+import GoogleCalendarSettings from '../components/GoogleCalendarSettings';
 import {
     Clock,
     Calendar,
@@ -236,6 +237,12 @@ const CloserSettingsPage = () => {
                         className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'appearance' ? 'bg-primary text-white shadow-xl shadow-primary/40' : 'text-muted hover:text-base'}`}
                     >
                         <Palette size={16} /> Apariencia
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('integrations')}
+                        className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-3 ${activeTab === 'integrations' ? 'bg-primary text-white shadow-xl shadow-primary/40' : 'text-muted hover:text-base'}`}
+                    >
+                        <Zap size={16} /> Integraciones
                     </button>
                 </div>
             </header>
@@ -526,6 +533,18 @@ const CloserSettingsPage = () => {
                     </div>
                 )}
             </main>
+
+            {activeTab === 'integrations' && (
+                <div className="animate-in slide-in-from-bottom-6 duration-500 space-y-10">
+                    <Card variant="surface" className="p-10 border-primary/10">
+                        <div className="mb-10">
+                            <h3 className="text-3xl font-black text-base italic tracking-tighter uppercase mb-2">Integraciones Externas</h3>
+                            <p className="text-muted text-xs font-bold uppercase tracking-widest">Conecta tus herramientas favoritas</p>
+                        </div>
+                        <GoogleCalendarSettings />
+                    </Card>
+                </div>
+            )}
 
             <style dangerouslySetInnerHTML={{
                 __html: `

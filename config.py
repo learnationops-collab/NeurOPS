@@ -23,3 +23,4 @@ class Config:
     # Security & Sessions
     SESSION_COOKIE_NAME = 'learnation_workers_session'
     REMEMBER_COOKIE_NAME = 'learnation_workers_remember'
+    SESSION_COOKIE_SAMESITE = 'Lax'

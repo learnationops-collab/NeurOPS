@@ -34,14 +34,71 @@ def get_dashboard():
             debtor['student'] = {"id": client.id, "full_name": client.full_name, "email": client.email}
     return jsonify(data), 200
 
-@bp.route('/admin/users', methods=['GET'])
+@bp.route('/admin/users', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def get_users():
+def manage_users():
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password')
+        role = data.get('role', 'closer')
+        
+        if not username or not password:
+            return jsonify({"message": "Username and password required"}), 400
+            
+        if User.query.filter((User.username == username) | (User.email == email)).first():
+             return jsonify({"message": "User already exists"}), 409
+             
+        user = User(username=username, email=email, role=role)
+        user.set_password(password)
+        if 'timezone' in data: user.timezone = data['timezone']
+        
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({"message": "User created", "id": user.id}), 201
+
     role_filter = request.args.getlist('role') or ['admin', 'closer']
     users = UserService.get_users_by_role(role_filter)
     user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "is_active": True} for u in users]
     return jsonify(user_list), 200
+
+@bp.route('/admin/users/<int:id>', methods=['PUT', 'DELETE'])
+@login_required
+@admin_required
+def user_operations(id):
+    user = User.query.get_or_404(id)
+    
+    if request.method == 'DELETE':
+        if user.id == current_user.id:
+            return jsonify({"message": "Cannot delete yourself"}), 400
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"message": "User deleted"}), 200
+        
+    if request.method == 'PUT':
+        data = request.get_json() or {}
+        username = data.get('username')
+        email = data.get('email')
+        
+        # Check conflicts
+        existing = User.query.filter(
+            ((User.username == username) | (User.email == email)) & (User.id != id)
+        ).first()
+        if existing:
+            return jsonify({"message": "Username or Email already taken"}), 409
+            
+        user.username = username or user.username
+        user.email = email or user.email
+        user.role = data.get('role', user.role)
+        if 'timezone' in data: user.timezone = data['timezone']
+        
+        if data.get('password'):
+            user.set_password(data['password'])
+            
+        db.session.commit()
+        return jsonify({"message": "User updated"}), 200
 
 @bp.route('/admin/leads/search', methods=['GET'])
 @login_required

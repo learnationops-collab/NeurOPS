@@ -6,6 +6,7 @@ import ReportQuestionsManager from '../components/ReportQuestionsManager';
 import ProgramsManager from '../components/ProgramsManager';
 import FunnelsManager from '../components/FunnelsManager';
 import IntegrationsManager from '../components/IntegrationsManager';
+import GoogleCalendarSettings from '../components/GoogleCalendarSettings';
 import PaymentMethodsManager from '../components/PaymentMethodsManager';
 import Card from '../components/ui/Card';
 import ThemeSelector from '../components/ui/ThemeSelector';
@@ -111,7 +112,11 @@ const SettingsPage = () => {
                     )}
 
                     {activeSection === 'integrations' && (
-                        <IntegrationsManager />
+                        <div className="space-y-8">
+                            <IntegrationsManager />
+                            <div className="border-t border-base opacity-20 my-4" />
+                            <GoogleCalendarSettings />
+                        </div>
                     )}
 
                     {activeSection === 'appearance' && (

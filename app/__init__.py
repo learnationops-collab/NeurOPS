@@ -59,6 +59,10 @@ def create_app(config_class=Config):
     app.register_blueprint(public_api_bp, url_prefix='/api')
     csrf.exempt(public_api_bp)
 
+    from app.api.google_calendar import bp as google_calendar_bp
+    app.register_blueprint(google_calendar_bp)
+    csrf.exempt(google_calendar_bp)
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):
