@@ -61,7 +61,6 @@ const BookingPage = () => {
     const [clientId, setClientId] = useState(null);
     const [bookedCloser, setBookedCloser] = useState('');
     const [redirectUrl, setRedirectUrl] = useState(null);
-    const [countdown, setCountdown] = useState(3);
 
     // Data from API
     const [eventInfo, setEventInfo] = useState(null);
@@ -124,12 +123,32 @@ const BookingPage = () => {
             const res = await api.post('/public/clients/check', { email: contactData.email });
             if (res.data.exists) {
                 setClientId(res.data.client.id);
+
+                const fullPhone = res.data.client.phone || '';
+                let matchedPrefix = '+54';
+                let subscriberNumber = fullPhone.replace(/\D/g, '');
+
+                // Find matching prefix (longest match first)
+                const sortedCodes = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
+                for (const c of sortedCodes) {
+                    if (fullPhone.startsWith(c.code)) {
+                        matchedPrefix = c.code;
+                        subscriberNumber = fullPhone.slice(c.code.length).replace(/\D/g, '');
+                        break;
+                    }
+                }
+
+                setPhonePrefix(matchedPrefix);
                 setContactData(prev => ({
                     ...prev,
                     name: res.data.client.full_name || prev.name,
-                    phone: res.data.client.phone || prev.phone,
+                    phone: subscriberNumber,
                     instagram: res.data.client.instagram || prev.instagram
                 }));
+
+                if (res.data.client.survey_answers) {
+                    setSurveyAnswers(res.data.client.survey_answers);
+                }
             }
             setCurrentStep(2);
         } catch (err) {
@@ -145,7 +164,7 @@ const BookingPage = () => {
             try {
                 const res = await api.post('/public/submit-lead', {
                     ...contactData,
-                    phone: `${phonePrefix} ${contactData.phone}`
+                    phone: `${phonePrefix} ${contactData.phone.replace(/\D/g, '')}`
                 });
                 if (res.data.id) setClientId(res.data.id);
 
@@ -195,7 +214,7 @@ const BookingPage = () => {
         try {
             const payload = {
                 ...contactData,
-                phone: `${phonePrefix} ${contactData.phone}`,
+                phone: `${phonePrefix} ${contactData.phone.replace(/\D/g, '')}`,
                 timestamp: selectedSlot.ts,
                 event_id: eventInfo.id,
                 closer_id: selectedSlot.closer_id,
@@ -206,26 +225,25 @@ const BookingPage = () => {
             };
             const res = await api.post(`/public/book`, payload);
             if (res.data.closer_name) setBookedCloser(res.data.closer_name);
+            if (res.data.redirect_url) setRedirectUrl(res.data.redirect_url);
 
             setSuccess(true);
-
-            // Handle Redirection Logic
-            if (res.data.redirect_url) {
-                setRedirectUrl(res.data.redirect_url);
-                let timer = 3;
-                const interval = setInterval(() => {
-                    timer -= 1;
-                    setCountdown(timer);
-                    if (timer <= 0) {
-                        clearInterval(interval);
-                        window.location.href = res.data.redirect_url;
-                    }
-                }, 1000);
-            }
         } catch (err) {
             setError(err.response?.data?.error || "Error al confirmar el agendamiento.");
         } finally {
             setBooking(false);
+        }
+    };
+
+    const handleFinalize = () => {
+        if (redirectUrl) {
+            let target = redirectUrl;
+            if (target.includes('.') && !target.startsWith('http') && !target.startsWith('/')) {
+                target = 'https://' + target;
+            }
+            window.location.href = target;
+        } else {
+            window.location.reload();
         }
     };
 
@@ -247,29 +265,23 @@ const BookingPage = () => {
                     Tu sesión con <span className="text-primary font-black">@{bookedCloser || username}</span> ha sido reservada.
                 </p>
 
-                {redirectUrl && (
-                    <div className="mb-10 p-4 bg-primary/10 border border-primary/20 rounded-2xl animate-pulse">
-                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">
-                            Redirigiéndote en {countdown} segundos...
-                        </p>
-                    </div>
-                )}
                 <div className="bg-main/50 p-8 rounded-[2rem] border border-base mb-10 text-left space-y-4 shadow-inner">
                     <div className="flex items-center gap-4 text-sm">
                         <Calendar className="w-5 h-5 text-primary" />
-                        <span className="text-base font-black italic">{new Date(selectedSlot.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                        <span className="text-base font-black italic">{selectedSlot ? new Date(selectedSlot.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}</span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
                         <Clock className="w-5 h-5 text-primary" />
-                        <span className="text-base font-black italic">{selectedSlot.start_time} HS</span>
+                        <span className="text-base font-black italic">{selectedSlot?.start} HS</span>
                     </div>
                 </div>
                 <Button
-                    onClick={() => window.location.reload()}
+                    onClick={handleFinalize}
                     variant="primary"
-                    className="w-full h-16"
+                    className="w-full h-18 text-base tracking-widest font-black"
+                    type="button"
                 >
-                    Finalizar
+                    CONTINUAR
                 </Button>
             </Card>
         </div>
@@ -283,7 +295,7 @@ const BookingPage = () => {
                     <div className="mb-10 p-6 bg-red-500/10 border border-red-500/20 rounded-3xl flex items-center gap-4 text-red-500 animate-in fade-in zoom-in-95 duration-500">
                         <AlertCircle className="w-8 h-8 shrink-0" />
                         <div className="space-y-1">
-                            <p className="font-black uppercase tracking-widest text-xs">Error de Conexión</p>
+                            <p className="font-black uppercase tracking-widest text-xs">Error</p>
                             <p className="text-[10px] font-medium opacity-80 uppercase tracking-tight">{error}</p>
                         </div>
                     </div>
@@ -294,7 +306,7 @@ const BookingPage = () => {
                     {[1, 2, 3, 4].map((step) => {
                         const isCompleted = currentStep > step;
                         const isActive = currentStep === step;
-                        const stepLabels = ["Email", "Datos", "Cualificación", "Reserva"];
+                        const stepLabels = ["Email", "Datos", "Encuesta", "Reserva"];
                         return (
                             <div key={step} className="flex-1 flex flex-col items-center gap-3">
                                 <div className={`h-1.5 w-full rounded-full transition-all duration-700 ${isCompleted ? 'bg-primary' : isActive ? 'bg-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.6)]' : 'bg-base'
@@ -331,6 +343,7 @@ const BookingPage = () => {
                                 variant="primary"
                                 className="w-full h-18 text-base tracking-widest"
                                 icon={ChevronRight}
+                                type="button"
                             >
                                 CONTINUAR
                             </Button>
@@ -343,7 +356,7 @@ const BookingPage = () => {
                     <div className="space-y-10 animate-in fade-in slide-in-from-right-6 duration-700">
                         <header className="text-center space-y-3">
                             <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">TUS DATOS</h2>
-                            <p className="text-muted font-black uppercase text-[10px] tracking-[0.5em] ml-1">Verifica y completa tu información</p>
+                            <p className="text-muted font-black uppercase text-[10px] tracking-[0.5em] ml-1">Completa tu perfil</p>
                         </header>
 
                         <Card variant="surface" className="p-10 shadow-2xl space-y-8">
@@ -351,64 +364,51 @@ const BookingPage = () => {
                                 <FormInput
                                     label="Nombre Completo"
                                     icon={<User size={20} />}
-                                    placeholder="Ej: John Wick"
+                                    placeholder="Nombre y Apellido"
                                     value={contactData.name}
                                     onChange={(v) => setContactData({ ...contactData, name: v })}
                                 />
 
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">WhatsApp / Móvil (Obligatorio)</label>
+                                    <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">WhatsApp</label>
                                     <div className="flex gap-3">
-                                        <div className="relative group">
-                                            <select
-                                                className="h-full bg-main border border-base rounded-2xl py-5 px-4 text-xs font-black outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none pr-10 cursor-pointer min-w-[120px]"
-                                                value={phonePrefix}
-                                                onChange={(e) => setPhonePrefix(e.target.value)}
-                                            >
-                                                {COUNTRY_CODES.map(c => (
-                                                    <option key={`${c.country}-${c.code}`} value={c.code}>
-                                                        {c.flag} {c.code}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none group-focus-within:text-primary transition-colors">
-                                                <ChevronDown size={14} />
-                                            </div>
-                                        </div>
-                                        <div className="flex-1 relative group">
-                                            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-muted/50 group-focus-within:text-primary transition-colors">
-                                                <Phone size={20} />
-                                            </div>
-                                            <input
-                                                type="tel"
-                                                className="w-full bg-main border border-base rounded-2xl py-5 pl-16 pr-6 text-base outline-none focus:ring-2 focus:ring-primary/50 transition-all font-black placeholder:text-muted/20"
-                                                placeholder="911 2233 4455"
-                                                value={contactData.phone}
-                                                onChange={(e) => setContactData({ ...contactData, phone: e.target.value })}
-                                            />
-                                        </div>
+                                        <select
+                                            className="bg-main border border-base rounded-2xl px-4 text-xs font-black outline-none focus:ring-2 focus:ring-primary/50"
+                                            value={phonePrefix}
+                                            onChange={(e) => setPhonePrefix(e.target.value)}
+                                        >
+                                            {COUNTRY_CODES.map(c => <option key={c.code + c.country} value={c.code}>{c.flag} {c.code}</option>)}
+                                        </select>
+                                        <input
+                                            type="tel"
+                                            className="flex-1 bg-main border border-base rounded-2xl py-5 px-6 text-base outline-none focus:ring-2 focus:ring-primary/50 font-black"
+                                            placeholder="123456789"
+                                            value={contactData.phone}
+                                            onChange={(e) => setContactData({ ...contactData, phone: e.target.value })}
+                                        />
                                     </div>
                                 </div>
 
                                 <FormInput
-                                    label="Instagram / Usuario (Obligatorio)"
+                                    label="Instagram"
                                     icon={<Instagram size={20} />}
-                                    placeholder="@tuusuario"
+                                    placeholder="@usuario"
                                     value={contactData.instagram}
                                     onChange={(v) => setContactData({ ...contactData, instagram: v })}
                                 />
                             </div>
 
                             <div className="flex gap-6">
-                                <Button onClick={prevStep} variant="ghost" className="h-18 w-24 p-0 border-base" icon={ChevronLeft} />
+                                <Button onClick={prevStep} variant="ghost" className="h-18 w-24 p-0 border-base" icon={ChevronLeft} type="button" />
                                 <Button
                                     onClick={nextStep}
                                     disabled={!contactData.name || !contactData.phone || !contactData.instagram}
                                     variant="primary"
                                     className="flex-1 h-18 text-base tracking-widest"
                                     icon={ChevronRight}
+                                    type="button"
                                 >
-                                    Siguiente
+                                    SIGUIENTE
                                 </Button>
                             </div>
                         </Card>
@@ -419,35 +419,30 @@ const BookingPage = () => {
                 {currentStep === 3 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-right-6 duration-700">
                         <header className="text-center space-y-3">
-                            <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">CALIFICACIÓN</h2>
-                            <p className="text-muted font-black uppercase text-[10px] tracking-[0.5em] ml-1">Personalizando tu experiencia</p>
+                            <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">ENCUESTA</h2>
+                            <p className="text-muted font-black uppercase text-[10px] tracking-[0.5em] ml-1">Casi terminamos</p>
                         </header>
 
-                        <Card variant="surface" className="p-10 shadow-2xl space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                        <Card variant="surface" className="p-10 shadow-2xl space-y-8 max-h-[50vh] overflow-y-auto custom-scrollbar">
                             {questions.map((q) => (
                                 <div key={q.id} className="space-y-4">
-                                    <label className="text-[11px] font-black text-muted uppercase tracking-widest ml-1">{q.text}</label>
+                                    <label className="text-[11px] font-black text-muted uppercase tracking-widest">{q.text}</label>
                                     {q.type === 'select' ? (
                                         <select
-                                            className="w-full bg-main border border-base rounded-2xl py-5 px-6 text-base outline-none focus:ring-2 focus:ring-primary/50 transition-all font-black appearance-none cursor-pointer"
+                                            className="w-full bg-main border border-base rounded-2xl py-5 px-6 text-base outline-none focus:ring-2 focus:ring-primary/50 font-black appearance-none cursor-pointer"
                                             value={surveyAnswers[q.id] || ''}
                                             onChange={(e) => setSurveyAnswers({ ...surveyAnswers, [q.id]: e.target.value })}
                                         >
-                                            <option value="" className="bg-surface">Seleccionar...</option>
+                                            <option value="">Seleccionar...</option>
                                             {Array.isArray(q.options)
-                                                ? q.options.map(opt => (
-                                                    <option key={opt.text} value={opt.text} className="bg-surface">{opt.text}</option>
-                                                ))
-                                                : q.options?.split(',').map(opt => (
-                                                    <option key={opt} value={opt} className="bg-surface">{opt}</option>
-                                                ))
+                                                ? q.options.map(opt => <option key={opt.text} value={opt.text}>{opt.text}</option>)
+                                                : q.options?.split(',').map(opt => <option key={opt} value={opt}>{opt}</option>)
                                             }
                                         </select>
                                     ) : (
                                         <input
                                             type={q.type}
-                                            className="w-full bg-main border border-base rounded-2xl py-5 px-6 text-base outline-none focus:ring-2 focus:ring-primary/50 transition-all font-black placeholder:text-muted/30"
-                                            placeholder="..."
+                                            className="w-full bg-main border border-base rounded-2xl py-5 px-6 text-base outline-none focus:ring-2 focus:ring-primary/50 font-black"
                                             value={surveyAnswers[q.id] || ''}
                                             onChange={(e) => setSurveyAnswers({ ...surveyAnswers, [q.id]: e.target.value })}
                                         />
@@ -457,38 +452,31 @@ const BookingPage = () => {
                         </Card>
 
                         <div className="flex gap-6">
-                            <Button onClick={prevStep} variant="ghost" className="h-18 w-24 p-0 border-base" icon={ChevronLeft} />
-                            <Button
-                                onClick={nextStep}
-                                variant="primary"
-                                className="flex-1 h-18 text-base tracking-widest"
-                                icon={ChevronRight}
-                            >
+                            <Button onClick={prevStep} variant="ghost" className="h-18 w-24 p-0 border-base" icon={ChevronLeft} type="button" />
+                            <Button onClick={nextStep} variant="primary" className="flex-1 h-18 text-base tracking-widest" icon={ChevronRight} type="button">
                                 CONTINUAR
                             </Button>
                         </div>
                     </div>
                 )}
 
-                {/* Step 4: Calendar Grid */}
+                {/* Step 4: Booking */}
                 {currentStep === 4 && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-right-6 duration-700">
+                    <div className="space-y-10 animate-in fade-in slide-in-from-right-6 duration-700">
                         <header className="text-center space-y-3">
                             <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">RESERVAR</h2>
-                            <div className="flex items-center justify-center gap-4 text-muted font-black uppercase text-[10px] tracking-[0.3em] ml-1">
+                            <div className="flex items-center justify-center gap-4 text-muted font-black uppercase text-[10px] tracking-[0.3em]">
                                 <Clock size={12} className="text-primary" />
-                                <span>{eventInfo?.duration} MINUTOS</span>
-                                <div className="w-1 h-1 bg-primary/30 rounded-full"></div>
+                                <span>{eventInfo?.duration} MIN</span>
                                 <Globe size={12} className="text-primary" />
                                 <span>UTC-3</span>
                             </div>
                         </header>
 
-                        <Card variant="surface" className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 shadow-2xl min-h-[400px]">
-                            {/* Date Selector */}
+                        <Card variant="surface" className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 shadow-2xl">
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Seleccionar Fecha</h4>
-                                <div className="grid grid-cols-1 gap-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                                <h4 className="text-[10px] font-black text-muted uppercase tracking-widest">Fecha</h4>
+                                <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                     {availableDates.map(dateStr => {
                                         const d = new Date(dateStr + "T00:00:00");
                                         const isActive = selectedDate === dateStr;
@@ -496,93 +484,58 @@ const BookingPage = () => {
                                             <button
                                                 key={dateStr}
                                                 onClick={() => setSelectedDate(dateStr)}
-                                                className={`p-5 rounded-2xl border transition-all text-left flex items-center justify-between transition-all group ${isActive
-                                                    ? 'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-900/40'
-                                                    : 'bg-white/[0.02] border-white/5 text-slate-400 hover:bg-white/5'
-                                                    }`}
+                                                className={`p-4 rounded-xl border text-left transition-all ${isActive ? 'bg-primary border-primary text-white' : 'bg-white/5 border-white/10 text-muted'}`}
                                             >
-                                                <div className="group-hover:translate-x-1 transition-transform">
-                                                    <p className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-white/60' : 'text-muted'}`}>
-                                                        {d.toLocaleDateString('es-ES', { weekday: 'long' })}
-                                                    </p>
-                                                    <p className="font-black italic text-base">
-                                                        {d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
-                                                    </p>
-                                                </div>
-                                                <ChevronRight size={16} className={`transition-all duration-300 ${isActive ? 'translate-x-0 opacity-100' : '-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-50'}`} />
+                                                <p className="text-[8px] font-black uppercase tracking-widest opacity-60">{d.toLocaleDateString('es-ES', { weekday: 'long' })}</p>
+                                                <p className="font-black italic text-sm">{d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</p>
                                             </button>
                                         );
                                     })}
                                 </div>
                             </div>
 
-                            {/* Time Selector */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Bloques Disponibles</h4>
-                                {selectedDate ? (
-                                    <div className="grid grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {groupedAvailability[selectedDate]?.map(slot => (
-                                            <button
-                                                key={slot.ts}
-                                                onClick={() => setSelectedSlot(slot)}
-                                                className={`p-4 rounded-xl border text-center font-black text-sm transition-all ${selectedSlot?.ts === slot.ts
-                                                    ? 'bg-primary border-primary text-white shadow-lg'
-                                                    : 'bg-main border-base text-muted hover:text-base hover:border-primary/30'
-                                                    }`}
-                                            >
-                                                {slot.start}
-                                            </button>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="h-full flex items-center justify-center text-[10px] font-black text-muted uppercase tracking-widest italic opacity-30">
-                                        Elige una fecha
-                                    </div>
-                                )}
+                                <h4 className="text-[10px] font-black text-muted uppercase tracking-widest">Hora</h4>
+                                <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {groupedAvailability[selectedDate]?.map(slot => (
+                                        <button
+                                            key={slot.ts}
+                                            onClick={() => setSelectedSlot(slot)}
+                                            className={`p-3 rounded-xl border text-center text-xs font-black transition-all ${selectedSlot?.ts === slot.ts ? 'bg-primary border-primary text-white' : 'bg-white/5 border-white/10 text-muted'}`}
+                                        >
+                                            {slot.start}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </Card>
 
-                        {error && (
-                            <div className="p-5 bg-accent/10 border border-accent/20 rounded-2xl flex items-center gap-4 text-accent animate-in shake duration-500">
-                                <AlertCircle className="w-6 h-6 shrink-0" />
-                                <p className="text-[10px] font-black uppercase tracking-widest">{error}</p>
-                            </div>
-                        )}
-
                         <div className="flex gap-6">
-                            <Button onClick={prevStep} variant="ghost" className="h-18 w-24 p-0 border-base" icon={ChevronLeft} />
+                            <Button onClick={prevStep} variant="ghost" className="h-18 w-24 p-0 border-base" icon={ChevronLeft} type="button" />
                             <Button
                                 onClick={handleBook}
                                 disabled={!selectedSlot || booking}
                                 loading={booking}
                                 variant="primary"
-                                className="flex-1 h-18 text-base tracking-widest uppercase font-black"
+                                className="flex-1 h-18 text-base tracking-widest font-black"
+                                type="button"
                             >
-                                Agendar {eventInfo?.duration} MIN
+                                AGENDAR {eventInfo?.duration} MIN
                             </Button>
                         </div>
                     </div>
                 )}
 
-                <footer className="mt-20 text-center space-y-2 opacity-50">
-                    <p className="text-[9px] font-black text-muted uppercase tracking-[0.4em]">NeurOPS Intelligent Scheduling System</p>
-                    <p className="text-[8px] font-bold text-muted/50 uppercase tracking-[0.2em]">© 2026 LeadOps Automation. All Rights Reserved.</p>
+                <footer className="mt-20 text-center space-y-2 opacity-30">
+                    <p className="text-[8px] font-black text-muted uppercase tracking-[0.4em]">NeurOPS Intelligent Scheduling System</p>
                 </footer>
             </div>
 
             <style dangerouslySetInnerHTML={{
                 __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;400;700;900&display=swap');
-                body { font-family: 'Outfit', sans-serif; }
-                @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes slide-in-from-bottom { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-                @keyframes slide-in-from-right { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-                @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
-                .animate-in { animation: initial 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
-                .fade-in { animation-name: fade-in; }
-                .slide-in-from-bottom-6 { animation-name: slide-in-from-bottom; }
-                .slide-in-from-right-6 { animation-name: slide-in-from-right; }
-                .shake { animation-name: shake; animation-duration: 0.4s; }
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(var(--primary-rgb), 0.2); border-radius: 10px; }
             `}} />
         </div>
     );

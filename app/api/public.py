@@ -70,13 +70,15 @@ def check_client_exists():
     
     client = Client.query.filter_by(email=email).first()
     if client:
+        answers = {sa.question_id: sa.answer for sa in client.survey_answers}
         return jsonify({
             "exists": True,
             "client": {
                 "id": client.id,
                 "full_name": client.full_name,
                 "phone": client.phone,
-                "instagram": client.instagram
+                "instagram": client.instagram,
+                "survey_answers": answers
             }
         }), 200
     return jsonify({"exists": False}), 200
@@ -226,12 +228,15 @@ def book_appointment():
         
         if event:
             appt.origin = f"Funnel: {event.name}"
+            print(f"[DEBUG] Total Score: {total_score}, Min Score: {event.min_score}")
             # Check qualification
             if total_score < (event.min_score or 0):
                 is_qualified = False
                 redirect_url = event.redirect_url_fail
+                print(f"[DEBUG] Lead NOT qualified. Redirecting to: {redirect_url}")
             else:
                 redirect_url = event.redirect_url_success
+                print(f"[DEBUG] Lead QUALIFIED. Redirecting to: {redirect_url}")
         
         db.session.commit()
         return jsonify({
