@@ -32,6 +32,21 @@ class ImportService:
                 'program_name': Program,
                 'payment_method_name': PaymentMethod
             }
+        },
+        'agendas': {
+            'required': ['student_email', 'closer_username', 'start_time'],
+            'fields': [
+                {'name': 'student_email', 'label': 'Email del Estudiante', 'required': True},
+                {'name': 'student_name', 'label': 'Nombre del Estudiante'},
+                {'name': 'closer_username', 'label': 'Usuario del Closer', 'required': True},
+                {'name': 'start_time', 'label': 'Fecha y Hora (YYYY-MM-DD HH:MM)', 'required': True},
+                {'name': 'status', 'label': 'Estado (scheduled/completed/no_show/canceled)'},
+                {'name': 'type', 'label': 'Tipo (Primera/Segunda agenda)'},
+                {'name': 'origin', 'label': 'Origen'}
+            ],
+            'entities': {
+                'closer_username': User
+            }
         }
     }
 
@@ -124,6 +139,8 @@ class ImportService:
                     ImportService._process_lead(row_data, update_existing, dry_run)
                 elif target == 'sales':
                     ImportService._process_sale(row_data, resolutions, dry_run)
+                elif target == 'agendas':
+                    ImportService._process_agenda(row_data, resolutions, dry_run)
 
                 stats["success"] += 1
             except Exception as e:
@@ -267,3 +284,53 @@ class ImportService:
             date=sale_date
         )
         db.session.add(payment)
+
+    @staticmethod
+    def _process_agenda(data, resolutions, dry_run):
+        # 1. Datetime parsing
+        start_time = datetime.now()
+        if data.get('start_time'):
+            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%d/%m/%Y %H:%M', '%m/%d/%Y %H:%M'):
+                try:
+                    start_time = datetime.strptime(data['start_time'], fmt)
+                    break
+                except: continue
+
+        # 2. Resolve Closer
+        closer_val = data.get('closer_username')
+        res_closer = resolutions.get('closer_username', {}).get(closer_val)
+        closer_username = res_closer if res_closer and res_closer != '__CREATE__' else closer_val
+        
+        closer = User.query.filter_by(username=closer_username).first()
+        if not closer:
+            if res_closer == '__CREATE__':
+                closer = User(username=closer_username, role='closer')
+                closer.set_password('NeurOPS2025!')
+                db.session.add(closer)
+                db.session.flush()
+            else:
+                raise Exception(f"Closer '{closer_username}' no encontrado")
+
+        # 3. Resolve Client
+        client_email = data.get('student_email')
+        if not client_email: raise Exception("Email del estudiante vacio")
+        
+        client = Client.query.filter_by(email=client_email).first()
+        if not client:
+            client = Client(
+                full_name=data.get('student_name') or client_email.split('@')[0],
+                email=client_email
+            )
+            db.session.add(client)
+            db.session.flush()
+
+        # 4. Create Appointment
+        appt = Appointment(
+            client_id=client.id,
+            closer_id=closer.id,
+            start_time=start_time,
+            status=data.get('status', 'scheduled'),
+            appointment_type=data.get('type', 'Primera agenda'),
+            origin=data.get('origin', 'import')
+        )
+        db.session.add(appt)
