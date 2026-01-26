@@ -109,14 +109,20 @@ const CloserLeadsPage = () => {
         { value: 'no_show', label: 'No Show' },
         { value: 'canceled', label: 'Cancelada' },
         { value: 'reprogrammed', label: 'Reprogramada' },
-        { value: 'sold', label: 'Ventada' } // If applicable
+        { value: 'sold', label: 'Ventada' }
     ];
 
-    // These could come from API in future
     const programOptions = [
-        { value: 'Closer', label: 'Closer' },
-        { value: 'Master', label: 'Master' },
-        { value: 'Workshop', label: 'Workshop' }
+        { value: 'Mentoria Learnation', label: 'Mentoria Learnation' },
+        { value: 'Curso Workers Pro', label: 'Curso Workers Pro' },
+        { value: 'NeuroOps Masterclass', label: 'NeuroOps Masterclass' },
+        { value: 'Residency Roadmap v1', label: 'Residency Roadmap v1' },
+        { value: 'Specialist Iniciative v1', label: 'Specialist Iniciative v1' },
+        { value: 'Ace Learner v1', label: 'Ace Learner v1' },
+        { value: 'Residency Roadmap v2', label: 'Residency Roadmap v2' },
+        { value: 'Residency Roadmap v3', label: 'Residency Roadmap v3' },
+        { value: 'Ace Learner v2', label: 'Ace Learner v2' },
+        { value: 'Ace Learner v3', label: 'Ace Learner v3' }
     ];
 
     const paymentOptions = [

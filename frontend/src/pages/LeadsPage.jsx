@@ -46,9 +46,16 @@ const LeadsPage = () => {
     };
 
     const programOptions = [
-        { value: 'Closer', label: 'Closer' },
-        { value: 'Master', label: 'Master' },
-        { value: 'Workshop', label: 'Workshop' }
+        { value: 'Mentoria Learnation', label: 'Mentoria Learnation' },
+        { value: 'Curso Workers Pro', label: 'Curso Workers Pro' },
+        { value: 'NeuroOps Masterclass', label: 'NeuroOps Masterclass' },
+        { value: 'Residency Roadmap v1', label: 'Residency Roadmap v1' },
+        { value: 'Specialist Iniciative v1', label: 'Specialist Iniciative v1' },
+        { value: 'Ace Learner v1', label: 'Ace Learner v1' },
+        { value: 'Residency Roadmap v2', label: 'Residency Roadmap v2' },
+        { value: 'Residency Roadmap v3', label: 'Residency Roadmap v3' },
+        { value: 'Ace Learner v2', label: 'Ace Learner v2' },
+        { value: 'Ace Learner v3', label: 'Ace Learner v3' }
     ];
 
     return (
