@@ -200,7 +200,43 @@ def update_appointment(id):
             return jsonify({"error": "Invalid date format"}), 400
             
     db.session.commit()
+    db.session.commit()
     return jsonify({"message": "Agenda actualizada con éxito"}), 200
+
+@bp.route('/appointments', methods=['POST'])
+@login_required
+def create_appointment():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    
+    data = request.get_json() or {}
+    start_time_str = data.get('start_time')
+    lead_id = data.get('lead_id')
+    appt_type = data.get('type', 'Manual')
+    
+    if not start_time_str or not lead_id:
+        return jsonify({"error": "Faltan datos requeridos (start_time, lead_id)"}), 400
+        
+    try:
+        from app.services.booking_service import BookingService
+        start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
+        
+        # BookingService create_appointment signature: (client_id, closer_id, start_time, origin='manual')
+        appt = BookingService.create_appointment(
+            client_id=lead_id,
+            closer_id=current_user.id,
+            start_time=start_time,
+            origin='Manual Closer'
+        )
+        
+        if appt_type:
+            appt.appointment_type = appt_type
+            db.session.commit()
+            
+        return jsonify({"message": "Agenda creada", "id": appt.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
 
 @bp.route('/slots', methods=['GET'])
 @login_required

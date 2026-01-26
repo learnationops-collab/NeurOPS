@@ -389,7 +389,7 @@ const CloserSettingsPage = () => {
                                     </Button>
                                     <Button
                                         as={Link}
-                                        to="/closer/leads"
+                                        to="/closer/appointments/new"
                                         variant="primary"
                                         className="h-14 px-8"
                                         icon={Calendar}

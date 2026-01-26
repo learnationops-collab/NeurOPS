@@ -10,6 +10,7 @@ import CloserDashboard from './pages/CloserDashboard';
 import CloserLeadsPage from './pages/CloserLeadsPage';
 import CloserSettingsPage from './pages/CloserSettingsPage';
 import CloserNewSalePage from './pages/CloserNewSalePage';
+import CloserNewAppointmentPage from './pages/CloserNewAppointmentPage';
 import OperationsPage from './pages/OperationsPage';
 import BookingPage from './pages/BookingPage';
 import StyleGuidePage from './pages/StyleGuidePage';
@@ -104,6 +105,14 @@ function App() {
           element={
             <MainLayout>
               <CloserNewSalePage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/closer/appointments/new"
+          element={
+            <MainLayout>
+              <CloserNewAppointmentPage />
             </MainLayout>
           }
         />
