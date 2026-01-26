@@ -351,10 +351,23 @@ class CloserService:
         # - "Reprogramada" -> Old appt becomes 'reprogrammed', new one created as 'Primera agenda'
         # - "Primera Agenda" -> Old appt becomes 'completed', new one created as 'Segunda agenda'
 
+        print(f"[DEBUG] Processing Agenda {appt_id}, Status: {new_status}")
+        
         if new_status == 'Completada':
             appt.status = 'completed'
-        elif new_status == 'Cancelada':
+        elif new_status in ['Cancelada', 'canceled', 'cancelled']:
             appt.status = 'canceled'
+            # Delete from GCal
+            if appt.google_event_id:
+                print(f"[DEBUG] Attempting to delete GCal Event: {appt.google_event_id}")
+                try:
+                    from app.services.google_service import GoogleService
+                    res = GoogleService.delete_event(appt.closer_id, appt.google_event_id)
+                    print(f"[DEBUG] Delete Result: {res}")
+                except Exception as e:
+                    print(f"[DEBUG] Error deleting GCal event: {e}")
+            else:
+                 print(f"[DEBUG] No Google Event ID found for appt {appt.id}")
         elif new_status == 'No Show':
             appt.status = 'no_show'
         elif new_status == 'Reprogramada':

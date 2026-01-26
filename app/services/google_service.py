@@ -150,3 +150,19 @@ class GoogleService:
         except Exception as e:
              print(f"Error creating event: {e}")
              return None
+
+    @staticmethod
+    def delete_event(user_id, event_id):
+        service = GoogleService.get_service(user_id)
+        if not service or not event_id: return False
+        
+        token = GoogleCalendarToken.query.filter_by(user_id=user_id).first()
+        calendar_id = token.google_calendar_id or 'primary'
+        
+        try:
+            service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+            print(f"Event {event_id} deleted")
+            return True
+        except Exception as e:
+            print(f"Error deleting event: {e}")
+            return False

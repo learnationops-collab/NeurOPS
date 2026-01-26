@@ -247,7 +247,10 @@ def book_appointment():
         # Sync with Google Calendar
         try:
             from app.services.google_service import GoogleService
-            GoogleService.create_event(appt.closer_id, appt)
+            evt_id = GoogleService.create_event(appt.closer_id, appt)
+            if evt_id:
+                appt.google_event_id = evt_id
+                db.session.commit()
         except Exception as e:
             print(f"GCal Sync Error (Public): {e}")
 

@@ -137,6 +137,7 @@ class Appointment(db.Model):
     origin = db.Column(db.String(100)) # VSL, Closer, etc.
     appointment_type = db.Column(db.String(50), default='Primera agenda')
     is_pinned = db.Column(db.Boolean, default=False)
+    google_event_id = db.Column(db.String(255))
 
 
 class Availability(db.Model):
