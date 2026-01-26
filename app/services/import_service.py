@@ -177,17 +177,24 @@ class ImportService:
 
         client = Client.query.filter_by(email=email).first()
         if not client:
+            # Truncate phone to 20 chars to avoid DB error
+            phone = data.get('phone')
+            if phone and len(str(phone)) > 20:
+                phone = str(phone)[:20]
+
             client = Client(
                 full_name=data.get('full_name') or email.split('@')[0],
                 email=email,
-                phone=data.get('phone'),
+                phone=phone,
                 instagram=data.get('instagram'),
                 created_at=created_at
             )
             db.session.add(client)
         elif update_existing:
             if data.get('full_name'): client.full_name = data.get('full_name')
-            if data.get('phone'): client.phone = data.get('phone')
+            if data.get('phone'): 
+                p = str(data.get('phone'))
+                client.phone = p[:20] if len(p) > 20 else p
             if data.get('instagram'): client.instagram = data.get('instagram')
             # Always update created_at if provided in import, allows fixing dates
             client.created_at = created_at
