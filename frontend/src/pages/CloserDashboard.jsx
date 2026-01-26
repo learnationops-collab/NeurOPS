@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import NewSaleModal from '../components/NewSaleModal';
+import SaleDetailModal from '../components/SaleDetailModal';
 import api from '../services/api';
 import AgendaManagerModal from '../components/AgendaManagerModal';
 import Button from '../components/ui/Button';
@@ -47,7 +48,9 @@ const CloserDashboard = () => {
     const [feedback, setFeedback] = useState(null);
     const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
     const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedAgenda, setSelectedAgenda] = useState(null);
+    const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(null);
 
     useEffect(() => {
         fetchDashboard();
@@ -200,15 +203,26 @@ const CloserDashboard = () => {
                         </CardHeader>
                         <div className="divide-y divide-base max-h-[400px] overflow-y-auto custom-scrollbar">
                             {data.sales_today?.length > 0 ? data.sales_today.map(sale => (
-                                <div key={sale.id} className="px-8 py-6 hover:bg-surface-hover transition-all group">
+                                <div
+                                    key={sale.id}
+                                    onClick={() => { setSelectedEnrollmentId(sale.id); setIsDetailModalOpen(true); }}
+                                    className="px-8 py-6 hover:bg-surface-hover transition-all group cursor-pointer"
+                                >
                                     <div className="flex justify-between items-center">
                                         <div>
                                             <p className="text-base font-black">{sale.student_name}</p>
                                             <p className="text-[10px] text-muted font-bold uppercase mt-0.5">{sale.program_name}</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-secondary font-black">${sale.amount?.toLocaleString()}</p>
-                                            <p className="text-[9px] text-muted font-bold uppercase">{new Date(sale.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                            <div className="flex items-center justify-end gap-2">
+                                                {sale.debt > 0 && (
+                                                    <span className="text-[10px] font-black text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-lg">
+                                                        -${sale.debt?.toLocaleString()}
+                                                    </span>
+                                                )}
+                                                <p className="text-secondary font-black">${sale.amount?.toLocaleString()}</p>
+                                            </div>
+                                            <p className="text-[9px] text-muted font-bold uppercase mt-0.5">{new Date(sale.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -375,7 +389,7 @@ const CloserDashboard = () => {
                 </div>
             </div>
 
-            {/* Quick Access / Leads Column removed to fit 3-col per user request, 
+            {/* Quick Access / Leads Column removed to fit 3-col per user request,
                 or could be placed below in a full-width section */}
 
             <section className="pt-10">
@@ -428,6 +442,12 @@ const CloserDashboard = () => {
                 isOpen={isAgendaModalOpen}
                 appointment={selectedAgenda}
                 onClose={() => { setIsAgendaModalOpen(false); setSelectedAgenda(null); }}
+                onSuccess={fetchDashboard}
+            />
+            <SaleDetailModal
+                isOpen={isDetailModalOpen}
+                enrollmentId={selectedEnrollmentId}
+                onClose={() => { setIsDetailModalOpen(false); setSelectedEnrollmentId(null); }}
                 onSuccess={fetchDashboard}
             />
         </div>

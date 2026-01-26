@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
-from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client
+from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment
 from app.decorators import role_required
 from datetime import date, timedelta, datetime
 
@@ -42,18 +42,21 @@ def get_dashboard():
             "seq_num": seq
         })
         
-    # Sales Today
-    sales = Enrollment.query.filter(
+    # Sales Today: Any enrollment that had a payment today
+    sales = Enrollment.query.join(Payment).filter(
         Enrollment.closer_id == current_user.id,
-        Enrollment.enrollment_date >= date.today()
-    ).all()
+        Payment.date >= date.today()
+    ).distinct().all()
     
     for s in sales:
+        total_paid = s.total_paid
+        price = s.program.price if s.program else 0.0
         serialized['sales_today'].append({
             "id": s.id,
             "student_name": s.client.full_name or s.client.email if s.client else "Unknown",
             "program_name": s.program.name if s.program else "Unknown",
-            "amount": s.program.price if s.program else 0.0,
+            "amount": total_paid,
+            "debt": max(0, price - total_paid),
             "time": s.enrollment_date.isoformat()
         })
     
@@ -159,6 +162,40 @@ def manage_weekly_availability():
         if day not in result: result[day] = []
         result[day].append({"start": wa.start_time.strftime('%H:%M'), "end": wa.end_time.strftime('%H:%M')})
     return jsonify(result), 200
+
+@bp.route('/leads/<int:id>/payment-status', methods=['GET'])
+@login_required
+def get_lead_payment_status(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    return jsonify(CloserService.get_lead_payment_status(id)), 200
+
+@bp.route('/enrollments/<int:id>', methods=['GET', 'DELETE'])
+@login_required
+def get_or_delete_enrollment(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    if request.method == 'DELETE':
+        CloserService.delete_enrollment(id)
+        return jsonify({"message": "Venta eliminada"}), 200
+    return jsonify(CloserService.get_enrollment_details(id)), 200
+
+@bp.route('/enrollments/<int:id>/payments', methods=['POST'])
+@login_required
+def add_payment(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    data = request.get_json() or {}
+    CloserService.add_payment(id, data)
+    return jsonify({"message": "Pago añadido"}), 201
+
+@bp.route('/payments/<int:id>', methods=['DELETE'])
+@login_required
+def delete_payment(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    CloserService.delete_payment(id)
+    return jsonify({"message": "Pago eliminado"}), 200
 
 @bp.route('/sale-metadata', methods=['GET'])
 @login_required

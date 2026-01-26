@@ -57,19 +57,32 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
 
     const handleLeadSelect = async (lead) => {
         setFormData({ ...formData, lead_id: lead.id, payment_type: '' });
-        setStep(2);
+        setStep(2); // Move to step 2 immediately
         setLoadingStatus(true);
         try {
             const res = await api.get(`/closer/leads/${lead.id}/payment-status`);
             console.log("Payment status for lead:", lead.id, res.data);
             setAllowedPaymentTypes(res.data.allowed_types);
+
+            const updates = { lead_id: lead.id, payment_type: '' }; // Start with lead_id and clear payment_type
+
             if (res.data.allowed_types.length > 0) {
-                setFormData(prev => ({ ...prev, payment_type: res.data.allowed_types[0] }));
+                updates.payment_type = res.data.allowed_types[0];
             }
+
+            if (res.data.program_id) {
+                updates.program_id = res.data.program_id;
+                updates.payment_amount = res.data.program_price || '';
+            }
+
+            setFormData(prev => ({ ...prev, ...updates }));
+
         } catch (err) {
             console.error("Error fetching payment status", err);
             // Fallback to basic options for new lead if API fails
             setAllowedPaymentTypes(['full', 'first_payment', 'down_payment']);
+            // Also set lead_id and clear payment_type in case of error
+            setFormData(prev => ({ ...prev, lead_id: lead.id, payment_type: '' }));
         } finally {
             setLoadingStatus(false);
         }

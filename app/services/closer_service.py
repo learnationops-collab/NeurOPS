@@ -186,13 +186,19 @@ class CloserService:
 
     @staticmethod
     def register_sale(closer_id, client_id, data):
-        enrollment = Enrollment(
-            client_id=client_id,
-            program_id=data.get('program_id'),
-            closer_id=closer_id
-        )
-        db.session.add(enrollment)
-        db.session.flush()
+        program_id = data.get('program_id')
+        
+        # Look for existing active enrollment for this client and program
+        enrollment = Enrollment.query.filter_by(client_id=client_id, program_id=program_id).first()
+        
+        if not enrollment:
+            enrollment = Enrollment(
+                client_id=client_id,
+                program_id=program_id,
+                closer_id=closer_id
+            )
+            db.session.add(enrollment)
+            db.session.flush()
         
         payment = Payment(
             enrollment_id=enrollment.id,
@@ -272,7 +278,8 @@ class CloserService:
             return {
                 "allowed_types": ["down_payment", "first_payment", "full"],
                 "has_debt": False,
-                "total_paid": 0
+                "total_paid": 0,
+                "program_id": None
             }
         
         payments = enrollment.payments.filter_by(status='completed').all()
@@ -282,36 +289,129 @@ class CloserService:
         total_paid = sum(p.amount for p in payments)
         has_debt = total_paid < program_price
         
+        payload = {
+            "has_debt": has_debt,
+            "total_paid": total_paid,
+            "program_id": enrollment.program_id,
+            "program_price": program_price
+        }
+        
         if not payments:
-            return {
-                "allowed_types": ["down_payment", "first_payment", "full"],
-                "has_debt": True,
-                "total_paid": 0
-            }
+            payload["allowed_types"] = ["down_payment", "first_payment", "full"]
+            return payload
             
         if not has_debt or 'full' in payment_types:
-            return {
-                "allowed_types": ["renewal"],
-                "has_debt": False,
-                "total_paid": total_paid
-            }
+            payload["allowed_types"] = ["renewal"]
+            return payload
 
         if 'first_payment' in payment_types:
-            return {
-                "allowed_types": ["installment"],
-                "has_debt": True,
-                "total_paid": total_paid
-            }
+            payload["allowed_types"] = ["installment"]
+            return payload
 
         if 'down_payment' in payment_types:
-            return {
-                "allowed_types": ["first_payment", "full"],
-                "has_debt": True,
-                "total_paid": total_paid
-            }
+            payload["allowed_types"] = ["first_payment", "full"]
+            return payload
+            
+        payload["allowed_types"] = ["installment", "renewal"]
+        return payload
+
+    @staticmethod
+    def get_enrollment_details(enrollment_id):
+        from app.models import SurveyQuestion
+        import json
+        
+        enrollment = Enrollment.query.get_or_404(enrollment_id)
+        client = enrollment.client
+        
+        # 1. Payments
+        payments = []
+        for p in enrollment.payments:
+            payments.append({
+                "id": p.id,
+                "amount": p.amount,
+                "date": p.date.isoformat(),
+                "type": p.payment_type,
+                "method": p.method.name if p.method else "N/A",
+                "status": p.status,
+                "method_id": p.payment_method_id
+            })
+            
+        # 2. Appointments
+        appointments = []
+        for a in client.appointments.order_by(Appointment.start_time.desc()):
+            appointments.append({
+                "id": a.id,
+                "start_time": a.start_time.isoformat(),
+                "status": a.status,
+                "type": a.appointment_type,
+                "origin": a.origin
+            })
+            
+        # 3. Survey Answers + Scores
+        survey_data = []
+        for sa in client.survey_answers:
+            points = 0
+            q = sa.question
+            if q and q.options:
+                try:
+                    opts = json.loads(q.options)
+                    if isinstance(opts, list):
+                        for opt in opts:
+                            if str(opt.get('text')) == str(sa.answer):
+                                points = int(opt.get('points', 0))
+                                break
+                except: pass
+                
+            survey_data.append({
+                "question": q.text if q else "Pregunta eliminada",
+                "answer": sa.answer,
+                "points": points
+            })
             
         return {
-            "allowed_types": ["installment", "renewal"],
-            "has_debt": True,
-            "total_paid": total_paid
+            "id": enrollment.id,
+            "client": {
+                "id": client.id,
+                "name": client.full_name,
+                "email": client.email,
+                "phone": client.phone,
+                "instagram": client.instagram
+            },
+            "program": {
+                "id": enrollment.program_id,
+                "name": enrollment.program.name if enrollment.program else "N/A",
+                "price": enrollment.program.price if enrollment.program else 0.0
+            },
+            "payments": payments,
+            "appointments": appointments,
+            "survey": survey_data,
+            "total_paid": enrollment.total_paid
         }
+
+    @staticmethod
+    def add_payment(enrollment_id, data):
+        enrollment = Enrollment.query.get_or_404(enrollment_id)
+        payment = Payment(
+            enrollment_id=enrollment.id,
+            payment_method_id=data.get('payment_method_id'),
+            amount=data.get('amount'),
+            payment_type=data.get('payment_type'),
+            status='completed'
+        )
+        db.session.add(payment)
+        db.session.commit()
+        return payment
+
+    @staticmethod
+    def delete_payment(payment_id):
+        payment = Payment.query.get_or_404(payment_id)
+        db.session.delete(payment)
+        db.session.commit()
+        return True
+
+    @staticmethod
+    def delete_enrollment(enrollment_id):
+        enrollment = Enrollment.query.get_or_404(enrollment_id)
+        db.session.delete(enrollment)
+        db.session.commit()
+        return True
