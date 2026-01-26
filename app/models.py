@@ -166,9 +166,12 @@ class SurveyQuestion(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     mapping_field = db.Column(db.String(50), nullable=True)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('event_groups.id'), nullable=True)
+    is_global = db.Column(db.Boolean, default=False)
     step = db.Column(db.String(20), default='first_survey') # 'first_survey', 'second_survey'
     
     event = db.relationship('Event', backref='questions')
+    group = db.relationship('EventGroup', backref='group_questions')
 
 class SurveyAnswer(db.Model):
     __tablename__ = 'survey_answers'

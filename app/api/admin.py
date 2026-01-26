@@ -378,7 +378,77 @@ def manage_event_questions(event_id):
         "order": q.order,
         "step": q.step,
         "options": q.options,
-        "is_active": q.is_active
+        "is_active": q.is_active,
+        "event_id": q.event_id,
+        "group_id": q.group_id,
+        "is_global": q.is_global
+    } for q in questions]), 200
+
+@bp.route('/admin/funnels/questions/global', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_global_questions():
+    from app.models import SurveyQuestion
+    
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        id = data.get('id')
+        if id:
+            q = SurveyQuestion.query.get_or_404(id)
+            q.text = data.get('text', q.text)
+            q.question_type = data.get('type', 'select')
+            q.options = data.get('options') # Already JSON string or text
+            q.order = data.get('order', q.order)
+            q.is_active = data.get('is_active', q.is_active)
+        else:
+            q = SurveyQuestion(
+                text=data.get('text'),
+                is_global=True,
+                question_type=data.get('type', 'select'),
+                options=data.get('options'),
+                order=data.get('order', 0)
+            )
+            db.session.add(q)
+        db.session.commit()
+        return jsonify({"message": "Pregunta global guardada"}), 200
+
+    questions = SurveyQuestion.query.filter_by(is_global=True).order_by(SurveyQuestion.order).all()
+    return jsonify([{
+        "id": q.id, "text": q.text, "type": q.question_type, 
+        "options": q.options, "order": q.order, "is_active": q.is_active
+    } for q in questions]), 200
+
+@bp.route('/admin/funnels/groups/<int:group_id>/questions', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_group_questions(group_id):
+    from app.models import SurveyQuestion
+    
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        id = data.get('id')
+        if id:
+            q = SurveyQuestion.query.get_or_404(id)
+            q.text = data.get('text', q.text)
+            q.options = data.get('options')
+            q.order = data.get('order', q.order)
+            q.is_active = data.get('is_active', q.is_active)
+        else:
+            q = SurveyQuestion(
+                text=data.get('text'),
+                group_id=group_id,
+                question_type=data.get('type', 'select'),
+                options=data.get('options'),
+                order=data.get('order', 0)
+            )
+            db.session.add(q)
+        db.session.commit()
+        return jsonify({"message": "Pregunta de grupo guardada"}), 200
+
+    questions = SurveyQuestion.query.filter_by(group_id=group_id).order_by(SurveyQuestion.order).all()
+    return jsonify([{
+        "id": q.id, "text": q.text, "type": q.question_type, 
+        "options": q.options, "order": q.order, "is_active": q.is_active
     } for q in questions]), 200
 
 @bp.route('/admin/funnels/questions/<int:id>', methods=['DELETE'])

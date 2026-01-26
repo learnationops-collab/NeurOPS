@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.models import db, Event, Client, Appointment, SurveyAnswer, SurveyQuestion, User
 from app.services.booking_service import BookingService
 from datetime import datetime, date, timedelta
+import json
 
 bp = Blueprint('public_api', __name__)
 
@@ -12,7 +13,14 @@ def get_funnel_by_source(utm_source):
     if not event:
         return jsonify({"error": "Event not found"}), 404
         
-    questions = SurveyQuestion.query.filter_by(event_id=event.id, is_active=True).order_by(SurveyQuestion.step, SurveyQuestion.order).all()
+    # Merge Questions: Global + Group + Event
+    global_questions = SurveyQuestion.query.filter_by(is_global=True, is_active=True).all()
+    group_questions = SurveyQuestion.query.filter_by(group_id=event.group_id, is_active=True).all() if event.group_id else []
+    event_questions = SurveyQuestion.query.filter_by(event_id=event.id, is_active=True).all()
+    
+    # Simple merge and sort by order
+    questions = global_questions + group_questions + event_questions
+    questions.sort(key=lambda x: x.order)
         
     # Get available slots (Generic for all closers)
     start_date = date.today()
@@ -45,7 +53,7 @@ def get_funnel_by_source(utm_source):
             "id": q.id,
             "text": q.text,
             "type": q.question_type,
-            "options": q.options,
+            "options": json.loads(q.options) if q.options and q.options.startswith('[') else q.options,
             "step": q.step,
             "mapping": q.mapping_field
         } for q in questions],
@@ -192,24 +200,51 @@ def book_appointment():
         if not closer_id:
             return jsonify({"error": "Lo sentimos, este horario ya no está disponible. Por favor elige otro."}), 400
 
-        # 3. Save Survey Answers
+        # 3. Save Survey Answers and Calculate Score
+        total_score = 0
         if survey_answers_raw:
             formatted_answers = []
             for q_id, val in survey_answers_raw.items():
-                formatted_answers.append({"question_id": int(q_id), "answer": str(val)})
+                q_id_int = int(q_id)
+                formatted_answers.append({"question_id": q_id_int, "answer": str(val)})
+                
+                # Calculate points for this answer
+                q = SurveyQuestion.query.get(q_id_int)
+                if q and q.options:
+                    try:
+                        import json
+                        opts = json.loads(q.options)
+                        if isinstance(opts, list):
+                            for opt in opts:
+                                if str(opt.get('text')) == str(val):
+                                    total_score += int(opt.get('points', 0))
+                                    break
+                    except: # Fallback for old comma-separated format
+                        pass
+                        
             BookingService.save_survey_answers(client.id, formatted_answers, appointment_id=appt.id)
         
-        # 4. Link to event
+        # 4. Link to event and determine redirect
         event = Event.query.get(event_id)
+        redirect_url = None
+        is_qualified = True
+        
         if event:
             appt.origin = f"Funnel: {event.name}"
-            # Track UTMs if we had an attribution system (could be added to Appointment)
+            # Check qualification
+            if total_score < (event.min_score or 0):
+                is_qualified = False
+                redirect_url = event.redirect_url_fail
+            else:
+                redirect_url = event.redirect_url_success
         
         db.session.commit()
         return jsonify({
             "message": "Booking successful", 
             "id": appt.id,
-            "redirect_url": event.redirect_url_success if event else None
+            "total_score": total_score,
+            "is_qualified": is_qualified,
+            "redirect_url": redirect_url
         }), 201
         
     except Exception as e:

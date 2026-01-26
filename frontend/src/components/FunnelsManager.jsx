@@ -21,17 +21,21 @@ const FunnelsManager = () => {
 
     const [editingGroup, setEditingGroup] = useState(null);
     const [editingEvent, setEditingEvent] = useState(null);
+    const [editingGroupQuestions, setEditingGroupQuestions] = useState(null);
+    const [activeScope, setActiveScope] = useState('event'); // 'event', 'group', 'global'
+    const [activeScopeId, setActiveScopeId] = useState(null);
     const [activeEventQuestions, setActiveEventQuestions] = useState([]);
     const [currentEventId, setCurrentEventId] = useState(null);
 
     const [groupName, setGroupName] = useState('');
     const [eventForm, setEventForm] = useState({
-        name: '', utm_source: '', duration_minutes: 30, buffer_minutes: 15, group_id: '', min_score: 0
+        name: '', utm_source: '', duration_minutes: 30, buffer_minutes: 15, group_id: '', min_score: 0, redirect_url_success: '', redirect_url_fail: ''
     });
     const [questionForm, setQuestionForm] = useState({
-        text: '', type: 'text', options: '', order: 0, step: 'first_survey', is_active: true
+        text: '', type: 'select', options: [], order: 0, step: 'first_survey', is_active: true
     });
     const [editingQuestionId, setEditingQuestionId] = useState(null);
+    const [optionInput, setOptionInput] = useState({ text: '', points: 0 });
 
     useEffect(() => {
         fetchData();
@@ -85,25 +89,47 @@ const FunnelsManager = () => {
         } catch (err) { alert("Error al eliminar"); }
     };
 
-    const openQuestions = async (event) => {
-        setCurrentEventId(event.id);
-        setEditingEvent(event);
+    const openQuestions = async (scope, id, title) => {
+        setActiveScope(scope);
+        setActiveScopeId(id);
+        setEditingEvent({ name: title }); // Hack for modal title
+
+        let url = '';
+        if (scope === 'global') url = '/admin/funnels/questions/global';
+        else if (scope === 'group') url = `/admin/funnels/groups/${id}/questions`;
+        else url = `/admin/funnels/events/${id}/questions`;
+
         try {
-            const res = await api.get(`/admin/funnels/events/${event.id}/questions`);
-            setActiveEventQuestions(res.data);
+            const res = await api.get(url);
+            // Parse options if they are stored as JSON string
+            const parsed = res.data.map(q => ({
+                ...q,
+                options: q.options ? (typeof q.options === 'string' && q.options.startsWith('[') ? JSON.parse(q.options) : q.options) : []
+            }));
+            setActiveEventQuestions(parsed);
             setShowQuestionsModal(true);
         } catch (err) { alert("Error cargando preguntas"); }
     };
 
     const handleSaveQuestion = async () => {
+        let url = '';
+        if (activeScope === 'global') url = '/admin/funnels/questions/global';
+        else if (activeScope === 'group') url = `/admin/funnels/groups/${activeScopeId}/questions`;
+        else url = `/admin/funnels/events/${activeScopeId}/questions`;
+
         try {
-            await api.post(`/admin/funnels/events/${currentEventId}/questions`, {
+            await api.post(url, {
                 id: editingQuestionId,
-                ...questionForm
+                ...questionForm,
+                options: JSON.stringify(questionForm.options)
             });
-            const res = await api.get(`/admin/funnels/events/${currentEventId}/questions`);
-            setActiveEventQuestions(res.data);
-            setQuestionForm({ text: '', type: 'text', options: '', order: 0, step: 'first_survey', is_active: true });
+            const res = await api.get(url);
+            const parsed = res.data.map(q => ({
+                ...q,
+                options: q.options ? (typeof q.options === 'string' && q.options.startsWith('[') ? JSON.parse(q.options) : q.options) : []
+            }));
+            setActiveEventQuestions(parsed);
+            setQuestionForm({ text: '', type: 'select', options: [], order: 0, step: 'first_survey', is_active: true });
             setEditingQuestionId(null);
         } catch (err) { alert("Error guardando pregunta"); }
     };
@@ -111,8 +137,16 @@ const FunnelsManager = () => {
     const handleDeleteQuestion = async (id) => {
         try {
             await api.delete(`/admin/funnels/questions/${id}`);
-            const res = await api.get(`/admin/funnels/events/${currentEventId}/questions`);
-            setActiveEventQuestions(res.data);
+            let url = '';
+            if (activeScope === 'global') url = '/admin/funnels/questions/global';
+            else if (activeScope === 'group') url = `/admin/funnels/groups/${activeScopeId}/questions`;
+            else url = `/admin/funnels/events/${activeScopeId}/questions`;
+            const res = await api.get(url);
+            const parsed = res.data.map(q => ({
+                ...q,
+                options: q.options ? (typeof q.options === 'string' && q.options.startsWith('[') ? JSON.parse(q.options) : q.options) : []
+            }));
+            setActiveEventQuestions(parsed);
         } catch (err) { alert("Error eliminando pregunta"); }
     };
 
@@ -146,6 +180,9 @@ const FunnelsManager = () => {
                     <p className="text-muted text-[10px] font-bold uppercase tracking-widest">Configura tus landing pages y segmentación</p>
                 </div>
                 <div className="flex gap-4">
+                    <Button variant="ghost" size="xs" icon={HelpCircle} onClick={() => openQuestions('global', 0, 'Preguntas Globales')}>
+                        Globales
+                    </Button>
                     <Button variant="outline" size="xs" icon={Plus} onClick={() => { setEditingGroup(null); setGroupName(''); setShowGroupModal(true); }}>
                         Grupo
                     </Button>
@@ -192,6 +229,9 @@ const FunnelsManager = () => {
                                     <Badge variant="neutral">{getEventsByGroup(group.id).length} Eventos</Badge>
                                 </div>
                                 <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                                    <button onClick={() => openQuestions('group', group.id, `Grupo: ${group.name}`)} className="p-2 text-muted hover:text-primary transition-colors">
+                                        <HelpCircle size={16} />
+                                    </button>
                                     <button onClick={() => { setEditingGroup(group); setGroupName(group.name); setShowGroupModal(true); }} className="p-2 text-muted hover:text-primary transition-colors">
                                         <Edit2 size={16} />
                                     </button>
@@ -225,7 +265,7 @@ const FunnelsManager = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <Button size="xs" variant="ghost" icon={HelpCircle} onClick={() => openQuestions(event)} className="hover:bg-primary/10 hover:text-primary transition-all" />
+                                                    <Button size="xs" variant="ghost" icon={HelpCircle} onClick={() => openQuestions('event', event.id, event.name)} className="hover:bg-primary/10 hover:text-primary transition-all" />
                                                     <Button size="xs" variant="ghost" icon={Edit2} onClick={() => { setEditingEvent(event); setEventForm(event); setShowEventModal(true); }} className="hover:bg-primary/20 hover:text-primary transition-all" />
                                                     <Button size="xs" variant="primary" icon={LinkIcon} onClick={() => window.open(`/book/${event.utm_source}`, '_blank')} className="shadow-lg shadow-primary/20" />
                                                     <Button size="xs" variant="ghost" icon={Trash2} onClick={() => handleDeleteEvent(event.id)} className="hover:text-red-500 hover:bg-red-500/10" />
@@ -281,7 +321,15 @@ const FunnelsManager = () => {
                             </div>
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">Puntaje Mínimo</label>
-                                <input type="number" value={eventForm.min_score} onChange={e => setEventForm({ ...eventForm, min_score: e.target.value })} className="w-full bg-main border border-base rounded-xl px-4 py-4 font-bold text-sm outline-none" placeholder="0" />
+                                <input type="number" value={eventForm.min_score} onChange={e => setEventForm({ ...eventForm, min_score: parseInt(e.target.value) || 0 })} className="w-full bg-main border border-base rounded-xl px-4 py-4 font-bold text-sm outline-none" placeholder="0" />
+                            </div>
+                            <div className="col-span-2 space-y-3">
+                                <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">URL Redirección Éxito (Calificado)</label>
+                                <input value={eventForm.redirect_url_success} onChange={e => setEventForm({ ...eventForm, redirect_url_success: e.target.value })} placeholder="https://..." className="w-full bg-main border border-base rounded-xl px-4 py-4 font-bold text-sm outline-none" />
+                            </div>
+                            <div className="col-span-2 space-y-3">
+                                <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">URL Redirección Fallo (Descalificado)</label>
+                                <input value={eventForm.redirect_url_fail} onChange={e => setEventForm({ ...eventForm, redirect_url_fail: e.target.value })} placeholder="https://..." className="w-full bg-main border border-base rounded-xl px-4 py-4 font-bold text-sm outline-none" />
                             </div>
                             <div className="col-span-2 space-y-3">
                                 <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">Asignar Grupo</label>
@@ -305,7 +353,10 @@ const FunnelsManager = () => {
                         <div className="flex justify-between items-center px-10 pt-10 pb-6 border-b border-base bg-surface-hover/20">
                             <div className="text-left">
                                 <h3 className="text-2xl font-black uppercase tracking-tight italic text-base">Cualificación: {editingEvent?.name}</h3>
-                                <p className="text-muted text-[10px] font-bold uppercase tracking-widest mt-1">Diseña el cuestionario que verán tus leads</p>
+                                <p className="text-muted text-[10px] font-bold uppercase tracking-widest mt-1">
+                                    Configurando preguntas a nivel:
+                                    <span className="text-primary ml-2">{activeScope === 'global' ? 'GLOBAL' : activeScope === 'group' ? 'GRUPO' : 'EVENTO'}</span>
+                                </p>
                             </div>
                             <Button variant="ghost" size="sm" icon={X} onClick={() => setShowQuestionsModal(false)} className="rounded-full hover:bg-main" />
                         </div>
@@ -327,14 +378,18 @@ const FunnelsManager = () => {
                                             </div>
                                             <div>
                                                 <p className="font-bold text-sm tracking-tight">{q.text}</p>
-                                                <div className="flex gap-2 mt-3">
+                                                <div className="flex flex-wrap gap-2 mt-3">
                                                     <Badge size="xs" variant="neutral" className="px-2">{q.type}</Badge>
-                                                    {q.options && <Badge size="xs" variant="outline" className="px-2">Multi-Opción</Badge>}
+                                                    {Array.isArray(q.options) && q.options.length > 0 && (
+                                                        <Badge size="xs" variant="outline" className="px-2">
+                                                            {q.options.length} Opciones • Max {Math.max(...q.options.map(o => o.points || 0), 0)} pts
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => { setEditingQuestionId(q.id); setQuestionForm({ text: q.text, type: q.type, options: q.options || '', order: q.order, step: q.step, is_active: q.is_active }); }} className="p-2 text-muted hover:text-primary transition-all rounded-lg hover:bg-primary/10"><Edit2 size={16} /></button>
+                                            <button onClick={() => { setEditingQuestionId(q.id); setQuestionForm({ text: q.text, type: q.type, options: [...(q.options || [])], order: q.order, step: q.step, is_active: q.is_active }); }} className="p-2 text-muted hover:text-primary transition-all rounded-lg hover:bg-primary/10"><Edit2 size={16} /></button>
                                             <button onClick={() => handleDeleteQuestion(q.id)} className="p-2 text-muted hover:text-red-500 transition-all rounded-lg hover:bg-red-500/10"><Trash2 size={16} /></button>
                                         </div>
                                     </div>
@@ -353,20 +408,64 @@ const FunnelsManager = () => {
                                             <label className="text-[9px] font-black uppercase text-muted tracking-widest">Enunciado</label>
                                             <textarea value={questionForm.text} onChange={e => setQuestionForm({ ...questionForm, text: e.target.value })} placeholder="Ej: ¿Cual es tu facturacion mensual?" className="w-full bg-main border border-base rounded-2xl p-5 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/50 transition-all h-24 resize-none" />
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-muted tracking-widest">Tipo de Entrada</label>
-                                            <select value={questionForm.type} onChange={e => setQuestionForm({ ...questionForm, type: e.target.value })} className="w-full bg-main border border-base rounded-xl px-4 py-4 font-bold text-sm outline-none cursor-pointer">
-                                                <option value="text">Texto Corto (Línea)</option>
-                                                <option value="select">Selección (Menú)</option>
-                                                <option value="radio">Opciones Única (Botones)</option>
-                                            </select>
-                                        </div>
-                                        {(questionForm.type === 'select' || questionForm.type === 'radio') && (
-                                            <div className="space-y-2 animate-in slide-in-from-top-2">
-                                                <label className="text-[9px] font-black uppercase text-muted tracking-widest">Opciones (Separadas por Coma)</label>
-                                                <input value={questionForm.options} onChange={e => setQuestionForm({ ...questionForm, options: e.target.value })} placeholder="Opcion 1, Opcion 2, ..." className="w-full bg-main border border-base rounded-xl px-4 py-4 font-bold text-sm outline-none" />
+                                        <div className="space-y-2 animate-in slide-in-from-top-2">
+                                            <label className="text-[9px] font-black uppercase text-muted tracking-widest">Configurar Opciones y Puntos</label>
+
+                                            <div className="space-y-3">
+                                                {/* Option Adder */}
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        value={optionInput.text}
+                                                        onChange={e => setOptionInput({ ...optionInput, text: e.target.value })}
+                                                        placeholder="Opción"
+                                                        className="flex-1 bg-main border border-base rounded-xl px-4 py-2 text-xs font-bold outline-none"
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        value={optionInput.points}
+                                                        onChange={e => setOptionInput({ ...optionInput, points: parseInt(e.target.value) || 0 })}
+                                                        placeholder="Pts"
+                                                        className="w-20 bg-main border border-base rounded-xl px-4 py-2 text-xs font-bold outline-none"
+                                                    />
+                                                    <Button
+                                                        size="xs"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            if (!optionInput.text) return;
+                                                            setQuestionForm({
+                                                                ...questionForm,
+                                                                options: [...(questionForm.options || []), { ...optionInput }]
+                                                            });
+                                                            setOptionInput({ text: '', points: 0 });
+                                                        }}
+                                                        icon={Plus}
+                                                    />
+                                                </div>
+
+                                                {/* Options List */}
+                                                <div className="space-y-2 bg-main/30 p-3 rounded-2xl border border-base max-h-40 overflow-y-auto custom-scrollbar">
+                                                    {(questionForm.options || []).length === 0 && <p className="text-[9px] text-muted uppercase italic text-center py-2">Sin opciones añadidas</p>}
+                                                    {(questionForm.options || []).map((opt, i) => (
+                                                        <div key={i} className="flex items-center justify-between bg-surface p-2 rounded-lg border border-base/50 text-[11px] font-bold">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-primary">{opt.points} pts</span>
+                                                                <span className="text-base">{opt.text}</span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const next = [...questionForm.options];
+                                                                    next.splice(i, 1);
+                                                                    setQuestionForm({ ...questionForm, options: next });
+                                                                }}
+                                                                className="text-muted hover:text-red-500 transition-colors"
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        )}
+                                        </div>
                                         <div className="grid grid-cols-2 gap-4 pt-2">
                                             <div className="space-y-2">
                                                 <label className="text-[9px] font-black uppercase text-muted tracking-widest">Orden</label>

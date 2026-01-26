@@ -376,9 +376,14 @@ const BookingPage = () => {
                                             onChange={(e) => setSurveyAnswers({ ...surveyAnswers, [q.id]: e.target.value })}
                                         >
                                             <option value="" className="bg-surface">Seleccionar...</option>
-                                            {q.options?.split(',').map(opt => (
-                                                <option key={opt} value={opt} className="bg-surface">{opt}</option>
-                                            ))}
+                                            {Array.isArray(q.options)
+                                                ? q.options.map(opt => (
+                                                    <option key={opt.text} value={opt.text} className="bg-surface">{opt.text}</option>
+                                                ))
+                                                : q.options?.split(',').map(opt => (
+                                                    <option key={opt} value={opt} className="bg-surface">{opt}</option>
+                                                ))
+                                            }
                                         </select>
                                     ) : (
                                         <input
