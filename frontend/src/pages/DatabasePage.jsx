@@ -22,6 +22,8 @@ import {
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import AdvancedImportTool from '../components/AdvancedImportTool';
+import { FileUp } from 'lucide-react';
 
 const DatabasePage = () => {
     const [activeTab, setActiveTab] = useState('programs');
@@ -39,6 +41,7 @@ const DatabasePage = () => {
         { id: 'sales_raw', label: 'Ventas (Pagos)', icon: TrendingUp, endpoint: '/admin/db/sales_raw' },
         { id: 'agendas', label: 'Agenda General', icon: Calendar, endpoint: '/admin/db/agendas' },
         { id: 'questions', label: 'Reporte Diario (Q)', icon: HelpCircle, endpoint: '/admin/db/questions' },
+        { id: 'import', label: 'Importaciones', icon: FileUp, endpoint: null },
     ];
 
     useEffect(() => {
@@ -49,6 +52,11 @@ const DatabasePage = () => {
         try {
             setLoading(true);
             const tab = tabs.find(t => t.id === activeTab);
+            if (!tab.endpoint) {
+                setData([]);
+                setLoading(false);
+                return;
+            }
             const res = await api.get(tab.endpoint, { params: { page, search } });
 
             if (res.data.data) {
@@ -234,44 +242,48 @@ const DatabasePage = () => {
                 )}
             </div>
 
-            <Card variant="surface" padding="p-0 overflow-hidden">
-                {loading ? (
-                    <div className="p-32 text-center text-muted font-black uppercase tracking-[0.5em] animate-pulse">Sincronizando Nodo...</div>
-                ) : (
-                    <div className="overflow-x-auto min-h-[400px]">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-base bg-surface-hover">
-                                    {renderHeader()}
-                                    <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-base">
-                                {data.map(item => (
-                                    <tr key={item.id} className={`hover:bg-surface-hover/50 transition-all group ${editingId === item.id ? 'bg-primary/5' : ''}`}>
-                                        {renderRow(item)}
-                                        <td className="px-8 py-5 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                {editingId === item.id ? (
-                                                    <>
-                                                        <button onClick={handleSave} className="p-2 text-success hover:bg-success/10 rounded-lg"><Save size={16} /></button>
-                                                        <button onClick={cancelEditing} className="p-2 text-accent hover:bg-accent/10 rounded-lg"><X size={16} /></button>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <button onClick={() => startEditing(item)} className="p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit3 size={16} /></button>
-                                                        {activeTab === 'agendas' && <button onClick={() => handleDelete(item.id)} className="p-2 text-muted hover:text-accent hover:bg-accent/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>}
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
+            {activeTab === 'import' ? (
+                <AdvancedImportTool />
+            ) : (
+                <Card variant="surface" padding="p-0 overflow-hidden">
+                    {loading ? (
+                        <div className="p-32 text-center text-muted font-black uppercase tracking-[0.5em] animate-pulse">Sincronizando Nodo...</div>
+                    ) : (
+                        <div className="overflow-x-auto min-h-[400px]">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-base bg-surface-hover">
+                                        {renderHeader()}
+                                        <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </Card>
+                                </thead>
+                                <tbody className="divide-y divide-base">
+                                    {data.map(item => (
+                                        <tr key={item.id} className={`hover:bg-surface-hover/50 transition-all group ${editingId === item.id ? 'bg-primary/5' : ''}`}>
+                                            {renderRow(item)}
+                                            <td className="px-8 py-5 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    {editingId === item.id ? (
+                                                        <>
+                                                            <button onClick={handleSave} className="p-2 text-success hover:bg-success/10 rounded-lg"><Save size={16} /></button>
+                                                            <button onClick={cancelEditing} className="p-2 text-accent hover:bg-accent/10 rounded-lg"><X size={16} /></button>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <button onClick={() => startEditing(item)} className="p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit3 size={16} /></button>
+                                                            {activeTab === 'agendas' && <button onClick={() => handleDelete(item.id)} className="p-2 text-muted hover:text-accent hover:bg-accent/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Card>
+            )}
         </div>
     );
 };
