@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Card = ({ children, variant = 'surface', className = '', padding = 'p-8', glass = false }) => {
+const Card = ({ children, variant = 'surface', className = '', padding = 'p-8', glass = false, ...props }) => {
     const baseStyles = "rounded-main border border-base transition-all duration-300";
 
     const variants = {
@@ -10,7 +10,10 @@ const Card = ({ children, variant = 'surface', className = '', padding = 'p-8', 
     };
 
     return (
-        <div className={`${baseStyles} ${variants[variant]} ${padding} ${glass ? 'glass-effect' : ''} ${className}`}>
+        <div
+            className={`${baseStyles} ${variants[variant]} ${padding} ${glass ? 'glass-effect' : ''} ${className}`}
+            {...props}
+        >
             {children}
         </div>
     );
