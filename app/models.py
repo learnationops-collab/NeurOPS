@@ -127,6 +127,8 @@ class Payment(db.Model):
     payment_type = db.Column(db.String(20)) # Primer Pago, Renovación, Pago Completo, Cuota, Seña
     status = db.Column(db.String(20), default='completed')
 
+    payment_method = db.relationship('PaymentMethod')
+
 class Appointment(db.Model):
     __tablename__ = 'appointments'
     id = db.Column(db.Integer, primary_key=True)

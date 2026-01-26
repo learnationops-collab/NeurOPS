@@ -14,12 +14,16 @@ import {
     CheckCircle2,
     XCircle,
     Loader2,
-    ArrowUpRight
+    ArrowUpRight,
+    X
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import AgendaManagerModal from '../components/AgendaManagerModal';
+import DateRangeFilter from '../components/DateRangeFilter';
+import MultiSelectFilter from '../components/MultiSelectFilter';
+import usePersistentFilters from '../hooks/usePersistentFilters';
 
 const CloserLeadsPage = () => {
     const [activeTab, setActiveTab] = useState('agendas');
@@ -34,17 +38,38 @@ const CloserLeadsPage = () => {
     const [updating, setUpdating] = useState(false);
     const [selectedAgenda, setSelectedAgenda] = useState(null);
     const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
+
+    // Filter Configuration
+    const { filters, updateFilter } = usePersistentFilters(`closer_filters_${activeTab}`, {
+        dateRange: { type: 'all', start: '', end: '' },
+        status: [],
+        program: [],
+        paymentMethod: []
+    });
 
     useEffect(() => {
         fetchData();
-    }, [activeTab, page]);
+    }, [activeTab, page, filters]); // Re-fetch when filters change
 
     const fetchData = async () => {
         setLoading(true);
         setError(null);
         try {
             const endpoint = activeTab === 'agendas' ? '/closer/agendas' : '/closer/sales';
-            const res = await api.get(`${endpoint}?page=${page}&search=${search}`);
+
+            // Construct query params
+            const params = {
+                page,
+                search,
+                start_date: filters.dateRange?.start,
+                end_date: filters.dateRange?.end,
+                status: filters.status?.join(','),
+                program: filters.program?.join(','),
+                payment_method: filters.paymentMethod?.join(',')
+            };
+
+            const res = await api.get(endpoint, { params });
 
             const tabData = Array.isArray(res.data.data) ? res.data.data : [];
 
@@ -77,6 +102,29 @@ const CloserLeadsPage = () => {
         }
     };
 
+    // Filter Options
+    const statusOptions = [
+        { value: 'scheduled', label: 'Programada' },
+        { value: 'completed', label: 'Completada' },
+        { value: 'no_show', label: 'No Show' },
+        { value: 'canceled', label: 'Cancelada' },
+        { value: 'reprogrammed', label: 'Reprogramada' },
+        { value: 'sold', label: 'Ventada' } // If applicable
+    ];
+
+    // These could come from API in future
+    const programOptions = [
+        { value: 'Closer', label: 'Closer' },
+        { value: 'Master', label: 'Master' },
+        { value: 'Workshop', label: 'Workshop' }
+    ];
+
+    const paymentOptions = [
+        { value: 'Stripe', label: 'Stripe' },
+        { value: 'PayPal', label: 'PayPal' },
+        { value: 'Transferencia', label: 'Transferencia' }
+    ];
+
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -103,25 +151,85 @@ const CloserLeadsPage = () => {
             </header>
 
             {/* Filters & Search */}
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-surface p-6 rounded-[2rem] border border-base backdrop-blur-xl">
-                <form onSubmit={handleSearch} className="relative w-full md:max-w-md group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors" size={20} />
-                    <input
-                        type="text"
-                        placeholder="Buscar por nombre..."
-                        className="w-full pl-12 pr-4 py-4 bg-main border border-base rounded-2xl text-base placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </form>
-                <div className="flex gap-4 w-full md:w-auto">
-                    <Button variant="ghost" className="flex-1 md:flex-none border-base text-muted px-6 h-14" icon={Filter}>
-                        Filtros
-                    </Button>
-                    <Button variant="ghost" className="flex-1 md:flex-none border-primary/20 text-primary hover:bg-primary hover:text-white px-6 h-14" icon={Download}>
-                        Exportar
-                    </Button>
+            <div className="space-y-4">
+                <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-surface p-6 rounded-[2rem] border border-base backdrop-blur-xl">
+                    <form onSubmit={handleSearch} className="relative w-full md:max-w-md group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors" size={20} />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre..."
+                            className="w-full pl-12 pr-4 py-4 bg-main border border-base rounded-2xl text-base placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </form>
+                    <div className="flex gap-4 w-full md:w-auto">
+                        <Button
+                            variant="ghost"
+                            className={`flex-1 md:flex-none border-base text-muted px-6 h-14 ${showFilters ? 'bg-surface-hover text-white' : ''}`}
+                            icon={Filter}
+                            onClick={() => setShowFilters(!showFilters)}
+                        >
+                            Filtros
+                        </Button>
+                        <Button variant="ghost" className="flex-1 md:flex-none border-primary/20 text-primary hover:bg-primary hover:text-white px-6 h-14" icon={Download}>
+                            Exportar
+                        </Button>
+                    </div>
                 </div>
+
+                {/* Filter Panel */}
+                {showFilters && (
+                    <div className="bg-surface/50 border border-base rounded-[1.5rem] p-6 animate-in slide-in-from-top-4 fade-in duration-300">
+                        <div className="flex flex-wrap gap-4 items-center">
+                            <DateRangeFilter
+                                value={filters.dateRange}
+                                onChange={(val) => { updateFilter('dateRange', val); setPage(1); }}
+                            />
+
+                            {activeTab === 'agendas' && (
+                                <MultiSelectFilter
+                                    label="Estado"
+                                    options={statusOptions}
+                                    value={filters.status}
+                                    onChange={(val) => { updateFilter('status', val); setPage(1); }}
+                                />
+                            )}
+
+                            {activeTab === 'sales' && (
+                                <>
+                                    <MultiSelectFilter
+                                        label="Programa"
+                                        options={programOptions}
+                                        value={filters.program}
+                                        onChange={(val) => { updateFilter('program', val); setPage(1); }}
+                                    />
+                                    <MultiSelectFilter
+                                        label="Método Pago"
+                                        options={paymentOptions}
+                                        value={filters.paymentMethod}
+                                        onChange={(val) => { updateFilter('paymentMethod', val); setPage(1); }}
+                                    />
+                                </>
+                            )}
+
+                            {(filters.dateRange?.type !== 'all' || filters.status?.length > 0 || filters.program?.length > 0 || filters.paymentMethod?.length > 0) && (
+                                <button
+                                    onClick={() => {
+                                        updateFilter('dateRange', { type: 'all', start: '', end: '' });
+                                        updateFilter('status', []);
+                                        updateFilter('program', []);
+                                        updateFilter('paymentMethod', []);
+                                        setPage(1);
+                                    }}
+                                    className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 flex items-center gap-1 ml-auto"
+                                >
+                                    <X size={14} /> Limpiar Filtros
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Main Table Database */}
@@ -223,6 +331,7 @@ const CloserLeadsPage = () => {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <p className="text-success font-black tracking-tighter text-lg">${item.amount?.toLocaleString()}</p>
+                                                <p className="text-[9px] text-muted font-bold uppercase">{item.payment_method}</p>
                                             </td>
                                         </>
                                     )}

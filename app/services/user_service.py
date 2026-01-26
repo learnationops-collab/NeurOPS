@@ -104,17 +104,19 @@ class UserService(BaseService):
     def get_leads_list(filters, page=1, per_page=50):
         query = Client.query
         search = filters.get('search')
-        program_id = filters.get('program')
+        program_filter = filters.get('program')
         start_date = filters.get('start_date')
         end_date = filters.get('end_date')
         sort_by = filters.get('sort_by', 'newest')
         closer_id = filters.get('closer_id')
 
-        if program_id:
-            query = query.join(Enrollment).filter(Enrollment.program_id == program_id)
+        # Join if filtering by program
+        if program_filter:
+            programs = program_filter.split(',')
+            if programs:
+                query = query.join(Enrollment).join(Program).filter(Program.name.in_(programs))
         
         if closer_id:
-            # Join with Appointment or Enrollment to filter by closer
             query = query.filter(or_(
                 Client.appointments.any(Appointment.closer_id == closer_id),
                 Client.enrollments.any(Enrollment.closer_id == closer_id)
@@ -137,43 +139,104 @@ class UserService(BaseService):
     def get_leads_kpis(filters):
         def apply_filters(q):
             search = filters.get('search')
-            program_id = filters.get('program')
+            program_filter = filters.get('program')
             closer_id = filters.get('closer_id')
             start_date = filters.get('start_date')
             end_date = filters.get('end_date')
 
-            if program_id: q = q.join(Enrollment).filter(Enrollment.program_id == program_id)
-            if closer_id: 
-                q = q.filter(or_(
-                    Client.appointments.any(Appointment.closer_id == closer_id),
-                    Client.enrollments.any(Enrollment.closer_id == closer_id)
-                ))
-            if start_date: q = q.filter(Client.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
-            if end_date: q = q.filter(Client.created_at < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
-            if search: q = q.filter(or_(Client.full_name.ilike(f"%{search}%"), Client.email.ilike(f"%{search}%")))
+            if program_filter:
+                programs = program_filter.split(',')
+                if programs:
+                    # Check if already joined
+                    # SQLAlchemy constructs are smart, but safer to robustly join
+                    # Assuming q is based on Client or joined with it
+                    # We need to act differently based on q source
+                    # For simplicity, assuming q starts with Client
+                    pass # We need robust check inside main logic
+            
+            # Since apply_filters is helper, let's just inline logic or simplify
+            # Re-implementing specific filter block per query type below is safer
             return q
 
+        # Separate logic for complex joins
         base_q = Client.query
-        base_q = apply_filters(base_q)
+        
+        # Apply standard filters to base_q
+        search = filters.get('search')
+        program_filter = filters.get('program')
+        closer_id = filters.get('closer_id')
+        start_date = filters.get('start_date')
+        end_date = filters.get('end_date')
+
+        if program_filter:
+            programs = program_filter.split(',')
+            if programs:
+                base_q = base_q.join(Enrollment).join(Program).filter(Program.name.in_(programs))
+        
+        if closer_id:
+            base_q = base_q.filter(or_(
+                Client.appointments.any(Appointment.closer_id == closer_id),
+                Client.enrollments.any(Enrollment.closer_id == closer_id)
+            ))
+        if start_date: base_q = base_q.filter(Client.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
+        if end_date: base_q = base_q.filter(Client.created_at < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+        if search: base_q = base_q.filter(or_(Client.full_name.ilike(f"%{search}%"), Client.email.ilike(f"%{search}%")))
+        
         total_clients = base_q.count()
 
+        # Revenue Query
         pay_q = db.session.query(
             db.func.sum(Payment.amount),
             db.func.sum((Payment.amount * (PaymentMethod.commission_percent / 100.0)) + PaymentMethod.commission_fixed)
         ).select_from(Client).join(Enrollment).join(Payment).join(PaymentMethod).filter(Payment.status == 'completed')
-        pay_q = apply_filters(pay_q) 
+        
+        # Apply same filters to pay_q
+        if program_filter:
+            programs = program_filter.split(',')
+            # We already join Enrollment/Program in base query logic, but pay_q is fresh
+            # Should reuse logic.
+            pay_q = pay_q.join(Program).filter(Program.name.in_(programs)) # Program is joined via Enrollment usually
+        
+        if closer_id:
+             pay_q = pay_q.filter(or_(
+                Client.appointments.any(Appointment.closer_id == closer_id),
+                Client.enrollments.any(Enrollment.closer_id == closer_id)
+            ))
+        if start_date: pay_q = pay_q.filter(Client.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
+        if end_date: pay_q = pay_q.filter(Client.created_at < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+        if search: pay_q = pay_q.filter(or_(Client.full_name.ilike(f"%{search}%"), Client.email.ilike(f"%{search}%")))
+
         result = pay_q.first()
         gross_collected = result[0] or 0.0
         cash_collected = gross_collected - (result[1] or 0.0)
         
-        enrs = apply_filters(Enrollment.query.join(Client)).all()
+        # Debt Query? Simple approach: fetch clients and iterate
+        # Optimization: Don't iterate all if too many. 
+        # But for debt calculation we need all.
+        # Let's use base_q.all() if feasible or aggregate in sql
+        clients = base_q.all()
         total_debt = 0.0
-        for enr in enrs:
-             debt = (enr.program.price if enr.program else 0.0) - enr.total_paid
-             if debt > 0: total_debt += debt
+        for c in clients:
+            for enr in c.enrollments:
+                debt = (enr.program.price if enr.program else 0.0) - enr.total_paid
+                if debt > 0: total_debt += debt
         
-        program_counts = db.session.query(Program.name, db.func.count(Enrollment.id)).select_from(Client).join(Enrollment).join(Program)
-        program_counts = apply_filters(program_counts).group_by(Program.name).all()
+        # Program Counts
+        program_counts_q = db.session.query(Program.name, db.func.count(Enrollment.id)).select_from(Client).join(Enrollment).join(Program)
+        # Apply filters
+        if program_filter:
+            programs = program_filter.split(',')
+            program_counts_q = program_counts_q.filter(Program.name.in_(programs))
+        if closer_id:
+            program_counts_q = program_counts_q.filter(or_(
+                Client.appointments.any(Appointment.closer_id == closer_id),
+                Client.enrollments.any(Enrollment.closer_id == closer_id)
+            ))
+        if start_date: program_counts_q = program_counts_q.filter(Client.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
+        if end_date: program_counts_q = program_counts_q.filter(Client.created_at < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+        if search: program_counts_q = program_counts_q.filter(or_(Client.full_name.ilike(f"%{search}%"), Client.email.ilike(f"%{search}%")))
+        
+        program_counts = program_counts_q.group_by(Program.name).all()
 
         return {
             'total': total_clients,

@@ -130,8 +130,39 @@ def submit_report():
 def get_all_agendas():
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
+    
     page = request.args.get('page', 1, type=int)
-    pagination = Appointment.query.filter_by(closer_id=current_user.id).order_by(Appointment.start_time.desc()).paginate(page=page, per_page=50)
+    search = request.args.get('search', '')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    status_filter = request.args.get('status') # comma separated
+
+    query = Appointment.query.filter_by(closer_id=current_user.id)
+
+    # Search
+    if search:
+        query = query.join(Client).filter(
+            (Client.full_name.ilike(f'%{search}%')) | 
+            (Client.email.ilike(f'%{search}%'))
+        )
+    
+    # Date Range
+    if start_date:
+        query = query.filter(Appointment.start_time >= datetime.strptime(start_date, '%Y-%m-%d'))
+    if end_date:
+        # Include the whole end day
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+        query = query.filter(Appointment.start_time < end_dt)
+
+    # Status Filter
+    if status_filter:
+        statuses = status_filter.split(',')
+        if statuses:
+            from sqlalchemy import or_
+            query = query.filter(Appointment.status.in_(statuses))
+
+    pagination = query.order_by(Appointment.start_time.desc()).paginate(page=page, per_page=50)
+    
     return jsonify({
         "data": [{
             "id": a.id, 
@@ -150,10 +181,67 @@ def get_all_agendas():
 def get_all_sales():
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
+        
     page = request.args.get('page', 1, type=int)
-    pagination = Enrollment.query.filter_by(closer_id=current_user.id).order_by(Enrollment.enrollment_date.desc()).paginate(page=page, per_page=50)
+    search = request.args.get('search', '')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    program_filter = request.args.get('program')
+    payment_filter = request.args.get('payment_method')
+
+    query = Enrollment.query.filter_by(closer_id=current_user.id)
+
+    # Joins for filtering
+    from app.models import Program, Payment, PaymentMethod
+    query = query.join(Client).join(Program).outerjoin(Payment).outerjoin(PaymentMethod, Payment.payment_method_id == PaymentMethod.id)
+
+    # Search
+    if search:
+        query = query.filter(
+            (Client.full_name.ilike(f'%{search}%')) | 
+            (Client.email.ilike(f'%{search}%'))
+        )
+    
+    # Date Range (Enrollment Date)
+    if start_date:
+        query = query.filter(Enrollment.enrollment_date >= datetime.strptime(start_date, '%Y-%m-%d'))
+    if end_date:
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+        query = query.filter(Enrollment.enrollment_date < end_dt)
+
+    # Program Filter
+    if program_filter:
+        programs = program_filter.split(',')
+        if programs:
+            query = query.filter(Program.name.in_(programs))
+
+    # Payment Method Filter
+    if payment_filter:
+        methods = payment_filter.split(',')
+        if methods:
+            query = query.filter(PaymentMethod.name.in_(methods))
+
+    pagination = query.order_by(Enrollment.enrollment_date.desc()).paginate(page=page, per_page=50)
+    
+    data = []
+    for s in pagination.items:
+        # Get payment info (assuming single payment for simplicity or aggregate)
+        # s.payments is dynamic, so use order_by
+        last_payment = s.payments.order_by(Payment.id.desc()).first()
+        method_name = last_payment.payment_method.name if last_payment and last_payment.payment_method else "N/A"
+        amount = last_payment.amount if last_payment else (s.program.price if s.program else 0.0)
+
+        data.append({
+            "id": s.id, 
+            "student_name": s.client.full_name or s.client.email if s.client else "Unknown", 
+            "program_name": s.program.name if s.program else "Unknown", 
+            "amount": amount,
+            "payment_method": method_name,
+            "date": s.enrollment_date.isoformat()
+        })
+
     return jsonify({
-        "data": [{"id": s.id, "student_name": s.client.full_name or s.client.email if s.client else "Unknown", "program_name": s.program.name if s.program else "Unknown", "amount": s.program.price if s.program else 0.0, "date": s.enrollment_date.isoformat()} for s in pagination.items],
+        "data": data,
         "total": pagination.total, "pages": pagination.pages
     }), 200
 

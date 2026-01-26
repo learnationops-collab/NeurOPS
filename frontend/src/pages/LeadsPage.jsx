@@ -1,20 +1,38 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Search, Filter, ArrowRight, UserCheck, CreditCard, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, Filter, ArrowRight, UserCheck, CreditCard, AlertCircle, Loader2, X } from 'lucide-react';
+import Button from '../components/ui/Button';
+import DateRangeFilter from '../components/DateRangeFilter';
+import MultiSelectFilter from '../components/MultiSelectFilter';
+import usePersistentFilters from '../hooks/usePersistentFilters';
 
 const LeadsPage = () => {
     const [data, setData] = useState({ leads: [], kpis: {} });
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
+
+    // Filter Configuration
+    const { filters, updateFilter } = usePersistentFilters('admin_leads_filters', {
+        dateRange: { type: 'all', start: '', end: '' },
+        program: []
+    });
 
     useEffect(() => {
         fetchLeads();
-    }, []);
+    }, [filters]);
 
     const fetchLeads = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/admin/leads', { params: { search } });
+            const params = {
+                search,
+                start_date: filters.dateRange?.start,
+                end_date: filters.dateRange?.end,
+                program: filters.program?.join(',')
+            };
+
+            const res = await api.get('/admin/leads', { params });
             setData(res.data);
         } catch (err) {
             console.error("Error fetching leads", err);
@@ -22,6 +40,16 @@ const LeadsPage = () => {
             setLoading(false);
         }
     };
+
+    const handleSearch = (e) => {
+        if (e.key === 'Enter') fetchLeads();
+    };
+
+    const programOptions = [
+        { value: 'Closer', label: 'Closer' },
+        { value: 'Master', label: 'Master' },
+        { value: 'Workshop', label: 'Workshop' }
+    ];
 
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
@@ -63,19 +91,60 @@ const LeadsPage = () => {
             </div>
 
             {/* Filters Bar */}
-            <div className="flex flex-wrap gap-4 items-center">
-                <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Buscar por nombre o email..."
-                        className="w-full pl-11 pr-4 py-4 bg-slate-900/40 border border-slate-800 rounded-2xl text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        onBlur={fetchLeads}
-                        onKeyDown={(e) => e.key === 'Enter' && fetchLeads()}
-                    />
+            <div className="space-y-4">
+                <div className="flex flex-wrap gap-4 items-center">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre o email..."
+                            className="w-full pl-11 pr-4 py-4 bg-slate-900/40 border border-slate-800 rounded-2xl text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            onBlur={fetchLeads}
+                            onKeyDown={handleSearch}
+                        />
+                    </div>
+                    <Button
+                        variant="ghost"
+                        className={`border-slate-800 text-slate-400 hover:text-white h-14 px-6 ${showFilters ? 'bg-slate-800 text-white' : ''}`}
+                        icon={Filter}
+                        onClick={() => setShowFilters(!showFilters)}
+                    >
+                        Filtros
+                    </Button>
                 </div>
+
+                {/* Filter Panel */}
+                {showFilters && (
+                    <div className="bg-slate-900/40 border border-slate-800 rounded-[1.5rem] p-6 animate-in slide-in-from-top-4 fade-in duration-300">
+                        <div className="flex flex-wrap gap-4 items-center">
+                            <DateRangeFilter
+                                value={filters.dateRange}
+                                onChange={(val) => updateFilter('dateRange', val)}
+                            />
+
+                            <MultiSelectFilter
+                                label="Programa"
+                                options={programOptions}
+                                value={filters.program}
+                                onChange={(val) => updateFilter('program', val)}
+                            />
+
+                            {(filters.dateRange?.type !== 'all' || filters.program?.length > 0) && (
+                                <button
+                                    onClick={() => {
+                                        updateFilter('dateRange', { type: 'all', start: '', end: '' });
+                                        updateFilter('program', []);
+                                    }}
+                                    className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 flex items-center gap-1 ml-auto"
+                                >
+                                    <X size={14} /> Limpiar Filtros
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Leads Table */}
