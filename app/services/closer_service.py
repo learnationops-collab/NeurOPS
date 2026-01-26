@@ -219,7 +219,7 @@ class CloserService:
         if trigger_webhook:
             try:
                 from app.models import Integration
-                sales_webhook = Integration.query.filter_by(key='sales_webhook').first()
+                sales_webhook = CloserService._get_sales_integration()
                 if sales_webhook:
                     mode = data.get('webhook_mode', sales_webhook.active_env or 'dev')
                     url = sales_webhook.url_prod if mode == 'prod' else sales_webhook.url_dev
@@ -294,6 +294,16 @@ class CloserService:
         return enrollment
 
     @staticmethod
+    def _get_sales_integration():
+        from app.models import Integration
+        # Try strict key match first
+        webhook = Integration.query.filter_by(key='sales_webhook').first()
+        if not webhook:
+            # Fallback: Try name match (case insensitive-ish) or just 'Ventas'
+            webhook = Integration.query.filter(Integration.name.ilike('Ventas%')).first()
+        return webhook
+
+    @staticmethod
     def get_sale_metadata(closer_id):
         from app.models import Program, PaymentMethod, Integration
         programs = Program.query.filter_by(is_active=True).all()
@@ -301,8 +311,8 @@ class CloserService:
         # Leads for sale selection: clients with recent appointments with this closer
         leads = Client.query.filter(Client.appointments.any(Appointment.closer_id == closer_id)).limit(50).all()
         
-        # Check integration status
-        webhook = Integration.query.filter_by(key='sales_webhook').first()
+        # Check integration status using helper
+        webhook = CloserService._get_sales_integration()
         integration_status = {
             "configured": bool(webhook),
             "active_env": webhook.active_env if webhook else 'dev'
