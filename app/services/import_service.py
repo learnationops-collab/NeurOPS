@@ -1,5 +1,5 @@
 import pandas as pd
-from app.models import db, User, Client, Program, PaymentMethod, Enrollment, Payment
+from app.models import db, User, Client, Program, PaymentMethod, Enrollment, Payment, Appointment
 from datetime import datetime
 
 class ImportService:
@@ -144,6 +144,7 @@ class ImportService:
 
                 stats["success"] += 1
             except Exception as e:
+                print(f"[Import Error Row {index+2}] {e}") # DEBUG
                 stats["errors"].append({"row": index + 2, "error": str(e)})
 
         if not dry_run:
@@ -290,9 +291,13 @@ class ImportService:
         # 1. Datetime parsing
         start_time = datetime.now()
         if data.get('start_time'):
-            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%d/%m/%Y %H:%M', '%m/%d/%Y %H:%M'):
+            # Added date-only formats: %d/%m/%Y, %Y-%m-%d, %m/%d/%Y
+            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%d/%m/%Y %H:%M', '%m/%d/%Y %H:%M', '%d/%m/%Y', '%Y-%m-%d', '%m/%d/%Y'):
                 try:
                     start_time = datetime.strptime(data['start_time'], fmt)
+                    # If date only, set to 9am by default or keep 00:00? 
+                    # 00:00 is fine, but maybe business hours is better? 
+                    # Let's leave at 00:00 for now.
                     break
                 except: continue
 
