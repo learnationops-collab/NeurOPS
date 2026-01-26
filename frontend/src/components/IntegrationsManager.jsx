@@ -111,18 +111,47 @@ const IntegrationsManager = () => {
                     <Key className="text-primary" size={24} />
                     <h2 className="text-2xl font-black text-base italic uppercase tracking-tighter">Integraciones & Webhooks</h2>
                 </div>
-                <p className="text-xs text-muted font-bold uppercase tracking-widest">Conecta el sistema con herramientas externas (n8n, Make, Zapier)</p>
+                <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted font-bold uppercase tracking-widest">Conecta el sistema con herramientas externas (n8n, Make, Zapier)</p>
+                    <button
+                        onClick={() => setIntegrations([...integrations, { name: '', key: '', url_dev: '', url_prod: '', active_env: 'dev' }])}
+                        className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/20"
+                    >
+                        + Nueva Integración
+                    </button>
+                </div>
             </header>
 
             <div className="grid gap-6">
                 {integrations.map((integration, index) => (
                     <div key={index} className="bg-surface p-8 rounded-[2.5rem] border border-base space-y-6">
                         <div className="flex justify-between items-start">
-                            <div>
-                                <h3 className="text-lg font-black text-base">{integration.name}</h3>
-                                <p className="text-[10px] text-muted font-bold uppercase tracking-widest">Key: {integration.key}</p>
+                            <div className="flex-1 mr-4 space-y-2">
+                                {integration.id ? (
+                                    <>
+                                        <h3 className="text-lg font-black text-base">{integration.name}</h3>
+                                        <p className="text-[10px] text-muted font-bold uppercase tracking-widest">Key: {integration.key}</p>
+                                    </>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Nombre (Ej: Agenda)"
+                                            className="w-full bg-main border border-base rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                            value={integration.name}
+                                            onChange={(e) => updateIntegration(index, 'name', e.target.value)}
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Key (Ej: agenda_webhook)"
+                                            className="w-full bg-main border border-base rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
+                                            value={integration.key}
+                                            onChange={(e) => updateIntegration(index, 'key', e.target.value)}
+                                        />
+                                    </div>
+                                )}
                             </div>
-                            <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">
+                            <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
                                 {integration.active_env === 'prod' ? 'Producción' : 'Test / Dev'}
                             </div>
                         </div>

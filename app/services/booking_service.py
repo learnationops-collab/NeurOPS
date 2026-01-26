@@ -133,3 +133,58 @@ class BookingService:
                 new_ans = SurveyAnswer(client_id=client_id, question_id=q_id, answer=ans_text, appointment_id=appointment_id)
                 db.session.add(new_ans)
         db.session.commit()
+
+    @staticmethod
+    def trigger_agenda_webhook(appointment, event=None):
+        try:
+            from app.models import Integration
+            # 1. Find 'Agenda' Integration
+            webhook = Integration.query.filter(Integration.name.ilike('Agenda%')).first()
+            if not webhook:
+                # Try by key if name fails
+                webhook = Integration.query.filter_by(key='agenda_webhook').first()
+            
+            if not webhook: return
+            
+            url = webhook.url_prod if webhook.active_env == 'prod' else webhook.url_dev
+            if not url: return
+
+            import requests
+            
+            # 2. Prepare Data
+            client = appointment.client
+            closer = appointment.closer
+            
+            # Count appointments for this client to get "numero_agenda"
+            count = Appointment.query.filter_by(client_id=client.id).count()
+            
+            # Format Date/Time (Adjust to Closer's TZ if possible, else UTC)
+            tz_name = closer.timezone or 'America/La_Paz'
+            user_tz = pytz.timezone(tz_name)
+            local_dt = appointment.start_time.replace(tzinfo=pytz.UTC).astimezone(user_tz)
+            
+            date_str = local_dt.strftime('%d/%m/%Y')
+            time_str = local_dt.strftime('%H:%M')
+            
+            # Source from Event if available, else appointment origin
+            source = event.utm_source if event else (appointment.origin or "Desconocido")
+            
+            payload = {
+                "nombre_completo": client.full_name or "Sin Nombre",
+                "primer_nombre": client.full_name.split(' ')[0] if client.full_name else "",
+                "numero_telefono": client.phone or "",
+                "fuente": source,
+                "fecha_agenda": date_str,
+                "hora_agenda": time_str,
+                "closer": closer.username,
+                "zona_geografica": tz_name,
+                "tipo_evento": "agendada",
+                "numero_agenda": count
+            }
+            
+            # 3. Send
+            requests.post(url, json=payload, timeout=5)
+            print(f"[Agenda Webhook] Sent to {url}")
+            
+        except Exception as e:
+            print(f"[Agenda Webhook Error] {e}")

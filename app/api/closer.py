@@ -308,12 +308,15 @@ def create_appointment():
             status=status
         )
         
-        if not appt:
-             return jsonify({"error": "Ya existe una agenda en ese horario"}), 409
-        
-        if appt_type:
-            appt.appointment_type = appt_type
+        if appt:
+            if appt_type:
+                appt.appointment_type = appt_type
+                
             db.session.commit()
+            
+            # Check for webhook trigger
+            if data.get('trigger_webhook', False):
+                 BookingService.trigger_agenda_webhook(appt)
             
         return jsonify({"message": "Agenda creada", "id": appt.id}), 201
     except Exception as e:

@@ -238,7 +238,12 @@ def book_appointment():
                 redirect_url = event.redirect_url_success
                 print(f"[DEBUG] Lead QUALIFIED. Redirecting to: {redirect_url}")
         
+        
         db.session.commit()
+
+        # Trigger Agenda Webhook
+        BookingService.trigger_agenda_webhook(appt, event)
+
         return jsonify({
             "message": "Booking successful", 
             "id": appt.id,

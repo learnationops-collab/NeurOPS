@@ -34,7 +34,8 @@ const AddAgendaModal = ({ isOpen, onClose, onSuccess }) => {
         start_date: new Date().toISOString().split('T')[0],
         start_time: '10:00',
         status: 'scheduled',
-        type: 'Manual Closer'
+        type: 'Manual Closer',
+        trigger_webhook: false
     });
 
     useEffect(() => {
@@ -98,7 +99,8 @@ const AddAgendaModal = ({ isOpen, onClose, onSuccess }) => {
         const payload = {
             start_time: isoDateTime,
             status: formData.status,
-            type: formData.type
+            type: formData.type,
+            trigger_webhook: formData.trigger_webhook
         };
 
         if (isNewClient) {
@@ -307,6 +309,24 @@ const AddAgendaModal = ({ isOpen, onClose, onSuccess }) => {
                                         <option value="Seguimiento">Seguimiento</option>
                                     </select>
                                 </div>
+                            </div>
+
+                            <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                                <div className="space-y-1">
+                                    <h4 className="text-xs font-black text-base uppercase tracking-wider flex items-center gap-2">
+                                        <Clock size={14} className="text-primary" /> Automatización (Webhook)
+                                    </h4>
+                                    <p className="text-[10px] text-muted">Enviar datos a la integración "Agenda"</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={formData.trigger_webhook}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, trigger_webhook: e.target.checked }))}
+                                    />
+                                    <div className="w-11 h-6 bg-main border-2 border-base peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-muted after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white animate-in fade-in"></div>
+                                </label>
                             </div>
 
                             {error && (
