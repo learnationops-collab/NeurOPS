@@ -11,7 +11,13 @@ import {
     CreditCard,
     AlertCircle,
     TrendingUp,
-    ShieldCheck
+    ShieldCheck,
+    UserPlus,
+    Calendar,
+    Instagram,
+    Webhook,
+    Globe,
+    FlaskConical
 } from 'lucide-react';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
@@ -29,19 +35,50 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
         program_id: '',
         payment_amount: '',
         payment_method_id: '',
-        payment_type: ''
+        payment_type: '',
+        client_data: { name: '', email: '', phone: '', instagram: '' },
+        appointment_date: new Date().toISOString(),
+        trigger_webhook: true,
+        webhook_mode: 'test'
     });
+    const [isNewClient, setIsNewClient] = useState(false);
     const [allowedPaymentTypes, setAllowedPaymentTypes] = useState([]);
     const [loadingStatus, setLoadingStatus] = useState(false);
+    const [hasActiveIntegration, setHasActiveIntegration] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             fetchMetadata();
+            fetchIntegrationStatus();
             setStep(1);
             setError(null);
             setAllowedPaymentTypes([]);
+            setIsNewClient(false);
+            setFormData(prev => ({
+                ...prev,
+                lead_id: '',
+                program_id: '',
+                payment_amount: '',
+                payment_method_id: '',
+                payment_type: '',
+                client_data: { name: '', email: '', phone: '', instagram: '' },
+                appointment_date: new Date().toISOString(),
+                trigger_webhook: true,
+                webhook_mode: 'test'
+            }));
         }
     }, [isOpen]);
+
+    const fetchIntegrationStatus = async () => {
+        try {
+            const res = await api.get('/admin/integrations');
+            const salesInt = res.data.find(i => i.key === 'sales_webhook');
+            if (salesInt) {
+                setHasActiveIntegration(true);
+                setFormData(prev => ({ ...prev, webhook_mode: salesInt.active_env }));
+            }
+        } catch (e) { console.error("Error checking integrations", e); }
+    };
 
     const fetchMetadata = async () => {
         setLoading(true);
@@ -102,8 +139,16 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
         e.preventDefault();
         setSubmitting(true);
         setError(null);
+
+        // Prepare payload
+        const payload = { ...formData };
+        if (!isNewClient) {
+            delete payload.client_data;
+            delete payload.appointment_date;
+        }
+
         try {
-            await api.post('/closer/sales', formData);
+            await api.post('/closer/sales', payload);
             setStep(3);
             setTimeout(() => {
                 onSuccess();
@@ -174,39 +219,129 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
                                     <div className="space-y-6">
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1 flex items-center gap-2">
-                                                <User size={12} /> Seleccionar Lead
+                                                <User size={12} /> Seleccionar Lead o Crear Nuevo
                                             </label>
-                                            <div className="relative group/search">
-                                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted group-focus-within/search:text-primary transition-colors" />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Buscar por nombre o email..."
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                    className="w-full bg-main border border-base rounded-2xl py-4 pl-14 pr-6 text-base text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
-                                                />
-                                            </div>
-                                            <div className="max-h-60 overflow-y-auto custom-scrollbar bg-main rounded-2xl border border-base divide-y divide-base mt-4">
-                                                {filteredLeads.map(l => (
-                                                    <button
-                                                        key={l.id}
-                                                        type="button"
-                                                        onClick={() => handleLeadSelect(l)}
-                                                        className={`w-full p-4 flex items-center justify-between hover:bg-surface-hover transition-all text-left ${formData.lead_id === l.id ? 'bg-primary/10' : ''}`}
-                                                    >
-                                                        <div>
-                                                            <p className="text-sm font-bold text-base">{l.username}</p>
-                                                            <p className="text-[10px] text-muted font-medium uppercase">{l.email}</p>
-                                                        </div>
-                                                        <CheckCircle2 size={16} className={formData.lead_id === l.id ? 'text-primary' : 'text-muted'} />
-                                                    </button>
-                                                ))}
-                                                {filteredLeads.length === 0 && (
-                                                    <div className="p-8 text-center">
-                                                        <p className="text-[10px] font-black text-muted uppercase tracking-widest opacity-20">No se encontraron leads</p>
+
+                                            {!isNewClient ? (
+                                                <>
+                                                    <div className="relative group/search">
+                                                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted group-focus-within/search:text-primary transition-colors" />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Buscar por nombre o email..."
+                                                            value={searchTerm}
+                                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                                            className="w-full bg-main border border-base rounded-2xl py-4 pl-14 pr-6 text-base text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                                                        />
                                                     </div>
-                                                )}
-                                            </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsNewClient(true)}
+                                                        className="w-full py-4 border border-dashed border-primary/30 text-primary font-bold rounded-2xl hover:bg-primary/5 transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-widest"
+                                                    >
+                                                        <UserPlus size={16} />
+                                                        Crear Nuevo Cliente
+                                                    </button>
+
+                                                    <div className="max-h-60 overflow-y-auto custom-scrollbar bg-main rounded-2xl border border-base divide-y divide-base mt-2">
+                                                        {filteredLeads.map(l => (
+                                                            <button
+                                                                key={l.id}
+                                                                type="button"
+                                                                onClick={() => handleLeadSelect(l)}
+                                                                className={`w-full p-4 flex items-center justify-between hover:bg-surface-hover transition-all text-left ${formData.lead_id === l.id ? 'bg-primary/10' : ''}`}
+                                                            >
+                                                                <div>
+                                                                    <p className="text-sm font-bold text-base">{l.username}</p>
+                                                                    <p className="text-[10px] text-muted font-medium uppercase">{l.email}</p>
+                                                                </div>
+                                                                <CheckCircle2 size={16} className={formData.lead_id === l.id ? 'text-primary' : 'text-muted'} />
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <h4 className="text-xs font-black text-base uppercase tracking-widest">Nuevo Cliente</h4>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsNewClient(false)}
+                                                            className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wide"
+                                                        >
+                                                            Volver a buscar
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="col-span-2 space-y-2">
+                                                            <input
+                                                                required={isNewClient}
+                                                                className="w-full px-5 py-3 bg-main border border-base rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                                                                value={formData.client_data.name}
+                                                                onChange={e => setFormData({ ...formData, client_data: { ...formData.client_data, name: e.target.value } })}
+                                                                placeholder="Nombre Completo"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <input
+                                                                required={isNewClient}
+                                                                type="email"
+                                                                className="w-full px-5 py-3 bg-main border border-base rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                                                                value={formData.client_data.email}
+                                                                onChange={e => setFormData({ ...formData, client_data: { ...formData.client_data, email: e.target.value } })}
+                                                                placeholder="Email"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <input
+                                                                required={isNewClient}
+                                                                type="tel"
+                                                                className="w-full px-5 py-3 bg-main border border-base rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                                                                value={formData.client_data.phone}
+                                                                onChange={e => setFormData({ ...formData, client_data: { ...formData.client_data, phone: e.target.value } })}
+                                                                placeholder="Teléfono"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2 space-y-2">
+                                                            <div className="relative">
+                                                                <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                                                                <input
+                                                                    required={isNewClient}
+                                                                    className="w-full pl-10 pr-5 py-3 bg-main border border-base rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                                                                    value={formData.client_data.instagram}
+                                                                    onChange={e => setFormData({ ...formData, client_data: { ...formData.client_data, instagram: e.target.value } })}
+                                                                    placeholder="Instagram (Ej. @usuario)"
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="col-span-2 space-y-2 pt-2 border-t border-base/50">
+                                                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1 flex items-center gap-1.5"><Calendar size={12} /> Fecha de la Reunión (Para Historial)</label>
+                                                            <input
+                                                                required={isNewClient}
+                                                                type="datetime-local"
+                                                                className="w-full px-5 py-3 bg-main border border-base rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                                                                value={formData.appointment_date.slice(0, 16)}
+                                                                onChange={e => setFormData({ ...formData, appointment_date: new Date(e.target.value).toISOString() })}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <Button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setAllowedPaymentTypes(['full', 'first_payment', 'down_payment']); // Default for new clients
+                                                            setStep(2);
+                                                        }}
+                                                        variant="primary"
+                                                        className="w-full h-14"
+                                                    >
+                                                        Continuar
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ) : (
@@ -302,30 +437,92 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
 
                                 <div className="flex gap-4 pt-4">
                                     {step === 2 && (
+                                        <>
+                                            <Button
+                                                type="button"
+                                                onClick={() => setStep(1)}
+                                                variant="ghost"
+                                                className="px-8 py-5 h-16"
+                                            >
+                                                Atrás
+                                            </Button>
+
+                                            <div className="flex-1 flex flex-col gap-4">
+                                                <div className="pt-4 border-t border-base/50 space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <Webhook size={16} className={hasActiveIntegration ? 'text-primary' : 'text-muted'} />
+                                                            <label className="text-[10px] font-black text-muted uppercase tracking-widest">Automatización (Webhook)</label>
+                                                        </div>
+
+                                                        {hasActiveIntegration ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setFormData(prev => ({ ...prev, trigger_webhook: !prev.trigger_webhook }))}
+                                                                    className={`w-10 h-5 rounded-full transition-colors relative ${formData.trigger_webhook ? 'bg-primary' : 'bg-base'}`}
+                                                                >
+                                                                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${formData.trigger_webhook ? 'left-6' : 'left-1'}`} />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[9px] uppercase font-bold text-muted bg-base px-2 py-1 rounded">No Configurado</span>
+                                                        )}
+                                                    </div>
+
+                                                    {hasActiveIntegration && formData.trigger_webhook && (
+                                                        <div className="bg-surface-hover p-3 rounded-xl flex items-center justify-between animate-in slide-in-from-top-2">
+                                                            <span className="text-[10px] font-bold text-muted uppercase">Modo de Envío</span>
+                                                            <div className="flex bg-main rounded-lg p-0.5 border border-base">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setFormData(prev => ({ ...prev, webhook_mode: 'test' }))}
+                                                                    className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase transition-all flex items-center gap-1.5 ${formData.webhook_mode === 'test' ? 'bg-surface shadow text-primary' : 'text-muted hover:text-base'}`}
+                                                                >
+                                                                    <FlaskConical size={10} /> Test
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setFormData(prev => ({ ...prev, webhook_mode: 'prod' }))}
+                                                                    className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase transition-all flex items-center gap-1.5 ${formData.webhook_mode === 'prod' ? 'bg-surface shadow text-success' : 'text-muted hover:text-base'}`}
+                                                                >
+                                                                    <Globe size={10} /> Prod
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <Button
+                                                    type="submit"
+                                                    loading={submitting}
+                                                    variant="primary"
+                                                    className="h-14 w-full"
+                                                    icon={CheckCircle2}
+                                                >
+                                                    Completar Registro
+                                                </Button>
+                                            </div>
+                                        </>
+                                    )}
+                                    {step === 1 && (
                                         <Button
-                                            type="button"
-                                            onClick={() => setStep(1)}
-                                            variant="ghost"
-                                            className="px-8 py-5 h-16"
+                                            type="submit"
+                                            loading={submitting}
+                                            disabled={!formData.lead_id && !isNewClient}
+                                            variant="primary"
+                                            className="flex-1 py-5 h-16"
                                         >
-                                            Atrás
+                                            Siguiente Protocolo
                                         </Button>
                                     )}
-                                    <Button
-                                        type="submit"
-                                        loading={submitting}
-                                        disabled={step === 1 && !formData.lead_id}
-                                        variant="primary"
-                                        className="flex-1 py-5 h-16"
-                                    >
-                                        {step === 1 ? 'Siguiente Protocolo' : 'Completar Registro'}
-                                    </Button>
+
                                 </div>
                             </form>
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
 
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -335,7 +532,7 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
                 .fade-in { animation-name: fade-in; }
                 .zoom-in { animation-name: zoom-in; }
             `}} />
-        </div>
+        </div >
     );
 };
 

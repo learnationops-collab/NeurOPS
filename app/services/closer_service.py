@@ -1,4 +1,4 @@
-from app.models import User, Client, Enrollment, Appointment, Payment, PaymentMethod, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Event, db
+from app.models import User, Client, Enrollment, Appointment, Payment, PaymentMethod, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Event, db, Integration
 from app.services.dashboard_service import DashboardService
 from sqlalchemy import or_
 from datetime import datetime, time, timedelta, date
@@ -213,6 +213,49 @@ class CloserService:
         )
         db.session.add(payment)
         db.session.commit()
+        
+        # Webhook Trigger Logic
+        trigger_webhook = data.get('trigger_webhook', False)
+        if trigger_webhook:
+            try:
+                from app.models import Integration
+                sales_webhook = Integration.query.filter_by(key='sales_webhook').first()
+                if sales_webhook:
+                    mode = data.get('webhook_mode', sales_webhook.active_env or 'dev')
+                    url = sales_webhook.url_prod if mode == 'prod' else sales_webhook.url_dev
+                    
+                    if url:
+                        import requests
+                        payload = {
+                            "event": "new_sale",
+                            "client": {
+                                "id": client_id,
+                                "name": enrollment.client.full_name,
+                                "email": enrollment.client.email,
+                                "phone": enrollment.client.phone,
+                                "instagram": enrollment.client.instagram
+                            },
+                            "sale": {
+                                "enrollment_id": enrollment.id,
+                                "program": enrollment.program.name if enrollment.program else None,
+                                "amount": float(payment.amount),
+                                "currency": "USD", # Assuming USD
+                                "payment_type": payment.payment_type,
+                                "date": datetime.utcnow().isoformat()
+                            },
+                            "closer": {
+                                "id": closer_id,
+                                "name": User.query.get(closer_id).username
+                            }
+                        }
+                        # Fire and forget (or log error)
+                        try:
+                            requests.post(url, json=payload, timeout=5)
+                        except Exception as e:
+                            print(f"[Webhook Error] Failed to send webhook to {url}: {e}")
+            except Exception as e:
+                print(f"[Webhook Integration Error] {e}")
+
         return enrollment
 
     @staticmethod
