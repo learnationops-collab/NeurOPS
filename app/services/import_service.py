@@ -28,9 +28,9 @@ class ImportService:
                 {'name': 'date', 'label': 'Fecha (Opcional)'}
             ],
             'entities': {
-                'closer_username': User,
-                'program_name': Program,
-                'payment_method_name': PaymentMethod
+                'closer_username': 'User',
+                'program_name': 'Program',
+                'payment_method_name': 'PaymentMethod'
             }
         },
         'agendas': {
@@ -45,7 +45,7 @@ class ImportService:
                 {'name': 'origin', 'label': 'Origen'}
             ],
             'entities': {
-                'closer_username': User
+                'closer_username': 'User'
             }
         }
     }
