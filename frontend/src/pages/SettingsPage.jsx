@@ -6,6 +6,7 @@ import ReportQuestionsManager from '../components/ReportQuestionsManager';
 import ProgramsManager from '../components/ProgramsManager';
 import FunnelsManager from '../components/FunnelsManager';
 import IntegrationsManager from '../components/IntegrationsManager';
+import PaymentMethodsManager from '../components/PaymentMethodsManager';
 import Card from '../components/ui/Card';
 import ThemeSelector from '../components/ui/ThemeSelector';
 
