@@ -58,6 +58,10 @@ const BookingPage = () => {
     const [error, setError] = useState(null);
     const [currentStep, setCurrentStep] = useState(1);
     const [emailChecking, setEmailChecking] = useState(false);
+    const [clientId, setClientId] = useState(null);
+    const [bookedCloser, setBookedCloser] = useState('');
+    const [redirectUrl, setRedirectUrl] = useState(null);
+    const [countdown, setCountdown] = useState(3);
 
     // Data from API
     const [eventInfo, setEventInfo] = useState(null);
@@ -119,6 +123,7 @@ const BookingPage = () => {
         try {
             const res = await api.post('/public/clients/check', { email: contactData.email });
             if (res.data.exists) {
+                setClientId(res.data.client.id);
                 setContactData(prev => ({
                     ...prev,
                     name: res.data.client.full_name || prev.name,
@@ -134,12 +139,41 @@ const BookingPage = () => {
         }
     };
 
-    const nextStep = () => {
+    const nextStep = async () => {
         if (currentStep === 2) {
-            if (questions.length === 0) setCurrentStep(4);
-            else setCurrentStep(3);
+            // Step 2 to 3: Save Lead Info
+            try {
+                const res = await api.post('/public/submit-lead', {
+                    ...contactData,
+                    phone: `${phonePrefix} ${contactData.phone}`
+                });
+                if (res.data.id) setClientId(res.data.id);
+
+                if (questions.length === 0) setCurrentStep(4);
+                else setCurrentStep(3);
+            } catch (err) {
+                console.error("Error saving lead info:", err);
+                // Continue anyway to not block user, but maybe show warning?
+                if (questions.length === 0) setCurrentStep(4);
+                else setCurrentStep(3);
+            }
         } else if (currentStep === 3) {
-            setCurrentStep(4);
+            // Step 3 to 4: Save Survey Answers
+            try {
+                if (clientId) {
+                    const answers = Object.entries(surveyAnswers).map(([qId, val]) => ({
+                        question_id: parseInt(qId),
+                        answer: val
+                    }));
+                    if (answers.length > 0) {
+                        await api.post('/public/submit-survey', { client_id: clientId, answers });
+                    }
+                }
+                setCurrentStep(4);
+            } catch (err) {
+                console.error("Error saving survey answers:", err);
+                setCurrentStep(4); // Move forward anyway so the lead isn't blocked
+            }
         }
     };
 
@@ -170,8 +204,24 @@ const BookingPage = () => {
                 utm_medium: searchParams.get('utm_medium'),
                 utm_campaign: searchParams.get('utm_campaign')
             };
-            await api.post(`/public/book`, payload);
+            const res = await api.post(`/public/book`, payload);
+            if (res.data.closer_name) setBookedCloser(res.data.closer_name);
+
             setSuccess(true);
+
+            // Handle Redirection Logic
+            if (res.data.redirect_url) {
+                setRedirectUrl(res.data.redirect_url);
+                let timer = 3;
+                const interval = setInterval(() => {
+                    timer -= 1;
+                    setCountdown(timer);
+                    if (timer <= 0) {
+                        clearInterval(interval);
+                        window.location.href = res.data.redirect_url;
+                    }
+                }, 1000);
+            }
         } catch (err) {
             setError(err.response?.data?.error || "Error al confirmar el agendamiento.");
         } finally {
@@ -194,8 +244,16 @@ const BookingPage = () => {
                 </div>
                 <h1 className="text-4xl font-black text-base italic mb-4 uppercase tracking-tighter">¡BRUTAL!</h1>
                 <p className="text-muted mb-10 font-bold uppercase text-[10px] tracking-widest">
-                    Tu sesión con <span className="text-primary font-black">@{username}</span> ha sido reservada.
+                    Tu sesión con <span className="text-primary font-black">@{bookedCloser || username}</span> ha sido reservada.
                 </p>
+
+                {redirectUrl && (
+                    <div className="mb-10 p-4 bg-primary/10 border border-primary/20 rounded-2xl animate-pulse">
+                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">
+                            Redirigiéndote en {countdown} segundos...
+                        </p>
+                    </div>
+                )}
                 <div className="bg-main/50 p-8 rounded-[2rem] border border-base mb-10 text-left space-y-4 shadow-inner">
                     <div className="flex items-center gap-4 text-sm">
                         <Calendar className="w-5 h-5 text-primary" />
@@ -465,14 +523,14 @@ const BookingPage = () => {
                                     <div className="grid grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                                         {groupedAvailability[selectedDate]?.map(slot => (
                                             <button
-                                                key={slot.timestamp}
+                                                key={slot.ts}
                                                 onClick={() => setSelectedSlot(slot)}
                                                 className={`p-4 rounded-xl border text-center font-black text-sm transition-all ${selectedSlot?.ts === slot.ts
                                                     ? 'bg-primary border-primary text-white shadow-lg'
                                                     : 'bg-main border-base text-muted hover:text-base hover:border-primary/30'
                                                     }`}
                                             >
-                                                {slot.start_time}
+                                                {slot.start}
                                             </button>
                                         ))}
                                     </div>

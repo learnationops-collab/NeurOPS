@@ -35,9 +35,10 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 
 const DAYS_ES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-const SLOTS = Array.from({ length: 48 }, (_, i) => {
-    const hour = Math.floor(i / 2).toString().padStart(2, '0');
-    const min = (i % 2 === 0 ? '00' : '30');
+const SLOTS = Array.from({ length: 16 }, (_, i) => {
+    const totalMinutes = i * 90;
+    const hour = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+    const min = (totalMinutes % 60).toString().padStart(2, '0');
     return `${hour}:${min}`;
 });
 
@@ -98,12 +99,9 @@ const CloserSettingsPage = () => {
         const currentSlots = [...(weeklySchedule[dayStr] || [])];
 
         const [h, m] = timeStr.split(':').map(Number);
-        let endH = h;
-        let endM = m + 30;
-        if (endM === 60) {
-            endH += 1;
-            endM = 0;
-        }
+        const totalMinutes = h * 60 + m + 90;
+        const endH = Math.floor(totalMinutes / 60);
+        const endM = totalMinutes % 60;
         const endTimeStr = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
 
         const index = currentSlots.findIndex(s => s.start === timeStr);
@@ -135,9 +133,9 @@ const CloserSettingsPage = () => {
             SLOTS.forEach(timeStr => {
                 if (timeStr >= quickFill.start && timeStr < quickFill.end) {
                     const [h, min] = timeStr.split(':').map(Number);
-                    let endH = h;
-                    let endM = min + 30;
-                    if (endM === 60) { endH += 1; endM = 0; }
+                    const totalMin = h * 60 + min + 90;
+                    const endH = Math.floor(totalMin / 60);
+                    const endM = totalMin % 60;
                     const endTimeStr = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
                     slots.push({ start: timeStr, end: endTimeStr });
                 }
@@ -149,6 +147,12 @@ const CloserSettingsPage = () => {
         });
 
         setWeeklySchedule(newSchedule);
+    };
+
+    const handleResetWeekly = () => {
+        if (window.confirm("¿Estás seguro de que deseas borrar toda tu disponibilidad semanal?")) {
+            setWeeklySchedule({});
+        }
     };
 
     const handleSaveWeekly = async () => {
@@ -305,18 +309,28 @@ const CloserSettingsPage = () => {
                                     <h3 className="text-2xl font-black text-base italic tracking-tighter uppercase mb-2">Editor de Disponibilidad</h3>
                                     <div className="flex items-center gap-2">
                                         <Info size={12} className="text-primary" />
-                                        <p className="text-muted text-[10px] font-bold uppercase tracking-widest">Haz click en los bloques de 30 minutos para activar tu agenda</p>
+                                        <p className="text-muted text-[10px] font-bold uppercase tracking-widest">Haz click en los bloques de 1.5 horas para activar tu agenda</p>
                                     </div>
                                 </div>
-                                <Button
-                                    onClick={handleSaveWeekly}
-                                    loading={submitting}
-                                    variant="primary"
-                                    className="h-16 px-12"
-                                    icon={Save}
-                                >
-                                    Guardar Configuración
-                                </Button>
+                                <div className="flex gap-4">
+                                    <Button
+                                        onClick={handleResetWeekly}
+                                        variant="ghost"
+                                        className="h-16 px-8 border-rose-500/20 text-rose-500 hover:bg-rose-500/5"
+                                        icon={Trash2}
+                                    >
+                                        Limpiar Todo
+                                    </Button>
+                                    <Button
+                                        onClick={handleSaveWeekly}
+                                        loading={submitting}
+                                        variant="primary"
+                                        className="h-16 px-12"
+                                        icon={Save}
+                                    >
+                                        Guardar Configuración
+                                    </Button>
+                                </div>
                             </div>
 
                             <div className="relative border border-base rounded-[2.5rem] overflow-hidden bg-main/50 backdrop-blur-xl shadow-inner">

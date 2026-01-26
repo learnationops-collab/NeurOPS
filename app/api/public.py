@@ -73,6 +73,7 @@ def check_client_exists():
         return jsonify({
             "exists": True,
             "client": {
+                "id": client.id,
                 "full_name": client.full_name,
                 "phone": client.phone,
                 "instagram": client.instagram
@@ -103,17 +104,11 @@ def submit_survey():
     
     if not client_id: return jsonify({"error": "Client ID required"}), 400
     
-    for ans in answers:
-        q_id = ans.get('question_id')
-        val = ans.get('answer')
-        if q_id:
-            # Check for existing answer to update or create new? Usually surveys are one-time per event, but let's just append/replace.
-            # Assuming simple append for now.
-            sa = SurveyAnswer(client_id=client_id, question_id=q_id, answer=str(val))
-            db.session.add(sa)
-            
-    db.session.commit()
-    return jsonify({"message": "Answers saved"}), 200
+    try:
+        BookingService.save_survey_answers(client_id, answers)
+        return jsonify({"message": "Answers saved"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @bp.route('/public/slots', methods=['GET'])
 def get_public_slots():
@@ -146,7 +141,7 @@ def get_public_slots():
             all_slots.append(s)
             
     # Sort by time
-    all_slots.sort(key=lambda x: x['start'])
+    all_slots.sort(key=lambda x: x['ts'])
     return jsonify(all_slots), 200
 
 @bp.route('/public/book', methods=['POST'])
@@ -244,7 +239,8 @@ def book_appointment():
             "id": appt.id,
             "total_score": total_score,
             "is_qualified": is_qualified,
-            "redirect_url": redirect_url
+            "redirect_url": redirect_url,
+            "closer_name": appt.closer.username if appt.closer else "Equipo"
         }), 201
         
     except Exception as e:
