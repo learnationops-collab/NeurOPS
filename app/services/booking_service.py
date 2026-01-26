@@ -104,7 +104,7 @@ class BookingService:
         return client
 
     @staticmethod
-    def create_appointment(client_id, closer_id, start_time_utc, origin='direct'):
+    def create_appointment(client_id, closer_id, start_time_utc, origin='direct', status='scheduled'):
         conflict = Appointment.query.filter_by(closer_id=closer_id, start_time=start_time_utc).filter(Appointment.status != 'canceled').first()
         if conflict: return None
             
@@ -112,7 +112,7 @@ class BookingService:
             closer_id=closer_id,
             client_id=client_id,
             start_time=start_time_utc,
-            status='scheduled',
+            status=status,
             origin=origin
         )
         db.session.add(appt)

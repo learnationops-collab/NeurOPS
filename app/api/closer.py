@@ -249,22 +249,36 @@ def create_appointment():
     data = request.get_json() or {}
     start_time_str = data.get('start_time')
     lead_id = data.get('lead_id')
-    appt_type = data.get('type', 'Manual')
+    client_data = data.get('client_data')
+    appt_type = data.get('type', 'Manual Closer')
+    status = data.get('status', 'scheduled')
     
-    if not start_time_str or not lead_id:
-        return jsonify({"error": "Faltan datos requeridos (start_time, lead_id)"}), 400
+    if not start_time_str:
+        return jsonify({"error": "Faltan datos requeridos (start_time)"}), 400
+
+    if not lead_id and not client_data:
+        return jsonify({"error": "Debe seleccionar un cliente o crear uno nuevo"}), 400
         
     try:
         from app.services.booking_service import BookingService
+        
+        if not lead_id and client_data:
+            client = BookingService.create_or_update_client(client_data)
+            lead_id = client.id
+            
         start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
         
-        # BookingService create_appointment signature: (client_id, closer_id, start_time, origin='manual')
+        # BookingService create_appointment signature: (client_id, closer_id, start_time_utc, origin='manual', status='scheduled')
         appt = BookingService.create_appointment(
             client_id=lead_id,
             closer_id=current_user.id,
             start_time=start_time,
-            origin='Manual Closer'
+            origin='Manual Closer',
+            status=status
         )
+        
+        if not appt:
+             return jsonify({"error": "Ya existe una agenda en ese horario"}), 409
         
         if appt_type:
             appt.appointment_type = appt_type

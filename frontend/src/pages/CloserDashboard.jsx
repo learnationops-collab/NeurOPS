@@ -4,6 +4,7 @@ import NewSaleModal from '../components/NewSaleModal';
 import SaleDetailModal from '../components/SaleDetailModal';
 import api from '../services/api';
 import AgendaManagerModal from '../components/AgendaManagerModal';
+import AddAgendaModal from '../components/AddAgendaModal';
 import Button from '../components/ui/Button';
 import Card, { CardHeader, CardContent } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -48,6 +49,7 @@ const CloserDashboard = () => {
     const [feedback, setFeedback] = useState(null);
     const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
     const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
+    const [isAddAgendaModalOpen, setIsAddAgendaModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedAgenda, setSelectedAgenda] = useState(null);
     const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(null);
@@ -269,12 +271,12 @@ const CloserDashboard = () => {
                                     <Calendar size={14} className="text-primary" />
                                     Agendas de Hoy
                                 </h3>
-                                <Link
-                                    to="/closer/leads"
+                                <button
+                                    onClick={() => setIsAddAgendaModalOpen(true)}
                                     className="w-6 h-6 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-lg flex items-center justify-center transition-all group/plus"
                                 >
                                     <Plus size={14} />
-                                </Link>
+                                </button>
                             </div>
                             <Badge variant="neutral">{data.agendas_today.length} Agendas</Badge>
                         </CardHeader>
@@ -442,6 +444,11 @@ const CloserDashboard = () => {
                 isOpen={isAgendaModalOpen}
                 appointment={selectedAgenda}
                 onClose={() => { setIsAgendaModalOpen(false); setSelectedAgenda(null); }}
+                onSuccess={fetchDashboard}
+            />
+            <AddAgendaModal
+                isOpen={isAddAgendaModalOpen}
+                onClose={() => setIsAddAgendaModalOpen(false)}
                 onSuccess={fetchDashboard}
             />
             <SaleDetailModal
