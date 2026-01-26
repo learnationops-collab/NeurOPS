@@ -123,7 +123,15 @@ def get_all_agendas():
     page = request.args.get('page', 1, type=int)
     pagination = Appointment.query.filter_by(closer_id=current_user.id).order_by(Appointment.start_time.desc()).paginate(page=page, per_page=50)
     return jsonify({
-        "data": [{"id": a.id, "lead_name": a.client.full_name or a.client.email if a.client else "Unknown", "date": a.start_time.isoformat(), "status": a.status, "type": a.appointment_type} for a in pagination.items],
+        "data": [{
+            "id": a.id, 
+            "lead_name": a.client.full_name or a.client.email if a.client else "Unknown",
+            "phone": a.client.phone if a.client else None,
+            "email": a.client.email if a.client else None,
+            "date": a.start_time.isoformat(), 
+            "status": a.status, 
+            "type": a.appointment_type
+        } for a in pagination.items],
         "total": pagination.total, "pages": pagination.pages
     }), 200
 

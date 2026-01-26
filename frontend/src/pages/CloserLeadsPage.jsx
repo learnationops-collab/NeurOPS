@@ -19,6 +19,7 @@ import {
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import AgendaManagerModal from '../components/AgendaManagerModal';
 
 const CloserLeadsPage = () => {
     const [activeTab, setActiveTab] = useState('agendas');
@@ -31,6 +32,8 @@ const CloserLeadsPage = () => {
     const [editingId, setEditingId] = useState(null);
     const [editStartTime, setEditStartTime] = useState('');
     const [updating, setUpdating] = useState(false);
+    const [selectedAgenda, setSelectedAgenda] = useState(null);
+    const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -224,7 +227,15 @@ const CloserLeadsPage = () => {
                                         </>
                                     )}
                                     <td className="px-8 py-6 text-right">
-                                        <button className="p-3 bg-surface-hover hover:bg-main text-muted hover:text-primary rounded-xl transition-all border border-base">
+                                        <button
+                                            onClick={() => {
+                                                if (activeTab === 'agendas') {
+                                                    setSelectedAgenda(item);
+                                                    setIsAgendaModalOpen(true);
+                                                }
+                                            }}
+                                            className="p-3 bg-surface-hover hover:bg-main text-muted hover:text-primary rounded-xl transition-all border border-base"
+                                        >
                                             <ArrowUpRight size={18} />
                                         </button>
                                     </td>
@@ -259,6 +270,15 @@ const CloserLeadsPage = () => {
                     </button>
                 </div>
             </div>
+            {/* Modal for Agenda Management */}
+            {isAgendaModalOpen && selectedAgenda && (
+                <AgendaManagerModal
+                    isOpen={isAgendaModalOpen}
+                    onClose={() => { setIsAgendaModalOpen(false); setSelectedAgenda(null); }}
+                    appointment={selectedAgenda}
+                    onSuccess={fetchData}
+                />
+            )}
         </div>
     );
 };
