@@ -68,7 +68,13 @@ class BookingService:
         if (closer.id, utc_dt) not in booked_slots:
             ts_key = utc_dt
             if ts_key not in unique_slots:
-                unique_slots[ts_key] = {'utc_iso': utc_dt.isoformat() + 'Z', 'closer_id': closer.id, 'ts': utc_dt.timestamp()}
+                unique_slots[ts_key] = {
+                    'utc_iso': utc_dt.isoformat() + 'Z', 
+                    'closer_id': closer.id, 
+                    'ts': utc_dt.timestamp(),
+                    'date': date_val.isoformat(),
+                    'start': time_val.strftime('%H:%M')
+                }
             elif preferred_closer_id and closer.id == preferred_closer_id:
                  unique_slots[ts_key]['closer_id'] = closer.id
 

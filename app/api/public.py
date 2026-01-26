@@ -36,8 +36,8 @@ def get_funnel_by_source(utm_source):
             s['closer_name'] = closer.username
             all_slots.append(s)
             
-    # Sort and unique? Usually we just show them.
-    all_slots.sort(key=lambda x: x['start'])
+    # Sort by timestamp for proper chronological order
+    all_slots.sort(key=lambda x: x['ts'])
 
     return jsonify({
         "event": {
