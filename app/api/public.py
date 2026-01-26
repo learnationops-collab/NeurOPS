@@ -53,28 +53,38 @@ def get_funnel_by_source(utm_source):
         "closer_name": "Equipo NeurOPS" # Generic if merging
     }), 200
 
+@bp.route('/public/clients/check', methods=['POST'])
+def check_client_exists():
+    data = request.get_json() or {}
+    email = data.get('email')
+    if not email:
+        return jsonify({"error": "Email required"}), 400
+    
+    client = Client.query.filter_by(email=email).first()
+    if client:
+        return jsonify({
+            "exists": True,
+            "client": {
+                "full_name": client.full_name,
+                "phone": client.phone,
+                "instagram": client.instagram
+            }
+        }), 200
+    return jsonify({"exists": False}), 200
+
 @bp.route('/public/submit-lead', methods=['POST'])
 def submit_lead():
     data = request.get_json() or {}
     email = data.get('email')
     if not email: return jsonify({"error": "Email required"}), 400
     
-    client = Client.query.filter_by(email=email).first()
-    if not client:
-        client = Client(
-            email=email,
-            full_name=data.get('full_name'),
-            phone=data.get('phone'),
-            instagram=data.get('instagram')
-        )
-        db.session.add(client)
-    else:
-        # Update info if provided
-        if data.get('full_name'): client.full_name = data.get('full_name')
-        if data.get('phone'): client.phone = data.get('phone')
-        if data.get('instagram'): client.instagram = data.get('instagram')
-        
-    db.session.commit()
+    client = BookingService.create_or_update_client({
+        'email': email,
+        'name': data.get('name') or data.get('full_name'),
+        'phone': data.get('phone'),
+        'instagram': data.get('instagram')
+    })
+    
     return jsonify({"id": client.id, "message": "Lead saved"}), 200
 
 @bp.route('/public/submit-survey', methods=['POST'])
@@ -134,28 +144,74 @@ def get_public_slots():
 @bp.route('/public/book', methods=['POST'])
 def book_appointment():
     data = request.get_json() or {}
-    client_id = data.get('client_id')
-    closer_id = data.get('closer_id')
-    start_time_str = data.get('start_time')
-    event_id = data.get('event_id')
     
-    if not client_id or not start_time_str or not closer_id:
-        return jsonify({"error": "Missing required fields"}), 400
+    email = data.get('email')
+    name = data.get('name') or data.get('full_name')
+    phone = data.get('phone')
+    instagram = data.get('instagram')
+    
+    timestamp = data.get('timestamp')
+    event_id = data.get('event_id')
+    survey_answers_raw = data.get('survey_answers', {})
+    
+    if not email or not timestamp or not event_id:
+        return jsonify({"error": "Missing required fields (email, timestamp, event_id)"}), 400
         
     try:
-        start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
-        appt = BookingService.create_appointment(client_id, closer_id, start_time, origin='Funnel Web')
+        # 1. Create/Update Client
+        client = BookingService.create_or_update_client({
+            'email': email,
+            'name': name,
+            'phone': phone,
+            'instagram': instagram
+        })
         
-        # Link to event if provided? Appointment model has event_id?
-        # Checked models.py: Appointment has `origin`. `event_id` was removed in previous migration?
-        # Let's check model again. 
-        # Line 137: origin. Line 138: type. No event_id. 
-        # We can store event name in origin or type.
-        if event_id:
-            event = Event.query.get(event_id)
-            if event: appt.origin = f"Funnel: {event.name}"
+        # 2. Find a closer (Generic logic: use the one from the slot if possible, or any available)
+        # The frontend sends 'timestamp'. We need to find which closer has that slot.
+        start_time = datetime.fromtimestamp(float(timestamp))
+        
+        # Find which closer has this availability
+        # Note: In public funnel, we might want to pick a closer automatically.
+        # For now, let's see if the frontend sends closer_id. 
+        # Frontend BookingPage.jsx doesn't seem to send closer_id in the payload I saw.
+        # Let's adjust BookingPage.jsx to send closer_id, OR find one here.
+        
+        closer_id = data.get('closer_id')
+        if not closer_id:
+            # Pick any closer that has this slot available and no conflict
+            # This is a bit simplified for now.
+            closers = User.query.filter_by(role='closer').all()
+            for c in closers:
+                appt = BookingService.create_appointment(client.id, c.id, start_time, origin='Funnel Web')
+                if appt:
+                    closer_id = c.id
+                    break
+        else:
+            appt = BookingService.create_appointment(client.id, closer_id, start_time, origin='Funnel Web')
+            
+        if not closer_id:
+            return jsonify({"error": "Lo sentimos, este horario ya no está disponible. Por favor elige otro."}), 400
+
+        # 3. Save Survey Answers
+        if survey_answers_raw:
+            formatted_answers = []
+            for q_id, val in survey_answers_raw.items():
+                formatted_answers.append({"question_id": int(q_id), "answer": str(val)})
+            BookingService.save_survey_answers(client.id, formatted_answers, appointment_id=appt.id)
+        
+        # 4. Link to event
+        event = Event.query.get(event_id)
+        if event:
+            appt.origin = f"Funnel: {event.name}"
+            # Track UTMs if we had an attribution system (could be added to Appointment)
         
         db.session.commit()
-        return jsonify({"message": "Booking successful", "id": appt.id}), 201
+        return jsonify({
+            "message": "Booking successful", 
+            "id": appt.id,
+            "redirect_url": event.redirect_url_success if event else None
+        }), 201
+        
     except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 400

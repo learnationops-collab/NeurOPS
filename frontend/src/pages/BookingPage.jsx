@@ -14,7 +14,8 @@ import {
     ChevronLeft,
     CheckCircle,
     Globe,
-    CalendarDays
+    CalendarDays,
+    Instagram
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -30,6 +31,7 @@ const BookingPage = () => {
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState(null);
     const [currentStep, setCurrentStep] = useState(1);
+    const [emailChecking, setEmailChecking] = useState(false);
 
     // Data from API
     const [eventInfo, setEventInfo] = useState(null);
@@ -51,7 +53,7 @@ const BookingPage = () => {
     const [selectedDate, setSelectedDate] = useState(null);
 
     // Form States
-    const [contactData, setContactData] = useState({ name: '', email: '', phone: '' });
+    const [contactData, setContactData] = useState({ name: '', email: '', phone: '', instagram: '' });
     const [surveyAnswers, setSurveyAnswers] = useState({});
     const [selectedSlot, setSelectedSlot] = useState(null);
 
@@ -84,19 +86,43 @@ const BookingPage = () => {
         }
     };
 
+    const handleEmailNext = async () => {
+        if (!contactData.email) return;
+        setEmailChecking(true);
+        setError(null);
+        try {
+            const res = await api.post('/public/clients/check', { email: contactData.email });
+            if (res.data.exists) {
+                setContactData(prev => ({
+                    ...prev,
+                    name: res.data.client.full_name || prev.name,
+                    phone: res.data.client.phone || prev.phone,
+                    instagram: res.data.client.instagram || prev.instagram
+                }));
+            }
+            setCurrentStep(2);
+        } catch (err) {
+            setError("Error verificando email. Intenta de nuevo.");
+        } finally {
+            setEmailChecking(false);
+        }
+    };
+
     const nextStep = () => {
-        if (currentStep === 1) {
-            if (questions.length === 0) setCurrentStep(3);
-            else setCurrentStep(2);
-        } else if (currentStep === 2) {
-            setCurrentStep(3);
+        if (currentStep === 2) {
+            if (questions.length === 0) setCurrentStep(4);
+            else setCurrentStep(3);
+        } else if (currentStep === 3) {
+            setCurrentStep(4);
         }
     };
 
     const prevStep = () => {
-        if (currentStep === 3) {
-            if (questions.length === 0) setCurrentStep(1);
-            else setCurrentStep(2);
+        if (currentStep === 4) {
+            if (questions.length === 0) setCurrentStep(2);
+            else setCurrentStep(3);
+        } else if (currentStep === 3) {
+            setCurrentStep(2);
         } else if (currentStep === 2) {
             setCurrentStep(1);
         }
@@ -109,8 +135,9 @@ const BookingPage = () => {
         try {
             const payload = {
                 ...contactData,
-                timestamp: selectedSlot.timestamp,
+                timestamp: selectedSlot.ts,
                 event_id: eventInfo.id,
+                closer_id: selectedSlot.closer_id,
                 survey_answers: surveyAnswers,
                 utm_source: searchParams.get('utm_source') || eventInfo.utm_source,
                 utm_medium: searchParams.get('utm_medium'),
@@ -179,26 +206,59 @@ const BookingPage = () => {
 
                 {/* Stepper */}
                 <div className="flex items-center justify-between mb-16 gap-3">
-                    {[1, 2, 3].map((step) => {
+                    {[1, 2, 3, 4].map((step) => {
                         const isCompleted = currentStep > step;
                         const isActive = currentStep === step;
+                        const stepLabels = ["Email", "Datos", "Cualificación", "Reserva"];
                         return (
                             <div key={step} className="flex-1 flex flex-col items-center gap-3">
                                 <div className={`h-1.5 w-full rounded-full transition-all duration-700 ${isCompleted ? 'bg-primary' : isActive ? 'bg-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.6)]' : 'bg-base'
                                     }`} />
-                                <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isActive ? 'text-primary' : 'text-muted'
-                                    }`}>Fase {step}</span>
+                                <span className={`text-[8px] font-black uppercase tracking-[0.2em] whitespace-nowrap ${isActive ? 'text-primary' : 'text-muted'
+                                    }`}>{stepLabels[step - 1]}</span>
                             </div>
                         );
                     })}
                 </div>
 
-                {/* Step 1: Contact */}
+                {/* Step 1: Email Entry */}
                 {currentStep === 1 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
                         <header className="text-center space-y-3">
-                            <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">COMENCEMOS</h2>
-                            <p className="text-muted font-black uppercase text-[10px] tracking-[0.5em] ml-1">Tus credenciales de acceso</p>
+                            <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">BIENVENIDO</h2>
+                            <p className="text-muted font-black uppercase text-[10px] tracking-[0.5em] ml-1">Ingresa tu correo para continuar</p>
+                        </header>
+
+                        <Card variant="surface" className="p-10 shadow-2xl space-y-8">
+                            <FormInput
+                                label="Email Corporativo"
+                                type="email"
+                                icon={<Mail size={20} />}
+                                placeholder="tu@negocio.com"
+                                value={contactData.email}
+                                onChange={(v) => setContactData({ ...contactData, email: v })}
+                            />
+
+                            <Button
+                                onClick={handleEmailNext}
+                                disabled={!contactData.email || emailChecking}
+                                loading={emailChecking}
+                                variant="primary"
+                                className="w-full h-18 text-base tracking-widest"
+                                icon={ChevronRight}
+                            >
+                                CONTINUAR
+                            </Button>
+                        </Card>
+                    </div>
+                )}
+
+                {/* Step 2: Full Contact Info */}
+                {currentStep === 2 && (
+                    <div className="space-y-10 animate-in fade-in slide-in-from-right-6 duration-700">
+                        <header className="text-center space-y-3">
+                            <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">TUS DATOS</h2>
+                            <p className="text-muted font-black uppercase text-[10px] tracking-[0.5em] ml-1">Verifica y completa tu información</p>
                         </header>
 
                         <Card variant="surface" className="p-10 shadow-2xl space-y-8">
@@ -211,7 +271,7 @@ const BookingPage = () => {
                                     onChange={(v) => setContactData({ ...contactData, name: v })}
                                 />
                                 <FormInput
-                                    label="WhatsApp / Móvil"
+                                    label="WhatsApp / Móvil (Obligatorio)"
                                     type="tel"
                                     icon={<Phone size={20} />}
                                     placeholder="+54 9 ..."
@@ -219,30 +279,32 @@ const BookingPage = () => {
                                     onChange={(v) => setContactData({ ...contactData, phone: v })}
                                 />
                                 <FormInput
-                                    label="Email Corporativo"
-                                    type="email"
-                                    icon={<Mail size={20} />}
-                                    placeholder="tu@negocio.com"
-                                    value={contactData.email}
-                                    onChange={(v) => setContactData({ ...contactData, email: v })}
+                                    label="Instagram / Usuario (Obligatorio)"
+                                    icon={<Instagram size={20} />}
+                                    placeholder="@tuusuario"
+                                    value={contactData.instagram}
+                                    onChange={(v) => setContactData({ ...contactData, instagram: v })}
                                 />
                             </div>
 
-                            <Button
-                                onClick={nextStep}
-                                disabled={!contactData.name || !contactData.email || !contactData.phone}
-                                variant="primary"
-                                className="w-full h-18 text-base tracking-widest"
-                                icon={ChevronRight}
-                            >
-                                Siguiente
-                            </Button>
+                            <div className="flex gap-6">
+                                <Button onClick={prevStep} variant="ghost" className="h-18 w-24 p-0 border-base" icon={ChevronLeft} />
+                                <Button
+                                    onClick={nextStep}
+                                    disabled={!contactData.name || !contactData.phone || !contactData.instagram}
+                                    variant="primary"
+                                    className="flex-1 h-18 text-base tracking-widest"
+                                    icon={ChevronRight}
+                                >
+                                    Siguiente
+                                </Button>
+                            </div>
                         </Card>
                     </div>
                 )}
 
-                {/* Step 2: Survey */}
-                {currentStep === 2 && (
+                {/* Step 3: Survey */}
+                {currentStep === 3 && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-right-6 duration-700">
                         <header className="text-center space-y-3">
                             <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">CALIFICACIÓN</h2>
@@ -291,8 +353,8 @@ const BookingPage = () => {
                     </div>
                 )}
 
-                {/* Step 3: Calendar Grid */}
-                {currentStep === 3 && (
+                {/* Step 4: Calendar Grid */}
+                {currentStep === 4 && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-right-6 duration-700">
                         <header className="text-center space-y-3">
                             <h2 className="text-5xl font-black text-base italic uppercase tracking-tighter leading-none">RESERVAR</h2>
@@ -346,7 +408,7 @@ const BookingPage = () => {
                                             <button
                                                 key={slot.timestamp}
                                                 onClick={() => setSelectedSlot(slot)}
-                                                className={`p-4 rounded-xl border text-center font-black text-sm transition-all ${selectedSlot?.timestamp === slot.timestamp
+                                                className={`p-4 rounded-xl border text-center font-black text-sm transition-all ${selectedSlot?.ts === slot.ts
                                                     ? 'bg-primary border-primary text-white shadow-lg'
                                                     : 'bg-main border-base text-muted hover:text-base hover:border-primary/30'
                                                     }`}
@@ -377,9 +439,9 @@ const BookingPage = () => {
                                 disabled={!selectedSlot || booking}
                                 loading={booking}
                                 variant="primary"
-                                className="flex-1 h-18 text-base tracking-widest"
+                                className="flex-1 h-18 text-base tracking-widest uppercase font-black"
                             >
-                                CONFIRMAR AGENDAMIENTO
+                                Agendar {eventInfo?.duration} MIN
                             </Button>
                         </div>
                     </div>
