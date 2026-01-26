@@ -12,6 +12,7 @@
     --color-surface-hover: #1e293b;
 
     --color-primary: #6366f1;
+    --color-primary-rgb: 99, 102, 241;
     /* Indigo 500 */
     --color-primary-hover: #4f46e5;
 
@@ -107,4 +108,31 @@ body {
     --glass-blur: 20px;
 
     --radius-main: 2rem;
+}
+
+/* Subtle Scrollbars Global */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--color-primary-rgb), 0.2);
+    background-clip: content-box;
+}
+
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.05) transparent;
 }

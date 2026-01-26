@@ -446,18 +446,38 @@ const FunnelsManager = () => {
                                                 <div className="space-y-2 bg-main/30 p-3 rounded-2xl border border-base max-h-40 overflow-y-auto custom-scrollbar">
                                                     {(questionForm.options || []).length === 0 && <p className="text-[9px] text-muted uppercase italic text-center py-2">Sin opciones añadidas</p>}
                                                     {(questionForm.options || []).map((opt, i) => (
-                                                        <div key={i} className="flex items-center justify-between bg-surface p-2 rounded-lg border border-base/50 text-[11px] font-bold">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-primary">{opt.points} pts</span>
-                                                                <span className="text-base">{opt.text}</span>
+                                                        <div key={i} className="flex items-center justify-between bg-surface p-2 rounded-lg border border-base/50 text-[11px] font-bold gap-3">
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                <input
+                                                                    type="number"
+                                                                    value={opt.points}
+                                                                    onChange={(e) => {
+                                                                        const next = [...questionForm.options];
+                                                                        next[i] = { ...next[i], points: parseInt(e.target.value) || 0 };
+                                                                        setQuestionForm({ ...questionForm, options: next });
+                                                                    }}
+                                                                    className="w-12 bg-main border border-base rounded-md px-1 py-1 text-center text-primary outline-none focus:ring-1 focus:ring-primary/50"
+                                                                />
+                                                                <span className="text-[8px] text-muted uppercase">pts</span>
                                                             </div>
+                                                            <input
+                                                                type="text"
+                                                                value={opt.text}
+                                                                onChange={(e) => {
+                                                                    const next = [...questionForm.options];
+                                                                    next[i] = { ...next[i], text: e.target.value };
+                                                                    setQuestionForm({ ...questionForm, options: next });
+                                                                }}
+                                                                className="flex-1 bg-transparent border-none outline-none focus:bg-main/50 rounded-md px-2 py-1 text-xs transition-all"
+                                                                placeholder="Texto de la opción"
+                                                            />
                                                             <button
                                                                 onClick={() => {
                                                                     const next = [...questionForm.options];
                                                                     next.splice(i, 1);
                                                                     setQuestionForm({ ...questionForm, options: next });
                                                                 }}
-                                                                className="text-muted hover:text-red-500 transition-colors"
+                                                                className="text-muted hover:text-red-500 transition-colors p-1"
                                                             >
                                                                 <X size={14} />
                                                             </button>
