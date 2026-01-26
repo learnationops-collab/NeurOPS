@@ -307,7 +307,10 @@ def manage_events():
                 utm_source=data.get('utm_source'),
                 group_id=data.get('group_id'),
                 duration_minutes=data.get('duration_minutes', 30),
-                buffer_minutes=data.get('buffer_minutes', 15)
+                buffer_minutes=data.get('buffer_minutes', 15),
+                min_score=data.get('min_score', 0),
+                redirect_url_success=data.get('redirect_url_success'),
+                redirect_url_fail=data.get('redirect_url_fail')
             )
             db.session.add(e)
             
@@ -334,7 +337,11 @@ def manage_events():
         "utm_source": e.utm_source,
         "is_active": e.is_active,
         "group_id": e.group_id,
-        "group_name": e.group.name if e.group else None
+        "group_name": e.group.name if e.group else None,
+        "duration_minutes": e.duration_minutes,
+        "min_score": e.min_score,
+        "redirect_url_success": e.redirect_url_success,
+        "redirect_url_fail": e.redirect_url_fail
     } for e in events]), 200
 
 @bp.route('/admin/funnels/events/<int:event_id>/questions', methods=['GET', 'POST'])

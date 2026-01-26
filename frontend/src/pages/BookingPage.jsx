@@ -61,6 +61,24 @@ const BookingPage = () => {
     const [clientId, setClientId] = useState(null);
     const [bookedCloser, setBookedCloser] = useState('');
     const [redirectUrl, setRedirectUrl] = useState(null);
+    const [countdown, setCountdown] = useState(5);
+
+    useEffect(() => {
+        let timer;
+        if (success && redirectUrl) {
+            timer = setInterval(() => {
+                setCountdown(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        handleFinalize();
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [success, redirectUrl]);
 
     // Data from API
     const [eventInfo, setEventInfo] = useState(null);
@@ -261,9 +279,14 @@ const BookingPage = () => {
                     <CheckCircle2 className="w-14 h-14 text-success" />
                 </div>
                 <h1 className="text-4xl font-black text-base italic mb-4 uppercase tracking-tighter">¡BRUTAL!</h1>
-                <p className="text-muted mb-10 font-bold uppercase text-[10px] tracking-widest">
+                <p className="text-muted mb-6 font-bold uppercase text-[10px] tracking-widest">
                     Tu sesión con <span className="text-primary font-black">@{bookedCloser || username}</span> ha sido reservada.
                 </p>
+                {redirectUrl && (
+                    <p className="text-[10px] font-black text-primary animate-pulse mb-6 uppercase tracking-[0.2em]">
+                        Redirigiendo en {countdown} segundos...
+                    </p>
+                )}
 
                 <div className="bg-main/50 p-8 rounded-[2rem] border border-base mb-10 text-left space-y-4 shadow-inner">
                     <div className="flex items-center gap-4 text-sm">
