@@ -373,20 +373,50 @@ class CloserService:
         elif new_status == 'Reprogramada':
             if not reschedule_date: raise Exception("Fecha de reagenda requerida")
             appt.status = 'reprogrammed'
-            # Create new Primera Agenda
+            
+            # 1. Delete old event
+            if appt.google_event_id:
+                try:
+                    from app.services.google_service import GoogleService
+                    GoogleService.delete_event(appt.closer_id, appt.google_event_id)
+                except Exception as e:
+                    print(f"Error deleting old event on reschedule: {e}")
+
+            # 2. Create new appointment
             new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
-            BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
-            # Find the new appt and set its type (create_appointment defaults to Primera if we follow standard, let's fix type)
-            new_appt = Appointment.query.filter_by(closer_id=appt.closer_id, client_id=appt.client_id, start_time=new_dt).first()
-            if new_appt: new_appt.appointment_type = 'Primera agenda'
+            new_appt = BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
+            
+            if new_appt:
+                db.session.add(new_appt) # Ensure attached
+                new_appt.appointment_type = 'Primera agenda'
+                # 3. Create new GCal event
+                try:
+                    from app.services.google_service import GoogleService
+                    evt_id = GoogleService.create_event(new_appt.closer_id, new_appt)
+                    if evt_id:
+                        new_appt.google_event_id = evt_id
+                except Exception as e:
+                    print(f"Error syncing new rescheduled event: {e}")
+
         elif new_status == 'Primera Agenda':
             if not reschedule_date: raise Exception("Fecha de segunda agenda requerida")
             appt.status = 'completed'
+            
             # Create new Segunda Agenda
             new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
-            BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
-            new_appt = Appointment.query.filter_by(closer_id=appt.closer_id, client_id=appt.client_id, start_time=new_dt).first()
-            if new_appt: new_appt.appointment_type = 'Segunda agenda'
+            new_appt = BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
+            
+            if new_appt:
+                db.session.add(new_appt) # Ensure attached
+                new_appt.appointment_type = 'Segunda agenda'
+                # Create GCal Event for the SECOND APPOINTMENT
+                try:
+                    from app.services.google_service import GoogleService
+                    evt_id = GoogleService.create_event(new_appt.closer_id, new_appt)
+                    if evt_id:
+                        new_appt.google_event_id = evt_id
+                except Exception as e:
+                    print(f"Error syncing second agenda event: {e}")
         
         db.session.commit()
         return appt
