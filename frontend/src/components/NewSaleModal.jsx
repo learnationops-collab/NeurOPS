@@ -49,7 +49,6 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
     useEffect(() => {
         if (isOpen) {
             fetchMetadata();
-            fetchIntegrationStatus();
             setStep(1);
             setError(null);
             setAllowedPaymentTypes([]);
@@ -69,24 +68,22 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
         }
     }, [isOpen]);
 
-    const fetchIntegrationStatus = async () => {
-        try {
-            const res = await api.get('/admin/integrations');
-            const salesInt = res.data.find(i => i.key === 'sales_webhook');
-            if (salesInt) {
-                setHasActiveIntegration(true);
-                setFormData(prev => ({ ...prev, webhook_mode: salesInt.active_env }));
-            }
-        } catch (e) { console.error("Error checking integrations", e); }
-    };
-
     const fetchMetadata = async () => {
         setLoading(true);
         try {
             const res = await api.get('/closer/sale-metadata');
             setMetadata(res.data);
+
+            // Check integration from metadata
+            if (res.data.integration && res.data.integration.configured) {
+                setHasActiveIntegration(true);
+                setFormData(prev => ({ ...prev, webhook_mode: res.data.integration.active_env }));
+            } else {
+                setHasActiveIntegration(false);
+            }
         } catch (err) {
-            setError("Error al cargar datos necesarios.");
+            console.error(err);
+            setError("Error cargando datos del sistema.");
         } finally {
             setLoading(false);
         }

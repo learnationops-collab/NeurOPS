@@ -226,28 +226,45 @@ class CloserService:
                     
                     if url:
                         import requests
-                        payload = {
-                            "event": "new_sale",
-                            "client": {
-                                "id": client_id,
-                                "name": enrollment.client.full_name,
-                                "email": enrollment.client.email,
-                                "phone": enrollment.client.phone,
-                                "instagram": enrollment.client.instagram
-                            },
-                            "sale": {
-                                "enrollment_id": enrollment.id,
-                                "program": enrollment.program.name if enrollment.program else None,
-                                "amount": float(payment.amount),
-                                "currency": "USD", # Assuming USD
-                                "payment_type": payment.payment_type,
-                                "date": datetime.utcnow().isoformat()
-                            },
-                            "closer": {
-                                "id": closer_id,
-                                "name": User.query.get(closer_id).username
-                            }
+                        
+                        # Calculate fees/net
+                        pm = PaymentMethod.query.get(payment.payment_method_id)
+                        fee_percent = pm.commission_percent if pm else 0.0
+                        fee_fixed = pm.commission_fixed if pm else 0.0
+                        
+                        gross_amount = float(payment.amount)
+                        fees = (gross_amount * (fee_percent / 100.0)) + fee_fixed
+                        net_cash = gross_amount - fees
+                        
+                        # Map payment types to friendly names
+                        type_labels = {
+                            'full': 'Pago Completo',
+                            'first_payment': 'Primer Pago',
+                            'down_payment': 'Seña',
+                            'installment': 'Cuota',
+                            'renewal': 'Renovación'
                         }
+                        
+                        client_name = enrollment.client.full_name or "Sin Nombre"
+                        first_name = client_name.split(' ')[0] if client_name else ""
+                        
+                        payload = {
+                            "cliente": client_name,
+                            "first_name": first_name,
+                            "telefono": enrollment.client.phone,
+                            "email": enrollment.client.email,
+                            "closer": User.query.get(closer_id).username,
+                            "monto": gross_amount,
+                            "cash_collect": round(net_cash, 2),
+                            "tipo_pago": type_labels.get(payment.payment_type, payment.payment_type),
+                            "programa": enrollment.program.name if enrollment.program else "Desconocido",
+                            "metodo_pago": pm.name if pm else "N/A",
+                            "fecha": datetime.now().isoformat(),
+                            "transaction_id": "", # Placeholder or add if available in future
+                            "comision": round(fees, 2),
+                            "valor_programa": enrollment.program.price if enrollment.program else 0.0
+                        }
+                        
                         # Fire and forget (or log error)
                         try:
                             requests.post(url, json=payload, timeout=5)
@@ -260,16 +277,24 @@ class CloserService:
 
     @staticmethod
     def get_sale_metadata(closer_id):
-        from app.models import Program, PaymentMethod
+        from app.models import Program, PaymentMethod, Integration
         programs = Program.query.filter_by(is_active=True).all()
         methods = PaymentMethod.query.filter_by(is_active=True).all()
         # Leads for sale selection: clients with recent appointments with this closer
         leads = Client.query.filter(Client.appointments.any(Appointment.closer_id == closer_id)).limit(50).all()
         
+        # Check integration status
+        webhook = Integration.query.filter_by(key='sales_webhook').first()
+        integration_status = {
+            "configured": bool(webhook),
+            "active_env": webhook.active_env if webhook else 'dev'
+        }
+        
         return {
             "programs": [{"id": p.id, "name": p.name, "price": p.price} for p in programs],
             "payment_methods": [{"id": m.id, "name": m.name} for m in methods],
-            "leads": [{"id": l.id, "username": l.full_name or l.email, "email": l.email} for l in leads]
+            "leads": [{"id": l.id, "username": l.full_name or l.email, "email": l.email} for l in leads],
+            "integration": integration_status
         }
     @staticmethod
     def get_available_slots(closer_id, days=7):
