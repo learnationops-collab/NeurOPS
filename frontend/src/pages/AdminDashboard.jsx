@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Users, DollarSign, TrendingUp, Activity, Plus } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Activity, Plus, Calendar } from 'lucide-react';
 import NewSaleModal from '../components/NewSaleModal';
 import Button from '../components/ui/Button';
 import Card, { CardHeader, CardContent } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import DashboardCharts from '../components/DashboardCharts';
 
 const KPICard = ({ title, value, subtitle, icon: Icon, color }) => (
   <Card variant="surface" className="group">
@@ -30,20 +31,21 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [period, setPeriod] = useState('this_month');
 
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [period]);
 
   const fetchDashboard = () => {
     setLoading(true);
-    api.get("/admin/dashboard")
+    api.get(`/admin/dashboard?period=${period}`)
       .then(r => setData(r.data))
       .catch(e => setError(e.response?.data?.message || "Error al cargar datos"))
       .finally(() => setLoading(false));
   };
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -78,8 +80,25 @@ const AdminDashboard = () => {
             Nueva Venta
           </Button>
           <div className="p-1 px-1.5 bg-surface rounded-2xl border border-base flex gap-1 items-center">
-            <Badge variant="primary" className="cursor-pointer">Este Mes</Badge>
-            <span className="text-muted text-[10px] font-bold uppercase px-2 cursor-pointer hover:text-base">Personalizado</span>
+            <div
+              onClick={() => setPeriod('this_month')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${period === 'this_month' ? 'bg-primary text-white' : 'text-muted hover:text-base'}`}
+            >
+              Este Mes
+            </div>
+            <div
+              onClick={() => setPeriod('last_month')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${period === 'last_month' ? 'bg-primary text-white' : 'text-muted hover:text-base'}`}
+            >
+              Mes Pasado
+            </div>
+            <div
+              onClick={() => setPeriod('all_time')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${period === 'all_time' ? 'bg-primary text-white' : 'text-muted hover:text-base'}`}
+            >
+              Todo
+            </div>
+            {/* Future: Custom Date Picker */}
           </div>
         </div>
       </header>
@@ -116,10 +135,11 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card variant="surface" className="lg:col-span-2 h-80 flex items-center justify-center bg-main">
-          <p className="text-muted font-bold uppercase tracking-widest italic opacity-20">Graficos Tendencia</p>
-        </Card>
-        <Card variant="surface" className="h-80 flex flex-col" padding="p-0">
+        <div className="lg:col-span-2">
+          <DashboardCharts chartsData={data.charts} />
+        </div>
+
+        <Card variant="surface" className="h-[500px] flex flex-col" padding="p-0">
           <CardHeader className="px-8 py-6 border-b border-base bg-surface-hover mb-0">
             <h3 className="text-base font-black uppercase text-xs tracking-widest">Actividad Reciente</h3>
           </CardHeader>
@@ -131,6 +151,7 @@ const AdminDashboard = () => {
                   <p className="text-base text-xs font-bold">{activity.message}</p>
                   <p className="text-muted text-[10px] uppercase">{activity.sub}</p>
                 </div>
+                <span className="text-[10px] text-muted-foreground">{new Date(activity.time).toLocaleDateString()}</span>
               </div>
             ))}
           </CardContent>

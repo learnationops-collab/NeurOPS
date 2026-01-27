@@ -102,20 +102,54 @@ class DashboardService(BaseService):
         
         top_debtors = sorted(top_debtors_list, key=lambda x: x['debt'], reverse=True)[:5]
 
-        # Charts
+        # Charts Data Preparation
+        
+        # 1. Revenue & Agendas over time
+        # Get daily revenue
         daily_rev_q = db.session.query(db.func.date(Payment.date), db.func.sum(Payment.amount)).filter(
             Payment.date >= start_dt, Payment.date <= end_dt, Payment.status == 'completed'
         ).group_by(db.func.date(Payment.date)).all()
-        
         rev_dict = {str(r[0]): float(r[1]) for r in daily_rev_q}
-        chart_dates, chart_revs = [], []
+
+        # Get daily agendas count
+        daily_agendas_q = db.session.query(db.func.date(Appointment.start_time), db.func.count(Appointment.id)).filter(
+            Appointment.start_time >= start_dt, Appointment.start_time <= end_dt
+        ).group_by(db.func.date(Appointment.start_time)).all()
+        agendas_dict = {str(r[0]): int(r[1]) for r in daily_agendas_q}
+
+        chart_dates = []
+        chart_revs = []
+        chart_agendas = []
+        
         curr = start_date
         while curr <= end_date:
             d_str = str(curr)
             chart_dates.append(d_str)
             chart_revs.append(rev_dict.get(d_str, 0.0))
+            chart_agendas.append(agendas_dict.get(d_str, 0))
             curr += timedelta(days=1)
 
+        # 2. Agenda Status Breakdown
+        status_q = db.session.query(Appointment.status, db.func.count(Appointment.id)).filter(
+            Appointment.start_time >= start_dt, Appointment.start_time <= end_dt
+        ).group_by(Appointment.status).all()
+        status_labels = [r[0] for r in status_q]
+        status_values = [r[1] for r in status_q]
+
+        # 3. Programs Breakdown
+        prog_q = db.session.query(Program.name, db.func.count(Enrollment.id)).join(Program).filter(
+            Enrollment.enrollment_date >= start_dt, Enrollment.enrollment_date <= end_dt
+        ).group_by(Program.name).all()
+        program_labels = [r[0] for r in prog_q]
+        program_values = [r[1] for r in prog_q]
+
+        # 4. Debt vs Collected (Period Cohort)
+        # Using period_debt calculated above and income
+        # income is total collected in period (regardless of when enrolled)
+        # period_debt is OUTSTANDING debt for clients created in this period
+        # Ideally we might want Total Contract Value vs Collected, but requested "Deudas y pagos"
+        # Let's send { "Cobrado": income, "Por Cobrar": period_debt } 
+        
         activity = []
         rec_clients = Client.query.order_by(Client.created_at.desc()).limit(5).all()
         for c in rec_clients:
@@ -132,5 +166,14 @@ class DashboardService(BaseService):
             'dates': {'start': start_date, 'end': end_date},
             'financials': {'income': income, 'cash_collected': income - total_comm, 'net_profit': net_profit, 'total_expenses': total_expenses},
             'cohort': {'active_leads': len(period_clients), 'p_debt': period_debt, 'top_debtors': top_debtors},
-            'charts': {'dates_labels': chart_dates, 'revenue_values': chart_revs, 'status_labels': [], 'status_values': []}
+            'charts': {
+                'dates_labels': chart_dates, 
+                'revenue_values': chart_revs, 
+                'agendas_values': chart_agendas,
+                'status_labels': status_labels, 
+                'status_values': status_values,
+                'program_labels': program_labels,
+                'program_values': program_values,
+                'finance_breakdown': {'collected': income, 'debt': period_debt}
+            }
         }
