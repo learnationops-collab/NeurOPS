@@ -118,7 +118,7 @@ const ProgramsManager = () => {
                             <div className="flex items-center gap-2 pt-2">
                                 <button
                                     onClick={() => handleSave()}
-                                    disabled={saving || !editData.name || !editData.price}
+                                    disabled={saving || !editData.name || editData.price === ''}
                                     className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-widest py-3 rounded-xl transition-all"
                                 >
                                     {saving ? <Loader2 className="animate-spin mx-auto" size={16} /> : 'Guardar Programa'}
@@ -179,7 +179,7 @@ const ProgramsManager = () => {
                                         </div>
                                     </div>
 
-                                    <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="absolute top-4 right-4 flex items-center gap-2">
                                         <button
                                             onClick={() => startEdit(program)}
                                             className="p-2 bg-indigo-600/10 text-indigo-500 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"
