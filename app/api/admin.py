@@ -13,6 +13,69 @@ import json
 from app.models import Program, db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, DailyReportQuestion, Appointment, Integration
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
+import calendar
+
+@bp.route('/admin/finance/overview', methods=['GET'])
+@login_required
+@admin_required
+def get_finance_overview():
+    today = date.today()
+    # Default to current month
+    start_date = today.replace(day=1)
+    last_day = calendar.monthrange(today.year, today.month)[1]
+    end_date = today.replace(day=last_day)
+    
+    data = FinancialService.get_finances_data(start_date, end_date)
+    
+    # Serialize expenses
+    serialized_expenses = []
+    for exp in data['expenses']:
+        # Handle both SQLAlchemy model and VirtualExpense object
+        serialized_expenses.append({
+            "id": getattr(exp, 'id', None),
+            "description": exp.description,
+            "amount": float(exp.amount),
+            "category": exp.category,
+            "date": exp.date.isoformat(),
+            "is_recurring": getattr(exp, 'is_recurring', False)
+        })
+    data['expenses'] = serialized_expenses
+    
+    # Remove recurring_expenses from response as frontend doesn't use it here and it might contain non-serializable objects
+    if 'recurring_expenses' in data:
+        del data['recurring_expenses']
+        
+    return jsonify(data), 200
+
+@bp.route('/admin/finance/sales', methods=['GET'])
+@login_required
+@admin_required
+def get_finance_sales():
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    
+    # Query for completed payments
+    query = Payment.query.join(Enrollment).join(Client).join(Program).filter(
+        Payment.status == 'completed'
+    ).order_by(Payment.date.desc())
+    
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    sales = []
+    for p in pagination.items:
+        sales.append({
+            "student": [p.enrollment.client.full_name[0] if p.enrollment.client.full_name else "?", p.enrollment.client.full_name or p.enrollment.client.email],
+            "program": p.enrollment.program.name,
+            "amount": float(p.amount),
+            "date": p.date.isoformat()
+        })
+        
+    return jsonify({
+        "sales": sales,
+        "pages": pagination.pages,
+        "current_page": page,
+        "total": pagination.total
+    }), 200
 
 @bp.route('/admin/dashboard', methods=['GET'])
 @login_required
