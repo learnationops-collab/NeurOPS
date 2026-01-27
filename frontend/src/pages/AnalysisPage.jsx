@@ -9,16 +9,20 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     Search,
-    ChevronRight
+    ChevronRight,
+    Receipt
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
+import ExpensesManagerModal from '../components/ExpensesManagerModal';
 
 const AnalysisPage = () => {
     const [financeData, setFinanceData] = useState({ expenses: [], kpis: {} });
     const [salesData, setSalesData] = useState({ sales: [], pages: 1 });
     const [loading, setLoading] = useState(true);
     const [salesPage, setSalesPage] = useState(1);
+    const [isExpensesModalOpen, setIsExpensesModalOpen] = useState(false);
 
     useEffect(() => {
         fetchAll();
@@ -56,6 +60,12 @@ const AnalysisPage = () => {
                 <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Rendimiento Económico y Comercial</p>
             </header>
 
+            <ExpensesManagerModal
+                isOpen={isExpensesModalOpen}
+                onClose={() => setIsExpensesModalOpen(false)}
+                onSuccess={fetchAll}
+            />
+
             {/* KPI Section */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card variant="surface" className="flex flex-col justify-center">
@@ -79,10 +89,21 @@ const AnalysisPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Graph Placeholder / Expenses List */}
                 <Card variant="surface" className="p-8 space-y-6">
-                    <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
-                        <ArrowDownRight className="text-accent" size={16} />
-                        Detalle de Gastos
-                    </h3>
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
+                            <ArrowDownRight className="text-accent" size={16} />
+                            Detalle de Gastos
+                        </h3>
+                        <Button
+                            onClick={() => setIsExpensesModalOpen(true)}
+                            variant="ghost"
+                            size="sm"
+                            icon={Receipt}
+                            className="text-[10px] uppercase tracking-widest hover:bg-white/5"
+                        >
+                            Gestionar
+                        </Button>
+                    </div>
                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                         {financeData.expenses.map((exp, i) => (
                             <div key={i} className="flex justify-between items-center bg-main p-4 rounded-2xl border border-base group hover:border-accent/30 transition-all">

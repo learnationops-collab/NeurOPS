@@ -41,11 +41,67 @@ def get_finance_overview():
         })
     data['expenses'] = serialized_expenses
     
-    # Remove recurring_expenses from response as frontend doesn't use it here and it might contain non-serializable objects
     if 'recurring_expenses' in data:
         del data['recurring_expenses']
         
     return jsonify(data), 200
+
+@bp.route('/admin/finance/expenses', methods=['POST'])
+@login_required
+@admin_required
+def create_expense():
+    data = request.get_json() or {}
+    if 'date' in data:
+        data['date'] = datetime.strptime(data['date'], '%Y-%m-%d').date()
+    success, message = FinancialService.create_expense(data)
+    return jsonify({"message": message}), 200 if success else 400
+
+@bp.route('/admin/finance/expenses/<int:id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_expense(id):
+    success, message = FinancialService.delete_item(Expense, id, "Gasto")
+    return jsonify({"message": message}), 200 if success else 400
+
+@bp.route('/admin/finance/recurring', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_recurring_expenses():
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        success, message = FinancialService.create_recurring_expense(data)
+        return jsonify({"message": message}), 200 if success else 400
+        
+    # GET
+    recurring = RecurringExpense.query.all()
+    return jsonify([{
+        "id": r.id, 
+        "description": r.description, 
+        "amount": float(r.amount), 
+        "day_of_month": r.day_of_month, 
+        "is_active": r.is_active
+    } for r in recurring]), 200
+
+@bp.route('/admin/finance/recurring/<int:id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_recurring_expense(id):
+    success, message = FinancialService.toggle_recurring(id)
+    return jsonify({"message": message}), 200 if success else 400
+
+@bp.route('/admin/finance/recurring/<int:id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_recurring_expense(id):
+    success, message = FinancialService.delete_item(RecurringExpense, id, "Gasto fijo")
+    return jsonify({"message": message}), 200 if success else 400
+
+@bp.route('/admin/finance/recurring/generate', methods=['POST'])
+@login_required
+@admin_required
+def generate_recurring_expenses():
+    success, message = FinancialService.generate_monthly_recurring_expenses()
+    return jsonify({"message": message}), 200 if success else 400
 
 @bp.route('/admin/finance/sales', methods=['GET'])
 @login_required
