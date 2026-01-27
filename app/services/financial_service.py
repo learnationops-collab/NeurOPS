@@ -79,7 +79,7 @@ class FinancialService(BaseService):
                     self.amount = amount
                     self.id = id
             
-            v_exp = VirtualExpense(end_date, 'Comisiones Closers (Calculado)', 'variable', closer_commission_total)
+            v_exp = VirtualExpense(end_dt, 'Comisiones Closers (Calculado)', 'variable', closer_commission_total)
             expenses.append(v_exp)
             expenses.sort(key=lambda x: x.date, reverse=True)
 
