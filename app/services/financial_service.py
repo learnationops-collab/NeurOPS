@@ -23,10 +23,14 @@ class FinancialService(BaseService):
 
     @staticmethod
     def get_finances_data(start_date, end_date):
+        # Definitions
+        start_dt = datetime.combine(start_date, time.min)
+        end_dt = datetime.combine(end_date, time.max)
+
         # 1. Query Expenses
         expenses_query = Expense.query.filter(
-            Expense.date >= start_date,
-            Expense.date <= end_date
+            Expense.date >= start_dt,
+            Expense.date <= end_dt
         ).order_by(Expense.date.desc())
         expenses = expenses_query.all()
         total_expenses = sum(e.amount for e in expenses)
@@ -35,9 +39,6 @@ class FinancialService(BaseService):
         recurring_expenses = RecurringExpense.query.all()
 
         # 3. Income & Cash Collected Logic
-        start_dt = datetime.combine(start_date, time.min)
-        end_dt = datetime.combine(end_date, time.max)
-        
         period_payments = Payment.query.options(db.joinedload(Payment.enrollment)).filter(
             Payment.date >= start_dt,
             Payment.date <= end_dt,
