@@ -29,6 +29,7 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
     const [metadata, setMetadata] = useState({ programs: [], payment_methods: [], leads: [] });
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
 
     const [formData, setFormData] = useState({
         lead_id: '',
@@ -88,6 +89,24 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
             setLoading(false);
         }
     };
+
+    // Debounced Search Effect
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (searchTerm.length >= 2) {
+                try {
+                    const res = await api.get(`/closer/leads/search?q=${searchTerm}`);
+                    setSearchResults(res.data);
+                } catch (error) {
+                    console.error("Search error:", error);
+                }
+            } else {
+                setSearchResults([]);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     const handleLeadSelect = async (lead) => {
         setFormData({ ...formData, lead_id: lead.id, payment_type: '' });
@@ -158,10 +177,8 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
         }
     };
 
-    const filteredLeads = metadata.leads.filter(l =>
-        l.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        l.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Use searchResults instead of filtering locally
+    const filteredLeads = searchTerm.length >= 2 ? searchResults : metadata.leads;
 
     if (!isOpen) return null;
 

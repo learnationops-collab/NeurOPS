@@ -104,6 +104,25 @@ def get_assigned_leads():
         "kpis": kpis
     }), 200
 
+@bp.route('/leads/search', methods=['GET'])
+@login_required
+def search_closer_leads():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    query_str = request.args.get('q', '')
+    if len(query_str) < 2: return jsonify([]), 200
+    
+    term = f"%{query_str}%"
+    leads = Client.query.filter(or_(Client.full_name.ilike(term), Client.email.ilike(term))).limit(20).all()
+    
+    return jsonify([{
+        "id": l.id, 
+        "username": l.full_name or l.email, 
+        "email": l.email,
+        "phone": l.phone
+    } for l in leads]), 200
+
 @bp.route('/daily-report', methods=['POST'])
 @login_required
 def submit_report():

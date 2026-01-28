@@ -72,7 +72,46 @@ class DashboardService(BaseService):
             except ValueError:
                 start_date = today.replace(day=1)
                 end_date = today
+        elif period == 'last_month':
+            # Calculate first and last day of previous month
+            first = today.replace(day=1)
+            last_month_end = first - timedelta(days=1)
+            start_date = last_month_end.replace(day=1)
+            end_date = last_month_end
+        elif period == 'all_time':
+            # Dynamic range: First record to Last record
+            # We check Payments and Clients for activity range
+            min_p = db.session.query(db.func.min(Payment.date)).scalar()
+            min_c = db.session.query(db.func.min(Client.created_at)).scalar()
+            max_p = db.session.query(db.func.max(Payment.date)).scalar()
+            max_c = db.session.query(db.func.max(Client.created_at)).scalar()
+            
+            # Normalize to date objects
+            mins = []
+            if min_p: mins.append(min_p.date() if isinstance(min_p, datetime) else min_p)
+            if min_c: mins.append(min_c.date() if isinstance(min_c, datetime) else min_c.date())
+            
+            maxs = []
+            if max_p: maxs.append(max_p.date() if isinstance(max_p, datetime) else max_p)
+            if max_c: maxs.append(max_c.date() if isinstance(max_c, datetime) else max_c.date())
+            # Also consider today for end date if data is old, so we don't look stuck in past?
+            # User said "terminar en el ultimo", sticking to data range.
+            # But usually dashboard is current. Let's ensure at least Today is included if user wants "Everything"
+            # actually user said "terminar en el ultimo" specifically.
+            # But if I have NO data future, cutting off at today is fine. 
+            # If I have future data (appointments), I should show it? 
+            # Let's add Appointment to the query to be safe for "Last record"
+            
+            max_a = db.session.query(db.func.max(Appointment.start_time)).scalar()
+            if max_a: maxs.append(max_a.date())
+
+            start_date = min(mins) if mins else today.replace(day=1)
+            end_date = max(maxs) if maxs else today
+            
+            # Ensure start <= end (fallback safety)
+            if start_date > end_date: start_date = end_date
         else:
+            # Default to this month
             start_date = today.replace(day=1)
             end_date = today
 
