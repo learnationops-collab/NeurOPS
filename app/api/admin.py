@@ -178,7 +178,7 @@ def manage_users():
         db.session.commit()
         return jsonify({"message": "User created", "id": user.id}), 201
 
-    role_filter = request.args.getlist('role') or ['admin', 'closer']
+    role_filter = request.args.getlist('role') or ['admin', 'closer', 'setter']
     show_deactivated = request.args.get('show_deactivated') == 'true'
     
     users_query = User.query.filter(User.role.in_(role_filter))
