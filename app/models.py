@@ -11,6 +11,7 @@ def load_user(id):
 ROLE_ADMIN = 'admin'
 ROLE_CLOSER = 'closer'
 ROLE_SETTER = 'setter'
+ROLE_OPERATOR = 'operator'
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'

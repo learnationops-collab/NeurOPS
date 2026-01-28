@@ -284,6 +284,7 @@ const UsersPage = () => {
                                         <option value="admin">Administrador</option>
                                         <option value="closer">Closer</option>
                                         <option value="setter">Setter</option>
+                                        <option value="operator">Operador</option>
                                     </select>
                                 </div>
 

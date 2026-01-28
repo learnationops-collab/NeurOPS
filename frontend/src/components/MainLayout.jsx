@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import api from '../services/api';
+import OperatorControls from './OperatorControls';
 
 const SidebarItem = ({ icon: Icon, label, path, active, collapsed }) => (
     <Link
@@ -47,7 +48,7 @@ const MainLayout = ({ children }) => {
         }
     };
 
-    const menuItems = user.role === 'admin' ? [
+    const menuItems = (user.role === 'admin' || user.role === 'operator') ? [
         { icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard' },
         { icon: BarChart3, label: 'Analisis Detallado', path: '/admin/analysis' },
         { icon: Database, label: 'Bases de Datos', path: '/admin/database' },
@@ -62,6 +63,9 @@ const MainLayout = ({ children }) => {
 
     return (
         <div className="flex h-screen bg-main text-base overflow-hidden w-full selection:bg-primary/30">
+            {/* Operator Controls Overlay */}
+            <OperatorControls />
+
             {/* Sidebar */}
             <aside className={`bg-surface border-r border-base flex flex-col transition-all duration-500 ease-in-out z-20 ${collapsed ? 'w-24' : 'w-72'}`}>
                 <div className="h-24 flex items-center px-8 mb-4">

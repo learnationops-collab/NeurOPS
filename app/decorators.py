@@ -18,7 +18,8 @@ def admin_required(f):
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
-        if current_user.role != 'admin':
+        from app.models import ROLE_OPERATOR
+        if current_user.role != 'admin' and current_user.role != ROLE_OPERATOR:
             from flask import request, jsonify
             if request.path.startswith('/api/'):
                 return jsonify({"error": "Admin role required"}), 403
