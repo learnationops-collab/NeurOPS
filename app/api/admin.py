@@ -184,10 +184,12 @@ def manage_users():
     users_query = User.query.filter(User.role.in_(role_filter))
     
     if not show_deactivated:
-        users_query = users_query.filter(User.is_active == True)
+        # Show active (True) and those with None (legacy compatibility)
+        users_query = users_query.filter(or_(User.is_active == True, User.is_active == None))
         
     users = users_query.all()
-    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "is_active": u.is_active} for u in users]
+    # Treat None as True for display
+    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "is_active": u.is_active if u.is_active is not None else True} for u in users]
     return jsonify(user_list), 200
 
 @bp.route('/admin/users/<int:id>', methods=['PUT', 'DELETE'])
@@ -223,8 +225,10 @@ def user_operations(id):
         user.username = username or user.username
         user.email = email or user.email
         user.role = data.get('role', user.role)
-        if 'timezone' in data: user.timezone = data['timezone']
-        if 'is_active' in data: user.is_active = data['is_active']
+        if 'is_active' in data: 
+            if user.id == current_user.id and data['is_active'] is False:
+                return jsonify({"message": "No puedes desactivar tu propia cuenta"}), 400
+            user.is_active = data['is_active']
         
         if data.get('password'):
             user.set_password(data['password'])
