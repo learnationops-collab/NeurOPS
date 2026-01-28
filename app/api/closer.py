@@ -114,6 +114,7 @@ def search_closer_leads():
     if len(query_str) < 2: return jsonify([]), 200
     
     term = f"%{query_str}%"
+    # Allow searching ALL clients so they can sell to anyone in DB
     leads = Client.query.filter(or_(Client.full_name.ilike(term), Client.email.ilike(term))).limit(20).all()
     
     return jsonify([{

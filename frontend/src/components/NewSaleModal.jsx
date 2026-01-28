@@ -177,8 +177,19 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
         }
     };
 
-    // Use searchResults instead of filtering locally
-    const filteredLeads = searchTerm.length >= 2 ? searchResults : metadata.leads;
+    // Hybrid Search Logic:
+    // 1. Always filter locally for immediate feedback
+    const localMatches = metadata.leads.filter(l =>
+        (l.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (l.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // 2. Identify if we should be using backend results
+    // We use backend results if we have them and query is long enough
+    // Otherwise we fall back to local matches (which covers the "1 char" case and the "waiting for API" case)
+    const filteredLeads = (searchTerm.length >= 2 && searchResults.length > 0)
+        ? searchResults
+        : (searchTerm.length > 0 ? localMatches : metadata.leads);
 
     if (!isOpen) return null;
 

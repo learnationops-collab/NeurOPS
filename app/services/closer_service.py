@@ -308,8 +308,8 @@ class CloserService:
         from app.models import Program, PaymentMethod, Integration
         programs = Program.query.filter_by(is_active=True).all()
         methods = PaymentMethod.query.filter_by(is_active=True).all()
-        # Leads for sale selection: clients with recent appointments with this closer
-        leads = Client.query.filter(Client.appointments.any(Appointment.closer_id == closer_id)).limit(50).all()
+        # Leads for sale selection: Show 50 most recent clients globally
+        leads = Client.query.order_by(Client.created_at.desc()).limit(50).all()
         
         # Check integration status using helper
         webhook = CloserService._get_sales_integration()
