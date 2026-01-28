@@ -142,8 +142,8 @@ const UsersPage = () => {
                 <button
                     onClick={() => setShowDeactivated(!showDeactivated)}
                     className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-bold transition-all border ${showDeactivated
-                            ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
-                            : 'bg-slate-800/40 text-slate-400 border-slate-700/50 hover:bg-slate-800'
+                        ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+                        : 'bg-slate-800/40 text-slate-400 border-slate-700/50 hover:bg-slate-800'
                         }`}
                 >
                     <div className={`w-10 h-6 rounded-full p-1 transition-colors ${showDeactivated ? 'bg-indigo-500' : 'bg-slate-600'}`}>
@@ -171,8 +171,8 @@ const UsersPage = () => {
                                 <td className="px-8 py-6">
                                     <div className="flex items-center gap-4">
                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black border shadow-lg ${user.is_active
-                                                ? 'bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-500/20'
-                                                : 'bg-slate-800 text-slate-500 border-slate-700'
+                                            ? 'bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-500/20'
+                                            : 'bg-slate-800 text-slate-500 border-slate-700'
                                             }`}>
                                             {user.username[0].toUpperCase()}
                                         </div>
@@ -283,7 +283,7 @@ const UsersPage = () => {
                                     >
                                         <option value="admin">Administrador</option>
                                         <option value="closer">Closer</option>
-                                        <option value="agenda">Agenda</option>
+                                        <option value="setter">Setter</option>
                                     </select>
                                 </div>
 

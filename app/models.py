@@ -10,6 +10,7 @@ def load_user(id):
 # Roles as Constants
 ROLE_ADMIN = 'admin'
 ROLE_CLOSER = 'closer'
+ROLE_SETTER = 'setter'
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'

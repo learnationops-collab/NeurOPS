@@ -209,11 +209,16 @@ def user_operations(id):
         email = data.get('email')
         
         # Check conflicts
-        existing = User.query.filter(
-            ((User.username == username) | (User.email == email)) & (User.id != id)
-        ).first()
-        if existing:
-            return jsonify({"message": "Username or Email already taken"}), 409
+        filters = []
+        if username and username != user.username:
+             filters.append(User.username == username)
+        if email and email != user.email:
+             filters.append(User.email == email)
+             
+        if filters:
+             existing = User.query.filter(or_(*filters)).first()
+             if existing:
+                 return jsonify({"message": "Username or Email already taken"}), 409
             
         user.username = username or user.username
         user.email = email or user.email

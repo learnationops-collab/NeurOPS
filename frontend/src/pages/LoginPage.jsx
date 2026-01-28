@@ -24,7 +24,7 @@ const LoginPage = () => {
 
       if (role === 'admin') {
         navigate('/admin/dashboard');
-      } else if (role === 'closer' || role === 'agenda') {
+      } else if (role === 'closer' || role === 'setter') {
         navigate('/closer/dashboard');
       } else {
         // Fallback for other roles if they have access to the panel

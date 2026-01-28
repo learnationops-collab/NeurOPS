@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
-from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment
+from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment
 from app.decorators import role_required
 from datetime import date, timedelta, datetime
 
@@ -10,7 +10,7 @@ bp = Blueprint('closer_api', __name__)
 @bp.route('/dashboard', methods=['GET'])
 @login_required
 def get_dashboard():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
         
     tz = current_user.timezone or 'America/La_Paz'
@@ -85,7 +85,7 @@ def get_dashboard():
 @bp.route('/leads', methods=['GET'])
 @login_required
 def get_assigned_leads():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
         
     filters = {
@@ -107,7 +107,7 @@ def get_assigned_leads():
 @bp.route('/leads/search', methods=['GET'])
 @login_required
 def search_closer_leads():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
         
     query_str = request.args.get('q', '')
@@ -157,7 +157,22 @@ def get_all_agendas():
     end_date = request.args.get('end_date')
     status_filter = request.args.get('status') # comma separated
 
-    query = Appointment.query.filter_by(closer_id=current_user.id)
+    query = Appointment.query
+    
+    if current_user.role == 'closer':
+        query = query.filter_by(closer_id=current_user.id)
+    elif current_user.role == 'setter':
+        # Restriction: Today +/- 3 days
+        today = date.today()
+        # Convert to datetime for comparison with start_time (which is datetime)
+        # Assuming start_time is stored as UTC or naive datetime matching user expectation
+        # We need to cover the full range of days.
+        start_range = datetime.combine(today - timedelta(days=3), datetime.min.time())
+        end_range = datetime.combine(today + timedelta(days=3), datetime.max.time())
+        
+        query = query.filter(Appointment.start_time >= start_range, Appointment.start_time <= end_range)
+    # Admin sees all (if logic falls through, query is unfiltered by role ownership, just search filters)
+
 
     # Search
     if search:
@@ -199,7 +214,7 @@ def get_all_agendas():
 @bp.route('/sales', methods=['GET'])
 @login_required
 def get_all_sales():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
         
     page = request.args.get('page', 1, type=int)
@@ -268,7 +283,7 @@ def get_all_sales():
 @bp.route('/weekly-availability', methods=['GET', 'POST'])
 @login_required
 def manage_weekly_availability():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
     
     if request.method == 'POST':
@@ -299,7 +314,7 @@ def get_lead_payment_status(id):
 @bp.route('/enrollments/<int:id>', methods=['GET', 'DELETE'])
 @login_required
 def get_or_delete_enrollment(id):
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
     if request.method == 'DELETE':
         CloserService.delete_enrollment(id)
@@ -309,7 +324,7 @@ def get_or_delete_enrollment(id):
 @bp.route('/enrollments/<int:id>/payments', methods=['POST'])
 @login_required
 def add_payment(id):
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
     data = request.get_json() or {}
     CloserService.add_payment(id, data)
@@ -318,7 +333,7 @@ def add_payment(id):
 @bp.route('/payments/<int:id>', methods=['DELETE'])
 @login_required
 def delete_payment(id):
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
     CloserService.delete_payment(id)
     return jsonify({"message": "Pago eliminado"}), 200
@@ -326,14 +341,14 @@ def delete_payment(id):
 @bp.route('/sale-metadata', methods=['GET'])
 @login_required
 def get_sale_metadata():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
     return jsonify(CloserService.get_sale_metadata(current_user.id)), 200
 
 @bp.route('/sales', methods=['POST'])
 @login_required
 def register_sale():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
     data = request.get_json() or {}
     lead_id = data.get('lead_id')
@@ -378,7 +393,7 @@ def register_sale():
 @bp.route('/appointments/<int:id>', methods=['PATCH'])
 @login_required
 def update_appointment(id):
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
     
     appt = Appointment.query.get_or_404(id)
@@ -400,7 +415,7 @@ def update_appointment(id):
 @bp.route('/appointments', methods=['POST'])
 @login_required
 def create_appointment():
-    if current_user.role not in ['closer', 'admin']:
+    if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
     
     data = request.get_json() or {}
@@ -467,6 +482,8 @@ def get_slots():
 @bp.route('/appointments/<int:id>/process', methods=['POST'])
 @login_required
 def process_agenda(id):
+    if current_user.role not in ['closer', 'admin', 'setter']:
+        return jsonify({"message": "Forbidden"}), 403
     data = request.get_json() or {}
     try:
         CloserService.process_agenda(current_user.id, id, data)
@@ -514,3 +531,38 @@ def get_availability():
         "start": a.start_time.strftime('%H:%M'),
         "end": a.end_time.strftime('%H:%M')
     } for a in avails]), 200
+
+@bp.route('/leads/<int:id>/comments', methods=['GET'])
+@login_required
+def get_lead_comments(id):
+    if current_user.role not in ['closer', 'admin', 'setter']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    comments = ClientComment.query.filter_by(client_id=id).order_by(ClientComment.created_at.desc()).all()
+    return jsonify([{
+        "id": c.id,
+        "text": c.text,
+        "author": c.author.username,
+        "created_at": c.created_at.isoformat()
+    } for c in comments]), 200
+
+@bp.route('/leads/<int:id>/comments', methods=['POST'])
+@login_required
+def add_lead_comment(id):
+    if current_user.role not in ['closer', 'admin', 'setter']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    data = request.get_json() or {}
+    text = data.get('text')
+    if not text: return jsonify({"error": "Texto requerido"}), 400
+    
+    comment = ClientComment(client_id=id, author_id=current_user.id, text=text)
+    db.session.add(comment)
+    db.session.commit()
+    
+    return jsonify({"message": "Comentario agregado", "comment": {
+        "id": comment.id,
+        "text": comment.text,
+        "author": current_user.username,
+        "created_at": comment.created_at.isoformat()
+    }}), 201

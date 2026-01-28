@@ -13,6 +13,7 @@ import {
     Check
 } from 'lucide-react';
 import Button from './ui/Button';
+import CommentsSection from './CommentsSection';
 
 const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
     const [status, setStatus] = useState('');
@@ -107,6 +108,13 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
                             </a>
                         </div>
                     </div>
+
+                    {/* Comments Section */}
+                    {appointment.client_id && (
+                        <div className="h-64">
+                            <CommentsSection clientId={appointment.client_id} />
+                        </div>
+                    )}
 
                     {/* Status Selection */}
                     <div className="space-y-3">
