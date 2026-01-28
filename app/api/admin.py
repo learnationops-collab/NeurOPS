@@ -179,8 +179,15 @@ def manage_users():
         return jsonify({"message": "User created", "id": user.id}), 201
 
     role_filter = request.args.getlist('role') or ['admin', 'closer']
-    users = UserService.get_users_by_role(role_filter)
-    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "is_active": True} for u in users]
+    show_deactivated = request.args.get('show_deactivated') == 'true'
+    
+    users_query = User.query.filter(User.role.in_(role_filter))
+    
+    if not show_deactivated:
+        users_query = users_query.filter(User.is_active == True)
+        
+    users = users_query.all()
+    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "is_active": u.is_active} for u in users]
     return jsonify(user_list), 200
 
 @bp.route('/admin/users/<int:id>', methods=['PUT', 'DELETE'])
@@ -212,6 +219,7 @@ def user_operations(id):
         user.email = email or user.email
         user.role = data.get('role', user.role)
         if 'timezone' in data: user.timezone = data['timezone']
+        if 'is_active' in data: user.is_active = data['is_active']
         
         if data.get('password'):
             user.set_password(data['password'])
