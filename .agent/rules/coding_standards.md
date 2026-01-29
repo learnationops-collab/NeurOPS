@@ -39,3 +39,17 @@ Este archivo define las reglas generales de programación para el proyecto. El o
 
 - **Componentes Pequeños**: Divide las vistas complejas en componentes más pequeños y reutilizables.
 - **Hooks Personalizados**: Mueve la lógica compleja (data fetching, state machines) a custom hooks (e.g., `useLeads.js`).
+
+## 5. Atención a la Sintaxis (Multi-Lenguaje)
+
+Dado que trabajamos con Python (Backend) y Javascript (Frontend), presta especial atención a NO mezclar sintaxis:
+
+- **Comentarios**:
+  - Python: `# Comentario`
+  - Javascript: `// Comentario`
+- **Booleanos**:
+  - Python: `True`, `False`
+  - Javascript: `true`, `false`
+- **Variables**:
+  - Python: `snake_case` (generalmente)
+  - Javascript: `camelCase`
