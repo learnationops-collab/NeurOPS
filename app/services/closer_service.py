@@ -128,8 +128,15 @@ class CloserService:
             Enrollment.enrollment_date <= end_utc
         ).all()
         
-        kpi_sales_count = len(new_enrollments)
-        kpi_sales_amount = sum(e.program.price if e.program else 0.0 for e in new_enrollments)
+        kpi_sales_count = 0
+        kpi_sales_amount = 0.0
+
+        for e in new_enrollments:
+            # Check if has at least one completed payment
+            has_completed_payment = e.payments.filter_by(status='completed').first()
+            if has_completed_payment:
+                kpi_sales_count += 1
+                kpi_sales_amount += e.program.price if e.program else 0.0
         
         payments_today = Payment.query.join(Enrollment).filter(
             Enrollment.closer_id == closer_id,
@@ -209,7 +216,7 @@ class CloserService:
             payment_method_id=data.get('payment_method_id'),
             amount=data.get('payment_amount'),
             payment_type=data.get('payment_type', 'full'),
-            status='completed'
+            status=data.get('status', 'completed')
         )
         db.session.add(payment)
         db.session.commit()

@@ -17,7 +17,9 @@ const CloserNewSalePage = () => {
         program_id: '',
         payment_method_id: '',
         payment_amount: '',
-        payment_type: 'full'
+        payment_amount: '',
+        payment_type: 'full',
+        status: 'completed'
     });
 
     useEffect(() => {
@@ -166,6 +168,25 @@ const CloserNewSalePage = () => {
                         </div>
                     </div>
 
+                    {/* Status Selector */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
+                            Estado de la Venta
+                        </label>
+                        <div className="flex bg-main rounded-xl p-1 border border-base">
+                            {['completed', 'pending'].map(st => (
+                                <button
+                                    key={st}
+                                    type="button"
+                                    onClick={() => setForm({ ...form, status: st })}
+                                    className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${form.status === st ? (st === 'completed' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-amber-500 text-white shadow-lg') : 'text-muted hover:text-base'}`}
+                                >
+                                    {st === 'completed' ? 'Completada / Pagada' : 'Pendiente de Pago'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className="pt-8 flex justify-end">
                         <Button
                             loading={submitting}
@@ -178,9 +199,9 @@ const CloserNewSalePage = () => {
                         </Button>
                     </div>
 
-                </form>
-            </Card>
-        </div>
+                </form >
+            </Card >
+        </div >
     );
 };
 

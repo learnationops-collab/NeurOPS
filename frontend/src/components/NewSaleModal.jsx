@@ -40,7 +40,9 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
         client_data: { name: '', email: '', phone: '', instagram: '' },
         appointment_date: new Date().toISOString(),
         trigger_webhook: true,
-        webhook_mode: 'test'
+        trigger_webhook: true,
+        webhook_mode: 'test',
+        status: 'completed'
     });
     const [isNewClient, setIsNewClient] = useState(false);
     const [allowedPaymentTypes, setAllowedPaymentTypes] = useState([]);
@@ -64,7 +66,9 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
                 client_data: { name: '', email: '', phone: '', instagram: '' },
                 appointment_date: new Date().toISOString(),
                 trigger_webhook: true,
-                webhook_mode: 'test'
+                trigger_webhook: true,
+                webhook_mode: 'test',
+                status: 'completed'
             }));
         }
     }, [isOpen]);
@@ -451,106 +455,128 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
                                             </div>
                                         </div>
                                     </div>
-                                )}
-
-                                {error && (
-                                    <div className="p-5 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-4 text-rose-400">
-                                        <AlertCircle className="shrink-0" size={18} />
-                                        <p className="text-[9px] font-black uppercase tracking-widest leading-relaxed">{error}</p>
                                     </div>
-                                )}
+                                    
+                                     {/* Status Selector */}
+                    {/* Only show if type is NOT full, or if user wants to override default completed */}
+                    {/* Actually, simplified requirement: "Marcar como completada, pendiente" */}
+                    <div className="space-y-3 pt-4 border-t border-base/50">
+                        <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1 flex items-center gap-2">
+                            Estado de la Venta
+                        </label>
+                        <div className="flex bg-main rounded-xl p-1 border border-base">
+                            {['completed', 'pending'].map(st => (
+                                <button
+                                    key={st}
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, status: st })}
+                                    className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${formData.status === st ? (st === 'completed' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-amber-500 text-white shadow-lg') : 'text-muted hover:text-base'}`}
+                                >
+                                    {st === 'completed' ? 'Completada / Pagada' : 'Pendiente de Pago'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-                                <div className="flex gap-4 pt-4">
-                                    {step === 2 && (
-                                        <>
-                                            <Button
-                                                type="button"
-                                                onClick={() => setStep(1)}
-                                                variant="ghost"
-                                                className="px-8 py-5 h-16"
-                                            >
-                                                Atrás
-                                            </Button>
 
-                                            <div className="flex-1 flex flex-col gap-4">
-                                                <div className="pt-4 border-t border-base/50 space-y-3">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <Webhook size={16} className={hasActiveIntegration ? 'text-primary' : 'text-muted'} />
-                                                            <label className="text-[10px] font-black text-muted uppercase tracking-widest">Automatización (Webhook)</label>
-                                                        </div>
-
-                                                        {hasActiveIntegration ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setFormData(prev => ({ ...prev, trigger_webhook: !prev.trigger_webhook }))}
-                                                                    className={`w-10 h-5 rounded-full transition-colors relative ${formData.trigger_webhook ? 'bg-primary' : 'bg-base'}`}
-                                                                >
-                                                                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${formData.trigger_webhook ? 'left-6' : 'left-1'}`} />
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-[9px] uppercase font-bold text-muted bg-base px-2 py-1 rounded">No Configurado</span>
-                                                        )}
-                                                    </div>
-
-                                                    {hasActiveIntegration && formData.trigger_webhook && (
-                                                        <div className="bg-surface-hover p-3 rounded-xl flex items-center justify-between animate-in slide-in-from-top-2">
-                                                            <span className="text-[10px] font-bold text-muted uppercase">Modo de Envío</span>
-                                                            <div className="flex bg-main rounded-lg p-0.5 border border-base">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setFormData(prev => ({ ...prev, webhook_mode: 'test' }))}
-                                                                    className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase transition-all flex items-center gap-1.5 ${formData.webhook_mode === 'test' ? 'bg-surface shadow text-primary' : 'text-muted hover:text-base'}`}
-                                                                >
-                                                                    <FlaskConical size={10} /> Test
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setFormData(prev => ({ ...prev, webhook_mode: 'prod' }))}
-                                                                    className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase transition-all flex items-center gap-1.5 ${formData.webhook_mode === 'prod' ? 'bg-surface shadow text-success' : 'text-muted hover:text-base'}`}
-                                                                >
-                                                                    <Globe size={10} /> Prod
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <Button
-                                                    type="submit"
-                                                    loading={submitting}
-                                                    variant="primary"
-                                                    className="h-14 w-full"
-                                                    icon={CheckCircle2}
-                                                >
-                                                    Completar Registro
-                                                </Button>
-                                            </div>
-                                        </>
-                                    )}
-                                    {step === 1 && (
-                                        <Button
-                                            type="submit"
-                                            loading={submitting}
-                                            disabled={!formData.lead_id && !isNewClient}
-                                            variant="primary"
-                                            className="flex-1 py-5 h-16"
-                                        >
-                                            Siguiente Protocolo
-                                        </Button>
-                                    )}
-
-                                </div>
-                            </form>
+                    {error && (
+                        <div className="p-5 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-4 text-rose-400">
+                            <AlertCircle className="shrink-0" size={18} />
+                            <p className="text-[9px] font-black uppercase tracking-widest leading-relaxed">{error}</p>
                         </div>
                     )}
-                </div>
+
+                    <div className="flex gap-4 pt-4">
+                        {step === 2 && (
+                            <>
+                                <Button
+                                    type="button"
+                                    onClick={() => setStep(1)}
+                                    variant="ghost"
+                                    className="px-8 py-5 h-16"
+                                >
+                                    Atrás
+                                </Button>
+
+                                <div className="flex-1 flex flex-col gap-4">
+                                    <div className="pt-4 border-t border-base/50 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Webhook size={16} className={hasActiveIntegration ? 'text-primary' : 'text-muted'} />
+                                                <label className="text-[10px] font-black text-muted uppercase tracking-widest">Automatización (Webhook)</label>
+                                            </div>
+
+                                            {hasActiveIntegration ? (
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData(prev => ({ ...prev, trigger_webhook: !prev.trigger_webhook }))}
+                                                        className={`w-10 h-5 rounded-full transition-colors relative ${formData.trigger_webhook ? 'bg-primary' : 'bg-base'}`}
+                                                    >
+                                                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${formData.trigger_webhook ? 'left-6' : 'left-1'}`} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[9px] uppercase font-bold text-muted bg-base px-2 py-1 rounded">No Configurado</span>
+                                            )}
+                                        </div>
+
+                                        {hasActiveIntegration && formData.trigger_webhook && (
+                                            <div className="bg-surface-hover p-3 rounded-xl flex items-center justify-between animate-in slide-in-from-top-2">
+                                                <span className="text-[10px] font-bold text-muted uppercase">Modo de Envío</span>
+                                                <div className="flex bg-main rounded-lg p-0.5 border border-base">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData(prev => ({ ...prev, webhook_mode: 'test' }))}
+                                                        className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase transition-all flex items-center gap-1.5 ${formData.webhook_mode === 'test' ? 'bg-surface shadow text-primary' : 'text-muted hover:text-base'}`}
+                                                    >
+                                                        <FlaskConical size={10} /> Test
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData(prev => ({ ...prev, webhook_mode: 'prod' }))}
+                                                        className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase transition-all flex items-center gap-1.5 ${formData.webhook_mode === 'prod' ? 'bg-surface shadow text-success' : 'text-muted hover:text-base'}`}
+                                                    >
+                                                        <Globe size={10} /> Prod
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <Button
+                                        type="submit"
+                                        loading={submitting}
+                                        variant="primary"
+                                        className="h-14 w-full"
+                                        icon={CheckCircle2}
+                                    >
+                                        Completar Registro
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                        {step === 1 && (
+                            <Button
+                                type="submit"
+                                loading={submitting}
+                                disabled={!formData.lead_id && !isNewClient}
+                                variant="primary"
+                                className="flex-1 py-5 h-16"
+                            >
+                                Siguiente Protocolo
+                            </Button>
+                        )}
+
+                    </div>
+                </form>
+            </div>
+                    )}
+        </div>
             </div >
 
-            <style dangerouslySetInnerHTML={{
-                __html: `
+    <style dangerouslySetInnerHTML={{
+        __html: `
                 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
                 @keyframes zoom-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
                 .animate-in { animation: initial 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }

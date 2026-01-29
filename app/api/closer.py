@@ -273,6 +273,7 @@ def get_all_sales():
             "program_name": s.program.name if s.program else "Unknown", 
             "amount": amount,
             "payment_method": method_name,
+            "status": last_payment.status if last_payment else ("completed" if s.total_paid >= (s.program.price if s.program else 0) else "pending"),
             "date": s.enrollment_date.isoformat()
         })
 
