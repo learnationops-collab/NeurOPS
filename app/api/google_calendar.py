@@ -8,6 +8,8 @@ bp = Blueprint('google_calendar_bp', __name__)
 
 # To allow HTTP for local dev
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+# Relax scope validation as Google might return extra scopes (e.g. calendar.readonly)
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 @bp.route('/api/google/login', methods=['GET'])
 @login_required
