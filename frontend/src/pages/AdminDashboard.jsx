@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Users, DollarSign, TrendingUp, Activity, Plus } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Activity, Plus, Filter } from 'lucide-react';
 import ExpensesManagerModal from '../components/ExpensesManagerModal';
+import DashboardFilter from '../components/DashboardFilter';
 import Button from '../components/ui/Button';
 import StatsCard from '../components/StatsCard';
 import AnalysisSection from '../components/AnalysisSection';
@@ -11,40 +12,66 @@ const AdminDashboard = () => {
   const [kpiData, setKpiData] = useState(null);
   const [chartsData, setChartsData] = useState(null);
 
-  const [loadingKpi, setLoadingKpi] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [period, setPeriod] = useState('this_month');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Centralized state for all filters
+  const [filters, setFilters] = useState({
+    period: 'last_3_months',
+    closer_ids: [],
+    program_ids: [],
+    start_date: '',
+    end_date: ''
+  });
 
   useEffect(() => {
     fetchAllData();
-  }, [period]);
+  }, [filters]);
 
   const fetchAllData = () => {
-    setLoadingKpi(true);
-    setChartsData(null);
+    setLoading(true);
     setError(null);
 
-    // 1. Fetch KPIs
-    api.get(`/admin/dashboard/kpis?period=${period}`)
-      .then(r => {
-        setKpiData(r.data);
-        setLoadingKpi(false);
+    // Build query params
+    const queryParams = new URLSearchParams({
+      period: filters.period
+    });
+
+    if (filters.closer_ids.length) queryParams.append('closer_ids', filters.closer_ids.join(','));
+    if (filters.program_ids.length) queryParams.append('program_ids', filters.program_ids.join(','));
+    if (filters.start_date) queryParams.append('start_date', filters.start_date);
+    if (filters.end_date) queryParams.append('end_date', filters.end_date);
+
+    const queryString = queryParams.toString();
+
+    // Fetch KPIs and Charts in parallel
+    Promise.all([
+      api.get(`/admin/dashboard/kpis?${queryString}`),
+      api.get(`/admin/dashboard/charts?${queryString}`)
+    ])
+      .then(([kpiRes, chartsRes]) => {
+        setKpiData(kpiRes.data);
+        setChartsData(chartsRes.data.charts || chartsRes.data);
+        setLoading(false);
       })
       .catch(e => {
-        setError("Error al cargar KPIs");
-        setLoadingKpi(false);
+        console.error(e);
+        setError("Error al cargar los datos del tablero");
+        setLoading(false);
       });
-
-    // 2. Fetch Charts
-    api.get(`/admin/dashboard/charts?period=${period}`)
-      .then(r => setChartsData(r.data.charts || r.data))
-      .catch(console.error);
   };
 
+  const handleApplyFilters = (newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  };
 
+  const handlePeriodChange = (newPeriod) => {
+    setFilters(prev => ({ ...prev, period: newPeriod }));
+  };
 
-  if (loadingKpi && !kpiData) {
+  if (loading && !kpiData) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -80,17 +107,18 @@ const AdminDashboard = () => {
           >
             Gasto
           </Button>
-          <div className="p-1 px-1.5 bg-surface/50 backdrop-blur-sm rounded-2xl border border-base/50 flex gap-1 items-center">
-            {['this_month', 'last_month', 'all_time'].map(p => (
-              <div
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all duration-300 ${period === p ? 'bg-white/10 text-white shadow-inner' : 'text-muted hover:text-white hover:bg-white/5'}`}
-              >
-                {p === 'this_month' ? 'Este Mes' : p === 'last_month' ? 'Mes Pasado' : 'Todo'}
-              </div>
-            ))}
-          </div>
+
+          {/* Optimized Filter Button */}
+          <button
+            onClick={() => setIsFilterOpen(true)}
+            className="flex items-center gap-2 px-6 py-2 bg-surface/50 backdrop-blur-sm rounded-2xl border border-base/50 text-white hover:bg-white/5 transition-all duration-300"
+          >
+            <Filter size={18} className="text-primary" />
+            <span className="text-xs font-bold uppercase tracking-wider">Filtros</span>
+            {(filters.closer_ids.length > 0 || filters.program_ids.length > 0 || filters.period === 'custom') && (
+              <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+            )}
+          </button>
         </div>
       </header>
 
@@ -129,7 +157,12 @@ const AdminDashboard = () => {
 
       {/* Analysis Graphic Section */}
       <div className="grid grid-cols-1 gap-8">
-        <AnalysisSection data={chartsData} />
+        <AnalysisSection
+          data={chartsData}
+          loading={loading}
+          period={filters.period}
+          onPeriodChange={handlePeriodChange}
+        />
       </div>
 
       <ExpensesManagerModal
@@ -137,6 +170,14 @@ const AdminDashboard = () => {
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchAllData}
       />
+
+      {isFilterOpen && (
+        <DashboardFilter
+          currentFilters={filters}
+          onApply={handleApplyFilters}
+          onClose={() => setIsFilterOpen(false)}
+        />
+      )}
     </div>
   );
 };
