@@ -38,6 +38,14 @@ module.exports = {
             },
             backdropBlur: {
                 glass: 'var(--glass-blur)',
+            },
+            boxShadow: {
+                'glass': '0 4px 30px rgba(0, 0, 0, 0.5)',
+                'glow': '0 0 20px rgba(157, 78, 221, 0.5)', /* Purple glow */
+            },
+            backgroundImage: {
+                'gradient-primary': 'linear-gradient(to right, #a855f7, #d946ef)',
+                'gradient-glow': 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%)',
             }
         },
     },

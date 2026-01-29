@@ -556,9 +556,34 @@ class CloserService:
             payment_method_id=data.get('payment_method_id'),
             amount=data.get('amount'),
             payment_type=data.get('payment_type'),
-            status='completed'
+            status=data.get('status', 'completed')
         )
         db.session.add(payment)
+        db.session.commit()
+        return payment
+
+    @staticmethod
+    def update_payment(payment_id, data):
+        payment = Payment.query.get_or_404(payment_id)
+        
+        if 'status' in data:
+            payment.status = data['status']
+            
+        if 'amount' in data:
+            payment.amount = data['amount']
+            
+        if 'payment_type' in data:
+            payment.payment_type = data['payment_type']
+            
+        if 'payment_method_id' in data:
+            payment.payment_method_id = data['payment_method_id']
+            
+        # Update enrollment stats? (Handled by implicit relationships or stats calc)
+        # However, total_paid is a property or calced field? 
+        # Enrollment model doesn't store total_paid, it's calculated on fly usually?
+        # Checked SaleDetailModal: data.total_paid comes from backend response.
+        # Let's check get_enrollment_details to see how total_paid is sent.
+        
         db.session.commit()
         return payment
  

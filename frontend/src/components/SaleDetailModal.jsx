@@ -34,7 +34,10 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
     const [newPayment, setNewPayment] = useState({
         amount: '',
         payment_method_id: '',
-        payment_type: 'installment'
+        amount: '',
+        payment_method_id: '',
+        payment_type: 'installment',
+        status: 'completed'
     });
 
     useEffect(() => {
@@ -92,6 +95,21 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
             if (onSuccess) onSuccess();
         } catch (err) {
             alert("Error al eliminar pago");
+        }
+    };
+
+    const handleUpdatePaymentStatus = async (paymentId, newStatus) => {
+        try {
+            await api.put(`/closer/payments/${paymentId}`, { status: newStatus });
+            // Optimistic update or refresh
+            setData(prev => ({
+                ...prev,
+                payments: prev.payments.map(p => p.id === paymentId ? { ...p, status: newStatus } : p)
+            }));
+            fetchDetails(); // Refresh to update totals
+            if (onSuccess) onSuccess();
+        } catch (err) {
+            alert("Error al actualizar estado");
         }
     };
 
@@ -285,6 +303,21 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                                                         <option value="renewal">Renovación</option>
                                                     </select>
                                                 </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Estado</label>
+                                                    <div className="flex bg-main rounded-xl p-1 border border-base">
+                                                        {['completed', 'pending'].map(st => (
+                                                            <button
+                                                                key={st}
+                                                                type="button"
+                                                                onClick={() => setNewPayment({ ...newPayment, status: st })}
+                                                                className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${newPayment.status === st ? (st === 'completed' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-amber-500 text-white shadow-lg') : 'text-muted hover:text-base'}`}
+                                                            >
+                                                                {st === 'completed' ? 'Pagado' : 'Pendiente'}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                                 <Button
                                                     type="submit"
                                                     variant="primary"
@@ -306,8 +339,7 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                                                         <thead>
                                                             <tr className="bg-surface border-b border-base">
                                                                 <th className="px-6 py-4 text-[9px] font-black text-muted uppercase tracking-[0.2em]">Fecha</th>
-                                                                <th className="px-6 py-4 text-[9px] font-black text-muted uppercase tracking-[0.2em]">Tipo</th>
-                                                                <th className="px-6 py-4 text-[9px] font-black text-muted uppercase tracking-[0.2em]">Método</th>
+                                                                <th className="px-6 py-4 text-[9px] font-black text-muted uppercase tracking-[0.2em]">Info</th>
                                                                 <th className="px-6 py-4 text-[9px] font-black text-muted uppercase tracking-[0.2em]">Monto</th>
                                                                 <th className="px-6 py-4 text-[9px] font-black text-muted uppercase tracking-[0.2em]"></th>
                                                             </tr>
@@ -316,10 +348,20 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                                                             {data.payments.map(p => (
                                                                 <tr key={p.id} className="hover:bg-surface-hover/50 transition-all group">
                                                                     <td className="px-6 py-5 text-xs font-bold">{new Date(p.date).toLocaleDateString()}</td>
-                                                                    <td className="px-6 py-5 uppercase text-[9px] font-black">
-                                                                        <Badge variant="neutral">{p.type}</Badge>
+                                                                    <td className="px-6 py-5">
+                                                                        <div className="flex flex-col gap-1 items-start">
+                                                                            <Badge variant="neutral" className="text-[9px]">{p.type}</Badge>
+                                                                            <span className="text-[10px] text-muted font-medium uppercase tracking-tight">{p.method}</span>
+                                                                            <select
+                                                                                value={p.status || 'completed'}
+                                                                                onChange={(e) => handleUpdatePaymentStatus(p.id, e.target.value)}
+                                                                                className={`text-[9px] font-black uppercase tracking-widest bg-transparent border-b border-dashed outline-none cursor-pointer py-0.5 mt-1 ${p.status === 'pending' ? 'text-amber-500 border-amber-500/30' : 'text-emerald-500 border-emerald-500/30'}`}
+                                                                            >
+                                                                                <option value="completed" className="text-black">Completado</option>
+                                                                                <option value="pending" className="text-black">Pendiente</option>
+                                                                            </select>
+                                                                        </div>
                                                                     </td>
-                                                                    <td className="px-6 py-5 text-xs text-muted font-medium">{p.method}</td>
                                                                     <td className="px-6 py-5 text-sm font-black text-secondary">${p.amount.toLocaleString()}</td>
                                                                     <td className="px-6 py-5 text-right">
                                                                         <button
