@@ -260,6 +260,10 @@ class CloserService:
             date=payment_date
         )
         db.session.add(payment)
+        
+        # Sync enrollment date with the first/initial payment date
+        enrollment.enrollment_date = payment_date
+        
         db.session.commit()
         
         # Webhook Trigger Logic
@@ -628,7 +632,14 @@ class CloserService:
             
         if 'date' in data:
             try:
-                payment.date = datetime.fromisoformat(data['date'].replace('Z', ''))
+                new_date = datetime.fromisoformat(data['date'].replace('Z', ''))
+                payment.date = new_date
+                
+                # If this is the earliest completed payment, sync with enrollment
+                if payment.enrollment:
+                    first_comp = payment.enrollment.payments.filter_by(status='completed').order_by(Payment.date.asc()).first()
+                    if first_comp and first_comp.id == payment.id:
+                        payment.enrollment.enrollment_date = new_date
             except: pass
             
         # Update enrollment stats? (Handled by implicit relationships or stats calc)
