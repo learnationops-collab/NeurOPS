@@ -34,10 +34,9 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
     const [newPayment, setNewPayment] = useState({
         amount: '',
         payment_method_id: '',
-        amount: '',
-        payment_method_id: '',
         payment_type: 'installment',
-        status: 'completed'
+        status: 'completed',
+        date: new Date().toISOString().slice(0, 10)
     });
 
     useEffect(() => {
@@ -95,6 +94,19 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
             if (onSuccess) onSuccess();
         } catch (err) {
             alert("Error al eliminar pago");
+        }
+    };
+
+    const handleUpdatePaymentDate = async (paymentId, newDate) => {
+        try {
+            await api.put(`/closer/payments/${paymentId}`, { date: newDate });
+            setData(prev => ({
+                ...prev,
+                payments: prev.payments.map(p => p.id === paymentId ? { ...p, date: newDate } : p)
+            }));
+            if (onSuccess) onSuccess();
+        } catch (err) {
+            alert("Error al actualizar fecha");
         }
     };
 
@@ -304,6 +316,16 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                                                     </select>
                                                 </div>
                                                 <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Fecha</label>
+                                                    <input
+                                                        type="date"
+                                                        required
+                                                        value={newPayment.date}
+                                                        onChange={(e) => setNewPayment({ ...newPayment, date: e.target.value })}
+                                                        className="w-full bg-main border border-base rounded-2xl p-4 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
                                                     <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Estado</label>
                                                     <div className="flex bg-main rounded-xl p-1 border border-base">
                                                         {['completed', 'pending'].map(st => (
@@ -347,7 +369,14 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                                                         <tbody className="divide-y divide-base">
                                                             {data.payments.map(p => (
                                                                 <tr key={p.id} className="hover:bg-surface-hover/50 transition-all group">
-                                                                    <td className="px-6 py-5 text-xs font-bold">{new Date(p.date).toLocaleDateString()}</td>
+                                                                    <td className="px-6 py-5">
+                                                                        <input
+                                                                            type="date"
+                                                                            value={p.date ? p.date.slice(0, 10) : ''}
+                                                                            onChange={(e) => handleUpdatePaymentDate(p.id, e.target.value)}
+                                                                            className="bg-transparent border-none text-xs font-bold outline-none cursor-pointer focus:ring-1 focus:ring-primary/30 rounded"
+                                                                        />
+                                                                    </td>
                                                                     <td className="px-6 py-5">
                                                                         <div className="flex flex-col gap-1 items-start">
                                                                             <Badge variant="neutral" className="text-[9px]">{p.type}</Badge>

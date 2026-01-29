@@ -39,7 +39,7 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
         payment_type: '',
         client_data: { name: '', email: '', phone: '', instagram: '' },
         appointment_date: new Date().toISOString(),
-        trigger_webhook: true,
+        payment_date: new Date().toISOString().slice(0, 10),
         trigger_webhook: true,
         webhook_mode: 'test',
         status: 'completed'
@@ -65,7 +65,7 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
                 payment_type: '',
                 client_data: { name: '', email: '', phone: '', instagram: '' },
                 appointment_date: new Date().toISOString(),
-                trigger_webhook: true,
+                payment_date: new Date().toISOString().slice(0, 10),
                 trigger_webhook: true,
                 webhook_mode: 'test',
                 status: 'completed'
@@ -416,6 +416,17 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
                                                         <option key={m.id} value={m.id} className="bg-surface">{m.name}</option>
                                                     ))}
                                                 </select>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Fecha del Pago</label>
+                                                <input
+                                                    required
+                                                    type="date"
+                                                    value={formData.payment_date}
+                                                    onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
+                                                    className="w-full bg-main border border-base rounded-2xl py-4 px-6 text-base text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold cursor-pointer"
+                                                />
                                             </div>
                                         </div>
 

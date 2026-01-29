@@ -244,12 +244,19 @@ class CloserService:
             db.session.add(enrollment)
             db.session.flush()
         
+        payment_date = datetime.now()
+        if data.get('payment_date'):
+            try:
+                payment_date = datetime.fromisoformat(data['payment_date'].replace('Z', ''))
+            except: pass
+
         payment = Payment(
             enrollment_id=enrollment.id,
             payment_method_id=data.get('payment_method_id'),
             amount=data.get('payment_amount'),
             payment_type=data.get('payment_type', 'full'),
-            status=data.get('status', 'completed')
+            status=data.get('status', 'completed'),
+            date=payment_date
         )
         db.session.add(payment)
         db.session.commit()
@@ -584,12 +591,19 @@ class CloserService:
     @staticmethod
     def add_payment(enrollment_id, data):
         enrollment = Enrollment.query.get_or_404(enrollment_id)
+        payment_date = datetime.now()
+        if data.get('date'):
+            try:
+                payment_date = datetime.fromisoformat(data['date'].replace('Z', ''))
+            except: pass
+
         payment = Payment(
             enrollment_id=enrollment.id,
             payment_method_id=data.get('payment_method_id'),
             amount=data.get('amount'),
             payment_type=data.get('payment_type'),
-            status=data.get('status', 'completed')
+            status=data.get('status', 'completed'),
+            date=payment_date
         )
         db.session.add(payment)
         db.session.commit()
@@ -610,6 +624,11 @@ class CloserService:
             
         if 'payment_method_id' in data:
             payment.payment_method_id = data['payment_method_id']
+            
+        if 'date' in data:
+            try:
+                payment.date = datetime.fromisoformat(data['date'].replace('Z', ''))
+            except: pass
             
         # Update enrollment stats? (Handled by implicit relationships or stats calc)
         # However, total_paid is a property or calced field? 
