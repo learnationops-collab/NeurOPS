@@ -40,7 +40,8 @@ class DashboardService(BaseService):
         stats = {
             'total_agendas': empty_bucket(),
             'first_agendas': empty_bucket(),
-            'second_agendas': empty_bucket()
+            'second_agendas': empty_bucket(),
+            'presentations': 0
         }
         
         def update_bucket(bucket, status):
@@ -48,7 +49,7 @@ class DashboardService(BaseService):
             if status == 'completed': bucket['completed'] += 1
             elif status == 'no_show': bucket['no_show'] += 1
             elif status == 'canceled': bucket['canceled'] += 1
-            elif status == 'rescheduled': bucket['rescheduled'] += 1
+            elif status in ['rescheduled', 'reprogrammed']: bucket['rescheduled'] += 1
             elif status == 'scheduled': 
                 bucket['scheduled'] += 1
                 bucket['pending'] += 1
@@ -61,6 +62,9 @@ class DashboardService(BaseService):
         
         for appt in total_appts:
             update_bucket(stats['total_agendas'], appt.status)
+            if appt.status == 'completed':
+                stats['presentations'] += 1
+                
             a_type = appt.appointment_type or 'Primera agenda'
             if a_type == 'Segunda agenda':
                 update_bucket(stats['second_agendas'], appt.status)
@@ -84,9 +88,12 @@ class DashboardService(BaseService):
         total_shows = m['completed'] + m['no_show'] # Asistencias reales + faltas
         
         kpis = {
-            'closing_rate': safe_div(sales_count, m['completed']), # Ventas sobre presentaciones hechas
-            'conversion_rate': safe_div(sales_count, m['total']), # Ventas sobre agendas totales
-            'attendance_rate': safe_div(m['completed'], (m['completed'] + m['no_show'] + m['canceled'])), # Asistencia
+            'closing_rate': safe_div(sales_count, m['completed']), # Ventas sobre presentaciones hechas (Alias: closing_rate_presentation)
+            'closing_rate_presentation': safe_div(sales_count, m['completed']),
+            'conversion_rate': safe_div(sales_count, m['total']), # Ventas sobre agendas totales (Alias: closing_rate_global)
+            'closing_rate_global': safe_div(sales_count, m['total']),
+            'attendance_rate': safe_div(m['completed'], (m['completed'] + m['no_show'] + m['canceled'])), # Asistencia (Alias: show_up_rate)
+            'show_up_rate': safe_div(m['completed'], (m['completed'] + m['no_show'] + m['canceled'])),
             'cancellation_rate': safe_div(m['canceled'], m['total']),
             'rescheduling_rate': safe_div(m['rescheduled'], m['total']),
             'no_show_rate': safe_div(m['no_show'], m['total'])

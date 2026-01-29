@@ -168,11 +168,44 @@ class CloserService:
             ))
         recent_clients = recent_query.order_by(Client.created_at.desc()).limit(10).all()
 
+        # Map agendas for frontend
+        agendas_today_list = []
+        for appt in upcoming:
+            agendas_today_list.append({
+                'id': appt.id,
+                'lead_name': appt.client.full_name if appt.client else 'Sin Nombre',
+                'start_time': appt.start_time.isoformat(),
+                'type': appt.appointment_type or 'Primera agenda',
+                'status': appt.status
+            })
+
+        # Map sales for frontend
+        sales_today_list = []
+        for p in payments_today:
+            debt = 0
+            if p.enrollment and p.enrollment.program:
+                debt = max(0, p.enrollment.program.price - p.enrollment.total_paid)
+            
+            sales_today_list.append({
+                'id': p.enrollment_id,
+                'student_name': p.enrollment.client.full_name if p.enrollment and p.enrollment.client else 'N/A',
+                'program_name': p.enrollment.program.name if p.enrollment and p.enrollment.program else 'N/A',
+                'amount': p.amount,
+                'debt': debt,
+                'time': p.date.isoformat()
+            })
+
+        # Calculate progress: Handled agendas / Total agendas
+        m = agendas['total_agendas']
+        total_a = m['total']
+        handled = m['completed'] + m['no_show'] + m['canceled'] + m['rescheduled']
+        progress_val = (handled / total_a * 100) if total_a > 0 else 0
+
         today_stats = CloserDailyStats.query.filter_by(closer_id=closer_id, date=today_local).first()
 
         return {
             'kpis': {
-                'scheduled': agendas['total_agendas'],
+                'scheduled': agendas['total_agendas']['total'],
                 'completed': first['completed'] + second['completed'],
                 'no_show': first['no_show'] + second['no_show'],
                 'canceled': first['canceled'] + second['canceled'],
@@ -189,7 +222,7 @@ class CloserService:
                 'closing_pres': detailed_metrics['kpis']['closing_rate_presentation']
             },
             'commission': {'month': calculate_commission(month_start_utc, end_utc), 'today': calculate_commission(start_utc, end_utc)},
-            'progress': 0,
+            'progress': progress_val,
             'upcoming_agendas': [(a, 1) for a in upcoming],
             'recent_clients': recent_clients,
             'today_stats': today_stats
