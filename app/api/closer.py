@@ -4,6 +4,7 @@ from app.services.closer_service import CloserService
 from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment
 from app.decorators import role_required
 from datetime import date, timedelta, datetime
+from sqlalchemy import or_
 
 bp = Blueprint('closer_api', __name__)
 
