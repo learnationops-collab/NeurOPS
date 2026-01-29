@@ -245,6 +245,20 @@ def get_dashboard():
     }
     return jsonify(data), 200
 
+@bp.route('/admin/analysis/closer-performance', methods=['GET'])
+@login_required
+@admin_required
+def get_closer_performance():
+    period = request.args.get('period', 'this_month')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    closer_id = request.args.get('closer_id', type=int)
+    
+    start, end = DashboardService._get_date_range(period, start_date, end_date)
+    data = DashboardService.get_detailed_closer_metrics(start, end, closer_id)
+    
+    return jsonify(data), 200
+
 @bp.route('/admin/users', methods=['GET', 'POST'])
 @login_required
 @admin_required

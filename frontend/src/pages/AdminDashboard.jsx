@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Users, DollarSign, TrendingUp, Activity, Plus, Filter } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Activity, Plus, Filter, Calendar } from 'lucide-react';
 import ExpensesManagerModal from '../components/ExpensesManagerModal';
 import DashboardFilter from '../components/DashboardFilter';
 import Button from '../components/ui/Button';
@@ -125,19 +125,19 @@ const AdminDashboard = () => {
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          title="Ingresos"
-          value={<Counter value={kpiData.financials.income} prefix="$" />}
-          subtitle={<span className="text-emerald-400">Neto Recaudado</span>}
-          icon={DollarSign}
+          title="Revenue"
+          value={<Counter value={kpiData.financials.gross_revenue} prefix="$" />}
+          subtitle={<span className="text-emerald-400 font-bold">{kpiData.financials.enrollments_count} inscripciones</span>}
+          icon={TrendingUp}
           color={{ bg: "bg-emerald-500", text: "text-emerald-500", from: "from-emerald-500" }}
         />
         <StatsCard
-          title="Pendiente"
-          value={<Counter value={kpiData.cohort.p_debt} prefix="$" />}
-          subtitle={<span className="text-purple-400">Por Cobrar</span>}
-          icon={TrendingUp}
-          color={{ bg: "bg-purple-500", text: "text-purple-500", from: "from-purple-500" }}
-          subtitleColor="text-purple-400"
+          title="Cash Collect"
+          value={<Counter value={kpiData.financials.cash_collected} prefix="$" />}
+          subtitle={<span className="text-indigo-400 font-bold">Recaudado Neto</span>}
+          icon={DollarSign}
+          color={{ bg: "bg-indigo-500", text: "text-indigo-500", from: "from-indigo-500" }}
+          subtitleColor="text-indigo-400"
         />
         <StatsCard
           title="Gastos"
@@ -147,10 +147,10 @@ const AdminDashboard = () => {
           color={{ bg: "bg-rose-500", text: "text-rose-500", from: "from-rose-500" }}
         />
         <StatsCard
-          title="Leads"
-          value={<Counter value={kpiData.cohort.active_leads} />}
-          subtitle={<span className="text-blue-400">Activos en Pipeline</span>}
-          icon={Users}
+          title="Agendas"
+          value={<Counter value={kpiData.agendas.count} />}
+          subtitle={<span className="text-blue-400">Citas en el periodo</span>}
+          icon={Calendar}
           color={{ bg: "bg-blue-500", text: "text-blue-500", from: "from-blue-500" }}
         />
       </div>

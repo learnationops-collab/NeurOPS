@@ -13,12 +13,10 @@ class DashboardService(BaseService):
         
         appt_filters = [Appointment.start_time >= start_date, Appointment.start_time <= end_date]
         avail_filters = [Availability.date >= start_date.date(), Availability.date <= end_date.date()]
-        sale_filters = [Enrollment.enrollment_date >= start_date, Enrollment.enrollment_date <= end_date]
         
         if closer_id:
             appt_filters.append(Appointment.closer_id == closer_id)
             avail_filters.append(Availability.closer_id == closer_id)
-            sale_filters.append(Enrollment.closer_id == closer_id)
             
         slots_defined_count = Availability.query.filter(*avail_filters).count()
         total_appts = Appointment.query.filter(*appt_filters).all()
@@ -26,42 +24,72 @@ class DashboardService(BaseService):
         slots_used = len(total_appts)
         slots_available = max(0, slots_defined_count - slots_used)
         
+        # Estructura de estadísticas base
+        def empty_bucket():
+            return {
+                'total': 0, 
+                'completed': 0, 
+                'no_show': 0, 
+                'canceled': 0, 
+                'rescheduled': 0, 
+                'scheduled': 0, 
+                'confirmed': 0,
+                'pending': 0 # Combinación de scheduled y confirmed
+            }
+
         stats = {
-            'total_agendas': 0,
-            'presentations': 0,
-            'first_agendas': {'total': 0, 'completed': 0, 'no_show': 0, 'canceled': 0, 'rescheduled': 0, 'scheduled': 0, 'confirmed': 0},
-            'second_agendas': {'total': 0, 'completed': 0, 'no_show': 0, 'canceled': 0, 'rescheduled': 0, 'scheduled': 0, 'confirmed': 0}
+            'total_agendas': empty_bucket(),
+            'first_agendas': empty_bucket(),
+            'second_agendas': empty_bucket()
         }
         
         def update_bucket(bucket, status):
             bucket['total'] += 1
-            if status in bucket: bucket[status] += 1
+            if status == 'completed': bucket['completed'] += 1
+            elif status == 'no_show': bucket['no_show'] += 1
+            elif status == 'canceled': bucket['canceled'] += 1
+            elif status == 'rescheduled': bucket['rescheduled'] += 1
+            elif status == 'scheduled': 
+                bucket['scheduled'] += 1
+                bucket['pending'] += 1
+            elif status == 'confirmed': 
+                bucket['confirmed'] += 1
+                bucket['pending'] += 1
+            else:
+                # Manejar estados desconocidos como pendientes
+                bucket['pending'] += 1
         
         for appt in total_appts:
-            stats['total_agendas'] += 1
-            if appt.status == 'completed': stats['presentations'] += 1
+            update_bucket(stats['total_agendas'], appt.status)
             a_type = appt.appointment_type or 'Primera agenda'
-            if a_type == 'Segunda agenda': update_bucket(stats['second_agendas'], appt.status)
-            else: update_bucket(stats['first_agendas'], appt.status)
+            if a_type == 'Segunda agenda':
+                update_bucket(stats['second_agendas'], appt.status)
+            else:
+                update_bucket(stats['first_agendas'], appt.status)
 
-        # Sales count: Enrollments with at least one completed payment in the period
-        # This is slightly complex because enrollment_date might be in period but payment might not, or vice versa.
-        # Strict logic: Enrollment DATE is in period AND has a completed payment (regardless of date? or payment date in period?)
-        # Let's stick to: "Enrollments made in this period that are completed"
-        sales_count = Enrollment.query.join(Payment).filter(
+        # Conteo de Ventas (Enrollments con pago completado)
+        sale_q = Enrollment.query.join(Payment).filter(
             Enrollment.enrollment_date >= start_date, 
             Enrollment.enrollment_date <= end_date,
             Payment.status == 'completed'
-        ).distinct().count()
+        )
+        if closer_id:
+            sale_q = sale_q.filter(Enrollment.closer_id == closer_id)
+        
+        sales_count = sale_q.distinct().count()
         
         def safe_div(n, d): return (n / d * 100) if d > 0 else 0
-        total_completed = stats['first_agendas']['completed'] + stats['second_agendas']['completed']
-        total_scheduled = stats['first_agendas']['total'] + stats['second_agendas']['total']
+        
+        m = stats['total_agendas']
+        total_shows = m['completed'] + m['no_show'] # Asistencias reales + faltas
         
         kpis = {
-            'show_up_rate': safe_div(total_completed, total_scheduled),
-            'closing_rate_global': safe_div(sales_count, total_completed),
-            'closing_rate_presentation': safe_div(sales_count, stats['presentations']),
+            'closing_rate': safe_div(sales_count, m['completed']), # Ventas sobre presentaciones hechas
+            'conversion_rate': safe_div(sales_count, m['total']), # Ventas sobre agendas totales
+            'attendance_rate': safe_div(m['completed'], (m['completed'] + m['no_show'] + m['canceled'])), # Asistencia
+            'cancellation_rate': safe_div(m['canceled'], m['total']),
+            'rescheduling_rate': safe_div(m['rescheduled'], m['total']),
+            'no_show_rate': safe_div(m['no_show'], m['total'])
         }
         
         return {
@@ -130,6 +158,9 @@ class DashboardService(BaseService):
                 if max_d > end_date: end_date = max_d
             
             if start_date > end_date: start_date = end_date
+        elif period == 'today':
+            start_date = today
+            end_date = today
         else:
             # this_month
             start_date = today.replace(day=1)
@@ -152,77 +183,55 @@ class DashboardService(BaseService):
         
         # 1. Financials: Join Enrollment for IDs
         if closer_ids or program_ids:
-            # Need to join enrollment to filter payments by closer/program
-            # Payments -> Enrollment
-            
-            # Re-build query base
             payment_q = Payment.query.join(Enrollment).filter(Payment.date >= start_dt, Payment.date <= end_dt, Payment.status == 'completed')
-            
-            if closer_ids:
-                payment_q = payment_q.filter(Enrollment.closer_id.in_(closer_ids))
-            if program_ids:
-                payment_q = payment_q.filter(Enrollment.program_id.in_(program_ids))
-            
+            if closer_ids: payment_q = payment_q.filter(Enrollment.closer_id.in_(closer_ids))
+            if program_ids: payment_q = payment_q.filter(Enrollment.program_id.in_(program_ids))
             payments = payment_q.all()
             
-            # Expenses might not be filterable by closer/program easily unless Expense model has it.
-            # Assuming global expenses for now if no relation.
-            # If strictly requested, we return 0 or unassigned? Let's leave total_expenses global or 0 if filtered?
-            # User wants "Data dependa de ese filtro". If I filter by Closer A, I want HIS sales. Expenses? Maybe commissions?
-            # Let's keep expenses global for now or 0 to avoid confusion if we can't attribution.
-            # Better: Total Expenses usually are Ad spend (marketing) + Software + etc. Not closer specific.
-            # Net Profit per closer = Commission - Expense? No.
-            # Let's return 0 expenses if filtering by parameters that don't apply, or just global.
-            # To be safe/logical: Show 0 expenses if specific closer filter is on, unless we have 'Expense.closer_id'.
-            if closer_ids or program_ids:
-                total_expenses = 0 
-            else:
-                 total_expenses = db.session.query(func.sum(Expense.amount)).filter(Expense.date >= start_dt, Expense.date <= end_dt).scalar() or 0
-                 
+            # Gross Revenue & Enrollments count
+            enrollment_q = Enrollment.query.filter(Enrollment.enrollment_date >= start_dt, Enrollment.enrollment_date <= end_dt)
+            if closer_ids: enrollment_q = enrollment_q.filter(Enrollment.closer_id.in_(closer_ids))
+            if program_ids: enrollment_q = enrollment_q.filter(Enrollment.program_id.in_(program_ids))
+            enrollments = enrollment_q.all()
+
+            total_expenses = 0 
         else:
             payments = Payment.query.filter(*payment_filters).all()
             total_expenses = db.session.query(func.sum(Expense.amount)).filter(Expense.date >= start_dt, Expense.date <= end_dt).scalar() or 0
+            enrollments = Enrollment.query.filter(Enrollment.enrollment_date >= start_dt, Enrollment.enrollment_date <= end_dt).all()
 
         income = sum(p.amount for p in payments)
+        total_comm = 0
+        closer_commission_total = 0
         
-        # Calculate commissions
-        total_comm = sum((p.amount * (p.method.commission_percent / 100) + p.method.commission_fixed) for p in payments if p.method)
-        
-        net_profit = (income - total_comm) - total_expenses
-        
-        # 2. Cohort & Optimised Debt Calculation
-        # Cohort active leads: Clients created in period.
-        # If filtering by closer: Clients assigned to closer?
-        # If filtering by program: Clients interested in program? Enrolled in?
-        # A Lead (Client) might not be enrolled yet.
-        # Strict filter: Clients who ENROLLED in period?
-        # "Cohort" usually means "Created At".
-        # If I filter Closers, I probably want "Leads assigned to Closer X".
-        # If we don't have explicit assignment before enrollment, this metric might be 0 or "Assigned Leads".
-        # Let's use joins if possible.
-        
-        lead_q = Client.query.filter(Client.created_at >= start_dt, Client.created_at <= end_dt)
-        if closer_ids:
-            # Join? Client has many enrollments.
-            # Maybe join appointments? Or first_closer?
-            # If Client model has `closer_id` (setter/closer assignment), use it.
-            # Checking Models... assuming Client has NO direct closer_id, only via Enrollment or Appointment.
-            # If Client doesn't have closer_id, we can't filter pure Leads by Closer strictly unless we look at who took the call.
-            # Let's skip deep filtering for "Active Leads" if it's too complex for now, or assume global.
-            # OR: Leads that generated an Enrollment with Closer? No that's Sales.
-            # Let's count Leads that had an Appointment with Closer in that period?
-            # Too complex. Let's Return Global Leads if filter is active, or 0.
-            # User wants "Reflejen los datos".
-            # Let's stick to Sales data for Closer/Program filters mostly.
-            pass
+        # Calculate fees and commissions
+        for p in payments:
+            if p.method:
+                total_comm += (p.amount * (p.method.commission_percent / 100) + p.method.commission_fixed)
             
-        active_leads_count = lead_q.count()
+            # Closer Commissions (10% of net after payment fee)
+            if p.enrollment and p.enrollment.closer_id:
+                p_amount = p.amount
+                if p.method:
+                    p_fee = (p.amount * (p.method.commission_percent / 100)) + p.method.commission_fixed
+                    p_amount -= p_fee
+                closer_commission_total += (p_amount * 0.10)
+
+        # Revenue Calculation (Potential)
+        gross_revenue_value = sum(e.program.price for e in enrollments if e.program)
+        enrollments_count = len(enrollments)
         
-        # SQL Debt: Only for Enrollments matching filters
-        # Subquery sq_paid needs filtering too?
-        # Actually easier: Calculate Debt from Enrollments found.
-        # Filter Enrollments by date (created in period? or Client created?)
-        # Logic was: Client.created_at in period.
+        # Total Expenses = Plain Expenses + Closer Commissions
+        total_expenses_with_commissions = total_expenses + closer_commission_total
+        net_profit = (income - total_comm) - total_expenses_with_commissions
+        
+        # 2. Agendas count
+        appt_q = Appointment.query.filter(Appointment.start_time >= start_dt, Appointment.start_time <= end_dt)
+        if closer_ids: appt_q = appt_q.filter(Appointment.closer_id.in_(closer_ids))
+        agendas_count = appt_q.count()
+
+        # 3. Cohort & Debt Calculation
+        active_leads_count = Client.query.filter(Client.created_at >= start_dt, Client.created_at <= end_dt).count()
         
         # Debt Query with Filters
         query_debt_bs = db.session.query(
@@ -233,48 +242,38 @@ class DashboardService(BaseService):
          .join(Program, Enrollment.program)\
          .filter(Client.created_at >= start_dt, Client.created_at <= end_dt)
          
-        if closer_ids:
-            query_debt_bs = query_debt_bs.filter(Enrollment.closer_id.in_(closer_ids))
-        if program_ids:
-            query_debt_bs = query_debt_bs.filter(Enrollment.program_id.in_(program_ids))
+        if closer_ids: query_debt_bs = query_debt_bs.filter(Enrollment.closer_id.in_(closer_ids))
+        if program_ids: query_debt_bs = query_debt_bs.filter(Enrollment.program_id.in_(program_ids))
             
-        # We need total paid for THESE enrollments.
-        # Getting all candidate enrollments first might be easier if not too many.
-        # Or do it in SQL.
-        
-        # Let's execute the candidates and sum in python for simplicity if volume isn't huge, or subquery.
-        # Let's stick to SQL for robustness.
-        
-        # 1. Get List of Enrollment IDs in Cohort + Filters
-        relevant_enrollments = query_debt_bs.all() # [(price, id), ...]
+        relevant_enrollments = query_debt_bs.group_by(Enrollment.id).all() 
         
         period_debt = 0.0
         if relevant_enrollments:
             e_ids = [r[1] for r in relevant_enrollments]
             prices = {r[1]: r[0] for r in relevant_enrollments}
-            
-            # 2. Get total paid for these IDs
             paid_q = db.session.query(Payment.enrollment_id, func.sum(Payment.amount))\
                 .filter(Payment.enrollment_id.in_(e_ids), Payment.status == 'completed')\
                 .group_by(Payment.enrollment_id).all()
-                
             paid_map = {r[0]: r[1] for r in paid_q}
-            
             for eid, price in prices.items():
                 paid = paid_map.get(eid, 0)
-                debt = max(0, price - paid)
-                period_debt += debt
+                period_debt += max(0, price - paid)
         
         return {
             'financials': {
                 'income': income, 
+                'gross_revenue': gross_revenue_value,
+                'enrollments_count': enrollments_count,
                 'cash_collected': income - total_comm, 
                 'net_profit': net_profit, 
-                'total_expenses': total_expenses
+                'total_expenses': total_expenses_with_commissions
             },
             'cohort': {
                 'active_leads': active_leads_count,
                 'p_debt': float(period_debt)
+            },
+            'agendas': {
+                'count': agendas_count
             },
             'dates': {'start': start_date.isoformat(), 'end': end_date.isoformat()}
         }

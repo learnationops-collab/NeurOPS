@@ -38,19 +38,20 @@ class FinancialService(BaseService):
         # 2. Query Recurring Expenses (Configuration)
         recurring_expenses = RecurringExpense.query.all()
 
-        # 3. Income & Cash Collected Logic
+        # 3. Financial Logic
         period_payments = Payment.query.options(db.joinedload(Payment.enrollment)).filter(
             Payment.date >= start_dt,
             Payment.date <= end_dt,
             Payment.status == 'completed'
         ).all()
         
-        gross_revenue = 0
+        # New Definitions
+        total_payments = 0
         total_commission = 0
         closer_commission_total = 0
         
         for p in period_payments:
-            gross_revenue += p.amount
+            total_payments += p.amount
             if p.method:
                 comm = (p.amount * (p.method.commission_percent / 100)) + p.method.commission_fixed
                 total_commission += comm
@@ -63,8 +64,23 @@ class FinancialService(BaseService):
                     p_amount -= p_fee
                 closer_commission_total += (p_amount * 0.10)
 
-        cash_collected = gross_revenue - total_commission
+        # Potential Revenue (Enrollments in period)
+        period_enrollments = Enrollment.query.filter(
+            Enrollment.enrollment_date >= start_dt,
+            Enrollment.enrollment_date <= end_dt
+        ).all()
+        gross_revenue = sum(e.program.price for e in period_enrollments if e.program)
+        enrollments_count = len(period_enrollments)
+
+        cash_collected = total_payments - total_commission
         
+        # Agendas count for consistency
+        from app.models import Appointment
+        agendas_count = Appointment.query.filter(
+            Appointment.start_time >= start_dt,
+            Appointment.start_time <= end_dt
+        ).count()
+
         # Add Closer Commissions to Total Expenses for Net Profit Calc
         net_profit = cash_collected - (total_expenses + closer_commission_total)
         total_expenses_with_commissions = total_expenses + closer_commission_total
@@ -88,11 +104,14 @@ class FinancialService(BaseService):
             'recurring_expenses': recurring_expenses,
             'kpis': {
                 'gross_revenue': gross_revenue,
+                'enrollments_count': enrollments_count,
+                'total_payments': total_payments,
                 'total_commission': total_commission,
                 'cash_collected': cash_collected,
                 'total_expenses': total_expenses_with_commissions,
                 'net_profit': net_profit,
-                'closer_commission_total': closer_commission_total
+                'closer_commission_total': closer_commission_total,
+                'agendas_count': agendas_count
             }
         }
 
