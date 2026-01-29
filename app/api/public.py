@@ -173,7 +173,9 @@ def book_appointment():
         
         # 2. Find a closer (Generic logic: use the one from the slot if possible, or any available)
         # The frontend sends 'timestamp'. We need to find which closer has that slot.
-        start_time = datetime.fromtimestamp(float(timestamp))
+        # Ensure timestamp is treated as UTC
+        from datetime import timezone
+        start_time = datetime.fromtimestamp(float(timestamp), tz=timezone.utc).replace(tzinfo=None)
         
         # Find which closer has this availability
         # Note: In public funnel, we might want to pick a closer automatically.

@@ -87,12 +87,36 @@ const BookingPage = () => {
     const [closerName, setCloserName] = useState('');
 
     // Grouping availability by date
+    // Grouping availability by date (LOCAL USER TIMEZONE)
     const groupedAvailability = useMemo(() => {
         const groups = {};
         availability.forEach(slot => {
-            if (!groups[slot.date]) groups[slot.date] = [];
-            groups[slot.date].push(slot);
+            // Parse UTC ISO string
+            const dateObj = new Date(slot.utc_iso);
+
+            // Format to YYYY-MM-DD in local time for grouping
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const localDateKey = `${year}-${month}-${day}`;
+
+            // Format to HH:mm in local time for display
+            const localStart = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+            if (!groups[localDateKey]) groups[localDateKey] = [];
+            groups[localDateKey].push({
+                ...slot,
+                localStart,
+                // We keep original slot data for backend submission, but display local stuff
+                localDateKey
+            });
         });
+
+        // Sort slots within days
+        Object.keys(groups).forEach(dateKey => {
+            groups[dateKey].sort((a, b) => a.ts - b.ts);
+        });
+
         return groups;
     }, [availability]);
 
@@ -492,7 +516,7 @@ const BookingPage = () => {
                                 <Clock size={12} className="text-primary" />
                                 <span>{eventInfo?.duration} MIN</span>
                                 <Globe size={12} className="text-primary" />
-                                <span>UTC-3</span>
+                                <span>{Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
                             </div>
                         </header>
 
@@ -526,7 +550,7 @@ const BookingPage = () => {
                                             onClick={() => setSelectedSlot(slot)}
                                             className={`p-3 rounded-xl border text-center text-xs font-black transition-all ${selectedSlot?.ts === slot.ts ? 'bg-primary border-primary text-white' : 'bg-white/5 border-white/10 text-muted'}`}
                                         >
-                                            {slot.start}
+                                            {slot.localStart}
                                         </button>
                                     ))}
                                 </div>
