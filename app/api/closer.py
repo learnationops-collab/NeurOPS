@@ -568,3 +568,32 @@ def add_lead_comment(id):
         "author": current_user.username,
         "created_at": comment.created_at.isoformat()
     }}), 201
+
+# Payment Management for Closers
+@bp.route('/enrollments/<int:enrollment_id>/payments', methods=['POST'])
+@login_required
+def add_enrollment_payment(enrollment_id):
+    if current_user.role not in ['closer', 'admin', 'operator']:
+        return jsonify({"message": "Forbidden"}), 403
+    
+    data = request.get_json()
+    try:
+        from app.services.closer_service import CloserService
+        payment = CloserService.add_payment(enrollment_id, data)
+        return jsonify({"message": "Pago registrado", "id": payment.id}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/payments/<int:payment_id>', methods=['PUT'])
+@login_required
+def update_payment(payment_id):
+    if current_user.role not in ['admin', 'closer', 'operator']:
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    data = request.get_json()
+    try:
+        from app.services.closer_service import CloserService
+        CloserService.update_payment(payment_id, data)
+        return jsonify({"message": "Pago actualizado"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
