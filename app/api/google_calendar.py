@@ -3,6 +3,7 @@ from flask_login import current_user, login_required
 from app.services.google_service import GoogleService
 from app.models import db, GoogleCalendarToken
 import os
+from urllib.parse import urlparse
 
 bp = Blueprint('google_calendar_bp', __name__)
 
@@ -29,6 +30,12 @@ def login():
     if not redirect_uri:
         base_url = request.url_root.rstrip('/')
         redirect_uri = f"{base_url}/google/callback"
+
+    # Capture frontend origin from Referer to ensure redirect back to correct domain (fix for prod defaulting to localhost)
+    referer = request.headers.get('Referer')
+    if referer:
+        parsed = urlparse(referer)
+        session['frontend_origin'] = f"{parsed.scheme}://{parsed.netloc}"
     
     flow = GoogleService.get_flow(redirect_uri=redirect_uri)
     authorization_url, state = flow.authorization_url(
@@ -62,7 +69,8 @@ def callback():
     if current_user.is_authenticated:
         GoogleService.save_credentials(current_user.id, credentials)
         # Redirect to frontend settings with success param
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+        # Use stored origin as primary source, fallback to env var or localhost
+        frontend_url = session.get('frontend_origin') or os.environ.get('FRONTEND_URL', 'http://localhost:5173')
         
         target_path = '/admin/settings' if current_user.role == 'admin' else '/closer/settings'
         return redirect(f"{frontend_url}{target_path}?google_connected=success")
