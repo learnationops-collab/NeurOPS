@@ -224,6 +224,7 @@ class CloserService:
             'commission': {'month': calculate_commission(month_start_utc, end_utc), 'today': calculate_commission(start_utc, end_utc)},
             'progress': progress_val,
             'upcoming_agendas': [(a, 1) for a in upcoming],
+            'sales_today': sales_today_list,
             'recent_clients': recent_clients,
             'today_stats': today_stats
         }

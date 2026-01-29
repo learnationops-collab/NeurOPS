@@ -53,23 +53,8 @@ def get_dashboard():
     }
     serialized['agendas_today'].sort(key=lambda x: status_order.get(x['status'], 99))
         
-    # Sales Today: Any enrollment that had a payment today
-    sales = Enrollment.query.join(Payment).filter(
-        Enrollment.closer_id == current_user.id,
-        Payment.date >= date.today()
-    ).distinct().all()
-    
-    for s in sales:
-        total_paid = s.total_paid
-        price = s.program.price if s.program else 0.0
-        serialized['sales_today'].append({
-            "id": s.id,
-            "student_name": s.client.full_name or s.client.email if s.client else "Unknown",
-            "program_name": s.program.name if s.program else "Unknown",
-            "amount": total_paid,
-            "debt": max(0, price - total_paid),
-            "time": s.enrollment_date.isoformat()
-        })
+    serialized['sales_today'] = data.get('sales_today', [])
+
     
     questions = DailyReportQuestion.query.filter_by(is_active=True).order_by(DailyReportQuestion.order).all()
     serialized['report_questions'] = [{"id": q.id, "text": q.text, "type": q.question_type} for q in questions]
