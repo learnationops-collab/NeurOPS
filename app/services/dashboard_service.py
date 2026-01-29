@@ -272,6 +272,7 @@ class DashboardService(BaseService):
                 'gross_revenue': gross_revenue_value,
                 'enrollments_count': enrollments_count,
                 'cash_collected': income - total_comm, 
+                'total_fees': total_comm,
                 'net_profit': net_profit, 
                 'total_expenses': total_expenses_with_commissions
             },

@@ -60,6 +60,16 @@ const AnalysisPage = () => {
                     <Card variant="surface" className="flex flex-col justify-center border-success/20 bg-success/5 rounded-[2rem]">
                         <p className="text-[10px] font-black text-success/60 uppercase tracking-widest mb-2">Cash Collect</p>
                         <h3 className="text-2xl font-black text-success italic tracking-tighter">${kpis.cash_collected?.toLocaleString()}</h3>
+                        <div className="flex flex-col gap-0.5 mt-2 opacity-80">
+                            <div className="flex justify-between items-center text-[9px] uppercase tracking-wider font-bold text-success/70">
+                                <span>Bruto</span>
+                                <span>${kpis.total_payments?.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px] uppercase tracking-wider font-bold text-rose-400/70">
+                                <span>Fees</span>
+                                <span>-${kpis.total_commission?.toLocaleString()}</span>
+                            </div>
+                        </div>
                     </Card>
                     <Card variant="surface" className="flex flex-col justify-center border-accent/20 bg-accent/5 rounded-[2rem]">
                         <p className="text-[10px] font-black text-accent/60 uppercase tracking-widest mb-2">Egresos Totales</p>

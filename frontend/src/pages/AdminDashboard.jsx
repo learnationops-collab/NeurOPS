@@ -134,10 +134,20 @@ const AdminDashboard = () => {
         <StatsCard
           title="Cash Collect"
           value={<Counter value={kpiData.financials.cash_collected} prefix="$" />}
-          subtitle={<span className="text-indigo-400 font-bold">Recaudado Neto</span>}
+          subtitle={
+            <div className="flex flex-col gap-0.5 mt-2 opacity-90">
+              <div className="flex justify-between items-center text-[10px] uppercase tracking-wider font-bold text-indigo-400/80">
+                <span>Bruto</span>
+                <span>${kpiData.financials.income?.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center text-[10px] uppercase tracking-wider font-bold text-rose-400/80">
+                <span>Fees</span>
+                <span>-${kpiData.financials.total_fees?.toLocaleString()}</span>
+              </div>
+            </div>
+          }
           icon={DollarSign}
           color={{ bg: "bg-indigo-500", text: "text-indigo-500", from: "from-indigo-500" }}
-          subtitleColor="text-indigo-400"
         />
         <StatsCard
           title="Gastos"
