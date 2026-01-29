@@ -21,6 +21,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import AgendaManagerModal from '../components/AgendaManagerModal';
+import SaleDetailModal from '../components/SaleDetailModal';
 import DateRangeFilter from '../components/DateRangeFilter';
 import MultiSelectFilter from '../components/MultiSelectFilter';
 import usePersistentFilters from '../hooks/usePersistentFilters';
@@ -38,6 +39,8 @@ const CloserLeadsPage = () => {
     const [updating, setUpdating] = useState(false);
     const [selectedAgenda, setSelectedAgenda] = useState(null);
     const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
 
     // Filter Configuration
@@ -347,6 +350,9 @@ const CloserLeadsPage = () => {
                                                 if (activeTab === 'agendas') {
                                                     setSelectedAgenda(item);
                                                     setIsAgendaModalOpen(true);
+                                                } else {
+                                                    setSelectedEnrollmentId(item.id);
+                                                    setIsDetailModalOpen(true);
                                                 }
                                             }}
                                             className="p-3 bg-surface-hover hover:bg-main text-muted hover:text-primary rounded-xl transition-all border border-base"
@@ -394,6 +400,13 @@ const CloserLeadsPage = () => {
                     onSuccess={fetchData}
                 />
             )}
+
+            <SaleDetailModal
+                isOpen={isDetailModalOpen}
+                enrollmentId={selectedEnrollmentId}
+                onClose={() => { setIsDetailModalOpen(false); setSelectedEnrollmentId(null); }}
+                onSuccess={fetchData}
+            />
         </div>
     );
 };
