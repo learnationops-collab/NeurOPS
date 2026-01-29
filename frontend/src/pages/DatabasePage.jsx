@@ -22,8 +22,7 @@ import {
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
-import AdvancedImportTool from '../components/AdvancedImportTool';
-import { FileUp } from 'lucide-react';
+
 import DateRangeFilter from '../components/DateRangeFilter';
 import MultiSelectFilter from '../components/MultiSelectFilter';
 import usePersistentFilters from '../hooks/usePersistentFilters';
@@ -60,7 +59,7 @@ const DatabasePage = () => {
         { id: 'programs', label: 'Programas', icon: Package, endpoint: '/admin/db/programs' },
         { id: 'payment-methods', label: 'Metodos de Pago', icon: CreditCard, endpoint: '/admin/db/payment-methods' },
         { id: 'questions', label: 'Reporte Diario (Q)', icon: HelpCircle, endpoint: '/admin/db/questions' },
-        { id: 'import', label: 'Importaciones', icon: FileUp, endpoint: null },
+
     ];
 
     useEffect(() => {
@@ -350,48 +349,44 @@ const DatabasePage = () => {
             </div>
             {/* ... Rest of JSX ... */}
 
-            {activeTab === 'import' ? (
-                <AdvancedImportTool />
-            ) : (
-                <Card variant="surface" padding="p-0 overflow-hidden">
-                    {loading ? (
-                        <div className="p-32 text-center text-muted font-black uppercase tracking-[0.5em] animate-pulse">Sincronizando Nodo...</div>
-                    ) : (
-                        <div className="overflow-x-auto min-h-[400px]">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-base bg-surface-hover">
-                                        {renderHeader()}
-                                        <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
+            <Card variant="surface" padding="p-0 overflow-hidden">
+                {loading ? (
+                    <div className="p-32 text-center text-muted font-black uppercase tracking-[0.5em] animate-pulse">Sincronizando Nodo...</div>
+                ) : (
+                    <div className="overflow-x-auto min-h-[400px]">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-base bg-surface-hover">
+                                    {renderHeader()}
+                                    <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-base">
+                                {data.map(item => (
+                                    <tr key={item.id} className={`hover:bg-surface-hover/50 transition-all group ${editingId === item.id ? 'bg-primary/5' : ''}`}>
+                                        {renderRow(item)}
+                                        <td className="px-8 py-5 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                {editingId === item.id ? (
+                                                    <>
+                                                        <button onClick={handleSave} className="p-2 text-success hover:bg-success/10 rounded-lg"><Save size={16} /></button>
+                                                        <button onClick={cancelEditing} className="p-2 text-accent hover:bg-accent/10 rounded-lg"><X size={16} /></button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button onClick={() => startEditing(item)} className="p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit3 size={16} /></button>
+                                                        {activeTab === 'agendas' && <button onClick={() => handleDelete(item.id)} className="p-2 text-muted hover:text-accent hover:bg-accent/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-base">
-                                    {data.map(item => (
-                                        <tr key={item.id} className={`hover:bg-surface-hover/50 transition-all group ${editingId === item.id ? 'bg-primary/5' : ''}`}>
-                                            {renderRow(item)}
-                                            <td className="px-8 py-5 text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    {editingId === item.id ? (
-                                                        <>
-                                                            <button onClick={handleSave} className="p-2 text-success hover:bg-success/10 rounded-lg"><Save size={16} /></button>
-                                                            <button onClick={cancelEditing} className="p-2 text-accent hover:bg-accent/10 rounded-lg"><X size={16} /></button>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <button onClick={() => startEditing(item)} className="p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Edit3 size={16} /></button>
-                                                            {activeTab === 'agendas' && <button onClick={() => handleDelete(item.id)} className="p-2 text-muted hover:text-accent hover:bg-accent/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>}
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </Card>
-            )}
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
         </div>
     );
 };

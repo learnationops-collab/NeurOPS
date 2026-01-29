@@ -1,41 +1,17 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Users, DollarSign, TrendingUp, Activity, Plus } from 'lucide-react';
-import NewSaleModal from '../components/NewSaleModal';
+import ExpensesManagerModal from '../components/ExpensesManagerModal';
 import Button from '../components/ui/Button';
-import Card, { CardHeader, CardContent } from '../components/ui/Card';
-import DashboardCharts from '../components/DashboardCharts';
+import StatsCard from '../components/StatsCard';
+import AnalysisSection from '../components/AnalysisSection';
 import Counter from '../components/ui/Counter';
-
-const KPICard = ({ title, value, subtitle, icon: Icon, color }) => (
-  <Card variant="surface" className="group h-full">
-    <div className="flex justify-between items-start mb-4">
-      <div className={`p-4 rounded-2xl bg-opacity-10 ${color.bg} ${color.text}`}>
-        <Icon size={28} />
-      </div>
-      <div className="flex flex-col items-end">
-        <span className="text-muted text-[10px] font-black uppercase tracking-widest">{title}</span>
-        <h3 className="text-3xl font-black text-base italic tracking-tighter mt-1">
-          {value}
-        </h3>
-      </div>
-    </div>
-    {subtitle && (
-      <div className="pt-4 border-t border-base mt-2">
-        <p className="text-muted text-[10px] font-bold uppercase tracking-widest">{subtitle}</p>
-      </div>
-    )}
-  </Card>
-);
 
 const AdminDashboard = () => {
   const [kpiData, setKpiData] = useState(null);
   const [chartsData, setChartsData] = useState(null);
-  const [activityData, setActivityData] = useState(null);
 
   const [loadingKpi, setLoadingKpi] = useState(true);
-  // Charts and Activity load independently, non-blocking for KPIs
-
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [period, setPeriod] = useState('this_month');
@@ -46,11 +22,10 @@ const AdminDashboard = () => {
 
   const fetchAllData = () => {
     setLoadingKpi(true);
-    setChartsData(null); // Reset to trigger loading state in UI if desired
-    setActivityData(null);
+    setChartsData(null);
     setError(null);
 
-    // 1. Fetch KPIs (Critical First Content Paint)
+    // 1. Fetch KPIs
     api.get(`/admin/dashboard/kpis?period=${period}`)
       .then(r => {
         setKpiData(r.data);
@@ -61,20 +36,13 @@ const AdminDashboard = () => {
         setLoadingKpi(false);
       });
 
-    // 2. Fetch Charts (Parallel)
+    // 2. Fetch Charts
     api.get(`/admin/dashboard/charts?period=${period}`)
-      .then(r => setChartsData(r.data.charts || r.data)) // Fixed comment syntax
-      .catch(console.error);
-
-    // 3. Fetch Activity (Parallel)
-    api.get(`/admin/dashboard/activity?period=${period}`)
-      .then(r => setActivityData(r.data))
+      .then(r => setChartsData(r.data.charts || r.data))
       .catch(console.error);
   };
 
-  const handleSaleSuccess = () => {
-    fetchAllData();
-  };
+
 
   if (loadingKpi && !kpiData) {
     return (
@@ -97,26 +65,27 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+    <div className="p-8 max-w-[1600px] mx-auto space-y-12 animate-in fade-in duration-700">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-base/50 pb-8">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-base italic tracking-tighter">Panel Principal</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-lg">Panel Principal</h1>
           <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Vista General del Negocio</p>
         </div>
         <div className="flex gap-4">
           <Button
             onClick={() => setIsModalOpen(true)}
-            variant="primary"
+            size="md"
             icon={Plus}
+            className="bg-gradient-primary border-none shadow-glow hover:brightness-110 !rounded-2xl"
           >
-            Nueva Venta
+            Gasto
           </Button>
-          <div className="p-1 px-1.5 bg-surface rounded-2xl border border-base flex gap-1 items-center">
+          <div className="p-1 px-1.5 bg-surface/50 backdrop-blur-sm rounded-2xl border border-base/50 flex gap-1 items-center">
             {['this_month', 'last_month', 'all_time'].map(p => (
               <div
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase cursor-pointer transition-all ${period === p ? 'bg-primary text-white' : 'text-muted hover:text-base'}`}
+                className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all duration-300 ${period === p ? 'bg-white/10 text-white shadow-inner' : 'text-muted hover:text-white hover:bg-white/5'}`}
               >
                 {p === 'this_month' ? 'Este Mes' : p === 'last_month' ? 'Mes Pasado' : 'Todo'}
               </div>
@@ -125,96 +94,48 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      {/* KPIs Section - Always renders first due to loading state above */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <KPICard
+      {/* KPI Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
           title="Ingresos"
           value={<Counter value={kpiData.financials.income} prefix="$" />}
-          subtitle={<span className="flex items-center gap-1">Pendiente: <Counter value={kpiData.cohort.p_debt} prefix="$" /></span>}
-          icon={TrendingUp}
-          color={{ bg: "bg-blue-500", text: "text-blue-500" }}
-        />
-        <KPICard
-          title="Efectivo"
-          value={<Counter value={kpiData.financials.cash_collected} prefix="$" />}
-          subtitle="Neto recaudado"
+          subtitle={<span className="text-emerald-400">Neto Recaudado</span>}
           icon={DollarSign}
-          color={{ bg: "bg-emerald-500", text: "text-emerald-500" }}
+          color={{ bg: "bg-emerald-500", text: "text-emerald-500", from: "from-emerald-500" }}
         />
-        <KPICard
+        <StatsCard
+          title="Pendiente"
+          value={<Counter value={kpiData.cohort.p_debt} prefix="$" />}
+          subtitle={<span className="text-purple-400">Por Cobrar</span>}
+          icon={TrendingUp}
+          color={{ bg: "bg-purple-500", text: "text-purple-500", from: "from-purple-500" }}
+          subtitleColor="text-purple-400"
+        />
+        <StatsCard
           title="Gastos"
           value={<Counter value={kpiData.financials.total_expenses} prefix="$" />}
-          subtitle={<span className="flex items-center gap-1">Profit: <Counter value={kpiData.financials.net_profit} prefix="$" /></span>}
+          subtitle={<span className="text-rose-400">Profit: ${kpiData.financials.net_profit}</span>}
           icon={Activity}
-          color={{ bg: "bg-red-500", text: "text-red-500" }}
+          color={{ bg: "bg-rose-500", text: "text-rose-500", from: "from-rose-500" }}
         />
-        <KPICard
+        <StatsCard
           title="Leads"
           value={<Counter value={kpiData.cohort.active_leads} />}
-          subtitle="Registros nuevos"
+          subtitle={<span className="text-blue-400">Activos en Pipeline</span>}
           icon={Users}
-          color={{ bg: "bg-purple-500", text: "text-purple-500" }}
+          color={{ bg: "bg-blue-500", text: "text-blue-500", from: "from-blue-500" }}
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          {chartsData ? (
-            <DashboardCharts chartsData={chartsData} />
-          ) : (
-            <Card variant="surface" className="h-[400px] flex items-center justify-center">
-              <div className="animate-pulse flex flex-col items-center gap-2">
-                <div className="h-8 w-8 bg-muted/20 rounded-full"></div>
-                <span className="text-xs font-bold uppercase text-muted">Cargando Gráficos...</span>
-              </div>
-            </Card>
-          )}
-        </div>
-
-        <Card variant="surface" className="h-[500px] flex flex-col" padding="p-0">
-          <CardHeader className="px-8 py-6 border-b border-base bg-surface-hover mb-0">
-            <h3 className="text-base font-black uppercase text-xs tracking-widest">Actividad Reciente</h3>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto space-y-4 p-8 custom-scrollbar">
-            {activityData ? (
-              <>
-                {activityData.recent_activity.map((activity, i) => (
-                  <div key={i} className="flex items-center gap-4 group">
-                    <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_10px] ${activity.type === 'payment' ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-primary shadow-primary/50'}`}></div>
-                    <div className="flex-1">
-                      <p className="text-base text-xs font-bold">{activity.message}</p>
-                      <p className="text-muted text-[10px] uppercase">{activity.sub}</p>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground">{new Date(activity.time).toLocaleDateString()}</span>
-                  </div>
-                ))}
-
-                {/* Optional: Show Top Debtors here if desired, or maybe in a separate tab? 
-                    User asked for "optimization", let's stick to showing recent activity as before. 
-                    Top Debtors is data available if needed.
-                */}
-              </>
-            ) : (
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} className="flex items-center gap-4 animate-pulse">
-                    <div className="w-1.5 h-1.5 rounded-full bg-muted/20"></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 w-3/4 bg-muted/20 rounded"></div>
-                      <div className="h-2 w-1/2 bg-muted/20 rounded"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Analysis Graphic Section */}
+      <div className="grid grid-cols-1 gap-8">
+        <AnalysisSection data={chartsData} />
       </div>
 
-      <NewSaleModal
+      <ExpensesManagerModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={handleSaleSuccess}
+        onSuccess={fetchAllData}
       />
     </div>
   );
