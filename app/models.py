@@ -349,3 +349,15 @@ class Ad(db.Model):
     total_spend = db.Column(db.Float, default=0.0)
     ad_group_id = db.Column(db.Integer, db.ForeignKey('ad_groups.id'), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'))
+
+class Lead(db.Model):
+    __tablename__ = 'leads'
+    id = db.Column(db.Integer, primary_key=True)
+    manychat_id = db.Column(db.String(50), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=True)
+    instagram_username = db.Column(db.String(64), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Lead {self.name} ({self.manychat_id})>'

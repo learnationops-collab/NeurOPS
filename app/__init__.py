@@ -67,6 +67,10 @@ def create_app(config_class=Config):
     app.register_blueprint(google_calendar_bp)
     csrf.exempt(google_calendar_bp)
 
+    from app.api.webhooks import bp as webhooks_bp
+    app.register_blueprint(webhooks_bp, url_prefix='/api/webhooks')
+    csrf.exempt(webhooks_bp)
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):
