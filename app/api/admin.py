@@ -180,6 +180,34 @@ def get_dashboard_charts():
     )
     return jsonify(data), 200
 
+@bp.route('/admin/dashboard/revenue-chart', methods=['GET'])
+@login_required
+@admin_required
+def get_dashboard_revenue_chart():
+    period = request.args.get('period', 'this_month')
+    granularity = request.args.get('granularity', 'day') # day, week, month
+    group_by = request.args.get('group_by', 'program') # program, payment_type
+    
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    closer_ids_arg = request.args.get('closer_ids')
+    program_ids_arg = request.args.get('program_ids')
+    
+    closer_ids = [int(x) for x in closer_ids_arg.split(',')] if closer_ids_arg else None
+    program_ids = [int(x) for x in program_ids_arg.split(',')] if program_ids_arg else None
+
+    data = DashboardService.get_revenue_chart_data(
+        period=period,
+        granularity=granularity,
+        group_by=group_by,
+        start_date_arg=start_date,
+        end_date_arg=end_date,
+        closer_ids=closer_ids,
+        program_ids=program_ids
+    )
+    return jsonify(data), 200
+
 @bp.route('/admin/dashboard/activity', methods=['GET'])
 @login_required
 @admin_required

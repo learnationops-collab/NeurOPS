@@ -6,6 +6,7 @@ import DashboardFilter from '../components/DashboardFilter';
 import Button from '../components/ui/Button';
 import StatsCard from '../components/StatsCard';
 import AnalysisSection from '../components/AnalysisSection';
+import RevenueChart from '../components/RevenueChart';
 import Counter from '../components/ui/Counter';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +22,7 @@ const AdminDashboard = () => {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [activeGraphTab, setActiveGraphTab] = useState('sales'); // New state for tabs
 
   // Centralized state for all filters with persistence
   const [filters, setFilters] = useState(() => {
@@ -230,13 +232,49 @@ const AdminDashboard = () => {
       </div>
 
       {/* Analysis Graphic Section */}
-      <div className="grid grid-cols-1 gap-8">
-        <AnalysisSection
-          data={chartsData}
-          loading={loading}
-          period={filters.period}
-          onPeriodChange={handlePeriodChange}
-        />
+      {/* Analysis Graphic Section */}
+      <div className="space-y-6">
+        {/* Tabs for Graphs */}
+        <div className="flex bg-slate-900/40 p-1.5 rounded-[2rem] border border-slate-800 w-fit">
+          <button
+            onClick={() => setActiveGraphTab('sales')}
+            className={`px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeGraphTab === 'sales'
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+              : 'text-slate-500 hover:text-white hover:bg-slate-800'
+              }`}
+          >
+            Ventas
+          </button>
+          <button
+            onClick={() => setActiveGraphTab('marketing')}
+            className={`px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeGraphTab === 'marketing'
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+              : 'text-slate-500 hover:text-white hover:bg-slate-800'
+              }`}
+          >
+            Marketing
+          </button>
+        </div>
+
+        {activeGraphTab === 'sales' ? (
+          <div className="grid grid-cols-1 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <RevenueChart filters={filters} />
+            <AnalysisSection
+              data={chartsData}
+              loading={loading}
+              period={filters.period}
+              onPeriodChange={handlePeriodChange}
+            />
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center p-12 border border-dashed border-slate-700/50 rounded-[2.5rem] bg-slate-900/20 animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-[400px]">
+            <div className="w-16 h-16 mb-4 rounded-full bg-slate-800 flex items-center justify-center">
+              <TrendingUp className="text-slate-500" size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-300">Análisis de Marketing</h3>
+            <p className="text-slate-500 text-sm mt-2 font-medium">Próximamente disponible</p>
+          </div>
+        )}
       </div>
 
       <ExpensesManagerModal

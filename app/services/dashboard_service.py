@@ -483,7 +483,111 @@ class DashboardService(BaseService):
             
         activity.sort(key=lambda x: x['time'], reverse=True)
         
+    @staticmethod
+    def get_revenue_chart_data(period='this_month', granularity='day', group_by='program', start_date_arg=None, end_date_arg=None, closer_ids=None, program_ids=None):
+        start_date, end_date = DashboardService._get_date_range(period, start_date_arg, end_date_arg)
+        start_dt = datetime.combine(start_date, time.min)
+        end_dt = datetime.combine(end_date, time.max)
+        
+        # Query Basic Data
+        query = db.session.query(
+            Payment.amount,
+            Payment.date,
+            Program.name,
+            Payment.payment_type
+        ).join(Enrollment).join(Program).filter(
+            Payment.date >= start_dt,
+            Payment.date <= end_dt,
+            Payment.status == 'completed'
+        )
+        
+        if closer_ids:
+            query = query.filter(Enrollment.closer_id.in_(closer_ids))
+        if program_ids:
+            query = query.filter(Enrollment.program_id.in_(program_ids))
+            
+        results = query.all()
+        
+        # Structure: Map[TimeLabel][StackKey] = Amount
+        # Time Labels depend on granularity
+        data_map = {}
+        stack_keys = set()
+        
+        def get_time_key(dt):
+            if granularity == 'day':
+                return dt.strftime('%Y-%m-%d') # 2023-10-25
+            elif granularity == 'week':
+                # ISO week start
+                return dt.strftime('%Y-W%U') # 2023-W43
+            elif granularity == 'month':
+                return dt.strftime('%Y-%m') # 2023-10
+            return dt.strftime('%Y-%m-%d')
+
+        for amount, p_date, prog_name, p_type in results:
+            t_key = get_time_key(p_date)
+            
+            if group_by == 'program':
+                s_key = prog_name
+            else: # payment_type
+                s_key = p_type or 'Desconocido'
+                
+            stack_keys.add(s_key)
+            
+            if t_key not in data_map: data_map[t_key] = {}
+            data_map[t_key][s_key] = data_map[t_key].get(s_key, 0.0) + amount
+            
+        # Generate complete timeline labels (fill gaps with 0 if needed? ChartJS mostly handles it if we provide sorted labels)
+        # But cleaner if we have continuous axis.
+        # Generating date range list
+        labels = []
+        curr = start_date
+        while curr <= end_date:
+            dt = datetime.combine(curr, time.min)
+            l = get_time_key(dt)
+            if not labels or labels[-1] != l:
+                labels.append(l)
+            
+            # Step increment
+            if granularity == 'day':
+                curr += timedelta(days=1)
+            elif granularity == 'week':
+                curr += timedelta(days=7) # Approximate
+            elif granularity == 'month':
+                 # Next month first day
+                 if curr.month == 12:
+                     curr = curr.replace(year=curr.year+1, month=1, day=1)
+                 else:
+                     curr = curr.replace(month=curr.month+1, day=1)
+        
+        # Ensure all generated labels are in data_map (even empty ones)
+        # Actually, iterating day by day for 'week' might skip if start date is not week start.
+        # Better: use the keys present in data_map + sort them + gap fill?
+        # Or just use the sorted keys from data_map if gaps are okay.
+        # Let's use sorted keys from data_map for simplicity in first iteration, 
+        # but ChartJS line/bar looks better with continuous axis.
+        # Re-using the labels list generated above is safer for consistency.
+        
+        # Align data
+        datasets = []
+        # Fixed colors usually needed? Or random?
+        # Let's define a palette or let frontend handle colors?
+        # Backend returning raw structs is better.
+        
+        sorted_stack_keys = sorted(list(stack_keys))
+        
+        for key in sorted_stack_keys:
+            ds_data = []
+            for l in labels:
+                val = data_map.get(l, {}).get(key, 0.0)
+                ds_data.append(val)
+            
+            datasets.append({
+                'label': key,
+                'data': ds_data
+            })
+            
         return {
-            'recent_activity': activity[:10],
-            'top_debtors': top_debtors
+            'labels': labels,
+            'datasets': datasets
         }
+
