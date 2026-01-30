@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bar } from 'react-chartjs-2';
+import { Bar, Line } from 'react-chartjs-2';
 import api from '../services/api';
 import Card from './ui/Card';
 import {
@@ -7,31 +7,54 @@ import {
     CategoryScale,
     LinearScale,
     BarElement,
+    PointElement,
+    LineElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    Filler
 } from 'chart.js';
+import { Activity, Layers, Users, CreditCard, DollarSign, Hash } from 'lucide-react';
 
 ChartJS.register(
     CategoryScale,
     LinearScale,
     BarElement,
+    PointElement,
+    LineElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    Filler
+);
+
+// Control Button Helper
+const ControlBtn = ({ active, onClick, icon: Icon, label }) => (
+    <button
+        onClick={onClick}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${active
+            ? 'bg-primary/20 text-white border-primary/20 shadow-[0_0_10px_rgba(99,102,241,0.2)]'
+            : 'bg-black/20 text-slate-400 border-transparent hover:text-white hover:bg-white/5'
+            }`}
+    >
+        {Icon && <Icon size={12} />}
+        {label}
+    </button>
 );
 
 const RevenueChart = ({ filters }) => {
     const [chartData, setChartData] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Internal state for chart controls
+    // Chart Builder States
     const [granularity, setGranularity] = useState('day');
-    const [groupBy, setGroupBy] = useState('program'); // 'program' | 'payment_type'
+    const [groupBy, setGroupBy] = useState('program');
+    const [metric, setMetric] = useState('amount'); // 'amount', 'count'
+    const [chartType, setChartType] = useState('bar'); // 'bar', 'line'
 
     useEffect(() => {
         fetchChartData();
-    }, [filters, granularity, groupBy]);
+    }, [filters, granularity, groupBy, metric]);
 
     const fetchChartData = async () => {
         setLoading(true);
@@ -40,14 +63,12 @@ const RevenueChart = ({ filters }) => {
                 period: filters.period,
                 granularity: granularity,
                 group_by: groupBy,
+                metric: metric,
                 start_date: filters.start_date || '',
                 end_date: filters.end_date || ''
             });
 
             if (filters.closer_ids?.length) queryParams.append('closer_ids', filters.closer_ids.join(','));
-
-            // Program filter? Usually if we filter by program, grouping by program shows only that program.
-            // But user might want to see breakdown of Payment Types for that program.
             if (filters.program_ids?.length) queryParams.append('program_ids', filters.program_ids.join(','));
 
             const response = await api.get(`/admin/dashboard/revenue-chart?${queryParams.toString()}`);
@@ -61,14 +82,9 @@ const RevenueChart = ({ filters }) => {
 
     // Color Palette
     const colors = [
-        '#10b981', // Emerald-500
-        '#3b82f6', // Blue-500
-        '#8b5cf6', // Violet-500
-        '#f43f5e', // Rose-500
-        '#f59e0b', // Amber-500
-        '#06b6d4', // Cyan-500
-        '#ec4899', // Pink-500
-        '#6366f1'  // Indigo-500
+        '#10b981', '#3b82f6', '#8b5cf6', '#f43f5e',
+        '#f59e0b', '#06b6d4', '#ec4899', '#6366f1',
+        '#d946ef', '#14b8a6', '#f97316', '#22c55e'
     ];
 
     const data = {
@@ -76,15 +92,24 @@ const RevenueChart = ({ filters }) => {
         datasets: chartData?.datasets?.map((ds, index) => ({
             label: ds.label,
             data: ds.data,
-            backgroundColor: colors[index % colors.length],
+            backgroundColor: chartType === 'line' ? `${colors[index % colors.length]}33` : colors[index % colors.length], // Transparent for area
+            borderColor: colors[index % colors.length],
+            borderWidth: 2,
             borderRadius: 4,
-            stack: 'stack1', // All in same stack
+            stack: chartType === 'bar' ? 'stack1' : undefined,
+            tension: 0.4,
+            fill: chartType === 'line',
+            pointBackgroundColor: colors[index % colors.length],
         })) || []
     };
 
     const options = {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
         plugins: {
             legend: {
                 position: 'bottom',
@@ -96,13 +121,17 @@ const RevenueChart = ({ filters }) => {
                 }
             },
             tooltip: {
-                backgroundColor: 'rgba(17, 17, 20, 0.9)',
+                backgroundColor: 'rgba(17, 17, 20, 0.95)',
                 titleColor: '#fff',
                 bodyColor: '#e2e8f0',
                 padding: 12,
                 cornerRadius: 8,
                 callbacks: {
-                    label: (context) => `${context.dataset.label}: $${context.raw.toLocaleString()}`
+                    label: (context) => {
+                        let val = context.raw;
+                        if (metric === 'amount') val = `$${val.toLocaleString()}`;
+                        return `${context.dataset.label}: ${val}`;
+                    }
                 }
             }
         },
@@ -116,36 +145,56 @@ const RevenueChart = ({ filters }) => {
                 ticks: {
                     color: '#64748b',
                     font: { size: 10 },
-                    callback: (value) => `$${value >= 1000 ? value / 1000 + 'k' : value}`
+                    callback: (value) => {
+                        if (metric === 'amount') return `$${value >= 1000 ? value / 1000 + 'k' : value}`;
+                        return value;
+                    }
                 }
             }
         }
     };
 
     return (
-        <Card variant="surface" className="flex flex-col h-[450px] border border-base/50 bg-surface/50 backdrop-blur-sm shadow-glass" padding="p-0">
-            {/* Header with Controls */}
-            <div className="flex flex-col md:flex-row items-center justify-between px-6 py-4 border-b border-base/50 gap-4">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-white">Desglose de Ingresos</h3>
+        <Card variant="surface" className="flex flex-col h-[500px] border border-base/50 bg-surface/50 backdrop-blur-sm shadow-glass" padding="p-0">
+            {/* Header: Controls */}
+            <div className="flex flex-col gap-4 p-4 border-b border-base/30">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-white flex items-center gap-2">
+                        <Activity className="text-primary" size={16} />
+                        Explorador de Ventas
+                    </h3>
 
-                <div className="flex gap-4">
-                    {/* Group By Selector using Tabs style */}
+                    {/* Visual Type */}
                     <div className="flex bg-black/40 rounded-lg p-1 gap-1">
-                        <button
-                            onClick={() => setGroupBy('program')}
-                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors ${groupBy === 'program' ? 'bg-primary/20 text-white border border-primary/20' : 'text-muted hover:text-white'}`}
-                        >
-                            Por Programa
-                        </button>
-                        <button
-                            onClick={() => setGroupBy('payment_type')}
-                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors ${groupBy === 'payment_type' ? 'bg-primary/20 text-white border border-primary/20' : 'text-muted hover:text-white'}`}
-                        >
-                            Por Tipo Pago
-                        </button>
+                        <button title="Barras" onClick={() => setChartType('bar')} className={`p-1.5 rounded-md transition-colors ${chartType === 'bar' ? 'text-primary bg-white/10' : 'text-slate-500 hover:text-white'}`}><Activity size={14} /></button>
+                        <button title="Lineas" onClick={() => setChartType('line')} className={`p-1.5 rounded-md transition-colors ${chartType === 'line' ? 'text-primary bg-white/10' : 'text-slate-500 hover:text-white'}`}><Activity size={14} /></button>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    {/* Metric & Dimensions */}
+                    <div className="flex flex-wrap gap-2">
+                        <div className="flex items-center gap-2 mr-4 border-r border-white/10 pr-4">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase">Métrica:</span>
+                            <div className="flex gap-1">
+                                <ControlBtn active={metric === 'amount'} onClick={() => setMetric('amount')} icon={DollarSign} label="Ingresos" />
+                                <ControlBtn active={metric === 'count'} onClick={() => setMetric('count')} icon={Hash} label="Cantidad" />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase">Agrupar Por:</span>
+                            <div className="flex flex-wrap gap-1">
+                                <ControlBtn active={groupBy === 'general'} onClick={() => setGroupBy('general')} icon={Activity} label="General" />
+                                <ControlBtn active={groupBy === 'program'} onClick={() => setGroupBy('program')} icon={Layers} label="Programa" />
+                                <ControlBtn active={groupBy === 'payment_type'} onClick={() => setGroupBy('payment_type')} icon={CreditCard} label="Tipo Pago" />
+                                <ControlBtn active={groupBy === 'closer'} onClick={() => setGroupBy('closer')} icon={Users} label="Closer" />
+                                <ControlBtn active={groupBy === 'payment_method'} onClick={() => setGroupBy('payment_method')} icon={CreditCard} label="Método" />
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Granularity Selector */}
+                    {/* Time Granularity */}
                     <div className="flex bg-black/40 rounded-lg p-1 gap-1">
                         {['day', 'week', 'month'].map(g => (
                             <button
@@ -160,13 +209,15 @@ const RevenueChart = ({ filters }) => {
                 </div>
             </div>
 
-            <div className="flex-1 p-6 relative">
+            <div className="flex-1 p-4 relative min-h-0">
                 {loading ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-surface/20 backdrop-blur-sm z-10">
+                    <div className="absolute inset-0 flex items-center justify-center bg-surface/20 backdrop-blur-sm z-10 rounded-b-2xl">
                         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                     </div>
                 ) : (
-                    <Bar data={data} options={options} />
+                    <div className="h-full w-full">
+                        {chartType === 'bar' ? <Bar data={data} options={options} /> : <Line data={data} options={options} />}
+                    </div>
                 )}
             </div>
         </Card>

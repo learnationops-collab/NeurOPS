@@ -259,12 +259,6 @@ const AdminDashboard = () => {
         {activeGraphTab === 'sales' ? (
           <div className="grid grid-cols-1 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <RevenueChart filters={filters} />
-            <AnalysisSection
-              data={chartsData}
-              loading={loading}
-              period={filters.period}
-              onPeriodChange={handlePeriodChange}
-            />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-12 border border-dashed border-slate-700/50 rounded-[2.5rem] bg-slate-900/20 animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-[400px]">

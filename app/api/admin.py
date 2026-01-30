@@ -186,7 +186,8 @@ def get_dashboard_charts():
 def get_dashboard_revenue_chart():
     period = request.args.get('period', 'this_month')
     granularity = request.args.get('granularity', 'day') # day, week, month
-    group_by = request.args.get('group_by', 'program') # program, payment_type
+    group_by = request.args.get('group_by', 'program') # program, payment_type, closer, payment_method
+    metric = request.args.get('metric', 'amount') # amount, count
     
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
@@ -201,6 +202,7 @@ def get_dashboard_revenue_chart():
         period=period,
         granularity=granularity,
         group_by=group_by,
+        metric=metric,
         start_date_arg=start_date,
         end_date_arg=end_date,
         closer_ids=closer_ids,

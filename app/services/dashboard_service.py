@@ -484,18 +484,23 @@ class DashboardService(BaseService):
         activity.sort(key=lambda x: x['time'], reverse=True)
         
     @staticmethod
-    def get_revenue_chart_data(period='this_month', granularity='day', group_by='program', start_date_arg=None, end_date_arg=None, closer_ids=None, program_ids=None):
+    def get_revenue_chart_data(period='this_month', granularity='day', group_by='program', metric='amount', start_date_arg=None, end_date_arg=None, closer_ids=None, program_ids=None):
         start_date, end_date = DashboardService._get_date_range(period, start_date_arg, end_date_arg)
         start_dt = datetime.combine(start_date, time.min)
         end_dt = datetime.combine(end_date, time.max)
         
         # Query Basic Data
+        # We need to join everything possibly needed: Enrollment -> Closer(User), Payment -> PaymentMethod
         query = db.session.query(
             Payment.amount,
             Payment.date,
             Program.name,
-            Payment.payment_type
-        ).join(Enrollment).join(Program).filter(
+            Payment.payment_type,
+            User.username, # Closer
+            PaymentMethod.name # Method
+        ).select_from(Payment).join(Enrollment).join(Program).outerjoin(User, Enrollment.closer_id == User.id)\
+         .outerjoin(PaymentMethod, Payment.payment_method_id == PaymentMethod.id)\
+         .filter(
             Payment.date >= start_dt,
             Payment.date <= end_dt,
             Payment.status == 'completed'
@@ -507,34 +512,41 @@ class DashboardService(BaseService):
             query = query.filter(Enrollment.program_id.in_(program_ids))
             
         results = query.all()
+        print(f"DEBUG CHART: period={period} start={start_dt} end={end_dt} count={len(results)}")
         
-        # Structure: Map[TimeLabel][StackKey] = Amount
-        # Time Labels depend on granularity
+        # Structure: Map[TimeLabel][StackKey] = Amount/Count
         data_map = {}
         stack_keys = set()
         
         def get_time_key(dt):
             if granularity == 'day':
-                return dt.strftime('%Y-%m-%d') # 2023-10-25
+                return dt.strftime('%Y-%m-%d')
             elif granularity == 'week':
-                # ISO week start
-                return dt.strftime('%Y-W%U') # 2023-W43
+                return dt.strftime('%Y-W%U')
             elif granularity == 'month':
-                return dt.strftime('%Y-%m') # 2023-10
+                return dt.strftime('%Y-%m')
             return dt.strftime('%Y-%m-%d')
 
-        for amount, p_date, prog_name, p_type in results:
+        for amount, p_date, prog_name, p_type, closer_name, method_name in results:
             t_key = get_time_key(p_date)
             
             if group_by == 'program':
                 s_key = prog_name
-            else: # payment_type
+            elif group_by == 'payment_type':
                 s_key = p_type or 'Desconocido'
+            elif group_by == 'closer':
+                s_key = closer_name or 'Sin Closer'
+            elif group_by == 'payment_method':
+                s_key = method_name or 'N/A'
+            else:
+                s_key = 'Total'
                 
             stack_keys.add(s_key)
             
+            val_to_add = amount if metric == 'amount' else 1
+            
             if t_key not in data_map: data_map[t_key] = {}
-            data_map[t_key][s_key] = data_map[t_key].get(s_key, 0.0) + amount
+            data_map[t_key][s_key] = data_map[t_key].get(s_key, 0.0) + val_to_add
             
         # Generate complete timeline labels (fill gaps with 0 if needed? ChartJS mostly handles it if we provide sorted labels)
         # But cleaner if we have continuous axis.
