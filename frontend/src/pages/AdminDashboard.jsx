@@ -127,22 +127,41 @@ const AdminDashboard = () => {
         <StatsCard
           title="Revenue"
           value={<Counter value={kpiData.financials.gross_revenue} prefix="$" />}
-          subtitle={<span className="text-emerald-400 font-bold">{kpiData.financials.enrollments_count} inscripciones</span>}
+          subtitle={
+            <div className="flex flex-col gap-0.5 mt-2 opacity-90 text-right">
+              <span className="text-xs text-rose-400 font-medium">Pendiente: ${kpiData.financials.pending_revenue?.toLocaleString()}</span>
+            </div>
+          }
           icon={TrendingUp}
           color={{ bg: "bg-emerald-500", text: "text-emerald-500", from: "from-emerald-500" }}
         />
         <StatsCard
           title="Cash Collect"
-          value={<Counter value={kpiData.financials.cash_collected} prefix="$" />}
+          value={<Counter value={kpiData.financials.income} prefix="$" />}
           subtitle={
-            <div className="flex flex-col gap-0.5 mt-2 opacity-90">
-              <div className="flex justify-between items-center text-[10px] uppercase tracking-wider font-bold text-indigo-400/80">
-                <span>Bruto</span>
-                <span>${kpiData.financials.income?.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center text-[10px] uppercase tracking-wider font-bold text-rose-400/80">
-                <span>Fees</span>
-                <span>-${kpiData.financials.total_fees?.toLocaleString()}</span>
+            <div className="flex flex-col gap-0.5 mt-2 opacity-90 text-right">
+              {/* "En el cash collect solo debe verse el ingreso bruto en las letras pequeñas, o sea, quita a FEES" 
+                  Wait, if main value is Cash Collected (Net), showing Gross in subtitle makes sense?
+                  User said: "En el cash collect solo debe verse el ingreso bruto en las letras pequeñas"
+                  And "quita a FEES".
+                  Let's check what was calculated. 
+                  kpiData.financials.cash_collected = income - fees.
+                  kpiData.financials.income = Gross Income (Bruto).
+                  
+                  If user wants to remove FEES, I should just show Bruto? 
+                  But usually Cash Collect IS the Net... 
+                  Wait, "En el cash collect solo debe verse el ingreso bruto en las letras pequeñas" implies the MAIN value is NOT the Gross?
+                  Main value was `cash_collected` (Net). 
+                  Subtitle was `Bruto` and `Fees`.
+                  So I should keep Main Value as Net (or whatever user expects for "Cash Collect", usually actual money in bank i.e. Net) and Subtitle only Bruto.
+                  BUT, user might mean "Show Gross as Main and nothing else"? 
+                  "En el cash collect solo debe verse el ingreso bruto en las letras pequeñas" -> In the small letters, only Gross Income should be seen.
+                  So Main Value = Net? Or Main Value = Gross? 
+                  "Cash Collect" usually implies money collected. 
+                  I will keep Main Value as `cash_collected` (Net) and Subtitle as `Bruto: $X`.
+              */}
+              <div className="flex justify-end items-center text-[10px] uppercase tracking-wider font-bold text-indigo-400/80">
+                <span>Bruto: ${kpiData.financials.income?.toLocaleString()}</span>
               </div>
             </div>
           }
@@ -152,15 +171,15 @@ const AdminDashboard = () => {
         <StatsCard
           title="Gastos"
           value={<Counter value={kpiData.financials.total_expenses} prefix="$" />}
-          subtitle={<span className="text-rose-400">Profit: ${kpiData.financials.net_profit}</span>}
+          subtitle={<span className="text-emerald-400 font-bold">Profit: ${kpiData.financials.net_profit?.toLocaleString()}</span>}
           icon={Activity}
           color={{ bg: "bg-rose-500", text: "text-rose-500", from: "from-rose-500" }}
         />
         <StatsCard
-          title="Agendas"
-          value={<Counter value={kpiData.agendas.count} />}
-          subtitle={<span className="text-blue-400">Citas en el periodo</span>}
-          icon={Calendar}
+          title="Ticket Promedio"
+          value={<Counter value={kpiData.financials.average_ticket || 0} prefix="$" />}
+          subtitle={<span className="text-blue-400 font-bold">{kpiData.financials.enrollments_count} inscripciones</span>}
+          icon={TrendingUp}
           color={{ bg: "bg-blue-500", text: "text-blue-500", from: "from-blue-500" }}
         />
       </div>

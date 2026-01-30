@@ -307,7 +307,31 @@ class DashboardService(BaseService):
             for eid, price in prices.items():
                 paid = paid_map.get(eid, 0)
                 period_debt += max(0, price - paid)
+
+        # 4. Average Ticket (Ticket Promedio)
+        # Promedio de inscripciones: Tipos de pago "Completo" y "Primer pago"
+        # Calculation: Average amount of initial payments made in this period
+        # We need to filter payments by type
         
+        initial_payments_q = Payment.query.filter(
+            Payment.date >= start_dt, 
+            Payment.date <= end_dt, 
+            Payment.status == 'completed',
+            Payment.payment_type.in_(['Completo', 'Primer pago'])
+        )
+        if closer_ids:
+            initial_payments_q = initial_payments_q.join(Enrollment).filter(Enrollment.closer_id.in_(closer_ids))
+        if program_ids:
+            # If not joined yet
+            if not closer_ids: initial_payments_q = initial_payments_q.join(Enrollment)
+            initial_payments_q = initial_payments_q.filter(Enrollment.program_id.in_(program_ids))
+            
+        initial_payments = initial_payments_q.all()
+        
+        total_initial_amount = sum(p.amount for p in initial_payments)
+        count_initial = len(initial_payments)
+        average_ticket = (total_initial_amount / count_initial) if count_initial > 0 else 0.0
+
         return {
             'financials': {
                 'income': income, 
@@ -316,7 +340,9 @@ class DashboardService(BaseService):
                 'cash_collected': income - total_comm, 
                 'total_fees': total_comm,
                 'net_profit': net_profit, 
-                'total_expenses': total_expenses_with_commissions
+                'total_expenses': total_expenses_with_commissions,
+                'pending_revenue': float(period_debt), # Dinero pendiente según ese Revenue
+                'average_ticket': average_ticket
             },
             'cohort': {
                 'active_leads': active_leads_count,

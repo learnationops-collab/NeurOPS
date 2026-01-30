@@ -19,16 +19,15 @@ const StatsCard = ({ title, value, subtitle, icon: Icon, color }) => {
                         <div className="text-2xl font-bold tracking-tight text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
                             {value}
                         </div>
+                        {subtitle && (
+                            <div className="mt-1 text-right">
+                                <p className="text-xs text-muted font-medium flex items-center justify-end gap-2">
+                                    {subtitle}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
-
-                {subtitle && (
-                    <div className="pt-3 border-t border-white/5">
-                        <p className="text-xs text-muted font-medium flex items-center gap-2">
-                            {subtitle}
-                        </p>
-                    </div>
-                )}
             </div>
 
             {/* Bottom accent line */}

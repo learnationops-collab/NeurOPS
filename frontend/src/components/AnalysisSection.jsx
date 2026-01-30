@@ -33,51 +33,58 @@ const AnalysisSection = ({ data, loading, period, onPeriodChange }) => {
         { label: '6M', value: 'last_6_months' },
     ];
 
+    // Gradient creation helper
+    const createGradient = (ctx, area) => {
+        const gradient = ctx.createLinearGradient(0, area.bottom, 0, area.top);
+        // Purple to transparent/lighter purple
+        gradient.addColorStop(0, 'rgba(124, 58, 237, 0.2)'); // Violet-600 low opacity
+        gradient.addColorStop(1, 'rgba(139, 92, 246, 1)');   // Violet-500 solid
+        return gradient;
+    };
+
     const options = {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+            duration: 2000,
+            easing: 'easeOutQuart',
+        },
         plugins: {
             legend: {
-                position: 'top',
-                align: 'end',
-                labels: {
-                    color: '#94a3b8', // text-muted
-                    font: {
-                        family: 'Inter',
-                        size: 9,
-                        weight: 'bold'
-                    },
-                    boxWidth: 6,
-                    usePointStyle: true,
-                    pointStyle: 'circle'
-                }
+                display: false, // Minimalist: Hide legend if it's just one metric obvious by title
             },
             tooltip: {
-                backgroundColor: '#111114',
+                backgroundColor: 'rgba(17, 17, 20, 0.8)', // Glass dark
                 titleColor: '#fff',
-                bodyColor: '#94a3b8',
-                borderColor: '#262626',
-                borderWidth: 1,
-                padding: 10,
-                cornerRadius: 8,
-                displayColors: true,
-                boxPadding: 4
+                bodyColor: '#e2e8f0',
+                padding: 12,
+                cornerRadius: 12,
+                displayColors: false, // Hide color box for cleaner look
+                callbacks: {
+                    title: (items) => {
+                        return items[0].label;
+                    },
+                    label: (context) => {
+                        return `Ingresos: $${context.raw.toLocaleString()}`;
+                    }
+                }
             }
         },
         scales: {
             y: {
                 beginAtZero: true,
                 grid: {
-                    color: '#1f1f23', // Very faint
+                    display: false, // No grid lines
                     drawBorder: false,
                 },
                 ticks: {
-                    color: '#52525b',
+                    color: '#64748b', // Slate-500
                     font: {
                         family: 'Inter',
-                        size: 9
+                        size: 10
                     },
-                    callback: (value) => `$${value}`
+                    callback: (value) => value >= 1000 ? `${value / 1000}k` : value, // Minimalist compact numbers
+                    padding: 10
                 },
                 border: {
                     display: false
@@ -92,18 +99,24 @@ const AnalysisSection = ({ data, loading, period, onPeriodChange }) => {
                     color: '#94a3b8',
                     font: {
                         family: 'Inter',
-                        size: 10,
+                        size: 11,
                         weight: '500'
                     },
                     maxRotation: 0,
                     autoSkip: true,
-                    maxTicksLimit: 8
+                    maxTicksLimit: 7
                 },
                 border: {
                     display: false
                 }
             },
         },
+        elements: {
+            bar: {
+                borderRadius: 20, // Fully rounded top and bottom if possible, or high number
+                borderSkipped: false, // Round all corners
+            }
+        }
     };
 
     const formattedData = {
@@ -112,10 +125,17 @@ const AnalysisSection = ({ data, loading, period, onPeriodChange }) => {
             {
                 label: 'Cobrado',
                 data: data?.revenue_values || [],
-                backgroundColor: '#9d4edd', // Neon Purple
-                borderRadius: 4,
+                backgroundColor: (context) => {
+                    const { ctx, chartArea } = context.chart;
+                    if (!chartArea) {
+                        return null;
+                    }
+                    return createGradient(ctx, chartArea);
+                },
+                hoverBackgroundColor: '#a78bfa', // Violet-400
                 barThickness: 'flex',
-                maxBarThickness: 32
+                maxBarThickness: 40, // Slightly wider for modern look
+                minBarLength: 5, // Always show a little bar even if 0 to show presence
             },
         ],
     };
