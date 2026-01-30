@@ -589,12 +589,27 @@ def manage_questions(id=None):
         if id:
             q = DailyReportQuestion.query.get_or_404(id)
             q.text, q.question_type, q.is_active, q.order = data.get('text', q.text), data.get('type', q.question_type), data.get('is_active', q.is_active), data.get('order', q.order)
+            if 'role' in data: q.role = data['role']
         else:
-            q = DailyReportQuestion(text=data.get('text'), question_type=data.get('type', 'text'), order=data.get('order', 0))
+            q = DailyReportQuestion(
+                text=data.get('text'), 
+                question_type=data.get('type', 'text'), 
+                order=data.get('order', 0),
+                role=data.get('role', 'closer')
+            )
             db.session.add(q)
         db.session.commit()
         return jsonify({"message": "Pregunta guardada"}), 200
-    return jsonify([{"id": q.id, "text": q.text, "type": q.question_type, "order": q.order, "is_active": q.is_active} for q in DailyReportQuestion.query.order_by(DailyReportQuestion.order).all()]), 200
+    
+    role_filter = request.args.get('role', 'closer')
+    query = DailyReportQuestion.query
+    if role_filter == 'closer':
+        query = query.filter(or_(DailyReportQuestion.role == 'closer', DailyReportQuestion.role == None))
+    else:
+        query = query.filter_by(role=role_filter)
+        
+    questions = query.order_by(DailyReportQuestion.order).all()
+    return jsonify([{"id": q.id, "text": q.text, "type": q.question_type, "order": q.order, "is_active": q.is_active, "role": q.role or 'closer'} for q in questions]), 200
 
 # --- Admin Operations ---
 

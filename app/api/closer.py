@@ -56,7 +56,10 @@ def get_dashboard():
     serialized['sales_today'] = data.get('sales_today', [])
 
     
-    questions = DailyReportQuestion.query.filter_by(is_active=True).order_by(DailyReportQuestion.order).all()
+    questions = DailyReportQuestion.query.filter(
+        DailyReportQuestion.is_active == True,
+        or_(DailyReportQuestion.role == 'closer', DailyReportQuestion.role == None)
+    ).order_by(DailyReportQuestion.order).all()
     serialized['report_questions'] = [{"id": q.id, "text": q.text, "type": q.question_type} for q in questions]
 
     serialized['recent_clients'] = []

@@ -11,6 +11,7 @@ import CloserLeadsPage from './pages/CloserLeadsPage';
 import CloserSettingsPage from './pages/CloserSettingsPage';
 import CloserNewSalePage from './pages/CloserNewSalePage';
 import CloserNewAppointmentPage from './pages/CloserNewAppointmentPage';
+import SetterDashboard from './pages/SetterDashboard';
 import OperationsPage from './pages/OperationsPage';
 import BookingPage from './pages/BookingPage';
 import StyleGuidePage from './pages/StyleGuidePage';
@@ -114,6 +115,16 @@ function App() {
           element={
             <MainLayout>
               <CloserNewAppointmentPage />
+            </MainLayout>
+          }
+        />
+
+        {/* Protected Setter Routes */}
+        <Route
+          path="/setter/dashboard"
+          element={
+            <MainLayout>
+              <SetterDashboard />
             </MainLayout>
           }
         />

@@ -214,16 +214,36 @@ class DailyReportQuestion(db.Model):
     question_type = db.Column(db.String(50), default='text')
     order = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
+    role = db.Column(db.String(20), default='closer') # 'closer' o 'setter'
 
 class DailyReportAnswer(db.Model):
     __tablename__ = 'daily_report_answers'
     id = db.Column(db.Integer, primary_key=True)
-    daily_stats_id = db.Column(db.Integer, db.ForeignKey('closer_daily_stats.id'), nullable=False)
+    daily_stats_id = db.Column(db.Integer, db.ForeignKey('closer_daily_stats.id'), nullable=True) # Opcional si es setter
+    setter_stats_id = db.Column(db.Integer, db.ForeignKey('setter_daily_stats.id'), nullable=True) # Nuevo vínculo para setter
     question_id = db.Column(db.Integer, db.ForeignKey('daily_report_questions.id'), nullable=False)
     answer = db.Column(db.Text)
     
     question = db.relationship('DailyReportQuestion')
     daily_stats = db.relationship('CloserDailyStats', backref=db.backref('answers', lazy='dynamic'))
+    setter_stats = db.relationship('SetterDailyStats', backref=db.backref('answers', lazy='dynamic'))
+
+class SetterDailyStats(db.Model):
+    __tablename__ = 'setter_daily_stats'
+    id = db.Column(db.Integer, primary_key=True)
+    setter_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    
+    inbound_leads = db.Column(db.Integer, default=0) # Entrantes
+    openings = db.Column(db.Integer, default=0) # Aperturas
+    not_lead = db.Column(db.Integer, default=0) # No Lead
+    new_offers = db.Column(db.Integer, default=0) # New_offer
+    links_sent = db.Column(db.Integer, default=0) # Links
+    appointments_booked = db.Column(db.Integer, default=0) # Agendas
+    follow_ups = db.Column(db.Integer, default=0) # Seguimientos
+    
+    setter = db.relationship('User', backref=db.backref('setter_daily_stats', lazy='dynamic'))
+    __table_args__ = (db.UniqueConstraint('setter_id', 'date', name='_setter_date_uc'),)
 
 class CloserDailyStats(db.Model):
     __tablename__ = 'closer_daily_stats'
