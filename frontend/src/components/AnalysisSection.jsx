@@ -28,14 +28,7 @@ ChartJS.register(
 const AnalysisSection = ({ data, loading, period, onPeriodChange }) => {
     // State lifted to parent. 
 
-    const filters = [
-        { label: '7D', value: 'last_7_days' },
-        { label: '14D', value: 'last_14_days' },
-        { label: '3S', value: 'last_3_weeks' },
-        { label: '1M', value: 'last_1_month' },
-        { label: '3M', value: 'last_3_months' },
-        { label: '6M', value: 'last_6_months' },
-    ];
+
 
     // Gradient creation helper
     const createGradient = (ctx, area) => {
@@ -154,25 +147,6 @@ const AnalysisSection = ({ data, loading, period, onPeriodChange }) => {
         <Card variant="surface" className="flex flex-col h-[400px] border border-base/50 bg-surface/50 backdrop-blur-sm shadow-glass" padding="p-0">
             <div className="flex flex-wrap items-center justify-between px-6 py-4 border-b border-base/50 gap-4">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-white">Análisis de Ingresos</h3>
-
-                {/* Neon Tabs */}
-                <div className="flex bg-black/40 rounded-lg p-1 gap-1 overflow-x-auto custom-scrollbar">
-                    {filters.map(filter => (
-                        <button
-                            key={filter.value}
-                            onClick={() => onPeriodChange(filter.value)}
-                            className={`relative px-3 py-1 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all duration-300 min-w-[32px] ${period === filter.value
-                                ? 'text-white'
-                                : 'text-muted hover:text-white'
-                                }`}
-                        >
-                            {period === filter.value && (
-                                <span className="absolute inset-0 bg-primary/20 rounded-md border border-primary/20 shadow-[0_0_10px_rgba(157,78,221,0.3)]"></span>
-                            )}
-                            <span className="relative z-10">{filter.label}</span>
-                        </button>
-                    ))}
-                </div>
             </div>
 
             <div className="flex-1 p-6 min-h-0 relative">

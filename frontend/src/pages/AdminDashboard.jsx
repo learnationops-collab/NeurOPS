@@ -8,7 +8,12 @@ import StatsCard from '../components/StatsCard';
 import AnalysisSection from '../components/AnalysisSection';
 import Counter from '../components/ui/Counter';
 
+import { useAuth } from '../contexts/AuthContext';
+
+// ... imports
+
 const AdminDashboard = () => {
+  const { user } = useAuth();
   const [kpiData, setKpiData] = useState(null);
   const [chartsData, setChartsData] = useState(null);
 
@@ -17,14 +22,31 @@ const AdminDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // Centralized state for all filters
-  const [filters, setFilters] = useState({
-    period: 'last_3_months',
-    closer_ids: [],
-    program_ids: [],
-    start_date: '',
-    end_date: ''
+  // Centralized state for all filters with persistence
+  const [filters, setFilters] = useState(() => {
+    const saved = localStorage.getItem(`dashboard_filters_${user?.id}`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error parsing saved filters", e);
+      }
+    }
+    return {
+      period: 'this_month',
+      closer_ids: [],
+      program_ids: [],
+      start_date: '',
+      end_date: ''
+    };
   });
+
+  // Save filters persistence
+  useEffect(() => {
+    if (user?.id) {
+      localStorage.setItem(`dashboard_filters_${user.id}`, JSON.stringify(filters));
+    }
+  }, [filters, user?.id]);
 
   useEffect(() => {
     fetchAllData();
@@ -107,6 +129,29 @@ const AdminDashboard = () => {
           >
             Gasto
           </Button>
+
+          {/* Period Filters */}
+          <div className="flex bg-surface/50 backdrop-blur-sm rounded-2xl p-1 gap-1 overflow-x-auto custom-scrollbar items-center border border-base/50">
+            {[
+              { label: '7D', value: 'last_7_days' },
+              { label: '14D', value: 'last_14_days' },
+              { label: '1M', value: 'last_1_month' },
+              { label: '3M', value: 'last_3_months' },
+              { label: 'Este Mes', value: 'this_month' },
+              { label: 'Todo', value: 'all_time' },
+            ].map(filter => (
+              <button
+                key={filter.value}
+                onClick={() => handlePeriodChange(filter.value)}
+                className={`relative px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all duration-300 whitespace-nowrap ${filters.period === filter.value
+                  ? 'bg-primary text-white shadow-glow'
+                  : 'text-muted hover:text-white hover:bg-white/5'
+                  }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
 
           {/* Optimized Filter Button */}
           <button
