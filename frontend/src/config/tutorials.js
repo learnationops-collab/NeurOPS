@@ -45,5 +45,40 @@ export const TUTORIALS = {
                 placement: 'bottom'
             }
         ]
+    },
+    'admin-dashboard-v3': {
+        role: 'admin',
+        steps: [
+            {
+                target: '#dashboard-header-title',
+                title: 'Nuevo Dashboard',
+                content: '¡Bienvenido! Hemos renovado completamente el tablero para darte más poder de análisis.',
+                placement: 'bottom'
+            },
+            {
+                target: '#dashboard-header-filters',
+                title: 'Filtros Rápidos',
+                content: 'Accede rápidamente a los periodos más comunes o usa "Filtros" para opciones avanzadas. Tu selección se guarda automáticamente.',
+                placement: 'bottom'
+            },
+            {
+                target: '#dashboard-tabs',
+                title: 'Navegación por Pestañas',
+                content: 'Separamos Ventas de Marketing. Ahora tienes vistas dedicadas para cada área del negocio.',
+                placement: 'bottom'
+            },
+            {
+                target: '#revenue-chart-card',
+                title: 'Explorador de Ventas',
+                content: 'El corazón del nuevo dashboard. Un gráfico totalmente interactivo y personalizable.',
+                placement: 'top'
+            },
+            {
+                target: '#revenue-chart-controls',
+                title: 'Personaliza tu Vista',
+                content: 'Alterna entre Ingresos ($) y Cantidad (#), cambia la agrupación (General, Closer, etc.) y la granularidad. ¡Tú tienes el control!',
+                placement: 'bottom'
+            }
+        ]
     }
 };

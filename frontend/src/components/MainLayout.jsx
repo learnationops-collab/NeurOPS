@@ -190,7 +190,7 @@ const MainLayout = ({ children }) => {
                 </header>
 
                 {/* Page Content */}
-                <div className="flex-1 overflow-y-auto scroll-smooth">
+                <div id="app-main-scroll" className="flex-1 overflow-y-auto scroll-smooth">
                     <div className="min-h-full">
                         {children}
                     </div>

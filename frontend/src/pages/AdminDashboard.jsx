@@ -118,7 +118,7 @@ const AdminDashboard = () => {
   return (
     <div className="p-8 max-w-[1600px] mx-auto space-y-12 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-base/50 pb-8">
-        <div className="space-y-1">
+        <div className="space-y-1" id="dashboard-header-title">
           <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-lg">Panel Principal</h1>
           <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Vista General del Negocio</p>
         </div>
@@ -133,7 +133,7 @@ const AdminDashboard = () => {
           </Button>
 
           {/* Period Filters */}
-          <div className="flex bg-surface/50 backdrop-blur-sm rounded-2xl p-1 gap-1 overflow-x-auto custom-scrollbar items-center border border-base/50">
+          <div id="dashboard-header-filters" className="flex bg-surface/50 backdrop-blur-sm rounded-2xl p-1 gap-1 overflow-x-auto custom-scrollbar items-center border border-base/50">
             {[
               { label: '7D', value: 'last_7_days' },
               { label: '14D', value: 'last_14_days' },
@@ -235,7 +235,7 @@ const AdminDashboard = () => {
       {/* Analysis Graphic Section */}
       <div className="space-y-6">
         {/* Tabs for Graphs */}
-        <div className="flex bg-slate-900/40 p-1.5 rounded-[2rem] border border-slate-800 w-fit">
+        <div id="dashboard-tabs" className="flex bg-slate-900/40 p-1.5 rounded-[2rem] border border-slate-800 w-fit">
           <button
             onClick={() => setActiveGraphTab('sales')}
             className={`px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeGraphTab === 'sales'

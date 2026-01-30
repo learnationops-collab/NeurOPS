@@ -155,9 +155,9 @@ const RevenueChart = ({ filters }) => {
     };
 
     return (
-        <Card variant="surface" className="flex flex-col h-[500px] border border-base/50 bg-surface/50 backdrop-blur-sm shadow-glass" padding="p-0">
+        <Card id="revenue-chart-card" variant="surface" className="flex flex-col h-[500px] border border-base/50 bg-surface/50 backdrop-blur-sm shadow-glass" padding="p-0">
             {/* Header: Controls */}
-            <div className="flex flex-col gap-4 p-4 border-b border-base/30">
+            <div id="revenue-chart-controls" className="flex flex-col gap-4 p-4 border-b border-base/30">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <h3 className="text-sm font-bold uppercase tracking-widest text-white flex items-center gap-2">
                         <Activity className="text-primary" size={16} />
