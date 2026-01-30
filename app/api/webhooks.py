@@ -40,6 +40,13 @@ def receive_manychat_lead():
             lead.name = name
             lead.email = data.get('email', lead.email) # Solo actualiza si viene en el payload
             lead.instagram_username = data.get('instagram_username', lead.instagram_username)
+            if 'ad_source' in data:
+                lead.ad_source = data.get('ad_source')
+            if 'tags' in data:
+                lead.tags = data.get('tags')
+            if 'notes' in data:
+                lead.notes = data.get('notes')
+            
             status_code = 200
             action = "updated"
         else:
@@ -76,7 +83,10 @@ def receive_manychat_lead():
                 name=name,
                 email=data.get('email'),
                 instagram_username=data.get('instagram_username'),
-                stage_id=stage_id
+                stage_id=stage_id,
+                ad_source=data.get('ad_source'),
+                tags=data.get('tags', []),
+                notes=data.get('notes')
             )
             db.session.add(lead)
             status_code = 201

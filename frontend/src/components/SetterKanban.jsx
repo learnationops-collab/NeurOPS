@@ -64,6 +64,29 @@ const SetterKanban = () => {
                                     </div>
                                 )}
 
+                                {/* Etiquetas y Anuncio */}
+                                {(lead.tags?.length > 0 || lead.ad_source) && (
+                                    <div className="flex flex-wrap gap-1 mb-2 mt-2">
+                                        {lead.ad_source && (
+                                            <span className="px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-400 text-[10px] font-bold border border-purple-500/20 truncate max-w-[150px]">
+                                                📢 {lead.ad_source}
+                                            </span>
+                                        )}
+                                        {lead.tags?.map((tag, idx) => (
+                                            <span key={idx} className="px-1.5 py-0.5 rounded-md bg-slate-700 text-slate-300 text-[10px]">
+                                                #{tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Comentario/Nota Inicial */}
+                                {lead.notes && (
+                                    <div className="bg-slate-700/30 p-2 rounded-lg mb-2 border border-slate-700">
+                                        <p className="text-[10px] text-slate-300 italic line-clamp-2">" {lead.notes} "</p>
+                                    </div>
+                                )}
+
                                 <div className="mt-3 flex items-center justify-between border-t border-slate-700/50 pt-2">
                                     <span className="text-[10px] text-slate-500 font-mono">
                                         {new Date(lead.created_at).toLocaleDateString()}

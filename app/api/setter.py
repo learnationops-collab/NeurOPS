@@ -126,6 +126,9 @@ def get_leads():
         "email": l.email,
         "instagram_username": l.instagram_username,
         "stage_id": l.stage_id,
+        "ad_source": l.ad_source,
+        "tags": l.tags,
+        "notes": l.notes,
         "created_at": l.created_at.isoformat()
     } for l in leads]), 200
 

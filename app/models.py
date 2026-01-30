@@ -359,6 +359,9 @@ class Lead(db.Model):
     instagram_username = db.Column(db.String(64), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     stage_id = db.Column(db.Integer, db.ForeignKey('pipeline_stages.id'), nullable=True)
+    ad_source = db.Column(db.String(255), nullable=True)
+    tags = db.Column(db.JSON, default=[])
+    notes = db.Column(db.Text, nullable=True) # Para guardar el comentario inicial
 
     stage = db.relationship('PipelineStage', backref='leads')
 
