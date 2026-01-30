@@ -124,7 +124,7 @@ function App() {
           <Route
             path="/closer/leads"
             element={
-              <ProtectedRoute roles={['closer', 'setter']}>
+              <ProtectedRoute roles={['closer']}>
                 <MainLayout>
                   <CloserLeadsPage />
                 </MainLayout>
@@ -134,7 +134,7 @@ function App() {
           <Route
             path="/closer/settings"
             element={
-              <ProtectedRoute roles={['closer', 'setter']}>
+              <ProtectedRoute roles={['closer']}>
                 <MainLayout>
                   <CloserSettingsPage />
                 </MainLayout>

@@ -77,34 +77,30 @@ def get_stats_summary():
     from sqlalchemy import func
     from datetime import date, timedelta
     
-    print(f"DEBUG: Getting stats for user {current_user.username} (ID: {current_user.id})")
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
     
-    # Obtener todas las estadísticas históricas del setter actual
-    stats = db.session.query(
+    query = db.session.query(
         func.sum(SetterDailyStats.appointments_booked).label('total_agendas'),
-        func.sum(SetterDailyStats.openings).label('total_openings')
-    ).filter_by(setter_id=current_user.id).first()
+        func.sum(SetterDailyStats.openings).label('total_openings'),
+        func.sum(SetterDailyStats.inbound_leads).label('total_leads')
+    ).filter_by(setter_id=current_user.id)
     
-    print(f"DEBUG: Historical stats - Agendas: {stats.total_agendas}, Openings: {stats.total_openings}")
+    if start_date_str:
+        query = query.filter(SetterDailyStats.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
+    if end_date_str:
+        query = query.filter(SetterDailyStats.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+        
+    stats = query.first()
     
-    # Calcular conversión semanal (últimos 7 días)
-    seven_days_ago = date.today() - timedelta(days=7)
-    weekly_stats = db.session.query(
-        func.sum(SetterDailyStats.appointments_booked).label('agendas'),
-        func.sum(SetterDailyStats.openings).label('openings')
-    ).filter(
-        SetterDailyStats.setter_id == current_user.id,
-        SetterDailyStats.date >= seven_days_ago
-    ).first()
-    
-    print(f"DEBUG: Weekly stats - Agendas: {weekly_stats.agendas if weekly_stats else 'None'}, Openings: {weekly_stats.openings if weekly_stats else 'None'}")
-    
-    weekly_conversion = 0
-    if weekly_stats and weekly_stats.openings and weekly_stats.openings > 0:
-        weekly_conversion = round((weekly_stats.agendas / weekly_stats.openings) * 100, 1)
+    # Conversión en el periodo seleccionado o histórica
+    conversion = 0
+    if stats and stats.total_openings and stats.total_openings > 0:
+        conversion = round((stats.total_agendas / stats.total_openings) * 100, 1)
     
     return jsonify({
         "total_agendas": int(stats.total_agendas or 0),
         "total_openings": int(stats.total_openings or 0),
-        "weekly_conversion": weekly_conversion
+        "total_leads": int(stats.total_leads or 0),
+        "conversion": conversion
     }), 200

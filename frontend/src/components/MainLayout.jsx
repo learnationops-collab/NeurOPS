@@ -45,8 +45,6 @@ const MainLayout = ({ children }) => {
         { icon: Settings, label: 'Configuracion', path: '/admin/settings' },
     ] : (user.role === 'setter') ? [
         { icon: LayoutDashboard, label: 'Panel Setter', path: '/setter/dashboard' },
-        { icon: Database, label: 'Gestionar Leads', path: '/closer/leads' },
-        { icon: Settings, label: 'Configuracion', path: '/closer/settings' },
     ] : [
         { icon: LayoutDashboard, label: 'Resumen Diario', path: '/closer/dashboard' },
         { icon: Database, label: 'Gestionar Leads', path: '/closer/leads' },
