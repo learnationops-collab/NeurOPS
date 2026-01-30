@@ -93,7 +93,6 @@ const MainLayout = ({ children }) => {
             ]
         },
         { type: 'link', icon: Database, label: 'Bases de Datos', path: '/admin/database' },
-        { type: 'link', icon: Zap, label: 'Operaciones', path: '/admin/operations' },
         { type: 'link', icon: Settings, label: 'Configuracion', path: '/admin/settings' },
     ] : (user.role === 'setter') ? [
         { type: 'link', icon: LayoutDashboard, label: 'Panel Setter', path: '/setter/dashboard' },

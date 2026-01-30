@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Settings, Shield, User, LogOut, Bell, Key, Plus, Trash2, ClipboardCheck, Loader2, Check, X, Package, CreditCard, Palette, Layers } from 'lucide-react';
+import { Settings, Shield, User, LogOut, Bell, Key, Plus, Trash2, ClipboardCheck, Loader2, Check, X, Package, CreditCard, Palette, Layers, AlertTriangle } from 'lucide-react';
 import UsersPage from './UsersPage';
 import ReportQuestionsManager from '../components/ReportQuestionsManager';
 import ProgramsManager from '../components/ProgramsManager';
@@ -8,6 +8,7 @@ import FunnelsManager from '../components/FunnelsManager';
 import IntegrationsManager from '../components/IntegrationsManager';
 import GoogleCalendarSettings from '../components/GoogleCalendarSettings';
 import PaymentMethodsManager from '../components/PaymentMethodsManager';
+import OperationsPage from './OperationsPage';
 import Card from '../components/ui/Card';
 import ThemeSelector from '../components/ui/ThemeSelector';
 
@@ -23,6 +24,7 @@ const SettingsPage = () => {
         { id: 'questions', label: 'Preguntas de Reporte', icon: ClipboardCheck },
         { id: 'appearance', label: 'Apariencia', icon: Palette },
         { id: 'integrations', label: 'Integraciones', icon: Key },
+        { id: 'danger_zone', label: 'Operaciones', icon: AlertTriangle, danger: true },
     ];
 
     const handleLogout = async () => {
@@ -49,8 +51,8 @@ const SettingsPage = () => {
                             key={section.id}
                             onClick={() => setActiveSection(section.id)}
                             className={`w-full flex items-center gap-4 p-5 rounded-3xl transition-all ${activeSection === section.id
-                                ? 'bg-primary text-white shadow-xl shadow-primary/20'
-                                : 'text-muted hover:bg-surface-hover hover:text-base'
+                                ? (section.danger ? 'bg-rose-600 text-white shadow-xl shadow-rose-600/20' : 'bg-primary text-white shadow-xl shadow-primary/20')
+                                : (section.danger ? 'text-rose-500 hover:bg-rose-500/10' : 'text-muted hover:bg-surface-hover hover:text-base')
                                 }`}
                         >
                             <section.icon size={20} />
@@ -130,6 +132,21 @@ const SettingsPage = () => {
                                     <ThemeSelector />
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {activeSection === 'danger_zone' && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <div className="bg-rose-500/10 border border-rose-500/30 p-6 rounded-3xl flex items-center gap-4">
+                                <div className="p-3 bg-rose-500/20 rounded-xl text-rose-500">
+                                    <AlertTriangle size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-rose-500 uppercase tracking-tight">Zona de Peligro</h3>
+                                    <p className="text-xs text-rose-400 font-bold uppercase tracking-widest mt-1">Estas acciones afectan la base de datos irreversiblemente. Proceder con cautela.</p>
+                                </div>
+                            </div>
+                            <OperationsPage />
                         </div>
                     )}
                 </div>
