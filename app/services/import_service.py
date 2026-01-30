@@ -48,6 +48,23 @@ class ImportService:
             'entities': {
                 'closer_username': 'User'
             }
+        },
+        'setters': {
+            'required': ['date', 'Nombre'],
+            'fields': [
+                {'name': 'date', 'label': 'Fecha (DD/MM/YYYY)', 'required': True},
+                {'name': 'Nombre', 'label': 'Nombre del Setter', 'required': True},
+                {'name': 'Inbox', 'label': 'Inbox (Entrantes)'},
+                {'name': 'Opened', 'label': 'Opened (Aperturas)'},
+                {'name': 'NoLead', 'label': 'No Lead'},
+                {'name': 'Offer', 'label': 'Offer (Ofertas/Invitaciones)'},
+                {'name': 'Link', 'label': 'Link (Links Enviados)'},
+                {'name': 'Goal', 'label': 'Goal (Agendas)'},
+                {'name': 'AnFollows', 'label': 'Seguimientos'},
+            ],
+            'entities': {
+                'Nombre': 'User'
+            }
         }
     }
 
@@ -94,6 +111,8 @@ class ImportService:
                     exists = Program.query.filter_by(name=val_str).first()
                 elif field == 'payment_method_name':
                     exists = PaymentMethod.query.filter_by(name=val_str).first()
+                elif field == 'Nombre': # Para Setters
+                    exists = User.query.filter(User.username.ilike(val_str)).first()
                 else:
                     exists = None
                 
@@ -142,6 +161,8 @@ class ImportService:
                     ImportService._process_sale(row_data, resolutions, dry_run)
                 elif target == 'agendas':
                     ImportService._process_agenda(row_data, resolutions, dry_run)
+                elif target == 'setters':
+                    ImportService._process_setter_stats(row_data, resolutions, dry_run)
 
                 stats["success"] += 1
             except Exception as e:
@@ -361,3 +382,65 @@ class ImportService:
             origin=data.get('origin', 'import')
         )
         db.session.add(appt)
+
+    @staticmethod
+    def _process_setter_stats(data, resolutions, dry_run):
+        from app.models import SetterDailyStats
+        
+        # 1. Parse date
+        date_str = data.get('date')
+        if not date_str: raise Exception("Fecha faltante")
+        
+        try:
+            # Handle both DD/MM/YYYY and YYYY-MM-DD
+            report_date = pd.to_datetime(date_str, dayfirst=True).date()
+        except:
+            raise Exception(f"Formato de fecha inválido: {date_str}")
+
+        # 2. Resolve Setter (User)
+        setter_val = data.get('Nombre')
+        res_setter = resolutions.get('Nombre', {}).get(setter_val)
+        setter_name = res_setter if res_setter and res_setter != '__CREATE__' else setter_val
+        
+        if not setter_name: raise Exception("Falta nombre del setter")
+
+        setter = User.query.filter(User.username.ilike(setter_name)).first()
+        if not setter:
+            if res_setter == '__CREATE__':
+                setter = User(username=setter_name, role='setter')
+                setter.set_password('NeurOPS2025!')
+                db.session.add(setter)
+                db.session.flush()
+            else:
+                raise Exception(f"Setter '{setter_name}' no encontrado")
+
+        # 3. Create or Update Stats
+        stats = SetterDailyStats.query.filter_by(setter_id=setter.id, date=report_date).first()
+        
+        # Helper to convert to int safely
+        def to_i(val):
+            try: return int(float(str(val or 0).replace(',', '')))
+            except: return 0
+
+        if not stats:
+            stats = SetterDailyStats(
+                setter_id=setter.id,
+                date=report_date,
+                inbound_leads=to_i(data.get('Inbox')),
+                openings=to_i(data.get('Opened')),
+                not_lead=to_i(data.get('NoLead')),
+                new_offers=to_i(data.get('Offer')),
+                links_sent=to_i(data.get('Link')),
+                appointments_booked=to_i(data.get('Goal')),
+                follow_ups=to_i(data.get('AnFollows'))
+            )
+            db.session.add(stats)
+        else:
+            # Update existing
+            stats.inbound_leads = to_i(data.get('Inbox'))
+            stats.openings = to_i(data.get('Opened'))
+            stats.not_lead = to_i(data.get('NoLead'))
+            stats.new_offers = to_i(data.get('Offer'))
+            stats.links_sent = to_i(data.get('Link'))
+            stats.appointments_booked = to_i(data.get('Goal'))
+            stats.follow_ups = to_i(data.get('AnFollows'))

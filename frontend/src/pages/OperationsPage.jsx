@@ -61,11 +61,18 @@ const OperationsPage = () => {
                         Herramientas
                     </button>
                     <button
-                        onClick={() => setActiveTab('import')}
-                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'import' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-base'}`}
+                        onClick={() => setActiveTab('import_general')}
+                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'import_general' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-base'}`}
                     >
                         <FileUp size={14} />
-                        Importación
+                        Importación General
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('import_setters')}
+                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'import_setters' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-base'}`}
+                    >
+                        <Database size={14} />
+                        Importación Setters
                     </button>
                 </div>
             </header>
@@ -170,8 +177,10 @@ const OperationsPage = () => {
                         </Card>
                     </div>
                 </>
+            ) : activeTab === 'import_general' ? (
+                <AdvancedImportTool targetFilter={['leads', 'sales', 'agendas']} />
             ) : (
-                <AdvancedImportTool />
+                <AdvancedImportTool targetFilter={['setters']} />
             )}
         </div>
     );

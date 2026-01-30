@@ -18,7 +18,7 @@ import Button from './ui/Button';
 import Card from './ui/Card';
 import Badge from './ui/Badge';
 
-const AdvancedImportTool = () => {
+const AdvancedImportTool = ({ targetFilter = null }) => {
     const [step, setStep] = useState(1);
     const [target, setTarget] = useState('leads');
     const [file, setFile] = useState(null);
@@ -109,6 +109,14 @@ const AdvancedImportTool = () => {
         reader.readAsText(selectedFile);
     };
 
+    // Skip Step 1 if targetFilter allows only one target
+    useEffect(() => {
+        if (targetFilter && targetFilter.length === 1 && step === 1) {
+            setTarget(targetFilter[0]);
+            setStep(2);
+        }
+    }, [targetFilter, step]);
+
     const handleValidate = async () => {
         setLoading(true);
         const formData = new FormData();
@@ -165,51 +173,74 @@ const AdvancedImportTool = () => {
             case 1:
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 animate-in slide-in-from-bottom-4 duration-500">
-                        <Card
-                            variant="surface"
-                            className={`p-10 cursor-pointer border-2 transition-all group ${target === 'leads' ? 'border-primary bg-primary/5 shadow-xl shadow-primary/10' : 'border-base hover:border-primary/30'}`}
-                            onClick={() => { setTarget('leads'); setStep(2); }}
-                        >
-                            <div className="flex flex-col items-center text-center space-y-6">
-                                <div className={`w-20 h-20 rounded-3xl flex items-center justify-center transition-all ${target === 'leads' ? 'bg-primary text-white scale-110' : 'bg-surface text-muted group-hover:text-primary'}`}>
-                                    <Database size={40} />
+                        {(!targetFilter || targetFilter.includes('leads')) && (
+                            <Card
+                                variant="surface"
+                                className={`p-10 cursor-pointer border-2 transition-all group ${target === 'leads' ? 'border-primary bg-primary/5 shadow-xl shadow-primary/10' : 'border-base hover:border-primary/30'}`}
+                                onClick={() => { setTarget('leads'); setStep(2); }}
+                            >
+                                <div className="flex flex-col items-center text-center space-y-6">
+                                    <div className={`w-20 h-20 rounded-3xl flex items-center justify-center transition-all ${target === 'leads' ? 'bg-primary text-white scale-110' : 'bg-surface text-muted group-hover:text-primary'}`}>
+                                        <Database size={40} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black italic uppercase tracking-tighter">Leads & Clientes</h3>
+                                        <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-2 leading-relaxed">Importa prospectos masivamente con detección de duplicados</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Leads & Clientes</h3>
-                                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-2 leading-relaxed">Importa prospectos masivamente con detección de duplicados</p>
+                            </Card>
+                        )}
+                        {(!targetFilter || targetFilter.includes('sales')) && (
+                            <Card
+                                variant="surface"
+                                className={`p-10 cursor-pointer border-2 transition-all group ${target === 'sales' ? 'border-primary bg-primary/5 shadow-xl shadow-primary/10' : 'border-base hover:border-primary/30'}`}
+                                onClick={() => { setTarget('sales'); setStep(2); }}
+                            >
+                                <div className="flex flex-col items-center text-center space-y-6">
+                                    <div className={`w-20 h-20 rounded-3xl flex items-center justify-center transition-all ${target === 'sales' ? 'bg-primary text-white scale-110' : 'bg-surface text-muted group-hover:text-primary'}`}>
+                                        <CheckCircle2 size={40} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black italic uppercase tracking-tighter">Ventas (Enrolls)</h3>
+                                        <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-2 leading-relaxed">Carga cierres y pagos vinculados a programas y closers</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
-                        <Card
-                            variant="surface"
-                            className={`p-10 cursor-pointer border-2 transition-all group ${target === 'sales' ? 'border-primary bg-primary/5 shadow-xl shadow-primary/10' : 'border-base hover:border-primary/30'}`}
-                            onClick={() => { setTarget('sales'); setStep(2); }}
-                        >
-                            <div className="flex flex-col items-center text-center space-y-6">
-                                <div className={`w-20 h-20 rounded-3xl flex items-center justify-center transition-all ${target === 'sales' ? 'bg-primary text-white scale-110' : 'bg-surface text-muted group-hover:text-primary'}`}>
-                                    <CheckCircle2 size={40} />
+                            </Card>
+                        )}
+                        {(!targetFilter || targetFilter.includes('agendas')) && (
+                            <Card
+                                variant="surface"
+                                className={`p-10 cursor-pointer border-2 transition-all group ${target === 'agendas' ? 'border-primary bg-primary/5 shadow-xl shadow-primary/10' : 'border-base hover:border-primary/30'}`}
+                                onClick={() => { setTarget('agendas'); setStep(2); }}
+                            >
+                                <div className="flex flex-col items-center text-center space-y-6">
+                                    <div className={`w-20 h-20 rounded-3xl flex items-center justify-center transition-all ${target === 'agendas' ? 'bg-primary text-white scale-110' : 'bg-surface text-muted group-hover:text-primary'}`}>
+                                        <LinkIcon size={40} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black italic uppercase tracking-tighter">Agendas (Appts)</h3>
+                                        <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-2 leading-relaxed">Sincroniza citas históricas o futuras con estados y closers</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Ventas (Enrolls)</h3>
-                                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-2 leading-relaxed">Carga cierres y pagos vinculados a programas y closers</p>
+                            </Card>
+                        )}
+                        {(!targetFilter || targetFilter.includes('setters')) && (
+                            <Card
+                                variant="surface"
+                                className={`p-10 cursor-pointer border-2 transition-all group ${target === 'setters' ? 'border-primary bg-primary/5 shadow-xl shadow-primary/10' : 'border-base hover:border-primary/30'}`}
+                                onClick={() => { setTarget('setters'); setStep(2); }}
+                            >
+                                <div className="flex flex-col items-center text-center space-y-6">
+                                    <div className={`w-20 h-20 rounded-3xl flex items-center justify-center transition-all ${target === 'setters' ? 'bg-primary text-white scale-110' : 'bg-surface text-muted group-hover:text-primary'}`}>
+                                        <Database size={40} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black italic uppercase tracking-tighter">Reportes Setters</h3>
+                                        <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-2 leading-relaxed">Carga estadísticas históricas de Setters desde tracker CSV</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
-                        <Card
-                            variant="surface"
-                            className={`p-10 cursor-pointer border-2 transition-all group ${target === 'agendas' ? 'border-primary bg-primary/5 shadow-xl shadow-primary/10' : 'border-base hover:border-primary/30'}`}
-                            onClick={() => { setTarget('agendas'); setStep(2); }}
-                        >
-                            <div className="flex flex-col items-center text-center space-y-6">
-                                <div className={`w-20 h-20 rounded-3xl flex items-center justify-center transition-all ${target === 'agendas' ? 'bg-primary text-white scale-110' : 'bg-surface text-muted group-hover:text-primary'}`}>
-                                    <LinkIcon size={40} />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Agendas (Appts)</h3>
-                                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-2 leading-relaxed">Sincroniza citas históricas o futuras con estados y closers</p>
-                                </div>
-                            </div>
-                        </Card>
+                            </Card>
+                        )}
                     </div>
                 );
             case 2:
@@ -245,7 +276,9 @@ const AdvancedImportTool = () => {
                                 <FileUp size={300} />
                             </div>
                         </Card>
-                        <Button variant="ghost" className="mt-8 mx-auto" onClick={() => setStep(1)}>Cambiar Objetivo</Button>
+                        {(!targetFilter || targetFilter.length > 1) && (
+                            <Button variant="ghost" className="mt-8 mx-auto" onClick={() => setStep(1)}>Cambiar Objetivo</Button>
+                        )}
                     </div>
                 );
             case 3:
@@ -368,7 +401,8 @@ const AdvancedImportTool = () => {
                                     <h4 className="text-xs font-black uppercase tracking-widest text-base">
                                         {field === 'closer_username' ? 'Closer' :
                                             field === 'program_name' ? 'Programa' :
-                                                field === 'payment_method_name' ? 'Método de Pago' : field} No Identificados
+                                                field === 'payment_method_name' ? 'Método de Pago' :
+                                                    field === 'Nombre' ? 'Setter' : field} No Identificados
                                     </h4>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -388,6 +422,9 @@ const AdvancedImportTool = () => {
                                                 <option value="">Mapear a...</option>
                                                 <option value="__CREATE__" className="text-primary font-black">✨ Crear como nuevo</option>
                                                 {field === 'closer_username' && systemUsers.map(u => (
+                                                    <option key={u.id} value={u.username}>{u.username}</option>
+                                                ))}
+                                                {field === 'Nombre' && systemUsers.map(u => (
                                                     <option key={u.id} value={u.username}>{u.username}</option>
                                                 ))}
                                                 {field === 'program_name' && systemPrograms.map(p => (
