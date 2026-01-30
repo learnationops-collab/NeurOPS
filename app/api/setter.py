@@ -74,9 +74,37 @@ def submit_daily_report():
 @login_required
 @role_required(ROLE_SETTER)
 def get_stats_summary():
-    # Placeholder para estadísticas individuales del setter que se mostrarán en su dashboard
+    from sqlalchemy import func
+    from datetime import date, timedelta
+    
+    print(f"DEBUG: Getting stats for user {current_user.username} (ID: {current_user.id})")
+    
+    # Obtener todas las estadísticas históricas del setter actual
+    stats = db.session.query(
+        func.sum(SetterDailyStats.appointments_booked).label('total_agendas'),
+        func.sum(SetterDailyStats.openings).label('total_openings')
+    ).filter_by(setter_id=current_user.id).first()
+    
+    print(f"DEBUG: Historical stats - Agendas: {stats.total_agendas}, Openings: {stats.total_openings}")
+    
+    # Calcular conversión semanal (últimos 7 días)
+    seven_days_ago = date.today() - timedelta(days=7)
+    weekly_stats = db.session.query(
+        func.sum(SetterDailyStats.appointments_booked).label('agendas'),
+        func.sum(SetterDailyStats.openings).label('openings')
+    ).filter(
+        SetterDailyStats.setter_id == current_user.id,
+        SetterDailyStats.date >= seven_days_ago
+    ).first()
+    
+    print(f"DEBUG: Weekly stats - Agendas: {weekly_stats.agendas if weekly_stats else 'None'}, Openings: {weekly_stats.openings if weekly_stats else 'None'}")
+    
+    weekly_conversion = 0
+    if weekly_stats and weekly_stats.openings and weekly_stats.openings > 0:
+        weekly_conversion = round((weekly_stats.agendas / weekly_stats.openings) * 100, 1)
+    
     return jsonify({
-        "total_agendas": 0,
-        "total_openings": 0,
-        "weekly_conversion": 0
+        "total_agendas": int(stats.total_agendas or 0),
+        "total_openings": int(stats.total_openings or 0),
+        "weekly_conversion": weekly_conversion
     }), 200

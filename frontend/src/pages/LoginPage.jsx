@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../services/authService';
-import { Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/ui/Button';
 
 const LoginPage = () => {
@@ -11,23 +11,20 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      const data = await authService.login(username, password);
-      // Store user info for UI persistence
-      localStorage.setItem('user', JSON.stringify(data.user));
-      const { role } = data.user;
+      const user = await login(username, password);
 
-      if (role === 'admin') {
+      if (user.role === 'admin' || user.role === 'operator') {
         navigate('/admin/dashboard');
-      } else if (role === 'closer' || role === 'setter') {
-        navigate('/closer/dashboard');
+      } else if (user.role === 'setter') {
+        navigate('/setter/dashboard');
       } else {
-        // Fallback for other roles if they have access to the panel
         navigate('/closer/dashboard');
       }
     } catch (err) {

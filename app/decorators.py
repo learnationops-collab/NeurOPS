@@ -8,6 +8,9 @@ def role_required(role):
         @login_required
         def decorated_function(*args, **kwargs):
             if current_user.role != role:
+                from flask import request, jsonify
+                if request.path.startswith('/api/'):
+                    return jsonify({"error": f"Role {role} required"}), 403
                 flash('No tienes permiso para acceder a esta página.')
                 return redirect(url_for('main.index'))
             return f(*args, **kwargs)

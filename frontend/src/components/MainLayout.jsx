@@ -9,12 +9,10 @@ import {
     ChevronRight,
     LogOut,
     Bell,
-    DollarSign,
-    Shield,
     Zap
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import OperatorControls from './OperatorControls';
 
 const SidebarItem = ({ icon: Icon, label, path, active, collapsed }) => (
@@ -35,18 +33,9 @@ const SidebarItem = ({ icon: Icon, label, path, active, collapsed }) => (
 const MainLayout = ({ children }) => {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
-    const user = JSON.parse(localStorage.getItem('user') || '{"username": "Usuario", "role": "closer"}');
+    const { user, logout } = useAuth();
 
-
-    const handleLogout = async () => {
-        try {
-            await api.post('/auth/logout');
-            window.location.href = '/login';
-        } catch (err) {
-            console.error("Logout failed", err);
-            window.location.href = '/login';
-        }
-    };
+    if (!user) return null;
 
     const menuItems = (user.role === 'admin' || user.role === 'operator') ? [
         { icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard' },
@@ -119,7 +108,7 @@ const MainLayout = ({ children }) => {
                         </button>
 
                         <button
-                            onClick={handleLogout}
+                            onClick={logout}
                             className="text-muted hover:text-accent transition-colors p-2 hover:bg-accent/10 rounded-xl"
                             title="Cerrar Sesion"
                         >
