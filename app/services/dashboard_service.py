@@ -317,7 +317,7 @@ class DashboardService(BaseService):
             Payment.date >= start_dt, 
             Payment.date <= end_dt, 
             Payment.status == 'completed',
-            Payment.payment_type.in_(['Completo', 'Primer pago'])
+            Payment.payment_type.in_(['Completo', 'Pago Completo', 'Primer pago', 'Primer Pago'])
         )
         if closer_ids:
             initial_payments_q = initial_payments_q.join(Enrollment).filter(Enrollment.closer_id.in_(closer_ids))
