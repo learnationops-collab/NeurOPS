@@ -61,13 +61,20 @@ const SetterPerformanceReport = () => {
         }
     };
 
-    const StatusItem = ({ label, value, icon: Icon, colorClass }) => (
+    const StatusItem = ({ label, value, icon: Icon, colorClass, percentage }) => (
         <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:border-white/10 transition-all">
             <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${colorClass} bg-opacity-10`}>
                     <Icon className={colorClass.replace('bg-', 'text-')} size={16} />
                 </div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+                <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{label}</span>
+                    {percentage !== undefined && (
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">
+                            {percentage}% de efectividad
+                        </span>
+                    )}
+                </div>
             </div>
             <span className="text-lg font-black text-white">
                 <Counter value={value || 0} />
@@ -194,10 +201,34 @@ const SetterPerformanceReport = () => {
                         <BarChart3 size={16} /> Detalle de Actividad
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
-                        <StatusItem label="Ofertas Realizadas" value={performance?.stats?.new_offers} icon={CheckCircle} colorClass="bg-emerald-500" />
-                        <StatusItem label="Links Enviados" value={performance?.stats?.links_sent} icon={TrendingUp} colorClass="bg-blue-500" />
-                        <StatusItem label="No es Lead / Descartados" value={performance?.stats?.not_lead} icon={XCircle} colorClass="bg-rose-500" />
-                        <StatusItem label="Follow ups" value={performance?.stats?.follow_ups} icon={Clock} colorClass="bg-amber-500" />
+                        <StatusItem
+                            label="Ofertas Realizadas"
+                            value={performance?.stats?.new_offers}
+                            icon={CheckCircle}
+                            colorClass="bg-emerald-500"
+                            percentage={performance?.stats?.openings > 0 ? ((performance.stats.new_offers / performance.stats.openings) * 100).toFixed(1) : 0}
+                        />
+                        <StatusItem
+                            label="Links Enviados"
+                            value={performance?.stats?.links_sent}
+                            icon={TrendingUp}
+                            colorClass="bg-blue-500"
+                            percentage={performance?.stats?.openings > 0 ? ((performance.stats.links_sent / performance.stats.openings) * 100).toFixed(1) : 0}
+                        />
+                        <StatusItem
+                            label="No es Lead / Descartados"
+                            value={performance?.stats?.not_lead}
+                            icon={XCircle}
+                            colorClass="bg-rose-500"
+                            percentage={performance?.stats?.inbound_leads > 0 ? ((performance.stats.not_lead / performance.stats.inbound_leads) * 100).toFixed(1) : 0}
+                        />
+                        <StatusItem
+                            label="Follow ups"
+                            value={performance?.stats?.follow_ups}
+                            icon={Clock}
+                            colorClass="bg-amber-500"
+                            percentage={performance?.stats?.openings > 0 ? ((performance.stats.follow_ups / performance.stats.openings) * 100).toFixed(1) : 0}
+                        />
                     </div>
                 </div>
 
