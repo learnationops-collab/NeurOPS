@@ -298,10 +298,12 @@ def manage_users():
         db.session.commit()
         return jsonify({"message": "User created", "id": user.id}), 201
 
-    role_filter = request.args.getlist('role') or ['admin', 'closer', 'setter']
+    role_filter = request.args.getlist('role')
     show_deactivated = request.args.get('show_deactivated') == 'true'
     
-    users_query = User.query.filter(User.role.in_(role_filter))
+    users_query = User.query
+    if role_filter:
+        users_query = users_query.filter(User.role.in_(role_filter))
     
     if not show_deactivated:
         # Show active (True) and those with None (legacy compatibility)

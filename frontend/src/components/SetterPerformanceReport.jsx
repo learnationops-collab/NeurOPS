@@ -129,9 +129,11 @@ const SetterPerformanceReport = () => {
                     </div>
                     <div>
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Inbound Leads</p>
-                        <h2 className="text-4xl font-black text-white italic tracking-tighter">
-                            <Counter value={performance?.stats?.inbound_leads || 0} />
-                        </h2>
+                        <div className="flex items-baseline gap-2">
+                            <h2 className="text-4xl font-black text-white italic tracking-tighter">
+                                <Counter value={performance?.stats?.inbound_leads || 0} />
+                            </h2>
+                        </div>
                     </div>
                 </Card>
 
@@ -141,9 +143,14 @@ const SetterPerformanceReport = () => {
                     </div>
                     <div>
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Aperturas</p>
-                        <h2 className="text-4xl font-black text-white italic tracking-tighter">
-                            <Counter value={performance?.stats?.openings || 0} />
-                        </h2>
+                        <div className="flex items-baseline gap-2">
+                            <h2 className="text-4xl font-black text-white italic tracking-tighter">
+                                <Counter value={performance?.stats?.openings || 0} />
+                            </h2>
+                            <span className="text-[10px] font-black text-emerald-500/60">
+                                {performance?.stats?.inbound_leads > 0 ? ((performance.stats.openings / performance.stats.inbound_leads) * 100).toFixed(1) : 0}%
+                            </span>
+                        </div>
                     </div>
                 </Card>
 
@@ -153,9 +160,14 @@ const SetterPerformanceReport = () => {
                     </div>
                     <div>
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Agendas booked</p>
-                        <h2 className="text-4xl font-black text-white italic tracking-tighter">
-                            <Counter value={performance?.stats?.appointments_booked || 0} />
-                        </h2>
+                        <div className="flex items-baseline gap-2">
+                            <h2 className="text-4xl font-black text-white italic tracking-tighter">
+                                <Counter value={performance?.stats?.appointments_booked || 0} />
+                            </h2>
+                            <span className="text-[10px] font-black text-amber-500/60">
+                                {performance?.stats?.openings > 0 ? ((performance.stats.appointments_booked / performance.stats.openings) * 100).toFixed(1) : 0}%
+                            </span>
+                        </div>
                     </div>
                 </Card>
 
@@ -165,9 +177,12 @@ const SetterPerformanceReport = () => {
                     </div>
                     <div>
                         <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Conversión</p>
-                        <h2 className="text-4xl font-black text-white italic tracking-tighter">
-                            <Counter value={performance?.kpis?.conversion_rate || 0} suffix="%" />
-                        </h2>
+                        <div className="flex items-baseline gap-2">
+                            <h2 className="text-4xl font-black text-white italic tracking-tighter">
+                                <Counter value={performance?.kpis?.conversion_rate || 0} suffix="%" />
+                            </h2>
+                            <span className="text-[10px] font-black text-indigo-500/60">Global</span>
+                        </div>
                     </div>
                 </Card>
             </div>
