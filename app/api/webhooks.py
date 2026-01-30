@@ -44,10 +44,32 @@ def receive_manychat_lead():
             action = "updated"
         else:
             # Crear nuevo
-            # Buscar etapa 'Entrante'
-            from app.models import PipelineStage
-            entrante_stage = PipelineStage.query.filter_by(name='Entrante').first()
-            stage_id = entrante_stage.id if entrante_stage else None
+            # Crear nuevo
+            # Buscar o Crear etapa 'Entrante'
+            from app.models import PipelineStage, Pipeline
+            
+            stage_name = 'Entrante'
+            entrante_stage = PipelineStage.query.filter_by(name=stage_name).first()
+            
+            if not entrante_stage:
+                # Si no existe, verificar si existe el Pipeline
+                pipeline = Pipeline.query.filter_by(name='General').first()
+                if not pipeline:
+                    pipeline = Pipeline(name='General', is_active=True)
+                    db.session.add(pipeline)
+                    db.session.flush() # Para obtener ID
+                
+                # Crear la etapa
+                entrante_stage = PipelineStage(
+                    name=stage_name, 
+                    pipeline_id=pipeline.id, 
+                    order=0, 
+                    is_active=True
+                )
+                db.session.add(entrante_stage)
+                db.session.flush()
+                
+            stage_id = entrante_stage.id
 
             lead = Lead(
                 manychat_id=manychat_id,
