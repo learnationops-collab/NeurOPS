@@ -48,6 +48,15 @@ La aplicación usa un `ThemeContext`. Cualquier componente nuevo que necesite l�
 - **Lucide Icons**: Usa consistentemente los iconos de `lucide-react`.
 - **Responsive**: Todas las vistas deben ser `flex-col` en móvil y `flex-row` en desktop cuando sea apropiado.
 
+## 🛡️ 6. Estabilidad y Mantenimiento
+
+### 🛑 REGLA DE SEGURIDAD: Verificación de Referencias
+Durante refactorizaciones o limpiezas de código, **está estrictamente prohibido eliminar importaciones** sin verificar que el componente ya no se utiliza en el archivo.
+- Antes de entregar: Busca en el archivo todas las referencias a los componentes importados.
+- Si eliminas un bloque de código, verifica que no contenía imports necesarios para el resto del Layout.
+- **Doble Verificación en Layouts**: `MainLayout.jsx` y `App.jsx` son componentes críticos. Cualquier error aquí rompe toda la aplicación. Verifica siempre el renderizado tras editarlos.
+
 ---
 > [!TIP]
+
 > Si encuentras código antiguo que no sigue estas reglas, tu primera tarea debe ser refactorizarlo al sistema de diseño actual antes de añadir nuevas funcionalidades.

@@ -14,11 +14,13 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import OnboardingTour from './OnboardingTour';
 import OperatorControls from './OperatorControls';
 
-const SidebarItem = ({ icon: Icon, label, path, active, collapsed }) => (
+const SidebarItem = ({ icon: Icon, label, path, active, collapsed, id }) => (
     <Link
         to={path}
+        id={id}
         className={`flex items-center gap-4 p-4 mx-3 rounded-2xl transition-all duration-300 ${active
             ? 'bg-primary text-white shadow-lg shadow-primary/30 font-bold scale-[1.02]'
             : 'text-muted hover:bg-surface-hover hover:text-base'
@@ -31,11 +33,11 @@ const SidebarItem = ({ icon: Icon, label, path, active, collapsed }) => (
     </Link>
 );
 
-const SidebarDropdown = ({ icon: Icon, label, items, collapsed, currentPath }) => {
+const SidebarDropdown = ({ icon: Icon, label, items, collapsed, currentPath, id }) => {
     const [isOpen, setIsOpen] = useState(items.some(item => currentPath === item.path));
 
     return (
-        <div className="space-y-1">
+        <div className="space-y-1" id={id}>
             <button
                 onClick={() => !collapsed && setIsOpen(!isOpen)}
                 className={`w-full flex items-center justify-between p-4 px-7 text-muted hover:bg-surface-hover hover:text-base transition-all duration-300 rounded-2xl mx-1 ${items.some(item => currentPath === item.path) ? 'text-primary font-bold' : ''}`}
@@ -78,11 +80,12 @@ const MainLayout = ({ children }) => {
     if (!user) return null;
 
     const menuItems = (user.role === 'admin' || user.role === 'operator') ? [
-        { type: 'link', icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard' },
+        { type: 'link', icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard', id: 'sidebar-dashboard' },
         {
             type: 'dropdown',
             icon: BarChart3,
             label: 'Analisis Detallado',
+            id: 'sidebar-dropdown-analysis',
             items: [
                 { label: 'Finanzas', path: '/admin/analysis/finance' },
                 { label: 'Closers', path: '/admin/analysis/closers' },
@@ -105,6 +108,9 @@ const MainLayout = ({ children }) => {
         <div className="flex h-screen bg-main text-base overflow-hidden w-full selection:bg-primary/30">
             {/* Operator Controls Overlay */}
             <OperatorControls />
+
+            {/* Tutorial Overlay */}
+            <OnboardingTour />
 
             {/* Sidebar */}
             <aside className={`bg-surface border-r border-base flex flex-col transition-all duration-500 ease-in-out z-20 ${collapsed ? 'w-24' : 'w-72'}`}>

@@ -53,3 +53,13 @@ Dado que trabajamos con Python (Backend) y Javascript (Frontend), presta especia
 - **Variables**:
   - Python: `snake_case` (generalmente)
   - Javascript: `camelCase`
+
+## 6. Estabilidad y Verificación Post-Refactorización
+
+Para evitar errores críticos (pantallas en blanco, fallos de importación) tras realizar cambios:
+
+- **Doble Verificación de Imports**: Tras cualquier refactorización, revisa que todos los componentes y utilidades utilizados en el código sigan teniendo su línea de `import` correspondiente.
+- **No Eliminar en Bloque**: Evita borrar bloques grandes de código sin verificar si contienen importaciones o lógica compartida necesaria para otras partes del archivo.
+- **Verificación de Referencias**: Si se utiliza un componente en el JSX (e.g. `<OperatorControls />`), el agente debe confirmar que sigue definido o importado antes de reportar la tarea como terminada.
+- **Pruebas de Humo**: Siempre que se modifiquen archivos core (`MainLayout.jsx`, `App.jsx`, `__init__.py`), se debe intentar verificar que el punto de entrada principal sigue funcionando.
+

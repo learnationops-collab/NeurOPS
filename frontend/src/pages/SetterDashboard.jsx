@@ -112,6 +112,7 @@ const SetterDashboard = () => {
                     </div>
 
                     <button
+                        id="btn-new-report"
                         onClick={() => setIsReportOpen(true)}
                         className="bg-white hover:bg-slate-100 text-slate-950 px-8 py-4 rounded-[1.5rem] font-black uppercase text-xs tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl flex items-center gap-3"
                     >
@@ -122,7 +123,7 @@ const SetterDashboard = () => {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div id="stats-summary" className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-slate-900/40 p-10 rounded-[2.5rem] border border-slate-800 group hover:border-indigo-500/50 transition-all">
                     <p className="text-slate-500 font-black uppercase text-[10px] tracking-widest mb-4">Agendas del Periodo</p>
                     <div className="flex items-baseline gap-2">

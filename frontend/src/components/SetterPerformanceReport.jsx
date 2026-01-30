@@ -94,7 +94,7 @@ const SetterPerformanceReport = () => {
     return (
         <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500">
             {/* Filters Navigation */}
-            <div className="flex flex-wrap items-center justify-between gap-6 p-2 bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] sticky top-4 z-40">
+            <div id="filter-period" className="flex flex-wrap items-center justify-between gap-6 p-2 bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] sticky top-4 z-40">
                 <div className="flex items-center gap-2 p-1">
                     {['today', 'yesterday', 'last_7_days', 'this_month', 'last_month', 'all_time'].map((p) => (
                         <button

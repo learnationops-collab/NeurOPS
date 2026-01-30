@@ -139,3 +139,27 @@ body {
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.05) transparent;
 }
+
+/* Onboarding Tutorial Highlights */
+.tutorial-highlight {
+    position: relative !important;
+    z-index: 102 !important;
+    box-shadow: 0 0 0 10px rgba(157, 78, 221, 0.2), 0 0 40px rgba(157, 78, 221, 0.4) !important;
+    transition: all 500ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transform: scale(1.02) !important;
+    background-color: var(--color-surface) !important;
+}
+
+@keyframes pulse-highlight {
+    0% {
+        box-shadow: 0 0 0 0 rgba(157, 78, 221, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 15px rgba(157, 78, 221, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(157, 78, 221, 0);
+    }
+}

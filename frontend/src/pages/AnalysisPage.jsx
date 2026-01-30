@@ -176,6 +176,7 @@ const AnalysisPage = ({ defaultTab = 'finance' }) => {
                         Closers
                     </button>
                     <button
+                        id="tab-setters"
                         onClick={() => setActiveTab('setters')}
                         className={`px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'setters'
                             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
