@@ -49,6 +49,18 @@ const ReportQuestionsManager = () => {
         }
     };
 
+    const handleToggle = async (q) => {
+        try {
+            await api.post('/admin/db/questions', {
+                id: q.id,
+                is_active: !q.is_active
+            });
+            fetchQuestions();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     const startEdit = (q) => {
         setEditingId(q.id);
         setFormData({ text: q.text, type: q.type, order: q.order, is_active: q.is_active });
@@ -161,9 +173,15 @@ const ReportQuestionsManager = () => {
                                         </span>
                                     </td>
                                     <td className="px-8 py-6">
-                                        <span className={`text-[9px] font-black uppercase tracking-widest ${q.is_active ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                        <button
+                                            onClick={() => handleToggle(q)}
+                                            className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border transition-all ${q.is_active
+                                                ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/10 hover:bg-emerald-400/20'
+                                                : 'text-slate-500 border-slate-700 bg-slate-800 hover:bg-slate-700'
+                                                }`}
+                                        >
                                             {q.is_active ? 'Activa' : 'Inactiva'}
-                                        </span>
+                                        </button>
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
