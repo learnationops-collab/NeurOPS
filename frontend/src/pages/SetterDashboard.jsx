@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { LayoutDashboard, FileText, Kanban, BarChart3, PlusCircle, Calendar, ChevronDown } from 'lucide-react';
 import SetterReportModal from '../components/SetterReportModal';
+import SetterKanban from '../components/SetterKanban';
 
 const SetterDashboard = () => {
     const [stats, setStats] = useState({ total_agendas: 0, total_openings: 0, total_leads: 0, conversion: 0 });
@@ -154,25 +155,16 @@ const SetterDashboard = () => {
                 </div>
             </div>
 
-            {/* Kanban Placeholder Section */}
+            {/* Kanban Section */}
             <div className="space-y-6">
                 <h2 className="text-xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
                     <div className="p-2 bg-indigo-500/10 rounded-lg">
-                        {/* Placeholder for Kanban icon */}
-                        <div className="w-4 h-4 border-2 border-indigo-500 rounded-sm" />
+                        <Kanban size={24} className="text-indigo-500" />
                     </div>
-                    Embudo de Gestión (Próximamente)
+                    Embudo de Gestión
                 </h2>
 
-                <div className="bg-slate-900/20 border-2 border-dashed border-slate-800 rounded-[3rem] p-20 flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 rounded-full bg-slate-800/50 flex items-center justify-center">
-                        <PlusCircle size={32} className="text-slate-600" />
-                    </div>
-                    <div className="max-w-md">
-                        <h3 className="text-white font-black text-lg">El Kanban del Setter está en desarrollo</h3>
-                        <p className="text-slate-500 text-sm font-medium">Pronto podrás mover tus leads de etapa a etapa directamente desde esta vista para automatizar el seguimiento.</p>
-                    </div>
-                </div>
+                <SetterKanban />
             </div>
 
             <SetterReportModal
