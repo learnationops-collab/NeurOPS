@@ -1,24 +1,28 @@
 import { useState, useEffect } from 'react';
-import { Bar } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import api from '../services/api'; // Import api to fetch data locally
 import {
     Chart as ChartJS,
     CategoryScale,
     LinearScale,
-    BarElement,
+    PointElement,
+    LineElement,
     Title,
     Tooltip,
     Legend,
+    Filler
 } from 'chart.js';
 import Card from './ui/Card';
 
 ChartJS.register(
     CategoryScale,
     LinearScale,
-    BarElement,
+    PointElement,
+    LineElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    Filler
 );
 
 const AnalysisSection = ({ data, loading, period, onPeriodChange }) => {
@@ -112,9 +116,13 @@ const AnalysisSection = ({ data, loading, period, onPeriodChange }) => {
             },
         },
         elements: {
-            bar: {
-                borderRadius: 20, // Fully rounded top and bottom if possible, or high number
-                borderSkipped: false, // Round all corners
+            line: {
+                tension: 0 // Straight lines ("rectas")
+            },
+            point: {
+                radius: 4,
+                hitRadius: 10,
+                hoverRadius: 6,
             }
         }
     };
@@ -125,6 +133,7 @@ const AnalysisSection = ({ data, loading, period, onPeriodChange }) => {
             {
                 label: 'Cobrado',
                 data: data?.revenue_values || [],
+                fill: true, // Area chart
                 backgroundColor: (context) => {
                     const { ctx, chartArea } = context.chart;
                     if (!chartArea) {
@@ -132,10 +141,11 @@ const AnalysisSection = ({ data, loading, period, onPeriodChange }) => {
                     }
                     return createGradient(ctx, chartArea);
                 },
-                hoverBackgroundColor: '#a78bfa', // Violet-400
-                barThickness: 'flex',
-                maxBarThickness: 40, // Slightly wider for modern look
-                minBarLength: 5, // Always show a little bar even if 0 to show presence
+                borderColor: '#8b5cf6', // Violet-500
+                borderWidth: 2,
+                pointBackgroundColor: '#18181b', // Zinc-950 (dark background)
+                pointBorderColor: '#8b5cf6', // Violet-500
+                pointBorderWidth: 2,
             },
         ],
     };
@@ -171,7 +181,7 @@ const AnalysisSection = ({ data, loading, period, onPeriodChange }) => {
                         Cargando...
                     </div>
                 ) : (
-                    <Bar data={formattedData} options={options} />
+                    <Line data={formattedData} options={options} />
                 )}
             </div>
         </Card>
