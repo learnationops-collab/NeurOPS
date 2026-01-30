@@ -104,3 +104,46 @@ def get_stats_summary():
         "total_leads": int(stats.total_leads or 0),
         "conversion": conversion
     }), 200
+
+@bp.route('/leads', methods=['GET'])
+@login_required
+@role_required(ROLE_SETTER)
+def get_leads():
+    from app.models import Lead, PipelineStage
+    
+    stage_id = request.args.get('stage_id')
+    
+    query = Lead.query
+    
+    if stage_id:
+        query = query.filter_by(stage_id=stage_id)
+        
+    leads = query.order_by(Lead.created_at.desc()).all()
+    
+    return jsonify([{
+        "id": l.id,
+        "name": l.name,
+        "email": l.email,
+        "instagram_username": l.instagram_username,
+        "stage_id": l.stage_id,
+        "created_at": l.created_at.isoformat()
+    } for l in leads]), 200
+
+@bp.route('/stages', methods=['GET'])
+@login_required
+@role_required(ROLE_SETTER)
+def get_stages():
+    from app.models import Pipeline, PipelineStage
+    
+    # Asumimos que hay un pipeline "General" o tomamos el primero
+    pipeline = Pipeline.query.first()
+    if not pipeline:
+        return jsonify([]), 200
+        
+    stages = PipelineStage.query.filter_by(pipeline_id=pipeline.id, is_active=True).order_by(PipelineStage.order).all()
+    
+    return jsonify([{
+        "id": s.id, 
+        "name": s.name,
+        "order": s.order
+    } for s in stages]), 200

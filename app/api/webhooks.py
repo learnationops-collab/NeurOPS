@@ -44,11 +44,17 @@ def receive_manychat_lead():
             action = "updated"
         else:
             # Crear nuevo
+            # Buscar etapa 'Entrante'
+            from app.models import PipelineStage
+            entrante_stage = PipelineStage.query.filter_by(name='Entrante').first()
+            stage_id = entrante_stage.id if entrante_stage else None
+
             lead = Lead(
                 manychat_id=manychat_id,
                 name=name,
                 email=data.get('email'),
-                instagram_username=data.get('instagram_username')
+                instagram_username=data.get('instagram_username'),
+                stage_id=stage_id
             )
             db.session.add(lead)
             status_code = 201

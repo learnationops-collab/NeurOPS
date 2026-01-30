@@ -358,6 +358,9 @@ class Lead(db.Model):
     email = db.Column(db.String(120), nullable=True)
     instagram_username = db.Column(db.String(64), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    stage_id = db.Column(db.Integer, db.ForeignKey('pipeline_stages.id'), nullable=True)
+
+    stage = db.relationship('PipelineStage', backref='leads')
 
     def __repr__(self):
         return f'<Lead {self.name} ({self.manychat_id})>'
