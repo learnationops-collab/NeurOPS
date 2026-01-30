@@ -259,6 +259,20 @@ def get_closer_performance():
     
     return jsonify(data), 200
 
+@bp.route('/admin/analysis/setter-performance', methods=['GET'])
+@login_required
+@admin_required
+def get_setter_performance():
+    period = request.args.get('period', 'this_month')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    setter_id = request.args.get('setter_id', type=int)
+    
+    start, end = DashboardService._get_date_range(period, start_date, end_date)
+    data = DashboardService.get_detailed_setter_metrics(start, end, setter_id)
+    
+    return jsonify(data), 200
+
 @bp.route('/admin/users', methods=['GET', 'POST'])
 @login_required
 @admin_required

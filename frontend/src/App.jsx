@@ -60,11 +60,31 @@ function App() {
             }
           />
           <Route
-            path="/admin/analysis"
+            path="/admin/analysis/finance"
             element={
               <ProtectedRoute roles={['admin', 'operator']}>
                 <MainLayout>
-                  <AnalysisPage />
+                  <AnalysisPage defaultTab="finance" />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/analysis/closers"
+            element={
+              <ProtectedRoute roles={['admin', 'operator']}>
+                <MainLayout>
+                  <AnalysisPage defaultTab="closers" />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/analysis/setters"
+            element={
+              <ProtectedRoute roles={['admin', 'operator']}>
+                <MainLayout>
+                  <AnalysisPage defaultTab="setters" />
                 </MainLayout>
               </ProtectedRoute>
             }

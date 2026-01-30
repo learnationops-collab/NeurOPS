@@ -141,7 +141,7 @@ const CloserPerformanceReport = () => {
             {/* Filters Navigation */}
             <div className="flex flex-wrap items-center justify-between gap-6 p-2 bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] sticky top-4 z-40">
                 <div className="flex items-center gap-2 p-1">
-                    {['today', 'this_month', 'last_month', 'last_7_days', 'all_time'].map((p) => (
+                    {['today', 'yesterday', 'this_month', 'last_month', 'last_7_days', 'all_time'].map((p) => (
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
@@ -150,7 +150,7 @@ const CloserPerformanceReport = () => {
                                 : 'text-slate-500 hover:text-white hover:bg-slate-800'
                                 }`}
                         >
-                            {p === 'today' ? 'Hoy' : p === 'this_month' ? 'Este Mes' : p === 'last_month' ? 'Mes Pasado' : p === 'last_7_days' ? '7 Días' : 'Todo'}
+                            {p === 'today' ? 'Hoy' : p === 'yesterday' ? 'Ayer' : p === 'this_month' ? 'Este Mes' : p === 'last_month' ? 'Mes Pasado' : p === 'last_7_days' ? '7 Días' : 'Todo'}
                         </button>
                     ))}
                 </div>

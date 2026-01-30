@@ -17,14 +17,19 @@ import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import ExpensesManagerModal from '../components/ExpensesManagerModal';
 import CloserPerformanceReport from '../components/CloserPerformanceReport';
+import SetterPerformanceReport from '../components/SetterPerformanceReport';
 
-const AnalysisPage = () => {
-    const [activeTab, setActiveTab] = useState('finance');
+const AnalysisPage = ({ defaultTab = 'finance' }) => {
+    const [activeTab, setActiveTab] = useState(defaultTab);
     const [financeData, setFinanceData] = useState({ expenses: [], kpis: {} });
     const [salesData, setSalesData] = useState({ sales: [], pages: 1 });
     const [loading, setLoading] = useState(true);
     const [salesPage, setSalesPage] = useState(1);
     const [isExpensesModalOpen, setIsExpensesModalOpen] = useState(false);
+
+    useEffect(() => {
+        setActiveTab(defaultTab);
+    }, [defaultTab]);
 
     useEffect(() => {
         if (activeTab === 'finance') fetchAll();
@@ -170,6 +175,15 @@ const AnalysisPage = () => {
                     >
                         Closers
                     </button>
+                    <button
+                        onClick={() => setActiveTab('setters')}
+                        className={`px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'setters'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                            : 'text-slate-500 hover:text-white hover:bg-slate-800'
+                            }`}
+                    >
+                        Setters
+                    </button>
                 </div>
             </header>
 
@@ -186,8 +200,10 @@ const AnalysisPage = () => {
                         <p className="text-primary font-bold uppercase tracking-widest text-sm">Calculando...</p>
                     </div>
                 ) : renderFinanceTab()
-            ) : (
+            ) : activeTab === 'closers' ? (
                 <CloserPerformanceReport />
+            ) : (
+                <SetterPerformanceReport />
             )}
         </div>
     );

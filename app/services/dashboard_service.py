@@ -106,6 +106,45 @@ class DashboardService(BaseService):
             'kpis': kpis
         }
 
+    @staticmethod
+    def get_detailed_setter_metrics(start_date, end_date, setter_id=None):
+        from app.models import SetterDailyStats
+        if isinstance(start_date, date): start_date = datetime.combine(start_date, time.min)
+        if isinstance(end_date, date): end_date = datetime.combine(end_date, time.max)
+        
+        query = db.session.query(
+            func.sum(SetterDailyStats.inbound_leads).label('inbound_leads'),
+            func.sum(SetterDailyStats.openings).label('openings'),
+            func.sum(SetterDailyStats.not_lead).label('not_lead'),
+            func.sum(SetterDailyStats.new_offers).label('new_offers'),
+            func.sum(SetterDailyStats.links_sent).label('links_sent'),
+            func.sum(SetterDailyStats.appointments_booked).label('appointments_booked'),
+            func.sum(SetterDailyStats.follow_ups).label('follow_ups'),
+            func.count(SetterDailyStats.id).label('report_count')
+        ).filter(SetterDailyStats.date >= start_date.date(), SetterDailyStats.date <= end_date.date())
+        
+        if setter_id:
+            query = query.filter(SetterDailyStats.setter_id == setter_id)
+            
+        res = query.first()
+        
+        def safe_div(n, d): return (n / d * 100) if d > 0 else 0
+        
+        return {
+            'stats': {
+                'inbound_leads': int(res.inbound_leads or 0),
+                'openings': int(res.openings or 0),
+                'not_lead': int(res.not_lead or 0),
+                'new_offers': int(res.new_offers or 0),
+                'links_sent': int(res.links_sent or 0),
+                'appointments_booked': int(res.appointments_booked or 0),
+                'follow_ups': int(res.follow_ups or 0)
+            },
+            'kpis': {
+                'conversion_rate': safe_div(float(res.appointments_booked or 0), float(res.openings or 0))
+            },
+            'count': int(res.report_count or 0)
+        }
 
     @staticmethod
     def _get_date_range(period, start_date_arg, end_date_arg):
@@ -168,6 +207,9 @@ class DashboardService(BaseService):
         elif period == 'today':
             start_date = today
             end_date = today
+        elif period == 'yesterday':
+            start_date = today - timedelta(days=1)
+            end_date = today - timedelta(days=1)
         else:
             # this_month
             start_date = today.replace(day=1)

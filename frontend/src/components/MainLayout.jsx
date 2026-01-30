@@ -7,6 +7,7 @@ import {
     Settings,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
     LogOut,
     Bell,
     Zap
@@ -30,6 +31,45 @@ const SidebarItem = ({ icon: Icon, label, path, active, collapsed }) => (
     </Link>
 );
 
+const SidebarDropdown = ({ icon: Icon, label, items, collapsed, currentPath }) => {
+    const [isOpen, setIsOpen] = useState(items.some(item => currentPath === item.path));
+
+    return (
+        <div className="space-y-1">
+            <button
+                onClick={() => !collapsed && setIsOpen(!isOpen)}
+                className={`w-full flex items-center justify-between p-4 px-7 text-muted hover:bg-surface-hover hover:text-base transition-all duration-300 rounded-2xl mx-1 ${items.some(item => currentPath === item.path) ? 'text-primary font-bold' : ''}`}
+            >
+                <div className="flex items-center gap-4">
+                    <Icon size={22} />
+                    {!collapsed && <span className="whitespace-nowrap tracking-tight">{label}</span>}
+                </div>
+                {!collapsed && (
+                    <div className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                        <ChevronDown size={14} />
+                    </div>
+                )}
+            </button>
+            {isOpen && !collapsed && (
+                <div className="ml-12 space-y-1 pr-4 animate-in slide-in-from-top-2 duration-300">
+                    {items.map((item) => (
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            className={`block p-3 px-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${currentPath === item.path
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-slate-500 hover:bg-white/5 hover:text-white'
+                                }`}
+                        >
+                            {item.label}
+                        </Link>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const MainLayout = ({ children }) => {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
@@ -38,17 +78,26 @@ const MainLayout = ({ children }) => {
     if (!user) return null;
 
     const menuItems = (user.role === 'admin' || user.role === 'operator') ? [
-        { icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard' },
-        { icon: BarChart3, label: 'Analisis Detallado', path: '/admin/analysis' },
-        { icon: Database, label: 'Bases de Datos', path: '/admin/database' },
-        { icon: Zap, label: 'Operaciones', path: '/admin/operations' },
-        { icon: Settings, label: 'Configuracion', path: '/admin/settings' },
+        { type: 'link', icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard' },
+        {
+            type: 'dropdown',
+            icon: BarChart3,
+            label: 'Analisis Detallado',
+            items: [
+                { label: 'Finanzas', path: '/admin/analysis/finance' },
+                { label: 'Closers', path: '/admin/analysis/closers' },
+                { label: 'Setters', path: '/admin/analysis/setters' },
+            ]
+        },
+        { type: 'link', icon: Database, label: 'Bases de Datos', path: '/admin/database' },
+        { type: 'link', icon: Zap, label: 'Operaciones', path: '/admin/operations' },
+        { type: 'link', icon: Settings, label: 'Configuracion', path: '/admin/settings' },
     ] : (user.role === 'setter') ? [
-        { icon: LayoutDashboard, label: 'Panel Setter', path: '/setter/dashboard' },
+        { type: 'link', icon: LayoutDashboard, label: 'Panel Setter', path: '/setter/dashboard' },
     ] : [
-        { icon: LayoutDashboard, label: 'Resumen Diario', path: '/closer/dashboard' },
-        { icon: Database, label: 'Gestionar Leads', path: '/closer/leads' },
-        { icon: Settings, label: 'Configuracion', path: '/closer/settings' },
+        { type: 'link', icon: LayoutDashboard, label: 'Resumen Diario', path: '/closer/dashboard' },
+        { type: 'link', icon: Database, label: 'Gestionar Leads', path: '/closer/leads' },
+        { type: 'link', icon: Settings, label: 'Configuracion', path: '/closer/settings' },
     ];
 
 
@@ -70,14 +119,23 @@ const MainLayout = ({ children }) => {
                     )}
                 </div>
 
-                <nav className="flex-1 space-y-2 px-1">
-                    {menuItems.map((item) => (
-                        <SidebarItem
-                            key={item.path}
-                            {...item}
-                            active={location.pathname === item.path}
-                            collapsed={collapsed}
-                        />
+                <nav className="flex-1 space-y-2 px-1 custom-scrollbar overflow-y-auto overflow-x-hidden">
+                    {menuItems.map((item, idx) => (
+                        item.type === 'link' ? (
+                            <SidebarItem
+                                key={item.path}
+                                {...item}
+                                active={location.pathname === item.path}
+                                collapsed={collapsed}
+                            />
+                        ) : (
+                            <SidebarDropdown
+                                key={idx}
+                                {...item}
+                                collapsed={collapsed}
+                                currentPath={location.pathname}
+                            />
+                        )
                     ))}
                 </nav>
 
