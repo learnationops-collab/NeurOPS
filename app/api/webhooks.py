@@ -44,7 +44,9 @@ def receive_manychat_lead():
                 lead.ad_source = data.get('ad_source')
             if 'tags' in data:
                 lead.tags = data.get('tags')
-            if 'notes' in data:
+            if 'coment' in data:
+                lead.notes = data.get('coment')
+            elif 'notes' in data:
                 lead.notes = data.get('notes')
             
             status_code = 200
@@ -86,7 +88,7 @@ def receive_manychat_lead():
                 stage_id=stage_id,
                 ad_source=data.get('ad_source'),
                 tags=data.get('tags', []),
-                notes=data.get('notes')
+                notes=data.get('coment') or data.get('notes') # Mapeamos 'coment' a notes
             )
             db.session.add(lead)
             status_code = 201
