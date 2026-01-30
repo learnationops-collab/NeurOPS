@@ -74,10 +74,24 @@ const OnboardingTour = () => {
 
             // Function to handle scroll and positioning sequence
             const handleStepTransition = async () => {
-                const element = document.querySelector(step.target);
                 const container = document.getElementById('app-main-scroll');
 
-                if (!element || !container) return;
+                // Initial check and wait for element (handling loading states)
+                let element = document.querySelector(step.target);
+                let attempts = 0;
+                while (!element && attempts < 20) { // Wait up to 5s (20 * 250ms)
+                    await new Promise(r => setTimeout(r, 250));
+                    element = document.querySelector(step.target);
+                    attempts++;
+                }
+
+                // If still not found or no container, abort to prevent lock
+                if (!element || !container) {
+                    console.warn("Tutorial target not found, aborting step:", step.target);
+                    // Optional: could cancel tour here if it's the first step
+                    if (currentStep === 0) setActiveTutorial(null);
+                    return;
+                }
 
                 const placement = step.placement || 'bottom';
 
