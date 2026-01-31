@@ -51,7 +51,14 @@ const SetterKanban = () => {
                                 <div className="flex items-start justify-between mb-2">
                                     <h4 className="font-bold text-white text-sm line-clamp-1">{lead.name}</h4>
                                     {lead.instagram_username && (
-                                        <a href={`https://instagram.com/${lead.instagram_username}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-pink-500 transition-colors">
+                                        <a
+                                            href={`https://instagram.com/${lead.instagram_username}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="flex items-center gap-1 text-slate-400 hover:text-pink-500 transition-colors"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <span className="text-[10px] font-medium max-w-[80px] truncate">@{lead.instagram_username}</span>
                                             <Instagram size={14} />
                                         </a>
                                     )}
