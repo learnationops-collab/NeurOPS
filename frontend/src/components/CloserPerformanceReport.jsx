@@ -70,13 +70,23 @@ const CloserPerformanceReport = () => {
         }
     };
 
-    const StatusItem = ({ label, value, icon: Icon, colorClass }) => (
+    const getPercentage = (value, total) => {
+        if (!total || total === 0) return '0%';
+        return `${Math.round((value / total) * 100)}%`;
+    };
+
+    const StatusItem = ({ label, value, total, icon: Icon, colorClass }) => (
         <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group hover:border-white/10 transition-all">
             <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${colorClass} bg-opacity-10`}>
                     <Icon className={colorClass.replace('bg-', 'text-')} size={14} />
                 </div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+                    {total > 0 && (
+                        <span className="text-[10px] text-slate-500 font-medium">{getPercentage(value, total)} del total</span>
+                    )}
+                </div>
             </div>
             <span className="text-sm font-black text-white">
                 <Counter value={value || 0} />
@@ -84,7 +94,7 @@ const CloserPerformanceReport = () => {
         </div>
     );
 
-    const StatCard = ({ title, value, icon: Icon, gradient, subtext }) => (
+    const StatCard = ({ title, value, total, icon: Icon, gradient, subtext }) => (
         <Card variant="surface" className={`overflow-hidden relative group rounded-[2rem]`}>
             <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${gradient} opacity-[0.03] -mr-16 -mt-16 rounded-full group-hover:scale-125 transition-transform duration-700`} />
             <div className="relative space-y-4">
@@ -99,7 +109,11 @@ const CloserPerformanceReport = () => {
                         </h2>
                     </div>
                 </div>
-                {subtext && <p className="text-xs text-slate-400 text-right">{subtext}</p>}
+                {(subtext || total > 0) && (
+                    <p className="text-xs text-slate-400 text-right">
+                        {subtext || `${getPercentage(value, total)} del total`}
+                    </p>
+                )}
             </div>
         </Card>
     );
@@ -315,12 +329,14 @@ const CloserPerformanceReport = () => {
                             <StatCard
                                 title="Primeras Agendas"
                                 value={performance?.agendas?.first_agendas?.total}
+                                total={performance?.agendas?.total_agendas?.total}
                                 icon={Calendar}
                                 gradient="from-indigo-600 to-blue-500"
                             />
                             <StatCard
                                 title="Segundas Agendas"
                                 value={performance?.agendas?.second_agendas?.total}
+                                total={performance?.agendas?.total_agendas?.total}
                                 icon={Target}
                                 gradient="from-amber-600 to-orange-500"
                             />
@@ -329,11 +345,41 @@ const CloserPerformanceReport = () => {
                         <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-8">
                             <h3 className="text-xl font-black text-white italic tracking-tighter mb-6">Desglose de Estados</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                                <StatusItem label="Completadas" value={performance?.agendas?.total_agendas?.completed} icon={CheckCircle} colorClass="bg-emerald-500" />
-                                <StatusItem label="No Show" value={performance?.agendas?.total_agendas?.no_show} icon={XCircle} colorClass="bg-rose-500" />
-                                <StatusItem label="Canceladas" value={performance?.agendas?.total_agendas?.canceled} icon={XCircle} colorClass="bg-slate-500" />
-                                <StatusItem label="Reagendadas" value={performance?.agendas?.total_agendas?.rescheduled} icon={RotateCcw} colorClass="bg-amber-500" />
-                                <StatusItem label="Pendientes" value={performance?.agendas?.total_agendas?.pending} icon={Clock} colorClass="bg-blue-500" />
+                                <StatusItem
+                                    label="Completadas"
+                                    value={performance?.agendas?.total_agendas?.completed}
+                                    total={performance?.agendas?.total_agendas?.total}
+                                    icon={CheckCircle}
+                                    colorClass="bg-emerald-500"
+                                />
+                                <StatusItem
+                                    label="No Show"
+                                    value={performance?.agendas?.total_agendas?.no_show}
+                                    total={performance?.agendas?.total_agendas?.total}
+                                    icon={XCircle}
+                                    colorClass="bg-rose-500"
+                                />
+                                <StatusItem
+                                    label="Canceladas"
+                                    value={performance?.agendas?.total_agendas?.canceled}
+                                    total={performance?.agendas?.total_agendas?.total}
+                                    icon={XCircle}
+                                    colorClass="bg-slate-500"
+                                />
+                                <StatusItem
+                                    label="Reagendadas"
+                                    value={performance?.agendas?.total_agendas?.rescheduled}
+                                    total={performance?.agendas?.total_agendas?.total}
+                                    icon={RotateCcw}
+                                    colorClass="bg-amber-500"
+                                />
+                                <StatusItem
+                                    label="Pendientes"
+                                    value={performance?.agendas?.total_agendas?.pending}
+                                    total={performance?.agendas?.total_agendas?.total}
+                                    icon={Clock}
+                                    colorClass="bg-blue-500"
+                                />
                             </div>
                         </div>
 
