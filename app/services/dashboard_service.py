@@ -87,12 +87,24 @@ class DashboardService(BaseService):
         m = stats['total_agendas']
         total_shows = m['completed'] + m['no_show'] # Asistencias reales + faltas
         
+        # Financials
+        cash_q = db.session.query(func.sum(Payment.amount)).join(Enrollment).filter(
+            Payment.date >= start_date, 
+            Payment.date <= end_date,
+            Payment.status == 'completed'
+        )
+        if closer_id:
+            cash_q = cash_q.filter(Enrollment.closer_id == closer_id)
+            
+        cash_collected = cash_q.scalar() or 0.0
+        average_ticket = (cash_collected / sales_count) if sales_count > 0 else 0.0
+
         kpis = {
-            'closing_rate': safe_div(sales_count, m['completed']), # Ventas sobre presentaciones hechas (Alias: closing_rate_presentation)
+            'closing_rate': safe_div(sales_count, m['completed']), 
             'closing_rate_presentation': safe_div(sales_count, m['completed']),
-            'conversion_rate': safe_div(sales_count, m['total']), # Ventas sobre agendas totales (Alias: closing_rate_global)
+            'conversion_rate': safe_div(sales_count, m['total']), 
             'closing_rate_global': safe_div(sales_count, m['total']),
-            'attendance_rate': safe_div(m['completed'], (m['completed'] + m['no_show'] + m['canceled'])), # Asistencia (Alias: show_up_rate)
+            'attendance_rate': safe_div(m['completed'], (m['completed'] + m['no_show'] + m['canceled'])), 
             'show_up_rate': safe_div(m['completed'], (m['completed'] + m['no_show'] + m['canceled'])),
             'cancellation_rate': safe_div(m['canceled'], m['total']),
             'rescheduling_rate': safe_div(m['rescheduled'], m['total']),
@@ -103,6 +115,10 @@ class DashboardService(BaseService):
             'slots': {'total': slots_defined_count, 'available': slots_available, 'used': slots_used},
             'agendas': stats,
             'sales': sales_count,
+            'financials': {
+                'cash_collected': float(cash_collected),
+                'average_ticket': float(average_ticket)
+            },
             'kpis': kpis
         }
 

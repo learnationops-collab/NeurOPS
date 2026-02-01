@@ -12,7 +12,10 @@ import {
     Target,
     BarChart3,
     Search,
-    ChevronDown
+    ChevronDown,
+    LayoutDashboard,
+    DollarSign,
+    Wallet
 } from 'lucide-react';
 import Card from './ui/Card';
 import Counter from './ui/Counter';
@@ -25,8 +28,8 @@ const CloserPerformanceReport = () => {
 
     // Filtros
     const [selectedCloser, setSelectedCloser] = useState('');
-    const [period, setPeriod] = useState('today');
-    const [dateRange, setDateRange] = useState({ start: '', end: '' });
+    const [period, setPeriod] = useState('last_month');
+    const [activeTab, setActiveTab] = useState('general');
 
     useEffect(() => {
         fetchClosers();
@@ -34,7 +37,7 @@ const CloserPerformanceReport = () => {
 
     useEffect(() => {
         fetchPerformance();
-    }, [selectedCloser, period, dateRange]);
+    }, [selectedCloser, period]);
 
     const fetchClosers = async () => {
         try {
@@ -50,8 +53,6 @@ const CloserPerformanceReport = () => {
             setLoading(true);
             const params = {
                 period,
-                start_date: dateRange.start,
-                end_date: dateRange.end,
                 closer_id: selectedCloser || undefined
             };
             const res = await api.get('/admin/analysis/closer-performance', { params });
@@ -77,12 +78,10 @@ const CloserPerformanceReport = () => {
         </div>
     );
 
-    const StatCard = ({ title, data, icon: Icon, gradient }) => (
+    const StatCard = ({ title, value, icon: Icon, gradient, subtext }) => (
         <Card variant="surface" className={`overflow-hidden relative group rounded-[2rem]`}>
-            {/* Background Accent */}
             <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${gradient} opacity-[0.03] -mr-16 -mt-16 rounded-full group-hover:scale-125 transition-transform duration-700`} />
-
-            <div className="relative space-y-6">
+            <div className="relative space-y-4">
                 <div className="flex justify-between items-start">
                     <div className={`p-3 rounded-2xl bg-gradient-to-br ${gradient} shadow-lg shadow-black/20`}>
                         <Icon size={24} className="text-white" />
@@ -90,18 +89,11 @@ const CloserPerformanceReport = () => {
                     <div className="text-right">
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">{title}</p>
                         <h2 className="text-4xl font-black text-white italic tracking-tighter">
-                            <Counter value={data.total || 0} />
+                            <Counter value={value || 0} prefix={title.includes('Money') || title.includes('Ticket') ? '$' : ''} />
                         </h2>
                     </div>
                 </div>
-
-                <div className="grid grid-cols-1 gap-2">
-                    <StatusItem label="Completadas" value={data.completed} icon={CheckCircle} colorClass="bg-emerald-500" />
-                    <StatusItem label="Pendientes" value={data.pending} icon={Clock} colorClass="bg-indigo-500" />
-                    <StatusItem label="Reagendadas" value={data.rescheduled} icon={RotateCcw} colorClass="bg-amber-500" />
-                    <StatusItem label="No Show" value={data.no_show} icon={XCircle} colorClass="bg-rose-500" />
-                    <StatusItem label="Canceladas" value={data.canceled} icon={XCircle} colorClass="bg-slate-500" />
-                </div>
+                {subtext && <p className="text-xs text-slate-400 text-right">{subtext}</p>}
             </div>
         </Card>
     );
@@ -113,7 +105,7 @@ const CloserPerformanceReport = () => {
                     <Icon className={colorClass.replace('bg-', 'text-')} size={20} />
                 </div>
                 <span className={`text-[10px] font-black uppercase tracking-widest ${colorClass.replace('bg-', 'text-')}`}>
-                    Performance
+                    KPI
                 </span>
             </div>
             <div>
@@ -137,15 +129,15 @@ const CloserPerformanceReport = () => {
     }
 
     return (
-        <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500">
-            {/* Filters Navigation */}
-            <div className="flex flex-wrap items-center justify-between gap-6 p-2 bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] sticky top-4 z-40">
-                <div className="flex items-center gap-2 p-1">
+        <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
+            {/* Context Header with Filters */}
+            <div className="flex flex-col xl:flex-row gap-6 justify-between items-start xl:items-center p-2 bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] sticky top-4 z-40">
+                <div className="flex items-center gap-2 p-1 overflow-x-auto max-w-full">
                     {['today', 'yesterday', 'this_month', 'last_month', 'last_7_days', 'all_time'].map((p) => (
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
-                            className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${period === p
+                            className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${period === p
                                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                                 : 'text-slate-500 hover:text-white hover:bg-slate-800'
                                 }`}
@@ -155,8 +147,8 @@ const CloserPerformanceReport = () => {
                     ))}
                 </div>
 
-                <div className="flex items-center gap-4 pr-4">
-                    <div className="relative group min-w-[200px]">
+                <div className="flex items-center gap-4 px-4 w-full xl:w-auto">
+                    <div className="relative group w-full xl:w-[200px]">
                         <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-indigo-400 transition-colors" size={16} />
                         <select
                             value={selectedCloser}
@@ -173,87 +165,147 @@ const CloserPerformanceReport = () => {
                 </div>
             </div>
 
-            {/* Agendas Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <StatCard
-                    title="Agendas Totales"
-                    data={performance?.agendas?.total_agendas || {}}
-                    icon={PieChart}
-                    gradient="from-indigo-600 to-blue-500"
-                />
-                <StatCard
-                    title="Primeras Agendas"
-                    data={performance?.agendas?.first_agendas || {}}
-                    icon={Calendar}
-                    gradient="from-emerald-600 to-teal-500"
-                />
-                <StatCard
-                    title="Segundas Agendas"
-                    data={performance?.agendas?.second_agendas || {}}
-                    icon={Target}
-                    gradient="from-amber-600 to-orange-500"
-                />
+            {/* View Tabs */}
+            <div className="flex justify-center">
+                <div className="flex bg-slate-900/60 p-1.5 rounded-[2rem] border border-slate-800 backdrop-blur-sm">
+                    {[
+                        { id: 'general', label: 'General', icon: LayoutDashboard },
+                        { id: 'sales', label: 'Ventas', icon: DollarSign },
+                        { id: 'agendas', label: 'Agendas', icon: Calendar }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 px-8 py-3 rounded-[1.5rem] transition-all ${activeTab === tab.id
+                                ? 'bg-white text-slate-900 shadow-xl shadow-white/10'
+                                : 'text-slate-500 hover:text-white hover:bg-slate-800'
+                                }`}
+                        >
+                            <tab.icon size={16} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">{tab.label}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* KPIs & Conversion */}
+            {/* Content Areas */}
             <div className="space-y-6">
-                <div className="flex items-center gap-4 mb-2">
-                    <BarChart3 className="text-indigo-500" size={20} />
-                    <h3 className="text-lg font-black text-white italic tracking-tighter">KPIs de Conversión</h3>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-6">
-                    <PercentageCard
-                        label="% de Cierre"
-                        value={performance?.kpis?.closing_rate}
-                        icon={TrendingUp}
-                        colorClass="bg-emerald-500"
-                    />
-                    <PercentageCard
-                        label="% de Conversión"
-                        value={performance?.kpis?.conversion_rate}
-                        icon={Target}
-                        colorClass="bg-indigo-500"
-                    />
-                    <PercentageCard
-                        label="% de Asistencia"
-                        value={performance?.kpis?.attendance_rate}
-                        icon={Users}
-                        colorClass="bg-blue-500"
-                    />
-                    <PercentageCard
-                        label="% No Show"
-                        value={performance?.kpis?.no_show_rate}
-                        icon={XCircle}
-                        colorClass="bg-rose-500"
-                    />
-                    <PercentageCard
-                        label="% de Cancelación"
-                        value={performance?.kpis?.cancellation_rate}
-                        icon={XCircle}
-                        colorClass="bg-slate-500"
-                    />
-                    <PercentageCard
-                        label="% de Reagendamiento"
-                        value={performance?.kpis?.rescheduling_rate}
-                        icon={RotateCcw}
-                        colorClass="bg-amber-500"
-                    />
-                </div>
-            </div>
+                {activeTab === 'general' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {/* High Level Overview */}
+                        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-900/40">
+                            <div className="relative z-10">
+                                <p className="text-indigo-200 font-bold uppercase tracking-widest text-xs mb-2">Cash Collected</p>
+                                <h2 className="text-6xl font-black italic tracking-tighter mb-8">
+                                    <Counter value={performance?.financials?.cash_collected || 0} prefix="$" />
+                                </h2>
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex-1">
+                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Cierres</p>
+                                        <p className="text-2xl font-black"><Counter value={performance?.sales || 0} /></p>
+                                    </div>
+                                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex-1">
+                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Closing Rate</p>
+                                        <p className="text-2xl font-black"><Counter value={performance?.kpis?.closing_rate || 0} suffix="%" /></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <Wallet className="absolute -bottom-12 -right-12 text-white/5 rotate-12" size={300} />
+                        </div>
 
-            {/* Sales Summary Mini */}
-            <div className="flex items-center justify-center p-12 bg-indigo-600/5 border border-indigo-500/20 rounded-[3rem] relative overflow-hidden group">
-                <TrendingUp size={120} className="absolute -left-10 -bottom-10 text-indigo-500/10 -rotate-12 group-hover:scale-110 transition-transform duration-700" />
-                <div className="text-center space-y-2 relative">
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em]">Ventas Totales en el Periodo</p>
-                    <h2 className="text-7xl font-black text-white italic tracking-tighter">
-                        <Counter value={performance?.sales || 0} />
-                    </h2>
-                </div>
-                <div className="absolute top-8 right-12">
-                    <Badge variant="success" className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Confirmadas</Badge>
-                </div>
+                        <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-8 flex flex-col justify-center relative overflow-hidden">
+                            <div className="relative z-10 space-y-6">
+                                <div className="flex justify-between items-center">
+                                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Eficiencia de Agenda</p>
+                                    <Badge variant={performance?.kpis?.show_up_rate > 60 ? 'success' : 'warning'}>
+                                        {performance?.kpis?.show_up_rate > 60 ? 'Saludable' : 'Atención'}
+                                    </Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <PercentageCard label="Show Rate" value={performance?.kpis?.show_up_rate} icon={Users} colorClass="bg-blue-500" />
+                                    <PercentageCard label="Oferta" value={performance?.kpis?.offer_rate || 0} icon={Target} colorClass="bg-amber-500" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'sales' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <StatCard
+                                title="Cash Collected"
+                                value={performance?.financials?.cash_collected}
+                                icon={DollarSign}
+                                gradient="from-emerald-600 to-teal-500"
+                            />
+                            <StatCard
+                                title="Ticket Promedio"
+                                value={performance?.financials?.average_ticket}
+                                icon={TrendingUp}
+                                gradient="from-indigo-600 to-blue-500"
+                            />
+                            <StatCard
+                                title="Total Cierres"
+                                value={performance?.sales}
+                                icon={CheckCircle}
+                                gradient="from-violet-600 to-purple-500"
+                            />
+                        </div>
+
+                        <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-8">
+                            <h3 className="text-xl font-black text-white italic tracking-tighter mb-6">Detalle Financiero</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <PercentageCard label="% Cierre Global" value={performance?.kpis?.closing_rate_global} icon={Target} colorClass="bg-blue-500" />
+                                <PercentageCard label="% Cierre (Pres)" value={performance?.kpis?.closing_rate_presentation} icon={CheckCircle} colorClass="bg-emerald-500" />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'agendas' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <StatCard
+                                title="Agendas Totales"
+                                value={performance?.agendas?.total_agendas?.total}
+                                icon={PieChart}
+                                gradient="from-slate-700 to-slate-600"
+                            />
+                            <StatCard
+                                title="Primeras Agendas"
+                                value={performance?.agendas?.first_agendas?.total}
+                                icon={Calendar}
+                                gradient="from-indigo-600 to-blue-500"
+                            />
+                            <StatCard
+                                title="Segundas Agendas"
+                                value={performance?.agendas?.second_agendas?.total}
+                                icon={Target}
+                                gradient="from-amber-600 to-orange-500"
+                            />
+                        </div>
+
+                        <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-8">
+                            <h3 className="text-xl font-black text-white italic tracking-tighter mb-6">Desglose de Estados</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                                <StatusItem label="Completadas" value={performance?.agendas?.total_agendas?.completed} icon={CheckCircle} colorClass="bg-emerald-500" />
+                                <StatusItem label="No Show" value={performance?.agendas?.total_agendas?.no_show} icon={XCircle} colorClass="bg-rose-500" />
+                                <StatusItem label="Canceladas" value={performance?.agendas?.total_agendas?.canceled} icon={XCircle} colorClass="bg-slate-500" />
+                                <StatusItem label="Reagendadas" value={performance?.agendas?.total_agendas?.rescheduled} icon={RotateCcw} colorClass="bg-amber-500" />
+                                <StatusItem label="Pendientes" value={performance?.agendas?.total_agendas?.pending} icon={Clock} colorClass="bg-blue-500" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                            <PercentageCard label="Asistencia" value={performance?.kpis?.show_up_rate} icon={Users} colorClass="bg-blue-500" />
+                            <PercentageCard label="Cancelación" value={performance?.kpis?.cancellation_rate} icon={XCircle} colorClass="bg-slate-500" />
+                            <PercentageCard label="No Show" value={performance?.kpis?.no_show_rate} icon={XCircle} colorClass="bg-rose-500" />
+                            <PercentageCard label="Reagendamiento" value={performance?.kpis?.rescheduling_rate} icon={RotateCcw} colorClass="bg-amber-500" />
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
