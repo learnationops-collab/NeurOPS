@@ -15,7 +15,8 @@ import {
     ChevronDown,
     LayoutDashboard,
     DollarSign,
-    Wallet
+    Wallet,
+    X
 } from 'lucide-react';
 import Card from './ui/Card';
 import Counter from './ui/Counter';
@@ -27,8 +28,10 @@ const CloserPerformanceReport = () => {
     const [closers, setClosers] = useState([]);
 
     // Filtros
+    // Filtros
     const [selectedCloser, setSelectedCloser] = useState('');
     const [period, setPeriod] = useState('last_month');
+    const [customDates, setCustomDates] = useState({ start: '', end: '' });
     const [activeTab, setActiveTab] = useState('general');
 
     useEffect(() => {
@@ -36,8 +39,9 @@ const CloserPerformanceReport = () => {
     }, []);
 
     useEffect(() => {
+        if (period === 'custom' && (!customDates.start || !customDates.end)) return;
         fetchPerformance();
-    }, [selectedCloser, period]);
+    }, [selectedCloser, period, customDates]);
 
     const fetchClosers = async () => {
         try {
@@ -53,7 +57,9 @@ const CloserPerformanceReport = () => {
             setLoading(true);
             const params = {
                 period,
-                closer_id: selectedCloser || undefined
+                closer_id: selectedCloser || undefined,
+                start_date: period === 'custom' ? customDates.start : undefined,
+                end_date: period === 'custom' ? customDates.end : undefined
             };
             const res = await api.get('/admin/analysis/closer-performance', { params });
             setPerformance(res.data);
@@ -132,19 +138,52 @@ const CloserPerformanceReport = () => {
         <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
             {/* Context Header with Filters */}
             <div className="flex flex-col xl:flex-row gap-6 justify-between items-start xl:items-center p-2 bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] sticky top-4 z-40">
-                <div className="flex items-center gap-2 p-1 overflow-x-auto max-w-full">
-                    {['today', 'yesterday', 'this_month', 'last_month', 'last_7_days', 'all_time'].map((p) => (
-                        <button
-                            key={p}
-                            onClick={() => setPeriod(p)}
-                            className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${period === p
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                                : 'text-slate-500 hover:text-white hover:bg-slate-800'
-                                }`}
-                        >
-                            {p === 'today' ? 'Hoy' : p === 'yesterday' ? 'Ayer' : p === 'this_month' ? 'Este Mes' : p === 'last_month' ? 'Mes Pasado' : p === 'last_7_days' ? '7 Días' : 'Todo'}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-2 p-1 overflow-x-auto max-w-full transition-all duration-300">
+                    {period !== 'custom' ? (
+                        <>
+                            {['today', 'yesterday', 'this_month', 'last_month', 'last_7_days', 'all_time', 'custom'].map((p) => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPeriod(p)}
+                                    className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${period === p
+                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                                        : 'text-slate-500 hover:text-white hover:bg-slate-800'
+                                        }`}
+                                >
+                                    {p === 'today' ? 'Hoy' : p === 'yesterday' ? 'Ayer' : p === 'this_month' ? 'Este Mes' : p === 'last_month' ? 'Mes Pasado' : p === 'last_7_days' ? '7 Días' : p === 'all_time' ? 'Todo' : 'Personalizado'}
+                                </button>
+                            ))}
+                        </>
+                    ) : (
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-4 duration-300">
+                            <button
+                                onClick={() => setPeriod('last_month')}
+                                className="p-3 rounded-full hover:bg-slate-800 text-slate-500 hover:text-white transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+
+                            <div className="relative group">
+                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-indigo-400" size={14} />
+                                <input
+                                    type="date"
+                                    value={customDates.start}
+                                    onChange={(e) => setCustomDates(prev => ({ ...prev, start: e.target.value }))}
+                                    className="pl-9 pr-3 py-3 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-white text-xs font-bold uppercase tracking-wide outline-none focus:ring-2 focus:ring-indigo-500 hover:bg-slate-800 transition-all"
+                                />
+                            </div>
+                            <span className="text-slate-500 font-bold">-</span>
+                            <div className="relative group">
+                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-indigo-400" size={14} />
+                                <input
+                                    type="date"
+                                    value={customDates.end}
+                                    onChange={(e) => setCustomDates(prev => ({ ...prev, end: e.target.value }))}
+                                    className="pl-9 pr-3 py-3 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-white text-xs font-bold uppercase tracking-wide outline-none focus:ring-2 focus:ring-indigo-500 hover:bg-slate-800 transition-all"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-4 px-4 w-full xl:w-auto">
