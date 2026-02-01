@@ -11,7 +11,9 @@ import {
     LogOut,
     Bell,
     Zap,
-    DollarSign
+    DollarSign,
+    Megaphone,
+    Package
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -89,8 +91,9 @@ const MainLayout = ({ children }) => {
             label: 'Analisis Detallado',
             id: 'sidebar-dropdown-analysis',
             items: [
-                { label: 'Closers', path: '/admin/analysis/closers' },
-                { label: 'Setters', path: '/admin/analysis/setters' },
+                { label: 'Marketing', path: '/admin/analysis/marketing' },
+                { label: 'Ventas', path: '/admin/analysis/sales' },
+                { label: 'Fulfillment', path: '/admin/analysis/fulfillment' },
             ]
         },
         { type: 'link', icon: Database, label: 'Bases de Datos', path: '/admin/database' },

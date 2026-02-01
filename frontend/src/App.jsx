@@ -6,6 +6,7 @@ import AdminFinancePage from './pages/AdminFinancePage';
 import LoginPage from './pages/LoginPage';
 import EmergencyCreatePage from './pages/EmergencyCreatePage';
 import AnalysisPage from './pages/AnalysisPage';
+import ConstructionPage from './pages/ConstructionPage';
 import DatabasePage from './pages/DatabasePage';
 import SettingsPage from './pages/SettingsPage';
 import CloserDashboard from './pages/CloserDashboard';
@@ -71,7 +72,17 @@ function App() {
             }
           />
           <Route
-            path="/admin/analysis/closers"
+            path="/admin/analysis/marketing"
+            element={
+              <ProtectedRoute roles={['admin', 'operator']}>
+                <MainLayout>
+                  <ConstructionPage title="Marketing" />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/analysis/sales"
             element={
               <ProtectedRoute roles={['admin', 'operator']}>
                 <MainLayout>
@@ -81,11 +92,11 @@ function App() {
             }
           />
           <Route
-            path="/admin/analysis/setters"
+            path="/admin/analysis/fulfillment"
             element={
               <ProtectedRoute roles={['admin', 'operator']}>
                 <MainLayout>
-                  <AnalysisPage defaultTab="setters" />
+                  <ConstructionPage title="Fulfillment" />
                 </MainLayout>
               </ProtectedRoute>
             }
