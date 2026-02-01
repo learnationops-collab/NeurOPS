@@ -10,7 +10,8 @@ import {
     ChevronDown,
     LogOut,
     Bell,
-    Zap
+    Zap,
+    DollarSign
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -81,13 +82,13 @@ const MainLayout = ({ children }) => {
 
     const menuItems = (user.role === 'admin' || user.role === 'operator') ? [
         { type: 'link', icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard', id: 'sidebar-dashboard' },
+        { type: 'link', icon: DollarSign, label: 'Finanzas', path: '/admin/analysis/finance' },
         {
             type: 'dropdown',
             icon: BarChart3,
             label: 'Analisis Detallado',
             id: 'sidebar-dropdown-analysis',
             items: [
-                { label: 'Finanzas', path: '/admin/analysis/finance' },
                 { label: 'Closers', path: '/admin/analysis/closers' },
                 { label: 'Setters', path: '/admin/analysis/setters' },
             ]

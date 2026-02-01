@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminFinancePage from './pages/AdminFinancePage';
 import LoginPage from './pages/LoginPage';
 import EmergencyCreatePage from './pages/EmergencyCreatePage';
 import AnalysisPage from './pages/AnalysisPage';
@@ -64,7 +65,7 @@ function App() {
             element={
               <ProtectedRoute roles={['admin', 'operator']}>
                 <MainLayout>
-                  <AnalysisPage defaultTab="finance" />
+                  <AdminFinancePage />
                 </MainLayout>
               </ProtectedRoute>
             }
