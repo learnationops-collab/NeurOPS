@@ -53,13 +53,13 @@ const AdminFinancePage = () => {
         return (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {/* KPI Section */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div id="finance-kpis" className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <Card variant="surface" className="flex flex-col justify-center rounded-[2rem]">
                         <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-2">Revenue</p>
                         <h3 className="text-2xl font-black text-base italic tracking-tighter">${kpis.gross_revenue?.toLocaleString()}</h3>
                         <p className="text-[9px] font-bold text-emerald-400 uppercase mt-1">{kpis.enrollments_count} inscripciones</p>
                     </Card>
-                    <Card variant="surface" className="flex flex-col justify-center border-success/20 bg-success/5 rounded-[2rem]">
+                    <Card id="finance-summary-card" variant="surface" className="flex flex-col justify-center border-success/20 bg-success/5 rounded-[2rem]">
                         <p className="text-[10px] font-black text-success/60 uppercase tracking-widest mb-2">Cash Collect</p>
                         <h3 className="text-2xl font-black text-success italic tracking-tighter">${kpis.cash_collected?.toLocaleString()}</h3>
                         <div className="flex flex-col gap-0.5 mt-2 opacity-80">
@@ -165,7 +165,7 @@ const AdminFinancePage = () => {
                     <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Gestión y Análisis Financiero</p>
                 </div>
 
-                <div className="flex bg-slate-900/40 p-1.5 rounded-[2rem] border border-slate-800">
+                <div id="finance-tabs" className="flex bg-slate-900/40 p-1.5 rounded-[2rem] border border-slate-800">
                     <button
                         onClick={() => setActiveTab('general')}
                         className={`px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'general'

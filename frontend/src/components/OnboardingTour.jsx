@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft, CheckCircle2, HelpCircle } from 'lucide-react';
 import Button from './ui/Button';
-import { TUTORIALS } from '../config/tutorials';
+import { TUTORIALS, TUTORIAL_ROUTES } from '../config/tutorials';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 
@@ -22,13 +22,25 @@ const OnboardingTour = () => {
 
         let potentialTutorialId = null;
 
-        // Context-aware tutorial selection
-        if (user.role === 'admin' && location.pathname === '/admin/dashboard') {
-            potentialTutorialId = 'admin-dashboard-v3';
-        } else if (user.role === 'setter') {
-            potentialTutorialId = 'setter-onboarding-v1';
-        } else if (user.role === 'admin' && location.pathname.includes('/analysis')) {
-            potentialTutorialId = 'admin-analysis-v2';
+        // Context-aware tutorial selection using config
+        const match = TUTORIAL_ROUTES.find(route => {
+            // Role must match
+            if (route.role && user.role !== route.role) return false;
+
+            // Path must match if specified
+            if (route.path) {
+                // Exact match
+                if (route.path === location.pathname) return true;
+                // Or simplified includes check if needed (removed for strictness based on user feedback)
+                return false;
+            }
+
+            // If no path specified, it's a generic role-based tour (fallback)
+            return true;
+        });
+
+        if (match) {
+            potentialTutorialId = match.tutorialId;
         }
 
         if (potentialTutorialId) {

@@ -151,7 +151,7 @@ const CloserPerformanceReport = () => {
     return (
         <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
             {/* Context Header with Filters */}
-            <div className="flex flex-col xl:flex-row gap-6 justify-between items-start xl:items-center p-2 bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] sticky top-4 z-40">
+            <div id="date-filters" className="flex flex-col xl:flex-row gap-6 justify-between items-start xl:items-center p-2 bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] sticky top-4 z-40">
                 <div className="flex items-center gap-2 p-1 overflow-x-auto max-w-full transition-all duration-300">
                     {period !== 'custom' ? (
                         <>
@@ -220,7 +220,7 @@ const CloserPerformanceReport = () => {
 
             {/* View Tabs */}
             <div className="flex justify-center">
-                <div className="flex bg-slate-900/60 p-1.5 rounded-[2rem] border border-slate-800 backdrop-blur-sm">
+                <div id="report-tabs" className="flex bg-slate-900/60 p-1.5 rounded-[2rem] border border-slate-800 backdrop-blur-sm">
                     {[
                         { id: 'general', label: 'General', icon: LayoutDashboard },
                         { id: 'sales', label: 'Ventas', icon: DollarSign },

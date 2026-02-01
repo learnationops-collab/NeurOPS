@@ -84,7 +84,7 @@ const MainLayout = ({ children }) => {
 
     const menuItems = (user.role === 'admin' || user.role === 'operator') ? [
         { type: 'link', icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard', id: 'sidebar-dashboard' },
-        { type: 'link', icon: DollarSign, label: 'Finanzas', path: '/admin/analysis/finance' },
+        { type: 'link', icon: DollarSign, label: 'Finanzas', path: '/admin/analysis/finance', id: 'sidebar-finance' },
         {
             type: 'dropdown',
             icon: BarChart3,

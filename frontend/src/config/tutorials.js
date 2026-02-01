@@ -80,5 +80,58 @@ export const TUTORIALS = {
                 placement: 'bottom'
             }
         ]
+    },
+    'admin-finance-page-v1': {
+        role: 'admin',
+        steps: [
+            {
+                target: '#sidebar-finance',
+                title: '💰 Nueva Central Financiera',
+                content: '¡Tu dinero, organizado! Accede rápidamente a todos los métricas clave y flujo de caja desde este botón.',
+                placement: 'right'
+            },
+            {
+                target: '#finance-summary-card',
+                title: '🏦 Tu Norte Financiero',
+                content: 'Aquí verás el Cash Collected real en tiempo real. Es el indicador más importante de tu liquidez.',
+                placement: 'right'
+            },
+            {
+                target: '#finance-kpis',
+                title: '📊 Signos Vitales',
+                content: 'Monitorea el Ticket Promedio, Egresos y Revenue Bruto de un solo vistazo.',
+                placement: 'bottom'
+            },
+            {
+                target: '#finance-tabs',
+                title: '🔍 Profundiza',
+                content: 'Cambia de la vista General a desgloses específicos por Closers o Setters para encontrar cuellos de botella.',
+                placement: 'bottom'
+            }
+        ]
+    },
+    'admin-sales-page-v1': {
+        role: 'admin',
+        steps: [
+            {
+                target: '#report-tabs',
+                title: '📂 Pestañas Inteligentes',
+                content: 'Alterna entre la visión General, detalle de Ventas (Cash/Ticket) y el análisis Operativo (Agendas/Show Rates).',
+                placement: 'top'
+            },
+            {
+                target: '#date-filters',
+                title: '📅 Control Temporal Total',
+                content: 'Usa filtros rápidos o nuestra nueva selección de rango PERSONALIZADA para análisis de precisión quirúrgica.',
+                placement: 'bottom'
+            }
+        ]
     }
 };
+
+export const TUTORIAL_ROUTES = [
+    { path: '/admin/dashboard', role: 'admin', tutorialId: 'admin-dashboard-v3' },
+    { path: '/admin/analysis/finance', role: 'admin', tutorialId: 'admin-finance-page-v1' },
+    { path: '/admin/analysis/sales', role: 'admin', tutorialId: 'admin-sales-page-v1' },
+    { role: 'setter', tutorialId: 'setter-onboarding-v1' }
+];
