@@ -27,6 +27,7 @@ def receive_manychat_lead():
     # 3. Validación de campos requeridos
     manychat_id = data.get('manychat_id')
     name = data.get('name')
+    keyword = data.get('keyword')
     
     if not manychat_id or not name:
         return jsonify({"status": "error", "message": "Missing required fields: manychat_id, name"}), 400
@@ -40,10 +41,25 @@ def receive_manychat_lead():
             lead.name = name
             lead.email = data.get('email', lead.email) # Solo actualiza si viene en el payload
             lead.instagram_username = data.get('instagram_username', lead.instagram_username)
+            
+            # Actualizar ad_source
             if 'ad_source' in data:
                 lead.ad_source = data.get('ad_source')
+            elif keyword and not lead.ad_source:
+                lead.ad_source = keyword
+
+            # Actualizar tags
             if 'tags' in data:
                 lead.tags = data.get('tags')
+            
+            # Asegurar tag de keyword si existe
+            if keyword:
+                kw_tag = f"kw:{keyword}"
+                current_tags = list(lead.tags) if lead.tags else []
+                if kw_tag not in current_tags:
+                    current_tags.append(kw_tag)
+                    lead.tags = current_tags
+
             if 'coment' in data:
                 lead.notes = data.get('coment')
             elif 'notes' in data:
@@ -52,7 +68,6 @@ def receive_manychat_lead():
             status_code = 200
             action = "updated"
         else:
-            # Crear nuevo
             # Crear nuevo
             # Buscar o Crear etapa 'Entrante'
             from app.models import PipelineStage, Pipeline
@@ -80,14 +95,25 @@ def receive_manychat_lead():
                 
             stage_id = entrante_stage.id
 
+            # Preparar datos iniciales
+            initial_ad_source = data.get('ad_source')
+            if not initial_ad_source and keyword:
+                initial_ad_source = keyword
+            
+            initial_tags = data.get('tags', [])
+            if keyword:
+                kw_tag = f"kw:{keyword}"
+                if kw_tag not in initial_tags:
+                    initial_tags.append(kw_tag)
+
             lead = Lead(
                 manychat_id=manychat_id,
                 name=name,
                 email=data.get('email'),
                 instagram_username=data.get('instagram_username'),
                 stage_id=stage_id,
-                ad_source=data.get('ad_source'),
-                tags=data.get('tags', []),
+                ad_source=initial_ad_source,
+                tags=initial_tags,
                 notes=data.get('coment') or data.get('notes') # Mapeamos 'coment' a notes
             )
             db.session.add(lead)
