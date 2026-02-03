@@ -4,6 +4,7 @@ import {
     Users,
     Database,
     BarChart3,
+    Kanban,
     Settings,
     ChevronLeft,
     ChevronRight,
@@ -84,25 +85,18 @@ const MainLayout = ({ children }) => {
 
     const menuItems = (user.role === 'admin' || user.role === 'operator') ? [
         { type: 'link', icon: LayoutDashboard, label: 'Main Board', path: '/admin/dashboard', id: 'sidebar-dashboard' },
-        { type: 'link', icon: DollarSign, label: 'Finanzas', path: '/admin/analysis/finance', id: 'sidebar-finance' },
-        {
-            type: 'dropdown',
-            icon: BarChart3,
-            label: 'Analisis Detallado',
-            id: 'sidebar-dropdown-analysis',
-            items: [
-                { label: 'Marketing', path: '/admin/analysis/marketing' },
-                { label: 'Ventas', path: '/admin/analysis/sales' },
-                { label: 'Fulfillment', path: '/admin/analysis/fulfillment' },
-            ]
-        },
+        { type: 'link', icon: DollarSign, label: 'Finanzas', path: '/admin/finance', id: 'sidebar-finance' },
+        { type: 'link', icon: BarChart3, label: 'Ventas', path: '/admin/sales', id: 'sidebar-sales' },
+        { type: 'link', icon: Megaphone, label: 'Marketing', path: '/admin/marketing', id: 'sidebar-marketing' },
+        { type: 'link', icon: Package, label: 'Fulfillment', path: '/admin/fulfillment', id: 'sidebar-fulfillment' },
         { type: 'link', icon: Database, label: 'Bases de Datos', path: '/admin/database' },
         { type: 'link', icon: Settings, label: 'Configuracion', path: '/admin/settings' },
     ] : (user.role === 'setter') ? [
-        { type: 'link', icon: LayoutDashboard, label: 'Panel Setter', path: '/setter/dashboard' },
+        { type: 'link', icon: BarChart3, label: 'Ventas', path: '/setter/dashboard' },
     ] : [
-        { type: 'link', icon: LayoutDashboard, label: 'Resumen Diario', path: '/closer/dashboard' },
-        { type: 'link', icon: Database, label: 'Gestionar Leads', path: '/closer/leads' },
+        { type: 'link', icon: LayoutDashboard, label: 'Main Board', path: '/closer/dashboard' },
+        { type: 'link', icon: Kanban, label: 'Embudo', path: '/closer/embudo' },
+        { type: 'link', icon: Database, label: 'Base de Datos', path: '/closer/leads' },
         { type: 'link', icon: Settings, label: 'Configuracion', path: '/closer/settings' },
     ];
 
@@ -148,7 +142,39 @@ const MainLayout = ({ children }) => {
                     ))}
                 </nav>
 
-                <div className="p-6 border-t border-base">
+                <div className="p-4 mt-auto border-t border-base space-y-4">
+                    {/* User Profile & Actions */}
+                    <div className={`p-4 rounded-3xl bg-main/30 border border-base/50 flex flex-col gap-4 ${collapsed ? 'items-center px-1' : ''}`}>
+                        <div className={`flex items-center gap-3 ${collapsed ? 'flex-col' : ''}`}>
+                            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white font-black text-lg shadow-lg shrink-0">
+                                {user.username[0].toUpperCase()}
+                            </div>
+                            {!collapsed && (
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-black text-base leading-tight truncate">{user.username}</p>
+                                    <p className="text-[10px] font-bold text-muted uppercase tracking-widest truncate">{user.role}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className={`flex items-center gap-1 ${collapsed ? 'flex-col' : 'justify-between'}`}>
+                            <button className="text-muted hover:text-base transition-all relative p-2 hover:bg-surface-hover rounded-xl group">
+                                <Bell size={18} className="group-hover:scale-110 transition-transform" />
+                                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-primary rounded-full border-2 border-surface animate-pulse"></span>
+                                {collapsed && <span className="sr-only">Notificaciones</span>}
+                            </button>
+
+                            <button
+                                onClick={logout}
+                                className="text-muted hover:text-accent transition-all p-2 hover:bg-accent/10 rounded-xl flex items-center gap-2 group"
+                                title="Cerrar Sesion"
+                            >
+                                <LogOut size={18} className="group-hover:translate-x-0.5 transition-transform" />
+                                {!collapsed && <span className="text-[10px] font-black uppercase tracking-widest">Cerrar Sesión</span>}
+                            </button>
+                        </div>
+                    </div>
+
                     <button
                         onClick={() => setCollapsed(!collapsed)}
                         className="w-full flex items-center justify-center gap-3 py-3 text-muted hover:text-base hover:bg-surface-hover rounded-2xl transition-all duration-300 border border-transparent hover:border-base"
@@ -160,38 +186,6 @@ const MainLayout = ({ children }) => {
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-main">
-                {/* Header */}
-                <header className="h-20 px-10 flex items-center justify-between border-b border-base bg-surface shadow-sm sticky top-0 z-10 shrink-0">
-                    <div className="flex items-center gap-4 text-slate-400">
-                        <span className="text-xs font-bold uppercase tracking-[0.2em]">{location.pathname.split('/').pop()}</span>
-                    </div>
-
-                    <div className="flex items-center gap-8">
-                        <button className="text-muted hover:text-base transition-colors relative">
-                            <Bell size={20} />
-                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></span>
-                        </button>
-
-                        <button
-                            onClick={logout}
-                            className="text-muted hover:text-accent transition-colors p-2 hover:bg-accent/10 rounded-xl"
-                            title="Cerrar Sesion"
-                        >
-                            <LogOut size={20} />
-                        </button>
-
-                        <div className="flex items-center gap-4 group cursor-pointer text-muted hover:text-base transition-colors">
-                            <div className="text-right hidden sm:block">
-                                <p className="text-sm font-black text-base leading-tight">{user.username}</p>
-                                <p className="text-[10px] font-bold text-muted uppercase tracking-widest">{user.role}</p>
-                            </div>
-                            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white font-black text-lg shadow-lg group-hover:scale-105 transition-transform">
-                                {user.username[0].toUpperCase()}
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
                 {/* Page Content */}
                 <div id="app-main-scroll" className="flex-1 overflow-y-auto scroll-smooth">
                     <div className="min-h-full">

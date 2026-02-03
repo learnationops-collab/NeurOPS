@@ -41,6 +41,10 @@ def create_app(config_class=Config):
     from flask_wtf.csrf import CSRFProtect
     csrf = CSRFProtect(app)
     db.init_app(app)
+    
+    # Import models to ensure they are registered with SQLAlchemy/Migrate
+    from app import models
+
     # Solo usar render_as_batch para SQLite (desarrollo local)
     is_sqlite = app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('sqlite')
     migrate.init_app(app, db, render_as_batch=is_sqlite)
@@ -70,6 +74,14 @@ def create_app(config_class=Config):
     from app.api.webhooks import bp as webhooks_bp
     app.register_blueprint(webhooks_bp, url_prefix='/api/webhooks')
     csrf.exempt(webhooks_bp)
+
+    from app.api.analytics import bp as analytics_bp
+    app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+    csrf.exempt(analytics_bp)
+
+    from app.api.marketing import bp as marketing_bp
+    app.register_blueprint(marketing_bp, url_prefix='/api/marketing')
+    csrf.exempt(marketing_bp)
 
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')

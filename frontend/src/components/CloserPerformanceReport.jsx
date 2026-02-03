@@ -13,10 +13,9 @@ import {
     BarChart3,
     Search,
     ChevronDown,
+    X,
     LayoutDashboard,
-    DollarSign,
-    Wallet,
-    X
+    DollarSign
 } from 'lucide-react';
 import Card from './ui/Card';
 import Counter from './ui/Counter';
@@ -153,30 +152,26 @@ const CloserPerformanceReport = () => {
             {/* Context Header with Filters */}
             <div id="date-filters" className="flex flex-col xl:flex-row gap-6 justify-between items-start xl:items-center p-2 bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] sticky top-4 z-40">
                 <div className="flex items-center gap-2 p-1 overflow-x-auto max-w-full transition-all duration-300">
-                    {period !== 'custom' ? (
-                        <>
-                            {['today', 'yesterday', 'this_month', 'last_month', 'last_7_days', 'all_time', 'custom'].map((p) => (
-                                <button
-                                    key={p}
-                                    onClick={() => setPeriod(p)}
-                                    className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${period === p
-                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                                        : 'text-slate-500 hover:text-white hover:bg-slate-800'
-                                        }`}
-                                >
-                                    {p === 'today' ? 'Hoy' : p === 'yesterday' ? 'Ayer' : p === 'this_month' ? 'Este Mes' : p === 'last_month' ? 'Mes Pasado' : p === 'last_7_days' ? '7 Días' : p === 'all_time' ? 'Todo' : 'Personalizado'}
-                                </button>
-                            ))}
-                        </>
-                    ) : (
-                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-4 duration-300">
-                            <button
-                                onClick={() => setPeriod('last_month')}
-                                className="p-3 rounded-full hover:bg-slate-800 text-slate-500 hover:text-white transition-colors"
-                            >
-                                <X size={16} />
-                            </button>
-
+                    <div className="relative group">
+                        <select
+                            value={period}
+                            onChange={(e) => setPeriod(e.target.value)}
+                            className="appearance-none bg-slate-900 border border-slate-800 text-white pl-10 pr-10 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer hover:bg-slate-800"
+                        >
+                            <option value="yesterday">Ayer</option>
+                            <option value="last_7_days">Esta Semana</option>
+                            <option value="this_month">Este Mes</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none">
+                            <Calendar size={16} />
+                        </div>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-hover:text-white">
+                            <ChevronDown size={16} />
+                        </div>
+                    </div>
+                    {period === 'custom' && (
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-4 duration-300 ml-4">
                             <div className="relative group">
                                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-indigo-400" size={14} />
                                 <input
@@ -392,7 +387,7 @@ const CloserPerformanceReport = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 

@@ -7,13 +7,11 @@ import {
     CheckCircle,
     XCircle,
     Clock,
-    TrendingUp,
-    Target,
-    BarChart3,
-    Search,
+    RotateCcw,
     ChevronDown,
-    Inbox,
-    Zap
+    Search,
+    BarChart3,
+    TrendingUp
 } from 'lucide-react';
 import Card from './ui/Card';
 import Counter from './ui/Counter';
@@ -27,14 +25,16 @@ const SetterPerformanceReport = () => {
     // Filtros
     const [selectedSetter, setSelectedSetter] = useState('');
     const [period, setPeriod] = useState('this_month');
+    const [customDates, setCustomDates] = useState({ start: '', end: '' });
 
     useEffect(() => {
         fetchSetters();
     }, []);
 
     useEffect(() => {
+        if (period === 'custom' && (!customDates.start || !customDates.end)) return;
         fetchPerformance();
-    }, [selectedSetter, period]);
+    }, [selectedSetter, period, customDates]);
 
     const fetchSetters = async () => {
         try {
@@ -50,7 +50,9 @@ const SetterPerformanceReport = () => {
             setLoading(true);
             const params = {
                 period,
-                setter_id: selectedSetter || undefined
+                setter_id: selectedSetter || undefined,
+                start_date: period === 'custom' ? customDates.start : undefined,
+                end_date: period === 'custom' ? customDates.end : undefined
             };
             const res = await api.get('/admin/analysis/setter-performance', { params });
             setPerformance(res.data);
@@ -96,18 +98,48 @@ const SetterPerformanceReport = () => {
             {/* Filters Navigation */}
             <div id="filter-period" className="flex flex-wrap items-center justify-between gap-6 p-2 bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-[2.5rem] sticky top-4 z-40">
                 <div className="flex items-center gap-2 p-1">
-                    {['today', 'yesterday', 'last_7_days', 'this_month', 'last_month', 'all_time'].map((p) => (
-                        <button
-                            key={p}
-                            onClick={() => setPeriod(p)}
-                            className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${period === p
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                                : 'text-slate-500 hover:text-white hover:bg-slate-800'
-                                }`}
+                    <div className="relative group">
+                        <select
+                            value={period}
+                            onChange={(e) => setPeriod(e.target.value)}
+                            className="appearance-none bg-slate-900 border border-slate-800 text-white pl-10 pr-10 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer hover:bg-slate-800"
                         >
-                            {p === 'today' ? 'Hoy' : p === 'yesterday' ? 'Ayer' : p === 'this_month' ? 'Este Mes' : p === 'last_month' ? 'Mes Pasado' : p === 'last_7_days' ? '7 Días' : 'Todo'}
-                        </button>
-                    ))}
+                            <option value="yesterday">Ayer</option>
+                            <option value="last_7_days">Esta Semana</option>
+                            <option value="this_month">Este Mes</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none">
+                            <Calendar size={16} />
+                        </div>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-hover:text-white">
+                            <ChevronDown size={16} />
+                        </div>
+                    </div>
+
+                    {period === 'custom' && (
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-4 duration-300 ml-4">
+                            <div className="relative group">
+                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-indigo-400" size={14} />
+                                <input
+                                    type="date"
+                                    value={customDates.start}
+                                    onChange={(e) => setCustomDates(prev => ({ ...prev, start: e.target.value }))}
+                                    className="pl-9 pr-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white text-[10px] font-bold uppercase tracking-wide outline-none focus:ring-2 focus:ring-indigo-500 hover:bg-slate-800 transition-all"
+                                />
+                            </div>
+                            <span className="text-slate-500 font-bold text-xs">-</span>
+                            <div className="relative group">
+                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-indigo-400" size={14} />
+                                <input
+                                    type="date"
+                                    value={customDates.end}
+                                    onChange={(e) => setCustomDates(prev => ({ ...prev, end: e.target.value }))}
+                                    className="pl-9 pr-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white text-[10px] font-bold uppercase tracking-wide outline-none focus:ring-2 focus:ring-indigo-500 hover:bg-slate-800 transition-all"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-4 pr-4">

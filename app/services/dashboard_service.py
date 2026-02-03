@@ -376,7 +376,7 @@ class DashboardService(BaseService):
         start_dt = datetime.combine(start_date, time.min)
         end_dt = datetime.combine(end_date, time.max)
         
-        # 1. Revenue & Agendas
+        # 1. Revenue, Agendas & Sales
         # Revenue
         rev_q = db.session.query(func.date(Payment.date), func.sum(Payment.amount)).join(Enrollment).filter(
             Payment.date >= start_dt, Payment.date <= end_dt, Payment.status == 'completed'
@@ -387,18 +387,23 @@ class DashboardService(BaseService):
         daily_rev_q = rev_q.group_by(func.date(Payment.date)).all()
         rev_dict = {str(r[0]): float(r[1]) for r in daily_rev_q}
 
+        # Sales
+        sales_q = db.session.query(func.date(Enrollment.enrollment_date), func.count(Enrollment.id)).join(Payment, Enrollment.payments).filter(
+            Enrollment.enrollment_date >= start_dt, Enrollment.enrollment_date <= end_dt, Payment.status == 'completed'
+        )
+        if closer_ids: sales_q = sales_q.filter(Enrollment.closer_id.in_(closer_ids))
+        if program_ids: sales_q = sales_q.filter(Enrollment.program_id.in_(program_ids))
+        
+        daily_sales_q = sales_q.group_by(func.date(Enrollment.enrollment_date)).all()
+        sales_dict = {str(r[0]): int(r[1]) for r in daily_sales_q}
+
         # Agendas
-        # Appointment has closer_id. Program? Appointment usually not linked to Program directly yet (Sales call).
         appt_q = db.session.query(func.date(Appointment.start_time), func.count(Appointment.id)).filter(
             Appointment.start_time >= start_dt, Appointment.start_time <= end_dt
         )
         if closer_ids: appt_q = appt_q.filter(Appointment.closer_id.in_(closer_ids))
-        # If filtering by Program, we can't filter Appts easily.
-        # User wants "See data desired". If Program A selected, we might only see Sales?
-        # Agendas might just show 0 or global?
-        # Let's show filtered if possible, else 0.
+        
         if program_ids:
-            # Can't filter agendas by program easily.
             agendas_dict = {} 
         else:
             daily_agendas_q = appt_q.group_by(func.date(Appointment.start_time)).all()
@@ -407,6 +412,7 @@ class DashboardService(BaseService):
         chart_dates = []
         chart_revs = []
         chart_agendas = []
+        chart_sales = []
         
         curr = start_date
         while curr <= end_date:
@@ -414,19 +420,16 @@ class DashboardService(BaseService):
             chart_dates.append(d_str)
             chart_revs.append(rev_dict.get(d_str, 0.0))
             chart_agendas.append(agendas_dict.get(d_str, 0))
+            chart_sales.append(sales_dict.get(d_str, 0))
             curr += timedelta(days=1)
 
         # 2. Agenda Status Breakdown
-        # Same logic for filters
-        if program_ids:
-            stats_status = ([], [])
-        else:
-            status_q = db.session.query(Appointment.status, func.count(Appointment.id)).filter(
-                Appointment.start_time >= start_dt, Appointment.start_time <= end_dt
-            )
-            if closer_ids: status_q = status_q.filter(Appointment.closer_id.in_(closer_ids))
-            res_status = status_q.group_by(Appointment.status).all()
-            stats_status = ([r[0] for r in res_status], [r[1] for r in res_status])
+        status_q = db.session.query(Appointment.status, func.count(Appointment.id)).filter(
+            Appointment.start_time >= start_dt, Appointment.start_time <= end_dt
+        )
+        if closer_ids: status_q = status_q.filter(Appointment.closer_id.in_(closer_ids))
+        res_status = status_q.group_by(Appointment.status).all()
+        stats_status = ([r[0] for r in res_status], [r[1] for r in res_status])
         
         # 3. Programs Breakdown
         prog_q = db.session.query(Program.name, func.count(Enrollment.id)).join(Program).filter(
@@ -441,6 +444,7 @@ class DashboardService(BaseService):
             'dates_labels': chart_dates, 
             'revenue_values': chart_revs, 
             'agendas_values': chart_agendas,
+            'sales_values': chart_sales,
             'status_labels': stats_status[0], 
             'status_values': stats_status[1],
             'program_labels': [r[0] for r in res_prog],

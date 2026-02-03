@@ -1,23 +1,25 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import MainLayout from './components/MainLayout';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminFinancePage from './pages/AdminFinancePage';
-import LoginPage from './pages/LoginPage';
-import EmergencyCreatePage from './pages/EmergencyCreatePage';
-import AnalysisPage from './pages/AnalysisPage';
-import ConstructionPage from './pages/ConstructionPage';
-import DatabasePage from './pages/DatabasePage';
-import SettingsPage from './pages/SettingsPage';
-import CloserDashboard from './pages/CloserDashboard';
-import CloserLeadsPage from './pages/CloserLeadsPage';
-import CloserSettingsPage from './pages/CloserSettingsPage';
-import CloserNewSalePage from './pages/CloserNewSalePage';
-import CloserNewAppointmentPage from './pages/CloserNewAppointmentPage';
-import SetterDashboard from './pages/SetterDashboard';
-import OperationsPage from './pages/OperationsPage';
-import BookingPage from './pages/BookingPage';
-import StyleGuidePage from './pages/StyleGuidePage';
+import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
+import FinancePage from './pages/admin/reports/FinancePage';
+import LoginPage from './pages/auth/LoginPage';
+import EmergencyCreatePage from './pages/auth/EmergencyCreatePage';
+import AnalysisPage from './pages/admin/reports/AnalysisPage';
+import ConstructionPage from './pages/common/ConstructionPage';
+import DatabasePage from './pages/admin/database/DatabasePage';
+import MarketingPage from './pages/admin/marketing/MarketingPage';
+import SettingsPage from './pages/admin/settings/SettingsPage';
+import CloserDashboard from './pages/closer/dashboard/CloserDashboard';
+import CloserLeadsPage from './pages/closer/leads/LeadsPage';
+import CloserSettingsPage from './pages/closer/settings/SettingsPage';
+import CloserNewSalePage from './pages/closer/records/NewSalePage';
+import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
+import CloserKanbanPage from './pages/closer/kanban/CloserKanbanPage';
+import SetterDashboard from './pages/setter/dashboard/DashboardPage';
+import OperationsPage from './pages/admin/database/OperationsPage';
+import BookingPage from './pages/public/BookingPage';
+import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import './index.css';
 
 const ProtectedRoute = ({ children, roles = [] }) => {
@@ -62,27 +64,27 @@ function App() {
             }
           />
           <Route
-            path="/admin/analysis/finance"
+            path="/admin/finance"
             element={
               <ProtectedRoute roles={['admin', 'operator']}>
                 <MainLayout>
-                  <AdminFinancePage />
+                  <FinancePage />
                 </MainLayout>
               </ProtectedRoute>
             }
           />
           <Route
-            path="/admin/analysis/marketing"
+            path="/admin/marketing"
             element={
               <ProtectedRoute roles={['admin', 'operator']}>
                 <MainLayout>
-                  <ConstructionPage title="Marketing" />
+                  <MarketingPage />
                 </MainLayout>
               </ProtectedRoute>
             }
           />
           <Route
-            path="/admin/analysis/sales"
+            path="/admin/sales"
             element={
               <ProtectedRoute roles={['admin', 'operator']}>
                 <MainLayout>
@@ -92,7 +94,7 @@ function App() {
             }
           />
           <Route
-            path="/admin/analysis/fulfillment"
+            path="/admin/fulfillment"
             element={
               <ProtectedRoute roles={['admin', 'operator']}>
                 <MainLayout>
@@ -159,6 +161,16 @@ function App() {
               <ProtectedRoute roles={['closer']}>
                 <MainLayout>
                   <CloserLeadsPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/closer/embudo"
+            element={
+              <ProtectedRoute roles={['closer']}>
+                <MainLayout>
+                  <CloserKanbanPage />
                 </MainLayout>
               </ProtectedRoute>
             }

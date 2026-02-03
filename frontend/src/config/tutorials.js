@@ -27,15 +27,15 @@ export const TUTORIALS = {
         role: 'admin',
         steps: [
             {
-                target: '#sidebar-dropdown-analysis',
-                title: 'Análisis Centralizado',
-                content: 'Hemos reorganizado todo el análisis. Haz clic aquí para desplegar las opciones de Finanzas, Closers y el nuevo panel de Setters.',
+                target: '#sidebar-sales',
+                title: 'Análisis de Ventas',
+                content: 'Ahora puedes acceder directamente al análisis de ventas desde aquí.',
                 placement: 'right'
             },
             {
                 target: '#tab-setters',
                 title: 'Rendimiento de Setters',
-                content: 'Ahora puedes ver la eficacia de cada setter, sus tasas de apertura y conversión individualmente.',
+                content: 'Mira la eficacia de cada setter, sus tasas de apertura y conversión individualmente.',
                 placement: 'bottom'
             },
             {
@@ -131,7 +131,7 @@ export const TUTORIALS = {
 
 export const TUTORIAL_ROUTES = [
     { path: '/admin/dashboard', role: 'admin', tutorialId: 'admin-dashboard-v3' },
-    { path: '/admin/analysis/finance', role: 'admin', tutorialId: 'admin-finance-page-v1' },
-    { path: '/admin/analysis/sales', role: 'admin', tutorialId: 'admin-sales-page-v1' },
+    { path: '/admin/finance', role: 'admin', tutorialId: 'admin-finance-page-v1' },
+    { path: '/admin/sales', role: 'admin', tutorialId: 'admin-sales-page-v1' },
     { role: 'setter', tutorialId: 'setter-onboarding-v1' }
 ];

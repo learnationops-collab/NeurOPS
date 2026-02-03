@@ -195,7 +195,10 @@ def get_all_agendas():
             "email": a.client.email if a.client else None,
             "date": a.start_time.isoformat(), 
             "status": a.status, 
-            "type": a.appointment_type
+            "type": a.appointment_type,
+            "last_stage": a.last_stage,
+            "result": a.result,
+            "linked_call": a.linked_call
         } for a in pagination.items],
         "total": pagination.total, "pages": pagination.pages
     }), 200
@@ -585,3 +588,64 @@ def update_payment(payment_id):
         return jsonify({"message": "Pago actualizado"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@bp.route('/kanban', methods=['GET'])
+@login_required
+def get_kanban_data():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    
+    # Define logically ordered stages for Closers
+    stages = ["Agendada", "Llamando", "Seguimiento", "Cierre Pendiente", "Finalizada"]
+    
+    query = Appointment.query
+    if current_user.role == 'closer':
+        query = query.filter_by(closer_id=current_user.id)
+    
+    # Only show active/recent appointments in Kanban
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    query = query.filter(Appointment.start_time >= thirty_days_ago)
+    
+    appointments = query.all()
+    
+    # Group appointments by stage
+    board = {stage: [] for stage in stages}
+    for a in appointments:
+        stage = a.last_stage if a.last_stage in stages else "Agendada"
+        board[stage].append({
+            "id": a.id,
+            "lead_name": a.client.full_name or a.client.email if a.client else "Unknown",
+            "phone": a.client.phone if a.client else "",
+            "start_time": a.start_time.isoformat(),
+            "status": a.status,
+            "type": a.appointment_type,
+            "result": a.result,
+            "linked_call": a.linked_call
+        })
+    
+    return jsonify({
+        "stages": stages,
+        "board": board
+    }), 200
+
+@bp.route('/appointments/<int:id>/stage', methods=['PATCH'])
+@login_required
+def update_appointment_stage(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    
+    appt = Appointment.query.get_or_404(id)
+    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    data = request.get_json() or {}
+    new_stage = data.get('stage')
+    
+    valid_stages = ["Agendada", "Llamando", "Seguimiento", "Cierre Pendiente", "Finalizada"]
+    if new_stage not in valid_stages:
+        return jsonify({"error": "Invalid stage"}), 400
+        
+    appt.last_stage = new_stage
+    db.session.commit()
+    
+    return jsonify({"message": "Etapa actualizada", "stage": new_stage}), 200
