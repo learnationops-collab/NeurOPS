@@ -49,7 +49,20 @@ def create_app(config_class=Config):
     is_sqlite = app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('sqlite')
     migrate.init_app(app, db, render_as_batch=is_sqlite)
     login.init_app(app)
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    
+    # CORS Configuration
+    # Must explicitly allow credentials and specific origins for cookies to work
+    allowed_origins = [
+        "http://localhost:5173", 
+        "http://localhost:3000",
+        "https://work.thelearnation.com",
+        "https://neurops-production.up.railway.app" # Assuming this might be the backend URL too
+    ]
+    CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
+
+    # ProxyFix for Railway (HTTPS detection)
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     from app.api import bp as api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
