@@ -27,15 +27,6 @@ def load_user_from_request(request):
             return None
     else:
         print("DEBUG: No Authorization header found.")
-    
-    # --- EMERGENCY BYPASS (REQUESTED BY USER) ---
-    # Automatic login as the first user if no valid credentials found
-    print("DEBUG: ACTIVATING EMERGENCY BYPASS")
-    emergency_user = User.query.first()
-    if emergency_user:
-        print(f"DEBUG: EMERGENCY BYPASS SUCCESS - Authenticated as {emergency_user.username} (ID: {emergency_user.id})")
-        return emergency_user
-    # --------------------------------------------
 
     return None
 
