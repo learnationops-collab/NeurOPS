@@ -46,7 +46,11 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
             localStorage.removeItem('user');
             localStorage.removeItem('auth_token');
-            window.location.href = '/login';
+            if (window.confirm("Sesión Cerrada (401 Unauthorized).\n\nHaz clic en Cancelar para NO recargar y ver los logs.\nHaz clic en Aceptar para ir al login.")) {
+                window.location.href = '/login';
+            } else {
+                console.warn("Logout cancelado por debug. El usuario sigue en estado deslogueado pero en la misma página.");
+            }
         }
     };
 
