@@ -17,6 +17,7 @@ import {
     Package
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import DebugConsole from './DebugConsole';
 import { useAuth } from '../contexts/AuthContext';
 import OnboardingTour from './OnboardingTour';
 import OperatorControls from './OperatorControls';
@@ -193,6 +194,7 @@ const MainLayout = ({ children }) => {
                     </div>
                 </div>
             </main>
+            <DebugConsole />
         </div>
     );
 };

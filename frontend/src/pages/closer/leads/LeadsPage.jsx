@@ -85,7 +85,12 @@ const CloserLeadsPage = () => {
                 setTotalPages(res.data.pages || 1);
             }
         } catch (err) {
-            console.error("Error fetching leads data", err);
+            console.error("Error fetching leads data [DB/Network]:", {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data,
+                url: err.config?.url
+            });
             setError("Error al cargar los datos. Por favor reintenta.");
         } finally {
             setLoading(false);
