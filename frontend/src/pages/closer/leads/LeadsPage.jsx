@@ -440,6 +440,17 @@ const CloserLeadsPage = () => {
                         <div className="p-20 flex justify-center items-center">
                             <Loader2 className="animate-spin text-primary" size={40} />
                         </div>
+                    ) : error ? (
+                        <div className="p-8 text-center bg-red-500/10 border border-red-500/20 rounded-xl">
+                            <p className="text-red-400 font-bold mb-2">Error al cargar el embudo</p>
+                            <p className="text-sm text-red-300 mb-4">{error}</p>
+                            <button
+                                onClick={fetchData}
+                                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-colors text-sm font-medium"
+                            >
+                                Reintentar
+                            </button>
+                        </div>
                     ) : (
                         <CloserKanbanBoard
                             stages={data.kanban.stages}

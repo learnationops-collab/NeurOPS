@@ -598,15 +598,19 @@ def get_kanban_data():
     # Define logically ordered stages for Closers
     stages = ["Agendada", "Llamando", "Seguimiento", "Cierre Pendiente", "Finalizada"]
     
+    print(f"DEBUG: Fetching Kanban for user {current_user.id} ({current_user.username})")
+
     query = Appointment.query
     if current_user.role == 'closer':
         query = query.filter_by(closer_id=current_user.id)
     
     # Only show active/recent appointments in Kanban
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    query = query.filter(Appointment.start_time >= thirty_days_ago)
+    # thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    # query = query.filter(Appointment.start_time >= thirty_days_ago)
+    # Removing date filter for debugging purposes, maybe user just has old leads
     
     appointments = query.all()
+    print(f"DEBUG: Found {len(appointments)} appointments for Kanban")
     
     # Group appointments by stage
     board = {stage: [] for stage in stages}
