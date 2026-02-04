@@ -32,8 +32,12 @@ def login():
 
     login_user(user, remember=remember)
 
+    # Generate JWT Token for stateless auth backup
+    token = user.get_auth_token()
+
     return jsonify({
         "message": "Login successful",
+        "token": token,
         "user": {
             "id": user.id,
             "username": user.username,

@@ -14,22 +14,38 @@ export const AuthProvider = ({ children }) => {
             setUser(JSON.parse(savedUser));
         }
         setLoading(false);
+
+        // Listen for 401 Unauthorized events from apiInterceptor
+        const handleUnauthorized = () => {
+            logout();
+        };
+        window.addEventListener('auth-unauthorized', handleUnauthorized);
+
+        return () => {
+            window.removeEventListener('auth-unauthorized', handleUnauthorized);
+        };
     }, []);
 
     const login = async (username, password) => {
         const response = await api.post('/auth/login', { username, password });
-        const userData = response.data.user;
+        const { user: userData, token } = response.data;
+
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
+        if (token) {
+            localStorage.setItem('auth_token', token);
+        }
         return userData;
     };
 
     const logout = async () => {
         try {
             await api.post('/auth/logout');
-        } finally {
+        } catch (e) { /* ignore */ }
+        finally {
             setUser(null);
             localStorage.removeItem('user');
+            localStorage.removeItem('auth_token');
             window.location.href = '/login';
         }
     };

@@ -1,4 +1,7 @@
 from datetime import datetime
+import time
+import jwt
+from flask import current_app, request
 from app import db, login
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
@@ -6,6 +9,21 @@ from flask_login import UserMixin
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
+
+@login.request_loader
+def load_user_from_request(request):
+    # Check for Authorization header
+    auth_header = request.headers.get('Authorization')
+    if auth_header:
+        try:
+            auth_header = auth_header.replace('Bearer ', '', 1)
+            user_id = User.verify_auth_token(auth_header)
+            if user_id:
+                return User.query.get(user_id)
+        except Exception as e:
+            print(f"Token validation error: {e}")
+            return None
+    return None
 
 # Roles as Constants
 ROLE_ADMIN = 'admin'
@@ -23,6 +41,28 @@ class User(UserMixin, db.Model):
     timezone = db.Column(db.String(50), default='America/La_Paz')
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def get_auth_token(self, expires_in=86400):
+        # Generate a JWT token
+        return jwt.encode(
+            {'id': self.id, 'exp': time.time() + expires_in},
+            current_app.config['SECRET_KEY'],
+            algorithm='HS256'
+        )
+
+    @staticmethod
+    def verify_auth_token(token):
+        try:
+            data = jwt.decode(
+                token,
+                current_app.config['SECRET_KEY'],
+                algorithms=['HS256']
+            )
+            return data['id']
+        except Exception:
+            return None
+
+    # Relationships for Closers
 
     # Relationships for Closers
     appointments_as_closer = db.relationship('Appointment', foreign_keys='Appointment.closer_id', backref='closer', lazy='dynamic')
