@@ -28,8 +28,6 @@ class Config:
     # If running on HTTPS (Railway usually puts behind proxy), we need Secure cookies
     # But locally we don't use HTTPS usually.
     # Flask-Login/Sessions usually need this for cross-domain iframes or modern browsers on HTTPS.
-    SESSION_COOKIE_SECURE = False # Reverting to False to test if this restores session auth
+    SESSION_COOKIE_SECURE = False 
     REMEMBER_COOKIE_SECURE = False
-    SESSION_COOKIE_SAMESITE = 'Lax' # Reverting to Lax
-        REMEMBER_COOKIE_SECURE = False
-        SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SAMESITE = 'Lax'
