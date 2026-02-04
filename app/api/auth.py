@@ -8,8 +8,11 @@ from app.models import User
 @bp.route('/auth/login', methods=['POST'])
 def login():
     if current_user.is_authenticated:
+        # Generate JWT Token even if session exists, to ensure Frontend has it
+        token = current_user.get_auth_token()
         return jsonify({
             "message": "Already authenticated",
+            "token": token,
             "user": {
                 "id": current_user.id,
                 "username": current_user.username,
