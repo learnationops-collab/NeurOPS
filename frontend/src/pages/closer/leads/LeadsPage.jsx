@@ -15,7 +15,8 @@ import {
     XCircle,
     Loader2,
     ArrowUpRight,
-    X
+    X,
+    Kanban
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -25,10 +26,11 @@ import SaleDetailModal from '../../../components/SaleDetailModal';
 import DateRangeFilter from '../../../components/DateRangeFilter';
 import MultiSelectFilter from '../../../components/MultiSelectFilter';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
+import CloserKanbanBoard from '../../../components/CloserKanbanBoard';
 
 const CloserLeadsPage = () => {
     const [activeTab, setActiveTab] = useState('agendas');
-    const [data, setData] = useState({ agendas: [], sales: [] });
+    const [data, setData] = useState({ agendas: [], sales: [], kanban: { stages: [], board: {} } });
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -59,25 +61,29 @@ const CloserLeadsPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const endpoint = activeTab === 'agendas' ? '/closer/agendas' : '/closer/sales';
+            if (activeTab === 'kanban') {
+                const res = await api.get('/closer/kanban');
+                setData(prev => ({ ...prev, kanban: res.data }));
+            } else {
+                const endpoint = activeTab === 'agendas' ? '/closer/agendas' : '/closer/sales';
 
-            // Construct query params
-            const params = {
-                page,
-                search,
-                start_date: filters.dateRange?.start,
-                end_date: filters.dateRange?.end,
-                status: filters.status?.join(','),
-                program: filters.program?.join(','),
-                payment_method: filters.paymentMethod?.join(',')
-            };
+                // Construct query params
+                const params = {
+                    page,
+                    search,
+                    start_date: filters.dateRange?.start,
+                    end_date: filters.dateRange?.end,
+                    status: filters.status?.join(','),
+                    program: filters.program?.join(','),
+                    payment_method: filters.paymentMethod?.join(',')
+                };
 
-            const res = await api.get(endpoint, { params });
+                const res = await api.get(endpoint, { params });
 
-            const tabData = Array.isArray(res.data.data) ? res.data.data : [];
-
-            setData(prev => ({ ...prev, [activeTab]: tabData }));
-            setTotalPages(res.data.pages || 1);
+                const tabData = Array.isArray(res.data.data) ? res.data.data : [];
+                setData(prev => ({ ...prev, [activeTab]: tabData }));
+                setTotalPages(res.data.pages || 1);
+            }
         } catch (err) {
             console.error("Error fetching leads data", err);
             setError("Error al cargar los datos. Por favor reintenta.");
@@ -102,6 +108,41 @@ const CloserLeadsPage = () => {
             alert("Error al actualizar la fecha");
         } finally {
             setUpdating(false);
+        }
+    };
+
+    const handleKanbanMove = async (id, fromStage, toStage) => {
+        // Optimistic UI update
+        const newBoard = { ...data.kanban.board };
+
+        // Ensure source array exists
+        if (!newBoard[fromStage]) return;
+
+        const itemIndex = newBoard[fromStage].findIndex(i => i.id === id);
+
+        if (itemIndex === -1) return;
+
+        const [movedItem] = newBoard[fromStage].splice(itemIndex, 1);
+
+        // Ensure target array exists
+        if (!newBoard[toStage]) newBoard[toStage] = [];
+
+        newBoard[toStage].push({ ...movedItem, last_stage: toStage });
+
+        setData(prev => ({
+            ...prev,
+            kanban: {
+                ...prev.kanban,
+                board: newBoard
+            }
+        }));
+
+        try {
+            await api.patch(`/closer/appointments/${id}/stage`, { stage: toStage });
+        } catch (err) {
+            console.error("Error updating stage", err);
+            // Revert on error - simply refetch
+            fetchData();
         }
     };
 
@@ -156,90 +197,99 @@ const CloserLeadsPage = () => {
                         <DollarSign size={18} />
                         <span className="text-[10px] font-black uppercase tracking-widest">Base Ventas</span>
                     </button>
+                    <button
+                        onClick={() => { setActiveTab('kanban'); }}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${activeTab === 'kanban' ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-base'}`}
+                    >
+                        <Kanban size={18} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Embudo</span>
+                    </button>
                 </div>
             </header>
 
-            {/* Filters & Search */}
-            <div className="space-y-4">
-                <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-surface p-6 rounded-[2rem] border border-base backdrop-blur-xl">
-                    <form onSubmit={handleSearch} className="relative w-full md:max-w-md group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors" size={20} />
-                        <input
-                            type="text"
-                            placeholder="Buscar por nombre..."
-                            className="w-full pl-12 pr-4 py-4 bg-main border border-base rounded-2xl text-base placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </form>
-                    <div className="flex gap-4 w-full md:w-auto">
-                        <Button
-                            variant="ghost"
-                            className={`flex-1 md:flex-none border-base text-muted px-6 h-14 ${showFilters ? 'bg-surface-hover text-white' : ''}`}
-                            icon={Filter}
-                            onClick={() => setShowFilters(!showFilters)}
-                        >
-                            Filtros
-                        </Button>
-                        <Button variant="ghost" className="flex-1 md:flex-none border-primary/20 text-primary hover:bg-primary hover:text-white px-6 h-14" icon={Download}>
-                            Exportar
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Filter Panel */}
-                {showFilters && (
-                    <div className="bg-surface/50 border border-base rounded-[1.5rem] p-6 animate-in slide-in-from-top-4 fade-in duration-300">
-                        <div className="flex flex-wrap gap-4 items-center">
-                            <DateRangeFilter
-                                value={filters.dateRange}
-                                onChange={(val) => { updateFilter('dateRange', val); setPage(1); }}
+            {/* Filters & Search - Hide for Kanban for now or adapt */}
+            {activeTab !== 'kanban' && (
+                <div className="space-y-4">
+                    <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-surface p-6 rounded-[2rem] border border-base backdrop-blur-xl">
+                        <form onSubmit={handleSearch} className="relative w-full md:max-w-md group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors" size={20} />
+                            <input
+                                type="text"
+                                placeholder="Buscar por nombre..."
+                                className="w-full pl-12 pr-4 py-4 bg-main border border-base rounded-2xl text-base placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
                             />
-
-                            {activeTab === 'agendas' && (
-                                <MultiSelectFilter
-                                    label="Estado"
-                                    options={statusOptions}
-                                    value={filters.status}
-                                    onChange={(val) => { updateFilter('status', val); setPage(1); }}
-                                />
-                            )}
-
-                            {activeTab === 'sales' && (
-                                <>
-                                    <MultiSelectFilter
-                                        label="Programa"
-                                        options={programOptions}
-                                        value={filters.program}
-                                        onChange={(val) => { updateFilter('program', val); setPage(1); }}
-                                    />
-                                    <MultiSelectFilter
-                                        label="Método Pago"
-                                        options={paymentOptions}
-                                        value={filters.paymentMethod}
-                                        onChange={(val) => { updateFilter('paymentMethod', val); setPage(1); }}
-                                    />
-                                </>
-                            )}
-
-                            {(filters.dateRange?.type !== 'all' || filters.status?.length > 0 || filters.program?.length > 0 || filters.paymentMethod?.length > 0) && (
-                                <button
-                                    onClick={() => {
-                                        updateFilter('dateRange', { type: 'all', start: '', end: '' });
-                                        updateFilter('status', []);
-                                        updateFilter('program', []);
-                                        updateFilter('paymentMethod', []);
-                                        setPage(1);
-                                    }}
-                                    className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 flex items-center gap-1 ml-auto"
-                                >
-                                    <X size={14} /> Limpiar Filtros
-                                </button>
-                            )}
+                        </form>
+                        <div className="flex gap-4 w-full md:w-auto">
+                            <Button
+                                variant="ghost"
+                                className={`flex-1 md:flex-none border-base text-muted px-6 h-14 ${showFilters ? 'bg-surface-hover text-white' : ''}`}
+                                icon={Filter}
+                                onClick={() => setShowFilters(!showFilters)}
+                            >
+                                Filtros
+                            </Button>
+                            <Button variant="ghost" className="flex-1 md:flex-none border-primary/20 text-primary hover:bg-primary hover:text-white px-6 h-14" icon={Download}>
+                                Exportar
+                            </Button>
                         </div>
                     </div>
-                )}
-            </div>
+
+                    {/* Filter Panel */}
+                    {showFilters && (
+                        <div className="bg-surface/50 border border-base rounded-[1.5rem] p-6 animate-in slide-in-from-top-4 fade-in duration-300">
+                            <div className="flex flex-wrap gap-4 items-center">
+                                <DateRangeFilter
+                                    value={filters.dateRange}
+                                    onChange={(val) => { updateFilter('dateRange', val); setPage(1); }}
+                                />
+
+                                {activeTab === 'agendas' && (
+                                    <MultiSelectFilter
+                                        label="Estado"
+                                        options={statusOptions}
+                                        value={filters.status}
+                                        onChange={(val) => { updateFilter('status', val); setPage(1); }}
+                                    />
+                                )}
+
+                                {activeTab === 'sales' && (
+                                    <>
+                                        <MultiSelectFilter
+                                            label="Programa"
+                                            options={programOptions}
+                                            value={filters.program}
+                                            onChange={(val) => { updateFilter('program', val); setPage(1); }}
+                                        />
+                                        <MultiSelectFilter
+                                            label="Método Pago"
+                                            options={paymentOptions}
+                                            value={filters.paymentMethod}
+                                            onChange={(val) => { updateFilter('paymentMethod', val); setPage(1); }}
+                                        />
+                                    </>
+                                )}
+
+                                {(filters.dateRange?.type !== 'all' || filters.status?.length > 0 || filters.program?.length > 0 || filters.paymentMethod?.length > 0) && (
+                                    <button
+                                        onClick={() => {
+                                            updateFilter('dateRange', { type: 'all', start: '', end: '' });
+                                            updateFilter('status', []);
+                                            updateFilter('program', []);
+                                            updateFilter('paymentMethod', []);
+                                            setPage(1);
+                                        }}
+                                        className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 flex items-center gap-1 ml-auto"
+                                    >
+                                        <X size={14} /> Limpiar Filtros
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Main Table Database */}
             <Card variant="surface" padding="p-0 overflow-hidden" className="shadow-2xl overflow-x-auto">
@@ -380,27 +430,47 @@ const CloserLeadsPage = () => {
                     </table>
                 )}
             </Card>
+            )}
 
-            {/* Pagination */}
-            <div className="flex justify-between items-center pb-10">
-                <p className="text-[10px] font-black text-muted uppercase tracking-widest">Página {page} de {totalPages}</p>
-                <div className="flex gap-2">
-                    <button
-                        disabled={page === 1}
-                        onClick={() => setPage(p => p - 1)}
-                        className="p-3 bg-surface border border-base rounded-xl text-muted hover:text-base disabled:opacity-20 transition-all"
-                    >
-                        <ChevronLeft size={20} />
-                    </button>
-                    <button
-                        disabled={page === totalPages}
-                        onClick={() => setPage(p => p + 1)}
-                        className="p-3 bg-surface border border-base rounded-xl text-muted hover:text-base disabled:opacity-20 transition-all"
-                    >
-                        <ChevronRight size={20} />
-                    </button>
+            {/* Kanban Board View */}
+            {activeTab === 'kanban' && (
+                <div className="overflow-x-auto pb-4">
+                    {loading ? (
+                        <div className="p-20 flex justify-center items-center">
+                            <Loader2 className="animate-spin text-primary" size={40} />
+                        </div>
+                    ) : (
+                        <CloserKanbanBoard
+                            stages={data.kanban.stages}
+                            board={data.kanban.board}
+                            onMove={handleKanbanMove}
+                        />
+                    )}
                 </div>
-            </div>
+            )}
+
+            {/* Pagination - Hide for Kanban */}
+            {activeTab !== 'kanban' && (
+                <div className="flex justify-between items-center pb-10">
+                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Página {page} de {totalPages}</p>
+                    <div className="flex gap-2">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(p => p - 1)}
+                            className="p-3 bg-surface border border-base rounded-xl text-muted hover:text-base disabled:opacity-20 transition-all"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        <button
+                            disabled={page === totalPages}
+                            onClick={() => setPage(p => p + 1)}
+                            className="p-3 bg-surface border border-base rounded-xl text-muted hover:text-base disabled:opacity-20 transition-all"
+                        >
+                            <ChevronRight size={20} />
+                        </button>
+                    </div>
+                </div>
+            )}
             {/* Modal for Agenda Management */}
             {isAgendaModalOpen && selectedAgenda && (
                 <AgendaManagerModal
