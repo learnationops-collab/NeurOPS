@@ -292,144 +292,145 @@ const CloserLeadsPage = () => {
             )}
 
             {/* Main Table Database */}
-            <Card variant="surface" padding="p-0 overflow-hidden" className="shadow-2xl overflow-x-auto">
-                {error ? (
-                    <div className="p-20 flex flex-col items-center justify-center text-accent gap-4">
-                        <p className="font-black uppercase tracking-widest text-[10px]">{error}</p>
-                        <Button onClick={fetchData} variant="ghost" className="border-accent/20 text-accent">Reintentar</Button>
-                    </div>
-                ) : loading ? (
-                    <div className="p-20 flex justify-center items-center">
-                        <Loader2 className="animate-spin text-primary" size={40} />
-                    </div>
-                ) : (
-                    <table className="w-full text-left border-collapse min-w-[800px]">
-                        <thead>
-                            <tr className="border-b border-base bg-surface-hover">
-                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Lead / Cliente</th>
-                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Fecha / Hora</th>
-                                {activeTab === 'agendas' ? (
-                                    <>
-                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Ultima Etapa</th>
-                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Resultado</th>
-                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Link Call</th>
-                                    </>
-                                ) : (
-                                    <>
-                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Programa</th>
-                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Monto</th>
-                                    </>
-                                )}
-                                <th className="px-8 py-6 text-[10px] font-black text-primary uppercase tracking-widest text-right">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-base">
-                            {data[activeTab]?.length > 0 ? data[activeTab].map(item => (
-                                <tr key={item.id} className="hover:bg-surface-hover/50 transition-all group">
-                                    <td className="px-8 py-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-main flex items-center justify-center text-muted font-black border border-base group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
-                                                {activeTab === 'agendas' ? item.lead_name[0].toUpperCase() : item.student_name[0].toUpperCase()}
-                                            </div>
-                                            <p className="text-base font-black italic">{activeTab === 'agendas' ? item.lead_name : item.student_name}</p>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        {editingId === item.id ? (
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="datetime-local"
-                                                    className="bg-main border border-base rounded-lg px-2 py-1 text-base text-[10px] outline-none focus:ring-1 focus:ring-primary font-bold"
-                                                    value={editStartTime}
-                                                    onChange={(e) => setEditStartTime(e.target.value)}
-                                                />
-                                                <button
-                                                    onClick={() => handleUpdateDate(item.id)}
-                                                    disabled={updating}
-                                                    className="p-1.5 bg-primary text-white rounded-md hover:bg-primary/80 transition-all disabled:opacity-50"
-                                                >
-                                                    {updating ? <Loader2 size={12} className="animate-spin" /> : <p className="text-[9px] font-black uppercase tracking-widest px-1">OK</p>}
-                                                </button>
-                                                <button
-                                                    onClick={() => setEditingId(null)}
-                                                    className="p-1.5 bg-surface-hover text-muted rounded-md hover:text-base transition-all"
-                                                >
-                                                    <p className="text-[9px] font-black uppercase tracking-widest px-1">X</p>
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div
-                                                onClick={() => {
-                                                    if (activeTab === 'agendas') {
-                                                        setEditingId(item.id);
-                                                        setEditStartTime(item.date ? item.date.substring(0, 16) : '');
-                                                    }
-                                                }}
-                                                className={`flex items-center gap-2 text-muted font-bold ${activeTab === 'agendas' ? 'cursor-pointer hover:text-base transition-colors' : ''}`}
-                                            >
-                                                <Calendar size={14} className="text-primary" />
-                                                <span className="text-sm">{new Date(item.date).toLocaleDateString()}</span>
-                                                <span className="text-[10px] opacity-50 ml-1">{new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                            </div>
-                                        )}
-                                    </td>
+            {activeTab !== 'kanban' && (
+                <Card variant="surface" padding="p-0 overflow-hidden" className="shadow-2xl overflow-x-auto">
+                    {error ? (
+                        <div className="p-20 flex flex-col items-center justify-center text-accent gap-4">
+                            <p className="font-black uppercase tracking-widest text-[10px]">{error}</p>
+                            <Button onClick={fetchData} variant="ghost" className="border-accent/20 text-accent">Reintentar</Button>
+                        </div>
+                    ) : loading ? (
+                        <div className="p-20 flex justify-center items-center">
+                            <Loader2 className="animate-spin text-primary" size={40} />
+                        </div>
+                    ) : (
+                        <table className="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                                <tr className="border-b border-base bg-surface-hover">
+                                    <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Lead / Cliente</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Fecha / Hora</th>
                                     {activeTab === 'agendas' ? (
                                         <>
-                                            <td className="px-8 py-6">
-                                                <p className="text-[10px] font-black text-muted uppercase tracking-widest">{item.last_stage || 'N/A'}</p>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <Badge variant={item.result === 'Sold' ? 'success' : 'neutral'}>
-                                                    {item.result || 'Sin resultado'}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                {item.linked_call ? (
-                                                    <a href={item.linked_call} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs font-bold">
-                                                        Ver Call
-                                                    </a>
-                                                ) : (
-                                                    <span className="text-muted text-xs">No link</span>
-                                                )}
-                                            </td>
+                                            <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Ultima Etapa</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Resultado</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Link Call</th>
                                         </>
                                     ) : (
                                         <>
-                                            <td className="px-8 py-6">
-                                                <p className="text-[10px] font-black text-muted uppercase tracking-widest">{item.program_name}</p>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <p className="text-success font-black tracking-tighter text-lg">${item.amount?.toLocaleString()}</p>
-                                                <p className="text-[9px] text-muted font-bold uppercase">{item.payment_method}</p>
-                                            </td>
+                                            <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Programa</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Monto</th>
                                         </>
                                     )}
-                                    <td className="px-8 py-6 text-right">
-                                        <button
-                                            onClick={() => {
-                                                if (activeTab === 'agendas') {
-                                                    setSelectedAgenda(item);
-                                                    setIsAgendaModalOpen(true);
-                                                } else {
-                                                    setSelectedEnrollmentId(item.id);
-                                                    setIsDetailModalOpen(true);
-                                                }
-                                            }}
-                                            className="p-3 bg-surface-hover hover:bg-main text-muted hover:text-primary rounded-xl transition-all border border-base"
-                                        >
-                                            <ArrowUpRight size={18} />
-                                        </button>
-                                    </td>
+                                    <th className="px-8 py-6 text-[10px] font-black text-primary uppercase tracking-widest text-right">Acción</th>
                                 </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan="5" className="p-20 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">No se encontraron registros</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                )}
-            </Card>
+                            </thead>
+                            <tbody className="divide-y divide-base">
+                                {data[activeTab]?.length > 0 ? data[activeTab].map(item => (
+                                    <tr key={item.id} className="hover:bg-surface-hover/50 transition-all group">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-main flex items-center justify-center text-muted font-black border border-base group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
+                                                    {activeTab === 'agendas' ? item.lead_name[0].toUpperCase() : item.student_name[0].toUpperCase()}
+                                                </div>
+                                                <p className="text-base font-black italic">{activeTab === 'agendas' ? item.lead_name : item.student_name}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            {editingId === item.id ? (
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="datetime-local"
+                                                        className="bg-main border border-base rounded-lg px-2 py-1 text-base text-[10px] outline-none focus:ring-1 focus:ring-primary font-bold"
+                                                        value={editStartTime}
+                                                        onChange={(e) => setEditStartTime(e.target.value)}
+                                                    />
+                                                    <button
+                                                        onClick={() => handleUpdateDate(item.id)}
+                                                        disabled={updating}
+                                                        className="p-1.5 bg-primary text-white rounded-md hover:bg-primary/80 transition-all disabled:opacity-50"
+                                                    >
+                                                        {updating ? <Loader2 size={12} className="animate-spin" /> : <p className="text-[9px] font-black uppercase tracking-widest px-1">OK</p>}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setEditingId(null)}
+                                                        className="p-1.5 bg-surface-hover text-muted rounded-md hover:text-base transition-all"
+                                                    >
+                                                        <p className="text-[9px] font-black uppercase tracking-widest px-1">X</p>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    onClick={() => {
+                                                        if (activeTab === 'agendas') {
+                                                            setEditingId(item.id);
+                                                            setEditStartTime(item.date ? item.date.substring(0, 16) : '');
+                                                        }
+                                                    }}
+                                                    className={`flex items-center gap-2 text-muted font-bold ${activeTab === 'agendas' ? 'cursor-pointer hover:text-base transition-colors' : ''}`}
+                                                >
+                                                    <Calendar size={14} className="text-primary" />
+                                                    <span className="text-sm">{new Date(item.date).toLocaleDateString()}</span>
+                                                    <span className="text-[10px] opacity-50 ml-1">{new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </div>
+                                            )}
+                                        </td>
+                                        {activeTab === 'agendas' ? (
+                                            <>
+                                                <td className="px-8 py-6">
+                                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">{item.last_stage || 'N/A'}</p>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <Badge variant={item.result === 'Sold' ? 'success' : 'neutral'}>
+                                                        {item.result || 'Sin resultado'}
+                                                    </Badge>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    {item.linked_call ? (
+                                                        <a href={item.linked_call} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs font-bold">
+                                                            Ver Call
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-muted text-xs">No link</span>
+                                                    )}
+                                                </td>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <td className="px-8 py-6">
+                                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">{item.program_name}</p>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <p className="text-success font-black tracking-tighter text-lg">${item.amount?.toLocaleString()}</p>
+                                                    <p className="text-[9px] text-muted font-bold uppercase">{item.payment_method}</p>
+                                                </td>
+                                            </>
+                                        )}
+                                        <td className="px-8 py-6 text-right">
+                                            <button
+                                                onClick={() => {
+                                                    if (activeTab === 'agendas') {
+                                                        setSelectedAgenda(item);
+                                                        setIsAgendaModalOpen(true);
+                                                    } else {
+                                                        setSelectedEnrollmentId(item.id);
+                                                        setIsDetailModalOpen(true);
+                                                    }
+                                                }}
+                                                className="p-3 bg-surface-hover hover:bg-main text-muted hover:text-primary rounded-xl transition-all border border-base"
+                                            >
+                                                <ArrowUpRight size={18} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan="5" className="p-20 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">No se encontraron registros</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    )}
+                </Card>
             )}
 
             {/* Kanban Board View */}
