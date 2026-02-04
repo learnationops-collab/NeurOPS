@@ -169,3 +169,25 @@ def emergency_create():
     
     return jsonify({"message": f"User {username} created successfully as {role}"}), 201
 
+@bp.route('/auth/debug', methods=['GET'])
+def debug_auth():
+    """
+    Debug endpoint to check what the server receives.
+    Helpful for diagnosing 401/Cookie issues.
+    """
+    from flask import session
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in ['authorization', 'cookie']} # Sanitize
+    cookies = request.cookies
+    
+    return jsonify({
+        "status": "ok",
+        "is_authenticated": current_user.is_authenticated,
+        "user_id": getattr(current_user, 'id', None),
+        "user_role": getattr(current_user, 'role', None),
+        "session_keys": list(session.keys()),
+        "cookies_received": list(cookies.keys()),
+        "cookie_details": {k: v[:5] + "***" for k, v in cookies.items() if 'session' in k}, # Show partial session cookie
+        "origin": request.headers.get('Origin'),
+        "referer": request.headers.get('Referer'),
+        "headers": headers
+    }), 200

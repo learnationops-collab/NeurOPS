@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, X, Minimize2, Maximize2, Trash2 } from 'lucide-react';
 
+import api from '../services/api'; // Import configured API
+
 const DebugConsole = () => {
     const [isOpen, setIsOpen] = useState(false); // Default collapsed
     const [logs, setLogs] = useState([]);
@@ -13,6 +15,21 @@ const DebugConsole = () => {
         warn: console.warn,
         info: console.info
     });
+
+    const checkAuthStatus = async () => {
+        try {
+            console.info("Testing Auth Connection...");
+            const res = await api.get('/auth/debug');
+            console.log("Auth Debug Response:", res.data);
+            if (!res.data.is_authenticated) {
+                console.warn("Server says NOT Authenticated. Cookies received:", res.data.cookies_received);
+            } else {
+                console.log("Server says Authenticated as:", res.data.user_id);
+            }
+        } catch (e) {
+            console.error("Auth Check Failed:", e);
+        }
+    };
 
     useEffect(() => {
         const handleLog = (type, args) => {
@@ -65,6 +82,13 @@ const DebugConsole = () => {
                     </div>
                     <div className="flex items-center gap-2">
                         <button
+                            onClick={(e) => { e.stopPropagation(); checkAuthStatus(); }}
+                            className="px-2 py-0.5 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 rounded text-[10px] transition-colors border border-indigo-500/30"
+                            title="Check Auth Status"
+                        >
+                            Test Auth
+                        </button>
+                        <button
                             onClick={(e) => { e.stopPropagation(); setLogs([]); }}
                             className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-red-400 transition-colors"
                             title="Clear Logs"
@@ -88,8 +112,8 @@ const DebugConsole = () => {
                         )}
                         {logs.map((log, idx) => (
                             <div key={idx} className={`border-b border-slate-800/50 pb-1 break-words ${log.type === 'error' ? 'text-red-400' :
-                                    log.type === 'warn' ? 'text-yellow-400' :
-                                        'text-emerald-400'
+                                log.type === 'warn' ? 'text-yellow-400' :
+                                    'text-emerald-400'
                                 }`}>
                                 <span className="text-[10px] text-slate-500 mr-2">[{log.timestamp}]</span>
                                 <span className="uppercase text-[9px] font-bold opacity-70 mr-1">[{log.type}]</span>
