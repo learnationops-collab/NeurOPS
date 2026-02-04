@@ -1,4 +1,3 @@
-```javascript
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, X, Minimize2, Maximize2, Trash2, Copy } from 'lucide-react';
 
@@ -36,9 +35,9 @@ const DebugConsole = () => {
         const logText = logs.map(log => {
             // Use log.message as it's the current structure
             const content = typeof log.message === 'object' ? JSON.stringify(log.message) : log.message;
-            return `[${ log.timestamp }][${ log.type }] ${ content } `;
+            return `[${log.timestamp}][${log.type}] ${content}`;
         }).join('\n');
-        
+
         navigator.clipboard.writeText(logText).then(() => {
             console.info('Logs copied to clipboard');
         }).catch(err => {
@@ -86,7 +85,7 @@ const DebugConsole = () => {
     if (!isVisible) return null;
 
     return (
-        <div className={`fixed bottom - 4 right - 4 z - [9999] transition - all duration - 300 font - mono text - xs ${ isOpen ? 'w-96 h-96' : 'w-auto h-auto' } `}>
+        <div className={`fixed bottom-4 right-4 z-[9999] transition-all duration-300 font-mono text-xs ${isOpen ? 'w-96 h-96' : 'w-auto h-auto'}`}>
             <div className="bg-slate-900 border border-slate-700 rounded-t-lg shadow-2xl flex flex-col h-full">
                 {/* Header */}
                 <div className="flex items-center justify-between p-2 bg-slate-800 border-b border-slate-700 rounded-t-lg cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
@@ -133,11 +132,10 @@ const DebugConsole = () => {
                             <div className="text-slate-600 text-center mt-4">No logs yet...</div>
                         )}
                         {logs.map((log, idx) => (
-                            <div key={idx} className={`border - b border - slate - 800 / 50 pb - 1 break-words ${
-    log.type === 'error' ? 'text-red-400' :
-    log.type === 'warn' ? 'text-yellow-400' :
-        'text-emerald-400'
-} `}>
+                            <div key={idx} className={`border-b border-slate-800/50 pb-1 break-words ${log.type === 'error' ? 'text-red-400' :
+                                    log.type === 'warn' ? 'text-yellow-400' :
+                                        'text-emerald-400'
+                                }`}>
                                 <span className="text-[10px] text-slate-500 mr-2">[{log.timestamp}]</span>
                                 <span className="uppercase text-[9px] font-bold opacity-70 mr-1">[{log.type}]</span>
                                 <span>{log.message}</span>
@@ -153,4 +151,3 @@ const DebugConsole = () => {
 };
 
 export default DebugConsole;
-```
