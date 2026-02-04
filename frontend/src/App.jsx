@@ -20,6 +20,7 @@ import SetterDashboard from './pages/setter/dashboard/DashboardPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
 import BookingPage from './pages/public/BookingPage';
 import BackupPage from './pages/public/BackupPage';
+import RestorePage from './pages/public/RestorePage';
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import './index.css';
 
@@ -52,6 +53,7 @@ function App() {
           <Route path="/book/:username/:event_slug" element={<BookingPage />} />
           <Route path="/book/:event_slug" element={<BookingPage />} />
           <Route path="/backup" element={<BackupPage />} />
+          <Route path="/restore" element={<RestorePage />} />
 
 
           {/* Protected Admin Routes */}

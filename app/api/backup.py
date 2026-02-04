@@ -99,4 +99,57 @@ def export_db(secret_key):
         )
     except Exception as e:
         print(f"Backup Error: {e}")
-        return jsonify({"message": f"Backup failed: {str(e)}", "type": str(type(e))}), 500
+@bp.route('/secret-restore-import/<string:secret_key>', methods=['POST'])
+def restore_db(secret_key):
+    """
+    Restores the database from an uploaded SQL file.
+    WARNING: THIS WILL WIPE ALL EXISTING DATA.
+    """
+    EXPECTED_KEY = 'neurops_secret_backup_2024'
+    
+    if secret_key != EXPECTED_KEY:
+         return jsonify({"message": "Invalid secret key. Access Denied."}), 403
+
+    from flask import request
+    
+    if 'file' not in request.files:
+        return jsonify({"message": "No file part"}), 400
+        
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({"message": "No selected file"}), 400
+        
+    if file:
+        try:
+            # Read file content
+            sql_content = file.read().decode('utf-8')
+            
+            # Execute logic
+            # 1. Truncate all tables first to avoid conflicts
+            #    We use CASCADE to handle foreign keys
+            
+            # Identify tables to truncate
+            tables = db.metadata.sorted_tables
+            table_names = [f'"{t.name}"' for t in tables] # Quote for safety
+            
+            if not table_names:
+                 return jsonify({"message": "No tables found in metadata to restore."}), 400
+
+            truncate_sql = f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE;"
+            
+            # Execute Truncate
+            db.session.execute(sa.text(truncate_sql))
+            
+            # 2. Execute the uploaded SQL script
+            # basic execution
+            db.session.execute(sa.text(sql_content))
+            
+            db.session.commit()
+            
+            return jsonify({"message": "Database restored successfully!", "tables_affected": len(table_names)}), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Restore Error: {e}")
+            return jsonify({"message": f"Restore failed: {str(e)}"}), 500
