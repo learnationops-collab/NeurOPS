@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../../../services/api';
+import { motion } from 'framer-motion';
 import {
     Database,
     Calendar,
@@ -16,7 +17,8 @@ import {
     Loader2,
     ArrowUpRight,
     X,
-    Kanban
+    Kanban,
+    Plus
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -29,22 +31,25 @@ import usePersistentFilters from '../../../hooks/usePersistentFilters';
 import CloserKanbanBoard from '../../../components/CloserKanbanBoard';
 
 const CloserLeadsPage = () => {
-    const [activeTab, setActiveTab] = useState('agendas');
+    const [selectedDb, setSelectedDb] = useState(null); // 'agendas' or 'sales' or null
     const [kanbanSubTab, setKanbanSubTab] = useState('tracking'); // 'tracking' or 'closing'
-    const [data, setData] = useState({ agendas: [], sales: [], kanban: { stages: [], board: {} } });
+    const [kanbanData, setKanbanData] = useState({ stages: [], board: {} });
+    const [data, setData] = useState({ agendas: [], sales: [] });
     const [loading, setLoading] = useState(true);
+    const [kanbanLoading, setKanbanLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [search, setSearch] = useState('');
-    const [error, setError] = useState(null);
-    const [editingId, setEditingId] = useState(null);
-    const [editStartTime, setEditStartTime] = useState('');
     const [updating, setUpdating] = useState(false);
     const [selectedAgenda, setSelectedAgenda] = useState(null);
+    const [activeSection, setActiveSection] = useState(0); // 0: Kanban, 1: Tables
+    const [editStartTime, setEditStartTime] = useState('');
     const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
+    const [search, setSearch] = useState('');
+    const [error, setError] = useState(null);
+    const [editingId, setEditingId] = useState(null);
 
     // Kanban splitting logic
     const trackingStages = ["Nueva", "Respondido", "Confirmado"];
@@ -54,58 +59,96 @@ const CloserLeadsPage = () => {
     const filteredKanbanBoard = useMemo(() => {
         const board = {};
         filteredKanbanStages.forEach(stage => {
-            board[stage] = data.kanban.board[stage] || [];
+            board[stage] = kanbanData.board[stage] || [];
         });
         return board;
-    }, [data.kanban.board, kanbanSubTab, filteredKanbanStages]);
+    }, [kanbanData.board, kanbanSubTab, filteredKanbanStages]);
 
     // Filter Configuration
-    const { filters, updateFilter } = usePersistentFilters(`closer_filters_${activeTab}`, {
+    const { filters, updateFilter } = usePersistentFilters(`closer_filters_${selectedDb || 'general'}`, {
         dateRange: { type: 'all', start: '', end: '' },
-        status: [],
         program: [],
         paymentMethod: []
     });
 
     useEffect(() => {
-        fetchData();
-    }, [activeTab, page, filters]); // Re-fetch when filters change
+        fetchKanbanData();
+    }, []);
+
+    useEffect(() => {
+        if (selectedDb) fetchData();
+    }, [selectedDb, page, filters]);
+
+    // Listen for section change requests from DOCK
+    useEffect(() => {
+        const handleRequest = (e) => {
+            const { index } = e.detail;
+            setActiveSection(index);
+        };
+        window.addEventListener('request-section-change', handleRequest);
+        return () => window.removeEventListener('request-section-change', handleRequest);
+    }, []);
+
+    // Vertical Key Navigation
+    useEffect(() => {
+        const handleKeys = (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+            if (e.key === 'ArrowUp' && activeSection === 0) {
+                setActiveSection(1); // Move to Tables (Above)
+            } else if (e.key === 'ArrowDown' && activeSection === 1) {
+                setActiveSection(0); // Move to Kanban (Below)
+            }
+        };
+
+        window.addEventListener('keydown', handleKeys);
+        return () => window.removeEventListener('keydown', handleKeys);
+    }, [activeSection]);
+
+    // Dispatch activeSection to Dock
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('page-section-changed', {
+            detail: { activeSection, category: 'Leads' }
+        }));
+    }, [activeSection]);
+
+    const fetchKanbanData = async () => {
+        setKanbanLoading(true);
+        try {
+            const res = await api.get('/closer/kanban');
+            setKanbanData(res.data);
+        } catch (err) {
+            console.error("Error fetching kanban", err);
+        } finally {
+            setKanbanLoading(false);
+        }
+    };
 
     const fetchData = async () => {
+        if (!selectedDb) return;
         setLoading(true);
         setError(null);
         try {
-            if (activeTab === 'kanban') {
-                const res = await api.get('/closer/kanban');
-                setData(prev => ({ ...prev, kanban: res.data }));
-            } else {
-                const endpoint = activeTab === 'agendas' ? '/closer/agendas' : '/closer/sales';
-
-                // Construct query params
-                const params = {
+            const endpoint = selectedDb === 'agendas' ? '/closer/agendas' : '/closer/sales';
+            const res = await api.get(endpoint, {
+                params: {
                     page,
                     search,
                     start_date: filters.dateRange?.start,
                     end_date: filters.dateRange?.end,
-                    status: filters.status?.join(','),
                     program: filters.program?.join(','),
                     payment_method: filters.paymentMethod?.join(',')
-                };
-
-                const res = await api.get(endpoint, { params });
-
-                const tabData = Array.isArray(res.data.data) ? res.data.data : [];
-                setData(prev => ({ ...prev, [activeTab]: tabData }));
-                setTotalPages(res.data.pages || 1);
-            }
-        } catch (err) {
-            console.error("Error fetching leads data [DB/Network]:", {
-                message: err.message,
-                status: err.response?.status,
-                data: err.response?.data,
-                url: err.config?.url
+                }
             });
-            setError("Error al cargar los datos. Por favor reintenta.");
+
+            setData(prev => ({
+                ...prev,
+                [selectedDb]: Array.isArray(res.data.data) ? res.data.data : []
+            }));
+            setTotalPages(res.data.pages || 1);
+        } catch (err) {
+            console.error("Error fetching leads data:", err);
+            setError("Error al cargar los datos.");
         } finally {
             setLoading(false);
         }
@@ -131,62 +174,42 @@ const CloserLeadsPage = () => {
     };
 
     const handleKanbanMove = async (id, fromStage, toStage) => {
-        // Optimistic UI update
-        const newBoard = { ...data.kanban.board };
-
-        // Find item in any stage (even if not visible in current split)
-        let foundItem = null;
-        let sourceStage = fromStage;
-
-        if (!newBoard[sourceStage]) {
-            for (const s of Object.keys(newBoard)) {
-                const idx = newBoard[s].findIndex(i => i.id === id);
-                if (idx !== -1) {
-                    sourceStage = s;
-                    foundItem = newBoard[s][idx];
-                    break;
-                }
-            }
-        } else {
-            const idx = newBoard[sourceStage].findIndex(i => i.id === id);
-            if (idx !== -1) foundItem = newBoard[sourceStage][idx];
-        }
-
-        if (!foundItem) return;
-
-        // Remove from source
-        newBoard[sourceStage] = newBoard[sourceStage].filter(i => i.id !== id);
-
-        // Add to target
-        if (!newBoard[toStage]) newBoard[toStage] = [];
-        newBoard[toStage].push({ ...foundItem, last_stage: toStage });
-
-        setData(prev => ({
-            ...prev,
-            kanban: {
-                ...prev.kanban,
-                board: newBoard
-            }
-        }));
-
+        if (fromStage === toStage) return;
+        setKanbanData(prev => {
+            const newBoard = { ...prev.board };
+            const fromItems = [...(newBoard[fromStage] || [])];
+            const toItems = [...(newBoard[toStage] || [])];
+            const itemIndex = fromItems.findIndex(i => i.id === id);
+            if (itemIndex === -1) return prev;
+            const [movedItem] = fromItems.splice(itemIndex, 1);
+            toItems.push({ ...movedItem, last_stage: toStage });
+            newBoard[fromStage] = fromItems;
+            newBoard[toStage] = toItems;
+            return { ...prev, board: newBoard };
+        });
         try {
             await api.patch(`/closer/appointments/${id}/stage`, { stage: toStage });
+            fetchData();
         } catch (err) {
-            console.error("Error updating stage", err);
-            // Revert on error - simply refetch
             fetchData();
         }
     };
 
-    // Filter Options
-    const statusOptions = [
-        { value: 'scheduled', label: 'Programada' },
-        { value: 'completed', label: 'Completada' },
-        { value: 'no_show', label: 'No Show' },
-        { value: 'canceled', label: 'Cancelada' },
-        { value: 'reprogrammed', label: 'Reprogramada' },
-        { value: 'sold', label: 'Ventada' }
-    ];
+    const handleSetOutcome = async (id, outcome) => {
+        try {
+            setKanbanData(prev => {
+                const newBoard = { ...prev.board };
+                for (const stage in newBoard) {
+                    newBoard[stage] = newBoard[stage].filter(item => item.id !== id);
+                }
+                return { ...prev, board: newBoard };
+            });
+            await api.patch(`/closer/appointments/${id}/outcome`, { outcome });
+            fetchData();
+        } catch (err) {
+            fetchData();
+        }
+    };
 
     const programOptions = [
         { value: 'Mentoria Learnation', label: 'Mentoria Learnation' },
@@ -208,335 +231,268 @@ const CloserLeadsPage = () => {
     ];
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="space-y-1">
-                    <h1 className="text-4xl font-black text-base italic tracking-tighter uppercase">Base de Datos</h1>
-                    <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Historial completo de ventas y agendamientos</p>
-                </div>
-                <div className="flex bg-surface p-1.5 rounded-2xl border border-base backdrop-blur-md">
-                    <button
-                        onClick={() => { setActiveTab('agendas'); setPage(1); }}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${activeTab === 'agendas' ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-base'}`}
-                    >
-                        <Calendar size={18} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Base Agendas</span>
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('sales'); setPage(1); }}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${activeTab === 'sales' ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-base'}`}
-                    >
-                        <DollarSign size={18} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Base Ventas</span>
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('kanban'); }}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${activeTab === 'kanban' ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-base'}`}
-                    >
-                        <Kanban size={18} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Embudo</span>
-                    </button>
-                </div>
-            </header>
-
-            {/* Sub-navigation for Kanban */}
-            {activeTab === 'kanban' && (
-                <div className="flex justify-center">
-                    <div className="flex bg-main p-1 rounded-full border border-base shadow-inner">
-                        <button
-                            onClick={() => setKanbanSubTab('tracking')}
-                            className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'tracking' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
-                        >
-                            Seguimiento
-                        </button>
-                        <button
-                            onClick={() => setKanbanSubTab('closing')}
-                            className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'closing' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
-                        >
-                            Cierre
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Filters & Search - Hide for Kanban for now or adapt */}
-            {activeTab !== 'kanban' && (
-                <div className="space-y-4">
-                    <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-surface p-6 rounded-[2rem] border border-base backdrop-blur-xl">
-                        <form onSubmit={handleSearch} className="relative w-full md:max-w-md group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors" size={20} />
-                            <input
-                                type="text"
-                                placeholder="Buscar por nombre..."
-                                className="w-full pl-12 pr-4 py-4 bg-main border border-base rounded-2xl text-base placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </form>
-                        <div className="flex gap-4 w-full md:w-auto">
-                            <Button
-                                variant="ghost"
-                                className={`flex-1 md:flex-none border-base text-muted px-6 h-14 ${showFilters ? 'bg-surface-hover text-white' : ''}`}
-                                icon={Filter}
-                                onClick={() => setShowFilters(!showFilters)}
+        <div className="h-screen overflow-hidden relative bg-main">
+            <motion.div
+                className="h-full w-full"
+                animate={{ y: `-${(1 - activeSection) * 100}%` }}
+                transition={{ type: 'spring', damping: 25, stiffness: 120 }}
+            >
+                {/* SECTION 1: DATABASE TABLES (Top) */}
+                <section className="h-full w-full p-8 flex flex-col items-center justify-start bg-main/50 overflow-y-auto">
+                    <div className="w-full max-w-[1800px] space-y-8 pb-32">
+                        <header className="flex items-center gap-6 border-b border-base pb-6">
+                            <button
+                                onClick={() => setActiveSection(0)}
+                                className="p-3 bg-surface border border-base rounded-2xl text-muted hover:text-primary transition-all group"
                             >
-                                Filtros
-                            </Button>
-                        </div>
-                    </div>
+                                <Plus className="rotate-45" size={20} />
+                            </button>
+                            <div className="space-y-1 text-left">
+                                <h1 className="text-4xl font-black text-base italic tracking-tighter uppercase leading-none">
+                                    {selectedDb ? (selectedDb === 'agendas' ? 'Base Agendas' : 'Base Ventas') : 'Bases de Datos'}
+                                </h1>
+                                <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Gestión unificada de registros</p>
+                            </div>
+                            {selectedDb && (
+                                <button
+                                    onClick={() => setSelectedDb(null)}
+                                    className="ml-auto px-4 py-2 bg-surface border border-base rounded-xl text-[10px] font-black uppercase tracking-widest text-muted hover:text-primary transition-all flex items-center gap-2"
+                                >
+                                    <ChevronLeft size={14} /> Cambiar Base
+                                </button>
+                            )}
+                        </header>
 
-                    {/* Filter Panel */}
-                    {showFilters && (
-                        <div className="bg-surface/50 border border-base rounded-[1.5rem] p-6 animate-in slide-in-from-top-4 fade-in duration-300">
-                            <div className="flex flex-wrap gap-4 items-center">
-                                <DateRangeFilter
-                                    value={filters.dateRange}
-                                    onChange={(val) => { updateFilter('dateRange', val); setPage(1); }}
-                                />
+                        {!selectedDb ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-12">
+                                <button
+                                    onClick={() => setSelectedDb('agendas')}
+                                    className="group relative h-[300px] bg-surface border-2 border-base rounded-[3rem] p-12 text-left hover:border-primary/50 transition-all overflow-hidden flex flex-col justify-end"
+                                >
+                                    <div className="absolute top-12 right-12 opacity-5 group-hover:opacity-10 transition-opacity">
+                                        <Calendar size={180} />
+                                    </div>
+                                    <div className="relative z-10 space-y-4">
+                                        <Badge variant="neutral" className="bg-primary/10 text-primary border-primary/20">Registros de Llamadas</Badge>
+                                        <h2 className="text-5xl font-black italic uppercase tracking-tighter text-base">Agendas</h2>
+                                        <p className="text-sm font-bold text-muted uppercase tracking-widest max-w-[250px]">Consulta el historial completo de agendas y prospectos.</p>
+                                    </div>
+                                    <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
 
-                                {activeTab === 'agendas' && (
-                                    <MultiSelectFilter
-                                        label="Estado"
-                                        options={statusOptions}
-                                        value={filters.status}
-                                        onChange={(val) => { updateFilter('status', val); setPage(1); }}
-                                    />
-                                )}
+                                <button
+                                    onClick={() => setSelectedDb('sales')}
+                                    className="group relative h-[300px] bg-surface border-2 border-base rounded-[3rem] p-12 text-left hover:border-emerald-500/50 transition-all overflow-hidden flex flex-col justify-end"
+                                >
+                                    <div className="absolute top-12 right-12 opacity-5 group-hover:opacity-10 transition-opacity">
+                                        <DollarSign size={180} />
+                                    </div>
+                                    <div className="relative z-10 space-y-4">
+                                        <Badge variant="neutral" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Facturación</Badge>
+                                        <h2 className="text-5xl font-black italic uppercase tracking-tighter text-base">Ventas</h2>
+                                        <p className="text-sm font-bold text-muted uppercase tracking-widest max-w-[250px]">Seguimiento de cierres, pagos y programas vendidos.</p>
+                                    </div>
+                                    <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+                                    <div className="space-y-2 text-left">
+                                        <h2 className="text-xs font-black uppercase tracking-widest text-muted italic flex items-center gap-2">
+                                            <Database size={14} className="text-primary" />
+                                            Filtros y Búsqueda
+                                        </h2>
+                                    </div>
 
-                                {activeTab === 'sales' && (
-                                    <>
+                                    <form onSubmit={handleSearch} className="relative w-full md:max-w-md group">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar por nombre..."
+                                            className="w-full pl-12 pr-4 py-4 bg-surface border border-base rounded-2xl text-sm placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                        />
+                                    </form>
+                                </div>
+
+                                <div className="bg-surface/50 border border-base rounded-[1.5rem] p-6">
+                                    <div className="flex flex-wrap gap-4 items-center">
+                                        <DateRangeFilter
+                                            value={filters.dateRange}
+                                            onChange={(val) => { updateFilter('dateRange', val); setPage(1); }}
+                                        />
                                         <MultiSelectFilter
                                             label="Programa"
                                             options={programOptions}
                                             value={filters.program}
                                             onChange={(val) => { updateFilter('program', val); setPage(1); }}
                                         />
-                                        <MultiSelectFilter
-                                            label="Método Pago"
-                                            options={paymentOptions}
-                                            value={filters.paymentMethod}
-                                            onChange={(val) => { updateFilter('paymentMethod', val); setPage(1); }}
-                                        />
-                                    </>
-                                )}
-
-                                {(filters.dateRange?.type !== 'all' || filters.status?.length > 0 || filters.program?.length > 0 || filters.paymentMethod?.length > 0) && (
-                                    <button
-                                        onClick={() => {
-                                            updateFilter('dateRange', { type: 'all', start: '', end: '' });
-                                            updateFilter('status', []);
-                                            updateFilter('program', []);
-                                            updateFilter('paymentMethod', []);
-                                            setPage(1);
-                                        }}
-                                        className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 flex items-center gap-1 ml-auto"
-                                    >
-                                        <X size={14} /> Limpiar Filtros
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Main Table Database */}
-            {activeTab !== 'kanban' && (
-                <Card variant="surface" padding="p-0 overflow-hidden" className="shadow-2xl overflow-x-auto">
-                    {error ? (
-                        <div className="p-20 flex flex-col items-center justify-center text-accent gap-4">
-                            <p className="font-black uppercase tracking-widest text-[10px]">{error}</p>
-                            <Button onClick={fetchData} variant="ghost" className="border-accent/20 text-accent">Reintentar</Button>
-                        </div>
-                    ) : loading ? (
-                        <div className="p-20 flex justify-center items-center">
-                            <Loader2 className="animate-spin text-primary" size={40} />
-                        </div>
-                    ) : (
-                        <table className="w-full text-left border-collapse min-w-[800px]">
-                            <thead>
-                                <tr className="border-b border-base bg-surface-hover">
-                                    <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Lead / Cliente</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Fecha / Hora</th>
-                                    {activeTab === 'agendas' ? (
-                                        <>
-                                            <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Ultima Etapa</th>
-                                            <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Resultado</th>
-                                            <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Link Call</th>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Programa</th>
-                                            <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Monto</th>
-                                        </>
-                                    )}
-                                    <th className="px-8 py-6 text-[10px] font-black text-primary uppercase tracking-widest text-right">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-base">
-                                {data[activeTab]?.length > 0 ? data[activeTab].map(item => (
-                                    <tr key={item.id} className="hover:bg-surface-hover/50 transition-all group">
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-main flex items-center justify-center text-muted font-black border border-base group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
-                                                    {activeTab === 'agendas' ? item.lead_name[0].toUpperCase() : item.student_name[0].toUpperCase()}
-                                                </div>
-                                                <p className="text-base font-black italic">{activeTab === 'agendas' ? item.lead_name : item.student_name}</p>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            {editingId === item.id ? (
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="datetime-local"
-                                                        className="bg-main border border-base rounded-lg px-2 py-1 text-base text-[10px] outline-none focus:ring-1 focus:ring-primary font-bold"
-                                                        value={editStartTime}
-                                                        onChange={(e) => setEditStartTime(e.target.value)}
-                                                    />
-                                                    <button
-                                                        onClick={() => handleUpdateDate(item.id)}
-                                                        disabled={updating}
-                                                        className="p-1.5 bg-primary text-white rounded-md hover:bg-primary/80 transition-all disabled:opacity-50"
-                                                    >
-                                                        {updating ? <Loader2 size={12} className="animate-spin" /> : <p className="text-[9px] font-black uppercase tracking-widest px-1">OK</p>}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setEditingId(null)}
-                                                        className="p-1.5 bg-surface-hover text-muted rounded-md hover:text-base transition-all"
-                                                    >
-                                                        <p className="text-[9px] font-black uppercase tracking-widest px-1">X</p>
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div
-                                                    onClick={() => {
-                                                        if (activeTab === 'agendas') {
-                                                            setEditingId(item.id);
-                                                            setEditStartTime(item.date ? item.date.substring(0, 16) : '');
-                                                        }
-                                                    }}
-                                                    className={`flex items-center gap-2 text-muted font-bold ${activeTab === 'agendas' ? 'cursor-pointer hover:text-base transition-colors' : ''}`}
-                                                >
-                                                    <Calendar size={14} className="text-primary" />
-                                                    <span className="text-sm">{new Date(item.date).toLocaleDateString()}</span>
-                                                    <span className="text-[10px] opacity-50 ml-1">{new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                </div>
-                                            )}
-                                        </td>
-                                        {activeTab === 'agendas' ? (
-                                            <>
-                                                <td className="px-8 py-6">
-                                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">{item.last_stage || 'N/A'}</p>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <Badge variant={item.result === 'Sold' ? 'success' : 'neutral'}>
-                                                        {item.result || 'Sin resultado'}
-                                                    </Badge>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    {item.linked_call ? (
-                                                        <a href={item.linked_call} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs font-bold">
-                                                            Ver Call
-                                                        </a>
-                                                    ) : (
-                                                        <span className="text-muted text-xs">No link</span>
-                                                    )}
-                                                </td>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <td className="px-8 py-6">
-                                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">{item.program_name}</p>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <p className="text-success font-black tracking-tighter text-lg">${item.amount?.toLocaleString()}</p>
-                                                    <p className="text-[9px] text-muted font-bold uppercase">{item.payment_method}</p>
-                                                </td>
-                                            </>
+                                        {selectedDb === 'sales' && (
+                                            <MultiSelectFilter
+                                                label="Método Pago"
+                                                options={paymentOptions}
+                                                value={filters.paymentMethod}
+                                                onChange={(val) => { updateFilter('paymentMethod', val); setPage(1); }}
+                                            />
                                         )}
-                                        <td className="px-8 py-6 text-right">
+                                        {(filters.dateRange?.type !== 'all' || filters.program?.length > 0 || filters.paymentMethod?.length > 0) && (
                                             <button
                                                 onClick={() => {
-                                                    if (activeTab === 'agendas') {
-                                                        setSelectedAgenda(item);
-                                                        setIsAgendaModalOpen(true);
-                                                    } else {
-                                                        setSelectedEnrollmentId(item.id);
-                                                        setIsDetailModalOpen(true);
-                                                    }
+                                                    updateFilter('dateRange', { type: 'all', start: '', end: '' });
+                                                    updateFilter('program', []);
+                                                    updateFilter('paymentMethod', []);
+                                                    setPage(1);
                                                 }}
-                                                className="p-3 bg-surface-hover hover:bg-main text-muted hover:text-primary rounded-xl transition-all border border-base"
+                                                className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 flex items-center gap-1 ml-auto"
                                             >
-                                                <ArrowUpRight size={18} />
+                                                <X size={14} /> Limpiar Filtros
                                             </button>
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr>
-                                        <td colSpan="5" className="p-20 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">No se encontraron registros</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    )}
-                </Card>
-            )}
+                                        )}
+                                    </div>
+                                </div>
 
-            {/* Kanban Board View */}
-            {activeTab === 'kanban' && (
-                <div className="overflow-x-auto pb-4">
-                    {loading ? (
-                        <div className="p-20 flex justify-center items-center">
-                            <Loader2 className="animate-spin text-primary" size={40} />
+                                <Card variant="surface" padding="p-0 overflow-hidden" className="shadow-2xl border-base/50">
+                                    {error ? (
+                                        <div className="p-20 text-center text-accent uppercase font-black text-xs">{error}</div>
+                                    ) : loading ? (
+                                        <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left border-collapse min-w-[800px]">
+                                                <thead>
+                                                    <tr className="border-b border-base bg-surface-hover">
+                                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Lead / Cliente</th>
+                                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Fecha / Hora</th>
+                                                        {selectedDb === 'agendas' ? (
+                                                            <>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Ultima Etapa</th>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Resultado</th>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Programa</th>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Monto</th>
+                                                            </>
+                                                        )}
+                                                        <th className="px-8 py-6 text-[10px] font-black text-primary uppercase tracking-widest text-right">Acción</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-base">
+                                                    {data[selectedDb]?.length > 0 ? data[selectedDb].map(item => (
+                                                        <tr key={item.id} className="hover:bg-surface-hover/50 transition-all group">
+                                                            <td className="px-8 py-6 font-black italic">{selectedDb === 'agendas' ? item.lead_name : item.student_name}</td>
+                                                            <td className="px-8 py-6 text-sm font-bold text-muted">{new Date(item.date).toLocaleString()}</td>
+                                                            {selectedDb === 'agendas' ? (
+                                                                <>
+                                                                    <td className="px-8 py-6 text-[10px] font-black uppercase">{item.last_stage || 'N/A'}</td>
+                                                                    <td className="px-8 py-6"><Badge variant={item.result === 'Sold' ? 'success' : 'neutral'}>{item.result || 'Sin resultado'}</Badge></td>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <td className="px-8 py-6 text-[10px] font-black uppercase">{item.program_name}</td>
+                                                                    <td className="px-8 py-6 text-lg font-black text-success">${item.amount?.toLocaleString()}</td>
+                                                                </>
+                                                            )}
+                                                            <td className="px-8 py-6 text-right">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (selectedDb === 'agendas') { setSelectedAgenda(item); setIsAgendaModalOpen(true); }
+                                                                        else { setSelectedEnrollmentId(item.id); setIsDetailModalOpen(true); }
+                                                                    }}
+                                                                    className="p-3 bg-surface-hover hover:bg-main text-muted hover:text-primary rounded-xl transition-all border border-base"
+                                                                >
+                                                                    <ArrowUpRight size={18} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    )) : (
+                                                        <tr><td colSpan="6" className="p-20 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">No se encontraron registros</td></tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </Card>
+
+                                <div className="flex justify-between items-center py-6">
+                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Página {page} de {totalPages}</p>
+                                    <div className="flex gap-2">
+                                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-3 bg-surface border border-base rounded-xl text-muted hover:text-base disabled:opacity-20 transition-all"><ChevronLeft size={20} /></button>
+                                        <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-3 bg-surface border border-base rounded-xl text-muted hover:text-base disabled:opacity-20 transition-all"><ChevronRight size={20} /></button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </section>
+
+                {/* SECTION 0: KANBAN BOARD (Bottom) */}
+                <section className="h-full w-full p-8 flex flex-col items-center justify-start overflow-hidden">
+                    <div className="w-full max-w-[1800px] flex-1 flex flex-col space-y-6 text-center">
+                        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div className="space-y-1 text-left">
+                                <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none">Pipeline</h1>
+                                <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Embudo de ventas y seguimiento activo</p>
+                            </div>
+                        </header>
+
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-xs font-black uppercase tracking-widest text-muted italic flex items-center gap-2">
+                                <Kanban size={14} className="text-primary" />
+                                Embudo de Seguimiento
+                            </h2>
+                            <div className="flex bg-main p-1 rounded-full border border-base shadow-inner">
+                                <button
+                                    onClick={() => setKanbanSubTab('tracking')}
+                                    className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'tracking' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
+                                >
+                                    Seguimiento
+                                </button>
+                                <button
+                                    onClick={() => setKanbanSubTab('closing')}
+                                    className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'closing' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
+                                >
+                                    Cierre
+                                </button>
+                            </div>
                         </div>
-                    ) : error ? (
-                        <div className="p-8 text-center bg-red-500/10 border border-red-500/20 rounded-xl">
-                            <p className="text-red-400 font-bold mb-2">Error al cargar el embudo</p>
-                            <p className="text-sm text-red-300 mb-4">{error}</p>
+
+                        <div className="bg-surface/30 backdrop-blur-md border border-base rounded-[2.5rem] p-8 flex-1 overflow-hidden flex flex-col">
+                            {kanbanLoading ? (
+                                <div className="flex-1 flex items-center justify-center">
+                                    <Loader2 className="animate-spin text-primary" size={32} />
+                                </div>
+                            ) : (
+                                <div className="flex-1 overflow-x-auto custom-scrollbar">
+                                    <CloserKanbanBoard
+                                        stages={filteredKanbanStages}
+                                        board={filteredKanbanBoard}
+                                        onMove={handleKanbanMove}
+                                        onSetOutcome={handleSetOutcome}
+                                        onCardClick={(item) => {
+                                            setSelectedAgenda(item);
+                                            setIsAgendaModalOpen(true);
+                                        }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-center pt-2">
                             <button
-                                onClick={fetchData}
-                                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-colors text-sm font-medium"
+                                onClick={() => setActiveSection(1)}
+                                className="group flex flex-col items-center gap-2 text-muted hover:text-primary transition-all animate-bounce focus:outline-none"
                             >
-                                Reintentar
+                                <span className="text-[8px] font-black uppercase tracking-widest">Ver Tabla General</span>
+                                <div className="w-px h-8 bg-gradient-to-b from-muted group-hover:from-primary text-primary" />
                             </button>
                         </div>
-                    ) : (
-                        <CloserKanbanBoard
-                            stages={filteredKanbanStages}
-                            board={filteredKanbanBoard}
-                            onMove={handleKanbanMove}
-                            onCardClick={(item) => {
-                                setSelectedAgenda(item);
-                                setIsAgendaModalOpen(true);
-                            }}
-                        />
-                    )}
-                </div>
-            )}
-
-            {/* Pagination - Hide for Kanban */}
-            {activeTab !== 'kanban' && (
-                <div className="flex justify-between items-center pb-10">
-                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Página {page} de {totalPages}</p>
-                    <div className="flex gap-2">
-                        <button
-                            disabled={page === 1}
-                            onClick={() => setPage(p => p - 1)}
-                            className="p-3 bg-surface border border-base rounded-xl text-muted hover:text-base disabled:opacity-20 transition-all"
-                        >
-                            <ChevronLeft size={20} />
-                        </button>
-                        <button
-                            disabled={page === totalPages}
-                            onClick={() => setPage(p => p + 1)}
-                            className="p-3 bg-surface border border-base rounded-xl text-muted hover:text-base disabled:opacity-20 transition-all"
-                        >
-                            <ChevronRight size={20} />
-                        </button>
                     </div>
-                </div>
-            )}
-            {/* Modal for Agenda Management */}
+                </section>
+            </motion.div>
+
             {isAgendaModalOpen && selectedAgenda && (
                 <AgendaManagerModal
                     isOpen={isAgendaModalOpen}
@@ -545,7 +501,6 @@ const CloserLeadsPage = () => {
                     onSuccess={fetchData}
                 />
             )}
-
             <SaleDetailModal
                 isOpen={isDetailModalOpen}
                 enrollmentId={selectedEnrollmentId}
