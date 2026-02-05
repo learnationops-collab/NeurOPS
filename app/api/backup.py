@@ -8,7 +8,7 @@ bp = Blueprint('backup', __name__)
 def format_value(value):
     if value is None:
         return 'NULL'
-    if isinstance(value, (datetime.date, datetime.datetime)):
+    if isinstance(value, (datetime.date, datetime.datetime, datetime.time)):
         return f"'{value.isoformat()}'"
     if isinstance(value, str):
         # Escape single quotes for SQL
@@ -129,27 +129,67 @@ def restore_db(secret_key):
             # 1. Truncate all tables first to avoid conflicts
             #    We use CASCADE to handle foreign keys
             
-            # Identify tables to truncate
+            # Identify tables to truncate/delete
             tables = db.metadata.sorted_tables
             table_names = [f'"{t.name}"' for t in tables] # Quote for safety
             
             if not table_names:
                  return jsonify({"message": "No tables found in metadata to restore."}), 400
 
-            truncate_sql = f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE;"
-            
-            # Execute Truncate
-            db.session.execute(sa.text(truncate_sql))
-            
-            # 2. Execute the uploaded SQL script
-            # basic execution
-            db.session.execute(sa.text(sql_content))
-            
-            db.session.commit()
+            # Use raw connection to avoid SQLAlchemy bind parameter parsing issues with the big SQL script
+            connection = db.engine.raw_connection()
+            try:
+                cursor = connection.cursor()
+                db_url = str(db.engine.url)
+                
+                # 1. Truncate/Wipe
+                if 'sqlite' in db_url:
+                    # SQLite: disable FK, delete all, enable FK
+                    cursor.execute("PRAGMA foreign_keys = OFF;")
+                    for table in tables:
+                        cursor.execute(f'DELETE FROM "{table.name}";')
+                    cursor.execute("PRAGMA foreign_keys = ON;")
+                else:
+                    # PostgreSQL: Truncate Cascade
+                    truncate_sql = f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE;"
+                    cursor.execute(truncate_sql)
+                
+                # 2. Execute Script
+                if 'sqlite' in db_url:
+                    # SQLite: Execute line by line to avoid "executescript" parser quirks with timestamps
+                    # and to provide better error context.
+                    # Our backup format is guaranteed to be one INSERT per line context.
+                    statements = sql_content.split(';')
+                    start_index = 0
+                    for i, stmt in enumerate(statements):
+                        stmt = stmt.strip()
+                        if not stmt:
+                            continue
+                        if stmt.upper().startswith('BEGIN') or stmt.upper().startswith('COMMIT'):
+                            continue # Skip transaction control
+                        if stmt.startswith('--'):
+                            continue 
+                            
+                        try:
+                            cursor.execute(stmt)
+                        except Exception as line_err:
+                            # Capture detailed context
+                            error_ctx = f"Statement #{i+1} failed.\nError: {str(line_err)}\nSQL Snippet: {stmt[:150]}..."
+                            print(f"Restore Line Error: {error_ctx}")
+                            raise Exception(error_ctx)
+                else:
+                    # PostgreSQL
+                    cursor.execute(sql_content)
+                
+                connection.commit()
+            finally:
+                cursor.close()
+                connection.close()
             
             return jsonify({"message": "Database restored successfully!", "tables_affected": len(table_names)}), 200
             
         except Exception as e:
             db.session.rollback()
-            print(f"Restore Error: {e}")
+            print(f"Restore Fatal Error: {e}")
+            # Return the specific message if passed from inner raise
             return jsonify({"message": f"Restore failed: {str(e)}"}), 500
