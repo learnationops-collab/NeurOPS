@@ -2,50 +2,42 @@
 trigger: always_on
 ---
 
-# Multi-Agent Git Workflow
+# Unified Main-Branch Git Workflow
 
-Este archivo define las reglas estrictas para el control de versiones con Git en este proyecto. El objetivo es permitir que múltiples agentes y desarrolladores trabajen simultáneamente sin conflictos ni pérdida de datos.
+Este archivo define las reglas simplificadas para el control de versiones con Git en este proyecto. Siguiendo las instrucciones del usuario, **se debe trabajar directamente sobre la rama `main`**.
 
 ## 1. Estrategia de Ramas (Branching Strategy)
 
-### Ramas Principales
-- **`main`**: Código de producción VERIFICADO. **Solo el usuario** (o un proceso de despliegue autorizado) hace merge a `main`. Nadie trabaja directamente aquí.
-- **`develop`**: Rama de integración. Aquí se fusionan las funcionalidades completas y probadas. Es la base para todas las nuevas funcionalidades.
+### Rama Principal Unificada
+- **`main`**: Es la única rama de trabajo. Todas las modificaciones, correcciones y nuevas funcionalidades se realizan directamente aquí.
+- **NO se deben crear ramas temporales** (`feature/`, `fix/`, etc.) a menos que el usuario lo solicite explícitamente para un caso muy especial.
+- Se elimina el uso de la rama `develop`.
 
-### Ramas de Trabajo (Feature Branches)
-- CADA nueva tarea debe tener su propia rama.
-- **Formato de nombre**: `feature/<deskripción-breve-sepada-por-guiones>`
-  - Ejemplo: `feature/auth-login-fix`, `feature/new-landing-page`.
-- **Origen**: Siempre crea tu rama desde `develop` (o `main` si `develop` no existe aún, pero prioriza `develop`).
-  ```powershell
-  git checkout develop
-  git pull origin develop
-  git checkout -b feature/mi-nueva-funcionalidad
-  ```
+## 2. Flujo de Trabajo (Workflow)
 
-## 2. Higiene de Commits
-
-- **Atomicidad**: Haz commits pequeños y lógicos. No mezcles arreglos de CSS con lógica de base de datos en el mismo commit inútilmente.
-- **Aislamiento**: NUNCA uses `git add .` a menos que estés 100% seguro de que no hay archivos basura o cambios no deseados en el directorio de trabajo.
-  - Usa `git add ruta/al/archivo` para seleccionar específicamente lo que editaste.
-- **Mensajes Claros**:
-  - Malo: "fix"
-  - Bueno: "Fix login button event handler"
-
-## 3. Resolución de Conflictos y Fusión
-
-### Antes de terminar
-1. Antes de dar una tarea por terminada, **trae los cambios más recientes de `develop`** a tu rama para verificar que no hay conflictos.
+1. **Sincronización inicial**: Antes de empezar cualquier tarea, asegúrate de estar en `main` y tener los cambios más recientes.
    ```powershell
-   git pull origin develop
-   # Si hay conflictos, resuélvelos en tu rama feature
+   git checkout main
+   git pull origin main
+   ```
+2. **Desarrollo y Commits**: Realiza tus cambios y haz commits frecuentes para mantener un historial claro.
+3. **Push Directo**: Una vez verificado el cambio, haz push directamente a `main`.
+   ```powershell
+   git push origin main
    ```
 
-### Al terminar
-1. Haz push de tu rama `feature`.
-2. Si tienes permisos y confianza, haz merge a `develop`. Si es un cambio crítico, solicita revisión (Pull Request/Merge Request).
-3. **NUNCA** hagas force push (`git push -f`) en ramas compartidas (`develop`, `main`).
+## 3. Higiene de Commits
 
-## Resumen para Agentes
-1. ¿Vas a empezar algo? -> `git checkout -b feature/...`
-2. ¿Terminaste? -> Commit -> Pull develop (resolver conflictos) -> Push feature.
+- **Atomicidad**: Haz commits pequeños y lógicos. No mezcles cambios no relacionados.
+- **Mensajes Claros**: Usa mensajes descriptivos en inglés (e.g., "Refactor navigation dock handle", "Fix JWT token validation").
+- **Evitar Basura**: NUNCA uses `git add .` a ciegas. Verifica los archivos con `git status` y usa `git add <archivo>` o selecciona cuidadosamente qué carpetas incluir.
+
+## 4. Resolución de Conflictos
+
+- Si alguien más ha subido cambios mientras trabajabas, haz un `git pull --rebase origin main` para integrar tus cambios sobre la base más reciente de forma limpia.
+- Resuelve los conflictos en `main` si aparecen, verifica la estabilidad y luego sube tus cambios.
+
+## Resumen Ejecutivo
+1. Trabaja SIEMPRE en `main`.
+2. `git pull` -> Cambios -> `git add` -> `git commit` -> `git push origin main`.
+3. Prohibido crear ramas tipo `feature/` o `develop`.

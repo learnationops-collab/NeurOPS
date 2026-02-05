@@ -11,6 +11,7 @@ import DatabasePage from './pages/admin/database/DatabasePage';
 import MarketingPage from './pages/admin/marketing/MarketingPage';
 import SettingsPage from './pages/admin/settings/SettingsPage';
 import CloserDashboard from './pages/closer/dashboard/CloserDashboard';
+import StatisticsPage from './pages/closer/dashboard/StatisticsPage';
 import CloserLeadsPage from './pages/closer/leads/LeadsPage';
 import CloserSettingsPage from './pages/closer/settings/SettingsPage';
 import CloserNewSalePage from './pages/closer/records/NewSalePage';
@@ -146,6 +147,16 @@ function App() {
                 <ProtectedRoute roles={['closer']}>
                   <MainLayout>
                     <CloserDashboard />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/closer/statistics"
+              element={
+                <ProtectedRoute roles={['closer']}>
+                  <MainLayout>
+                    <StatisticsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

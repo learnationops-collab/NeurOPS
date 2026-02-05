@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import DebugConsole from './DebugConsole';
 import OnboardingTour from './OnboardingTour';
 import OperatorControls from './OperatorControls';
@@ -11,6 +12,7 @@ import HotkeysManager from './HotkeysManager';
 
 const MainLayout = ({ children }) => {
     const { user } = useAuth();
+    const { backgroundType, customBackground, stockBackground } = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -23,7 +25,6 @@ const MainLayout = ({ children }) => {
 
     const inactivityTimerRef = useRef(null);
 
-    // Reset inactivity timer and show dock
     const resetInactivity = useCallback(() => {
         setIsDockVisible(true);
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
@@ -33,7 +34,6 @@ const MainLayout = ({ children }) => {
         }, 5000); // 5 seconds
     }, []);
 
-    // Handle global activity
     useEffect(() => {
         const handleActivity = () => resetInactivity();
 
@@ -41,7 +41,6 @@ const MainLayout = ({ children }) => {
         window.addEventListener('mousedown', handleActivity);
         window.addEventListener('scroll', handleActivity, true);
 
-        // Initial timer
         resetInactivity();
 
         return () => {
@@ -52,7 +51,6 @@ const MainLayout = ({ children }) => {
         };
     }, [resetInactivity]);
 
-    // Double-click to close menus
     useEffect(() => {
         const handleDoubleClick = () => {
             if (isPillOpen) setIsPillOpen(false);
@@ -65,10 +63,8 @@ const MainLayout = ({ children }) => {
         return () => window.removeEventListener('dblclick', handleDoubleClick);
     }, [isPillOpen, showSettings, showConsole, showImpersonation]);
 
-    // Control Focus: 'widgets' if pill is open, else 'dock'
     const controlFocus = isPillOpen ? 'widgets' : 'dock';
 
-    // Auto-minimize dock when widgets open
     useEffect(() => {
         if (isPillOpen) {
             setIsDockVisible(false);
@@ -80,61 +76,69 @@ const MainLayout = ({ children }) => {
 
     if (!user) return null;
 
+    const bgImage = backgroundType === 'custom' ? customBackground : backgroundType === 'stock' ? stockBackground : null;
+
     return (
-        <div className="flex h-screen bg-main text-base overflow-hidden w-full">
-            {/* behavior only component */}
-            <HotkeysManager
-                controlFocus={controlFocus}
-                onToggleWidgets={() => setIsPillOpen(prev => !prev)}
-                onToggleSettings={() => setShowSettings(prev => !prev)}
-                onResetInactivity={resetInactivity}
-                onWidgetsNavigate={(key) => setLastWidgetsNavKey({ key, timestamp: Date.now() })}
-            />
+        <div
+            className="flex h-screen bg-main text-base overflow-hidden w-full relative transition-all duration-1000"
+            style={bgImage ? {
+                backgroundImage: `url(${bgImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+            } : {}}
+        >
+            {bgImage && (
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-0" />
+            )}
 
-            {/* Simulation Overlay */}
-            <OperatorControls
-                isOpen={showImpersonation}
-                onClose={() => setShowImpersonation(false)}
-            />
+            <div className="relative z-10 flex w-full h-full overflow-hidden">
+                <HotkeysManager
+                    controlFocus={controlFocus}
+                    onToggleWidgets={() => setIsPillOpen(prev => !prev)}
+                    onToggleSettings={() => setShowSettings(prev => !prev)}
+                    onResetInactivity={resetInactivity}
+                    onWidgetsNavigate={(key) => setLastWidgetsNavKey({ key, timestamp: Date.now() })}
+                />
 
-            {/* Global Settings Modal */}
-            <GlobalSettingsModal
-                isOpen={showSettings}
-                onClose={() => setShowSettings(false)}
-            />
+                <OperatorControls
+                    isOpen={showImpersonation}
+                    onClose={() => setShowImpersonation(false)}
+                />
 
-            {/* Tutorial Overlay */}
-            <OnboardingTour />
+                <GlobalSettingsModal
+                    isOpen={showSettings}
+                    onClose={() => setShowSettings(false)}
+                />
 
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-main relative">
-                {/* Page Content */}
-                <div id="app-main-scroll" className="flex-1 overflow-y-auto scroll-smooth pb-32">
-                    <div className="min-h-full">
-                        {children}
+                <OnboardingTour />
+
+                <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                    <div id="app-main-scroll" className="flex-1 overflow-y-auto scroll-smooth pb-32">
+                        <div className="min-h-full">
+                            {children}
+                        </div>
                     </div>
-                </div>
 
-                {/* Navigation Dock */}
-                <Dock
-                    isVisible={isDockVisible}
-                    onToggleVisibility={() => setIsDockVisible(!isDockVisible)}
-                    onSettingsClick={() => setShowSettings(true)}
-                    isSettingsOpen={showSettings}
-                />
+                    <Dock
+                        isVisible={isDockVisible}
+                        onToggleVisibility={() => setIsDockVisible(!isDockVisible)}
+                        onSettingsClick={() => setShowSettings(true)}
+                        isSettingsOpen={showSettings}
+                    />
 
-                {/* Widgets & Tools Pill */}
-                <WidgetsPill
-                    isOpen={isPillOpen}
-                    onToggle={() => setIsPillOpen(!isPillOpen)}
-                    onConsoleToggle={() => setShowConsole(!showConsole)}
-                    onImpersonateClick={() => setShowImpersonation(true)}
-                    isConsoleOpen={showConsole}
-                    lastNavKey={lastWidgetsNavKey}
-                />
-            </main>
+                    <WidgetsPill
+                        isOpen={isPillOpen}
+                        onToggle={() => setIsPillOpen(!isPillOpen)}
+                        onConsoleToggle={() => setShowConsole(!showConsole)}
+                        onImpersonateClick={() => setShowImpersonation(true)}
+                        isConsoleOpen={showConsole}
+                        lastNavKey={lastWidgetsNavKey}
+                    />
+                </main>
 
-            <DebugConsole isVisible={showConsole} onClose={() => setShowConsole(false)} />
+                <DebugConsole isVisible={showConsole} onClose={() => setShowConsole(false)} />
+            </div>
         </div>
     );
 };

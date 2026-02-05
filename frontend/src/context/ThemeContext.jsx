@@ -29,6 +29,18 @@ export const ThemeProvider = ({ children }) => {
         return localStorage.getItem('app-theme-variant') || 'glass';
     });
 
+    const [backgroundType, setBackgroundType] = useState(() => {
+        return localStorage.getItem('app-bg-type') || 'theme'; // 'theme', 'stock', 'custom'
+    });
+
+    const [customBackground, setCustomBackground] = useState(() => {
+        return localStorage.getItem('app-bg-custom') || null;
+    });
+
+    const [stockBackground, setStockBackground] = useState(() => {
+        return localStorage.getItem('app-bg-stock') || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop';
+    });
+
     useEffect(() => {
         const root = window.document.documentElement;
 
@@ -40,15 +52,24 @@ export const ThemeProvider = ({ children }) => {
         }
 
         // Apply Style Variant (Solid/Glass)
-        // Ensure the attribute matches the CSS selectors: [data-theme-style="solid"] or [data-theme-style="glass"]
         root.setAttribute('data-theme-style', variant);
 
         localStorage.setItem('app-theme', theme);
         localStorage.setItem('app-theme-variant', variant);
-    }, [theme, variant]);
+        localStorage.setItem('app-bg-type', backgroundType);
+        if (customBackground) localStorage.setItem('app-bg-custom', customBackground);
+        localStorage.setItem('app-bg-stock', stockBackground);
+    }, [theme, variant, backgroundType, customBackground, stockBackground]);
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme, variant, setVariant, themes }}>
+        <ThemeContext.Provider value={{
+            theme, setTheme,
+            variant, setVariant,
+            backgroundType, setBackgroundType,
+            customBackground, setCustomBackground,
+            stockBackground, setStockBackground,
+            themes
+        }}>
             {children}
         </ThemeContext.Provider>
     );

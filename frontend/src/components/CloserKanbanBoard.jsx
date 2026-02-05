@@ -63,29 +63,19 @@ const KanbanCard = memo(({ item, stages = [], currentStage = null, onMove, onCar
             onClick={handleCardClick}
             className={`bg-surface border border-base p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:border-primary/30 transition-all group cursor-grab active:cursor-grabbing relative overflow-hidden select-none ${isOverlay ? 'shadow-2xl border-primary ring-2 ring-primary/20 scale-105' : ''}`}
         >
-            <div className="flex justify-between items-start mb-4">
-                <div className="space-y-1">
+            <div className="flex justify-between items-start">
+                <div className="space-y-2">
                     <h4 className="text-sm font-black italic tracking-tighter uppercase leading-tight">{item.lead_name}</h4>
                     <div className="flex items-center gap-2 text-muted">
                         <Calendar size={10} className="text-primary/40" />
-                        <span className="text-[9px] font-bold uppercase tracking-widest">{new Date(item.start_time).toLocaleDateString()}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">
+                            {new Date(item.start_time).toLocaleDateString()} - {new Date(item.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                     </div>
                 </div>
                 <div className="p-1.5 bg-main rounded-xl text-muted group-hover:text-primary transition-colors opacity-30 group-hover:opacity-100 border border-base">
                     <GripVertical size={14} />
                 </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Clock size={10} className="text-primary/40" />
-                    <span className="text-[9px] font-black text-primary/60">{new Date(item.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                {item.type && (
-                    <Badge variant="neutral" className="bg-main border-base text-[8px] font-black uppercase px-2 py-0.5">
-                        {item.type}
-                    </Badge>
-                )}
             </div>
         </div>
     );
@@ -94,7 +84,7 @@ const KanbanCard = memo(({ item, stages = [], currentStage = null, onMove, onCar
 });
 
 // --- Column Component ---
-const KanbanColumn = memo(({ id, title, items, stages, onMove, onCardClick }) => {
+const KanbanColumn = memo(({ id, title, items, stages, onMove, onCardClick, onSetOutcome }) => {
     const { setNodeRef, isOver } = useDroppable({ id });
 
     return (
@@ -122,6 +112,7 @@ const KanbanColumn = memo(({ id, title, items, stages, onMove, onCardClick }) =>
                             currentStage={id}
                             onMove={onMove}
                             onCardClick={onCardClick}
+                            onSetOutcome={onSetOutcome}
                         />
                     ))}
                 </SortableContext>
@@ -137,7 +128,7 @@ const KanbanColumn = memo(({ id, title, items, stages, onMove, onCardClick }) =>
 });
 
 // --- Main Board Component ---
-const CloserKanbanBoard = ({ stages, board, onMove, onCardClick }) => {
+const CloserKanbanBoard = ({ stages, board, onMove, onCardClick, onSetOutcome }) => {
     const [activeId, setActiveId] = useState(null);
     const [activeItem, setActiveItem] = useState(null);
 
@@ -238,6 +229,7 @@ const CloserKanbanBoard = ({ stages, board, onMove, onCardClick }) => {
                         stages={stages}
                         onMove={onMove}
                         onCardClick={onCardClick}
+                        onSetOutcome={onSetOutcome}
                     />
                 ))}
             </div>
