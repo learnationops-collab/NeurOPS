@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, Response, current_app
 from app import db
 import sqlalchemy as sa
 import datetime
+from app.models import User
 
 bp = Blueprint('backup', __name__)
 
@@ -198,3 +199,39 @@ def restore_db(secret_key):
             print(f"Restore Fatal Error: {e}")
             # Return the specific message if passed from inner raise
             return jsonify({"message": f"Restore failed: {str(e)}"}), 500
+
+@bp.route('/fix-auth', methods=['GET'])
+def fix_auth_simple():
+    """
+    Super simple endpoint to fix users.
+    Usage: /api/backup/fix-auth
+    """
+    try:
+        # 1. Ensure Admin
+        admin = User.query.filter_by(email='admin@neurops.com').first()
+        if not admin:
+            admin = User(username='admin', email='admin@neurops.com', role='admin')
+            db.session.add(admin)
+        admin.set_password('admin123')
+        admin.is_active = True
+        
+        # 2. Ensure Closer
+        closer = User.query.filter_by(email='closer@neurops.com').first()
+        if not closer:
+            closer = User(username='closer', email='closer@neurops.com', role='closer')
+            db.session.add(closer)
+        closer.set_password('closer123')
+        closer.is_active = True
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "USERS FIXED! Login now.",
+            "credentials": [
+                {"role": "Admin", "email": "admin@neurops.com", "pass": "admin123"},
+                {"role": "Closer", "email": "closer@neurops.com", "pass": "closer123"}
+            ]
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

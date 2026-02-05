@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess-neuro-key'
+    # HARDCODED SECRET KEY TO PREVENT ENV ISSUES DURING DEBUG
+    SECRET_KEY = 'neurops-secret-key-fixed-2024'
     
     # Database Config
     # Default to sqlite for local dev, but prepared for PostgreSQL

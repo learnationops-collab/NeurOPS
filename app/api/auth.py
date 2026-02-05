@@ -7,35 +7,32 @@ from app.models import User
 
 @bp.route('/auth/login', methods=['POST'])
 def login():
-    if current_user.is_authenticated:
-        # Generate JWT Token even if session exists, to ensure Frontend has it
-        token = current_user.get_auth_token()
-        return jsonify({
-            "message": "Already authenticated",
-            "token": token,
-            "user": {
-                "id": current_user.id,
-                "username": current_user.username,
-                "role": current_user.role
-            }
-        }), 200
-
+    """
+    Standard Login Endpoint. 
+    Prioritizes JWT Token generation.
+    """
     data = request.get_json() or {}
     username = data.get('username')
     password = data.get('password')
-    remember = data.get('remember', False)
 
     if not username or not password:
         return jsonify({"message": "Username and password required"}), 400
 
+    # 1. Find User
     user = db.session.scalar(sa.select(User).where(User.username == username))
+    
+    # 2. Try Email if username failed
+    if not user:
+        user = db.session.scalar(sa.select(User).where(User.email == username))
 
+    # 3. Validate
     if user is None or not user.check_password(password):
-        return jsonify({"message": "Invalid username or password"}), 401
+        return jsonify({"message": "Invalid credentials"}), 401
 
-    login_user(user, remember=remember)
+    # 4. Login Session (Optional / Legacy support)
+    login_user(user, remember=True)
 
-    # Generate JWT Token for stateless auth backup
+    # 5. Generate Token (Primary Auth Method)
     token = user.get_auth_token()
 
     return jsonify({
@@ -44,7 +41,8 @@ def login():
         "user": {
             "id": user.id,
             "username": user.username,
-            "role": user.role
+            "role": user.role,
+            "email": user.email
         }
     }), 200
 

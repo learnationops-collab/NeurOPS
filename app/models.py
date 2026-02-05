@@ -12,22 +12,18 @@ def load_user(id):
 
 @login.request_loader
 def load_user_from_request(request):
-    # Check for Authorization header
+    # 1. Check Authorization Header (Bearer Token)
     auth_header = request.headers.get('Authorization')
     if auth_header:
-        print(f"DEBUG: Auth Header received: {auth_header[:20]}...")
         try:
             auth_header = auth_header.replace('Bearer ', '', 1)
             user_id = User.verify_auth_token(auth_header)
-            print(f"DEBUG: Token verified for User ID: {user_id}")
             if user_id:
                 return User.query.get(user_id)
-        except Exception as e:
-            print(f"DEBUG: Token validation error: {e}")
+        except Exception:
             return None
-    else:
-        print("DEBUG: No Authorization header found.")
 
+    # 2. Check Session (Cookie) - Handled automatically by Flask-Login user_loader usually
     return None
 
 # Roles as Constants
