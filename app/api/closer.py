@@ -38,20 +38,9 @@ def get_dashboard():
             "lead_name": appt.client.full_name or appt.client.email if appt.client else "Unknown",
             "phone": appt.client.phone if appt.client else "",
             "start_time": appt.start_time.isoformat(),
-            "status": appt.status,
-            "type": appt.appointment_type,
+            "last_stage": appt.last_stage,
             "seq_num": seq
         })
-        
-    # Custom Sort: Pending (scheduled), Reprogramada, Completada, No Show, Cancelada
-    status_order = {
-        'scheduled': 1, 'pending': 1, 
-        'Reprogramada': 2, 'rescheduled': 2,
-        'Completada': 3, 'completed': 3, 'Primera Agenda': 3,
-        'No Show': 4, 'no_show': 4,
-        'Cancelada': 5, 'cancelled': 5
-    }
-    serialized['agendas_today'].sort(key=lambda x: status_order.get(x['status'], 99))
         
     serialized['sales_today'] = data.get('sales_today', [])
 
@@ -178,13 +167,6 @@ def get_all_agendas():
         end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
         query = query.filter(Appointment.start_time < end_dt)
 
-    # Status Filter
-    if status_filter:
-        statuses = status_filter.split(',')
-        if statuses:
-            from sqlalchemy import or_
-            query = query.filter(Appointment.status.in_(statuses))
-
     pagination = query.order_by(Appointment.start_time.desc()).paginate(page=page, per_page=50)
     
     return jsonify({
@@ -194,8 +176,6 @@ def get_all_agendas():
             "phone": a.client.phone if a.client else None,
             "email": a.client.email if a.client else None,
             "date": a.start_time.isoformat(), 
-            "status": a.status, 
-            "type": a.appointment_type,
             "last_stage": a.last_stage,
             "result": a.result,
             "linked_call": a.linked_call
@@ -415,9 +395,7 @@ def create_appointment():
     start_time_str = data.get('start_time')
     lead_id = data.get('lead_id')
     client_data = data.get('client_data')
-    appt_type = data.get('type', 'Manual Closer')
-    status = data.get('status', 'scheduled')
-    
+
     if not start_time_str:
         return jsonify({"error": "Faltan datos requeridos (start_time)"}), 400
 
@@ -433,19 +411,15 @@ def create_appointment():
             
         start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
         
-        # BookingService create_appointment signature: (client_id, closer_id, start_time_utc, origin='manual', status='scheduled')
+        # BookingService create_appointment signature: (client_id, closer_id, start_time_utc, origin='manual')
         appt = BookingService.create_appointment(
             client_id=lead_id,
             closer_id=current_user.id,
             start_time_utc=start_time,
-            origin='Manual Closer',
-            status=status
+            origin='Manual Closer'
         )
         
         if appt:
-            if appt_type:
-                appt.appointment_type = appt_type
-                
             db.session.commit()
             
             # Check for webhook trigger
@@ -622,6 +596,9 @@ def get_kanban_data():
     if current_user.role == 'closer':
         query = query.filter_by(closer_id=current_user.id)
     
+    # Solo mostrar agendas que NO tienen un resultado definido (Null o Vacío)
+    query = query.filter(or_(Appointment.result == None, Appointment.result == ''))
+    
     appointments = query.all()
     print(f"DEBUG: Found {len(appointments)} appointments for Kanban")
     
@@ -670,3 +647,35 @@ def update_appointment_stage(id):
     db.session.commit()
     
     return jsonify({"message": "Etapa actualizada", "stage": new_stage}), 200
+
+@bp.route('/appointments/<int:id>/outcome', methods=['PATCH'])
+@login_required
+def update_appointment_outcome(id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    
+    appt = Appointment.query.get_or_404(id)
+    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    data = request.get_json() or {}
+    outcome = data.get('outcome')
+    
+    # Resultados válidos: Cancelada, Reprogramada, Terminada
+    valid_outcomes = ["Cancelada", "Reprogramada", "Terminada", None, ""]
+    if outcome not in valid_outcomes:
+        return jsonify({"error": "Resultado no válido"}), 400
+        
+    appt.result = outcome
+    db.session.commit()
+    
+    return jsonify({"message": "Resultado actualizado", "outcome": outcome}), 200
+
+@bp.route('/stats', methods=['GET'])
+@login_required
+def get_stats():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    
+    stats = CloserService.get_agenda_stats(current_user.id)
+    return jsonify(stats), 200

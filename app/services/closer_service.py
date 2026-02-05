@@ -175,8 +175,7 @@ class CloserService:
                 'id': appt.id,
                 'lead_name': appt.client.full_name if appt.client else 'Sin Nombre',
                 'start_time': appt.start_time.isoformat(),
-                'type': appt.appointment_type or 'Primera agenda',
-                'status': appt.status
+                'last_stage': appt.last_stage
             })
 
         # Map sales for frontend
@@ -405,10 +404,23 @@ class CloserService:
 
         print(f"[DEBUG] Processing Agenda {appt_id}, Status: {new_status}")
         
-        if new_status == 'Completada':
-            appt.status = 'completed'
+        # Mapeo de estado a resultado para el Kanban (filtro result == Null)
+        outcome_map = {
+            'Completada': 'Terminada',
+            'Terminada': 'Terminada',
+            'No Show': 'No Show',
+            'Cancelada': 'Cancelada',
+            'canceled': 'Cancelada',
+            'cancelled': 'Cancelada',
+            'Reprogramada': 'Reprogramada'
+        }
+        
+        if new_status in outcome_map:
+            appt.result = outcome_map[new_status]
+
+        if new_status in ['Completada', 'Terminada']:
+            pass
         elif new_status in ['Cancelada', 'canceled', 'cancelled']:
-            appt.status = 'canceled'
             # Delete from GCal
             if appt.google_event_id:
                 print(f"[DEBUG] Attempting to delete GCal Event: {appt.google_event_id}")
@@ -421,10 +433,9 @@ class CloserService:
             else:
                  print(f"[DEBUG] No Google Event ID found for appt {appt.id}")
         elif new_status == 'No Show':
-            appt.status = 'no_show'
+            pass
         elif new_status == 'Reprogramada':
             if not reschedule_date: raise Exception("Fecha de reagenda requerida")
-            appt.status = 'reprogrammed'
             
             # 1. Delete old event
             if appt.google_event_id:
@@ -440,7 +451,6 @@ class CloserService:
             
             if new_appt:
                 db.session.add(new_appt) # Ensure attached
-                new_appt.appointment_type = 'Primera agenda'
                 # 3. Create new GCal event
                 try:
                     from app.services.google_service import GoogleService
@@ -452,7 +462,12 @@ class CloserService:
 
         elif new_status == 'Primera Agenda':
             if not reschedule_date: raise Exception("Fecha de segunda agenda requerida")
-            appt.status = 'completed'
+            # Note: For 'Primera Agenda' protocol, we don't necessarily set a 'result' yet 
+            # because there's a follow up. But if the user wants it off the board, 
+            # we should probably set result='Sig. Agenda' or similar?
+            # Actually, "Terminada" implies result is set. 
+            # If they just do 'Primera Agenda', it stays active in their workflow?
+            # Let's stick to the core outcomes mentioned.
             
             # Create new Segunda Agenda
             new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
@@ -460,7 +475,6 @@ class CloserService:
             
             if new_appt:
                 db.session.add(new_appt) # Ensure attached
-                new_appt.appointment_type = 'Segunda agenda'
                 # Create GCal Event for the SECOND APPOINTMENT
                 try:
                     from app.services.google_service import GoogleService
@@ -547,8 +561,7 @@ class CloserService:
             appointments.append({
                 "id": a.id,
                 "start_time": a.start_time.isoformat(),
-                "status": a.status,
-                "type": a.appointment_type,
+                "last_stage": a.last_stage,
                 "origin": a.origin
             })
             
@@ -664,3 +677,54 @@ class CloserService:
         db.session.delete(enrollment)
         db.session.commit()
         return True
+    @staticmethod
+    def get_agenda_stats(closer_id):
+        from app.models import Appointment, db
+        from sqlalchemy import func
+        
+        # 1. Agendas Pendientes (Sin resultado definido)
+        pending_count = Appointment.query.filter(
+            Appointment.closer_id == closer_id,
+            or_(Appointment.result == None, Appointment.result == '')
+        ).count()
+        
+        # 2. Conteo por Resultado (Outcomes)
+        outcomes_q = db.session.query(
+            Appointment.result, func.count(Appointment.id)
+        ).filter(
+            Appointment.closer_id == closer_id,
+            Appointment.result != None,
+            Appointment.result != ''
+        ).group_by(Appointment.result).all()
+        
+        outcomes = {r[0]: r[1] for r in outcomes_q}
+        
+        # 3. Desglose por Tipo de Agenda y Resultado
+        type_breakdown_q = db.session.query(
+            Appointment.appointment_type, 
+            Appointment.result, 
+            func.count(Appointment.id)
+        ).filter(
+            Appointment.closer_id == closer_id
+        ).group_by(
+            Appointment.appointment_type, 
+            Appointment.result
+        ).all()
+        
+        type_stats = {}
+        for a_type, result, count in type_breakdown_q:
+            a_type = a_type or 'Primera agenda'
+            if a_type not in type_stats:
+                type_stats[a_type] = {'total': 0, 'results': {}}
+            
+            type_stats[a_type]['total'] += count
+            if result:
+                type_stats[a_type]['results'][result] = count
+            else:
+                type_stats[a_type]['results']['Pendiente'] = count
+
+        return {
+            'pending': pending_count,
+            'outcomes': outcomes,
+            'type_stats': type_stats
+        }

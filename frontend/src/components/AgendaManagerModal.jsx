@@ -24,11 +24,11 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
     const [error, setError] = useState(null);
 
     const statuses = [
-        { id: 'Completada', label: 'Completada', icon: CheckCircle2, color: 'text-success' },
-        { id: 'Primera Agenda', label: 'Primera Agenda (OK)', icon: CheckCircle2, color: 'text-success' },
-        { id: 'No Show', label: 'No Show', icon: XCircle, color: 'text-accent' },
+        { id: 'Terminada', label: 'Terminada', icon: CheckCircle2, color: 'text-emerald-500' },
+        { id: 'No Show', label: 'No Show', icon: XCircle, color: 'text-rose-500' },
         { id: 'Cancelada', label: 'Cancelada', icon: XCircle, color: 'text-muted' },
-        { id: 'Reprogramada', label: 'Reprogramada', icon: RefreshCw, color: 'text-primary' }
+        { id: 'Reprogramada', label: 'Reprogramada', icon: RefreshCw, color: 'text-primary' },
+        { id: 'Primera Agenda', label: 'Protocolo Seg. Agenda', icon: CheckCircle2, color: 'text-success' },
     ];
 
     useEffect(() => {

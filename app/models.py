@@ -179,9 +179,7 @@ class Appointment(db.Model):
     closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
     start_time = db.Column(db.DateTime, index=True)
-    status = db.Column(db.String(20), default='scheduled')
     origin = db.Column(db.String(100)) # VSL, Closer, etc.
-    appointment_type = db.Column(db.String(50), default='Primera agenda')
     is_pinned = db.Column(db.Boolean, default=False)
     google_event_id = db.Column(db.String(255))
     last_stage = db.Column(db.String(100))
