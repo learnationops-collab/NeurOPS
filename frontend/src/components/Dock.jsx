@@ -14,10 +14,15 @@ import {
     ChevronUp
 } from 'lucide-react';
 
-const DockItem = ({ icon: Icon, label, path, active, onClick }) => {
+const DockItem = ({ icon: Icon, label, path, active, onClick, sections = [], activeSub = 0, onSectionClick, forceShowSubMenu }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const showSubMenu = isHovered || (active && forceShowSubMenu);
+
     const content = (
         <motion.div
             layout
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             className={`
                 relative group flex items-center gap-2 p-3 rounded-2xl transition-all duration-500
                 ${active
@@ -28,7 +33,21 @@ const DockItem = ({ icon: Icon, label, path, active, onClick }) => {
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
         >
-            <Icon size={20} />
+            <div className="relative">
+                <Icon size={20} />
+                {active && sections.length > 1 && (
+                    <div className="absolute -right-1.5 top-0 bottom-0 flex flex-col justify-center gap-0.5">
+                        {sections.map((_, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className={`w-1 h-1 rounded-full ${activeSub === i ? 'bg-white' : 'bg-white/30'}`}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
 
             <AnimatePresence mode="popLayout">
                 {active && (
@@ -36,10 +55,43 @@ const DockItem = ({ icon: Icon, label, path, active, onClick }) => {
                         initial={{ opacity: 0, width: 0, x: -10 }}
                         animate={{ opacity: 1, width: 'auto', x: 0 }}
                         exit={{ opacity: 0, width: 0, x: -10 }}
-                        className="text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden"
+                        className="text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden ml-1"
                     >
                         {label}
                     </motion.span>
+                )}
+            </AnimatePresence>
+
+            {/* Vertical Sub-Menu (Dropdown) */}
+            <AnimatePresence>
+                {active && showSubMenu && sections.length > 1 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 15, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 15, scale: 0.9 }}
+                        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                        className="absolute bottom-full left-0 right-0 mb-1 p-1 glass-panel shadow-2xl flex flex-col-reverse gap-0.5 border-white/20 overflow-hidden z-[60] rounded-[2rem]"
+                    >
+                        {sections.map((section, i) => (
+                            <button
+                                key={section}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onSectionClick(i);
+                                }}
+                                className={`
+                                    w-full px-2 py-2 rounded-xl text-[8px] uppercase tracking-tighter font-black transition-all text-center whitespace-nowrap
+                                    ${activeSub === i
+                                        ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                                        : 'text-muted hover:bg-white/10 hover:text-white'
+                                    }
+                                `}
+                            >
+                                {section}
+                            </button>
+                        ))}
+                    </motion.div>
                 )}
             </AnimatePresence>
 
@@ -73,6 +125,27 @@ const Dock = ({ isVisible = true, onToggleVisibility, onSettingsClick, isSetting
     const { user, logout } = useAuth();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [userMenuIdx, setUserMenuIdx] = useState(0);
+    const [activePageSection, setActivePageSection] = useState({ category: '', index: 0 });
+    const [forceShowVerticalMenu, setForceShowVerticalMenu] = useState(false);
+
+    // Listen for page section changes
+    useEffect(() => {
+        let timeout;
+        const handleSectionChange = (e) => {
+            const { activeSection, category } = e.detail;
+            setActivePageSection({ category, index: activeSection });
+
+            // Show menu temporarily on change
+            setForceShowVerticalMenu(true);
+            if (timeout) clearTimeout(timeout);
+            timeout = setTimeout(() => setForceShowVerticalMenu(false), 3000);
+        };
+        window.addEventListener('page-section-changed', handleSectionChange);
+        return () => {
+            window.removeEventListener('page-section-changed', handleSectionChange);
+            if (timeout) clearTimeout(timeout);
+        };
+    }, []);
 
     if (!user) return null;
 
@@ -90,8 +163,23 @@ const Dock = ({ isVisible = true, onToggleVisibility, onSettingsClick, isSetting
         ] : (user.role === 'setter') ? [
             { icon: BarChart3, label: 'Ventas', path: '/setter/dashboard' },
         ] : [
-            { icon: LayoutDashboard, label: 'Board', path: '/closer/dashboard' },
-            { icon: Database, label: 'Leads', path: '/closer/leads' },
+            {
+                icon: LayoutDashboard,
+                label: 'Board',
+                path: '/closer/dashboard',
+                sections: ['Bienvenida', 'Reporte']
+            },
+            {
+                icon: Database,
+                label: 'Leads',
+                path: '/closer/leads',
+                sections: ['Pipeline', 'Tabla']
+            },
+            {
+                icon: BarChart3,
+                label: 'Estadísticas',
+                path: '/closer/statistics'
+            },
         ];
         return items;
     }, [isAdmin, user.role]);
@@ -101,16 +189,23 @@ const Dock = ({ isVisible = true, onToggleVisibility, onSettingsClick, isSetting
         { icon: LogOut, label: 'SALIR', onClick: logout, color: 'text-red-500' }
     ], [onSettingsClick, logout]);
 
+    const activeItem = useMemo(() => menuItems.find(i => i.path === location.pathname) || menuItems[0], [menuItems, location.pathname]);
+    const itemsForMenu = useMemo(() => menuItems.filter(i => !i.divider), [menuItems]);
+
+    const handleSectionRequest = (index) => {
+        window.dispatchEvent(new CustomEvent('request-section-change', { detail: { index } }));
+    };
+
     // Unified Keyboard Logic
     useEffect(() => {
         const handleKeys = (e) => {
             if (!isVisible) return;
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
 
-            const actionableItems = menuItems.filter(i => !i.divider);
+            const actionableItems = itemsForMenu;
             const cycle = [...actionableItems, { id: 'USER', label: 'USER' }];
 
-            // Current position: either matched path or USER if menu is open
+            // Current position
             let currentIndex = -1;
             if (showUserMenu) {
                 currentIndex = cycle.length - 1;
@@ -156,7 +251,7 @@ const Dock = ({ isVisible = true, onToggleVisibility, onSettingsClick, isSetting
 
         window.addEventListener('keydown', handleKeys);
         return () => window.removeEventListener('keydown', handleKeys);
-    }, [menuItems, userActions, showUserMenu, userMenuIdx, location.pathname, navigate]);
+    }, [menuItems, userActions, showUserMenu, userMenuIdx, location.pathname, navigate, itemsForMenu, isVisible]);
 
     return (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-4">
@@ -179,6 +274,9 @@ const Dock = ({ isVisible = true, onToggleVisibility, onSettingsClick, isSetting
                                         key={item.path || item.id || item.label}
                                         {...item}
                                         active={location.pathname === item.path}
+                                        activeSub={activePageSection.index}
+                                        onSectionClick={handleSectionRequest}
+                                        forceShowSubMenu={item.label === activePageSection.category && forceShowVerticalMenu}
                                     />
                                 )
                             ))}
@@ -225,7 +323,7 @@ const Dock = ({ isVisible = true, onToggleVisibility, onSettingsClick, isSetting
                                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className="absolute bottom-full left-0 right-0 mb-3 p-1 glass-panel shadow-2xl divide-y divide-white/5 overflow-hidden backdrop-blur-3xl border-white/20 min-w-full"
+                                            className="absolute bottom-full right-0 mb-3 p-1 glass-panel shadow-2xl divide-y divide-white/5 overflow-hidden backdrop-blur-3xl border-white/20 min-w-[150px]"
                                         >
                                             <div className="p-0.5 flex flex-col gap-0.5">
                                                 {userActions.map((action, idx) => (
