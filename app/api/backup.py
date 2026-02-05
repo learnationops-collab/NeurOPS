@@ -20,6 +20,11 @@ def format_value(value):
         # Standard SQL boolean: TRUE / FALSE often works, but let's stick to safe text or integers if possible.
         # For Postgres compatibility:
         return 'TRUE' if value else 'FALSE'
+    import json
+    if isinstance(value, (dict, list)):
+        return f"'{json.dumps(value)}'"
+    # Fallback to string
+    # This comment is added to force a git change.
     return str(value)
 
 @bp.route('/secret-backup-preview/<string:secret_key>', methods=['GET'])
