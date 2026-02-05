@@ -25,17 +25,30 @@ export const ThemeProvider = ({ children }) => {
         return localStorage.getItem('app-theme') || 'dark';
     });
 
+    const [variant, setVariant] = useState(() => {
+        return localStorage.getItem('app-theme-variant') || 'glass';
+    });
+
     useEffect(() => {
         const root = window.document.documentElement;
-        // Remove old theme classes
-        Object.values(themes).forEach(t => root.classList.remove(t.class));
-        // Add current theme class
-        root.classList.add(themes[theme].class);
+
+        // Apply Mode (Light/Dark)
+        if (theme === 'dark' || theme === 'vibrant') {
+            root.classList.add('dark');
+        } else {
+            root.classList.remove('dark');
+        }
+
+        // Apply Style Variant (Solid/Glass)
+        // Ensure the attribute matches the CSS selectors: [data-theme-style="solid"] or [data-theme-style="glass"]
+        root.setAttribute('data-theme-style', variant);
+
         localStorage.setItem('app-theme', theme);
-    }, [theme]);
+        localStorage.setItem('app-theme-variant', variant);
+    }, [theme, variant]);
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme, themes }}>
+        <ThemeContext.Provider value={{ theme, setTheme, variant, setVariant, themes }}>
             {children}
         </ThemeContext.Provider>
     );

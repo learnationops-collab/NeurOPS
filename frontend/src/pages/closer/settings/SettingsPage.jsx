@@ -208,7 +208,7 @@ const CloserSettingsPage = () => {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700 min-h-screen">
+        <div className="p-8 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700">
 
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-base pb-10">
                 <div className="space-y-4">

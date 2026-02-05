@@ -30,6 +30,7 @@ import CloserKanbanBoard from '../../../components/CloserKanbanBoard';
 
 const CloserLeadsPage = () => {
     const [activeTab, setActiveTab] = useState('agendas');
+    const [kanbanSubTab, setKanbanSubTab] = useState('tracking'); // 'tracking' or 'closing'
     const [data, setData] = useState({ agendas: [], sales: [], kanban: { stages: [], board: {} } });
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -44,6 +45,19 @@ const CloserLeadsPage = () => {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
+
+    // Kanban splitting logic
+    const trackingStages = ["Nueva", "Respondido", "Confirmado"];
+    const closingStages = ["Asistido", "Contexto", "Decisor", "Presentado"];
+
+    const filteredKanbanStages = kanbanSubTab === 'tracking' ? trackingStages : closingStages;
+    const filteredKanbanBoard = useMemo(() => {
+        const board = {};
+        filteredKanbanStages.forEach(stage => {
+            board[stage] = data.kanban.board[stage] || [];
+        });
+        return board;
+    }, [data.kanban.board, kanbanSubTab, filteredKanbanStages]);
 
     // Filter Configuration
     const { filters, updateFilter } = usePersistentFilters(`closer_filters_${activeTab}`, {
@@ -120,19 +134,32 @@ const CloserLeadsPage = () => {
         // Optimistic UI update
         const newBoard = { ...data.kanban.board };
 
-        // Ensure source array exists
-        if (!newBoard[fromStage]) return;
+        // Find item in any stage (even if not visible in current split)
+        let foundItem = null;
+        let sourceStage = fromStage;
 
-        const itemIndex = newBoard[fromStage].findIndex(i => i.id === id);
+        if (!newBoard[sourceStage]) {
+            for (const s of Object.keys(newBoard)) {
+                const idx = newBoard[s].findIndex(i => i.id === id);
+                if (idx !== -1) {
+                    sourceStage = s;
+                    foundItem = newBoard[s][idx];
+                    break;
+                }
+            }
+        } else {
+            const idx = newBoard[sourceStage].findIndex(i => i.id === id);
+            if (idx !== -1) foundItem = newBoard[sourceStage][idx];
+        }
 
-        if (itemIndex === -1) return;
+        if (!foundItem) return;
 
-        const [movedItem] = newBoard[fromStage].splice(itemIndex, 1);
+        // Remove from source
+        newBoard[sourceStage] = newBoard[sourceStage].filter(i => i.id !== id);
 
-        // Ensure target array exists
+        // Add to target
         if (!newBoard[toStage]) newBoard[toStage] = [];
-
-        newBoard[toStage].push({ ...movedItem, last_stage: toStage });
+        newBoard[toStage].push({ ...foundItem, last_stage: toStage });
 
         setData(prev => ({
             ...prev,
@@ -212,6 +239,26 @@ const CloserLeadsPage = () => {
                 </div>
             </header>
 
+            {/* Sub-navigation for Kanban */}
+            {activeTab === 'kanban' && (
+                <div className="flex justify-center">
+                    <div className="flex bg-main p-1 rounded-full border border-base shadow-inner">
+                        <button
+                            onClick={() => setKanbanSubTab('tracking')}
+                            className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'tracking' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
+                        >
+                            Seguimiento
+                        </button>
+                        <button
+                            onClick={() => setKanbanSubTab('closing')}
+                            className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'closing' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
+                        >
+                            Cierre
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Filters & Search - Hide for Kanban for now or adapt */}
             {activeTab !== 'kanban' && (
                 <div className="space-y-4">
@@ -234,9 +281,6 @@ const CloserLeadsPage = () => {
                                 onClick={() => setShowFilters(!showFilters)}
                             >
                                 Filtros
-                            </Button>
-                            <Button variant="ghost" className="flex-1 md:flex-none border-primary/20 text-primary hover:bg-primary hover:text-white px-6 h-14" icon={Download}>
-                                Exportar
                             </Button>
                         </div>
                     </div>
@@ -458,9 +502,13 @@ const CloserLeadsPage = () => {
                         </div>
                     ) : (
                         <CloserKanbanBoard
-                            stages={data.kanban.stages}
-                            board={data.kanban.board}
+                            stages={filteredKanbanStages}
+                            board={filteredKanbanBoard}
                             onMove={handleKanbanMove}
+                            onCardClick={(item) => {
+                                setSelectedAgenda(item);
+                                setIsAgendaModalOpen(true);
+                            }}
                         />
                     )}
                 </div>

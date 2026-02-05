@@ -29,7 +29,8 @@ module.exports = {
                 btn: 'var(--radius-button)',
             },
             fontFamily: {
-                main: 'var(--font-main)',
+                main: 'var(--font-body)',
+                header: 'var(--font-header)',
             },
             borderColor: {
                 base: 'var(--color-border)',

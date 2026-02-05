@@ -3,10 +3,9 @@ import { Terminal, X, Minimize2, Maximize2, Trash2, Copy } from 'lucide-react';
 
 import api from '../services/api'; // Import configured API
 
-const DebugConsole = () => {
+const DebugConsole = ({ isVisible, onClose }) => {
     const [isOpen, setIsOpen] = useState(false); // Default collapsed
     const [logs, setLogs] = useState([]);
-    const [isVisible, setIsVisible] = useState(true); // Can hide completely if needed
 
     // Ref to keep track of the original console methods
     const originalConsole = useRef({
@@ -117,6 +116,13 @@ const DebugConsole = () => {
                             <Trash2 size={12} />
                         </button>
                         <button
+                            onClick={(e) => { e.stopPropagation(); onClose(); }}
+                            className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-red-400 transition-colors"
+                            title="Hide Console"
+                        >
+                            <X size={12} />
+                        </button>
+                        <button
                             onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
                             className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
                         >
@@ -133,8 +139,8 @@ const DebugConsole = () => {
                         )}
                         {logs.map((log, idx) => (
                             <div key={idx} className={`border-b border-slate-800/50 pb-1 break-words ${log.type === 'error' ? 'text-red-400' :
-                                    log.type === 'warn' ? 'text-yellow-400' :
-                                        'text-emerald-400'
+                                log.type === 'warn' ? 'text-yellow-400' :
+                                    'text-emerald-400'
                                 }`}>
                                 <span className="text-[10px] text-slate-500 mr-2">[{log.timestamp}]</span>
                                 <span className="uppercase text-[9px] font-bold opacity-70 mr-1">[{log.type}]</span>

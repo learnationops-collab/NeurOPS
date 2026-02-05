@@ -74,14 +74,14 @@ def get_me():
 @login_required
 def impersonate():
     from flask import session
-    from app.models import ROLE_OPERATOR
+    from app.models import ROLE_OPERATOR, ROLE_ADMIN
     
     # Check if user is allowed to impersonate
-    # Must be OPERATOR OR already impersonating (to switch between users directly)
+    # Must be ADMIN or OPERATOR OR already impersonating (to switch between users directly)
     original_role = session.get('original_user_role')
     is_impersonating = session.get('is_impersonating')
     
-    if current_user.role != ROLE_OPERATOR and not is_impersonating:
+    if current_user.role not in [ROLE_ADMIN, ROLE_OPERATOR] and not is_impersonating:
         return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json() or {}
@@ -102,9 +102,13 @@ def impersonate():
 
     # Log in as the target user without requiring password
     login_user(target_user)
+    
+    # Generate token for the target user (Sync for frontend)
+    token = target_user.get_auth_token()
 
     return jsonify({
         "message": f"Impersonating {target_user.username}",
+        "token": token,
         "user": {
             "id": target_user.id,
             "username": target_user.username,
@@ -136,6 +140,9 @@ def revert_impersonation():
     # Restore original session
     login_user(original_user)
     
+    # Generate token for the original user
+    token = original_user.get_auth_token()
+    
     # Clear impersonation flags
     session.pop('original_user_id', None)
     session.pop('original_user_role', None)
@@ -143,6 +150,7 @@ def revert_impersonation():
     
     return jsonify({
         "message": "Reverted to original session",
+        "token": token,
         "user": {
             "id": original_user.id,
             "username": original_user.username,

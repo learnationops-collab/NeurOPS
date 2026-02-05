@@ -589,14 +589,32 @@ def update_payment(payment_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def _get_closer_pipeline_stages():
+    from app.models import Pipeline, PipelineStage
+    pipeline = Pipeline.query.filter_by(name='Closer Kanban').first()
+    
+    if not pipeline:
+        # Initialize default pipeline if it doesn't exist
+        pipeline = Pipeline(name='Closer Kanban', is_active=True)
+        db.session.add(pipeline)
+        db.session.flush()
+        
+        default_names = ["Nueva", "Respondido", "Confirmado", "Asistido", "Contexto", "Decisor", "Presentado"]
+        for i, name in enumerate(default_names):
+            stage = PipelineStage(name=name, pipeline_id=pipeline.id, order=i, is_active=True)
+            db.session.add(stage)
+        db.session.commit()
+    
+    stages = PipelineStage.query.filter_by(pipeline_id=pipeline.id, is_active=True).order_by(PipelineStage.order).all()
+    return [s.name for s in stages]
+
 @bp.route('/kanban', methods=['GET'])
 @login_required
 def get_kanban_data():
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
     
-    # Define logically ordered stages for Closers
-    stages = ["Agendada", "Llamando", "Seguimiento", "Cierre Pendiente", "Finalizada"]
+    stages = _get_closer_pipeline_stages()
     
     print(f"DEBUG: Fetching Kanban for user {current_user.id} ({current_user.username})")
 
@@ -604,18 +622,17 @@ def get_kanban_data():
     if current_user.role == 'closer':
         query = query.filter_by(closer_id=current_user.id)
     
-    # Only show active/recent appointments in Kanban
-    # thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    # query = query.filter(Appointment.start_time >= thirty_days_ago)
-    # Removing date filter for debugging purposes, maybe user just has old leads
-    
     appointments = query.all()
     print(f"DEBUG: Found {len(appointments)} appointments for Kanban")
     
     # Group appointments by stage
     board = {stage: [] for stage in stages}
+    # Fallback stage is the first one
+    first_stage = stages[0] if stages else "Agendada"
+    
     for a in appointments:
-        stage = a.last_stage if a.last_stage in stages else "Agendada"
+        stage = a.last_stage if a.last_stage in stages else first_stage
+        if stage not in board: board[stage] = [] # Safety
         board[stage].append({
             "id": a.id,
             "lead_name": a.client.full_name or a.client.email if a.client else "Unknown",
@@ -645,7 +662,7 @@ def update_appointment_stage(id):
     data = request.get_json() or {}
     new_stage = data.get('stage')
     
-    valid_stages = ["Agendada", "Llamando", "Seguimiento", "Cierre Pendiente", "Finalizada"]
+    valid_stages = _get_closer_pipeline_stages()
     if new_stage not in valid_stages:
         return jsonify({"error": "Invalid stage"}), 400
         

@@ -11,7 +11,7 @@ from app.decorators import admin_required
 import pandas as pd
 import io
 import json
-from app.models import Program, db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, DailyReportQuestion, Appointment, Integration
+from app.models import Program, db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, DailyReportQuestion, Appointment, Integration, Pipeline, PipelineStage
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
 import calendar
@@ -846,6 +846,73 @@ def manage_events():
         "redirect_url_success": e.redirect_url_success,
         "redirect_url_fail": e.redirect_url_fail
     } for e in events]), 200
+
+# --- Pipeline Management Endpoints ---
+
+@bp.route('/admin/pipelines/closer', methods=['GET'])
+@login_required
+@admin_required
+def get_closer_pipeline():
+    pipeline = Pipeline.query.filter_by(name='Closer Kanban').first()
+    if not pipeline:
+        # Trigger initialization by calling the helper in closer.py (indirectly or just re-implement)
+        pipeline = Pipeline(name='Closer Kanban', is_active=True)
+        db.session.add(pipeline)
+        db.session.flush()
+        
+        default_names = ["Agendada", "Llamando", "Seguimiento", "Cierre Pendiente", "Finalizada"]
+        for i, name in enumerate(default_names):
+            stage = PipelineStage(name=name, pipeline_id=pipeline.id, order=i, is_active=True)
+            db.session.add(stage)
+        db.session.commit()
+
+    stages = PipelineStage.query.filter_by(pipeline_id=pipeline.id).order_by(PipelineStage.order).all()
+    return jsonify({
+        "id": pipeline.id,
+        "name": pipeline.name,
+        "stages": [{"id": s.id, "name": s.name, "order": s.order, "is_active": s.is_active} for s in stages]
+    }), 200
+
+@bp.route('/admin/pipelines/closer/stages', methods=['POST'])
+@login_required
+@admin_required
+def manage_closer_stages():
+    data = request.get_json() or {}
+    pipeline_id = data.get('pipeline_id')
+    stages_data = data.get('stages', [])
+    
+    if not pipeline_id:
+        return jsonify({"error": "Pipeline ID required"}), 400
+        
+    for s_data in stages_data:
+        stage_id = s_data.get('id')
+        if stage_id:
+            s = PipelineStage.query.get(stage_id)
+            if s:
+                s.name = s_data.get('name', s.name)
+                s.order = s_data.get('order', s.order)
+                s.is_active = s_data.get('is_active', s.is_active)
+        else:
+            new_stage = PipelineStage(
+                name=s_data.get('name'),
+                pipeline_id=pipeline_id,
+                order=s_data.get('order', 0),
+                is_active=s_data.get('is_active', True)
+            )
+            db.session.add(new_stage)
+            
+    db.session.commit()
+    return jsonify({"message": "Etapas actualizadas"}), 200
+
+@bp.route('/admin/pipelines/stages/<int:id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_pipeline_stage(id):
+    s = PipelineStage.query.get_or_404(id)
+    db.session.delete(s)
+    db.session.commit()
+    return jsonify({"message": "Etapa eliminada"}), 200
+
 
 @bp.route('/admin/funnels/events/<int:event_id>/questions', methods=['GET', 'POST'])
 @login_required

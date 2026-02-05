@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Power, Users, AlertTriangle, Loader2, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Power, Users, AlertTriangle, Loader2, ArrowLeft, Ghost } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 
-const OperatorControls = () => {
+const OperatorControls = ({ isOpen, onClose }) => {
     const [user, setUser] = useState(null);
     const [targets, setTargets] = useState([]);
+    const [filteredTargets, setFilteredTargets] = useState([]);
+    const [activeRoleFilter, setActiveRoleFilter] = useState('all');
     const [loading, setLoading] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState('');
 
     useEffect(() => {
@@ -15,8 +17,8 @@ const OperatorControls = () => {
                 const res = await api.get('/auth/me');
                 setUser(res.data.user);
 
-                // Only fetch potential targets if we are an operator
-                if (res.data.user.role === 'operator' || res.data.user.is_impersonating) {
+                // Fetch potential targets if we are authorized
+                if (res.data.user.role === 'operator' || res.data.user.role === 'admin' || res.data.user.is_impersonating) {
                     fetchTargets();
                 }
             } catch (err) {
@@ -28,20 +30,45 @@ const OperatorControls = () => {
 
     const fetchTargets = async () => {
         try {
-            // Reusing the users endpoint, might need adjustment if permissions change
             const res = await api.get('/admin/users');
-            setTargets(res.data.filter(u => u.username !== 'admin')); // Filter out admin if needed or keep all
+            setTargets(res.data);
+            setFilteredTargets(res.data.filter(u => u.username !== 'admin'));
         } catch (err) {
             console.error("Error fetching impersonation targets", err);
         }
     };
+
+    useEffect(() => {
+        if (activeRoleFilter === 'all') {
+            setFilteredTargets(targets.filter(u => u.username !== 'admin'));
+        } else {
+            setFilteredTargets(targets.filter(u => u.role === activeRoleFilter && u.username !== 'admin'));
+        }
+        setSelectedUserId(''); // Reset selection when filter changes
+    }, [activeRoleFilter, targets]);
 
     const handleImpersonate = async () => {
         if (!selectedUserId) return;
         setLoading(true);
         try {
             const res = await api.post('/auth/impersonate', { user_id: selectedUserId });
-            window.location.reload(); // Hard reload to ensure all contexts update
+            const { user: targetUser, token } = res.data;
+
+            // Sincronizar estado local
+            localStorage.setItem('user', JSON.stringify(targetUser));
+            if (token) localStorage.setItem('auth_token', token);
+
+            // Redirigir según el rol del usuario simulado
+            let redirectPath = '/';
+            if (targetUser.role === 'admin' || targetUser.role === 'operator') {
+                redirectPath = '/admin/dashboard';
+            } else if (targetUser.role === 'closer') {
+                redirectPath = '/closer/dashboard';
+            } else if (targetUser.role === 'setter') {
+                redirectPath = '/setter/dashboard';
+            }
+
+            window.location.href = redirectPath;
         } catch (err) {
             alert(err.response?.data?.message || 'Error executing impersonation');
             setLoading(false);
@@ -51,8 +78,19 @@ const OperatorControls = () => {
     const handleRevert = async () => {
         setLoading(true);
         try {
-            await api.post('/auth/revert');
-            window.location.reload();
+            const res = await api.post('/auth/revert');
+            const { user: originalUser, token } = res.data;
+
+            // Sincronizar estado local
+            localStorage.setItem('user', JSON.stringify(originalUser));
+            if (token) localStorage.setItem('auth_token', token);
+
+            // Redirigir al dashboard original
+            let redirectPath = '/admin/dashboard';
+            if (originalUser.role === 'closer') redirectPath = '/closer/dashboard';
+            if (originalUser.role === 'setter') redirectPath = '/setter/dashboard';
+
+            window.location.href = redirectPath;
         } catch (err) {
             alert('Error reverting session');
             setLoading(false);
@@ -61,93 +99,140 @@ const OperatorControls = () => {
 
     if (!user) return null;
 
-    // Show if role is operator OR if currently impersonating
-    if (user.role !== 'operator' && !user.is_impersonating) return null;
+    // Visibility: operator, admin, or currently impersonating
+    const isAuthorized = user.role === 'admin' || user.role === 'operator' || user.is_impersonating;
+    if (!isAuthorized) return null;
 
-    if (!isOpen) {
-        return (
-            <button
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-50 bg-amber-500 hover:bg-amber-400 text-black font-black p-4 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
-                title="Menú de Operador"
-            >
-                <Users size={24} />
-                {user.is_impersonating && <span className="text-xs uppercase tracking-widest bg-black/20 px-2 py-0.5 rounded-md">Activado</span>}
-            </button>
-        );
-    }
+    const roles = [
+        { id: 'all', label: 'Todos' },
+        { id: 'closer', label: 'Closers' },
+        { id: 'setter', label: 'Setters' },
+        { id: 'admin', label: 'Admins' },
+    ];
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="bg-slate-900 border border-amber-500/50 rounded-3xl shadow-2xl p-6 w-80 space-y-4 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-amber-500" />
+        <AnimatePresence>
+            {isOpen && (
+                <>
+                    {/* Backdrop */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
+                    />
 
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h3 className="text-amber-500 font-black italic uppercase text-lg">Modo Operador</h3>
-                        <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold">
-                            {user.is_impersonating ? 'Sesión Simulada Activa' : 'Control de Sesión'}
-                        </p>
-                    </div>
-                    <button onClick={() => setIsOpen(false)} className="text-slate-500 hover:text-white transition-colors">
-                        <Power size={20} />
-                    </button>
-                </div>
-
-                {user.is_impersonating ? (
-                    <div className="space-y-4">
-                        <div className="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/20">
-                            <div className="flex items-center gap-3 mb-2">
-                                <AlertTriangle className="text-amber-500" size={20} />
-                                <span className="font-bold text-amber-500 text-sm">Suplantando a:</span>
+                    {/* Menu Card */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        className="fixed bottom-24 right-8 z-[70] w-[28rem] glass-effect p-8 rounded-[2.5rem] shadow-2xl border-white/10"
+                    >
+                        <div className="flex justify-between items-start mb-8">
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-500">
+                                        <Ghost size={28} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-black italic uppercase tracking-tighter">Acceso Simulado</h3>
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-[0.2em]">{user.is_impersonating ? 'Suplantación Activa' : 'Panel de Operador'}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <p className="text-white font-black text-xl text-center">{user.username}</p>
-                            <p className="text-slate-500 text-xs text-center uppercase tracking-widest mt-1">Rol: {user.role}</p>
+                            <button
+                                onClick={onClose}
+                                className="p-3 hover:bg-surface-hover rounded-2xl text-muted hover:text-base transition-all"
+                            >
+                                <X size={24} />
+                            </button>
                         </div>
 
-                        <button
-                            onClick={handleRevert}
-                            disabled={loading}
-                            className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all border border-slate-700 hover:border-slate-600 flex items-center justify-center gap-2"
-                        >
-                            {loading ? <Loader2 className="animate-spin" size={18} /> : <ArrowLeft size={18} />}
-                            <span className="uppercase tracking-widest text-xs">Volver a mi sesión</span>
-                        </button>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Seleccionar Usuario</label>
-                            {targets.length > 0 ? (
-                                <select
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-amber-500 transition-all text-sm font-medium"
-                                    value={selectedUserId}
-                                    onChange={(e) => setSelectedUserId(e.target.value)}
+                        {user.is_impersonating ? (
+                            <div className="space-y-6">
+                                <div className="bg-primary/5 p-8 rounded-3xl border border-primary/20 text-center">
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Actualmente viendo como</p>
+                                    <p className="text-3xl font-black text-base">{user.username}</p>
+                                    <div className="inline-flex items-center gap-2 mt-4 px-4 py-1.5 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase">
+                                        <AlertTriangle size={14} />
+                                        <span>Modo Simulación</span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleRevert}
+                                    disabled={loading}
+                                    className="w-full py-5 bg-primary text-white font-black rounded-2xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98]"
                                 >
-                                    <option value="">-- Elegir usuario --</option>
-                                    {targets.map(t => (
-                                        <option key={t.id} value={t.id}>
-                                            {t.username} ({t.role})
-                                        </option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <p className="text-sm text-slate-400 italic">No hay usuarios disponibles para suplantar.</p>
-                            )}
-                        </div>
+                                    {loading ? <Loader2 className="animate-spin" size={24} /> : <ArrowLeft size={24} />}
+                                    <span className="uppercase tracking-widest text-sm">Volver a mi sesión</span>
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-8">
+                                {/* Role Filter Chips */}
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Filtrar por Rol</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {roles.map(role => (
+                                            <button
+                                                key={role.id}
+                                                onClick={() => setActiveRoleFilter(role.id)}
+                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${activeRoleFilter === role.id
+                                                    ? 'bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/20'
+                                                    : 'bg-main/50 border-base text-muted hover:border-amber-500/50'
+                                                    }`}
+                                            >
+                                                {role.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
 
-                        <button
-                            onClick={handleImpersonate}
-                            disabled={!selectedUserId || loading}
-                            className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
-                        >
-                            {loading ? <Loader2 className="animate-spin" size={18} /> : <Users size={18} />}
-                            <span className="uppercase tracking-widest text-xs">Simular Sesión</span>
-                        </button>
-                    </div>
-                )}
-            </div>
-        </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Seleccionar Usuario</label>
+                                    <div className="relative">
+                                        <select
+                                            className="w-full bg-main/50 border border-base rounded-2xl px-6 py-5 text-white outline-none focus:ring-2 focus:ring-amber-500/50 transition-all text-sm font-bold appearance-none cursor-pointer"
+                                            value={selectedUserId}
+                                            onChange={(e) => setSelectedUserId(e.target.value)}
+                                        >
+                                            <option value="">-- {filteredTargets.length > 0 ? `Elegir (${filteredTargets.length})` : 'No hay usuarios'} --</option>
+                                            {filteredTargets.map(t => (
+                                                <option key={t.id} value={t.id} className="bg-slate-900 text-white p-4">
+                                                    {t.username}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-muted">
+                                            <Users size={20} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleImpersonate}
+                                    disabled={!selectedUserId || loading}
+                                    className="w-full py-5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-2xl transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-3 active:scale-[0.98]"
+                                >
+                                    {loading ? <Loader2 className="animate-spin" size={24} /> : <Ghost size={24} />}
+                                    <span className="uppercase tracking-widest text-sm font-black">Iniciar Simulación</span>
+                                </button>
+
+                                <div className="p-5 bg-amber-500/5 rounded-3xl border border-amber-500/10 flex gap-4">
+                                    <AlertTriangle className="text-amber-500 shrink-0" size={20} />
+                                    <p className="text-[11px] text-amber-500/80 font-bold leading-relaxed uppercase tracking-tight">
+                                        Atención: Entrarás en una sesión espejada. Acciones realizadas afectarán los datos del usuario real.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
     );
 };
 

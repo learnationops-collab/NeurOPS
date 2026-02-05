@@ -11,6 +11,8 @@ import PaymentMethodsManager from '../../../components/PaymentMethodsManager';
 import OperationsPage from '../database/OperationsPage';
 import Card from '../../../components/ui/Card';
 import ThemeSelector from '../../../components/ui/ThemeSelector';
+import PipelineStagesManager from '../../../components/PipelineStagesManager';
+import { Kanban as KanbanIcon } from 'lucide-react';
 
 const SettingsPage = () => {
     const [activeSection, setActiveSection] = useState('team');
@@ -21,6 +23,7 @@ const SettingsPage = () => {
         { id: 'programs', label: 'Programas', icon: Package },
         { id: 'payment_methods', label: 'Metodos de Pago', icon: CreditCard },
         { id: 'funnels', label: 'Embudos y Eventos', icon: Layers },
+        { id: 'kanban', label: 'Estructura Kanban', icon: KanbanIcon },
         { id: 'questions', label: 'Preguntas de Reporte', icon: ClipboardCheck },
         { id: 'appearance', label: 'Apariencia', icon: Palette },
         { id: 'integrations', label: 'Integraciones', icon: Key },
@@ -99,6 +102,12 @@ const SettingsPage = () => {
                     {activeSection === 'funnels' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500 text-left">
                             <FunnelsManager />
+                        </div>
+                    )}
+
+                    {activeSection === 'kanban' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500 text-left">
+                            <PipelineStagesManager />
                         </div>
                     )}
 
