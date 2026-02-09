@@ -1,4 +1,4 @@
-from app.models import Availability, Appointment, User, Client, SurveyAnswer, db
+from app.models import Availability, Appointment, User, Client, SurveyAnswer, Notification, db
 from sqlalchemy import or_
 from datetime import datetime, timedelta, date, time
 import pytz
@@ -8,11 +8,11 @@ class BookingService:
     def get_available_slots_utc(start_date, end_date, preferred_closer_id=None):
         from app.models import WeeklyAvailability
         
-        # Get all appointments in range to avoid double booking
+        # Get all active appointments (not cancelled or rescheduled) in range to avoid double booking
         appointments = Appointment.query.filter(
             Appointment.start_time >= datetime.combine(start_date, time.min),
             Appointment.start_time <= datetime.combine(end_date, time.max) + timedelta(days=1),
-            Appointment.status != 'canceled'
+            or_(Appointment.result == None, Appointment.result == '', Appointment.result.notin_(['Cancelada', 'Reprogramada']))
         ).all()
         
         booked_slots = set()
@@ -71,7 +71,7 @@ class BookingService:
                 unique_slots[ts_key] = {
                     'utc_iso': utc_dt.isoformat() + 'Z', 
                     'closer_id': closer.id, 
-                    'ts': utc_dt.timestamp(),
+                    'ts': utc_dt.replace(tzinfo=pytz.UTC).timestamp(),
                     'date': date_val.isoformat(),
                     'start': time_val.strftime('%H:%M')
                 }
@@ -105,19 +105,39 @@ class BookingService:
 
     @staticmethod
     def create_appointment(client_id, closer_id, start_time_utc, origin='direct'):
-        # Check for conflict on same time for same closer
-        conflict = Appointment.query.filter_by(closer_id=closer_id, start_time=start_time_utc).first()
+        # Check for conflict on same time for same closer, ignoring cancelled/rescheduled ones
+        conflict = Appointment.query.filter_by(closer_id=closer_id, start_time=start_time_utc).filter(
+            or_(Appointment.result == None, Appointment.result == '', Appointment.result.notin_(['Cancelada', 'Reprogramada']))
+        ).first()
         if conflict: return None
             
         appt = Appointment(
             closer_id=closer_id,
             client_id=client_id,
             start_time=start_time_utc,
-            origin=origin
+            origin=origin,
+            last_stage='Nueva'
         )
         db.session.add(appt)
-        db.session.commit()
         
+        # Crear notificación consolidada para el Closer y Admins
+        try:
+            client = Client.query.get(client_id)
+            client_name = client.full_name or client.email or "Cliente"
+            
+            noti = Notification(
+                subject="Nueva Agenda",
+                content=f"Nueva sesión con {client_name} para el {start_time_utc.strftime('%d/%m/%Y %H:%M')} UTC.",
+                target_users=["role:admin", int(closer_id)],
+                related_users=[int(closer_id), client_id]
+            )
+            db.session.add(noti)
+            
+        except Exception as e:
+            print(f"Error creating notification for appointment: {e}")
+            # No bloqueamos el agendamiento si falla la notificación
+
+        db.session.commit()
         return appt
 
     @staticmethod
@@ -136,6 +156,9 @@ class BookingService:
 
     @staticmethod
     def trigger_agenda_webhook(appointment, event=None):
+        # Trigger the webhook
+
+        
         try:
             from app.models import Integration
             # 1. Find 'Agenda' Integration

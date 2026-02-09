@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Check, Eye, EyeOff, Save, Loader2, ListFilter } from 'lucide-react';
-import Button from './ui/Button';
+import Button from '../ui/Button';
 
 const AVAILABLE_FIELDS = [
     { key: 'cliente', label: 'Nombre Completo del Cliente' },

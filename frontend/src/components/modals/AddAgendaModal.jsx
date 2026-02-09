@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import api from '../../services/api';
 import {
     X,
     Search,
@@ -12,7 +12,7 @@ import {
     Clock,
     Instagram
 } from 'lucide-react';
-import Button from './ui/Button';
+import Button from '../ui/Button';
 
 const AddAgendaModal = ({ isOpen, onClose, onSuccess }) => {
     const [step, setStep] = useState(1);
@@ -306,7 +306,7 @@ const AddAgendaModal = ({ isOpen, onClose, onSuccess }) => {
                                     >
                                         <option value="Manual Closer">Manual Closer</option>
                                         <option value="Primera agenda">Primera agenda</option>
-                                        <option value="Seguimiento">Seguimiento</option>
+                                        <option value="Pre-call">Pre-call</option>
                                     </select>
                                 </div>
                             </div>

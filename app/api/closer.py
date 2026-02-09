@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+import json
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
 from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment
@@ -178,10 +179,36 @@ def get_all_agendas():
             "date": a.start_time.isoformat(), 
             "last_stage": a.last_stage,
             "result": a.result,
-            "linked_call": a.linked_call
+            "linked_call": a.linked_call,
+            "created_at": a.created_at.isoformat() if a.created_at else None
         } for a in pagination.items],
         "total": pagination.total, "pages": pagination.pages
     }), 200
+
+@bp.route('/reset-appointments', methods=['POST'])
+@login_required
+def reset_appointments():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    from app.models import Appointment
+    try:
+        # Actualizar todas las citas del closer actual (o todas si es admin?)
+        # Siguiendo el requerimiento: "establecer todas las agendas de la base de datos"
+        # Pero por seguridad solemos filtrar. Si el usuario pide "todas", lo hacemos global o por usuario.
+        # Dado que es para testing, lo aplicaremos a las del usuario autenticado para evitar desastres globales
+        # si no se especifica. Pero el usuario dice "todas las agendas de la base de datos".
+        
+        appointments = Appointment.query.all()
+        for appt in appointments:
+            appt.last_stage = 'Nueva'
+            appt.result = 'Terminada'
+            
+        db.session.commit()
+        return jsonify({"message": f"{len(appointments)} agendas reseteadas a Nueva/Terminada"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
 
 @bp.route('/sales', methods=['GET'])
 @login_required
@@ -615,8 +642,6 @@ def get_kanban_data():
             "lead_name": a.client.full_name or a.client.email if a.client else "Unknown",
             "phone": a.client.phone if a.client else "",
             "start_time": a.start_time.isoformat(),
-            "status": a.status,
-            "type": a.appointment_type,
             "result": a.result,
             "linked_call": a.linked_call
         })
@@ -679,3 +704,91 @@ def get_stats():
     
     stats = CloserService.get_agenda_stats(current_user.id)
     return jsonify(stats), 200
+
+@bp.route('/notifications', methods=['GET'])
+@login_required
+def get_notifications():
+    from app.models import Notification
+    
+    # Filter logic:
+    # 1. target_users == "all"
+    # 2. target_users == f"role:{current_user.role}"
+    # 3. current_user.id in target_users (if it's a list)
+    
+    all_notis = Notification.query.order_by(Notification.created_at.desc()).all()
+    filtered = []
+    
+    for n in all_notis:
+        targets = n.target_users
+        is_target = False
+        
+        if isinstance(targets, list):
+            if current_user.id in targets or f"role:{current_user.role}" in targets:
+                is_target = True
+        elif targets == "all":
+            is_target = True
+        elif isinstance(targets, str) and targets.startswith("role:") and targets == f"role:{current_user.role}":
+            is_target = True
+        
+        if is_target:
+            # Handle read_by possibly being a string due to previous double-encoding
+            read_by_val = n.read_by or []
+            if isinstance(read_by_val, str):
+                try:
+                    read_by_val = json.loads(read_by_val)
+                except:
+                    read_by_val = []
+            
+            # Skip if already read by current user
+            is_read = current_user.id in (read_by_val if isinstance(read_by_val, list) else [])
+            if is_read:
+                continue
+
+            filtered.append({
+                "id": n.id,
+                "subject": n.subject,
+                "content": n.content,
+                "created_at": n.created_at.isoformat(),
+                "is_read": False, # Always false since we filtered read ones out
+                "related_users": n.related_users
+            })
+            
+    return jsonify(filtered), 200
+
+@bp.route('/notifications/<int:id>/read', methods=['POST'])
+@login_required
+def mark_notification_read(id):
+    from app.models import Notification
+    noti = Notification.query.get_or_404(id)
+    
+    # Handle read_by possibly being a string
+    read_by = noti.read_by or []
+    if isinstance(read_by, str):
+        try:
+            read_by = json.loads(read_by)
+        except:
+            read_by = []
+    
+    read_by = list(read_by)
+    if current_user.id not in read_by:
+        read_by.append(current_user.id)
+        noti.read_by = read_by
+        db.session.commit()
+    return jsonify({"message": "Marked as read"}), 200
+
+@bp.route('/booking-link', methods=['GET'])
+@login_required
+def get_booking_links():
+    # Return all active events as a list of links
+    events = Event.query.filter_by(is_active=True).all()
+    base_url = request.host_url.rstrip('/')
+    
+    links = []
+    for event in events:
+        links.append({
+            "link": f"{base_url}/book/{event.utm_source}",
+            "source": event.utm_source,
+            "event_name": event.name
+        })
+    
+    return jsonify(links), 200

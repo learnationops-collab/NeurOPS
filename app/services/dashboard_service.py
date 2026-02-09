@@ -60,16 +60,22 @@ class DashboardService(BaseService):
                 # Manejar estados desconocidos como pendientes
                 bucket['pending'] += 1
         
+        def get_mapped_status(appt):
+            res = appt.result
+            if res == 'Terminada': return 'completed'
+            if res == 'No Show': return 'no_show'
+            if res == 'Cancelada': return 'canceled'
+            if res in ['Reprogramada', 'Reprogramar']: return 'rescheduled'
+            return 'scheduled'
+
         for appt in total_appts:
-            update_bucket(stats['total_agendas'], appt.status)
-            if appt.status == 'completed':
+            status = get_mapped_status(appt)
+            update_bucket(stats['total_agendas'], status)
+            if status == 'completed':
                 stats['presentations'] += 1
                 
-            a_type = appt.appointment_type or 'Primera agenda'
-            if a_type == 'Segunda agenda':
-                update_bucket(stats['second_agendas'], appt.status)
-            else:
-                update_bucket(stats['first_agendas'], appt.status)
+            # Todo se agrupa en 'Agendas' ya que no usamos tipo
+            update_bucket(stats['first_agendas'], status)
 
         # Conteo de Ventas (Enrollments con pago completado)
         sale_q = Enrollment.query.join(Payment).filter(
@@ -423,13 +429,22 @@ class DashboardService(BaseService):
             chart_sales.append(sales_dict.get(d_str, 0))
             curr += timedelta(days=1)
 
-        # 2. Agenda Status Breakdown
-        status_q = db.session.query(Appointment.status, func.count(Appointment.id)).filter(
+        # 2. Agenda Status Breakdown (Usando result)
+        status_q = db.session.query(Appointment.result, func.count(Appointment.id)).filter(
             Appointment.start_time >= start_dt, Appointment.start_time <= end_dt
         )
         if closer_ids: status_q = status_q.filter(Appointment.closer_id.in_(closer_ids))
-        res_status = status_q.group_by(Appointment.status).all()
-        stats_status = ([r[0] for r in res_status], [r[1] for r in res_status])
+        res_status_raw = status_q.group_by(Appointment.result).all()
+        
+        # Mapeo de nombres para el gráfico
+        mapped_labels = []
+        mapped_values = []
+        for res, count in res_status_raw:
+            label = res if res else 'Agendada'
+            mapped_labels.append(label)
+            mapped_values.append(count)
+            
+        stats_status = (mapped_labels, mapped_values)
         
         # 3. Programs Breakdown
         prog_q = db.session.query(Program.name, func.count(Enrollment.id)).join(Program).filter(

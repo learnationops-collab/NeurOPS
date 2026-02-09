@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Settings } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import SettingsPage from '../pages/admin/settings/SettingsPage';
-import CloserSettingsPage from '../pages/closer/settings/SettingsPage';
+import { useAuth } from '../../contexts/AuthContext';
+import SettingsPage from '../../pages/admin/settings/SettingsPage';
+import CloserSettingsPage from '../../pages/closer/settings/SettingsPage';
 
 const GlobalSettingsModal = ({ isOpen, onClose }) => {
     const { user } = useAuth();

@@ -394,7 +394,12 @@ class CloserService:
             
         new_status = data.get('status') # Completada, Primera Agenda, Cancelada, No Show, Reprogramada
         reschedule_date = data.get('reschedule_date') # ISO string
+        last_stage = data.get('last_stage')
         
+        # Actualizar etapa del lead si se proporciona
+        if last_stage:
+            appt.last_stage = last_stage
+            
         # Logic: 
         # - "Completada" -> status 'completed'
         # - "Cancelada" -> status 'canceled'
@@ -699,29 +704,30 @@ class CloserService:
         
         outcomes = {r[0]: r[1] for r in outcomes_q}
         
-        # 3. Desglose por Tipo de Agenda y Resultado
-        type_breakdown_q = db.session.query(
-            Appointment.appointment_type, 
+        # 3. Desglose por Resultado (Sin tipo de agenda)
+        result_breakdown_q = db.session.query(
             Appointment.result, 
             func.count(Appointment.id)
         ).filter(
             Appointment.closer_id == closer_id
         ).group_by(
-            Appointment.appointment_type, 
             Appointment.result
         ).all()
         
-        type_stats = {}
-        for a_type, result, count in type_breakdown_q:
-            a_type = a_type or 'Primera agenda'
-            if a_type not in type_stats:
-                type_stats[a_type] = {'total': 0, 'results': {}}
-            
-            type_stats[a_type]['total'] += count
-            if result:
-                type_stats[a_type]['results'][result] = count
-            else:
-                type_stats[a_type]['results']['Pendiente'] = count
+        result_stats = {}
+        total_count = 0
+        for result, count in result_breakdown_q:
+            res_key = result if result else 'Pendiente'
+            result_stats[res_key] = count
+            total_count += count
+
+        # Mantenemos 'type_stats' para compatibilidad con el frontend
+        type_stats = {
+            'Agendas': {
+                'total': total_count,
+                'results': result_stats
+            }
+        }
 
         return {
             'pending': pending_count,

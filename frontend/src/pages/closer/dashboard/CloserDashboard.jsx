@@ -1,16 +1,18 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import NewSaleModal from '../../../components/NewSaleModal';
-import SaleDetailModal from '../../../components/SaleDetailModal';
+import NewSaleModal from '../../../components/modals/NewSaleModal';
+import SaleDetailModal from '../../../components/modals/SaleDetailModal';
 import api from '../../../services/api';
-import AgendaManagerModal from '../../../components/AgendaManagerModal';
-import AddAgendaModal from '../../../components/AddAgendaModal';
+import AgendaManagerModal from '../../../components/modals/AgendaManagerModal';
+import AddAgendaModal from '../../../components/modals/AddAgendaModal';
 import Button from '../../../components/ui/Button';
 import Card, { CardHeader, CardContent } from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
-import CloserKanbanBoard from '../../../components/CloserKanbanBoard';
+import NotificationWidget from '../../../components/dashboard/NotificationWidget';
+import HotkeysTable from '../../../components/dashboard/HotkeysTable';
+import BookingLinkModal from '../../../components/dashboard/BookingLinkModal';
 import {
+    Loader2,
     Activity,
     Calendar,
     Users,
@@ -19,19 +21,16 @@ import {
     Clock,
     DollarSign,
     Target,
-    BarChart3,
-    ClipboardCheck,
-    Loader2,
-    ArrowUpRight,
     ChevronRight,
+    ArrowUpRight,
     Search,
     MessageSquare,
     PhoneCall,
     Zap,
     Plus,
-    Save,
     RefreshCw,
-    XCircle
+    XCircle,
+    Send
 } from 'lucide-react';
 
 const CloserDashboard = () => {
@@ -43,17 +42,12 @@ const CloserDashboard = () => {
         progress: 0,
         agendas_today: [],
         sales_today: [],
+        today_stats: null,
         report_questions: [],
         recent_clients: [],
-        today_stats: null
+        notifications: [],
+        booking_links: []
     });
-
-    // Kanban State
-    const [kanbanData, setKanbanData] = useState({ stages: [], board: {} });
-    const [pendingChanges, setPendingChanges] = useState({});
-    const [kanbanLoading, setKanbanLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [showSavedToast, setShowSavedToast] = useState(false);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -67,13 +61,14 @@ const CloserDashboard = () => {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedAgenda, setSelectedAgenda] = useState(null);
     const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(null);
-    const [activeSection, setActiveSection] = useState(0); // 0: Welcome, 1: Daily Summary
-
-    const [kanbanSubTab, setKanbanSubTab] = useState('tracking'); // 'tracking' or 'closing'
+    const [activeSection, setActiveSection] = useState(0); // 0: Dashboard, 1: Daily Summary
+    const [copying, setCopying] = useState(false);
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
     useEffect(() => {
         fetchAll();
     }, []);
+
 
     // Dispatch activeSection to Dock
     useEffect(() => {
@@ -92,39 +87,25 @@ const CloserDashboard = () => {
         return () => window.removeEventListener('request-section-change', handleRequest);
     }, []);
 
-    // Vertical Key Navigation
     useEffect(() => {
         const handleKeys = (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-
-            if (e.key === 'ArrowUp' && activeSection === 0) {
-                setActiveSection(1); // Move Up to Secondary
-            } else if (e.key === 'ArrowDown' && activeSection === 1) {
-                setActiveSection(0); // Move Down to Default
+            if (e.key.toLowerCase() === 'l') {
+                setIsLinkModalOpen(prev => !prev);
             }
         };
-
         window.addEventListener('keydown', handleKeys);
         return () => window.removeEventListener('keydown', handleKeys);
-    }, [activeSection]);
-
-    // Kanban splitting logic
-    const trackingStages = ["Nueva", "Respondido", "Confirmado"];
-    const closingStages = ["Asistido", "Contexto", "Decisor", "Presentado"];
-
-    const filteredKanbanStages = kanbanSubTab === 'tracking' ? trackingStages : closingStages;
-    const filteredKanbanBoard = useMemo(() => {
-        const board = {};
-        filteredKanbanStages.forEach(stage => {
-            board[stage] = kanbanData.board[stage] || [];
-        });
-        return board;
-    }, [kanbanData.board, kanbanSubTab, filteredKanbanStages]);
+    }, []);
 
     const fetchAll = async () => {
         setLoading(true);
         try {
-            await Promise.all([fetchDashboard(), fetchKanbanData()]);
+            await Promise.all([
+                fetchDashboard(),
+                fetchNotifications(),
+                fetchBookingLink()
+            ]);
         } catch (err) {
             console.error("Error in fetchAll", err);
         } finally {
@@ -132,23 +113,29 @@ const CloserDashboard = () => {
         }
     };
 
-    const fetchKanbanData = async () => {
-        setKanbanLoading(true);
+    const fetchNotifications = async () => {
         try {
-            const res = await api.get('/closer/kanban');
-            setKanbanData(res.data);
-            setPendingChanges({});
+            const res = await api.get('/closer/notifications');
+            setData(prev => ({ ...prev, notifications: res.data || [] }));
         } catch (err) {
-            console.error("Error fetching kanban", err);
-        } finally {
-            setKanbanLoading(false);
+            console.error("Error fetching notifications", err);
+        }
+    };
+
+    const fetchBookingLink = async () => {
+        try {
+            const res = await api.get('/closer/booking-link');
+            setData(prev => ({ ...prev, booking_links: res.data || [] }));
+        } catch (err) {
+            console.error("Error fetching booking link", err);
         }
     };
 
     const fetchDashboard = async () => {
         try {
             const res = await api.get('/closer/dashboard');
-            const safeData = {
+            setData(prev => ({
+                ...prev,
                 kpis: res.data.kpis || {},
                 commission: res.data.commission || {},
                 rates: res.data.rates || {},
@@ -158,10 +145,10 @@ const CloserDashboard = () => {
                 report_questions: res.data.report_questions || [],
                 recent_clients: res.data.recent_clients || [],
                 today_stats: res.data.today_stats || null
-            };
-            setData(safeData);
-            if (safeData.today_stats?.answers) {
-                setAnswers(safeData.today_stats.answers);
+            }));
+
+            if (res.data.today_stats?.answers) {
+                setAnswers(res.data.today_stats.answers);
             }
         } catch (err) {
             console.error("Error fetching dashboard", err);
@@ -171,6 +158,22 @@ const CloserDashboard = () => {
 
     const handleAnswerChange = (qId, val) => {
         setAnswers(prev => ({ ...prev, [qId]: val }));
+    };
+
+    const handleMarkAsRead = async (id) => {
+        try {
+            await api.post(`/closer/notifications/${id}/read`);
+            fetchNotifications();
+        } catch (err) {
+            console.error("Error marking notification as read", err);
+        }
+    };
+
+    const handleCopyLink = (link) => {
+        if (!link) return;
+        navigator.clipboard.writeText(link);
+        setCopying(true);
+        setTimeout(() => setCopying(false), 2000);
     };
 
     const handleSubmitReport = async (e) => {
@@ -196,30 +199,90 @@ const CloserDashboard = () => {
 
     return (
         <div className="h-screen overflow-hidden relative bg-main">
-            {showSavedToast && (
-                <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 duration-300">
-                    <div className="bg-emerald-500 text-black px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl font-black uppercase text-[10px] tracking-widest">
-                        <CheckCircle2 size={18} />
-                        Reporte guardado
-                    </div>
+            <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 duration-300">
+                <div className="bg-emerald-500 text-black px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl font-black uppercase text-[10px] tracking-widest">
+                    <CheckCircle2 size={18} />
+                    Reporte guardado
                 </div>
-            )}
+            </div>
 
             <motion.div
-                className="h-full w-full"
-                animate={{ y: `-${(1 - activeSection) * 100}%` }}
+                className="absolute top-0 left-0 w-full h-[200%]"
+                animate={{ y: `-${activeSection * 50}%` }}
                 transition={{ type: 'spring', damping: 25, stiffness: 120 }}
             >
-                {/* SECTION 1: DAILY SUMMARY (Top) */}
-                <section className="h-full w-full p-8 flex flex-col items-center justify-start bg-main/50 relative overflow-y-auto">
+
+                {/* SECTION 0: DASHBOARD (Top 50%) */}
+                <div
+                    className="absolute top-0 left-0 w-full h-[50%] flex flex-col items-center justify-start p-12 bg-main overflow-y-auto custom-scrollbar"
+                >
+                    <div className="w-full max-w-6xl space-y-12 py-12">
+                        <header className="flex justify-between items-center border-b border-base pb-8 mb-4">
+                            <div className="space-y-1 text-left">
+                                <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none">Dashboard</h1>
+                                <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Acceso rápido y notificaciones</p>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={async () => {
+                                        if (window.confirm("¿Estás seguro de resetear TODAS las agendas a Nueva/Terminada?")) {
+                                            try {
+                                                await api.post('/closer/reset-appointments');
+                                                window.location.reload();
+                                            } catch (e) {
+                                                alert("Error al resetear");
+                                            }
+                                        }
+                                    }}
+                                    className="px-6 py-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-lg shadow-rose-500/10 focus:outline-none"
+                                >
+                                    Reset Testing
+                                </button>
+                            </div>
+                        </header>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                            {/* Hotkeys Table */}
+                            <div className="space-y-6">
+                                <div className="h-full">
+                                    <HotkeysTable />
+                                </div>
+                            </div>
+
+                            {/* Notifications Widget */}
+                            <div className="space-y-6">
+                                <NotificationWidget
+                                    notifications={data.notifications || []}
+                                    onMarkAsRead={handleMarkAsRead}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-center pt-12">
+                            <button
+                                onClick={() => setActiveSection(1)}
+                                className="group flex flex-col items-center gap-2 text-muted hover:text-primary transition-all animate-bounce focus:outline-none"
+                            >
+                                <span className="text-[8px] font-black uppercase tracking-widest">Ir a Reporte Diario</span>
+                                <div className="w-px h-8 bg-gradient-to-b from-muted group-hover:from-primary text-primary" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* SECTION 1: DAILY SUMMARY (Bottom 50%) */}
+                <div
+                    className="absolute top-[50%] left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start bg-main/50 overflow-y-auto custom-scrollbar"
+                >
                     <div className="w-full max-w-6xl space-y-12 py-12">
                         <header className="flex justify-between items-end border-b border-base pb-8">
                             <div className="flex items-end gap-6">
                                 <button
-                                    onClick={() => setActiveSection(0)}
+                                    onClick={() => setActiveSection(0)} // Up to Dashboard
                                     className="p-3 mb-1 bg-surface border border-base rounded-2xl text-muted hover:text-primary transition-all group"
                                 >
-                                    <Plus className="rotate-45" size={20} />
+                                    <ArrowUpRight className="-rotate-90" size={20} />
                                 </button>
                                 <div>
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter text-base">Resumen Diario</h2>
@@ -294,7 +357,7 @@ const CloserDashboard = () => {
                                                     <p className="text-[11px] font-black italic text-main">{a.lead_name}</p>
                                                     <div className="flex items-center gap-2 text-[8px] font-bold text-muted uppercase tracking-tighter">
                                                         <Clock size={10} className="text-primary" />
-                                                        {new Date(a.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {new Date(a.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </div>
                                                 </div>
                                             </div>
@@ -327,50 +390,21 @@ const CloserDashboard = () => {
                                 </Card>
                             </div>
                         </div>
+
                     </div>
-                </section>
-
-                {/* SECTION 0: WELCOME SCREEN (Bottom) */}
-                <section className="h-full w-full flex flex-col items-center justify-center relative overflow-hidden bg-main">
-                    <div className="relative z-10 text-center space-y-6 max-w-2xl px-8">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8 }}
-                        >
-                            <h1 className="text-7xl font-black italic uppercase tracking-tight text-base leading-none">
-                                Dashboard
-                            </h1>
-                            <p className="text-sm font-bold text-muted uppercase tracking-[0.3em] mt-4">
-                                Bienvenido, {data.today_stats?.closer_name || 'Closer'}
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 1, duration: 1 }}
-                            className="flex flex-col items-center gap-4 pt-12"
-                        >
-                            <button
-                                onClick={() => setActiveSection(1)}
-                                className="group animate-bounce text-muted hover:text-primary transition-colors flex flex-col items-center gap-2 focus:outline-none"
-                            >
-                                <span className="text-[10px] font-black uppercase tracking-widest">Ver resumen</span>
-                                <div className="w-px h-12 bg-gradient-to-b from-muted group-hover:from-primary text-primary transition-all" />
-                            </button>
-                        </motion.div>
-                    </div>
-
-                    {/* Background Decor */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[120px] -z-0" />
-                </section>
+                </div>
             </motion.div>
 
             <AddAgendaModal
                 isOpen={isAddAgendaModalOpen}
                 onClose={() => setIsAddAgendaModalOpen(false)}
                 onSuccess={fetchAll}
+            />
+
+            <BookingLinkModal
+                isOpen={isLinkModalOpen}
+                onClose={() => setIsLinkModalOpen(false)}
+                data={data.booking_links}
             />
         </div>
     );

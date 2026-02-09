@@ -1,4 +1,4 @@
-import PayloadConfigModal from './PayloadConfigModal';
+import PayloadConfigModal from './modals/PayloadConfigModal';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Key, Save, Loader2, Globe, Server, Check, AlertCircle, Trash2, Settings2 } from 'lucide-react';

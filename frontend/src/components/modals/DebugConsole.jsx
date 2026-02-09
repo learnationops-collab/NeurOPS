@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, X, Minimize2, Maximize2, Trash2, Copy } from 'lucide-react';
 
-import api from '../services/api'; // Import configured API
+import api from '../../services/api'; // Import configured API
 
 const DebugConsole = ({ isVisible, onClose }) => {
     const [isOpen, setIsOpen] = useState(false); // Default collapsed
@@ -58,7 +58,10 @@ const DebugConsole = ({ isVisible, onClose }) => {
                 return String(arg);
             }).join(' ');
 
-            setLogs(prev => [...prev, { type, message, timestamp }].slice(-100)); // Keep last 100 logs
+            // Defer state update to avoid "Cannot update a component during render" errors
+            setTimeout(() => {
+                setLogs(prev => [...prev, { type, message, timestamp }].slice(-100)); // Keep last 100 logs
+            }, 0);
 
             // Call original console method to ensure it still shows in DevTools
             if (originalConsole.current[type]) {

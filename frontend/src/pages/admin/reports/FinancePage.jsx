@@ -16,7 +16,7 @@ import {
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
-import ExpensesManagerModal from '../../../components/ExpensesManagerModal';
+import ExpensesManagerModal from '../../../components/modals/ExpensesManagerModal';
 
 const FinancePage = () => {
     const [activeTab, setActiveTab] = useState('general');

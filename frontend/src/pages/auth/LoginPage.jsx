@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import Button from '../../components/ui/Button';
-import DebugConsole from '../../components/DebugConsole';
+import DebugConsole from '../../components/modals/DebugConsole';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');

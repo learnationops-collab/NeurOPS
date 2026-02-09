@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Power, Users, AlertTriangle, Loader2, ArrowLeft, Ghost } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import api from '../services/api';
+import api from '../../services/api';
 
 const OperatorControls = ({ isOpen, onClose }) => {
     const [user, setUser] = useState(null);
@@ -12,6 +12,8 @@ const OperatorControls = ({ isOpen, onClose }) => {
     const [selectedUserId, setSelectedUserId] = useState('');
 
     useEffect(() => {
+        if (!isOpen) return;
+
         const checkUser = async () => {
             try {
                 const res = await api.get('/auth/me');
@@ -26,7 +28,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
             }
         };
         checkUser();
-    }, []);
+    }, [isOpen]);
 
     const fetchTargets = async () => {
         try {

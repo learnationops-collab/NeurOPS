@@ -125,7 +125,7 @@ const PipelineStagesManager = () => {
                                 <input
                                     value={stage.name}
                                     onChange={(e) => handleUpdateStage(index, 'name', e.target.value)}
-                                    placeholder="Nombre de la etapa (ej: Seguimiento)"
+                                    placeholder="Nombre de la etapa (ej: Pre-call)"
                                     className="w-full bg-transparent border-none outline-none text-base font-black uppercase tracking-tight placeholder:text-muted/30"
                                 />
                             </div>

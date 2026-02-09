@@ -170,11 +170,7 @@ const CloserSettingsPage = () => {
     const [error, setError] = useState(null);
     const [copiedId, setCopiedId] = useState(null);
 
-    const [quickFill, setQuickFill] = useState({
-        days: [0, 1, 2, 3, 4],
-        start: '09:00',
-        end: '18:00'
-    });
+    const [workBlock, setWorkBlock] = useState({ start: '09:00', end: '18:00' });
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -193,7 +189,9 @@ const CloserSettingsPage = () => {
             ]);
             setAvailability(Array.isArray(availRes.data) ? availRes.data : []);
             setEvents(eventsRes.data || []);
-            setWeeklySchedule(weeklyRes.data || {});
+            // Handle new response format if backend was updated, or stay compatible
+            const weeklyData = weeklyRes.data?.days || weeklyRes.data || {};
+            setWeeklySchedule(weeklyData);
         } catch (err) {
             console.error("Error fetching data", err);
             setError("Error al cargar la configuración.");
@@ -201,6 +199,11 @@ const CloserSettingsPage = () => {
             setLoading(false);
         }
     };
+
+    // Filter SLOTS based on work block
+    const filteredSlots = useMemo(() => {
+        return SLOTS.filter(t => t >= workBlock.start && t < workBlock.end);
+    }, [workBlock]);
 
     const isSlotSelected = (dayIdx, timeStr) => {
         const dayStr = dayIdx.toString();
@@ -236,20 +239,18 @@ const CloserSettingsPage = () => {
         setWeeklySchedule(newSchedule);
     };
 
-    const handleQuickFill = () => {
-        const newSchedule = { ...weeklySchedule };
-        quickFill.days.forEach(dayIdx => {
+    const handleFillBlock = () => {
+        const newSchedule = {};
+        [0, 1, 2, 3, 4, 5, 6].forEach(dayIdx => {
             const dayStr = dayIdx.toString();
             const slots = [];
-            SLOTS.forEach(timeStr => {
-                if (timeStr >= quickFill.start && timeStr < quickFill.end) {
-                    const [h, min] = timeStr.split(':').map(Number);
-                    const totalMin = h * 60 + min + 90;
-                    const endH = Math.floor(totalMin / 60);
-                    const endM = totalMin % 60;
-                    const endTimeStr = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
-                    slots.push({ start: timeStr, end: endTimeStr });
-                }
+            filteredSlots.forEach(timeStr => {
+                const [h, min] = timeStr.split(':').map(Number);
+                const totalMin = h * 60 + min + 90;
+                const endH = Math.floor(totalMin / 60);
+                const endM = totalMin % 60;
+                const endTimeStr = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+                slots.push({ start: timeStr, end: endTimeStr });
             });
             if (slots.length > 0) newSchedule[dayStr] = slots;
         });
@@ -263,14 +264,21 @@ const CloserSettingsPage = () => {
     const handleSaveWeekly = async () => {
         setSubmitting(true);
         try {
-            const schedule = Object.entries(weeklySchedule).map(([day, slots]) => ({
-                day: parseInt(day),
-                slots: slots.sort((a, b) => a.start.localeCompare(b.start))
-            }));
+            const schedule = Object.entries(weeklySchedule).map(([day, slots]) => {
+                // Filtrar slots que estén dentro del bloque de trabajo actual
+                const filteredSlotsForDay = slots.filter(s =>
+                    s.start >= workBlock.start && s.start < workBlock.end
+                );
+                return {
+                    day: parseInt(day),
+                    slots: filteredSlotsForDay.sort((a, b) => a.start.localeCompare(b.start))
+                };
+            }).filter(d => d.slots.length > 0); // Opcional: no enviar días vacíos si prefieres
+
             await api.post('/closer/weekly-availability', { schedule });
-            alert("Guardado.");
+            alert("Guardado con éxito.");
         } catch (err) {
-            alert("Error.");
+            alert("Error al guardar.");
         } finally {
             setSubmitting(false);
         }
@@ -332,43 +340,93 @@ const CloserSettingsPage = () => {
             <main className="grid grid-cols-1 gap-12">
                 {activeTab === 'availability' && (
                     <div className="space-y-10">
-                        <Card variant="surface" className="p-10 border-primary/10">
-                            <div className="flex flex-wrap items-center gap-6">
-                                <div className="flex bg-main p-1.5 rounded-2xl border border-base">
-                                    {DAYS_ES.map((day, idx) => (
-                                        <button key={day} onClick={() => {
-                                            const newDays = quickFill.days.includes(idx) ? quickFill.days.filter(d => d !== idx) : [...quickFill.days, idx];
-                                            setQuickFill({ ...quickFill, days: newDays });
-                                        }} className={`w-10 h-10 rounded-xl text-[10px] font-black ${quickFill.days.includes(idx) ? 'bg-primary text-white' : 'text-muted'}`}>{day[0]}</button>
-                                    ))}
+                        {/* Bloque de Trabajo Visual & Acción Rápida */}
+                        <Card variant="surface" className="p-10 border-primary/20 bg-primary/5">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <Zap className="text-primary fill-primary/20" size={24} />
+                                        <h3 className="text-2xl font-black uppercase italic tracking-tighter">Bloque de Trabajo</h3>
+                                    </div>
+                                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest pl-9">Configura tu rango y llena los horarios en un clic</p>
                                 </div>
-                                <input type="time" value={quickFill.start} onChange={e => setQuickFill({ ...quickFill, start: e.target.value })} className="bg-main border border-base rounded-xl px-4 py-2.5" />
-                                <input type="time" value={quickFill.end} onChange={e => setQuickFill({ ...quickFill, end: e.target.value })} className="bg-main border border-base rounded-xl px-4 py-2.5" />
-                                <Button onClick={handleQuickFill} variant="primary">Aplicar</Button>
+                                <div className="flex flex-wrap items-center gap-6">
+                                    <div className="flex items-center gap-3 bg-main p-1.5 rounded-2xl border border-base shadow-inner">
+                                        <div className="flex items-center gap-2 px-4">
+                                            <span className="text-[8px] font-black uppercase text-muted">VISTA:</span>
+                                            <input
+                                                type="time"
+                                                value={workBlock.start}
+                                                onChange={e => setWorkBlock({ ...workBlock, start: e.target.value })}
+                                                className="bg-transparent border-none focus:ring-0 font-black text-sm p-0 w-16"
+                                            />
+                                        </div>
+                                        <div className="w-px h-8 bg-base"></div>
+                                        <div className="flex items-center gap-2 px-4">
+                                            <span className="text-[8px] font-black uppercase text-muted">HASTA:</span>
+                                            <input
+                                                type="time"
+                                                value={workBlock.end}
+                                                onChange={e => setWorkBlock({ ...workBlock, end: e.target.value })}
+                                                className="bg-transparent border-none focus:ring-0 font-black text-sm p-0 w-16"
+                                            />
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={handleFillBlock}
+                                        variant="primary"
+                                        className="h-[52px] px-8 rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all font-black uppercase italic tracking-wider"
+                                    >
+                                        Llenar Horarios
+                                    </Button>
+                                </div>
                             </div>
                         </Card>
 
                         <Card variant="surface" className="p-10">
-                            <div className="flex flex-wrap gap-4 mb-8">
-                                <Button onClick={handleResetWeekly} variant="ghost" className="text-rose-500">Limpiar</Button>
-                                <Button onClick={handleSaveWeekly} loading={submitting} variant="primary">Guardar</Button>
-                            </div>
-                            <div className="border border-base rounded-[2.5rem] overflow-hidden">
-                                <div className="grid grid-cols-8 border-b border-base bg-surface-hover/10">
-                                    <div className="p-5"></div>
-                                    {DAYS_ES.map(d => <div key={d} className="p-5 text-center font-black text-[11px] uppercase">{d}</div>)}
+                            <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-2 h-8 bg-primary rounded-full"></div>
+                                    <h3 className="text-3xl font-black uppercase italic tracking-tighter">Configuración Semanal</h3>
                                 </div>
-                                <div className="max-h-[600px] overflow-y-auto">
-                                    {SLOTS.map(t => (
-                                        <div key={t} className="grid grid-cols-8 border-b border-base/50 last:border-0 hover:bg-surface-hover/5">
-                                            <div className="p-3 text-center border-r border-base text-[10px] font-black opacity-40">{t}</div>
+                                <div className="flex gap-4">
+                                    <Button onClick={handleResetWeekly} variant="ghost" className="text-rose-500 font-black h-14 px-8 rounded-2xl hover:bg-rose-500/10">Limpiar Todo</Button>
+                                    <Button onClick={handleSaveWeekly} loading={submitting} variant="primary" className="h-14 px-12 rounded-2xl shadow-2xl">Guardar Configuración</Button>
+                                </div>
+                            </div>
+                            <div className="border border-base rounded-[2.5rem] overflow-hidden bg-main/20">
+                                <div className="grid grid-cols-8 border-b border-base bg-surface-hover/10">
+                                    <div className="p-5 flex items-center justify-center">
+                                        <Clock size={16} className="text-muted" />
+                                    </div>
+                                    {DAYS_ES.map(d => <div key={d} className="p-5 text-center font-black text-[11px] uppercase tracking-widest text-muted">{d}</div>)}
+                                </div>
+                                <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
+                                    {filteredSlots.length > 0 ? filteredSlots.map(t => (
+                                        <div key={t} className="grid grid-cols-8 border-b border-base/30 last:border-0 hover:bg-primary/5 transition-colors">
+                                            <div className="p-3 text-center border-r border-base/50 text-[11px] font-black text-base flex items-center justify-center bg-main/30">{t}</div>
                                             {DAYS_ES.map((_, idx) => (
-                                                <div key={idx} onClick={() => toggleSlot(idx, t)} className={`h-12 border-l border-base/30 cursor-pointer ${isSlotSelected(idx, t) ? 'bg-primary/20' : ''}`}>
-                                                    {isSlotSelected(idx, t) && <div className="h-full w-full bg-primary/40 flex items-center justify-center"><Check size={14} className="text-white" /></div>}
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => toggleSlot(idx, t)}
+                                                    className={`h-14 border-l border-base/10 cursor-pointer transition-all flex items-center justify-center group ${isSlotSelected(idx, t) ? 'bg-primary/10' : 'hover:bg-primary/5'}`}
+                                                >
+                                                    {isSlotSelected(idx, t) ? (
+                                                        <div className="h-10 w-10 bg-primary text-white rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center animate-in zoom-in duration-200">
+                                                            <Check size={18} strokeWidth={3} />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="h-8 w-8 rounded-lg border-2 border-dashed border-base group-hover:border-primary/30 group-hover:scale-110 transition-all opacity-0 group-hover:opacity-100" />
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
-                                    ))}
+                                    )) : (
+                                        <div className="p-20 text-center space-y-4">
+                                            <AlertCircle className="w-12 h-12 text-muted mx-auto" />
+                                            <p className="text-muted font-black uppercase tracking-widest text-xs">No hay slots en este rango</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </Card>

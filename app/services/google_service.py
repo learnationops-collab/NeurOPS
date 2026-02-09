@@ -94,6 +94,10 @@ class GoogleService:
 
     @staticmethod
     def create_event(user_id, appointment):
+        # TEMPORARY: Deactivated for internal testing
+        print(f"[DEBUG] Google Calendar Sync bypassed for user {user_id} and appointment {appointment.id}")
+        return None
+        
         service = GoogleService.get_service(user_id)
         if not service: return None
         

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import api from '../../services/api';
 import {
     X,
     Search,
@@ -19,8 +19,8 @@ import {
     Globe,
     FlaskConical
 } from 'lucide-react';
-import Button from './ui/Button';
-import Badge from './ui/Badge';
+import Button from '../ui/Button';
+import Badge from '../ui/Badge';
 
 const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
     const [step, setStep] = useState(1);

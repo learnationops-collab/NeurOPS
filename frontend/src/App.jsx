@@ -16,7 +16,8 @@ import CloserLeadsPage from './pages/closer/leads/LeadsPage';
 import CloserSettingsPage from './pages/closer/settings/SettingsPage';
 import CloserNewSalePage from './pages/closer/records/NewSalePage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
-import SetterDashboard from './pages/setter/dashboard/DashboardPage';
+import SetterDashboard from './pages/setter/dashboard/SetterDashboard';
+import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
 import BookingPage from './pages/public/BookingPage';
 import BackupPage from './pages/public/BackupPage';
@@ -152,11 +153,21 @@ function App() {
               }
             />
             <Route
-              path="/closer/statistics"
+              path="/closer/stats"
               element={
                 <ProtectedRoute roles={['closer']}>
                   <MainLayout>
                     <StatisticsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/closer/settings"
+              element={
+                <ProtectedRoute roles={['closer']}>
+                  <MainLayout>
+                    <CloserSettingsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -200,6 +211,16 @@ function App() {
                 <ProtectedRoute roles={['setter']}>
                   <MainLayout>
                     <SetterDashboard />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/setter/stats"
+              element={
+                <ProtectedRoute roles={['setter']}>
+                  <MainLayout>
+                    <SetterStatisticsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

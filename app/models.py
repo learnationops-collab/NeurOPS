@@ -185,6 +185,7 @@ class Appointment(db.Model):
     last_stage = db.Column(db.String(100))
     result = db.Column(db.String(100))
     linked_call = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Availability(db.Model):
@@ -426,3 +427,16 @@ class Lead(db.Model):
 
     def __repr__(self):
         return f'<Lead {self.name} ({self.manychat_id})>'
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    subject = db.Column(db.String(100), nullable=False) # Asunto
+    content = db.Column(db.Text, nullable=False) # Content
+    read_by = db.Column(db.JSON, default=[]) # List of user IDs (JSON)
+    target_users = db.Column(db.JSON, default="all") # "all", "role:admin", or list of user IDs
+    related_users = db.Column(db.JSON, default=[]) # List of related user IDs
+    created_at = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de creacion
+
+    def __repr__(self):
+        return f'<Notification {self.subject}>'

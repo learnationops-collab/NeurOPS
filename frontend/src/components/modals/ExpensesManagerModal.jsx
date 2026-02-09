@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api from '../../services/api';
 import { X, Plus, Calendar, DollarSign, Repeat, Trash2, ToggleLeft, ToggleRight, Loader2, Play } from 'lucide-react';
-import Button from './ui/Button';
+import Button from '../ui/Button';
 
 const ExpensesManagerModal = ({ isOpen, onClose, onSuccess }) => {
     const [activeTab, setActiveTab] = useState('new');

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.models import db, Event, Client, Appointment, SurveyAnswer, SurveyQuestion, User
+from app.models import db, Event, Client, Appointment, SurveyAnswer, SurveyQuestion, User, Notification
 from app.services.booking_service import BookingService
 from datetime import datetime, date, timedelta
 import json
@@ -8,58 +8,62 @@ bp = Blueprint('public_api', __name__)
 
 @bp.route('/public/funnel/<string:utm_source>', methods=['GET'])
 def get_funnel_by_source(utm_source):
-    # Find event by utm_source
-    event = Event.query.filter_by(utm_source=utm_source, is_active=True).first()
-    if not event:
-        return jsonify({"error": "Event not found"}), 404
-        
-    # Merge Questions: Global + Group + Event
-    global_questions = SurveyQuestion.query.filter_by(is_global=True, is_active=True).all()
-    group_questions = SurveyQuestion.query.filter_by(group_id=event.group_id, is_active=True).all() if event.group_id else []
-    event_questions = SurveyQuestion.query.filter_by(event_id=event.id, is_active=True).all()
-    
-    # Simple merge and sort by order
-    questions = global_questions + group_questions + event_questions
-    questions.sort(key=lambda x: x.order)
-        
-    # Get available slots (Generic for all closers)
-    start_date = date.today()
-    end_date = start_date + timedelta(days=14)
-    
-    # Simple strategy: aggregate slots from all closers
-    closers = User.query.filter_by(role='closer').all()
-    all_slots = []
-    for closer in closers:
-        slots = BookingService.get_available_slots_utc(start_date, end_date, preferred_closer_id=closer.id)
-        for s in slots:
-            s['closer_id'] = closer.id
-            s['closer_name'] = closer.username
-            all_slots.append(s)
+    try:
+        # Find event by utm_source
+        event = Event.query.filter_by(utm_source=utm_source, is_active=True).first()
+        if not event:
+            return jsonify({"error": "Event not found"}), 404
             
-    # Sort by timestamp for proper chronological order
-    all_slots.sort(key=lambda x: x['ts'])
-
-    return jsonify({
-        "event": {
-            "id": event.id,
-            "name": event.name,
-            "duration": event.duration_minutes,
-            "utm_source": event.utm_source,
-            "min_score": event.min_score,
-            "redirect_success": event.redirect_url_success,
-            "redirect_fail": event.redirect_url_fail,
-        },
-        "questions": [{
-            "id": q.id,
-            "text": q.text,
-            "type": q.question_type,
-            "options": json.loads(q.options) if q.options and q.options.startswith('[') else q.options,
-            "step": q.step,
-            "mapping": q.mapping_field
-        } for q in questions],
-        "availability": all_slots,
-        "closer_name": "Equipo NeurOPS" # Generic if merging
-    }), 200
+        # Merge Questions: Global + Group + Event
+        global_questions = SurveyQuestion.query.filter_by(is_global=True, is_active=True).all()
+        group_questions = SurveyQuestion.query.filter_by(group_id=event.group_id, is_active=True).all() if event.group_id else []
+        event_questions = SurveyQuestion.query.filter_by(event_id=event.id, is_active=True).all()
+        
+        # Simple merge and sort by order
+        questions = global_questions + group_questions + event_questions
+        questions.sort(key=lambda x: x.order)
+            
+        # Get available slots (Generic for all closers)
+        start_date = date.today()
+        end_date = start_date + timedelta(days=14)
+        
+        # Simple strategy: aggregate slots from all closers
+        closers = User.query.filter_by(role='closer').all()
+        all_slots = []
+        for closer in closers:
+            slots = BookingService.get_available_slots_utc(start_date, end_date, preferred_closer_id=closer.id)
+            for s in slots:
+                s['closer_id'] = closer.id
+                s['closer_name'] = closer.username
+                all_slots.append(s)
+                
+        # Sort by timestamp for proper chronological order
+        all_slots.sort(key=lambda x: x['ts'])
+    
+        return jsonify({
+            "event": {
+                "id": event.id,
+                "name": event.name,
+                "duration": event.duration_minutes,
+                "utm_source": event.utm_source,
+                "min_score": event.min_score,
+                "redirect_success": event.redirect_url_success,
+                "redirect_fail": event.redirect_url_fail,
+            },
+            "questions": [{
+                "id": q.id,
+                "text": q.text,
+                "type": q.question_type,
+                "options": (json.loads(q.options) if q.options and q.options.startswith('[') else q.options) if q.options else [],
+                "step": q.step,
+                "mapping": q.mapping_field
+            } for q in questions],
+            "availability": all_slots,
+            "closer_name": "Equipo NeurOPS" # Generic if merging
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] Funnel Data API: {e}")
+        return jsonify({"error": "Error interno al cargar la información del evento"}), 500
 
 @bp.route('/public/clients/check', methods=['POST'])
 def check_client_exists():
@@ -171,32 +175,35 @@ def book_appointment():
             'instagram': instagram
         })
         
+        if not client:
+            return jsonify({"error": "Error al procesar la información del cliente"}), 500
+        
         # 2. Find a closer (Generic logic: use the one from the slot if possible, or any available)
         # The frontend sends 'timestamp'. We need to find which closer has that slot.
         # Ensure timestamp is treated as UTC
-        from datetime import timezone
-        start_time = datetime.fromtimestamp(float(timestamp), tz=timezone.utc).replace(tzinfo=None)
+        try:
+            from datetime import timezone
+            start_time = datetime.fromtimestamp(float(timestamp), tz=timezone.utc).replace(tzinfo=None)
+        except (ValueError, TypeError) as e:
+            print(f"[ERROR] Invalid timestamp format: {timestamp} - {e}")
+            return jsonify({"error": "Formato de fecha inválido"}), 400
         
         # Find which closer has this availability
-        # Note: In public funnel, we might want to pick a closer automatically.
-        # For now, let's see if the frontend sends closer_id. 
-        # Frontend BookingPage.jsx doesn't seem to send closer_id in the payload I saw.
-        # Let's adjust BookingPage.jsx to send closer_id, OR find one here.
-        
         closer_id = data.get('closer_id')
-        if not closer_id:
+        appt = None
+
+        if closer_id:
+            appt = BookingService.create_appointment(client.id, int(closer_id), start_time, origin='Funnel Web')
+        else:
             # Pick any closer that has this slot available and no conflict
-            # This is a bit simplified for now.
             closers = User.query.filter_by(role='closer').all()
             for c in closers:
                 appt = BookingService.create_appointment(client.id, c.id, start_time, origin='Funnel Web')
                 if appt:
                     closer_id = c.id
                     break
-        else:
-            appt = BookingService.create_appointment(client.id, closer_id, start_time, origin='Funnel Web')
             
-        if not closer_id:
+        if not appt:
             return jsonify({"error": "Lo sentimos, este horario ya no está disponible. Por favor elige otro."}), 400
 
         # 3. Save Survey Answers and Calculate Score
@@ -249,13 +256,14 @@ def book_appointment():
         # Sync with Google Calendar
         try:
             from app.services.google_service import GoogleService
+            # appt is guaranteed to exist here
             evt_id = GoogleService.create_event(appt.closer_id, appt)
             if evt_id:
                 appt.google_event_id = evt_id
                 db.session.commit()
         except Exception as e:
             print(f"GCal Sync Error (Public): {e}")
-
+        
         return jsonify({
             "message": "Booking successful", 
             "id": appt.id,

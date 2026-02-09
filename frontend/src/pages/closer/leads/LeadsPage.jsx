@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../../services/api';
 import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 import {
     Database,
     Calendar,
@@ -14,17 +15,18 @@ import {
     User,
     CheckCircle2,
     XCircle,
-    Loader2,
     ArrowUpRight,
     X,
     Kanban,
-    Plus
+    Plus,
+    BarChart3,
+    ClipboardCheck
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
-import AgendaManagerModal from '../../../components/AgendaManagerModal';
-import SaleDetailModal from '../../../components/SaleDetailModal';
+import AgendaManagerModal from '../../../components/modals/AgendaManagerModal';
+import SaleDetailModal from '../../../components/modals/SaleDetailModal';
 import DateRangeFilter from '../../../components/DateRangeFilter';
 import MultiSelectFilter from '../../../components/MultiSelectFilter';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
@@ -34,7 +36,7 @@ const CloserLeadsPage = () => {
     const [selectedDb, setSelectedDb] = useState(null); // 'agendas' or 'sales' or null
     const [kanbanSubTab, setKanbanSubTab] = useState('tracking'); // 'tracking' or 'closing'
     const [kanbanData, setKanbanData] = useState({ stages: [], board: {} });
-    const [data, setData] = useState({ agendas: [], sales: [] });
+    const [data, setData] = useState({ agendas: [], sales: [], notifications: [] });
     const [loading, setLoading] = useState(true);
     const [kanbanLoading, setKanbanLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -48,8 +50,16 @@ const CloserLeadsPage = () => {
     const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
     const [search, setSearch] = useState('');
-    const [error, setError] = useState(null);
     const [editingId, setEditingId] = useState(null);
+    const [viewMode, setViewMode] = useState(() => {
+        const saved = localStorage.getItem('closer_view_mode');
+        if (saved) return saved;
+        return window.innerWidth < 768 ? 'list' : 'kanban';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('closer_view_mode', viewMode);
+    }, [viewMode]);
 
     // Kanban splitting logic
     const trackingStages = ["Nueva", "Respondido", "Confirmado"];
@@ -89,22 +99,6 @@ const CloserLeadsPage = () => {
         return () => window.removeEventListener('request-section-change', handleRequest);
     }, []);
 
-    // Vertical Key Navigation
-    useEffect(() => {
-        const handleKeys = (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-
-            if (e.key === 'ArrowUp' && activeSection === 0) {
-                setActiveSection(1); // Move to Tables (Above)
-            } else if (e.key === 'ArrowDown' && activeSection === 1) {
-                setActiveSection(0); // Move to Kanban (Below)
-            }
-        };
-
-        window.addEventListener('keydown', handleKeys);
-        return () => window.removeEventListener('keydown', handleKeys);
-    }, [activeSection]);
-
     // Dispatch activeSection to Dock
     useEffect(() => {
         window.dispatchEvent(new CustomEvent('page-section-changed', {
@@ -129,8 +123,12 @@ const CloserLeadsPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const endpoint = selectedDb === 'agendas' ? '/closer/agendas' : '/closer/sales';
-            const res = await api.get(endpoint, {
+            const endpointMap = {
+                'agendas': '/closer/agendas',
+                'sales': '/closer/sales',
+                'notifications': '/closer/notifications'
+            };
+            const res = await api.get(endpointMap[selectedDb], {
                 params: {
                     page,
                     search,
@@ -143,7 +141,9 @@ const CloserLeadsPage = () => {
 
             setData(prev => ({
                 ...prev,
-                [selectedDb]: Array.isArray(res.data.data) ? res.data.data : []
+                [selectedDb]: selectedDb === 'notifications'
+                    ? (Array.isArray(res.data) ? res.data : [])
+                    : (Array.isArray(res.data.data) ? res.data.data : [])
             }));
             setTotalPages(res.data.pages || 1);
         } catch (err) {
@@ -233,12 +233,12 @@ const CloserLeadsPage = () => {
     return (
         <div className="h-screen overflow-hidden relative bg-main">
             <motion.div
-                className="h-full w-full"
-                animate={{ y: `-${(1 - activeSection) * 100}%` }}
+                className="absolute top-0 left-0 w-full h-[200%]"
+                animate={{ y: `-${(1 - activeSection) * 50}%` }}
                 transition={{ type: 'spring', damping: 25, stiffness: 120 }}
             >
-                {/* SECTION 1: DATABASE TABLES (Top) */}
-                <section className="h-full w-full p-8 flex flex-col items-center justify-start bg-main/50 overflow-y-auto">
+                {/* SECTION 1: DATABASE TABLES (Top 50%) */}
+                <div className="absolute top-0 left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start bg-main/50 overflow-y-auto">
                     <div className="w-full max-w-[1800px] space-y-8 pb-32">
                         <header className="flex items-center gap-6 border-b border-base pb-6">
                             <button
@@ -249,7 +249,7 @@ const CloserLeadsPage = () => {
                             </button>
                             <div className="space-y-1 text-left">
                                 <h1 className="text-4xl font-black text-base italic tracking-tighter uppercase leading-none">
-                                    {selectedDb ? (selectedDb === 'agendas' ? 'Base Agendas' : 'Base Ventas') : 'Bases de Datos'}
+                                    {selectedDb ? (selectedDb === 'agendas' ? 'Base Agendas' : selectedDb === 'sales' ? 'Base Ventas' : 'Notificaciones') : 'Bases de Datos'}
                                 </h1>
                                 <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Gestión unificada de registros</p>
                             </div>
@@ -293,6 +293,21 @@ const CloserLeadsPage = () => {
                                         <p className="text-sm font-bold text-muted uppercase tracking-widest max-w-[250px]">Seguimiento de cierres, pagos y programas vendidos.</p>
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+
+                                <button
+                                    onClick={() => setSelectedDb('notifications')}
+                                    className="group relative h-[300px] bg-surface border-2 border-base rounded-[3rem] p-12 text-left hover:border-primary/50 transition-all overflow-hidden flex flex-col justify-end"
+                                >
+                                    <div className="absolute top-12 right-12 opacity-5 group-hover:opacity-10 transition-opacity">
+                                        <Database size={180} />
+                                    </div>
+                                    <div className="relative z-10 space-y-4">
+                                        <Badge variant="neutral" className="bg-primary/10 text-primary border-primary/20">Registro Interno</Badge>
+                                        <h2 className="text-5xl font-black italic uppercase tracking-tighter text-base">Avisos</h2>
+                                        <p className="text-sm font-bold text-muted uppercase tracking-widest max-w-[250px]">Consulta todas las notificaciones del sistema.</p>
+                                    </div>
+                                    <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                             </div>
                         ) : (
@@ -364,16 +379,22 @@ const CloserLeadsPage = () => {
                                                 <thead>
                                                     <tr className="border-b border-base bg-surface-hover">
                                                         <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Lead / Cliente</th>
-                                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Fecha / Hora</th>
+                                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Creado</th>
                                                         {selectedDb === 'agendas' ? (
                                                             <>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-primary uppercase tracking-widest">Fecha Cita</th>
                                                                 <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Ultima Etapa</th>
                                                                 <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Resultado</th>
                                                             </>
-                                                        ) : (
+                                                        ) : selectedDb === 'sales' ? (
                                                             <>
                                                                 <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Programa</th>
                                                                 <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Monto</th>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Contenido</th>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Estado</th>
                                                             </>
                                                         )}
                                                         <th className="px-8 py-6 text-[10px] font-black text-primary uppercase tracking-widest text-right">Acción</th>
@@ -382,17 +403,31 @@ const CloserLeadsPage = () => {
                                                 <tbody className="divide-y divide-base">
                                                     {data[selectedDb]?.length > 0 ? data[selectedDb].map(item => (
                                                         <tr key={item.id} className="hover:bg-surface-hover/50 transition-all group">
-                                                            <td className="px-8 py-6 font-black italic">{selectedDb === 'agendas' ? item.lead_name : item.student_name}</td>
-                                                            <td className="px-8 py-6 text-sm font-bold text-muted">{new Date(item.date).toLocaleString()}</td>
+                                                            <td className="px-8 py-6 font-black italic">
+                                                                {selectedDb === 'agendas' ? item.lead_name :
+                                                                    selectedDb === 'sales' ? item.student_name :
+                                                                        item.subject}
+                                                            </td>
+                                                            <td className="px-8 py-6 text-[10px] font-bold text-muted uppercase">
+                                                                {item.created_at ? new Date(item.created_at).toLocaleDateString() : '—'}
+                                                            </td>
                                                             {selectedDb === 'agendas' ? (
                                                                 <>
+                                                                    <td className="px-8 py-6 text-sm font-black text-primary italic">
+                                                                        {new Date(item.date).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                    </td>
                                                                     <td className="px-8 py-6 text-[10px] font-black uppercase">{item.last_stage || 'N/A'}</td>
                                                                     <td className="px-8 py-6"><Badge variant={item.result === 'Sold' ? 'success' : 'neutral'}>{item.result || 'Sin resultado'}</Badge></td>
                                                                 </>
-                                                            ) : (
+                                                            ) : selectedDb === 'sales' ? (
                                                                 <>
                                                                     <td className="px-8 py-6 text-[10px] font-black uppercase">{item.program_name}</td>
                                                                     <td className="px-8 py-6 text-lg font-black text-success">${item.amount?.toLocaleString()}</td>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <td className="px-8 py-6 text-[10px] text-muted line-clamp-1 max-w-xs">{item.content}</td>
+                                                                    <td className="px-8 py-6"><Badge variant={item.is_read ? 'neutral' : 'success'}>{item.is_read ? 'Leída' : 'Nueva'}</Badge></td>
                                                                 </>
                                                             )}
                                                             <td className="px-8 py-6 text-right">
@@ -426,29 +461,47 @@ const CloserLeadsPage = () => {
                             </>
                         )}
                     </div>
-                </section>
+                </div>
 
-                {/* SECTION 0: KANBAN BOARD (Bottom) */}
-                <section className="h-full w-full p-8 flex flex-col items-center justify-start overflow-hidden">
+                {/* SECTION 0: KANBAN BOARD (Bottom 50%) */}
+                <div className="absolute top-[50%] left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start overflow-hidden">
                     <div className="w-full max-w-[1800px] flex-1 flex flex-col space-y-6 text-center">
                         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div className="space-y-1 text-left">
                                 <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none">Pipeline</h1>
                                 <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Embudo de ventas y seguimiento activo</p>
                             </div>
+                            <div className="flex flex-wrap items-center gap-4">
+                                <div className="flex bg-main p-1.5 rounded-2xl border border-base shadow-sm">
+                                    <button
+                                        onClick={() => setViewMode('kanban')}
+                                        className={`p-2.5 rounded-xl transition-all ${viewMode === 'kanban' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-muted hover:text-base'}`}
+                                        title="Vista Kanban"
+                                    >
+                                        <BarChart3 size={18} className="rotate-90" />
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('list')}
+                                        className={`p-2.5 rounded-xl transition-all ${viewMode === 'list' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-muted hover:text-base'}`}
+                                        title="Vista Lista"
+                                    >
+                                        <ClipboardCheck size={18} />
+                                    </button>
+                                </div>
+                            </div>
                         </header>
 
                         <div className="flex justify-between items-center">
                             <h2 className="text-xs font-black uppercase tracking-widest text-muted italic flex items-center gap-2">
                                 <Kanban size={14} className="text-primary" />
-                                Embudo de Seguimiento
+                                Embudo de Pre-call
                             </h2>
                             <div className="flex bg-main p-1 rounded-full border border-base shadow-inner">
                                 <button
                                     onClick={() => setKanbanSubTab('tracking')}
                                     className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'tracking' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
                                 >
-                                    Seguimiento
+                                    Pre-call
                                 </button>
                                 <button
                                     onClick={() => setKanbanSubTab('closing')}
@@ -475,6 +528,7 @@ const CloserLeadsPage = () => {
                                             setSelectedAgenda(item);
                                             setIsAgendaModalOpen(true);
                                         }}
+                                        viewMode={viewMode}
                                     />
                                 </div>
                             )}
@@ -490,8 +544,8 @@ const CloserLeadsPage = () => {
                             </button>
                         </div>
                     </div>
-                </section>
-            </motion.div>
+                </div>
+            </motion.div >
 
             {isAgendaModalOpen && selectedAgenda && (
                 <AgendaManagerModal
@@ -507,7 +561,7 @@ const CloserLeadsPage = () => {
                 onClose={() => { setIsDetailModalOpen(false); setSelectedEnrollmentId(null); }}
                 onSuccess={fetchData}
             />
-        </div>
+        </div >
     );
 };
 

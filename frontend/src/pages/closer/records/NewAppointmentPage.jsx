@@ -113,7 +113,7 @@ const CloserNewAppointmentPage = () => {
                             >
                                 <option value="Primera agenda">Primera Agenda</option>
                                 <option value="Segunda agenda">Segunda Agenda</option>
-                                <option value="Seguimiento">Seguimiento</option>
+                                <option value="Pre-call">Pre-call</option>
                                 <option value="Cierre">Cierre</option>
                             </select>
                         </div>

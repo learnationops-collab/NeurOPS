@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import api from '../../services/api';
 import {
     X,
     User,
@@ -17,9 +17,9 @@ import {
     AlertCircle,
     Check
 } from 'lucide-react';
-import Button from './ui/Button';
-import Badge from './ui/Badge';
-import Card from './ui/Card';
+import Button from '../ui/Button';
+import Badge from '../ui/Badge';
+import Card from '../ui/Card';
 
 const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
     const [activeTab, setActiveTab] = useState('profile');

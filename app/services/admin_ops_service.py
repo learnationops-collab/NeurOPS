@@ -65,8 +65,7 @@ class AdminOperationService:
                     client_id=client.id,
                     closer_id=closer.id,
                     start_time=start_time,
-                    status=random.choice(['completed', 'no_show', 'scheduled', 'confirmed']),
-                    appointment_type=random.choice(['Primera agenda', 'Segunda agenda']),
+                    result=random.choice(['Terminada', 'No Show', None, 'Reprogramada']),
                     origin=random.choice(origins)
                 )
                 db.session.add(appt)
@@ -75,7 +74,7 @@ class AdminOperationService:
             db.session.flush()
 
             # 3. Generate Sales (Enrollments)
-            completed_appts = [a for a in appts if a.status == 'completed']
+            completed_appts = [a for a in appts if a.result == 'Terminada']
             if not completed_appts:
                 completed_appts = appts
                 

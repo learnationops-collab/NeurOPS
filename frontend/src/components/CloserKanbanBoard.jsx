@@ -128,7 +128,7 @@ const KanbanColumn = memo(({ id, title, items, stages, onMove, onCardClick, onSe
 });
 
 // --- Main Board Component ---
-const CloserKanbanBoard = ({ stages, board, onMove, onCardClick, onSetOutcome }) => {
+const CloserKanbanBoard = ({ stages, board, onMove, onCardClick, onSetOutcome, viewMode = 'kanban' }) => {
     const [activeId, setActiveId] = useState(null);
     const [activeItem, setActiveItem] = useState(null);
 
@@ -142,7 +142,7 @@ const CloserKanbanBoard = ({ stages, board, onMove, onCardClick, onSetOutcome })
         coordinateGetter: sortableKeyboardCoordinates,
     });
 
-    const sensors = useMemo(() => useSensors(pointerSensor, keyboardSensor), [pointerSensor, keyboardSensor]);
+    const sensors = useSensors(pointerSensor, keyboardSensor);
 
     const handleDragStart = (event) => {
         const { active } = event;
@@ -212,48 +212,97 @@ const CloserKanbanBoard = ({ stages, board, onMove, onCardClick, onSetOutcome })
     };
 
     return (
-        <DndContext
-            sensors={sensors}
-            collisionDetection={closestCorners}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-        >
-            <div className="flex gap-6 overflow-x-auto pb-8 pt-4 custom-scrollbar">
-                {stages.map(stage => (
-                    <KanbanColumn
-                        key={stage}
-                        id={stage}
-                        title={stage}
-                        items={board[stage] || []}
-                        stages={stages}
-                        onMove={onMove}
-                        onCardClick={onCardClick}
-                        onSetOutcome={onSetOutcome}
-                    />
-                ))}
-            </div>
+        <div className="relative">
+            {viewMode === 'kanban' ? (
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCorners}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDragEnd={handleDragEnd}
+                >
+                    <div className="flex gap-6 overflow-x-auto pb-8 pt-4 custom-scrollbar">
+                        {stages.map(stage => (
+                            <KanbanColumn
+                                key={stage}
+                                id={stage}
+                                title={stage}
+                                items={board[stage] || []}
+                                stages={stages}
+                                onMove={onMove}
+                                onCardClick={onCardClick}
+                                onSetOutcome={onSetOutcome}
+                            />
+                        ))}
+                    </div>
 
-            <DragOverlay dropAnimation={{
-                sideEffects: defaultDropAnimationSideEffects({
-                    styles: {
-                        active: {
-                            opacity: '0.4',
-                        },
-                    },
-                }),
-            }}>
-                {activeId ? (
-                    <KanbanCard
-                        item={activeItem}
-                        stages={stages}
-                        currentStage={activeItem?.last_stage}
-                        isOverlay
-                        onCardClick={onCardClick}
-                    />
-                ) : null}
-            </DragOverlay>
-        </DndContext>
+                    <DragOverlay dropAnimation={{
+                        sideEffects: defaultDropAnimationSideEffects({
+                            styles: {
+                                active: {
+                                    opacity: '0.4',
+                                },
+                            },
+                        }),
+                    }}>
+                        {activeId ? (
+                            <KanbanCard
+                                item={activeItem}
+                                stages={stages}
+                                currentStage={activeItem?.last_stage}
+                                isOverlay
+                                onCardClick={onCardClick}
+                            />
+                        ) : null}
+                    </DragOverlay>
+                </DndContext>
+            ) : (
+                <div className="space-y-8 pb-8 pt-4">
+                    {stages.map(stage => (
+                        <div key={stage} className="space-y-4">
+                            <div className="flex items-center gap-3 px-2">
+                                <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />
+                                <h3 className="text-[11px] font-black text-base tracking-[0.2em] italic uppercase">{stage}</h3>
+                                <Badge variant="neutral" className="rounded-lg h-5 min-w-[20px] flex items-center justify-center font-bold text-[9px] ml-auto">
+                                    {(board[stage] || []).length}
+                                </Badge>
+                            </div>
+
+                            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                                {(board[stage] || []).map(item => (
+                                    <div
+                                        key={item.id}
+                                        onClick={() => onCardClick(item)}
+                                        className="bg-surface border border-base p-5 rounded-[1.5rem] flex items-center justify-between group cursor-pointer hover:border-primary/30 transition-all"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-main rounded-xl flex items-center justify-center font-black text-primary border border-base">
+                                                {item.lead_name[0]}
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-black uppercase tracking-tight">{item.lead_name}</h4>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <Clock size={10} className="text-muted" />
+                                                    <span className="text-[9px] font-bold text-muted uppercase">
+                                                        {new Date(item.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ArrowRight size={14} className="text-muted group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                    </div>
+                                ))}
+                                {(board[stage] || []).length === 0 && (
+                                    <div className="p-4 border border-dashed border-base rounded-2xl opacity-30 text-center">
+                                        <p className="text-[9px] font-bold uppercase tracking-widest">Sin leads en esta etapa</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 };
 

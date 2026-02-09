@@ -24,7 +24,8 @@ Es recomendable usar un entorno virtual para aislar las dependencias.
 python -m venv env
 
 # Activar entorno (Windows)
-Restore failed: near ":00": syntax error
+env\Scripts\activate
+
 ```
 
 ### 3. Instalar Dependencias

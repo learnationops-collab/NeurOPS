@@ -440,7 +440,7 @@ def get_lead_profile(id):
             "instagram": client.instagram
         },
         "enrollments": [{"id": e.id, "program": e.program.name, "date": e.enrollment_date.isoformat(), "closer": e.closer_rel.username if e.closer_rel else None} for e in client.enrollments],
-        "appointments": [{"id": a.id, "start_time": a.start_time.isoformat(), "status": a.status, "closer": a.closer.username if a.closer else None, "origin": a.origin} for a in client.appointments]
+        "appointments": [{"id": a.id, "start_time": a.start_time.isoformat(), "status": a.result or "Agendada", "closer": a.closer.username if a.closer else None, "origin": a.origin} for a in client.appointments]
     }
     return jsonify(profile_data), 200
 
@@ -533,7 +533,7 @@ def manage_db_agendas():
         id = data.get('id')
         if id:
             a = Appointment.query.get_or_404(id)
-            if 'status' in data: a.status = data['status']
+            if 'status' in data: a.result = data['status']
             if 'origin' in data: a.origin = data['origin']
             if 'start_time' in data: a.start_time = datetime.fromisoformat(data['start_time'].replace('Z', ''))
         db.session.commit()
@@ -557,7 +557,7 @@ def manage_db_agendas():
 
     if status_filter:
         statuses = status_filter.split(',')
-        if statuses: query = query.filter(Appointment.status.in_(statuses))
+        if statuses: query = query.filter(Appointment.result.in_(statuses))
     
     if closer_filter:
         closers = closer_filter.split(',')
@@ -568,7 +568,7 @@ def manage_db_agendas():
         if origins: query = query.filter(Appointment.origin.in_(origins))
 
     pagination = query.order_by(Appointment.start_time.desc()).paginate(page=page, per_page=50, error_out=False)
-    return jsonify({"total": pagination.total, "pages": pagination.pages, "data": [{"id": a.id, "lead": a.client.full_name or a.client.email, "closer": a.closer.username, "start_time": a.start_time.isoformat(), "status": a.status, "origin": a.origin} for a in pagination.items]}), 200
+    return jsonify({"total": pagination.total, "pages": pagination.pages, "data": [{"id": a.id, "lead": a.client.full_name or a.client.email, "closer": a.closer.username, "start_time": a.start_time.isoformat(), "status": a.result or "Agendada", "origin": a.origin} for a in pagination.items]}), 200
 
 @bp.route('/admin/db/sales_raw', methods=['GET', 'POST'])
 @login_required
@@ -860,7 +860,7 @@ def get_closer_pipeline():
         db.session.add(pipeline)
         db.session.flush()
         
-        default_names = ["Agendada", "Llamando", "Seguimiento", "Cierre Pendiente", "Finalizada"]
+        default_names = ["Agendada", "Llamando", "Pre-call", "Cierre Pendiente", "Finalizada"]
         for i, name in enumerate(default_names):
             stage = PipelineStage(name=name, pipeline_id=pipeline.id, order=i, is_active=True)
             db.session.add(stage)

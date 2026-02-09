@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft, CheckCircle2, HelpCircle } from 'lucide-react';
-import Button from './ui/Button';
-import { TUTORIALS, TUTORIAL_ROUTES } from '../config/tutorials';
-import { useAuth } from '../contexts/AuthContext';
+import Button from '../ui/Button';
+import { TUTORIALS, TUTORIAL_ROUTES } from '../../config/tutorials';
+import { useAuth } from '../../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 
 const OnboardingTour = () => {
