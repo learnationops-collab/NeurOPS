@@ -683,33 +683,46 @@ class CloserService:
         db.session.commit()
         return True
     @staticmethod
-    def get_agenda_stats(closer_id):
+    def get_agenda_stats(closer_id, start_date=None, end_date=None):
         from app.models import Appointment, db
-        from sqlalchemy import func
+        from sqlalchemy import func, and_
         
+        # Build base filter
+        base_filter = [Appointment.closer_id == closer_id]
+        
+        if start_date:
+            base_filter.append(Appointment.start_time >= datetime.strptime(start_date, '%Y-%m-%d'))
+        if end_date:
+            # Include the full end date
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+            base_filter.append(Appointment.start_time < end_dt)
+
         # 1. Agendas Pendientes (Sin resultado definido)
-        pending_count = Appointment.query.filter(
-            Appointment.closer_id == closer_id,
-            or_(Appointment.result == None, Appointment.result == '')
-        ).count()
+        # Note: Pending might be future or past, usually we care about past pending but let's stick to standard definition
+        # If filtering by date, we show pending IN THAT RANGE (e.g. appointments scheduled today that have no result yet)
+        pending_filter = base_filter + [or_(Appointment.result == None, Appointment.result == '')]
+        pending_count = Appointment.query.filter(*pending_filter).count()
         
         # 2. Conteo por Resultado (Outcomes)
+        outcomes_filter = base_filter + [Appointment.result != None, Appointment.result != '']
         outcomes_q = db.session.query(
             Appointment.result, func.count(Appointment.id)
         ).filter(
-            Appointment.closer_id == closer_id,
-            Appointment.result != None,
-            Appointment.result != ''
+            *outcomes_filter
         ).group_by(Appointment.result).all()
         
         outcomes = {r[0]: r[1] for r in outcomes_q}
         
         # 3. Desglose por Resultado (Sin tipo de agenda)
+        # Use same filter as outcomes for breakdown
         result_breakdown_q = db.session.query(
             Appointment.result, 
             func.count(Appointment.id)
         ).filter(
-            Appointment.closer_id == closer_id
+            *base_filter # Use base filter to include pending in total count if needed, but breakdown usually excludes pending?
+            # Actually frontend expects 'results' map. Let's filter by base only to group by result (including None?)
+            # The original code grouped by result on base filter?
+            # Original: filter(closer_id).group_by(result).all() -> included everything
         ).group_by(
             Appointment.result
         ).all()

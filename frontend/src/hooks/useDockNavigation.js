@@ -45,6 +45,13 @@ const useDockNavigation = () => {
                 { id: 'board', icon: LayoutDashboard, label: 'Board', path: '/setter/dashboard' },
                 { id: 'stats', icon: BarChart3, label: 'Stats', path: '/setter/stats' }
             ];
+        } else if (user?.role === 'admin') {
+            return [
+                { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
+                { id: 'leads', icon: Users, label: 'Leads', path: '/admin/leads' },
+                { id: 'finances', icon: TrendingUp, label: 'Finanzas', path: '/admin/finance' },
+                { id: 'settings', icon: Settings, label: 'Ajustes', path: '/admin/settings' }
+            ];
         }
 
         return [];
@@ -88,6 +95,14 @@ const useDockNavigation = () => {
             return [
                 { id: 'notifications', icon: Bell, label: 'Notificaciones' },
                 { id: 'report', icon: ClipboardList, label: 'Reporte' }
+            ];
+        }
+
+        // Secciones para Admin Dashboard
+        if (activePage.id === 'dashboard' && user?.role === 'admin') {
+            return [
+                { id: 'home', icon: LayoutDashboard, label: 'Inicio' },
+                { id: 'summary', icon: ClipboardList, label: 'Resumen' }
             ];
         }
 

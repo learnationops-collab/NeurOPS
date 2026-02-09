@@ -702,7 +702,10 @@ def get_stats():
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
     
-    stats = CloserService.get_agenda_stats(current_user.id)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    stats = CloserService.get_agenda_stats(current_user.id, start_date=start_date, end_date=end_date)
     return jsonify(stats), 200
 
 @bp.route('/notifications', methods=['GET'])

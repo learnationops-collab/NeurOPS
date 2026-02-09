@@ -331,9 +331,8 @@ const CloserSettingsPage = () => {
 
                 <div className="flex bg-surface p-1.5 rounded-[2rem] border border-base backdrop-blur-3xl shadow-2xl">
                     <button onClick={() => setActiveTab('availability')} className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'availability' ? 'bg-primary text-white' : 'text-muted'}`}>Disponibilidad</button>
-                    <button onClick={() => setActiveTab('links')} className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'links' ? 'bg-primary text-white' : 'text-muted'}`}>Links</button>
+                    <button onClick={() => setActiveTab('agendas')} className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'agendas' ? 'bg-primary text-white' : 'text-muted'}`}>Agendas</button>
                     <button onClick={() => setActiveTab('appearance')} className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'appearance' ? 'bg-primary text-white' : 'text-muted'}`}>Apariencia</button>
-                    <button onClick={() => setActiveTab('integrations')} className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'integrations' ? 'bg-primary text-white' : 'text-muted'}`}>Integraciones</button>
                 </div>
             </header>
 
@@ -433,23 +432,30 @@ const CloserSettingsPage = () => {
                     </div>
                 )}
 
-                {activeTab === 'links' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                        {events.map(ev => (
-                            <Card key={ev.id} variant="surface" className="p-8 space-y-6">
-                                <h3 className="text-2xl font-black uppercase tracking-tighter italic">{ev.name}</h3>
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] font-black uppercase text-muted">Duración:</span>
-                                        <span className="text-primary font-black">{ev.duration_minutes}m</span>
+                {activeTab === 'agendas' && (
+                    <div className="space-y-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                            {events.map(ev => (
+                                <Card key={ev.id} variant="surface" className="p-8 space-y-6">
+                                    <h3 className="text-2xl font-black uppercase tracking-tighter italic">{ev.name}</h3>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black uppercase text-muted">Duración:</span>
+                                            <span className="text-primary font-black">{ev.duration_minutes}m</span>
+                                        </div>
+                                        <input type="range" min="15" max="120" step="15" value={ev.duration_minutes} onChange={e => handleUpdateEvent(ev.id, 'duration_minutes', e.target.value)} className="w-full accent-primary" />
                                     </div>
-                                    <input type="range" min="15" max="120" step="15" value={ev.duration_minutes} onChange={e => handleUpdateEvent(ev.id, 'duration_minutes', e.target.value)} className="w-full accent-primary" />
-                                </div>
-                                <Button onClick={() => handleCopyLink(ev.utm_source)} variant={copiedId === ev.utm_source ? 'primary' : 'ghost'} className="w-full h-12">
-                                    {copiedId === ev.utm_source ? 'COPIADO' : 'COPIAR LINK'}
-                                </Button>
-                            </Card>
-                        ))}
+                                    <Button onClick={() => handleCopyLink(ev.utm_source)} variant={copiedId === ev.utm_source ? 'primary' : 'ghost'} className="w-full h-12">
+                                        {copiedId === ev.utm_source ? 'COPIADO' : 'COPIAR LINK'}
+                                    </Button>
+                                </Card>
+                            ))}
+                        </div>
+
+                        <Card variant="surface" className="p-10">
+                            <h3 className="text-3xl font-black italic uppercase mb-8">Integraciones</h3>
+                            <GoogleCalendarSettings />
+                        </Card>
                     </div>
                 )}
 
@@ -464,13 +470,6 @@ const CloserSettingsPage = () => {
                             <BackgroundPicker />
                         </Card>
                     </div>
-                )}
-
-                {activeTab === 'integrations' && (
-                    <Card variant="surface" className="p-10">
-                        <h3 className="text-3xl font-black italic uppercase mb-8">Google Calendar</h3>
-                        <GoogleCalendarSettings />
-                    </Card>
                 )}
             </main>
 

@@ -10,6 +10,7 @@ import ConstructionPage from './pages/common/ConstructionPage';
 import DatabasePage from './pages/admin/database/DatabasePage';
 import MarketingPage from './pages/admin/marketing/MarketingPage';
 import SettingsPage from './pages/admin/settings/SettingsPage';
+import AdminLeadsPage from './pages/admin/leads/LeadsPage';
 import CloserDashboard from './pages/closer/dashboard/CloserDashboard';
 import StatisticsPage from './pages/closer/dashboard/StatisticsPage';
 import CloserLeadsPage from './pages/closer/leads/LeadsPage';
@@ -66,6 +67,16 @@ function App() {
                 <ProtectedRoute roles={['admin', 'operator']}>
                   <MainLayout>
                     <AdminDashboard />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/leads"
+              element={
+                <ProtectedRoute roles={['admin', 'operator']}>
+                  <MainLayout>
+                    <AdminLeadsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

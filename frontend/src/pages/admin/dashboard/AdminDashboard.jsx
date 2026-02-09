@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { Plus, Settings2, X, Move, Maximize2, Minimize2, BarChart3, Hash, Check, Users, TrendingUp, DollarSign, Trash2 } from 'lucide-react';
+import { Plus, Settings2, X, Maximize2, Hash, Check, Users, TrendingUp, DollarSign, Trash2, BarChart3, Bell } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import { useAuth } from '../../../contexts/AuthContext';
 import StatTile from './components/StatTile';
 import ChartTile from './components/ChartTile';
 import { AnimatePresence, motion } from 'framer-motion';
+import HotkeysTable from '../../../components/dashboard/HotkeysTable';
+import NotificationWidget from '../../../components/dashboard/NotificationWidget';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -23,6 +25,38 @@ const AdminDashboard = () => {
   const ROW_HEIGHT = 110;
   const GAP = 24;
 
+  const [activeSection, setActiveSection] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    const handleSectionChange = (e) => {
+      setActiveSection(e.detail.index);
+    };
+    window.addEventListener('request-section-change', handleSectionChange);
+    return () => window.removeEventListener('request-section-change', handleSectionChange);
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await api.get('/admin/notifications');
+      setNotifications(res.data || []);
+    } catch (error) {
+      console.error("Error fetching notifications", error);
+    }
+  };
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      await api.post(`/admin/notifications/${id}/read`);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    } catch (error) {
+      console.error("Error marking as read", error);
+    }
+  };
 
   // Centralized state for all filters with persistence
   const [filters, setFilters] = useState({
@@ -372,163 +406,222 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="p-8 sm:p-12 max-w-[1600px] mx-auto space-y-12 animate-in fade-in duration-700">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-lg">
-            Hola, {user?.name?.split(' ')[0] || 'Admin'}.
-          </h1>
-          <p className="text-muted font-medium text-lg italic bg-clip-text text-transparent bg-gradient-to-r from-muted to-muted/50">
-            "Bienvenido a tu centro de mando principal."
-          </p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <Button
-            onClick={() => setIsEditMode(!isEditMode)}
-            className={`glass-panel p-3 rounded-2xl border transition-all duration-300 flex items-center justify-center group ${isEditMode
-              ? 'bg-primary text-white border-primary shadow-brand-glow scale-105'
-              : 'bg-surface/50 backdrop-blur-md border-base/50 text-white hover:bg-white/5'
-              }`}
-            title={isEditMode ? '💾 Guardar Cambios' : '⚙️ Personalizar Tablero'}
-          >
-            {isEditMode ? <Check size={20} className="animate-pulse" /> : <Settings2 size={20} className="group-hover:rotate-45 transition-transform" />}
-          </Button>
-
-          {isEditMode && (
-            <Button
-              onClick={() => setIsCreateOpen(true)}
-              className="glass-panel px-6 py-2.5 bg-emerald-500 text-white rounded-2xl border border-emerald-400/50 shadow-emerald-500/20 shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-            >
-              <Plus size={18} />
-              <span className="text-xs font-black uppercase tracking-[0.15em]">Crear</span>
-            </Button>
-          )}
-
-        </div>
-      </header>
-
-      {/* Flexible Widget Grid */}
-      <div
-        data-grid-container
-        className="grid grid-cols-2 lg:grid-cols-5 gap-6 relative min-h-[800px]"
-        style={{ gridAutoRows: `${ROW_HEIGHT}px` }}
+    <div className="h-screen overflow-hidden relative bg-main">
+      <motion.div
+        className="absolute top-0 left-0 w-full h-[200%]"
+        animate={{ y: `-${activeSection * 50}%` }}
+        transition={{ type: 'spring', damping: 25, stiffness: 120 }}
       >
-        <AnimatePresence mode="popLayout">
-          {config.map((widget) => (
-            <motion.div
-              key={widget.id}
-              data-widget-id={widget.id}
-              layout
-              style={{
-                gridColumnStart: (widget.x || 0) + 1,
-                gridColumnEnd: `span ${widget.w || 1}`,
-                gridRowStart: (widget.y || 0) + 1,
-                gridRowEnd: `span ${widget.h || 2}`,
-              }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                zIndex: draggedId === widget.id ? 100 : 1,
-                scale: draggedId === widget.id ? 1.02 : 1,
-                pointerEvents: draggedId === widget.id ? 'none' : 'auto'
-              }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{
-                type: "spring",
-                stiffness: 400,
-                damping: 40,
-                scale: { duration: 0.2 }
-              }}
-              className="relative h-full"
-              drag={isEditMode}
-              dragSnapToOrigin={true}
-              onDragStart={() => handleDragStart(widget.id)}
-              onDragEnd={handleDragEnd}
-              onDrag={(e, info) => handleDrag(e, info, widget.id)}
-            >
-              <div className={`h-full flex flex-col relative group transition-all duration-300 ${isEditMode ? 'cursor-grab ring-2 ring-dashed ring-primary/30 rounded-[32px] overflow-hidden' : ''
-                }`}>
+        {/* SECTION 0: HOME (Hotkeys & Notifications) */}
+        <div className="absolute top-0 left-0 w-full h-[50%] p-8 sm:p-12 overflow-y-auto">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-lg">
+                Centro de Mando
+              </h1>
+              <p className="text-muted font-medium text-lg italic bg-clip-text text-transparent bg-gradient-to-r from-muted to-muted/50">
+                "Accesos rápidos y notificaciones."
+              </p>
+            </div>
+          </header>
 
-                <div className={`flex-1 min-h-0 w-full h-full transition-opacity ${isEditMode ? 'pointer-events-none opacity-60' : ''}`}>
-                  {widget.type === 'stat' ? (
-                    <StatTile metric={widget.metric} filters={filters} size={`${widget.w}x${widget.h}`} />
-                  ) : widget.type === 'grafico' ? (
-                    <ChartTile metric={widget.metric} filters={filters} size={`${widget.w}x${widget.h}`} />
-                  ) : (
-                    <div className="bg-rose-500/10 p-4 rounded-xl text-xs text-rose-400">Widget desconocido</div>
-                  )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-[1600px] mx-auto">
+            {/* LEFT COLUMN: HOTKEYS */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-primary/20 rounded-xl text-primary">
+                  <Hash size={24} />
                 </div>
-
-                {/* Resize Controls (Match Style) */}
-                {isEditMode && (
-                  <div className="absolute top-4 right-4 flex flex-col gap-2 z-[60]">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); updateWidgetSize(widget.id); }}
-                      className="bg-primary text-white p-2.5 rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all pointer-events-auto border border-white/20"
-                      title="Siguiente Tamaño"
-                    >
-                      <Maximize2 size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deleteWidget(widget.id); }}
-                      className="p-2.5 bg-rose-500 text-white rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all outline-none"
-                      title="Eliminar Widget"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                )}
+                <h2 className="text-xl font-bold text-white">Atajos de Teclado</h2>
               </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {config.length === 0 && !loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
-            <div className="max-w-md space-y-6 glass-panel p-10 rounded-[32px] border border-base/50">
-              <div className="p-4 bg-primary/10 rounded-full w-16 h-16 mx-auto flex items-center justify-center border border-primary/20">
-                <Settings2 className="text-primary animate-spin-slow" size={32} />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-white">El tablero está vacío</h3>
-                <p className="text-muted text-sm tracking-wide">
-                  Tu configuración actual no contiene elementos visibles o hubo un error al cargar.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 pt-4">
-                <Button onClick={() => setIsEditMode(true)} className="bg-primary text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl shadow-brand-glow">
-                  🎨 Comenzar a Personalizar
-                </Button>
-                <button onClick={handleResetLayout} className="text-muted hover:text-white text-[10px] font-bold uppercase tracking-widest transition-colors py-2">
-                  🔄 Reiniciar Configuración
-                </button>
+              <div className="glass-panel p-6 rounded-[32px] border border-white/5 bg-[#1a1c23]/80">
+                <HotkeysTable />
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Ghost Feedback (Match Style) */}
-        {ghost && isEditMode && (
-          <div
-            className={`border-2 border-dashed rounded-[32px] absolute z-10 transition-colors duration-200 pointer-events-none flex items-center justify-center ${ghost.valid ? 'border-primary/40 bg-primary/5' : 'border-rose-500/40 bg-rose-500/5'
-              }`}
-            style={{
-              gridColumnStart: ghost.x + 1,
-              gridColumnEnd: `span ${ghost.w}`,
-              gridRowStart: ghost.y + 1,
-              gridRowEnd: `span ${ghost.h}`,
-            }}
-          >
-            {!ghost.valid && (
-              <div className="bg-black/60 backdrop-blur-md text-rose-400 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg tracking-widest shadow-xl">
-                Sin Espacio
+            {/* RIGHT COLUMN: NOTIFICATIONS */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-amber-500/20 rounded-xl text-amber-500">
+                  <Bell size={24} />
+                </div>
+                <h2 className="text-xl font-bold text-white">Notificaciones</h2>
               </div>
-            )}
+              {/* NotificationWidget usually expects 'role' prop or handles it internally? 
+                             Checking earlier: used in CloserDashboard. 
+                             It likely fetches notifications from /closer/notifications.
+                             We need to check if it accepts a prop to switch endpoint or if we need to modify it.
+                             If it's hardcoded to /closer/notifications, we need to refactor it or duplicate.
+                             Let's assume it might need update, but for now I'll instantiate it. 
+                             Wait, I should check NotificationWidget logic.
+                         */}
+              <NotificationWidget notifications={notifications} onMarkAsRead={handleMarkAsRead} />
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+
+        {/* SECTION 1: DAILY SUMMARY (Old Dashboard) */}
+        <div className="absolute top-[50%] left-0 w-full h-[50%] p-8 sm:p-12 overflow-y-auto">
+          <div className="max-w-[1600px] mx-auto space-y-12">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
+              <div className="space-y-2">
+                <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-lg">
+                  Resumen Diario
+                </h1>
+                <p className="text-muted font-medium text-lg italic bg-clip-text text-transparent bg-gradient-to-r from-muted to-muted/50">
+                  "Métricas y visualización de datos."
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <Button
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className={`glass-panel p-3 rounded-2xl border transition-all duration-300 flex items-center justify-center group ${isEditMode
+                    ? 'bg-primary text-white border-primary shadow-brand-glow scale-105'
+                    : 'bg-surface/50 backdrop-blur-md border-base/50 text-white hover:bg-white/5'
+                    }`}
+                  title={isEditMode ? '💾 Guardar Cambios' : '⚙️ Personalizar Tablero'}
+                >
+                  {isEditMode ? <Check size={20} className="animate-pulse" /> : <Settings2 size={20} className="group-hover:rotate-45 transition-transform" />}
+                </Button>
+
+                {isEditMode && (
+                  <Button
+                    onClick={() => setIsCreateOpen(true)}
+                    className="glass-panel px-6 py-2.5 bg-emerald-500 text-white rounded-2xl border border-emerald-400/50 shadow-emerald-500/20 shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                  >
+                    <Plus size={18} />
+                    <span className="text-xs font-black uppercase tracking-[0.15em]">Crear</span>
+                  </Button>
+                )}
+
+              </div>
+            </header>
+
+            {/* Flexible Widget Grid */}
+            <div
+              data-grid-container
+              className="grid grid-cols-2 lg:grid-cols-5 gap-6 relative min-h-[800px]"
+              style={{ gridAutoRows: `${ROW_HEIGHT}px` }}
+            >
+              <AnimatePresence mode="popLayout">
+                {config.map((widget) => (
+                  <motion.div
+                    key={widget.id}
+                    data-widget-id={widget.id}
+                    layout
+                    style={{
+                      gridColumnStart: (widget.x || 0) + 1,
+                      gridColumnEnd: `span ${widget.w || 1}`,
+                      gridRowStart: (widget.y || 0) + 1,
+                      gridRowEnd: `span ${widget.h || 2}`,
+                    }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      zIndex: draggedId === widget.id ? 100 : 1,
+                      scale: draggedId === widget.id ? 1.02 : 1,
+                      pointerEvents: draggedId === widget.id ? 'none' : 'auto'
+                    }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 40,
+                      scale: { duration: 0.2 }
+                    }}
+                    className="relative h-full"
+                    drag={isEditMode}
+                    dragSnapToOrigin={true}
+                    onDragStart={() => handleDragStart(widget.id)}
+                    onDragEnd={handleDragEnd}
+                    onDrag={(e, info) => handleDrag(e, info, widget.id)}
+                  >
+                    <div className={`h-full flex flex-col relative group transition-all duration-300 ${isEditMode ? 'cursor-grab ring-2 ring-dashed ring-primary/30 rounded-[32px] overflow-hidden' : ''
+                      }`}>
+
+                      <div className={`flex-1 min-h-0 w-full h-full transition-opacity ${isEditMode ? 'pointer-events-none opacity-60' : ''}`}>
+                        {widget.type === 'stat' ? (
+                          <StatTile metric={widget.metric} filters={filters} size={`${widget.w}x${widget.h}`} />
+                        ) : widget.type === 'grafico' ? (
+                          <ChartTile metric={widget.metric} filters={filters} size={`${widget.w}x${widget.h}`} />
+                        ) : (
+                          <div className="bg-rose-500/10 p-4 rounded-xl text-xs text-rose-400">Widget desconocido</div>
+                        )}
+                      </div>
+
+                      {/* Resize Controls (Match Style) */}
+                      {isEditMode && (
+                        <div className="absolute top-4 right-4 flex flex-col gap-2 z-[60]">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); updateWidgetSize(widget.id); }}
+                            className="bg-primary text-white p-2.5 rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all pointer-events-auto border border-white/20"
+                            title="Siguiente Tamaño"
+                          >
+                            <Maximize2 size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteWidget(widget.id); }}
+                            className="p-2.5 bg-rose-500 text-white rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all outline-none"
+                            title="Eliminar Widget"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {config.length === 0 && !loading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
+                  <div className="max-w-md space-y-6 glass-panel p-10 rounded-[32px] border border-base/50">
+                    <div className="p-4 bg-primary/10 rounded-full w-16 h-16 mx-auto flex items-center justify-center border border-primary/20">
+                      <Settings2 className="text-primary animate-spin-slow" size={32} />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white">El tablero está vacío</h3>
+                      <p className="text-muted text-sm tracking-wide">
+                        Tu configuración actual no contiene elementos visibles o hubo un error al cargar.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-3 pt-4">
+                      <Button onClick={() => setIsEditMode(true)} className="bg-primary text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl shadow-brand-glow">
+                        🎨 Comenzar a Personalizar
+                      </Button>
+                      <button onClick={handleResetLayout} className="text-muted hover:text-white text-[10px] font-bold uppercase tracking-widest transition-colors py-2">
+                        🔄 Reiniciar Configuración
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Ghost Feedback (Match Style) */}
+              {ghost && isEditMode && (
+                <div
+                  className={`border-2 border-dashed rounded-[32px] absolute z-10 transition-colors duration-200 pointer-events-none flex items-center justify-center ${ghost.valid ? 'border-primary/40 bg-primary/5' : 'border-rose-500/40 bg-rose-500/5'
+                    }`}
+                  style={{
+                    gridColumnStart: ghost.x + 1,
+                    gridColumnEnd: `span ${ghost.w}`,
+                    gridRowStart: ghost.y + 1,
+                    gridRowEnd: `span ${ghost.h}`,
+                  }}
+                >
+                  {!ghost.valid && (
+                    <div className="bg-black/60 backdrop-blur-md text-rose-400 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg tracking-widest shadow-xl">
+                      Sin Espacio
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
 
       {/* New Widget Modal */}

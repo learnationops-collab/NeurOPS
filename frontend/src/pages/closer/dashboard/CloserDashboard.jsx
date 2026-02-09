@@ -224,21 +224,7 @@ const CloserDashboard = () => {
                             </div>
 
                             <div className="flex items-center gap-4">
-                                <button
-                                    onClick={async () => {
-                                        if (window.confirm("¿Estás seguro de resetear TODAS las agendas a Nueva/Terminada?")) {
-                                            try {
-                                                await api.post('/closer/reset-appointments');
-                                                window.location.reload();
-                                            } catch (e) {
-                                                alert("Error al resetear");
-                                            }
-                                        }
-                                    }}
-                                    className="px-6 py-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-lg shadow-rose-500/10 focus:outline-none"
-                                >
-                                    Reset Testing
-                                </button>
+                                {/* Actions Area */}
                             </div>
                         </header>
 

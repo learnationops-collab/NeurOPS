@@ -234,11 +234,94 @@ const CloserLeadsPage = () => {
         <div className="h-screen overflow-hidden relative bg-main">
             <motion.div
                 className="absolute top-0 left-0 w-full h-[200%]"
-                animate={{ y: `-${(1 - activeSection) * 50}%` }}
+                animate={{ y: `-${activeSection * 50}%` }}
                 transition={{ type: 'spring', damping: 25, stiffness: 120 }}
             >
-                {/* SECTION 1: DATABASE TABLES (Top 50%) */}
-                <div className="absolute top-0 left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start bg-main/50 overflow-y-auto">
+                {/* SECTION 0: KANBAN BOARD (Top 50%) */}
+                <div className="absolute top-0 left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start overflow-hidden">
+                    <div className="w-full max-w-[1800px] flex-1 flex flex-col space-y-6 text-center">
+                        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div className="space-y-1 text-left">
+                                <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none">Pipeline</h1>
+                                <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Embudo de ventas y seguimiento activo</p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-4">
+                                <div className="flex bg-main p-1.5 rounded-2xl border border-base shadow-sm">
+                                    <button
+                                        onClick={() => setViewMode('kanban')}
+                                        className={`p-2.5 rounded-xl transition-all ${viewMode === 'kanban' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-muted hover:text-base'}`}
+                                        title="Vista Kanban"
+                                    >
+                                        <BarChart3 size={18} className="rotate-90" />
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('list')}
+                                        className={`p-2.5 rounded-xl transition-all ${viewMode === 'list' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-muted hover:text-base'}`}
+                                        title="Vista Lista"
+                                    >
+                                        <ClipboardCheck size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        </header>
+
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-xs font-black uppercase tracking-widest text-muted italic flex items-center gap-2">
+                                <Kanban size={14} className="text-primary" />
+                                Embudo de Pre-call
+                            </h2>
+                            <div className="flex bg-main p-1 rounded-full border border-base shadow-inner">
+                                <button
+                                    onClick={() => setKanbanSubTab('tracking')}
+                                    className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'tracking' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
+                                >
+                                    Pre-call
+                                </button>
+                                <button
+                                    onClick={() => setKanbanSubTab('closing')}
+                                    className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'closing' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
+                                >
+                                    Cierre
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-surface/30 backdrop-blur-md border border-base rounded-[2.5rem] p-8 flex-1 overflow-hidden flex flex-col">
+                            {kanbanLoading ? (
+                                <div className="flex-1 flex items-center justify-center">
+                                    <Loader2 className="animate-spin text-primary" size={32} />
+                                </div>
+                            ) : (
+                                <div className="flex-1 overflow-x-auto custom-scrollbar">
+                                    <CloserKanbanBoard
+                                        stages={filteredKanbanStages}
+                                        board={filteredKanbanBoard}
+                                        onMove={handleKanbanMove}
+                                        onSetOutcome={handleSetOutcome}
+                                        onCardClick={(item) => {
+                                            setSelectedAgenda(item);
+                                            setIsAgendaModalOpen(true);
+                                        }}
+                                        viewMode={viewMode}
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-center pt-2">
+                            <button
+                                onClick={() => setActiveSection(1)}
+                                className="group flex flex-col items-center gap-2 text-muted hover:text-primary transition-all animate-bounce focus:outline-none"
+                            >
+                                <span className="text-[8px] font-black uppercase tracking-widest">Ver Bases de Datos</span>
+                                <div className="w-px h-8 bg-gradient-to-b from-muted group-hover:from-primary text-primary" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* SECTION 1: DATABASE TABLES (Bottom 50%) */}
+                <div className="absolute top-[50%] left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start bg-main/50 overflow-y-auto">
                     <div className="w-full max-w-[1800px] space-y-8 pb-32">
                         <header className="flex items-center gap-6 border-b border-base pb-6">
                             <button
@@ -460,89 +543,6 @@ const CloserLeadsPage = () => {
                                 </div>
                             </>
                         )}
-                    </div>
-                </div>
-
-                {/* SECTION 0: KANBAN BOARD (Bottom 50%) */}
-                <div className="absolute top-[50%] left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start overflow-hidden">
-                    <div className="w-full max-w-[1800px] flex-1 flex flex-col space-y-6 text-center">
-                        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                            <div className="space-y-1 text-left">
-                                <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none">Pipeline</h1>
-                                <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Embudo de ventas y seguimiento activo</p>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-4">
-                                <div className="flex bg-main p-1.5 rounded-2xl border border-base shadow-sm">
-                                    <button
-                                        onClick={() => setViewMode('kanban')}
-                                        className={`p-2.5 rounded-xl transition-all ${viewMode === 'kanban' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-muted hover:text-base'}`}
-                                        title="Vista Kanban"
-                                    >
-                                        <BarChart3 size={18} className="rotate-90" />
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode('list')}
-                                        className={`p-2.5 rounded-xl transition-all ${viewMode === 'list' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-muted hover:text-base'}`}
-                                        title="Vista Lista"
-                                    >
-                                        <ClipboardCheck size={18} />
-                                    </button>
-                                </div>
-                            </div>
-                        </header>
-
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-xs font-black uppercase tracking-widest text-muted italic flex items-center gap-2">
-                                <Kanban size={14} className="text-primary" />
-                                Embudo de Pre-call
-                            </h2>
-                            <div className="flex bg-main p-1 rounded-full border border-base shadow-inner">
-                                <button
-                                    onClick={() => setKanbanSubTab('tracking')}
-                                    className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'tracking' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
-                                >
-                                    Pre-call
-                                </button>
-                                <button
-                                    onClick={() => setKanbanSubTab('closing')}
-                                    className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'closing' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
-                                >
-                                    Cierre
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="bg-surface/30 backdrop-blur-md border border-base rounded-[2.5rem] p-8 flex-1 overflow-hidden flex flex-col">
-                            {kanbanLoading ? (
-                                <div className="flex-1 flex items-center justify-center">
-                                    <Loader2 className="animate-spin text-primary" size={32} />
-                                </div>
-                            ) : (
-                                <div className="flex-1 overflow-x-auto custom-scrollbar">
-                                    <CloserKanbanBoard
-                                        stages={filteredKanbanStages}
-                                        board={filteredKanbanBoard}
-                                        onMove={handleKanbanMove}
-                                        onSetOutcome={handleSetOutcome}
-                                        onCardClick={(item) => {
-                                            setSelectedAgenda(item);
-                                            setIsAgendaModalOpen(true);
-                                        }}
-                                        viewMode={viewMode}
-                                    />
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex justify-center pt-2">
-                            <button
-                                onClick={() => setActiveSection(1)}
-                                className="group flex flex-col items-center gap-2 text-muted hover:text-primary transition-all animate-bounce focus:outline-none"
-                            >
-                                <span className="text-[8px] font-black uppercase tracking-widest">Ver Tabla General</span>
-                                <div className="w-px h-8 bg-gradient-to-b from-muted group-hover:from-primary text-primary" />
-                            </button>
-                        </div>
                     </div>
                 </div>
             </motion.div >
