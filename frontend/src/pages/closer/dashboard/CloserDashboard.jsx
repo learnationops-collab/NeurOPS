@@ -11,7 +11,10 @@ import Badge from '../../../components/ui/Badge';
 import NotificationWidget from '../../../components/dashboard/NotificationWidget';
 import HotkeysTable from '../../../components/dashboard/HotkeysTable';
 import BookingLinkModal from '../../../components/dashboard/BookingLinkModal';
+import QuickSaleModal from '../../../components/modals/QuickSaleModal';
+import QuickAppointmentModal from '../../../components/modals/QuickAppointmentModal';
 import {
+
     Loader2,
     Activity,
     Calendar,
@@ -64,6 +67,8 @@ const CloserDashboard = () => {
     const [activeSection, setActiveSection] = useState(0); // 0: Dashboard, 1: Daily Summary
     const [copying, setCopying] = useState(false);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [isQuickSaleOpen, setIsQuickSaleOpen] = useState(false);
+    const [isQuickApptOpen, setIsQuickApptOpen] = useState(false);
 
     useEffect(() => {
         fetchAll();
@@ -224,7 +229,22 @@ const CloserDashboard = () => {
                             </div>
 
                             <div className="flex items-center gap-4">
-                                {/* Actions Area */}
+                                <Button
+                                    onClick={() => setIsQuickApptOpen(true)}
+                                    variant="ghost"
+                                    className="h-12 px-6 rounded-xl bg-surface hover:bg-surface-hover border border-base text-muted font-black uppercase tracking-widest text-[10px] gap-2"
+                                    icon={Calendar}
+                                >
+                                    Nueva Agenda
+                                </Button>
+                                <Button
+                                    onClick={() => setIsQuickSaleOpen(true)}
+                                    variant="primary"
+                                    className="h-12 px-6 rounded-xl shadow-lg shadow-primary/20 text-[10px] font-black uppercase tracking-widest gap-2"
+                                    icon={DollarSign}
+                                >
+                                    Nueva Venta
+                                </Button>
                             </div>
                         </header>
 
@@ -391,6 +411,24 @@ const CloserDashboard = () => {
                 isOpen={isLinkModalOpen}
                 onClose={() => setIsLinkModalOpen(false)}
                 data={data.booking_links}
+            />
+
+            <QuickSaleModal
+                isOpen={isQuickSaleOpen}
+                onClose={() => setIsQuickSaleOpen(false)}
+                onSuccess={() => {
+                    fetchAll();
+                    // Optionally show success toast
+                }}
+            />
+
+            <QuickAppointmentModal
+                isOpen={isQuickApptOpen}
+                onClose={() => setIsQuickApptOpen(false)}
+                onSuccess={() => {
+                    fetchAll();
+                    // Optionally show success toast
+                }}
             />
         </div>
     );

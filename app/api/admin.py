@@ -1118,3 +1118,119 @@ def read_admin_notification(id):
         n.read_by = new_read_by
         db.session.commit()
     return jsonify({"message": "Marked as read"}), 200
+
+# --- Quick Actions (Sales & Support) ---
+
+@bp.route('/admin/sales/quick-create', methods=['POST'])
+@login_required
+@admin_required
+def quick_create_sale():
+    data = request.get_json() or {}
+    try:
+        # 1. Validate inputs
+        required = ['lead_id', 'program_id', 'payment_method_id', 'payment_amount', 'payment_type']
+        for field in required:
+            if not data.get(field):
+                return jsonify({"error": f"Falta el campo {field}"}), 400
+
+        # 2. Get entities
+        lead = Lead.query.get(data['lead_id'])
+        program = Program.query.get(data['program_id'])
+        method = PaymentMethod.query.get(data['payment_method_id'])
+
+        if not lead or not program or not method:
+            return jsonify({"error": "Entidades no encontradas (Lead, Programa o Método)"}), 404
+
+        # 3. Create or Find Client (from Lead)
+        client = Client.query.filter_by(email=lead.email).first()
+        if not client:
+            client = Client(
+                full_name=lead.name,
+                email=lead.email,
+                phone=lead.phone if hasattr(lead, 'phone') else None,
+                instagram=lead.instagram_username
+            )
+            db.session.add(client)
+            db.session.flush() # Get ID
+
+        # 4. Create Enrollment
+        enrollment = Enrollment(
+            client_id=client.id,
+            program_id=program.id,
+            closer_id=current_user.id, # Admin as closer
+            enrollment_date=datetime.utcnow()
+        )
+        db.session.add(enrollment)
+        db.session.flush()
+
+        # 5. Create Payment
+        payment = Payment(
+            enrollment_id=enrollment.id,
+            payment_method_id=method.id,
+            amount=float(data['payment_amount']),
+            payment_type=data['payment_type'],
+            status=data.get('status', 'completed'),
+            date=datetime.utcnow()
+        )
+        db.session.add(payment)
+
+        # 6. Update Lead status to Won (Optional logic for admin)
+        # For now, we just record the sale.
+
+        db.session.commit()
+        return jsonify({"message": "Venta registrada exitosamente", "enrollment_id": enrollment.id}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/admin/db/agendas', methods=['POST'])
+@login_required
+@admin_required
+def create_admin_appointment():
+    # Helper to allow admin to create appointment manually
+    data = request.get_json() or {}
+    try:
+        lead_id = data.get('lead_id')
+        start_time_str = data.get('start_time')
+        appt_type = data.get('type', 'Primera agenda')
+        
+        if not lead_id or not start_time_str:
+            return jsonify({"error": "Faltan datos (lead_id, start_time)"}), 400
+            
+        lead = Lead.query.get(lead_id)
+        if not lead:
+             return jsonify({"error": "Lead no encontrado"}), 404
+             
+        # Create/Find Client
+        client = Client.query.filter_by(email=lead.email).first()
+        if not client:
+            client = Client(
+                full_name=lead.name,
+                email=lead.email,
+                phone=lead.phone if hasattr(lead, 'phone') else None,
+                instagram=lead.instagram_username
+            )
+            db.session.add(client)
+            db.session.flush()
+            
+        start_time = datetime.fromisoformat(start_time_str)
+        
+        appt = Appointment(
+            closer_id=current_user.id, # Admin assigned to self
+            client_id=client.id,
+            start_time=start_time,
+            origin=data.get('origin', 'Manual (Admin)'),
+            last_stage='Nueva',
+            result=None,
+            is_pinned=False
+        )
+        
+        db.session.add(appt)
+        db.session.commit()
+        
+        return jsonify({"message": "Agenda creada", "id": appt.id}), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
