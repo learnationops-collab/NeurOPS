@@ -98,11 +98,28 @@ def get_stats_summary():
     if stats and stats.total_openings and stats.total_openings > 0:
         conversion = round((stats.total_agendas / stats.total_openings) * 100, 1)
     
+    # Fetch pending agendas (appointments booked by this setter with no result)
+    from app.models import Appointment
+    from sqlalchemy import or_
+    
+    pending_agendas = Appointment.query.filter(
+        Appointment.setter_id == current_user.id,
+        or_(Appointment.result == None, Appointment.result == '')
+    ).order_by(Appointment.start_time.desc()).limit(50).all()
+    
     return jsonify({
         "total_agendas": int(stats.total_agendas or 0),
         "total_openings": int(stats.total_openings or 0),
         "total_leads": int(stats.total_leads or 0),
-        "conversion": conversion
+        "conversion": conversion,
+        "new_leads": [], # Deprecated or Empty
+        "pending_agendas": [{
+            "id": a.id,
+            "lead_name": a.client.full_name or a.client.email,
+            "closer_name": a.closer.username if a.closer else "Unassigned",
+            "start_time": a.start_time.isoformat(),
+            "origin": a.origin
+        } for a in pending_agendas]
     }), 200
 
 @bp.route('/leads', methods=['GET'])
@@ -150,3 +167,80 @@ def get_stages():
         "name": s.name,
         "order": s.order
     } for s in stages]), 200
+
+@bp.route('/links', methods=['GET'])
+@login_required
+@role_required(ROLE_SETTER)
+def get_available_links():
+    from app.models import Event, User
+    
+    events = Event.query.filter_by(is_active=True).all()
+    closers = User.query.filter_by(role='closer', is_active=True).all()
+    
+    return jsonify({
+        "events": [{
+            "id": e.id,
+            "name": e.name,
+            "slug": e.utm_source # Using utm_source as slug for now based on public.py logic
+        } for e in events],
+        "closers": [{
+            "id": c.id,
+            "username": c.username
+        } for c in closers]
+    }), 200
+
+@bp.route('/notifications', methods=['GET'])
+@login_required
+@role_required(ROLE_SETTER)
+def get_notifications():
+    from app.models import Notification
+    
+    # Fetch last 50 notifications
+    all_notifs = Notification.query.order_by(Notification.created_at.desc()).limit(50).all()
+    
+    relevant = []
+    # Simple Python-side filtering for JSON compatibility
+    for n in all_notifs:
+        is_target = False
+        
+        # Check target
+        if n.target_users == "all":
+            is_target = True
+        elif isinstance(n.target_users, str) and (n.target_users == f"role:{ROLE_SETTER}" or n.target_users == "role:setter"):
+            is_target = True
+        elif isinstance(n.target_users, list) and current_user.id in n.target_users:
+            is_target = True
+            
+        if is_target:
+            is_read = current_user.id in (n.read_by or [])
+            relevant.append({
+                "id": n.id,
+                "subject": n.subject,
+                "content": n.content,
+                "created_at": n.created_at.isoformat(),
+                "is_read": is_read
+            })
+            
+    return jsonify(relevant), 200
+
+@bp.route('/notifications/<int:id>/read', methods=['POST'])
+@login_required
+@role_required(ROLE_SETTER)
+def mark_notification_read(id):
+    from app.models import Notification
+    
+    notif = Notification.query.get_or_404(id)
+    
+    # Initialize read_by if None
+    if not notif.read_by:
+        notif.read_by = []
+        
+    # Add user if not present
+    if current_user.id not in notif.read_by:
+        # Create a new list to ensure SQLAlchemy detects change
+        new_list = list(notif.read_by)
+        new_list.append(current_user.id)
+        notif.read_by = new_list
+        db.session.commit()
+        
+    return jsonify({"message": "Marked as read"}), 200

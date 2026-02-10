@@ -14,6 +14,7 @@ const UsersPage = () => {
         password: '',
         role: 'closer',
         timezone: 'America/La_Paz',
+        two_chat_number: '',
         is_active: true
     });
     const [submitting, setSubmitting] = useState(false);
@@ -45,6 +46,7 @@ const UsersPage = () => {
                 password: '', // Leave empty for edit unless changing
                 role: user.role,
                 timezone: user.timezone || 'America/La_Paz',
+                two_chat_number: user.two_chat_number || '',
                 is_active: user.is_active
             });
         } else {
@@ -54,6 +56,7 @@ const UsersPage = () => {
                 password: '',
                 role: 'closer',
                 timezone: 'America/La_Paz',
+                two_chat_number: '',
                 is_active: true
             });
         }
@@ -298,6 +301,18 @@ const UsersPage = () => {
                                         value={formData.password}
                                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     />
+                                </div>
+
+                                <div className="space-y-2 col-span-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 text-primary">Número 2Chat (WhatsApp Emisor)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="+52123456789 (Opcional)"
+                                        className="w-full px-5 py-4 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold"
+                                        value={formData.two_chat_number}
+                                        onChange={(e) => setFormData({ ...formData, two_chat_number: e.target.value })}
+                                    />
+                                    <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-tight ml-1 font-bold">Si se deja vacío, no se enviarán mensajes automáticos desde este closer.</p>
                                 </div>
 
                                 <div className="col-span-2 flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">

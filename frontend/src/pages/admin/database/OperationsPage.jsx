@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Database, Trash2, Zap, RefreshCw, CheckCircle, AlertTriangle, FileUp, Download, Upload } from 'lucide-react';
+import { Database, Trash2, Zap, RefreshCw, CheckCircle, AlertTriangle, FileUp, Download, Upload, Settings2 } from 'lucide-react';
 import axios from 'axios';
 import Button from '../../../components/ui/Button';
 import Card, { CardHeader, CardContent } from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import AdvancedImportTool from '../../../components/AdvancedImportTool';
+import OperationsSection from '../dashboard/components/OperationsSection';
 
 const OperationsPage = () => {
-    const [activeTab, setActiveTab] = useState('tools');
+    const [activeTab, setActiveTab] = useState('messaging');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
     const [counts, setCounts] = useState({ leads: 20, agendas: 15, sales: 5 });
@@ -91,33 +92,33 @@ const OperationsPage = () => {
         <div className="p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div className="space-y-1">
-                    <h1 className="text-4xl font-black text-base italic tracking-tighter flex items-center gap-3">
-                        <Database className="text-primary" />
-                        Operaciones de Sistema
+                    <h1 className="text-4xl font-black text-white italic tracking-tighter flex items-center gap-3">
+                        <Zap className="text-primary fill-primary/20" />
+                        Operaciones
                     </h1>
-                    <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Gestión de datos masivos y herramientas de desarrollo</p>
+                    <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Centro de mando y herramientas críticas del sistema</p>
                 </div>
-                <div className="flex bg-surface p-1 rounded-2xl border border-base">
+                <div className="flex bg-surface p-1.5 rounded-[20px] border border-white/5 shadow-2xl">
                     <button
-                        onClick={() => setActiveTab('tools')}
-                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'tools' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-base'}`}
+                        onClick={() => setActiveTab('messaging')}
+                        className={`px-6 py-3 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'messaging' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-white'}`}
                     >
                         <Zap size={14} />
-                        Herramientas
+                        Mensajería
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('tools')}
+                        className={`px-6 py-3 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'tools' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-white'}`}
+                    >
+                        <Settings2 size={14} />
+                        DB Tools
                     </button>
                     <button
                         onClick={() => setActiveTab('import_general')}
-                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'import_general' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-base'}`}
+                        className={`px-6 py-3 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'import_general' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-white'}`}
                     >
                         <FileUp size={14} />
-                        Importación General
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('import_setters')}
-                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'import_setters' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-base'}`}
-                    >
-                        <Database size={14} />
-                        Importación Setters
+                        Import
                     </button>
                 </div>
             </header>
@@ -271,8 +272,10 @@ const OperationsPage = () => {
                 </>
             ) : activeTab === 'import_general' ? (
                 <AdvancedImportTool targetFilter={['leads', 'sales', 'agendas']} />
-            ) : (
+            ) : activeTab === 'import_setters' ? (
                 <AdvancedImportTool targetFilter={['setters']} />
+            ) : (
+                <OperationsSection />
             )}
         </div>
     );

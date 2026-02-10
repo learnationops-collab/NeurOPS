@@ -9,7 +9,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import HotkeysTable from '../../../components/dashboard/HotkeysTable';
 import NotificationWidget from '../../../components/dashboard/NotificationWidget';
 
-
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [config, setConfig] = useState([]);
@@ -449,14 +448,6 @@ const AdminDashboard = () => {
                 </div>
                 <h2 className="text-xl font-bold text-white">Notificaciones</h2>
               </div>
-              {/* NotificationWidget usually expects 'role' prop or handles it internally? 
-                             Checking earlier: used in CloserDashboard. 
-                             It likely fetches notifications from /closer/notifications.
-                             We need to check if it accepts a prop to switch endpoint or if we need to modify it.
-                             If it's hardcoded to /closer/notifications, we need to refactor it or duplicate.
-                             Let's assume it might need update, but for now I'll instantiate it. 
-                             Wait, I should check NotificationWidget logic.
-                         */}
               <NotificationWidget notifications={notifications} onMarkAsRead={handleMarkAsRead} />
             </div>
           </div>
@@ -624,99 +615,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       </motion.div>
-
-
-      {/* New Widget Modal */}
-      <AnimatePresence>
-        {isCreateOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsCreateOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md glass-panel p-8 rounded-[40px] border border-white/10 shadow-2xl overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 p-8">
-                <button onClick={() => setIsCreateOpen(false)} className="text-muted hover:text-white transition-colors">
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="space-y-8">
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold text-white tracking-tight">Nuevo Widget</h2>
-                  <p className="text-muted text-sm tracking-wide">Configura tu visualización personalizada.</p>
-                </div>
-
-                {/* Metric Selection */}
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1">1. Selecciona la Métrica</label>
-                  <div className="grid grid-cols-1 gap-3">
-                    {[
-                      { id: 'agendas', label: 'Agendas Totales', icon: Users },
-                      { id: 'sales', label: 'Ventas Realizadas', icon: TrendingUp },
-                      { id: 'cash_collect', label: 'Cash Collect', icon: DollarSign },
-                    ].map(m => (
-                      <button
-                        key={m.id}
-                        onClick={() => setNewWidget(prev => ({ ...prev, metric: m.id }))}
-                        className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${newWidget.metric === m.id
-                          ? 'bg-primary/20 border-primary text-white shadow-brand-glow'
-                          : 'bg-white/5 border-white/5 text-muted hover:bg-white/10 hover:border-white/10'
-                          }`}
-                      >
-                        <div className={`p-2 rounded-xl ${newWidget.metric === m.id ? 'bg-primary text-white' : 'bg-base text-muted'}`}>
-                          <m.icon size={18} />
-                        </div>
-                        <span className="font-bold text-sm tracking-tight">{m.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Type Selection */}
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1">2. Estilo de Visualización</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { id: 'stat', label: 'Número', icon: Hash },
-                      { id: 'grafico', label: 'Gráfico', icon: BarChart3 },
-                    ].map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => setNewWidget(prev => ({ ...prev, type: t.id }))}
-                        className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all ${newWidget.type === t.id
-                          ? 'bg-primary/20 border-primary text-white shadow-brand-glow'
-                          : 'bg-white/5 border-white/5 text-muted hover:bg-white/10 hover:border-white/10'
-                          }`}
-                      >
-                        <t.icon size={24} className={newWidget.type === t.id ? 'text-primary' : ''} />
-                        <span className="font-bold text-xs tracking-widest uppercase">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <Button
-                  onClick={addWidget}
-                  className="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-brand-glow hover:scale-[1.02] active:scale-95 transition-all mt-4"
-                >
-                  ✨ Añadir al Tablero
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
-
   );
 };
 

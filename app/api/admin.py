@@ -324,6 +324,7 @@ def manage_users():
         user = User(username=username, email=email, role=role)
         user.set_password(password)
         if 'timezone' in data: user.timezone = data['timezone']
+        if 'two_chat_number' in data: user.two_chat_number = data['two_chat_number']
         
         db.session.add(user)
         db.session.commit()
@@ -342,7 +343,7 @@ def manage_users():
         
     users = users_query.all()
     # Treat None as True for display
-    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "is_active": u.is_active if u.is_active is not None else True} for u in users]
+    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "two_chat_number": u.two_chat_number, "is_active": u.is_active if u.is_active is not None else True} for u in users]
     return jsonify(user_list), 200
 
 @bp.route('/admin/users/<int:id>', methods=['PUT', 'DELETE'])
@@ -378,6 +379,7 @@ def user_operations(id):
         user.username = username or user.username
         user.email = email or user.email
         user.role = data.get('role', user.role)
+        if 'two_chat_number' in data: user.two_chat_number = data['two_chat_number']
         if 'is_active' in data: 
             if user.id == current_user.id and data['is_active'] is False:
                 return jsonify({"message": "No puedes desactivar tu propia cuenta"}), 400
@@ -761,6 +763,26 @@ def manage_integrations():
         "url_dev": i.url_dev, "url_prod": i.url_prod, "active_env": i.active_env,
         "payload_config": i.payload_config
     } for i in Integration.query.all()]), 200
+
+@bp.route('/admin/integrations/2chat/test', methods=['POST'])
+@login_required
+@admin_required
+def test_2chat_integration():
+    from app.services.two_chat_service import TwoChatService
+    
+    data = request.get_json() or {}
+    to_number = data.get('to_number')
+    from_number = data.get('from_number')
+    message = data.get('message', 'Test message from NeurOPS Admin')
+    
+    if not to_number:
+        return jsonify({"message": "Target number required"}), 400
+        
+    try:
+        response = TwoChatService.send_message(to_number, message, from_number=from_number)
+        return jsonify({"message": "Message sent successfully", "response": response}), 200
+    except Exception as e:
+        return jsonify({"message": f"Failed to send message: {str(e)}"}), 500
 
 # --- Admin Funnel Management ---
 

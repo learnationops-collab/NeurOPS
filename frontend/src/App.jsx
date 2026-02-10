@@ -25,6 +25,7 @@ import BackupPage from './pages/public/BackupPage';
 import RestorePage from './pages/public/RestorePage';
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import { ThemeProvider } from './context/ThemeContext';
+import { Toaster } from 'react-hot-toast';
 import './index.css';
 
 const ProtectedRoute = ({ children, roles = [] }) => {
@@ -51,10 +52,11 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <Router>
+          <Toaster position="top-right" />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
-            <Route path="/book/:username/:event_slug" element={<BookingPage />} />
+            {/* Unified Booking Route (Slug handles both general and personal) */}
             <Route path="/book/:event_slug" element={<BookingPage />} />
             <Route path="/backup" element={<BackupPage />} />
             <Route path="/restore" element={<RestorePage />} />

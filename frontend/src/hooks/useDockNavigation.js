@@ -50,6 +50,7 @@ const useDockNavigation = () => {
                 { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
                 { id: 'leads', icon: Users, label: 'Leads', path: '/admin/leads' },
                 { id: 'finances', icon: TrendingUp, label: 'Finanzas', path: '/admin/finance' },
+                { id: 'operations', icon: Zap, label: 'Operaciones', path: '/admin/operations' },
                 { id: 'settings', icon: Settings, label: 'Ajustes', path: '/admin/settings' }
             ];
         }

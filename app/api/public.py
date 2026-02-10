@@ -8,9 +8,27 @@ bp = Blueprint('public_api', __name__)
 
 @bp.route('/public/funnel/<string:utm_source>', methods=['GET'])
 def get_funnel_by_source(utm_source):
+    target_username = request.args.get('username')
+    
     try:
-        # Find event by utm_source
+        # 1. Try exact match (General Link: /book/event-slug)
         event = Event.query.filter_by(utm_source=utm_source, is_active=True).first()
+        
+        # 2. If not found, try parsing 'slug-username' (Personal Link)
+        if not event:
+            parts = utm_source.rsplit('-', 1)
+            if len(parts) == 2:
+                slug_part, user_part = parts
+                
+                # Verify user exists
+                potential_user = User.query.filter_by(username=user_part, role='closer').first()
+                if potential_user:
+                    # Verify event exists
+                    potential_event = Event.query.filter_by(utm_source=slug_part, is_active=True).first()
+                    if potential_event:
+                        event = potential_event
+                        target_username = user_part
+
         if not event:
             return jsonify({"error": "Event not found"}), 404
             
@@ -27,8 +45,22 @@ def get_funnel_by_source(utm_source):
         start_date = date.today()
         end_date = start_date + timedelta(days=14)
         
-        # Simple strategy: aggregate slots from all closers
-        closers = User.query.filter_by(role='closer').all()
+        closers = []
+        target_username = request.args.get('username')
+        
+        if target_username:
+            user = User.query.filter_by(username=target_username, role='closer').first()
+            if user:
+                closers = [user]
+        
+        # If no specific closer or user not found, try event assigned closers
+        if not closers:
+            if event.closers:
+                closers = event.closers
+            else:
+                # Fallback: All closers
+                closers = User.query.filter_by(role='closer').all()
+
         all_slots = []
         for closer in closers:
             slots = BookingService.get_available_slots_utc(start_date, end_date, preferred_closer_id=closer.id)
@@ -59,7 +91,7 @@ def get_funnel_by_source(utm_source):
                 "mapping": q.mapping_field
             } for q in questions],
             "availability": all_slots,
-            "closer_name": "Equipo NeurOPS" # Generic if merging
+            "closer_name": closers[0].username if len(closers) == 1 else "Equipo NeurOPS"
         }), 200
     except Exception as e:
         print(f"[ERROR] Funnel Data API: {e}")

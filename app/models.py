@@ -41,6 +41,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default=ROLE_CLOSER)
     timezone = db.Column(db.String(50), default='America/La_Paz')
     is_active = db.Column(db.Boolean, default=True)
+    two_chat_number = db.Column(db.String(20), nullable=True) # Número vinculado para 2Chat
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def get_auth_token(self, expires_in=86400):
@@ -96,6 +97,12 @@ class Client(db.Model):
     def __repr__(self):
         return f'<Client {self.full_name or self.email}>'
 
+# Association Table for Many-to-Many Event <-> Closer
+event_closers = db.Table('event_closers',
+    db.Column('event_id', db.Integer, db.ForeignKey('events.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True)
+)
+
 class EventGroup(db.Model):
     __tablename__ = 'event_groups'
     id = db.Column(db.Integer, primary_key=True)
@@ -118,6 +125,10 @@ class Event(db.Model):
     min_score = db.Column(db.Integer, default=0)
     redirect_url_fail = db.Column(db.String(255))
     redirect_url_success = db.Column(db.String(255))
+
+    # Many-to-Many with Closers
+    closers = db.relationship('User', secondary=event_closers, lazy='subquery',
+        backref=db.backref('assigned_events', lazy=True))
 
     def __repr__(self):
         return f'<Event {self.name}>'
@@ -177,6 +188,7 @@ class Appointment(db.Model):
     __tablename__ = 'appointments'
     id = db.Column(db.Integer, primary_key=True)
     closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    setter_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) # New field
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
     start_time = db.Column(db.DateTime, index=True)
     origin = db.Column(db.String(100)) # VSL, Closer, etc.
@@ -323,11 +335,24 @@ class Integration(db.Model):
     __tablename__ = 'integrations'
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(50), unique=True, nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-    url_dev = db.Column(db.String(255))
-    url_prod = db.Column(db.String(255))
-    active_env = db.Column(db.String(10), default='dev')
-    payload_config = db.Column(db.JSON, default={})
+    name = db.Column(db.String(100), nullable=True)
+    url_dev = db.Column(db.String(255), nullable=True)
+    url_prod = db.Column(db.String(255), nullable=True)
+    active_env = db.Column(db.String(20), default='dev')
+    payload_config = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "key": self.key,
+            "name": self.name,
+            "url_dev": self.url_dev,
+            "url_prod": self.url_prod,
+            "active_env": self.active_env,
+            "payload_config": self.payload_config
+        }
 
 class Pipeline(db.Model):
     __tablename__ = 'pipelines'
@@ -466,3 +491,4 @@ class Comment(db.Model):
             "type": self.comment_type,
             "associated_id": self.associated_id
         }
+

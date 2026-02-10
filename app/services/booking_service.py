@@ -104,7 +104,7 @@ class BookingService:
         return client
 
     @staticmethod
-    def create_appointment(client_id, closer_id, start_time_utc, origin='direct'):
+    def create_appointment(client_id, closer_id, start_time_utc, origin='direct', setter_id=None):
         # Check for conflict on same time for same closer, ignoring cancelled/rescheduled ones
         conflict = Appointment.query.filter_by(closer_id=closer_id, start_time=start_time_utc).filter(
             or_(Appointment.result == None, Appointment.result == '', Appointment.result.notin_(['Cancelada', 'Reprogramada']))
@@ -113,6 +113,7 @@ class BookingService:
             
         appt = Appointment(
             closer_id=closer_id,
+            setter_id=setter_id,
             client_id=client_id,
             start_time=start_time_utc,
             origin=origin,
@@ -206,8 +207,81 @@ class BookingService:
             }
             
             # 3. Send
-            requests.post(url, json=payload, timeout=5)
+            if 'discord.com/api/webhooks' in url:
+                try:
+                    from app.services.image_service import ImageService
+                    import json
+                    
+                    # Calculate todays count
+                    today_start = datetime.combine(datetime.utcnow().date(), time.min)
+                    today_end = datetime.combine(datetime.utcnow().date(), time.max)
+                    todays_count = Appointment.query.filter(
+                        Appointment.created_at >= today_start,
+                        Appointment.created_at <= today_end
+                    ).count()
+                    
+                    # Prepare Image Data
+                    img_data = {
+                        "client_name": payload.get('nombre_completo', 'N/A'),
+                        "closer_name": payload.get('closer', 'N/A'),
+                        "date_str": payload.get('fecha_agenda', ''),
+                        "time_str": payload.get('hora_agenda', ''),
+                        "source": payload.get('fuente', 'N/A'),
+                        "count": todays_count
+                    }
+                    
+                    # Generate Image
+                    img_buffer = ImageService.generate_client_card(img_data)
+                    
+                    # Discord Multipart Payload
+                    files = {
+                        'file': ('agenda_card.png', img_buffer, 'image/png')
+                    }
+                    
+                    # SIMPLIFIED JSON payload: Text + Attachment (No Embeds needed if image has all info)
+                    json_payload = {
+                        "content": f"@everyone **📅 NUEVA AGENDA**\nCantidad de agendas de hoy: **{todays_count}**",
+                        # We can use an embed just to hold the image if we want it cleaner, 
+                        # or just attach. User asked for "Client Card" style, let's use an embed for the image container 
+                        # but remove the fields.
+                        "embeds": [{
+                            "color": 5763719, # Green accent
+                            "image": {
+                                "url": "attachment://agenda_card.png"
+                            },
+                            "timestamp": datetime.utcnow().isoformat()
+                        }]
+                    }
+                    
+                    # When sending files, 'json' parameter is not used, instead 'payload_json' field in data
+                    requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
+                    
+                except Exception as img_err:
+                    print(f"[Discord Image Error] {img_err}. Fallback to text.")
+                    # Fallback to simple embed if image fails
+                    requests.post(url, json=payload, timeout=5)
+            else:
+                # Standard JSON Webhook (n8n, etc.)
+                requests.post(url, json=payload, timeout=5)
             print(f"[Agenda Webhook] Sent to {url}")
             
+            # 4. WhatsApp Automation via 2Chat
+            try:
+                if closer.two_chat_number:
+                    from app.services.two_chat_service import TwoChatService
+                    # Personalize message or use a template
+                    wa_message = f"Hola {payload['primer_nombre']}! Se ha confirmado tu sesión con {payload['closer']} para el {payload['fecha_agenda']} a las {payload['hora_agenda']}. Nos vemos!"
+                    
+                    TwoChatService.send_message(
+                        to_number=client.phone,
+                        text=wa_message,
+                        from_number=closer.two_chat_number
+                    )
+                    print(f"[2Chat Auto] Message sent from {closer.two_chat_number} to {client.phone}")
+                else:
+                    print(f"[2Chat Auto] Closer {closer.username} has no two_chat_number assigned. Skipping WA.")
+            except Exception as wa_err:
+                print(f"[2Chat Auto Error] {wa_err}")
+                
         except Exception as e:
             print(f"[Agenda Webhook Error] {e}")

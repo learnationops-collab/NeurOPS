@@ -438,12 +438,15 @@ def create_appointment():
             
         start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
         
-        # BookingService create_appointment signature: (client_id, closer_id, start_time_utc, origin='manual')
+        # BookingService create_appointment signature: (client_id, closer_id, start_time_utc, origin='manual', setter_id=None)
+        setter_id = current_user.id if current_user.role == 'setter' else None
+        
         appt = BookingService.create_appointment(
             client_id=lead_id,
-            closer_id=current_user.id,
+            closer_id=current_user.id if current_user.role == 'closer' else (data.get('closer_id') or current_user.id), # Fallback mostly for admins/setters to pick closer
             start_time_utc=start_time,
-            origin='Manual Closer'
+            origin='Manual Closer',
+            setter_id=setter_id
         )
         
         if appt:

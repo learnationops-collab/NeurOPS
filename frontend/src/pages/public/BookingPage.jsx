@@ -149,7 +149,10 @@ const BookingPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get(`/public/funnel/${event_slug}`);
+            const params = {};
+            if (username) params.username = username;
+
+            const res = await api.get(`/public/funnel/${event_slug}`, { params });
             setEventInfo(res.data.event);
             setQuestions(res.data.questions);
             setAvailability(res.data.availability);
@@ -663,8 +666,8 @@ const BookingPage = () => {
                                                     key={dateStr}
                                                     onClick={() => setSelectedDate(dateStr)}
                                                     className={`p-5 rounded-2xl border text-left transition-all duration-300 group/date relative overflow-hidden ${isActive
-                                                            ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
-                                                            : 'bg-white/5 border-white/10 text-muted hover:border-primary/30 hover:bg-white/[0.07]'
+                                                        ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
+                                                        : 'bg-white/5 border-white/10 text-muted hover:border-primary/30 hover:bg-white/[0.07]'
                                                         }`}
                                                 >
                                                     <div className="relative z-10">
@@ -695,8 +698,8 @@ const BookingPage = () => {
                                                 key={slot.ts}
                                                 onClick={() => setSelectedSlot(slot)}
                                                 className={`p-4 rounded-xl border text-center text-sm font-black transition-all duration-300 ${selectedSlot?.ts === slot.ts
-                                                        ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-[1.05]'
-                                                        : 'bg-white/5 border-white/10 text-muted hover:border-primary/30 hover:bg-white/[0.07]'
+                                                    ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-[1.05]'
+                                                    : 'bg-white/5 border-white/10 text-muted hover:border-primary/30 hover:bg-white/[0.07]'
                                                     }`}
                                             >
                                                 {slot.localStart} HS
