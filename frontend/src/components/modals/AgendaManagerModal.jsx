@@ -243,7 +243,15 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
                         </div>
                     )}
 
-                    {/* Comments Section */}
+                    {/* Appointment Comments Section */}
+                    <div className="space-y-3 pb-4">
+                        <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Notas de la Llamada</label>
+                        <div className="h-44 border border-base rounded-3xl overflow-hidden bg-main/30">
+                            <CommentsSection type="appointment" associatedId={appointment.id} />
+                        </div>
+                    </div>
+
+                    {/* Client Comments Section */}
                     {appointment.client_id && (
                         <div className="space-y-3 pb-4">
                             <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Observaciones del Cliente</label>

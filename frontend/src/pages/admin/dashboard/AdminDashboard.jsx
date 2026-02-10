@@ -477,19 +477,6 @@ const AdminDashboard = () => {
 
               <div className="flex items-center gap-4">
                 <Button
-                  onClick={() => setIsQuickApptOpen(true)}
-                  className="glass-panel p-3 rounded-2xl border flex items-center justify-center gap-2 hover:bg-white/10 transition-all text-white font-bold text-xs uppercase tracking-wider"
-                >
-                  <Calendar size={18} /> Nueva Agenda
-                </Button>
-
-                <Button
-                  onClick={() => setIsQuickSaleOpen(true)}
-                  className="glass-panel p-3 rounded-2xl border flex items-center justify-center gap-2 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:border-emerald-500 transition-all font-bold text-xs uppercase tracking-wider"
-                >
-                  <DollarSign size={18} /> Nueva Venta
-                </Button>
-                <Button
                   onClick={() => setIsEditMode(!isEditMode)}
                   className={`glass-panel p-3 rounded-2xl border transition-all duration-300 flex items-center justify-center group ${isEditMode
                     ? 'bg-primary text-white border-primary shadow-brand-glow scale-105'
@@ -728,24 +715,8 @@ const AdminDashboard = () => {
           </div>
         )}
       </AnimatePresence>
-
-      <QuickSaleModal
-        isOpen={isQuickSaleOpen}
-        onClose={() => setIsQuickSaleOpen(false)}
-        onSuccess={() => {
-          // Optionally refresh stats
-          fetchNotifications(); // or other refresh logic
-        }}
-      />
-
-      <QuickAppointmentModal
-        isOpen={isQuickApptOpen}
-        onClose={() => setIsQuickApptOpen(false)}
-        onSuccess={() => {
-          // Optionally refresh stats
-        }}
-      />
     </div>
+
   );
 };
 

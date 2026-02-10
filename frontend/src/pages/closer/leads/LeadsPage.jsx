@@ -41,6 +41,7 @@ const CloserLeadsPage = () => {
     const [kanbanLoading, setKanbanLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [error, setError] = useState(null);
     const [updating, setUpdating] = useState(false);
     const [selectedAgenda, setSelectedAgenda] = useState(null);
     const [activeSection, setActiveSection] = useState(0); // 0: Kanban, 1: Tables

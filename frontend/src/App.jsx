@@ -152,6 +152,17 @@ function App() {
               }
             />
 
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute roles={['admin', 'operator']}>
+                  <MainLayout>
+                    <SettingsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
             {/* Protected Closer Routes */}
             <Route
               path="/closer/dashboard"

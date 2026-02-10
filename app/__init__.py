@@ -100,6 +100,10 @@ def create_app(config_class=Config):
     app.register_blueprint(backup_bp, url_prefix='/api/backup')
     csrf.exempt(backup_bp)
 
+    from app.api.comments import bp as comments_bp
+    app.register_blueprint(comments_bp, url_prefix='/api/comments')
+    csrf.exempt(comments_bp)
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):

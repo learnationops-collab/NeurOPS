@@ -2,19 +2,25 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Send, MessageSquare, Clock, User } from 'lucide-react';
 
-const CommentsSection = ({ clientId }) => {
+const CommentsSection = ({ clientId, type, associatedId }) => {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
-        if (clientId) fetchComments();
-    }, [clientId]);
+        if (clientId || (type && associatedId)) fetchComments();
+    }, [clientId, type, associatedId]);
 
     const fetchComments = async () => {
+        setLoading(true);
         try {
-            const res = await api.get(`/leads/${clientId}/comments`);
+            let res;
+            if (clientId) {
+                res = await api.get(`/closer/leads/${clientId}/comments`);
+            } else {
+                res = await api.get('/comments', { params: { type, associated_id: associatedId } });
+            }
             setComments(res.data);
         } catch (err) {
             console.error("Error fetching comments", err);
@@ -29,8 +35,19 @@ const CommentsSection = ({ clientId }) => {
 
         setSubmitting(true);
         try {
-            const res = await api.post(`/leads/${clientId}/comments`, { text: newComment });
-            setComments([res.data.comment, ...comments]);
+            let res;
+            if (clientId) {
+                res = await api.post(`/closer/leads/${clientId}/comments`, { text: newComment });
+                // Adapt legacy response format if needed, but assuming standard format
+                setComments([res.data.comment, ...comments]);
+            } else {
+                res = await api.post('/comments', {
+                    text: newComment,
+                    type,
+                    associated_id: associatedId
+                });
+                setComments([res.data, ...comments]);
+            }
             setNewComment('');
         } catch (err) {
             console.error("Error posting comment", err);
@@ -46,7 +63,7 @@ const CommentsSection = ({ clientId }) => {
                 <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wide">Notas & Comentarios</h3>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px] max-h-[500px]">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px] max-h-[500px] custom-scrollbar">
                 {loading ? (
                     <div className="text-center text-slate-500 text-xs py-10">Cargando...</div>
                 ) : comments.length === 0 ? (
@@ -55,15 +72,15 @@ const CommentsSection = ({ clientId }) => {
                     </div>
                 ) : (
                     comments.map(comment => (
-                        <div key={comment.id} className="flex gap-3 group">
+                        <div key={comment.id} className="flex gap-3 group animate-in slide-in-from-bottom-2 duration-300">
                             <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shrink-0">
                                 <span className="text-xs font-bold text-slate-400">
-                                    {comment.author ? comment.author[0].toUpperCase() : '?'}
+                                    {(comment.author || comment.author_name || '?')[0].toUpperCase()}
                                 </span>
                             </div>
                             <div className="flex-1 space-y-1">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-slate-300">{comment.author}</span>
+                                    <span className="text-xs font-bold text-slate-300">{comment.author || comment.author_name}</span>
                                     <span className="text-[10px] text-slate-600 flex items-center gap-1">
                                         <Clock size={10} />
                                         {new Date(comment.created_at).toLocaleString()}
