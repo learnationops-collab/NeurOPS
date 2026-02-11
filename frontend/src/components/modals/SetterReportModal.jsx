@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, X, Send, Calendar } from 'lucide-react';
+import { Loader2, X, Send, Calendar, ListChecks } from 'lucide-react';
 
 const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
     const [questions, setQuestions] = useState([]);
+    const [stages, setStages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({
@@ -15,27 +16,34 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
         links_sent: 0,
         appointments_booked: 0,
         follow_ups: 0,
-        answers: []
+        answers: [],
+        funnel_metrics: []
     });
 
     useEffect(() => {
-        if (isOpen) fetchQuestions();
+        if (isOpen) fetchData();
     }, [isOpen]);
 
-    const fetchQuestions = async () => {
+    const fetchData = async () => {
         setLoading(true);
-        console.log("Fetching setter questions...");
         try {
-            const res = await api.get('/setter/questions');
-            console.log("Questions received:", res.data);
-            setQuestions(res.data);
-            // Inicializar respuestas
+            const [qRes, sRes] = await Promise.all([
+                api.get('/setter/questions'),
+                api.get('/setter/stages')
+            ]);
+
+            setQuestions(qRes.data);
+            setStages(sRes.data);
+
+            // Init State
             setFormData(prev => ({
                 ...prev,
-                answers: res.data.map(q => ({ question_id: q.id, answer: '' }))
+                answers: qRes.data.map(q => ({ question_id: q.id, answer: '' })),
+                funnel_metrics: sRes.data.map(s => ({ stage_id: s.id, value: 0 }))
             }));
+
         } catch (err) {
-            console.error("Error fetching questions:", err);
+            console.error("Error fetching data:", err);
         } finally {
             setLoading(false);
         }
@@ -43,6 +51,15 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
 
     const handleStatChange = (field, value) => {
         setFormData({ ...formData, [field]: parseInt(value) || 0 });
+    };
+
+    const handleStageMetricChange = (stageId, value) => {
+        setFormData(prev => ({
+            ...prev,
+            funnel_metrics: prev.funnel_metrics.map(m =>
+                m.stage_id === stageId ? { ...m, value: parseInt(value) || 0 } : m
+            )
+        }));
     };
 
     const handleAnswerChange = (questionId, value) => {
@@ -70,6 +87,9 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
     };
 
     if (!isOpen) return null;
+
+    // Use dynamic stages if available, otherwise fallback to legacy hardcoded fields
+    const useDynamicStages = stages.length > 0;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -107,34 +127,59 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
                                 />
                             </div>
 
-                            {/* Métricas Fijas */}
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                {[
-                                    { label: 'Entrantes', field: 'inbound_leads' },
-                                    { label: 'Aperturas', field: 'openings' },
-                                    { label: 'No Lead', field: 'not_lead' },
-                                    { label: 'Invitaciones/Ofertas', field: 'new_offers' },
-                                    { label: 'Links Enviados', field: 'links_sent' },
-                                    { label: 'Agendas', field: 'appointments_booked' },
-                                    { label: 'Seguimientos', field: 'follow_ups' },
-                                ].map(stat => (
-                                    <div key={stat.field} className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">{stat.label}</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            className="w-full px-5 py-3 bg-slate-800/30 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-center"
-                                            value={formData[stat.field]}
-                                            onChange={e => handleStatChange(stat.field, e.target.value)}
-                                        />
+                            {/* Métricas (Dinámicas o Legacy) */}
+                            {useDynamicStages ? (
+                                <div className="space-y-6">
+                                    <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest italic flex items-center gap-2">
+                                        <ListChecks size={14} /> KPIs / Métricas
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {stages.map(stage => (
+                                            <div key={stage.id} className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{stage.name}</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    className="w-full px-5 py-4 bg-slate-800/30 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-center text-lg"
+                                                    value={formData.funnel_metrics.find(m => m.stage_id === stage.id)?.value || 0}
+                                                    onChange={e => handleStageMetricChange(stage.id, e.target.value)}
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                    <p className="text-[10px] text-slate-600 text-center italic">
+                                        Reportando métricas personalizadas para tu cuenta.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    {[
+                                        { label: 'Entrantes', field: 'inbound_leads' },
+                                        { label: 'Aperturas', field: 'openings' },
+                                        { label: 'No Lead', field: 'not_lead' },
+                                        { label: 'Invitaciones/Ofertas', field: 'new_offers' },
+                                        { label: 'Links Enviados', field: 'links_sent' },
+                                        { label: 'Agendas', field: 'appointments_booked' },
+                                        { label: 'Seguimientos', field: 'follow_ups' },
+                                    ].map(stat => (
+                                        <div key={stat.field} className="space-y-2">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">{stat.label}</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                className="w-full px-5 py-3 bg-slate-800/30 border border-slate-700/50 rounded-xl text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-center"
+                                                value={formData[stat.field]}
+                                                onChange={e => handleStatChange(stat.field, e.target.value)}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             {/* Preguntas Dinámicas */}
                             {questions.length > 0 && (
                                 <div className="space-y-6 pt-6 border-t border-slate-800/50">
-                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest italic">Preguntas del Administrador</h3>
+                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest italic">Preguntas Adicionales</h3>
                                     {questions.map(q => (
                                         <div key={q.id} className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{q.text}</label>

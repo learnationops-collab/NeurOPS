@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 import json
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
-from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment
+from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment, SurveyAnswer, SurveyQuestion
 from app.decorators import role_required
 from datetime import date, timedelta, datetime
 from sqlalchemy import or_
@@ -40,7 +40,8 @@ def get_dashboard():
             "phone": appt.client.phone if appt.client else "",
             "start_time": appt.start_time.isoformat(),
             "last_stage": appt.last_stage,
-            "seq_num": seq
+            "seq_num": seq,
+            "client_id": appt.client_id
         })
         
     serialized['sales_today'] = data.get('sales_today', [])
@@ -180,7 +181,8 @@ def get_all_agendas():
             "last_stage": a.last_stage,
             "result": a.result,
             "linked_call": a.linked_call,
-            "created_at": a.created_at.isoformat() if a.created_at else None
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+            "client_id": a.client_id
         } for a in pagination.items],
         "total": pagination.total, "pages": pagination.pages
     }), 200
@@ -409,8 +411,28 @@ def update_appointment(id):
             return jsonify({"error": "Invalid date format"}), 400
             
     db.session.commit()
-    db.session.commit()
     return jsonify({"message": "Agenda actualizada con éxito"}), 200
+
+@bp.route('/appointments/<int:id>', methods=['GET'])
+@login_required
+def get_appointment(id):
+    if current_user.role not in ['closer', 'admin', 'setter']:
+        return jsonify({"message": "Forbidden"}), 403
+    
+    appt = Appointment.query.get_or_404(id)
+    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    return jsonify({
+        "id": appt.id,
+        "lead_name": appt.client.full_name if appt.client else 'Sin Nombre',
+        "client_id": appt.client_id,
+        "start_time": appt.start_time.isoformat(),
+        "last_stage": appt.last_stage,
+        "result": appt.result,
+        "phone": appt.client.phone if appt.client else '',
+        "type": appt.origin or 'Manual'
+    }), 200
 
 @bp.route('/appointments', methods=['POST'])
 @login_required
@@ -438,8 +460,15 @@ def create_appointment():
             
         start_time = datetime.fromisoformat(start_time_str.replace('Z', ''))
         
+        # Enforce 4-day limit for non-admin users
+        if current_user.role != 'admin':
+            today = date.today()
+            max_date = today + timedelta(days=4)
+            if start_time.date() > max_date:
+                return jsonify({"error": "Solo puedes agendar para los próximos 4 días"}), 400
+
         # BookingService create_appointment signature: (client_id, closer_id, start_time_utc, origin='manual', setter_id=None)
-        setter_id = current_user.id if current_user.role == 'setter' else None
+        setter_id = current_user.id if current_user.role in ['setter', 'closer'] else None
         
         appt = BookingService.create_appointment(
             client_id=lead_id,
@@ -473,7 +502,12 @@ def create_appointment():
 @bp.route('/slots', methods=['GET'])
 @login_required
 def get_slots():
-    slots = CloserService.get_available_slots(current_user.id)
+    days = request.args.get('days', 4, type=int)
+    # Enforce a maximum of 4 days for non-admin users if requested
+    if current_user.role != 'admin' and days > 4:
+        days = 4
+        
+    slots = CloserService.get_available_slots(current_user.id, days=days)
     return jsonify(slots), 200
 
 @bp.route('/appointments/<int:id>/process', methods=['POST'])
@@ -529,7 +563,7 @@ def get_availability():
         "end": a.end_time.strftime('%H:%M')
     } for a in avails]), 200
 
-@bp.route('/leads/<int:id>/comments', methods=['GET'])
+@bp.route('/leads/<int:id>/comments', methods=['GET'], strict_slashes=False)
 @login_required
 def get_lead_comments(id):
     if current_user.role not in ['closer', 'admin', 'setter']:
@@ -543,7 +577,7 @@ def get_lead_comments(id):
         "created_at": c.created_at.isoformat()
     } for c in comments]), 200
 
-@bp.route('/leads/<int:id>/comments', methods=['POST'])
+@bp.route('/leads/<int:id>/comments', methods=['POST'], strict_slashes=False)
 @login_required
 def add_lead_comment(id):
     if current_user.role not in ['closer', 'admin', 'setter']:
@@ -646,7 +680,8 @@ def get_kanban_data():
             "phone": a.client.phone if a.client else "",
             "start_time": a.start_time.isoformat(),
             "result": a.result,
-            "linked_call": a.linked_call
+            "linked_call": a.linked_call,
+            "client_id": a.client_id
         })
     
     return jsonify({
@@ -756,7 +791,9 @@ def get_notifications():
                 "content": n.content,
                 "created_at": n.created_at.isoformat(),
                 "is_read": False, # Always false since we filtered read ones out
-                "related_users": n.related_users
+                "related_users": n.related_users,
+                "associated_id": n.associated_id,
+                "associated_type": n.associated_type
             })
             
     return jsonify(filtered), 200
@@ -798,3 +835,31 @@ def get_booking_links():
         })
     
     return jsonify(links), 200
+
+@bp.route('/clients/<int:client_id>', methods=['GET'])
+@login_required
+def get_client_details(client_id):
+    if current_user.role not in ['closer', 'admin', 'setter']:
+        return jsonify({"message": "Forbidden"}), 403
+
+    client = Client.query.get_or_404(client_id)
+    
+    # Fetch Survey Answers
+    answers_query = db.session.query(SurveyAnswer, SurveyQuestion).join(SurveyQuestion).filter(SurveyAnswer.client_id == client_id).all()
+    
+    formatted_answers = []
+    for answer, question in answers_query:
+        formatted_answers.append({
+            "question": question.text,
+            "answer": answer.answer,
+            "date": answer.appointment.created_at.isoformat() if answer.appointment else None 
+        })
+
+    return jsonify({
+        "id": client.id,
+        "full_name": client.full_name,
+        "email": client.email,
+        "phone": client.phone,
+        "instagram": client.instagram,
+        "survey_answers": formatted_answers
+    })

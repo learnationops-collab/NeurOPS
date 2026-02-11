@@ -265,82 +265,8 @@ class CloserService:
         
         db.session.commit()
         
-        # Webhook Trigger Logic
-        trigger_webhook = data.get('trigger_webhook', False)
-        if trigger_webhook:
-            try:
-                from app.models import Integration
-                sales_webhook = CloserService._get_sales_integration()
-                if sales_webhook:
-                    mode = data.get('webhook_mode', sales_webhook.active_env or 'dev')
-                    url = sales_webhook.url_prod if mode == 'prod' else sales_webhook.url_dev
-                    
-                    if url:
-                        import requests
-                        
-                        # Calculate fees/net
-                        pm = PaymentMethod.query.get(payment.payment_method_id)
-                        fee_percent = pm.commission_percent if pm else 0.0
-                        fee_fixed = pm.commission_fixed if pm else 0.0
-                        
-                        gross_amount = float(payment.amount)
-                        fees = (gross_amount * (fee_percent / 100.0)) + fee_fixed
-                        net_cash = gross_amount - fees
-                        
-                        # Map payment types to friendly names
-                        type_labels = {
-                            'full': 'Pago Completo',
-                            'first_payment': 'Primer Pago',
-                            'down_payment': 'Seña',
-                            'installment': 'Cuota',
-                            'renewal': 'Renovación'
-                        }
-                        
-                        client_name = enrollment.client.full_name or "Sin Nombre"
-                        first_name = client_name.split(' ')[0] if client_name else ""
-                        
-                        raw_payload = {
-                            "cliente": client_name,
-                            "first_name": first_name,
-                            "telefono": enrollment.client.phone,
-                            "email": enrollment.client.email,
-                            "closer": User.query.get(closer_id).username,
-                            "monto": gross_amount,
-                            "cash_collect": round(net_cash, 2),
-                            "tipo_pago": type_labels.get(payment.payment_type, payment.payment_type),
-                            "programa": enrollment.program.name if enrollment.program else "Desconocido",
-                            "metodo_pago": pm.name if pm else "N/A",
-                            "fecha": datetime.now().isoformat(),
-                            "transaction_id": "",
-                            "comision": round(fees, 2),
-                            "valor_programa": enrollment.program.price if enrollment.program else 0.0
-                        }
-                        
-                        # Apply Configuration
-                        config = sales_webhook.payload_config or {}
-                        # If config is empty, send everything (default behavior)
-                        if not config:
-                             payload = raw_payload
-                        else:
-                             payload = {}
-                             for key, val in raw_payload.items():
-                                 # Config structure expected: { key: { enabled: bool, label: string } } or simple { key: bool }
-                                 # Let's assume simple { key: bool } for enabled status for now, or check for existence
-                                 if config.get(key, True): # Default to true if not specified? Or strict? 
-                                     # Let's go with: if config exists, only send keys that are true.
-                                     # Actually, better: if config is populated, only send keys present and true.
-                                     # But for backward compat/init, if empty send all.
-                                     
-                                     if config.get(key):
-                                         payload[key] = val
-
-                        # Fire and forget (or log error)
-                        try:
-                            requests.post(url, json=payload, timeout=5)
-                        except Exception as e:
-                            print(f"[Webhook Error] Failed to send webhook to {url}: {e}")
-            except Exception as e:
-                print(f"[Webhook Integration Error] {e}")
+        # New Sale Automation (Discord + WhatsApp)
+        CloserService.trigger_sale_automation(enrollment, payment)
 
         return enrollment
 
@@ -348,11 +274,123 @@ class CloserService:
     def _get_sales_integration():
         from app.models import Integration
         # Try strict key match first
-        webhook = Integration.query.filter_by(key='sales_webhook').first()
+        webhook = Integration.query.filter_by(key='sale_wins').first()
         if not webhook:
-            # Fallback: Try name match (case insensitive-ish) or just 'Ventas'
-            webhook = Integration.query.filter(Integration.name.ilike('Ventas%')).first()
+            # Fallback to general sales webhook if specific wins one not found
+            webhook = Integration.query.filter_by(key='sales_webhook').first()
+            if not webhook:
+                webhook = Integration.query.filter(Integration.name.ilike('Ventas%')).first()
         return webhook
+
+    @staticmethod
+    def trigger_sale_automation(enrollment, payment):
+        """
+        Handles Discord Wins, Onboarding and WhatsApp confirmations for new sales.
+        """
+        try:
+            from app.models import Enrollment, Integration, User, PaymentMethod
+            from app.services.image_service import ImageService
+            from app.services.two_chat_service import TwoChatService
+            import requests
+            import json
+
+            client = enrollment.client
+            closer = enrollment.closer_rel
+            program = enrollment.program
+            pm = payment.method or PaymentMethod.query.get(payment.payment_method_id)
+            
+            # Map payment types to friendly names
+            type_labels = {
+                'full': 'Pago Completo',
+                'first_payment': 'Primer Pago',
+                'down_payment': 'Seña',
+                'installment': 'Cuota',
+                'renewal': 'Renovación'
+            }
+            payment_type_label = type_labels.get(payment.payment_type, payment.payment_type)
+
+            # 1. DISCORD WINS (Sales Channel)
+            try:
+                wins_webhook = Integration.query.filter_by(key='sale_wins').first()
+                if wins_webhook:
+                    url = wins_webhook.url_prod if wins_webhook.active_env == 'prod' else wins_webhook.url_dev
+                    if url:
+                        # Todays sales count
+                        today_start = datetime.combine(datetime.utcnow().date(), time.min)
+                        todays_count = Enrollment.query.filter(Enrollment.enrollment_date >= today_start).count()
+
+                        img_data = {
+                            "client_name": client.full_name or "Sin Nombre",
+                            "closer_name": closer.username if closer else "N/A",
+                            "program_name": program.name if program else "N/A",
+                            "amount": str(payment.amount),
+                            "payment_type": payment_type_label,
+                            "payment_method": pm.name if pm else "N/A",
+                            "count": todays_count
+                        }
+                        img_buffer = ImageService.generate_sale_card(img_data)
+                        
+                        files = {'file': ('sale_card.png', img_buffer, 'image/png')}
+                        json_payload = {
+                            "content": f"🏆 **¡NUEVA VENTA!**\nCloser: **{closer.username if closer else 'N/A'}** | Programa: **{program.name if program else 'N/A'}**",
+                            "embeds": [{
+                                "color": 16766720, # Gold
+                                "image": {"url": "attachment://sale_card.png"}
+                            }]
+                        }
+                        requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
+            except Exception as disc_err:
+                print(f"[Sale Auto Discord Wins Error] {disc_err}")
+
+            # 2. DISCORD ONBOARDING (fulfillment Channel)
+            try:
+                onboarding_webhook = Integration.query.filter_by(key='sale_onboarding').first()
+                if onboarding_webhook:
+                    url = onboarding_webhook.url_prod if onboarding_webhook.active_env == 'prod' else onboarding_webhook.url_dev
+                    if url:
+                        onboarding_payload = {
+                            "content": f"📦 **NUEVO ONBOARDING PENDIENTE**",
+                            "embeds": [{
+                                "title": "Detalles de Inscripción",
+                                "color": 3447003, # Deep Blue
+                                "fields": [
+                                    {"name": "Cliente", "value": client.full_name or "N/A", "inline": True},
+                                    {"name": "Programa", "value": program.name if program else "N/A", "inline": True},
+                                    {"name": "Email", "value": client.email or "N/A", "inline": False},
+                                    {"name": "Instagram", "value": client.instagram or "N/A", "inline": True},
+                                    {"name": "Teléfono", "value": client.phone or "N/A", "inline": True},
+                                    {"name": "Closer", "value": closer.username if closer else "N/A", "inline": True}
+                                ],
+                                "timestamp": datetime.utcnow().isoformat()
+                            }]
+                        }
+                        requests.post(url, json=onboarding_payload, timeout=5)
+            except Exception as onb_err:
+                print(f"[Sale Auto Discord Onboarding Error] {onb_err}")
+
+            # 3. WHATSAPP (Client Confirmation)
+            try:
+                JEAN_CARLO_NUMBER = "+525620873819"
+                first_name = client.full_name.split(' ')[0] if client.full_name else "Inversionista"
+                
+                wa_message = (
+                    f"🏆 ¡Felicidades {first_name}! 🚀\n\n"
+                    f"Te confirmo que hemos recibido con éxito tu pago de **${payment.amount}** "
+                    f"por concepto de: *{payment_type_label}* para el programa **{program.name if program else 'NeurOPS'}**.\n\n"
+                    f"¡Bienvenido/a a la familia! En breve el equipo de onboarding se pondrá en contacto contigo para los siguientes pasos.\n\n"
+                    f"¡Vamos con todo! 🔥"
+                )
+                
+                TwoChatService.send_message(
+                    to_number=client.phone,
+                    text=wa_message,
+                    from_number=JEAN_CARLO_NUMBER
+                )
+            except Exception as wa_err:
+                print(f"[Sale Auto WhatsApp Error] {wa_err}")
+
+        except Exception as global_err:
+            print(f"[Sale Automation Global Error] {global_err}")
 
     @staticmethod
     def get_sale_metadata(closer_id):
@@ -406,6 +444,9 @@ class CloserService:
         # - "No Show" -> status 'no_show'
         # - "Reprogramada" -> Old appt becomes 'reprogrammed', new one created as 'Primera agenda'
         # - "Primera Agenda" -> Old appt becomes 'completed', new one created as 'Segunda agenda'
+
+        if last_stage:
+            appt.last_stage = last_stage
 
         print(f"[DEBUG] Processing Agenda {appt_id}, Status: {new_status}")
         

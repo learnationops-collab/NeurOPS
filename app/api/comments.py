@@ -5,7 +5,7 @@ from datetime import datetime
 
 bp = Blueprint('comments', __name__)
 
-@bp.route('/', methods=['GET'])
+@bp.route('', methods=['GET'], strict_slashes=False)
 @login_required
 def get_comments():
     comment_type = request.args.get('type')
@@ -21,7 +21,7 @@ def get_comments():
 
     return jsonify([c.to_dict() for c in comments]), 200
 
-@bp.route('/', methods=['POST'])
+@bp.route('', methods=['POST'], strict_slashes=False)
 @login_required
 def add_comment():
     data = request.get_json() or {}

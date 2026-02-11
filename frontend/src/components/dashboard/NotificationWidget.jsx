@@ -3,7 +3,7 @@ import { CheckCircle2, MessageSquare, Send } from 'lucide-react';
 import Badge from '../ui/Badge';
 import Card from '../ui/Card';
 
-const NotificationWidget = ({ notifications, onMarkAsRead }) => {
+const NotificationWidget = ({ notifications, onMarkAsRead, onNotificationClick }) => {
     const unreadCount = notifications.filter(n => !n.is_read).length;
 
     return (
@@ -31,9 +31,10 @@ const NotificationWidget = ({ notifications, onMarkAsRead }) => {
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className={`group p-5 rounded-2xl border transition-all relative overflow-hidden ${n.is_read
-                                        ? 'bg-surface/20 border-base opacity-40 shadow-none'
-                                        : 'bg-surface border-primary/10 shadow-xl shadow-primary/5 hover:border-primary/30'
+                                onClick={() => onNotificationClick?.(n)}
+                                className={`group p-5 rounded-2xl border transition-all relative overflow-hidden cursor-pointer ${n.is_read
+                                    ? 'bg-surface/20 border-base opacity-40 shadow-none'
+                                    : 'bg-surface border-primary/10 shadow-xl shadow-primary/5 hover:border-primary/30'
                                     }`}
                             >
                                 {!n.is_read && (

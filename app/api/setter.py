@@ -33,7 +33,7 @@ def submit_daily_report():
         # En una versión futura podríamos permitir editar, por ahora bloqueamos duplicados
         return jsonify({"message": "Ya has enviado un reporte para esta fecha"}), 400
     
-    # Crear estadísticas fijas
+    # Crear estadísticas fijas (Legacy/Fallback)
     stats = SetterDailyStats(
         setter_id=current_user.id,
         date=report_date,
@@ -47,8 +47,24 @@ def submit_daily_report():
     )
     
     db.session.add(stats)
+    db.session.flush() # Get ID
     
-    # Procesar preguntas dinámicas
+    # Procesar Métricas del Funnel Dinámico
+    from app.models import SetterDailyStageMetric
+    funnel_metrics = data.get('funnel_metrics', [])
+    for metric in funnel_metrics:
+        stage_id = metric.get('stage_id')
+        value = metric.get('value', 0)
+        
+        if stage_id:
+            m = SetterDailyStageMetric(
+                daily_stats_id=stats.id,
+                stage_id=stage_id,
+                value=int(value)
+            )
+            db.session.add(m)
+    
+    # Procesar preguntas dinámicas (Legacy/Extra Questions)
     answers = data.get('answers', [])
     for ans in answers:
         question_id = ans.get('question_id')
@@ -155,8 +171,8 @@ def get_leads():
 def get_stages():
     from app.models import Pipeline, PipelineStage
     
-    # Asumimos que hay un pipeline "General" o tomamos el primero
-    pipeline = Pipeline.query.first()
+    # Fetch 'setter_default' pipeline
+    pipeline = Pipeline.query.filter_by(name='setter_default').first()
     if not pipeline:
         return jsonify([]), 200
         

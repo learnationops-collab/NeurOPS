@@ -17,13 +17,19 @@ import CloserLeadsPage from './pages/closer/leads/LeadsPage';
 import CloserSettingsPage from './pages/closer/settings/SettingsPage';
 import CloserNewSalePage from './pages/closer/records/NewSalePage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
+import SalesAdminDashboard from './pages/sales_admin/dashboard/SalesAdminDashboard';
+import TeamManagement from './pages/sales_admin/team/TeamManagement';
+import SalesSettingsPage from './pages/sales_admin/settings/SalesSettingsPage';
 import SetterDashboard from './pages/setter/dashboard/SetterDashboard';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
+import OperationsDashboard from './pages/operations/dashboard/OperationsDashboard';
+import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
 import BookingPage from './pages/public/BookingPage';
 import BackupPage from './pages/public/BackupPage';
 import RestorePage from './pages/public/RestorePage';
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
+import TeamManagementPage from './pages/admin/team/TeamManagementPage';
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import './index.css';
@@ -39,8 +45,10 @@ const ProtectedRoute = ({ children, roles = [] }) => {
 
   if (roles.length > 0 && !roles.includes(user.role)) {
     // Redirigir a su dashboard correspondiente si intenta entrar a ruta ajena
-    if (user.role === 'admin' || user.role === 'operator') return <Navigate to="/admin/dashboard" />;
+    if (user.role === 'admin') return <Navigate to="/admin/dashboard" />;
+    if (user.role === 'operator') return <Navigate to="/ops/dashboard" />;
     if (user.role === 'setter') return <Navigate to="/setter/dashboard" />;
+    if (user.role === 'sales_admin') return <Navigate to="/sales-admin/dashboard" />;
     return <Navigate to="/closer/dashboard" />;
   }
 
@@ -57,6 +65,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
             {/* Unified Booking Route (Slug handles both general and personal) */}
+            <Route path="/book/:setter_id/:event_slug" element={<BookingPage />} />
             <Route path="/book/:event_slug" element={<BookingPage />} />
             <Route path="/backup" element={<BackupPage />} />
             <Route path="/restore" element={<RestorePage />} />
@@ -66,7 +75,7 @@ function App() {
             <Route
               path="/admin/dashboard"
               element={
-                <ProtectedRoute roles={['admin', 'operator']}>
+                <ProtectedRoute roles={['admin']}>
                   <MainLayout>
                     <AdminDashboard />
                   </MainLayout>
@@ -124,21 +133,11 @@ function App() {
               }
             />
             <Route
-              path="/admin/database"
+              path="/admin/team"
               element={
-                <ProtectedRoute roles={['admin', 'operator']}>
+                <ProtectedRoute roles={['admin']}>
                   <MainLayout>
-                    <DatabasePage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/operations"
-              element={
-                <ProtectedRoute roles={['admin', 'operator']}>
-                  <MainLayout>
-                    <OperationsPage />
+                    <TeamManagementPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -146,7 +145,7 @@ function App() {
             <Route
               path="/admin/style-guide"
               element={
-                <ProtectedRoute roles={['admin', 'operator']}>
+                <ProtectedRoute roles={['admin']}>
                   <MainLayout>
                     <StyleGuidePage />
                   </MainLayout>
@@ -157,7 +156,7 @@ function App() {
             <Route
               path="/admin/settings"
               element={
-                <ProtectedRoute roles={['admin', 'operator']}>
+                <ProtectedRoute roles={['admin']}>
                   <MainLayout>
                     <SettingsPage />
                   </MainLayout>
@@ -245,6 +244,70 @@ function App() {
                 <ProtectedRoute roles={['setter']}>
                   <MainLayout>
                     <SetterStatisticsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Protected Operations Routes */}
+            <Route
+              path="/ops/dashboard"
+              element={
+                <ProtectedRoute roles={['operator']}>
+                  <MainLayout>
+                    <OperationsDashboard />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ops/database"
+              element={
+                <ProtectedRoute roles={['operator']}>
+                  <MainLayout>
+                    <DatabasePage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ops/settings"
+              element={
+                <ProtectedRoute roles={['operator']}>
+                  <MainLayout>
+                    <OperationsSettingsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Protected Sales Admin Routes */}
+            <Route
+              path="/sales-admin/dashboard"
+              element={
+                <ProtectedRoute roles={['sales_admin']}>
+                  <MainLayout>
+                    <SalesAdminDashboard />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sales-admin/team"
+              element={
+                <ProtectedRoute roles={['sales_admin']}>
+                  <MainLayout>
+                    <TeamManagement />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sales-admin/settings"
+              element={
+                <ProtectedRoute roles={['sales_admin']}>
+                  <MainLayout>
+                    <SalesSettingsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

@@ -75,15 +75,15 @@ const BackgroundPicker = () => {
         <div className="space-y-12">
             <div className="flex gap-4 p-1.5 bg-main/50 rounded-2xl border border-base max-w-fit">
                 {[
-                    { id: 'theme', label: 'TEMA ORIGINAL', icon: Palette },
-                    { id: 'stock', label: 'GALERÍA STOCK', icon: Layers },
-                    { id: 'custom', label: 'PERSONALIZADO', icon: Plus }
+                    { id: 'theme', label: 'Tema Original', icon: Palette },
+                    { id: 'stock', label: 'Galería Stock', icon: Layers },
+                    { id: 'custom', label: 'Personalizado', icon: Plus }
                 ].map(type => (
                     <button
                         key={type.id}
                         onClick={() => setBackgroundType(type.id)}
                         className={`
-                            px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2
+                            px-6 py-3 rounded-xl text-[9px] font-black tracking-widest transition-all flex items-center gap-2
                             ${backgroundType === type.id ? 'bg-primary text-white shadow-lg' : 'text-muted hover:text-base'}
                         `}
                     >
@@ -97,7 +97,7 @@ const BackgroundPicker = () => {
                 {backgroundType === 'theme' && (
                     <div className="p-10 border border-dashed border-base rounded-[3rem] text-center space-y-4">
                         <Info className="w-10 h-10 text-muted mx-auto" />
-                        <p className="text-muted font-black uppercase tracking-widest text-[10px]">Utilizando los colores definidos por el tema actual</p>
+                        <p className="text-muted font-black tracking-widest text-[10px]">Utilizando los colores definidos por el tema actual</p>
                     </div>
                 )}
 
@@ -114,7 +114,7 @@ const BackgroundPicker = () => {
                             >
                                 <img src={img.url} alt={img.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                                    <p className="text-[8px] font-black text-white uppercase tracking-tighter">{img.name}</p>
+                                    <p className="text-[8px] font-black text-white tracking-tighter">{img.name}</p>
                                 </div>
                                 {stockBackground === img.url && (
                                     <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
@@ -135,7 +135,7 @@ const BackgroundPicker = () => {
                             <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all shadow-xl">
                                 <Plus size={32} />
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted group-hover:text-base">Subir Imagen Nueva</span>
+                            <span className="text-[10px] font-black tracking-[0.2em] text-muted group-hover:text-base">Subir Imagen Nueva</span>
                         </label>
 
                         {customBackground && (
@@ -304,7 +304,7 @@ const CloserSettingsPage = () => {
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-main gap-6">
             <Loader2 className="w-16 h-16 text-primary animate-spin" />
-            <p className="text-muted font-black uppercase tracking-[0.3em] text-[10px]">Cargando...</p>
+            <p className="text-muted font-black tracking-[0.3em] text-[10px]">Cargando...</p>
         </div>
     );
 
@@ -312,7 +312,7 @@ const CloserSettingsPage = () => {
         <div className="flex flex-col items-center justify-center min-h-screen bg-main gap-6">
             <Card variant="surface" className="p-10 text-center space-y-6">
                 <AlertCircle className="w-12 h-12 text-accent mx-auto" />
-                <h3 className="text-xl font-black text-base uppercase">{error}</h3>
+                <h3 className="text-xl font-black text-base">{error}</h3>
                 <Button onClick={fetchInitialData} variant="primary">Reintentar</Button>
             </Card>
         </div>
@@ -324,15 +324,15 @@ const CloserSettingsPage = () => {
                 <div className="space-y-4">
                     <div className="flex items-center gap-4">
                         <div className="w-3 h-10 bg-primary rounded-full"></div>
-                        <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none">Settings Central</h1>
+                        <h1 className="text-5xl font-black text-base tracking-tighter leading-none">Settings Central</h1>
                     </div>
-                    <p className="text-muted font-bold uppercase text-[10px] tracking-[0.45em] ml-7">Optimiza tu flujo</p>
+                    <p className="text-muted font-bold text-[10px] tracking-[0.45em] ml-7">Optimiza tu flujo</p>
                 </div>
 
                 <div className="flex bg-surface p-1.5 rounded-[2rem] border border-base backdrop-blur-3xl shadow-2xl">
-                    <button onClick={() => setActiveTab('availability')} className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'availability' ? 'bg-primary text-white' : 'text-muted'}`}>Disponibilidad</button>
-                    <button onClick={() => setActiveTab('agendas')} className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'agendas' ? 'bg-primary text-white' : 'text-muted'}`}>Agendas</button>
-                    <button onClick={() => setActiveTab('appearance')} className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'appearance' ? 'bg-primary text-white' : 'text-muted'}`}>Apariencia</button>
+                    <button onClick={() => setActiveTab('availability')} className={`px-10 py-4 rounded-2xl text-[11px] font-black tracking-widest transition-all ${activeTab === 'availability' ? 'bg-primary text-white' : 'text-muted'}`}>Disponibilidad</button>
+                    <button onClick={() => setActiveTab('agendas')} className={`px-10 py-4 rounded-2xl text-[11px] font-black tracking-widest transition-all ${activeTab === 'agendas' ? 'bg-primary text-white' : 'text-muted'}`}>Agendas</button>
+                    <button onClick={() => setActiveTab('appearance')} className={`px-10 py-4 rounded-2xl text-[11px] font-black tracking-widest transition-all ${activeTab === 'appearance' ? 'bg-primary text-white' : 'text-muted'}`}>Apariencia</button>
                 </div>
             </header>
 
@@ -345,14 +345,14 @@ const CloserSettingsPage = () => {
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-3">
                                         <Zap className="text-primary fill-primary/20" size={24} />
-                                        <h3 className="text-2xl font-black uppercase italic tracking-tighter">Bloque de Trabajo</h3>
+                                        <h3 className="text-2xl font-black tracking-tighter">Bloque de Trabajo</h3>
                                     </div>
-                                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest pl-9">Configura tu rango y llena los horarios en un clic</p>
+                                    <p className="text-[10px] text-muted font-bold tracking-widest pl-9">Configura tu rango y llena los horarios en un clic</p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-6">
                                     <div className="flex items-center gap-3 bg-main p-1.5 rounded-2xl border border-base shadow-inner">
                                         <div className="flex items-center gap-2 px-4">
-                                            <span className="text-[8px] font-black uppercase text-muted">VISTA:</span>
+                                            <span className="text-[8px] font-black text-muted">VISTA:</span>
                                             <input
                                                 type="time"
                                                 value={workBlock.start}
@@ -362,7 +362,7 @@ const CloserSettingsPage = () => {
                                         </div>
                                         <div className="w-px h-8 bg-base"></div>
                                         <div className="flex items-center gap-2 px-4">
-                                            <span className="text-[8px] font-black uppercase text-muted">HASTA:</span>
+                                            <span className="text-[8px] font-black text-muted">HASTA:</span>
                                             <input
                                                 type="time"
                                                 value={workBlock.end}
@@ -374,7 +374,7 @@ const CloserSettingsPage = () => {
                                     <Button
                                         onClick={handleFillBlock}
                                         variant="primary"
-                                        className="h-[52px] px-8 rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all font-black uppercase italic tracking-wider"
+                                        className="h-[52px] px-8 rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all font-black tracking-wider"
                                     >
                                         Llenar Horarios
                                     </Button>
@@ -386,7 +386,7 @@ const CloserSettingsPage = () => {
                             <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
                                 <div className="flex items-center gap-4">
                                     <div className="w-2 h-8 bg-primary rounded-full"></div>
-                                    <h3 className="text-3xl font-black uppercase italic tracking-tighter">Configuración Semanal</h3>
+                                    <h3 className="text-3xl font-black tracking-tighter">Configuración Semanal</h3>
                                 </div>
                                 <div className="flex gap-4">
                                     <Button onClick={handleResetWeekly} variant="ghost" className="text-rose-500 font-black h-14 px-8 rounded-2xl hover:bg-rose-500/10">Limpiar Todo</Button>
@@ -398,7 +398,7 @@ const CloserSettingsPage = () => {
                                     <div className="p-5 flex items-center justify-center">
                                         <Clock size={16} className="text-muted" />
                                     </div>
-                                    {DAYS_ES.map(d => <div key={d} className="p-5 text-center font-black text-[11px] uppercase tracking-widest text-muted">{d}</div>)}
+                                    {DAYS_ES.map(d => <div key={d} className="p-5 text-center font-black text-[11px] tracking-widest text-muted">{d}</div>)}
                                 </div>
                                 <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
                                     {filteredSlots.length > 0 ? filteredSlots.map(t => (
@@ -423,7 +423,7 @@ const CloserSettingsPage = () => {
                                     )) : (
                                         <div className="p-20 text-center space-y-4">
                                             <AlertCircle className="w-12 h-12 text-muted mx-auto" />
-                                            <p className="text-muted font-black uppercase tracking-widest text-xs">No hay slots en este rango</p>
+                                            <p className="text-muted font-black tracking-widest text-xs">No hay slots en este rango</p>
                                         </div>
                                     )}
                                 </div>
@@ -437,10 +437,10 @@ const CloserSettingsPage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                             {events.map(ev => (
                                 <Card key={ev.id} variant="surface" className="p-8 space-y-6">
-                                    <h3 className="text-2xl font-black uppercase tracking-tighter italic">{ev.name}</h3>
+                                    <h3 className="text-2xl font-black tracking-tighter">{ev.name}</h3>
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-black uppercase text-muted">Duración:</span>
+                                            <span className="text-[10px] font-black text-muted">Duración:</span>
                                             <span className="text-primary font-black">{ev.duration_minutes}m</span>
                                         </div>
                                         <input type="range" min="15" max="120" step="15" value={ev.duration_minutes} onChange={e => handleUpdateEvent(ev.id, 'duration_minutes', e.target.value)} className="w-full accent-primary" />
@@ -453,7 +453,7 @@ const CloserSettingsPage = () => {
                         </div>
 
                         <Card variant="surface" className="p-10">
-                            <h3 className="text-3xl font-black italic uppercase mb-8">Integraciones</h3>
+                            <h3 className="text-3xl font-black mb-8">Integraciones</h3>
                             <GoogleCalendarSettings />
                         </Card>
                     </div>
@@ -462,25 +462,16 @@ const CloserSettingsPage = () => {
                 {activeTab === 'appearance' && (
                     <div className="space-y-12">
                         <Card variant="surface" className="p-10 border-base shadow-2xl">
-                            <h3 className="text-3xl font-black italic uppercase mb-8">Temas del Sistema</h3>
+                            <h3 className="text-3xl font-black mb-8">Temas del Sistema</h3>
                             <ThemeSelector />
                         </Card>
                         <Card variant="surface" className="p-10 border-base shadow-2xl">
-                            <h3 className="text-3xl font-black italic uppercase mb-8">Fondo de Pantalla</h3>
+                            <h3 className="text-3xl font-black mb-8">Fondo de Pantalla</h3>
                             <BackgroundPicker />
                         </Card>
                     </div>
                 )}
             </main>
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-                .animate-in { animation: initial 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
-                @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-                .fade-in { animation-name: fade-in; }
-            `}} />
         </div>
     );
 };

@@ -23,8 +23,8 @@ import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 
-import DateRangeFilter from '../../../components/DateRangeFilter';
-import MultiSelectFilter from '../../../components/MultiSelectFilter';
+import DateRangeFilter from '../../../components/shared/DateRangeFilter';
+import MultiSelectFilter from '../../../components/shared/MultiSelectFilter';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
 
 const DatabasePage = () => {

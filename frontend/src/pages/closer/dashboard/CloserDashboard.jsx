@@ -69,6 +69,7 @@ const CloserDashboard = () => {
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [isQuickSaleOpen, setIsQuickSaleOpen] = useState(false);
     const [isQuickApptOpen, setIsQuickApptOpen] = useState(false);
+    const [showSavedToast, setShowSavedToast] = useState(false);
 
     useEffect(() => {
         fetchAll();
@@ -174,6 +175,28 @@ const CloserDashboard = () => {
         }
     };
 
+    const handleNotificationClick = async (noti) => {
+        if (noti.associated_type === 'appointment' && noti.associated_id) {
+            try {
+                const res = await api.get(`/closer/appointments/${noti.associated_id}`);
+                setSelectedAgenda(res.data);
+                setIsAgendaModalOpen(true);
+            } catch (err) {
+                console.error("Error fetching appointment for notification", err);
+            }
+        }
+        // Mark as read when clicked if not read
+        if (!noti.is_read) {
+            handleMarkAsRead(noti.id);
+        }
+    };
+
+    const handleAgendaClick = (appt) => {
+        // Here appt is already available from dashboard data
+        setSelectedAgenda(appt);
+        setIsAgendaModalOpen(true);
+    };
+
     const handleCopyLink = (link) => {
         if (!link) return;
         navigator.clipboard.writeText(link);
@@ -204,12 +227,21 @@ const CloserDashboard = () => {
 
     return (
         <div className="h-screen overflow-hidden relative bg-main">
-            <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 duration-300">
-                <div className="bg-emerald-500 text-black px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl font-black uppercase text-[10px] tracking-widest">
-                    <CheckCircle2 size={18} />
-                    Reporte guardado
-                </div>
-            </div>
+            <AnimatePresence>
+                {showSavedToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: -20, x: '-50%' }}
+                        className="fixed top-8 left-1/2 z-50"
+                    >
+                        <div className="glass-panel text-text-main px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl font-black text-[10px] tracking-widest border border-emerald-500/20 bg-emerald-500/10 backdrop-blur-md">
+                            <CheckCircle2 size={18} className="text-emerald-500" />
+                            Reporte guardado
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <motion.div
                 className="absolute top-0 left-0 w-full h-[200%]"
@@ -224,26 +256,26 @@ const CloserDashboard = () => {
                     <div className="w-full max-w-6xl space-y-12 py-12">
                         <header className="flex justify-between items-center border-b border-base pb-8 mb-4">
                             <div className="space-y-1 text-left">
-                                <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none">Dashboard</h1>
-                                <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Acceso rápido y notificaciones</p>
+                                <h1 className="text-5xl font-black text-base tracking-tighter leading-none">Dashboard</h1>
+                                <p className="text-muted font-medium text-[10px] tracking-[0.2em]">Acceso rápido y notificaciones</p>
                             </div>
 
                             <div className="flex items-center gap-4">
                                 <Button
                                     onClick={() => setIsQuickApptOpen(true)}
                                     variant="ghost"
-                                    className="h-12 px-6 rounded-xl bg-surface hover:bg-surface-hover border border-base text-muted font-black uppercase tracking-widest text-[10px] gap-2"
+                                    className="h-12 px-6 rounded-xl bg-surface hover:bg-surface-hover border border-base text-muted font-black tracking-widest text-[10px] gap-2"
                                     icon={Calendar}
                                 >
-                                    Nueva Agenda
+                                    Nueva agenda
                                 </Button>
                                 <Button
                                     onClick={() => setIsQuickSaleOpen(true)}
                                     variant="primary"
-                                    className="h-12 px-6 rounded-xl shadow-lg shadow-primary/20 text-[10px] font-black uppercase tracking-widest gap-2"
+                                    className="h-12 px-6 rounded-xl shadow-lg shadow-primary/20 text-[10px] font-black tracking-widest gap-2"
                                     icon={DollarSign}
                                 >
-                                    Nueva Venta
+                                    Nueva venta
                                 </Button>
                             </div>
                         </header>
@@ -261,6 +293,12 @@ const CloserDashboard = () => {
                                 <NotificationWidget
                                     notifications={data.notifications || []}
                                     onMarkAsRead={handleMarkAsRead}
+                                    onNotificationClick={handleNotificationClick}
+                                    classNames={{
+                                        container: "glass-panel p-6 border-base",
+                                        title: "text-lg font-black tracking-tight mb-4",
+                                        list: "space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar"
+                                    }}
                                 />
                             </div>
                         </div>
@@ -270,7 +308,7 @@ const CloserDashboard = () => {
                                 onClick={() => setActiveSection(1)}
                                 className="group flex flex-col items-center gap-2 text-muted hover:text-primary transition-all animate-bounce focus:outline-none"
                             >
-                                <span className="text-[8px] font-black uppercase tracking-widest">Ir a Reporte Diario</span>
+                                <span className="text-[8px] font-black tracking-widest">Ir a reporte diario</span>
                                 <div className="w-px h-8 bg-gradient-to-b from-muted group-hover:from-primary text-primary" />
                             </button>
                         </div>
@@ -291,18 +329,18 @@ const CloserDashboard = () => {
                                     <ArrowUpRight className="-rotate-90" size={20} />
                                 </button>
                                 <div>
-                                    <h2 className="text-4xl font-black italic uppercase tracking-tighter text-base">Resumen Diario</h2>
-                                    <p className="text-[10px] font-bold text-muted uppercase tracking-widest mt-1">Reporte y KPIs de hoy</p>
+                                    <h2 className="text-4xl font-black tracking-tighter text-base">Resumen diario</h2>
+                                    <p className="text-[10px] font-bold text-muted tracking-widest mt-1">Reporte y KPIs de hoy</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-8">
                                 <div className="text-right">
-                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest italic">Cierre Mes</p>
-                                    <p className="text-2xl font-black text-primary italic leading-none mt-1">{data.rates.closing_month?.toFixed(1)}%</p>
+                                    <p className="text-[10px] font-black text-muted tracking-widest">Cierre mes</p>
+                                    <p className="text-2xl font-black text-primary leading-none mt-1">{data.rates.closing_month?.toFixed(1)}%</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest italic">Comisiones</p>
-                                    <p className="text-2xl font-black text-secondary italic leading-none mt-1"> ${data.commission.month?.toLocaleString()}</p>
+                                    <p className="text-[10px] font-black text-muted tracking-widest">Comisiones</p>
+                                    <p className="text-2xl font-black text-secondary leading-none mt-1"> ${data.commission.month?.toLocaleString()}</p>
                                 </div>
                             </div>
                         </header>
@@ -315,7 +353,7 @@ const CloserDashboard = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             {data.report_questions?.map(q => (
                                                 <div key={q.id} className="space-y-3">
-                                                    <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">{q.text}</label>
+                                                    <label className="text-[9px] font-black text-muted tracking-widest ml-1">{q.text}</label>
                                                     <input
                                                         type={q.type === 'number' ? 'number' : 'text'}
                                                         className="w-full px-6 py-5 bg-main border border-base rounded-2xl text-base outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/20"
@@ -329,9 +367,9 @@ const CloserDashboard = () => {
                                         <Button
                                             type="submit"
                                             loading={submitting}
-                                            className="w-full h-16 text-xs font-black tracking-widest uppercase shadow-xl shadow-primary/20 bg-primary text-white"
+                                            className="w-full h-16 text-xs font-black tracking-widest shadow-xl shadow-primary/20 bg-primary text-white"
                                         >
-                                            Sincronizar Reporte
+                                            Sincronizar reporte
                                         </Button>
                                     </form>
                                 </Card>
@@ -341,8 +379,8 @@ const CloserDashboard = () => {
                             <div className="space-y-6">
                                 <Card variant="surface" className="p-8 border-primary/20 bg-primary/5">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary italic">Progreso Hoy</h3>
-                                        <Badge variant="neutral" className="bg-primary text-white font-black italic">{data.progress?.toFixed(0)}%</Badge>
+                                        <h3 className="text-[10px] font-black tracking-widest text-primary">Progreso hoy</h3>
+                                        <Badge variant="neutral" className="bg-primary text-white font-black">{data.progress?.toFixed(0)}%</Badge>
                                     </div>
                                     <div className="h-3 w-full bg-main rounded-full overflow-hidden border border-base shadow-inner">
                                         <motion.div
@@ -355,42 +393,46 @@ const CloserDashboard = () => {
                                 </Card>
 
                                 <Card variant="surface" className="p-8">
-                                    <h3 className="text-[10px] font-black uppercase tracking-widest mb-6 border-b border-base pb-3">Agendas Hoy</h3>
+                                    <h3 className="text-[10px] font-black tracking-widest mb-6 border-b border-base pb-3">Agendas hoy</h3>
                                     <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                                         {data.agendas_today?.length > 0 ? data.agendas_today.map(a => (
-                                            <div key={a.id} className="flex items-center justify-between p-4 bg-main/50 rounded-2xl border border-base group hover:border-primary/30 transition-all">
+                                            <div
+                                                key={a.id}
+                                                onClick={() => handleAgendaClick(a)}
+                                                className="flex items-center justify-between p-4 bg-main/50 rounded-2xl border border-base group hover:border-primary/30 transition-all cursor-pointer"
+                                            >
                                                 <div className="space-y-1">
-                                                    <p className="text-[11px] font-black italic text-main">{a.lead_name}</p>
-                                                    <div className="flex items-center gap-2 text-[8px] font-bold text-muted uppercase tracking-tighter">
+                                                    <p className="text-[11px] font-black text-main">{a.lead_name}</p>
+                                                    <div className="flex items-center gap-2 text-[8px] font-bold text-muted tracking-tighter">
                                                         <Clock size={10} className="text-primary" />
                                                         {new Date(a.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </div>
                                                 </div>
                                             </div>
                                         )) : (
-                                            <div className="text-center py-8 opacity-30 text-[9px] font-black uppercase tracking-widest">No hay agendas hoy</div>
+                                            <div className="text-center py-8 opacity-30 text-[9px] font-black tracking-widest">No hay agendas hoy</div>
                                         )}
                                     </div>
                                 </Card>
 
                                 <Card variant="surface" className="p-8 border-emerald-500/20">
-                                    <h3 className="text-[10px] font-black uppercase tracking-widest mb-6 border-b border-base pb-3 text-emerald-500">Nuevas Ventas</h3>
+                                    <h3 className="text-[10px] font-black tracking-widest mb-6 border-b border-base pb-3 text-emerald-500">Nuevas ventas</h3>
                                     <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                                         {data.sales_today?.length > 0 ? data.sales_today.map(s => (
                                             <div key={s.id} className="flex items-center justify-between p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 group hover:border-emerald-500/30 transition-all">
                                                 <div className="space-y-1">
-                                                    <p className="text-[11px] font-black italic text-main">{s.student_name}</p>
-                                                    <div className="flex items-center gap-2 text-[8px] font-bold text-emerald-600/70 uppercase tracking-tighter">
+                                                    <p className="text-[11px] font-black text-main">{s.student_name}</p>
+                                                    <div className="flex items-center gap-2 text-[8px] font-bold text-emerald-600/70 tracking-tighter">
                                                         <DollarSign size={10} />
                                                         {s.program_name}
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-sm font-black text-emerald-500 italic">${s.amount?.toLocaleString()}</p>
+                                                    <p className="text-sm font-black text-emerald-500">${s.amount?.toLocaleString()}</p>
                                                 </div>
                                             </div>
                                         )) : (
-                                            <div className="text-center py-8 opacity-30 text-[9px] font-black uppercase tracking-widest">Esperando primera venta...</div>
+                                            <div className="text-center py-8 opacity-30 text-[9px] font-black tracking-widest">Esperando primera venta...</div>
                                         )}
                                     </div>
                                 </Card>
@@ -400,6 +442,13 @@ const CloserDashboard = () => {
                     </div>
                 </div>
             </motion.div>
+
+            <AgendaManagerModal
+                isOpen={isAgendaModalOpen}
+                appointment={selectedAgenda}
+                onClose={() => setIsAgendaModalOpen(false)}
+                onSuccess={fetchAll}
+            />
 
             <AddAgendaModal
                 isOpen={isAddAgendaModalOpen}

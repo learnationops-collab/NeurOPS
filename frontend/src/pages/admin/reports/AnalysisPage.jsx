@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import CloserPerformanceReport from '../../../components/CloserPerformanceReport';
-import SetterPerformanceReport from '../../../components/SetterPerformanceReport';
+import CloserPerformanceReport from '../../../components/closer/CloserPerformanceReport';
+import SetterPerformanceReport from '../../../components/setter/SetterPerformanceReport';
 
 const AnalysisPage = ({ defaultTab = 'closers' }) => {
     const [activeTab, setActiveTab] = useState(defaultTab);

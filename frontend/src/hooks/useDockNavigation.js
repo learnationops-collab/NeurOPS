@@ -9,7 +9,8 @@ import {
     ClipboardList,
     TrendingUp,
     Settings,
-    Zap
+    Zap,
+    Ghost
 } from 'lucide-react';
 
 /**
@@ -45,12 +46,24 @@ const useDockNavigation = () => {
                 { id: 'board', icon: LayoutDashboard, label: 'Board', path: '/setter/dashboard' },
                 { id: 'stats', icon: BarChart3, label: 'Stats', path: '/setter/stats' }
             ];
+        } else if (user?.role === 'operator') {
+            return [
+                { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/ops/dashboard' },
+                { id: 'database', icon: Zap, label: 'Base de Datos', path: '/ops/database' },
+                { id: 'settings', icon: Settings, label: 'Ajustes Técnicos', path: '/ops/settings' }
+            ];
+        } else if (user?.role === 'sales_admin') {
+            return [
+                { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/sales-admin/dashboard' },
+                { id: 'team', icon: Users, label: 'Equipo', path: '/sales-admin/team' },
+                { id: 'settings', icon: Settings, label: 'Ajustes', path: '/sales-admin/settings' }
+            ];
         } else if (user?.role === 'admin') {
             return [
                 { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
                 { id: 'leads', icon: Users, label: 'Leads', path: '/admin/leads' },
                 { id: 'finances', icon: TrendingUp, label: 'Finanzas', path: '/admin/finance' },
-                { id: 'operations', icon: Zap, label: 'Operaciones', path: '/admin/operations' },
+                { id: 'team', icon: Users, label: 'Equipo', path: '/admin/team' },
                 { id: 'settings', icon: Settings, label: 'Ajustes', path: '/admin/settings' }
             ];
         }

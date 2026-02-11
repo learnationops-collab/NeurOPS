@@ -6,9 +6,9 @@ import DebugConsole from './modals/DebugConsole';
 import OnboardingTour from './modals/OnboardingTour';
 import OperatorControls from './modals/OperatorControls';
 import GlobalSettingsModal from './modals/GlobalSettingsModal';
-import Dock from './Dock';
-import WidgetsPill from './WidgetsPill';
-import HotkeysManager from './HotkeysManager';
+import Dock from './shared/Dock';
+import WidgetsPill from './shared/WidgetsPill';
+import HotkeysManager from './admin/HotkeysManager';
 
 const MainLayout = ({ children }) => {
     const { user } = useAuth();

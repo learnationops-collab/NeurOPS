@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { Search, Filter, ArrowRight, UserCheck, CreditCard, AlertCircle, Loader2, X } from 'lucide-react';
 import Button from '../../components/ui/Button';
-import DateRangeFilter from '../../components/DateRangeFilter';
-import MultiSelectFilter from '../../components/MultiSelectFilter';
+import DateRangeFilter from '../../components/shared/DateRangeFilter';
+import MultiSelectFilter from '../../components/shared/MultiSelectFilter';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 
 const LeadsPage = () => {

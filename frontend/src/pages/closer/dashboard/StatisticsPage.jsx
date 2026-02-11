@@ -11,7 +11,7 @@ import {
     Loader2,
     BarChart3
 } from 'lucide-react';
-import DateRangeFilter from '../../../components/DateRangeFilter';
+import DateRangeFilter from '../../../components/shared/DateRangeFilter';
 
 const StatisticsPage = () => {
     const [statsData, setStatsData] = useState(null);
@@ -79,8 +79,8 @@ const StatisticsPage = () => {
                         <BarChart3 size={24} />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black uppercase tracking-tighter italic">Estadísticas de Agenda</h1>
-                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest mt-1">Análisis de rendimiento y resultados</p>
+                        <h1 className="text-2xl font-black tracking-tighter">Estadísticas de Agenda</h1>
+                        <p className="text-[10px] font-bold text-muted tracking-widest mt-1">Análisis de rendimiento y resultados</p>
                     </div>
                 </div>
 
@@ -96,9 +96,9 @@ const StatisticsPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card variant="main" className="p-8 border-rose-500/20 bg-rose-500/5 relative overflow-hidden group">
                     <div className="relative z-10">
-                        <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em]">Pendientes</p>
-                        <h2 className="text-5xl font-black text-rose-500 tracking-tighter italic mt-2">{statsData?.pending || 0}</h2>
-                        <p className="text-[9px] font-bold text-rose-500/60 mt-2 uppercase">Agendas sin resultado</p>
+                        <p className="text-[10px] font-black text-rose-500 tracking-[0.2em]">Pendientes</p>
+                        <h2 className="text-5xl font-black text-rose-500 tracking-tighter mt-2">{statsData?.pending || 0}</h2>
+                        <p className="text-[9px] font-bold text-rose-500/60 mt-2">Agendas sin resultado</p>
                     </div>
                     <Activity size={100} className="absolute -right-8 -bottom-8 text-rose-500 opacity-[0.05] group-hover:scale-110 transition-transform duration-700" />
                 </Card>
@@ -114,8 +114,8 @@ const StatisticsPage = () => {
                     return (
                         <Card key={key} variant="surface" className={`p-8 ${config.border} ${config.bg} relative overflow-hidden group`}>
                             <div className="relative z-10">
-                                <p className={`text-[10px] font-black ${config.color} uppercase tracking-[0.2em]`}>{key}</p>
-                                <h2 className={`text-5xl font-black ${config.color} tracking-tighter italic mt-2`}>{val}</h2>
+                                <p className={`text-[10px] font-black ${config.color} tracking-[0.2em]`}>{key}</p>
+                                <h2 className={`text-5xl font-black ${config.color} tracking-tighter mt-2`}>{val}</h2>
                             </div>
                             <config.icon size={100} className={`absolute -right-8 -bottom-8 ${config.color} opacity-[0.05] group-hover:scale-110 transition-transform duration-700`} />
                         </Card>
@@ -124,21 +124,21 @@ const StatisticsPage = () => {
             </div>
 
             <div className="space-y-6">
-                <h3 className="text-sm font-black italic uppercase tracking-widest text-muted border-l-4 border-primary pl-4">Desglose por Tipo</h3>
+                <h3 className="text-sm font-black tracking-widest text-muted border-l-4 border-primary pl-4">Desglose por Tipo</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {Object.entries(statsData?.type_stats || {}).map(([type, s]) => (
                         <div key={type} className="bg-main/30 rounded-[2.5rem] border border-base p-8 space-y-6">
                             <div className="flex justify-between items-center">
-                                <h4 className="text-sm font-black uppercase tracking-tight italic text-primary">{type}</h4>
-                                <Badge variant="neutral" className="bg-primary text-white h-7 px-4 rounded-full font-black text-[10px] italic">
-                                    {s.total} TOTAL
+                                <h4 className="text-sm font-black tracking-tight text-primary">{type}</h4>
+                                <Badge variant="neutral" className="bg-primary text-white h-7 px-4 rounded-full font-black text-[10px]">
+                                    {s.total} Total
                                 </Badge>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 {Object.entries(s.results).map(([res, count]) => (
                                     <div key={res} className="bg-surface p-4 rounded-2xl border border-base flex justify-between items-center group hover:border-primary/30 transition-all">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted group-hover:text-base">{res}</span>
-                                        <span className="text-sm font-black italic text-primary">{count}</span>
+                                        <span className="text-[9px] font-black tracking-widest text-muted group-hover:text-base">{res}</span>
+                                        <span className="text-sm font-black text-primary">{count}</span>
                                     </div>
                                 ))}
                             </div>

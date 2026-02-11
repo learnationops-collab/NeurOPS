@@ -62,8 +62,12 @@ const OperatorControls = ({ isOpen, onClose }) => {
 
             // Redirigir según el rol del usuario simulado
             let redirectPath = '/';
-            if (targetUser.role === 'admin' || targetUser.role === 'operator') {
+            if (targetUser.role === 'admin') {
                 redirectPath = '/admin/dashboard';
+            } else if (targetUser.role === 'operator') {
+                redirectPath = '/ops/dashboard';
+            } else if (targetUser.role === 'sales_admin') {
+                redirectPath = '/sales-admin/dashboard';
             } else if (targetUser.role === 'closer') {
                 redirectPath = '/closer/dashboard';
             } else if (targetUser.role === 'setter') {
@@ -89,6 +93,8 @@ const OperatorControls = ({ isOpen, onClose }) => {
 
             // Redirigir al dashboard original
             let redirectPath = '/admin/dashboard';
+            if (originalUser.role === 'operator') redirectPath = '/ops/dashboard';
+            if (originalUser.role === 'sales_admin') redirectPath = '/sales-admin/dashboard';
             if (originalUser.role === 'closer') redirectPath = '/closer/dashboard';
             if (originalUser.role === 'setter') redirectPath = '/setter/dashboard';
 
@@ -109,6 +115,8 @@ const OperatorControls = ({ isOpen, onClose }) => {
         { id: 'all', label: 'Todos' },
         { id: 'closer', label: 'Closers' },
         { id: 'setter', label: 'Setters' },
+        { id: 'sales_admin', label: 'Sales Admin' },
+        { id: 'operator', label: 'Operadores' },
         { id: 'admin', label: 'Admins' },
     ];
 

@@ -7,7 +7,7 @@ from app.services.dashboard_service import DashboardService
 from app.services.admin_ops_service import AdminOperationService
 from app.services.import_service import ImportService
 from app.services.database_service import DatabaseService
-from app.decorators import admin_required
+from app.decorators import admin_required, operator_required
 import pandas as pd
 import io
 import json
@@ -664,14 +664,14 @@ def manage_questions(id=None):
 
 @bp.route('/admin/ops/clear', methods=['POST'])
 @login_required
-@admin_required
+@operator_required
 def clear_db():
     success, message = AdminOperationService.clear_business_data()
     return jsonify({"message": message}), 200 if success else 400
 
 @bp.route('/admin/ops/generate', methods=['POST'])
 @login_required
-@admin_required
+@operator_required
 def generate_mock_data():
     data = request.get_json() or {}
     success, message = AdminOperationService.generate_mock_data(
@@ -682,7 +682,7 @@ def generate_mock_data():
     return jsonify({"message": message}), 200 if success else 400
 @bp.route('/admin/db/export', methods=['GET'])
 @login_required
-@admin_required
+@operator_required
 def export_database():
     try:
         data = DatabaseService.export_db()
@@ -702,7 +702,7 @@ def export_database():
 
 @bp.route('/admin/db/import', methods=['POST'])
 @login_required
-@admin_required
+@operator_required
 def import_database():
     if 'file' not in request.files:
         return jsonify({"message": "No se subió ningún archivo"}), 400
@@ -718,6 +718,50 @@ def import_database():
     except Exception as e:
         return jsonify({"message": f"Error al procesar el archivo: {str(e)}"}), 500
 
+@bp.route('/admin/tools/migrate-leads', methods=['POST'])
+@login_required
+@admin_required
+def migrate_leads():
+    try:
+        from app.models import User, Lead, PipelineStage
+        from sqlalchemy import or_
+        lead_users = User.query.filter(or_(User.role == 'lead', User.role == 'student')).all()
+        migrated_count = 0
+        
+        # Get default stage if exists
+        default_stage = PipelineStage.query.order_by(PipelineStage.order).first()
+        
+        for user in lead_users:
+            # Check if lead already exists by email
+            existing_lead = None
+            if user.email:
+                existing_lead = Lead.query.filter_by(email=user.email).first()
+            
+            if not existing_lead:
+                # Create a new lead
+                new_lead = Lead(
+                    name=user.username,
+                    email=user.email,
+                    manychat_id=f"migrated_{user.id}_{int(datetime.utcnow().timestamp())}",
+                    stage_id=default_stage.id if default_stage else None,
+                    notes=f"Migrado desde usuario (ID: {user.id})"
+                )
+                db.session.add(new_lead)
+                migrated_count += 1
+            
+            # Delete the user record
+            db.session.delete(user)
+        
+        db.session.commit()
+        return jsonify({
+            "success": True, 
+            "message": f"Se han migrado y eliminado {migrated_count} usuarios tipo lead.",
+            "total_deleted": len(lead_users)
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Error en la migración: {str(e)}"}), 500
+
 @bp.route('/admin/integrations', methods=['GET', 'POST', 'DELETE'])
 @login_required
 @admin_required
@@ -727,7 +771,82 @@ def manage_integrations():
         i = Integration.query.get_or_404(id)
         db.session.delete(i)
         db.session.commit()
-        return jsonify({"message": "Integración eliminada"}), 200
+@bp.route('/admin/pipelines/setter', methods=['GET'])
+@login_required
+@admin_required
+def get_setter_pipeline():
+    # Find or create default setter pipeline
+    pipeline = Pipeline.query.filter_by(name='setter_default').first()
+    if not pipeline:
+        pipeline = Pipeline(name='setter_default', is_active=True)
+        db.session.add(pipeline)
+        db.session.commit()
+    
+    stages = PipelineStage.query.filter_by(pipeline_id=pipeline.id, is_active=True).order_by(PipelineStage.order).all()
+    
+    return jsonify({
+        "id": pipeline.id,
+        "name": pipeline.name,
+        "stages": [{"id": s.id, "name": s.name, "order": s.order, "is_active": s.is_active} for s in stages]
+    }), 200
+
+@bp.route('/admin/pipelines/setter/stages', methods=['POST'])
+@login_required
+@admin_required
+def update_setter_stages():
+    data = request.get_json() or {}
+    pipeline_id = data.get('pipeline_id')
+    stages_data = data.get('stages', [])
+    
+    pipeline = Pipeline.query.get_or_404(pipeline_id)
+    if pipeline.name != 'setter_default':
+        return jsonify({"message": "Invalid pipeline"}), 400
+        
+    # Update or Create stages
+    # Strategy: Sync provided list. If ID exists, update. If not, create.
+    # We won't delete here to avoid locking/orphaning issues, delete is separate.
+    
+    for i, s_data in enumerate(stages_data):
+        sid = s_data.get('id')
+        name = s_data.get('name')
+        if not name: continue
+        
+        if sid and isinstance(sid, int):
+            stage = PipelineStage.query.get(sid)
+            if stage and stage.pipeline_id == pipeline.id:
+                stage.name = name
+                stage.order = i
+                stage.is_active = s_data.get('is_active', True)
+        elif s_data.get('isNew'):
+            new_stage = PipelineStage(
+                pipeline_id=pipeline.id,
+                name=name,
+                order=i,
+                is_active=True
+            )
+            db.session.add(new_stage)
+            
+    db.session.commit()
+    return jsonify({"message": "Pipeline actualizado"}), 200
+
+@bp.route('/admin/pipelines/stages/<int:id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_pipeline_stage(id):
+    stage = PipelineStage.query.get_or_404(id)
+    # Check if safe to delete?
+    # For now, just soft delete (inactive) or hard delete if no data?
+    # User requested delete, let's try hard delete but catch integrity error if needed.
+    try:
+        db.session.delete(stage)
+        db.session.commit()
+        return jsonify({"message": "Etapa eliminada"}), 200
+    except Exception as e:
+        db.session.rollback()
+        # Fallback to soft delete
+        stage.is_active = False
+        db.session.commit()
+        return jsonify({"message": "Etapa desactivada (tiene datos asociados)"}), 200
 
     if request.method == 'POST':
         data = request.get_json() or {}
@@ -826,17 +945,25 @@ def manage_events():
             if 'is_active' in data: e.is_active = data['is_active']
             if 'redirect_url_success' in data: e.redirect_url_success = data['redirect_url_success']
             if 'redirect_url_fail' in data: e.redirect_url_fail = data['redirect_url_fail']
+            if 'setter_id' in data: e.setter_id = data['setter_id'] or None
+            if 'closer_ids' in data:
+                ids = [int(i) for i in data['closer_ids'] if i]
+                e.closers = User.query.filter(User.id.in_(ids)).all() if ids else []
         else: # Create
             e = Event(
                 name=data.get('name'),
                 utm_source=data.get('utm_source'),
-                group_id=data.get('group_id'),
+                group_id=data.get('group_id') or None,
                 duration_minutes=data.get('duration_minutes', 30),
                 buffer_minutes=data.get('buffer_minutes', 15),
                 min_score=data.get('min_score', 0),
                 redirect_url_success=data.get('redirect_url_success'),
-                redirect_url_fail=data.get('redirect_url_fail')
+                redirect_url_fail=data.get('redirect_url_fail'),
+                setter_id=data.get('setter_id') or None
             )
+            if 'closer_ids' in data:
+                ids = [int(i) for i in data['closer_ids'] if i]
+                e.closers = User.query.filter(User.id.in_(ids)).all() if ids else []
             db.session.add(e)
             
         try:
@@ -866,7 +993,10 @@ def manage_events():
         "duration_minutes": e.duration_minutes,
         "min_score": e.min_score,
         "redirect_url_success": e.redirect_url_success,
-        "redirect_url_fail": e.redirect_url_fail
+        "redirect_url_fail": e.redirect_url_fail,
+        "setter_id": e.setter_id,
+        "setter_name": e.setter.username if e.setter else None,
+        "closer_ids": [c.id for c in e.closers]
     } for e in events]), 200
 
 # --- Pipeline Management Endpoints ---

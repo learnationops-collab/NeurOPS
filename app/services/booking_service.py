@@ -130,10 +130,67 @@ class BookingService:
                 subject="Nueva Agenda",
                 content=f"Nueva sesión con {client_name} para el {start_time_utc.strftime('%d/%m/%Y %H:%M')} UTC.",
                 target_users=["role:admin", int(closer_id)],
-                related_users=[int(closer_id), client_id]
+                related_users=[int(closer_id), client_id],
+                associated_id=appt.id,
+                associated_type='appointment'
             )
             db.session.add(noti)
             
+            # --- SYNC LEAD (Bridge to ManyChat/Marketing Leads) ---
+            try:
+                from app.models import Lead, PipelineStage, Pipeline
+                import uuid
+                
+                # 1. Search for existing Lead by email
+                lead = None
+                if client.email:
+                    lead = Lead.query.filter_by(email=client.email).first()
+                
+                # 2. If not found, create new Lead
+                if not lead:
+                    # Find 'Nueva' stage or default
+                    stage = PipelineStage.query.filter_by(name='Nueva').first()
+                    if not stage:
+                        # Fallback to first stage of first pipeline or just None (nullable=True?)
+                        # Lead.stage_id is nullable=True
+                        pass
+
+                    # Generate dummy ID if creating from Booking (not ManyChat)
+                    dummy_mc_id = f"gen_{int(datetime.utcnow().timestamp())}_{str(uuid.uuid4())[:8]}"
+                    
+                    lead = Lead(
+                        manychat_id=dummy_mc_id,
+                        name=client.full_name or client.email or "Sin Nombre",
+                        email=client.email,
+                        instagram_username=client.instagram,
+                        # phone field does not exist in Lead model
+                        stage_id=stage.id if stage else None,
+                        ad_source=origin or 'Booking',
+                        notes=f"Creado automáticamente desde Agenda ID {appt.id}"
+                    )
+                    db.session.add(lead)
+                    db.session.flush() # get ID
+                
+                # 3. Update existing or new Lead
+                # Link appointment in notes (since no direct FK)
+                new_note = f"\n[Auto] Agenda creada: {start_time_utc.strftime('%Y-%m-%d %H:%M')} (ID: {appt.id})"
+                lead.notes = (lead.notes or "") + new_note
+                
+                # Optional: Force stage to 'Agendado' if it exists? 
+                # User said "se actualiza como lead". "Nueva" might be for new leads.
+                # If they booked, maybe stage should be "Agendada"?
+                # But Closer Kanban uses Appointments. Lead Pipeline (Marketing) might have 'Agendada'.
+                # Let's check PipelineStages for 'Agendada'.
+                agendada_stage = PipelineStage.query.filter(PipelineStage.name.ilike('%Agend%')).first()
+                if agendada_stage:
+                    lead.stage_id = agendada_stage.id
+                
+            except Exception as lead_err:
+                print(f"[BookingService] Error syncing Lead: {lead_err}")
+                # Don't fail the appointment creation
+            
+            # -------------------------------------------------------
+
         except Exception as e:
             print(f"Error creating notification for appointment: {e}")
             # No bloqueamos el agendamiento si falla la notificación
@@ -227,6 +284,8 @@ class BookingService:
                         "date_str": payload.get('fecha_agenda', ''),
                         "time_str": payload.get('hora_agenda', ''),
                         "source": payload.get('fuente', 'N/A'),
+                        "client_phone": client.phone or 'N/A',
+                        "client_ig": getattr(client, 'instagram_username', 'N/A'),
                         "count": todays_count
                     }
                     
@@ -238,48 +297,52 @@ class BookingService:
                         'file': ('agenda_card.png', img_buffer, 'image/png')
                     }
                     
-                    # SIMPLIFIED JSON payload: Text + Attachment (No Embeds needed if image has all info)
+                    # JSON payload
                     json_payload = {
                         "content": f"@everyone **📅 NUEVA AGENDA**\nCantidad de agendas de hoy: **{todays_count}**",
-                        # We can use an embed just to hold the image if we want it cleaner, 
-                        # or just attach. User asked for "Client Card" style, let's use an embed for the image container 
-                        # but remove the fields.
                         "embeds": [{
-                            "color": 5763719, # Green accent
+                            "color": 3801080, # Sky blue (matches accent)
                             "image": {
                                 "url": "attachment://agenda_card.png"
                             },
-                            "timestamp": datetime.utcnow().isoformat()
                         }]
                     }
                     
-                    # When sending files, 'json' parameter is not used, instead 'payload_json' field in data
-                    requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
+                    res = requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
+                    print(f"[Discord] Status: {res.status_code} | Response: {res.text}")
+                    res.raise_for_status()
                     
                 except Exception as img_err:
                     print(f"[Discord Image Error] {img_err}. Fallback to text.")
-                    # Fallback to simple embed if image fails
-                    requests.post(url, json=payload, timeout=5)
+                    res = requests.post(url, json=payload, timeout=5)
+                    print(f"[Discord Fallback] Status: {res.status_code} | Response: {res.text}")
             else:
-                # Standard JSON Webhook (n8n, etc.)
                 requests.post(url, json=payload, timeout=5)
             print(f"[Agenda Webhook] Sent to {url}")
             
-            # 4. WhatsApp Automation via 2Chat
+            # 4. WhatsApp Automation via 2Chat (Forcing Jean Carlo's Number)
             try:
-                if closer.two_chat_number:
-                    from app.services.two_chat_service import TwoChatService
-                    # Personalize message or use a template
-                    wa_message = f"Hola {payload['primer_nombre']}! Se ha confirmado tu sesión con {payload['closer']} para el {payload['fecha_agenda']} a las {payload['hora_agenda']}. Nos vemos!"
-                    
-                    TwoChatService.send_message(
-                        to_number=client.phone,
-                        text=wa_message,
-                        from_number=closer.two_chat_number
-                    )
-                    print(f"[2Chat Auto] Message sent from {closer.two_chat_number} to {client.phone}")
-                else:
-                    print(f"[2Chat Auto] Closer {closer.username} has no two_chat_number assigned. Skipping WA.")
+                from app.services.two_chat_service import TwoChatService
+                
+                # Forced Sender (Jean Carlo)
+                JEAN_CARLO_NUMBER = "+525620873819"
+                
+                # Refined Professional Message
+                wa_message = (
+                    f"¡Hola {payload['primer_nombre']}! 👋\n\n"
+                    f"Te confirmo que hemos recibido tu agendamiento para tu sesión de consultoría "
+                    f"con **{payload['closer']}**.\n\n"
+                    f"📅 **Fecha:** {payload['fecha_agenda']}\n"
+                    f"⏰ **Hora:** {payload['hora_agenda']}\n\n"
+                    f"¡Nos vemos pronto! 🚀"
+                )
+                
+                TwoChatService.send_message(
+                    to_number=client.phone,
+                    text=wa_message,
+                    from_number=JEAN_CARLO_NUMBER
+                )
+                print(f"[2Chat Auto] Message sent from {JEAN_CARLO_NUMBER} to {client.phone}")
             except Exception as wa_err:
                 print(f"[2Chat Auto Error] {wa_err}")
                 

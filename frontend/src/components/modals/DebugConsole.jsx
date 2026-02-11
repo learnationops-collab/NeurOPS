@@ -1,161 +1,142 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, X, Minimize2, Maximize2, Trash2, Copy } from 'lucide-react';
-
-import api from '../../services/api'; // Import configured API
+import React, { useState, useEffect } from 'react';
+import { X, Terminal, Filter, Trash2, StopCircle, PlayCircle, Minimize2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import Button from '../ui/Button';
 
 const DebugConsole = ({ isVisible, onClose }) => {
-    const [isOpen, setIsOpen] = useState(false); // Default collapsed
     const [logs, setLogs] = useState([]);
-
-    // Ref to keep track of the original console methods
-    const originalConsole = useRef({
-        log: console.log,
-        error: console.error,
-        warn: console.warn,
-        info: console.info
-    });
-
-    const checkAuthStatus = async () => {
-        try {
-            console.info("Testing Auth Connection...");
-            const res = await api.get('/auth/debug');
-            console.log("Auth Debug Response:", res.data);
-            if (!res.data.is_authenticated) {
-                console.warn("Server says NOT Authenticated. Cookies received:", res.data.cookies_received);
-            } else {
-                console.log("Server says Authenticated as:", res.data.user_id);
-            }
-        } catch (e) {
-            console.error("Auth Check Failed:", e);
-        }
-    };
-
-    const copyLogs = () => {
-        const logText = logs.map(log => {
-            // Use log.message as it's the current structure
-            const content = typeof log.message === 'object' ? JSON.stringify(log.message) : log.message;
-            return `[${log.timestamp}][${log.type}] ${content}`;
-        }).join('\n');
-
-        navigator.clipboard.writeText(logText).then(() => {
-            console.info('Logs copied to clipboard');
-        }).catch(err => {
-            console.error('Failed to copy logs', err);
-        });
-    };
+    const [isPaused, setIsPaused] = useState(false);
+    const [filter, setFilter] = useState('');
+    const [logLevel, setLogLevel] = useState('all');
 
     useEffect(() => {
-        const handleLog = (type, args) => {
-            const timestamp = new Date().toLocaleTimeString();
-            const message = args.map(arg => {
-                if (typeof arg === 'object') {
-                    try {
-                        return JSON.stringify(arg);
-                    } catch (e) {
-                        return '[Circular/Object]';
-                    }
-                }
-                return String(arg);
-            }).join(' ');
-
-            // Defer state update to avoid "Cannot update a component during render" errors
-            setTimeout(() => {
-                setLogs(prev => [...prev, { type, message, timestamp }].slice(-100)); // Keep last 100 logs
-            }, 0);
-
-            // Call original console method to ensure it still shows in DevTools
-            if (originalConsole.current[type]) {
-                originalConsole.current[type](...args);
-            }
+        const originalConsole = {
+            log: console.log,
+            error: console.error,
+            warn: console.warn,
+            info: console.info
         };
 
-        // Override console methods
-        console.log = (...args) => handleLog('log', args);
-        console.error = (...args) => handleLog('error', args);
-        console.warn = (...args) => handleLog('warn', args);
-        console.info = (...args) => handleLog('info', args);
+        const intercept = (type, args) => {
+            if (isPaused) return;
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+
+            setLogs(prev => [
+                {
+                    id: Date.now() + Math.random(),
+                    timestamp: new Date().toLocaleTimeString(),
+                    type,
+                    message
+                },
+                ...prev
+            ].slice(0, 500)); // Limit history
+
+            originalConsole[type].apply(console, args);
+        };
+
+        console.log = (...args) => intercept('log', args);
+        console.error = (...args) => intercept('error', args);
+        console.warn = (...args) => intercept('warn', args);
+        console.info = (...args) => intercept('info', args);
 
         return () => {
-            // Restore original console methods on cleanup
-            console.log = originalConsole.current.log;
-            console.error = originalConsole.current.error;
-            console.warn = originalConsole.current.warn;
-            console.info = originalConsole.current.info;
+            console.log = originalConsole.log;
+            console.error = originalConsole.error;
+            console.warn = originalConsole.warn;
+            console.info = originalConsole.info;
         };
-    }, []);
+    }, [isPaused]);
+
+    const filteredLogs = logs.filter(log =>
+        (logLevel === 'all' || log.type === logLevel) &&
+        (log.message.toLowerCase().includes(filter.toLowerCase()))
+    );
+
+    const getLogColor = (type) => {
+        switch (type) {
+            case 'error': return 'text-rose-400';
+            case 'warn': return 'text-amber-400';
+            case 'info': return 'text-sky-400';
+            default: return 'text-slate-300';
+        }
+    };
 
     if (!isVisible) return null;
 
     return (
-        <div className={`fixed bottom-4 right-4 z-[9999] transition-all duration-300 font-mono text-xs ${isOpen ? 'w-96 h-96' : 'w-auto h-auto'}`}>
-            <div className="bg-slate-900 border border-slate-700 rounded-t-lg shadow-2xl flex flex-col h-full">
-                {/* Header */}
-                <div className="flex items-center justify-between p-2 bg-slate-800 border-b border-slate-700 rounded-t-lg cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
-                    <div className="flex items-center gap-2 text-slate-300">
-                        <Terminal size={14} />
-                        <span className="font-bold">Debug Console</span>
-                        <span className="bg-slate-700 px-1.5 rounded text-[10px]">{logs.length}</span>
+        <AnimatePresence>
+            <motion.div
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                className="fixed bottom-0 left-0 w-full h-[40vh] bg-[#0f111a]/95 backdrop-blur-md border-t border-slate-800 z-50 flex flex-col font-mono text-xs shadow-2xl"
+            >
+                <div className="flex items-center justify-between px-4 py-2 border-b border-slate-800 bg-slate-900/50">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 text-slate-400">
+                            <Terminal size={14} />
+                            <span className="font-bold">SYSTEM CONSOLE</span>
+                        </div>
+                        <div className="h-4 w-px bg-slate-700" />
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={() => setIsPaused(!isPaused)}
+                                variant="ghost"
+                                className={`h-6 px-2 text-[10px] ${isPaused ? 'text-amber-400' : 'text-slate-400'}`}
+                            >
+                                {isPaused ? <PlayCircle size={12} className="mr-1" /> : <StopCircle size={12} className="mr-1" />}
+                                {isPaused ? 'RESUME' : 'PAUSE'}
+                            </Button>
+                            <Button onClick={() => setLogs([])} variant="ghost" className="h-6 px-2 text-[10px] text-slate-400 hover:text-rose-400">
+                                <Trash2 size={12} className="mr-1" /> CLEAR
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); checkAuthStatus(); }}
-                            className="px-2 py-0.5 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 rounded text-[10px] transition-colors border border-indigo-500/30"
-                            title="Check Auth Status"
+
+                    <div className="flex items-center gap-4">
+                        <div className="relative">
+                            <Filter size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
+                            <input
+                                type="text"
+                                placeholder="Filter output..."
+                                value={filter}
+                                onChange={e => setFilter(e.target.value)}
+                                className="bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-2 py-1 text-slate-300 focus:border-indigo-500 outline-none w-48"
+                            />
+                        </div>
+                        <select
+                            value={logLevel}
+                            onChange={(e) => setLogLevel(e.target.value)}
+                            className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-300 outline-none"
                         >
-                            Test Auth
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); copyLogs(); }}
-                            className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-blue-400 transition-colors"
-                            title="Copy Logs"
-                        >
-                            <Copy size={12} />
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setLogs([]); }}
-                            className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-red-400 transition-colors"
-                            title="Clear Logs"
-                        >
-                            <Trash2 size={12} />
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onClose(); }}
-                            className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-red-400 transition-colors"
-                            title="Hide Console"
-                        >
-                            <X size={12} />
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                            className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
-                        >
-                            {isOpen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                            <option value="all">All Levels</option>
+                            <option value="log">Log</option>
+                            <option value="info">Info</option>
+                            <option value="warn">Warn</option>
+                            <option value="error">Error</option>
+                        </select>
+                        <button onClick={onClose} className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors">
+                            <Minimize2 size={16} />
                         </button>
                     </div>
                 </div>
 
-                {/* Logs Area (only visual when open) */}
-                {isOpen && (
-                    <div className="flex-1 overflow-y-auto p-2 bg-slate-950/90 space-y-1 custom-scrollbar">
-                        {logs.length === 0 && (
-                            <div className="text-slate-600 text-center mt-4">No logs yet...</div>
-                        )}
-                        {logs.map((log, idx) => (
-                            <div key={idx} className={`border-b border-slate-800/50 pb-1 break-words ${log.type === 'error' ? 'text-red-400' :
-                                log.type === 'warn' ? 'text-yellow-400' :
-                                    'text-emerald-400'
-                                }`}>
-                                <span className="text-[10px] text-slate-500 mr-2">[{log.timestamp}]</span>
-                                <span className="uppercase text-[9px] font-bold opacity-70 mr-1">[{log.type}]</span>
-                                <span>{log.message}</span>
-                            </div>
-                        ))}
-                        {/* Auto-scroll anchor could be added here */}
-                        <div ref={(el) => el?.scrollIntoView({ behavior: "smooth" })} />
-                    </div>
-                )}
-            </div>
-        </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-1 font-mono custom-scrollbar">
+                    {filteredLogs.map(log => (
+                        <div key={log.id} className="flex gap-4 hover:bg-white/5 p-0.5 rounded px-2">
+                            <span className="text-slate-500 shrink-0 select-none">[{log.timestamp}]</span>
+                            <span className={`uppercase font-bold shrink-0 w-12 ${getLogColor(log.type)}`}>{log.type}</span>
+                            <span className="text-slate-300 break-all whitespace-pre-wrap">{log.message}</span>
+                        </div>
+                    ))}
+                    {filteredLogs.length === 0 && (
+                        <div className="text-slate-600 italic text-center py-10">No logs captured...</div>
+                    )}
+                </div>
+            </motion.div>
+        </AnimatePresence>
     );
 };
 

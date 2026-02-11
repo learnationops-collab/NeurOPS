@@ -101,10 +101,21 @@ def get_funnel_by_source(utm_source):
 def check_client_exists():
     data = request.get_json() or {}
     email = data.get('email')
-    if not email:
-        return jsonify({"error": "Email required"}), 400
+    instagram = data.get('instagram')
     
-    client = Client.query.filter_by(email=email).first()
+    if not email and not instagram:
+        return jsonify({"error": "Email or Instagram required"}), 400
+    
+    client = None
+    if email:
+        client = Client.query.filter_by(email=email).first()
+    
+    if not client and instagram:
+        # Try finding by instagram (case insensitive if possible, or exact)
+        # We strip @ if present for consistency
+        ig_username = instagram.strip().replace('@', '')
+        client = Client.query.filter(or_(Client.instagram == ig_username, Client.instagram == f"@{ig_username}")).first()
+    
     if client:
         answers = {sa.question_id: sa.answer for sa in client.survey_answers}
         return jsonify({
@@ -210,9 +221,28 @@ def book_appointment():
         if not client:
             return jsonify({"error": "Error al procesar la información del cliente"}), 500
         
-        # 2. Find a closer (Generic logic: use the one from the slot if possible, or any available)
+        # 2. Identify Event
+        event = Event.query.get(event_id)
+        if not event:
+            return jsonify({"error": "Evento no encontrado"}), 404
+
+        # 2b. Identify Setter (from ID, Username, or Event Default)
+        setter_id = data.get('setter_id')
+        
+        if not setter_id:
+            setter_username = data.get('setter')
+            if setter_username:
+                # Case insensitive search for setter
+                setter_user = User.query.filter(User.username.ilike(setter_username), User.role.in_(['setter', 'admin', 'closer'])).first()
+                if setter_user:
+                    setter_id = setter_user.id
+        
+        # Fallback to event's default setter if still not identified
+        if not setter_id and event.setter_id:
+            setter_id = event.setter_id
+
+        # 3. Find a closer (Generic logic: use the one from the slot if possible, or any available)
         # The frontend sends 'timestamp'. We need to find which closer has that slot.
-        # Ensure timestamp is treated as UTC
         try:
             from datetime import timezone
             start_time = datetime.fromtimestamp(float(timestamp), tz=timezone.utc).replace(tzinfo=None)
@@ -225,12 +255,13 @@ def book_appointment():
         appt = None
 
         if closer_id:
-            appt = BookingService.create_appointment(client.id, int(closer_id), start_time, origin='Funnel Web')
+            appt = BookingService.create_appointment(client.id, int(closer_id), start_time, origin='Funnel Web', setter_id=setter_id)
         else:
             # Pick any closer that has this slot available and no conflict
-            closers = User.query.filter_by(role='closer').all()
-            for c in closers:
-                appt = BookingService.create_appointment(client.id, c.id, start_time, origin='Funnel Web')
+            # Use event-assigned closers if defined, fallback to all closers
+            target_closers = event.closers if event.closers else User.query.filter_by(role='closer').all()
+            for c in target_closers:
+                appt = BookingService.create_appointment(client.id, c.id, start_time, origin='Funnel Web', setter_id=setter_id)
                 if appt:
                     closer_id = c.id
                     break

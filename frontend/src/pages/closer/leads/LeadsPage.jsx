@@ -27,10 +27,10 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import AgendaManagerModal from '../../../components/modals/AgendaManagerModal';
 import SaleDetailModal from '../../../components/modals/SaleDetailModal';
-import DateRangeFilter from '../../../components/DateRangeFilter';
-import MultiSelectFilter from '../../../components/MultiSelectFilter';
+import DateRangeFilter from '../../../components/shared/DateRangeFilter';
+import MultiSelectFilter from '../../../components/shared/MultiSelectFilter';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
-import CloserKanbanBoard from '../../../components/CloserKanbanBoard';
+import CloserKanbanBoard from '../../../components/closer/CloserKanbanBoard';
 
 const CloserLeadsPage = () => {
     const [selectedDb, setSelectedDb] = useState(null); // 'agendas' or 'sales' or null
@@ -243,8 +243,8 @@ const CloserLeadsPage = () => {
                     <div className="w-full max-w-[1800px] flex-1 flex flex-col space-y-6 text-center">
                         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div className="space-y-1 text-left">
-                                <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none">Pipeline</h1>
-                                <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Embudo de ventas y seguimiento activo</p>
+                                <h1 className="text-5xl font-black text-base tracking-tighter leading-none">Pipeline</h1>
+                                <p className="text-muted font-medium text-[10px] tracking-[0.2em]">Embudo de ventas y seguimiento activo</p>
                             </div>
                             <div className="flex flex-wrap items-center gap-4">
                                 <div className="flex bg-main p-1.5 rounded-2xl border border-base shadow-sm">
@@ -267,20 +267,20 @@ const CloserLeadsPage = () => {
                         </header>
 
                         <div className="flex justify-between items-center">
-                            <h2 className="text-xs font-black uppercase tracking-widest text-muted italic flex items-center gap-2">
+                            <h2 className="text-xs font-black tracking-widest text-muted flex items-center gap-2">
                                 <Kanban size={14} className="text-primary" />
                                 Embudo de Pre-call
                             </h2>
                             <div className="flex bg-main p-1 rounded-full border border-base shadow-inner">
                                 <button
                                     onClick={() => setKanbanSubTab('tracking')}
-                                    className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'tracking' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
+                                    className={`px-8 py-2 rounded-full text-[10px] font-black tracking-tighter transition-all ${kanbanSubTab === 'tracking' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
                                 >
                                     Pre-call
                                 </button>
                                 <button
                                     onClick={() => setKanbanSubTab('closing')}
-                                    className={`px-8 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${kanbanSubTab === 'closing' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
+                                    className={`px-8 py-2 rounded-full text-[10px] font-black tracking-tighter transition-all ${kanbanSubTab === 'closing' ? 'bg-primary text-white shadow-md' : 'text-muted hover:text-base'}`}
                                 >
                                     Cierre
                                 </button>
@@ -314,7 +314,7 @@ const CloserLeadsPage = () => {
                                 onClick={() => setActiveSection(1)}
                                 className="group flex flex-col items-center gap-2 text-muted hover:text-primary transition-all animate-bounce focus:outline-none"
                             >
-                                <span className="text-[8px] font-black uppercase tracking-widest">Ver Bases de Datos</span>
+                                <span className="text-[8px] font-black tracking-widest">Ver Bases de Datos</span>
                                 <div className="w-px h-8 bg-gradient-to-b from-muted group-hover:from-primary text-primary" />
                             </button>
                         </div>
@@ -332,15 +332,15 @@ const CloserLeadsPage = () => {
                                 <Plus className="rotate-45" size={20} />
                             </button>
                             <div className="space-y-1 text-left">
-                                <h1 className="text-4xl font-black text-base italic tracking-tighter uppercase leading-none">
+                                <h1 className="text-4xl font-black text-base tracking-tighter leading-none">
                                     {selectedDb ? (selectedDb === 'agendas' ? 'Base Agendas' : selectedDb === 'sales' ? 'Base Ventas' : 'Notificaciones') : 'Bases de Datos'}
                                 </h1>
-                                <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Gestión unificada de registros</p>
+                                <p className="text-muted font-medium text-[10px] tracking-[0.2em]">Gestión unificada de registros</p>
                             </div>
                             {selectedDb && (
                                 <button
                                     onClick={() => setSelectedDb(null)}
-                                    className="ml-auto px-4 py-2 bg-surface border border-base rounded-xl text-[10px] font-black uppercase tracking-widest text-muted hover:text-primary transition-all flex items-center gap-2"
+                                    className="ml-auto px-4 py-2 bg-surface border border-base rounded-xl text-[10px] font-black tracking-widest text-muted hover:text-primary transition-all flex items-center gap-2"
                                 >
                                     <ChevronLeft size={14} /> Cambiar Base
                                 </button>
@@ -358,8 +358,8 @@ const CloserLeadsPage = () => {
                                     </div>
                                     <div className="relative z-10 space-y-4">
                                         <Badge variant="neutral" className="bg-primary/10 text-primary border-primary/20">Registros de Llamadas</Badge>
-                                        <h2 className="text-5xl font-black italic uppercase tracking-tighter text-base">Agendas</h2>
-                                        <p className="text-sm font-bold text-muted uppercase tracking-widest max-w-[250px]">Consulta el historial completo de agendas y prospectos.</p>
+                                        <h2 className="text-5xl font-black tracking-tighter text-base">Agendas</h2>
+                                        <p className="text-sm font-bold text-muted tracking-widest max-w-[250px]">Consulta el historial completo de agendas y prospectos.</p>
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
@@ -373,8 +373,8 @@ const CloserLeadsPage = () => {
                                     </div>
                                     <div className="relative z-10 space-y-4">
                                         <Badge variant="neutral" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Facturación</Badge>
-                                        <h2 className="text-5xl font-black italic uppercase tracking-tighter text-base">Ventas</h2>
-                                        <p className="text-sm font-bold text-muted uppercase tracking-widest max-w-[250px]">Seguimiento de cierres, pagos y programas vendidos.</p>
+                                        <h2 className="text-5xl font-black tracking-tighter text-base">Ventas</h2>
+                                        <p className="text-sm font-bold text-muted tracking-widest max-w-[250px]">Seguimiento de cierres, pagos y programas vendidos.</p>
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
@@ -388,8 +388,8 @@ const CloserLeadsPage = () => {
                                     </div>
                                     <div className="relative z-10 space-y-4">
                                         <Badge variant="neutral" className="bg-primary/10 text-primary border-primary/20">Registro Interno</Badge>
-                                        <h2 className="text-5xl font-black italic uppercase tracking-tighter text-base">Avisos</h2>
-                                        <p className="text-sm font-bold text-muted uppercase tracking-widest max-w-[250px]">Consulta todas las notificaciones del sistema.</p>
+                                        <h2 className="text-5xl font-black tracking-tighter text-base">Avisos</h2>
+                                        <p className="text-sm font-bold text-muted tracking-widest max-w-[250px]">Consulta todas las notificaciones del sistema.</p>
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
@@ -398,7 +398,7 @@ const CloserLeadsPage = () => {
                             <>
                                 <div className="flex flex-col md:flex-row justify-between items-end gap-6">
                                     <div className="space-y-2 text-left">
-                                        <h2 className="text-xs font-black uppercase tracking-widest text-muted italic flex items-center gap-2">
+                                        <h2 className="text-xs font-black tracking-widest text-muted flex items-center gap-2">
                                             <Database size={14} className="text-primary" />
                                             Filtros y Búsqueda
                                         </h2>
@@ -444,7 +444,7 @@ const CloserLeadsPage = () => {
                                                     updateFilter('paymentMethod', []);
                                                     setPage(1);
                                                 }}
-                                                className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 flex items-center gap-1 ml-auto"
+                                                className="text-[10px] font-black text-rose-500 tracking-widest hover:text-rose-400 flex items-center gap-1 ml-auto"
                                             >
                                                 <X size={14} /> Limpiar Filtros
                                             </button>
@@ -454,7 +454,7 @@ const CloserLeadsPage = () => {
 
                                 <Card variant="surface" padding="p-0 overflow-hidden" className="shadow-2xl border-base/50">
                                     {error ? (
-                                        <div className="p-20 text-center text-accent uppercase font-black text-xs">{error}</div>
+                                        <div className="p-20 text-center text-accent font-black text-xs">{error}</div>
                                     ) : loading ? (
                                         <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
                                     ) : (
@@ -462,50 +462,50 @@ const CloserLeadsPage = () => {
                                             <table className="w-full text-left border-collapse min-w-[800px]">
                                                 <thead>
                                                     <tr className="border-b border-base bg-surface-hover">
-                                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Lead / Cliente</th>
-                                                        <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Creado</th>
+                                                        <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Lead / Cliente</th>
+                                                        <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Creado</th>
                                                         {selectedDb === 'agendas' ? (
                                                             <>
-                                                                <th className="px-8 py-6 text-[10px] font-black text-primary uppercase tracking-widest">Fecha Cita</th>
-                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Ultima Etapa</th>
-                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Resultado</th>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-primary tracking-widest">Fecha Cita</th>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Ultima Etapa</th>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Resultado</th>
                                                             </>
                                                         ) : selectedDb === 'sales' ? (
                                                             <>
-                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Programa</th>
-                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Monto</th>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Programa</th>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Monto</th>
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Contenido</th>
-                                                                <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-widest">Estado</th>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Contenido</th>
+                                                                <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Estado</th>
                                                             </>
                                                         )}
-                                                        <th className="px-8 py-6 text-[10px] font-black text-primary uppercase tracking-widest text-right">Acción</th>
+                                                        <th className="px-8 py-6 text-[10px] font-black text-primary tracking-widest text-right">Acción</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-base">
                                                     {data[selectedDb]?.length > 0 ? data[selectedDb].map(item => (
                                                         <tr key={item.id} className="hover:bg-surface-hover/50 transition-all group">
-                                                            <td className="px-8 py-6 font-black italic">
+                                                            <td className="px-8 py-6 font-black">
                                                                 {selectedDb === 'agendas' ? item.lead_name :
                                                                     selectedDb === 'sales' ? item.student_name :
                                                                         item.subject}
                                                             </td>
-                                                            <td className="px-8 py-6 text-[10px] font-bold text-muted uppercase">
+                                                            <td className="px-8 py-6 text-[10px] font-bold text-muted">
                                                                 {item.created_at ? new Date(item.created_at).toLocaleDateString() : '—'}
                                                             </td>
                                                             {selectedDb === 'agendas' ? (
                                                                 <>
-                                                                    <td className="px-8 py-6 text-sm font-black text-primary italic">
+                                                                    <td className="px-8 py-6 text-sm font-black text-primary">
                                                                         {new Date(item.date).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                                                                     </td>
-                                                                    <td className="px-8 py-6 text-[10px] font-black uppercase">{item.last_stage || 'N/A'}</td>
+                                                                    <td className="px-8 py-6 text-[10px] font-black">{item.last_stage || 'N/A'}</td>
                                                                     <td className="px-8 py-6"><Badge variant={item.result === 'Sold' ? 'success' : 'neutral'}>{item.result || 'Sin resultado'}</Badge></td>
                                                                 </>
                                                             ) : selectedDb === 'sales' ? (
                                                                 <>
-                                                                    <td className="px-8 py-6 text-[10px] font-black uppercase">{item.program_name}</td>
+                                                                    <td className="px-8 py-6 text-[10px] font-black">{item.program_name}</td>
                                                                     <td className="px-8 py-6 text-lg font-black text-success">${item.amount?.toLocaleString()}</td>
                                                                 </>
                                                             ) : (
@@ -527,7 +527,7 @@ const CloserLeadsPage = () => {
                                                             </td>
                                                         </tr>
                                                     )) : (
-                                                        <tr><td colSpan="6" className="p-20 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">No se encontraron registros</td></tr>
+                                                        <tr><td colSpan="6" className="p-20 text-center text-muted font-bold tracking-widest text-xs">No se encontraron registros</td></tr>
                                                     )}
                                                 </tbody>
                                             </table>
@@ -536,7 +536,7 @@ const CloserLeadsPage = () => {
                                 </Card>
 
                                 <div className="flex justify-between items-center py-6">
-                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Página {page} de {totalPages}</p>
+                                    <p className="text-[10px] font-black text-muted tracking-widest">Página {page} de {totalPages}</p>
                                     <div className="flex gap-2">
                                         <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-3 bg-surface border border-base rounded-xl text-muted hover:text-base disabled:opacity-20 transition-all"><ChevronLeft size={20} /></button>
                                         <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-3 bg-surface border border-base rounded-xl text-muted hover:text-base disabled:opacity-20 transition-all"><ChevronRight size={20} /></button>
@@ -553,7 +553,7 @@ const CloserLeadsPage = () => {
                     isOpen={isAgendaModalOpen}
                     onClose={() => { setIsAgendaModalOpen(false); setSelectedAgenda(null); }}
                     appointment={selectedAgenda}
-                    onSuccess={fetchData}
+                    onSuccess={() => { fetchData(); fetchKanbanData(); }}
                 />
             )}
             <SaleDetailModal

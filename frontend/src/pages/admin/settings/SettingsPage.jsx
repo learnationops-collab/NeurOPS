@@ -1,18 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../../../services/api';
-import { Settings, Shield, User, LogOut, Bell, Key, Plus, Trash2, ClipboardCheck, Loader2, Check, X, Package, CreditCard, Palette, Layers, AlertTriangle } from 'lucide-react';
+import { Shield, User, LogOut, Palette, AlertTriangle } from 'lucide-react';
 import UsersPage from '../../legacy/UsersPage';
-import ReportQuestionsManager from '../../../components/ReportQuestionsManager';
-import ProgramsManager from '../../../components/ProgramsManager';
-import FunnelsManager from '../../../components/FunnelsManager';
-import IntegrationsManager from '../../../components/IntegrationsManager';
-import GoogleCalendarSettings from '../../../components/GoogleCalendarSettings';
-import PaymentMethodsManager from '../../../components/PaymentMethodsManager';
-import OperationsPage from '../database/OperationsPage';
 import Card from '../../../components/ui/Card';
 import ThemeSelector from '../../../components/ui/ThemeSelector';
-import PipelineStagesManager from '../../../components/PipelineStagesManager';
-import { Kanban as KanbanIcon } from 'lucide-react';
 
 const SettingsPage = () => {
     const [activeSection, setActiveSection] = useState('team');
@@ -20,14 +11,7 @@ const SettingsPage = () => {
     const sections = [
         { id: 'profile', label: 'Mi Cuenta', icon: User },
         { id: 'team', label: 'Gestion de Equipo', icon: Shield },
-        { id: 'programs', label: 'Programas', icon: Package },
-        { id: 'payment_methods', label: 'Metodos de Pago', icon: CreditCard },
-        { id: 'funnels', label: 'Embudos y Eventos', icon: Layers },
-        { id: 'kanban', label: 'Estructura Kanban', icon: KanbanIcon },
-        { id: 'questions', label: 'Preguntas de Reporte', icon: ClipboardCheck },
         { id: 'appearance', label: 'Apariencia', icon: Palette },
-        { id: 'integrations', label: 'Integraciones', icon: Key },
-        { id: 'danger_zone', label: 'Operaciones', icon: AlertTriangle, danger: true },
     ];
 
     const handleLogout = async () => {
@@ -81,36 +65,6 @@ const SettingsPage = () => {
                         </div>
                     )}
 
-                    {activeSection === 'programs' && (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                            <ProgramsManager />
-                        </div>
-                    )}
-
-                    {activeSection === 'payment_methods' && (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                            <PaymentMethodsManager />
-                        </div>
-                    )}
-
-                    {activeSection === 'questions' && (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                            <ReportQuestionsManager />
-                        </div>
-                    )}
-
-                    {activeSection === 'funnels' && (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-500 text-left">
-                            <FunnelsManager />
-                        </div>
-                    )}
-
-                    {activeSection === 'kanban' && (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-500 text-left">
-                            <PipelineStagesManager />
-                        </div>
-                    )}
-
                     {activeSection === 'profile' && (
                         <Card variant="surface" className="p-10 space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 text-center py-20">
                             <div className="w-24 h-24 bg-primary rounded-3xl mx-auto flex items-center justify-center text-3xl font-black text-white shadow-2xl">A</div>
@@ -120,14 +74,6 @@ const SettingsPage = () => {
                             </div>
                             <button className="px-8 py-3 bg-base hover:bg-surface-hover text-base text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all border border-base">Cambiar Contraseña</button>
                         </Card>
-                    )}
-
-                    {activeSection === 'integrations' && (
-                        <div className="space-y-8">
-                            <IntegrationsManager />
-                            <div className="border-t border-base opacity-20 my-4" />
-                            <GoogleCalendarSettings />
-                        </div>
                     )}
 
                     {activeSection === 'appearance' && (
@@ -141,21 +87,6 @@ const SettingsPage = () => {
                                     <ThemeSelector />
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    {activeSection === 'danger_zone' && (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                            <div className="bg-rose-500/10 border border-rose-500/30 p-6 rounded-3xl flex items-center gap-4">
-                                <div className="p-3 bg-rose-500/20 rounded-xl text-rose-500">
-                                    <AlertTriangle size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-black text-rose-500 uppercase tracking-tight">Zona de Peligro</h3>
-                                    <p className="text-xs text-rose-400 font-bold uppercase tracking-widest mt-1">Estas acciones afectan la base de datos irreversiblemente. Proceder con cautela.</p>
-                                </div>
-                            </div>
-                            <OperationsPage />
                         </div>
                     )}
                 </div>

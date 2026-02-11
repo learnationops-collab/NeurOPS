@@ -49,19 +49,19 @@ const CloserNewSalePage = () => {
         }
     };
 
-    if (loading) return <div className="p-20 text-center uppercase font-black text-xs text-muted tracking-widest">Cargando formulario...</div>;
+    if (loading) return <div className="p-20 text-center font-black text-xs text-muted tracking-widest">Cargando formulario...</div>;
 
     return (
         <div className="p-8 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
             <header className="space-y-2">
-                <h1 className="text-4xl font-black text-base italic tracking-tighter uppercase">Declarar Venta</h1>
-                <p className="text-muted text-xs font-bold uppercase tracking-widest">Registra una nueva venta manual en el sistema</p>
+                <h1 className="text-4xl font-black text-base tracking-tighter">Declarar Venta</h1>
+                <p className="text-muted text-xs font-bold tracking-widest">Registra una nueva venta manual en el sistema</p>
             </header>
 
             {error && (
                 <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-500">
                     <AlertCircle size={20} />
-                    <p className="font-bold text-xs uppercase tracking-wide">{error}</p>
+                    <p className="font-bold text-xs tracking-wide">{error}</p>
                 </div>
             )}
 
@@ -70,7 +70,7 @@ const CloserNewSalePage = () => {
 
                     {/* Lead Seletion */}
                     <div className="space-y-3">
-                        <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
+                        <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2">
                             <User size={14} /> Cliente / Lead
                         </label>
                         <select
@@ -84,13 +84,13 @@ const CloserNewSalePage = () => {
                                 <option key={l.id} value={l.id}>{l.username} ({l.email})</option>
                             ))}
                         </select>
-                        <p className="text-[9px] text-muted font-medium italic">* Solo aparecen leads con los que has tenido agenda reciente</p>
+                        <p className="text-[9px] text-muted font-medium">* Solo aparecen leads con los que has tenido agenda reciente</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Program */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
+                            <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2">
                                 <Box size={14} /> Programa
                             </label>
                             <select
@@ -115,7 +115,7 @@ const CloserNewSalePage = () => {
 
                         {/* Amount */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
+                            <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2">
                                 <DollarSign size={14} /> Monto Pagado (USD)
                             </label>
                             <input
@@ -133,7 +133,7 @@ const CloserNewSalePage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Payment Method */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
+                            <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2">
                                 <CreditCard size={14} /> Método de Pago
                             </label>
                             <select
@@ -151,7 +151,7 @@ const CloserNewSalePage = () => {
 
                         {/* Payment Type */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
+                            <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2">
                                 <CheckCircle2 size={14} /> Tipo de Pago
                             </label>
                             <select
@@ -169,7 +169,7 @@ const CloserNewSalePage = () => {
 
                     {/* Status Selector */}
                     <div className="space-y-3">
-                        <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
+                        <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2">
                             Estado de la Venta
                         </label>
                         <div className="flex bg-main rounded-xl p-1 border border-base">
@@ -178,7 +178,7 @@ const CloserNewSalePage = () => {
                                     key={st}
                                     type="button"
                                     onClick={() => setForm({ ...form, status: st })}
-                                    className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${form.status === st ? (st === 'completed' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-amber-500 text-white shadow-lg') : 'text-muted hover:text-base'}`}
+                                    className={`flex-1 py-3 rounded-lg text-[10px] font-black tracking-widest transition-all ${form.status === st ? (st === 'completed' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-amber-500 text-white shadow-lg') : 'text-muted hover:text-base'}`}
                                 >
                                     {st === 'completed' ? 'Completada / Pagada' : 'Pendiente de Pago'}
                                 </button>
