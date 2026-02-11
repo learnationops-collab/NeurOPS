@@ -9,7 +9,8 @@ import {
     Package,
     CreditCard,
     Layers,
-    Kanban as KanbanIcon
+    Kanban as KanbanIcon,
+    ListChecks
 } from 'lucide-react';
 import ReportQuestionsManager from '../../../components/admin/ReportQuestionsManager';
 import ProgramsManager from '../../../components/sales/ProgramsManager';
@@ -18,6 +19,7 @@ import IntegrationsManager from '../../../components/admin/IntegrationsManager';
 import GoogleCalendarSettings from '../../../components/GoogleCalendarSettings';
 import PaymentMethodsManager from '../../../components/sales/PaymentMethodsManager';
 import PipelineStagesManager from '../../../components/sales/PipelineStagesManager';
+import SetterMetricManager from '../../../components/admin/SetterMetricManager';
 import Card from '../../../components/ui/Card';
 
 const SalesSettingsPage = () => {
@@ -28,6 +30,7 @@ const SalesSettingsPage = () => {
         { id: 'payment_methods', label: 'Metodos de Pago', icon: CreditCard },
         { id: 'funnels', label: 'Embudos y Eventos', icon: Layers },
         { id: 'kanban', label: 'Estructura Kanban', icon: KanbanIcon },
+        { id: 'setter_metrics', label: 'Metricas Setter', icon: ListChecks },
         { id: 'questions', label: 'Preguntas de Reporte', icon: ClipboardCheck },
         { id: 'integrations', label: 'Integraciones', icon: Key },
     ];
@@ -86,6 +89,12 @@ const SalesSettingsPage = () => {
                     {activeSection === 'kanban' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500 text-left">
                             <PipelineStagesManager />
+                        </div>
+                    )}
+
+                    {activeSection === 'setter_metrics' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500 text-left">
+                            <SetterMetricManager />
                         </div>
                     )}
 

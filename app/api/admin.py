@@ -11,7 +11,7 @@ from app.decorators import admin_required, operator_required
 import pandas as pd
 import io
 import json
-from app.models import Program, db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, DailyReportQuestion, Appointment, Integration, Pipeline, PipelineStage, Notification
+from app.models import db, User, Client, Expense, RecurringExpense, Payment, Enrollment, PaymentMethod, Event, Appointment, Integration, Pipeline, PipelineStage, Notification
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_
 import calendar
@@ -108,6 +108,7 @@ def generate_recurring_expenses():
 @login_required
 @admin_required
 def get_finance_sales():
+    from app.models import Program
     page = request.args.get('page', 1, type=int)
     per_page = 10
     
@@ -452,6 +453,7 @@ def get_lead_profile(id):
 @login_required
 @admin_required
 def manage_payment_methods():
+    from app.models import PaymentMethod
     if request.method == 'POST':
         data = request.get_json() or {}
         id = data.get('id')
@@ -469,6 +471,7 @@ def manage_payment_methods():
 @login_required
 @admin_required
 def manage_programs():
+    from app.models import Program
     if request.method == 'POST':
         data = request.get_json() or {}
         id = data.get('id')
@@ -627,6 +630,7 @@ def manage_db_sales():
 @login_required
 @admin_required
 def manage_questions(id=None):
+    from app.models import DailyReportQuestion
     if request.method == 'DELETE':
         q = DailyReportQuestion.query.get_or_404(id)
         db.session.delete(q)
@@ -832,7 +836,7 @@ def update_setter_stages():
 @bp.route('/admin/pipelines/stages/<int:id>', methods=['DELETE'])
 @login_required
 @admin_required
-def delete_pipeline_stage(id):
+def remove_pipeline_stage(id):
     stage = PipelineStage.query.get_or_404(id)
     # Check if safe to delete?
     # For now, just soft delete (inactive) or hard delete if no data?
@@ -1277,6 +1281,7 @@ def read_admin_notification(id):
 @login_required
 @admin_required
 def quick_create_sale():
+    from app.models import Program
     data = request.get_json() or {}
     try:
         # 1. Validate inputs

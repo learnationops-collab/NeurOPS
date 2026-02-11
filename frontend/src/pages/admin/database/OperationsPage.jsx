@@ -3,7 +3,7 @@ import { Zap, MessageSquare, Database, FileUp, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import OperationsSection from '../dashboard/components/OperationsSection';
 import DatabaseTools from '../dashboard/components/DatabaseTools';
-import SetterMetricManager from '../../../components/admin/SetterMetricManager';
+
 
 const OperationsPage = () => {
     const [activeTab, setActiveTab] = useState('messaging');
@@ -48,16 +48,7 @@ const OperationsPage = () => {
                             <Database size={14} />
                             DB Tools
                         </button>
-                        <button
-                            onClick={() => setActiveTab('metrics')}
-                            className={`px-6 py-3 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'metrics'
-                                ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                                : 'text-muted hover:text-white'
-                                }`}
-                        >
-                            <ListOrdered size={14} />
-                            KPIs & Metricas
-                        </button>
+
                         <button
                             onClick={() => setActiveTab('import')}
                             className={`px-6 py-3 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'import'
@@ -76,7 +67,7 @@ const OperationsPage = () => {
                     <div className="bg-slate-900/20 backdrop-blur-sm rounded-[40px] border border-white/5 p-4 sm:p-8">
                         {activeTab === 'messaging' && <OperationsSection />}
                         {activeTab === 'database' && <DatabaseTools />}
-                        {activeTab === 'metrics' && <SetterMetricManager />}
+
                         {activeTab === 'import' && (
                             <div className="space-y-8">
                                 <header className="space-y-2">
