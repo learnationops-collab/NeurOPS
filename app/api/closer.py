@@ -822,19 +822,35 @@ def mark_notification_read(id):
 @bp.route('/booking-link', methods=['GET'])
 @login_required
 def get_booking_links():
-    # Return all active events as a list of links
-    events = Event.query.filter_by(is_active=True).all()
+    from app.models import EventGroup, Event
+    # Return hierarchical structure: EventGroup -> Events
+    groups = EventGroup.query.all()
     base_url = request.host_url.rstrip('/')
     
-    links = []
-    for event in events:
-        links.append({
-            "link": f"{base_url}/book/{event.utm_source}",
-            "source": event.utm_source,
-            "event_name": event.name
-        })
+    result = []
+    for g in groups:
+        # Only include groups that have active events
+        active_events = [e for e in g.events if e.is_active]
+        if not active_events:
+            continue
+            
+        group_data = {
+            "id": g.id,
+            "name": g.name,
+            "links": []
+        }
+        
+        for event in active_events:
+            group_data["links"].append({
+                "id": event.id,
+                "name": event.name,
+                "url": f"{base_url}/book/{event.utm_source}",
+                "slug": event.utm_source
+            })
+            
+        result.append(group_data)
     
-    return jsonify(links), 200
+    return jsonify(result), 200
 
 @bp.route('/clients/<int:client_id>', methods=['GET'])
 @login_required

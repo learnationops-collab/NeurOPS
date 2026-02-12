@@ -161,7 +161,7 @@ const FunnelsManager = () => {
     if (loading) return (
         <div className="p-20 text-center animate-pulse">
             <Layers className="mx-auto mb-4 text-primary opacity-20" size={48} />
-            <p className="text-xs uppercase tracking-widest font-black text-muted">Cargando Embudos...</p>
+            <p className="text-xs uppercase tracking-widest font-black text-muted">Cargando Eventos y Links...</p>
         </div>
     );
 
@@ -190,7 +190,7 @@ const FunnelsManager = () => {
                         Globales
                     </Button>
                     <Button variant="outline" size="xs" icon={Plus} onClick={() => { setEditingGroup(null); setGroupName(''); setShowGroupModal(true); }}>
-                        Grupo
+                        Nuevo Evento Comercial
                     </Button>
                     <Button variant="primary" size="xs" icon={Plus} onClick={() => {
                         if (groups.length === 0) {
@@ -201,7 +201,7 @@ const FunnelsManager = () => {
                         setEventForm({ name: '', utm_source: '', duration_minutes: 30, buffer_minutes: 15, group_id: groups[0]?.id || '', min_score: 0, setter_id: '', closer_ids: [] });
                         setShowEventModal(true);
                     }}>
-                        Nuevo Evento
+                        Nuevo Link
                     </Button>
                 </div>
             </header>
@@ -213,8 +213,8 @@ const FunnelsManager = () => {
                             <Layers size={32} className="opacity-30" />
                         </div>
                         <div className="space-y-2">
-                            <h4 className="text-xl font-bold uppercase italic tracking-tighter">No hay Embudos configurados</h4>
-                            <p className="text-[10px] text-muted font-bold uppercase tracking-widest max-w-xs mx-auto opacity-70">Crea un grupo para comenzar a organizar tus eventos.</p>
+                            <h4 className="text-xl font-bold uppercase italic tracking-tighter">No hay Eventos configurados</h4>
+                            <p className="text-[10px] text-muted font-bold uppercase tracking-widest max-w-xs mx-auto opacity-70">Crea un evento comercial para comenzar a organizar tus links de agenda.</p>
                         </div>
                         <Button variant="primary" icon={Plus} onClick={() => { setEditingGroup(null); setGroupName(''); setShowGroupModal(true); }}>
                             Crear Mi Primer Grupo
@@ -232,7 +232,7 @@ const FunnelsManager = () => {
                                         <ChevronRight size={16} className={`transition-transform duration-300 ${activeGroup === group.id ? 'rotate-90' : ''}`} />
                                     </div>
                                     <h3 className="text-lg font-black uppercase tracking-tight">{group.name}</h3>
-                                    <Badge variant="neutral">{getEventsByGroup(group.id).length} Eventos</Badge>
+                                    <Badge variant="neutral" className="bg-main/50 text-[10px]">{getEventsByGroup(group.id).length} Links</Badge>
                                 </div>
                                 <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                                     <button onClick={() => openQuestions('group', group.id, `Grupo: ${group.name}`)} className="p-2 text-muted hover:text-primary transition-colors">
@@ -257,24 +257,34 @@ const FunnelsManager = () => {
                                         </div>
                                     ) : (
                                         getEventsByGroup(group.id).map(event => (
-                                            <Card key={event.id} variant="surface" className="flex items-center justify-between p-4 group border-transparent hover:border-primary/20 transition-all">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black shadow-inner">
-                                                        {event.name ? event.name[0] : 'E'}
+                                            <Card key={event.id} variant="surface" className="flex items-center justify-between p-6 group border-white/5 hover:border-primary/20 transition-all bg-surface/30 rounded-[1.5rem] shadow-sm">
+                                                <div className="flex items-center gap-6">
+                                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 font-black shadow-inner text-xl">
+                                                        {event.name ? event.name[0] : 'L'}
                                                     </div>
-                                                    <div className="text-left">
-                                                        <h4 className="font-bold text-sm tracking-tight">{event.name}</h4>
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <Badge variant="outline" size="sm" className="text-[8px] opacity-70">/{event.utm_source}</Badge>
-                                                            <Badge variant="neutral" size="sm" className="text-[8px] opacity-70">{event.duration_minutes} min</Badge>
+                                                    <div className="text-left space-y-2">
+                                                        <h4 className="font-black text-base tracking-tight text-white/90">{event.name}</h4>
+                                                        <div className="flex items-center gap-3 mt-1">
+                                                            <div className="px-4 py-1.5 bg-main/60 border border-white/10 rounded-full text-[10px] font-black text-muted-main tracking-widest uppercase">
+                                                                /{event.utm_source}
+                                                            </div>
+                                                            <div className="px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-[10px] font-black text-indigo-400 tracking-widest uppercase">
+                                                                {event.duration_minutes} MIN
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Button size="xs" variant="ghost" icon={HelpCircle} onClick={() => openQuestions('event', event.id, event.name)} className="hover:bg-primary/10 hover:text-primary transition-all" />
-                                                    <Button size="xs" variant="ghost" icon={Edit2} onClick={() => { setEditingEvent(event); setEventForm(event); setShowEventModal(true); }} className="hover:bg-primary/20 hover:text-primary transition-all" />
-                                                    <Button size="xs" variant="primary" icon={LinkIcon} onClick={() => window.open(`/book/${event.utm_source}`, '_blank')} className="shadow-lg shadow-primary/20" />
-                                                    <Button size="xs" variant="ghost" icon={Trash2} onClick={() => handleDeleteEvent(event.id)} className="hover:text-red-500 hover:bg-red-500/10" />
+                                                <div className="flex items-center gap-3">
+                                                    <Button size="xs" variant="ghost" icon={HelpCircle} onClick={() => openQuestions('event', event.id, event.name)} className="hover:bg-primary/10 hover:text-primary transition-all opacity-60 hover:opacity-100" />
+                                                    <Button size="xs" variant="ghost" icon={Edit2} onClick={() => { setEditingEvent(event); setEventForm(event); setShowEventModal(true); }} className="hover:bg-primary/20 hover:text-primary transition-all opacity-60 hover:opacity-100" />
+                                                    <Button
+                                                        size="xs"
+                                                        variant="primary"
+                                                        icon={LinkIcon}
+                                                        onClick={() => window.open(`/book/${event.utm_source}`, '_blank')}
+                                                        className="bg-indigo-500 hover:bg-indigo-600 shadow-lg shadow-indigo-500/20 border-none w-10 h-10 rounded-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
+                                                    />
+                                                    <Button size="xs" variant="ghost" icon={Trash2} onClick={() => handleDeleteEvent(event.id)} className="hover:text-red-500 hover:bg-red-500/10 opacity-40 hover:opacity-100" />
                                                 </div>
                                             </Card>
                                         ))

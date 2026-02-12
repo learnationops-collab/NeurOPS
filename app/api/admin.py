@@ -673,6 +673,18 @@ def clear_db():
     success, message = AdminOperationService.clear_business_data()
     return jsonify({"message": message}), 200 if success else 400
 
+@bp.route('/admin/db/clear-table', methods=['POST'])
+@login_required
+@operator_required
+def clear_specific_table():
+    data = request.get_json() or {}
+    table_key = data.get('table_key')
+    if not table_key:
+        return jsonify({"message": "Falta el nombre de la tabla"}), 400
+        
+    success, message = DatabaseService.clear_table(table_key)
+    return jsonify({"message": message}), 200 if success else 400
+
 @bp.route('/admin/ops/generate', methods=['POST'])
 @login_required
 @operator_required
@@ -775,6 +787,42 @@ def manage_integrations():
         i = Integration.query.get_or_404(id)
         db.session.delete(i)
         db.session.commit()
+        return jsonify({"message": "Integración eliminada"}), 200
+
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        id = data.get('id')
+        if id:
+             i = Integration.query.get_or_404(id)
+             i.key = data.get('key', i.key)
+             i.name = data.get('name', i.name)
+             i.url_dev = data.get('url_dev', i.url_dev)
+             i.url_prod = data.get('url_prod', i.url_prod)
+             i.active_env = data.get('active_env', i.active_env)
+             i.payload_config = data.get('payload_config', i.payload_config)
+        else:
+            # Check for unique key
+            if Integration.query.filter_by(key=data.get('key')).first():
+                 return jsonify({"error": "Integration key already exists"}), 400
+            
+            i = Integration(
+                key=data.get('key'),
+                name=data.get('name'),
+                url_dev=data.get('url_dev'),
+                url_prod=data.get('url_prod'),
+                active_env=data.get('active_env', 'dev'),
+                payload_config=data.get('payload_config', {})
+            )
+            db.session.add(i)
+        
+        db.session.commit()
+        return jsonify({"message": "Integración guardada"}), 200
+        
+    return jsonify([{
+        "id": i.id, "key": i.key, "name": i.name, 
+        "url_dev": i.url_dev, "url_prod": i.url_prod, "active_env": i.active_env,
+        "payload_config": i.payload_config
+    } for i in Integration.query.all()]), 200
 @bp.route('/admin/pipelines/setter', methods=['GET'])
 @login_required
 @admin_required
@@ -852,40 +900,6 @@ def remove_pipeline_stage(id):
         db.session.commit()
         return jsonify({"message": "Etapa desactivada (tiene datos asociados)"}), 200
 
-    if request.method == 'POST':
-        data = request.get_json() or {}
-        id = data.get('id')
-        if id:
-             i = Integration.query.get_or_404(id)
-             i.key = data.get('key', i.key)
-             i.name = data.get('name', i.name)
-             i.url_dev = data.get('url_dev', i.url_dev)
-             i.url_prod = data.get('url_prod', i.url_prod)
-             i.active_env = data.get('active_env', i.active_env)
-             i.payload_config = data.get('payload_config', i.payload_config)
-        else:
-            # Check for unique key
-            if Integration.query.filter_by(key=data.get('key')).first():
-                 return jsonify({"error": "Integration key already exists"}), 400
-            
-            i = Integration(
-                key=data.get('key'),
-                name=data.get('name'),
-                url_dev=data.get('url_dev'),
-                url_prod=data.get('url_prod'),
-                active_env=data.get('active_env', 'dev'),
-                payload_config=data.get('payload_config', {})
-            )
-            db.session.add(i)
-        
-        db.session.commit()
-        return jsonify({"message": "Integración guardada"}), 200
-        
-    return jsonify([{
-        "id": i.id, "key": i.key, "name": i.name, 
-        "url_dev": i.url_dev, "url_prod": i.url_prod, "active_env": i.active_env,
-        "payload_config": i.payload_config
-    } for i in Integration.query.all()]), 200
 
 @bp.route('/admin/integrations/2chat/test', methods=['POST'])
 @login_required
@@ -1060,14 +1074,6 @@ def manage_closer_stages():
     db.session.commit()
     return jsonify({"message": "Etapas actualizadas"}), 200
 
-@bp.route('/admin/pipelines/stages/<int:id>', methods=['DELETE'])
-@login_required
-@admin_required
-def delete_pipeline_stage(id):
-    s = PipelineStage.query.get_or_404(id)
-    db.session.delete(s)
-    db.session.commit()
-    return jsonify({"message": "Etapa eliminada"}), 200
 
 
 @bp.route('/admin/funnels/events/<int:event_id>/questions', methods=['GET', 'POST'])

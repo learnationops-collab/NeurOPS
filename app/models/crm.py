@@ -32,6 +32,7 @@ class Notification(db.Model):
     target_users = db.Column(db.JSON, default="all")
     associated_id = db.Column(db.Integer, nullable=True)
     associated_type = db.Column(db.String(50), nullable=True) # e.g., 'appointment'
+    related_users = db.Column(db.JSON, default=[])
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):

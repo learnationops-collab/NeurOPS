@@ -112,4 +112,28 @@ def create_app(config_class=Config):
             return send_from_directory(app.static_folder, path)
         return send_from_directory(app.static_folder, 'index.html')
 
+    @app.errorhandler(500)
+    def internal_error(error):
+        from flask import jsonify
+        import traceback
+        return jsonify({
+            "message": "Internal Server Error",
+            "error": str(error),
+            "trace": traceback.format_exc()
+        }), 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        from flask import jsonify
+        import traceback
+        # pass through HTTP errors
+        if hasattr(e, 'code') and e.code < 500:
+            return e
+        
+        return jsonify({
+            "message": "Unhandled Exception",
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }), 500
+
     return app

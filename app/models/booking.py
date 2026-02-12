@@ -16,6 +16,11 @@ class Appointment(db.Model):
     linked_call = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Relationships
+    closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
+    setter = db.relationship('User', foreign_keys=[setter_id], backref='appointments_set')
+    # Note: client is already provided by backref in Client model
+
 class Availability(db.Model):
     __tablename__ = 'availability'
     id = db.Column(db.Integer, primary_key=True)

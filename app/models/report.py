@@ -36,20 +36,8 @@ class DailyReportAnswer(db.Model):
     answer = db.Column(db.Text)
     
     question = db.relationship('DailyReportQuestion')
-    daily_stats = db.relationship('CloserDailyStats', backref=db.backref('answers', lazy='dynamic'))
-    setter_stats = db.relationship('SetterDailyStats', backref=db.backref('answers', lazy='dynamic'))
-
-class SetterDailyStageMetric(db.Model):
-    __tablename__ = 'setter_daily_stage_metrics'
-    id = db.Column(db.Integer, primary_key=True)
-    daily_stats_id = db.Column(db.Integer, db.ForeignKey('setter_daily_stats.id'), nullable=False)
-    stage_id = db.Column(db.Integer, db.ForeignKey('pipeline_stages.id'), nullable=False)
-    value = db.Column(db.Integer, default=0)
-    
-    daily_stats = db.relationship('SetterDailyStats', backref=db.backref('stage_metrics', lazy='dynamic'))
-    stage = db.relationship('PipelineStage')
-    
-    __table_args__ = (db.UniqueConstraint('daily_stats_id', 'stage_id', name='_setter_daily_stage_uc'),)
+    daily_stats = db.relationship('CloserDailyStats', backref=db.backref('qualitative_answers', lazy='dynamic'))
+    # Removed setter_stats relationship to avoid conflict with 'answers' JSON column in SetterDailyStats
 
 class SetterDailyStats(db.Model):
     __tablename__ = 'setter_daily_stats'
@@ -57,13 +45,17 @@ class SetterDailyStats(db.Model):
     setter_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
     
-    inbound_leads = db.Column(db.Integer, default=0)
-    openings = db.Column(db.Integer, default=0)
     not_lead = db.Column(db.Integer, default=0)
-    new_offers = db.Column(db.Integer, default=0)
-    links_sent = db.Column(db.Integer, default=0)
-    appointments_booked = db.Column(db.Integer, default=0)
-    follow_ups = db.Column(db.Integer, default=0)
+
+    # Fixed Funnel Stages (Max 5)
+    stage_1_value = db.Column(db.Integer, default=0)
+    stage_2_value = db.Column(db.Integer, default=0)
+    stage_3_value = db.Column(db.Integer, default=0)
+    stage_4_value = db.Column(db.Integer, default=0)
+    stage_5_value = db.Column(db.Integer, default=0)
+    
+    # Qualitative answers stored as a JSON dictionary: {question_id: answer_text}
+    answers = db.Column(db.JSON, nullable=True)
     
     setter = db.relationship('User', backref=db.backref('setter_daily_stats', lazy='dynamic'))
     __table_args__ = (db.UniqueConstraint('setter_id', 'date', name='_setter_date_uc'),)

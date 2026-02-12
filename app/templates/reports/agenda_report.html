@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root {
+            --bg-surface: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #111827;
+            --text-muted: #4b5563;
+            --accent-primary: #3b82f6;
+            --accent-teal: #0d9488;
+            --accent-rose: #e11d48;
+            --border: #e5e7eb;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+        }
+
+        body {
+            margin: 0;
+            padding: 30px;
+            background-color: var(--bg-surface);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--text-main);
+            width: 740px;
+            /* Adapted for Discord image aspect ratio */
+        }
+
+        .report-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Top Accent Decoration */
+        .top-accent {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-teal));
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .agenda-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .agenda-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--accent-primary);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .agenda-details h1 {
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        .report-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+
+        .count-badge {
+            background: #f3f4f6;
+            padding: 8px 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .count-badge .val {
+            font-weight: 800;
+            font-size: 18px;
+            color: var(--text-main);
+            display: block;
+        }
+
+        .count-badge .lbl {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .info-group {
+            background: #fafafb;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .info-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .info-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .client-name {
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--text-main);
+            margin-bottom: 25px;
+            padding-left: 5px;
+            border-left: 4px solid var(--accent-teal);
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-top: 20px;
+        }
+
+        .highlight-teal {
+            color: var(--accent-teal);
+        }
+
+        .highlight-blue {
+            color: var(--accent-primary);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="report-card">
+        <div class="top-accent"></div>
+
+        <!-- HEADER -->
+        <div class="header">
+            <div class="agenda-info">
+                <div class="agenda-icon">📅</div>
+                <div class="agenda-details">
+                    <div class="report-label">NeurOPS System • Booking</div>
+                    <h1>Nueva Agenda</h1>
+                </div>
+            </div>
+            <div class="count-badge">
+                <span class="val">{{ count }}</span>
+                <span class="lbl">Agendas Hoy</span>
+            </div>
+        </div>
+
+        <!-- CLIENT NAME AREA -->
+        <div class="client-name">
+            {{ client_name }}
+        </div>
+
+        <!-- DETAILS GRID -->
+        <div class="content-grid">
+            <div class="info-group">
+                <div class="info-label">Closer Asignado</div>
+                <div class="info-value highlight-blue">{{ closer_name }}</div>
+            </div>
+            <div class="info-group">
+                <div class="info-label">Fecha y Hora</div>
+                <div class="info-value">{{ date_str }} — {{ time_str }}</div>
+            </div>
+            <div class="info-group">
+                <div class="info-label">Teléfono / Instagram</div>
+                <div class="info-value" style="font-size: 14px;">
+                    {{ client_phone }}<br>
+                    <span class="highlight-teal">@{{ client_ig }}</span>
+                </div>
+            </div>
+            <div class="info-group">
+                <div class="info-label">Fuente / Origen</div>
+                <div class="info-value" style="text-transform: uppercase;">{{ lead_source }}</div>
+            </div>
+        </div>
+
+        <div class="footer">NeurOPS PERFORMANCE • HIGH CONVERSION ONLY</div>
+    </div>
+
+</body>
+
+</html>

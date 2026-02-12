@@ -12,7 +12,10 @@ import {
     X,
     ExternalLink,
     MessageSquare,
-    ArrowUpRight
+    ArrowUpRight,
+    ChevronDown,
+    FileText,
+    Calendar
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -21,29 +24,95 @@ import api from '../../../services/api';
 import HotkeysTable from '../../../components/dashboard/HotkeysTable';
 import NotificationWidget from '../../../components/dashboard/NotificationWidget';
 
+import ReportsHistoryModal from './ReportsHistoryModal';
+
 const SetterDashboard = () => {
     const [loading, setLoading] = useState(true);
-    const [activeSection, setActiveSection] = useState(0); // 0: Dashboard (Top), 1: Daily Report (Bottom)
     const [submitting, setSubmitting] = useState(false);
+    const [activeSection, setActiveSection] = useState(0); // 0: Dashboard (Top), 1: Daily Report (Bottom)
+
+    // Data State
     const [questions, setQuestions] = useState([]);
     const [answers, setAnswers] = useState({});
-    const [fixedStats, setFixedStats] = useState({
-        inbound_leads: '',
-        openings: '',
-        not_lead: '',
-        new_offers: '',
-        links_sent: '',
-        appointments_booked: '',
-        follow_ups: ''
-    });
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
+    const [stages, setStages] = useState([]);
+    const [funnelStats, setFunnelStats] = useState({});
     const [summaryStats, setSummaryStats] = useState(null);
     const [notifications, setNotifications] = useState([]);
+    const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(null);
 
     // Links Modal State
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [availableLinks, setAvailableLinks] = useState({ events: [], closers: [] });
+
+    // --- FORM STATES ---
+    const [formData, setFormData] = useState({
+        date: new Date().toISOString().split('T')[0]
+    });
+
+    const [fixedStats, setFixedStats] = useState({
+        not_lead: ''
+    });
+
+
+
+    // --- AUTO-LOAD REPORT ON DATE CHANGE ---
+    useEffect(() => {
+        const checkExistingReport = async () => {
+            if (!formData.date) return;
+
+            try {
+                const { data } = await api.get('/setter/daily-report', {
+                    params: { date: formData.date }
+                });
+
+                if (data) {
+                    // Report exists, populate form
+                    console.log("Loading existing report:", data);
+                    setFixedStats({
+                        not_lead: data.fixed_stats.not_lead || ''
+                    });
+
+                    // Load funnel stats
+                    const newFunnelStats = {};
+                    stages.forEach(stage => {
+                        newFunnelStats[stage.id] = data.funnel_stats[stage.id] || '';
+                    });
+                    setFunnelStats(newFunnelStats);
+
+                    // Load answers
+                    setAnswers(data.answers || {});
+
+                } else {
+                    // No report, clear form (but keep date)
+                    setFixedStats({
+                        not_lead: ''
+                    });
+
+                    const emptyFunnel = {};
+                    stages.forEach(s => emptyFunnel[s.id] = '');
+                    setFunnelStats(emptyFunnel);
+                    setAnswers({});
+                }
+            } catch (err) {
+                console.error("Error checking daily report:", err);
+            }
+        };
+
+        if (activeSection === 1) { // Only check if in Daily Report section
+            checkExistingReport();
+        }
+    }, [formData.date, activeSection, stages]); // Run when date, section, or stages loads change
+
+    // History Modal State
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+    // Collapsible Sections State (Fixing undefined reference)
+    const [sections, setSections] = useState({ quant: true, qual: true });
+
+    const toggleSection = (section) => {
+        setSections(prev => ({ ...prev, [section]: !prev[section] }));
+    };
 
     // Initial Fetch
     useEffect(() => {
@@ -52,7 +121,8 @@ const SetterDashboard = () => {
             try {
                 await Promise.all([
                     fetchQuestionsAndStats(),
-                    fetchNotifications()
+                    fetchNotifications(),
+                    fetchStages()
                 ]);
             } catch (err) {
                 console.error("Error fetching data", err);
@@ -62,6 +132,21 @@ const SetterDashboard = () => {
         };
         init();
     }, []);
+
+    const fetchStages = async () => {
+        try {
+            const res = await api.get('/setter/stages');
+            setStages(res.data || []);
+            // Initialize funnelStats with empty strings
+            const initialStats = {};
+            (res.data || []).forEach(stage => {
+                initialStats[stage.id] = '';
+            });
+            setFunnelStats(initialStats);
+        } catch (err) {
+            console.error("Error fetching stages", err);
+        }
+    };
 
     const fetchQuestionsAndStats = async () => {
         try {
@@ -136,7 +221,39 @@ const SetterDashboard = () => {
         return () => window.removeEventListener('keydown', handleKeys);
     }, [isLinkModalOpen]);
 
-    // Handler for fixed stats input changes
+
+
+    // History Modal Handlers
+    const handleEditReport = (report) => {
+        // Load report data into form
+        setFormData({ date: report.date });
+        setFixedStats({
+            not_lead: report.fixed_stats.not_lead || ''
+        });
+
+        // Load funnel stats
+        const newFunnelStats = {};
+        stages.forEach(stage => {
+            newFunnelStats[stage.id] = report.funnel_stats[stage.id] || '';
+        });
+        setFunnelStats(newFunnelStats);
+
+        // Load answers
+        setAnswers(report.answers || {});
+
+        // Close modal and focus form
+        setIsHistoryModalOpen(false);
+        setActiveSection(1); // Switch to Daily Report view
+        setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); // Scroll to bottom
+        }, 100);
+    };
+
+    // Handler for funnel stats input changes
+    const handleFunnelChange = (stageId, value) => {
+        setFunnelStats(prev => ({ ...prev, [stageId]: value }));
+    };
+
     const handleFixedChange = (field, value) => {
         setFixedStats(prev => ({ ...prev, [field]: value }));
     };
@@ -148,10 +265,24 @@ const SetterDashboard = () => {
         setError(null);
         setSuccess(null);
 
+        // Prepare funnel metrics array
+        const funnelMetricsList = Object.entries(funnelStats).map(([stageId, value]) => ({
+            stage_id: parseInt(stageId),
+            value: value === '' ? 0 : parseInt(value)
+        })).filter(m => m.value >= 0); // Only send if valid number
+
         try {
+            // Transform answers object to expected array format
+            const answersList = Object.entries(answers).map(([qId, val]) => ({
+                question_id: parseInt(qId),
+                answer: val
+            })).filter(a => a.answer && a.answer.trim() !== '');
+
             await api.post('/setter/daily-report', {
-                fixed_stats: fixedStats,
-                answers
+                date: formData.date, // Use selected date
+                ...fixedStats, // Spread fixed stats to root level
+                funnel_metrics: funnelMetricsList, // Include dynamic metrics
+                answers: answersList // Send list of answers
             });
             setSuccess('Reporte enviado correctamente');
             setTimeout(() => setSuccess(null), 3000);
@@ -172,7 +303,7 @@ const SetterDashboard = () => {
     if (loading) return <div className="h-screen flex items-center justify-center bg-main"><Loader2 className="animate-spin text-primary" /></div>;
 
     return (
-        <div className="h-screen bg-main overflow-hidden relative">
+        <div className="h-screen overflow-hidden relative">
             <motion.div
                 className="absolute top-0 left-0 w-full h-[200%]"
                 animate={{ y: `-${activeSection * 50}%` }}
@@ -180,7 +311,7 @@ const SetterDashboard = () => {
             >
                 {/* SECTION 0: DASHBOARD (Top 50%) */}
                 <div
-                    className="absolute top-0 left-0 w-full h-[50%] flex flex-col items-center justify-start p-12 bg-main overflow-y-auto custom-scrollbar"
+                    className="absolute top-0 left-0 w-full h-[50%] flex flex-col items-center justify-start p-12 overflow-y-auto custom-scrollbar"
                 >
                     <div className="w-full max-w-6xl space-y-12 py-12">
                         <header className="flex justify-between items-center border-b border-base pb-8 mb-4">
@@ -232,14 +363,29 @@ const SetterDashboard = () => {
 
                 {/* SECTION 1: REPORT (Bottom 50%) */}
                 <div
-                    className="absolute top-[50%] left-0 w-full h-[50%] overflow-y-auto custom-scrollbar p-8 md:p-12 pb-32 bg-main/50"
+                    className="absolute top-[50%] left-0 w-full h-[50%] overflow-y-auto custom-scrollbar p-8 md:p-12 pb-32"
                 >
                     <div className="max-w-7xl mx-auto space-y-8">
                         <div className="flex justify-between items-end border-b border-base pb-8 mb-8">
-                            <div className="flex items-end gap-6">
+                            <div className="flex items-end gap-3">
+                                <Button
+                                    onClick={() => setIsHistoryModalOpen(true)}
+                                    variant="ghost"
+                                    className="h-10 px-4 rounded-xl text-xs font-black uppercase tracking-widest text-muted hover:text-white hover:bg-white/5"
+                                >
+                                    <FileText size={16} className="mr-2" /> Mis Reportes
+                                </Button>
+                                <Button
+                                    onClick={() => window.open('/setter/statistics', '_blank')}
+                                    variant="ghost"
+                                    className="h-10 px-4 rounded-xl text-xs font-black uppercase tracking-widest text-muted hover:text-white hover:bg-white/5"
+                                >
+                                    <BarChart3 size={16} className="mr-2" /> Estadísticas
+                                </Button>
                                 <button
                                     onClick={() => setActiveSection(0)} // Up to Dashboard
                                     className="p-3 mb-1 bg-surface border border-base rounded-2xl text-muted hover:text-primary transition-all group"
+                                    title="Volver al Dashboard"
                                 >
                                     <ArrowUpRight className="-rotate-90" size={20} />
                                 </button>
@@ -302,53 +448,141 @@ const SetterDashboard = () => {
                                 <form onSubmit={handleSubmit} className="space-y-6 h-full">
                                     <Card variant="surface" className="p-8 space-y-8 border-base/50 shadow-2xl">
 
-                                        {/* Fixed Metrics Section */}
-                                        <div>
-                                            <h3 className="text-xs font-black text-primary uppercase tracking-widest mb-6 flex items-center gap-2">
-                                                <LayoutDashboard size={14} /> Métricas Base
-                                            </h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                {[
-                                                    { k: 'inbound_leads', l: 'Inbound Leads (Entrantes)' },
-                                                    { k: 'openings', l: 'Aperturas (Openings)' },
-                                                    { k: 'appointments_booked', l: 'Agendas (Booked)' },
-                                                    { k: 'new_offers', l: 'Nuevas Ofertas' },
-                                                    { k: 'links_sent', l: 'Links Enviados' },
-                                                    { k: 'follow_ups', l: 'Seguimientos' },
-                                                    { k: 'not_lead', l: 'No Lead / Descalificados' },
-                                                ].map(field => (
-                                                    <div key={field.k} className="space-y-2">
-                                                        <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">{field.l}</label>
-                                                        <input
-                                                            type="number"
-                                                            className="w-full px-4 py-3 bg-main border border-base rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-muted/20"
-                                                            placeholder="0"
-                                                            value={fixedStats[field.k]}
-                                                            onChange={(e) => handleFixedChange(field.k, e.target.value)}
-                                                        />
-                                                    </div>
-                                                ))}
+                                        {/* Date Selection */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Fecha del Reporte</label>
+                                            <div className="relative">
+                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
+                                                <input
+                                                    type="date"
+                                                    className="w-full pl-12 pr-4 py-3 bg-main border border-base rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-muted/20 text-white"
+                                                    value={formData.date} // This should work now as formData is defined
+                                                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                                    required
+                                                />
                                             </div>
                                         </div>
 
-                                        {/* Divider */}
-                                        <div className="h-px bg-base w-full" />
-
-                                        {/* Qualitative Questions */}
-                                        <div>
-                                            <h3 className="text-xs font-black text-primary uppercase tracking-widest mb-6">Feedback Cualitativo</h3>
-                                            <div className="space-y-6">
-                                                {questions.map(q => (
-                                                    <div key={q.id} className="space-y-2">
-                                                        <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">{q.text}</label>
-                                                        <textarea
-                                                            className="w-full px-4 py-3 bg-main border border-base rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-muted/20 min-h-[100px] resize-none"
-                                                            placeholder="Escribe tu respuesta..."
-                                                            value={answers[q.id] || ''}
-                                                            onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                                                        />
+                                        <div className="space-y-4">
+                                            {/* Quantitative Section (Collapsible) */}
+                                            <div className="bg-surface/50 rounded-2xl border border-base overflow-hidden transition-all">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSection('quant')}
+                                                    className="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                                                            <BarChart3 size={18} />
+                                                        </div>
+                                                        <div className="text-left">
+                                                            <h3 className="text-xs font-black text-white uppercase tracking-widest">Cuantitativo</h3>
+                                                            <p className="text-[10px] font-bold text-muted uppercase">Métricas del Embudo</p>
+                                                        </div>
                                                     </div>
-                                                ))}
+                                                    <div className={`transition-transform duration-300 ${sections.quant ? 'rotate-180' : ''}`}>
+                                                        <ChevronDown size={16} className="text-muted" />
+                                                    </div>
+                                                </button>
+
+                                                <AnimatePresence>
+                                                    {sections.quant && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className="overflow-hidden"
+                                                        >
+                                                            <div className="p-6 pt-0 grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-base/50 mt-2">
+                                                                {stages.map(stage => (
+                                                                    <div key={stage.id} className="space-y-2 pt-6">
+                                                                        <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">{stage.name}</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            className="w-full px-4 py-3 bg-main border border-base rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-muted/20"
+                                                                            placeholder="0"
+                                                                            value={funnelStats[stage.id] || ''}
+                                                                            onChange={(e) => handleFunnelChange(stage.id, e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                ))}
+                                                                {stages.length === 0 && (
+                                                                    <div className="col-span-full py-8 text-center opacity-50">
+                                                                        <p className="text-xs text-muted font-medium italic">No hay etapas configuradas.</p>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Fixed Metrics Inputs (Only No Lead is hardcoded now) */}
+                                                                {[
+                                                                    { k: 'not_lead', l: 'No Lead' }
+                                                                ].map(field => (
+                                                                    <div key={field.k} className="space-y-2 pt-6">
+                                                                        <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">{field.l}</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            className="w-full px-4 py-3 bg-main border border-base rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-muted/20"
+                                                                            placeholder="0"
+                                                                            value={fixedStats[field.k]}
+                                                                            onChange={(e) => handleFixedChange(field.k, e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+
+                                            {/* Qualitative Section (Collapsible) */}
+                                            <div className="bg-surface/50 rounded-2xl border border-base overflow-hidden transition-all">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSection('qual')}
+                                                    className="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="p-2 bg-pink-500/10 rounded-lg text-pink-500">
+                                                            <MessageSquare size={18} />
+                                                        </div>
+                                                        <div className="text-left">
+                                                            <h3 className="text-xs font-black text-white uppercase tracking-widest">Cualitativo</h3>
+                                                            <p className="text-[10px] font-bold text-muted uppercase">Feedback & Notas</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className={`transition-transform duration-300 ${sections.qual ? 'rotate-180' : ''}`}>
+                                                        <ChevronDown size={16} className="text-muted" />
+                                                    </div>
+                                                </button>
+
+                                                <AnimatePresence>
+                                                    {sections.qual && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className="overflow-hidden"
+                                                        >
+                                                            <div className="p-6 pt-0 space-y-6 border-t border-base/50 mt-2">
+                                                                {questions.map(q => (
+                                                                    <div key={q.id} className="space-y-2 pt-6">
+                                                                        <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">{q.text}</label>
+                                                                        <textarea
+                                                                            className="w-full px-4 py-3 bg-main border border-base rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-muted/20 min-h-[100px] resize-none"
+                                                                            placeholder="Escribe tu respuesta..."
+                                                                            value={answers[q.id] || ''}
+                                                                            onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                ))}
+                                                                {questions.length === 0 && (
+                                                                    <div className="py-8 text-center opacity-50">
+                                                                        <p className="text-xs text-muted font-medium italic">No hay preguntas de feedback configuradas.</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </div>
                                         </div>
 
@@ -462,6 +696,13 @@ const SetterDashboard = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* History Modal */}
+            <ReportsHistoryModal
+                isOpen={isHistoryModalOpen}
+                onClose={() => setIsHistoryModalOpen(false)}
+                onEdit={handleEditReport}
+            />
 
         </div >
     );

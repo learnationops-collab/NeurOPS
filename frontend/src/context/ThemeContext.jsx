@@ -3,26 +3,30 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const ThemeContext = createContext();
 
 export const themes = {
-    dark: {
-        id: 'dark',
-        name: 'Dark Premium',
-        class: 'theme-dark'
+    elegant: {
+        id: 'elegant',
+        name: 'Elegant Blue',
+        class: 'theme-elegant',
+        description: 'Glass / Textos Oscuros'
     },
-    light: {
-        id: 'light',
-        name: 'Light Minimal',
-        class: 'theme-light'
+    clean: {
+        id: 'clean',
+        name: 'Clean Mac',
+        class: 'theme-clean',
+        description: 'Solid / Minimalista'
     },
-    vibrant: {
-        id: 'vibrant',
-        name: 'Electric Neon',
-        class: 'theme-vibrant'
+    custom: {
+        id: 'custom',
+        name: 'Custom Pro',
+        class: 'theme-custom',
+        description: 'Dark / Personalizable'
     }
 };
 
 export const ThemeProvider = ({ children }) => {
     const [theme, setTheme] = useState(() => {
-        return localStorage.getItem('app-theme') || 'dark';
+        const stored = localStorage.getItem('app-theme');
+        return (stored && themes[stored]) ? stored : 'elegant';
     });
 
     const [variant, setVariant] = useState(() => {
@@ -41,17 +45,35 @@ export const ThemeProvider = ({ children }) => {
         return localStorage.getItem('app-bg-stock') || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop';
     });
 
+    const [customPrimary, setCustomPrimary] = useState(() => {
+        return localStorage.getItem('app-custom-primary') || '#6366f1';
+    });
+
     useEffect(() => {
         const root = window.document.documentElement;
 
-        // Apply Mode (Light/Dark)
-        if (theme === 'dark' || theme === 'vibrant') {
+        // Apply Mode (Light/Dark) based on specific theme config
+        // Elegant & Clean are explicitly Light (per user request for dark text)
+        // Custom is set to Dark base to provide a dark option
+        if (theme === 'custom') {
             root.classList.add('dark');
+            root.style.setProperty('--brand-primary', customPrimary);
         } else {
             root.classList.remove('dark');
+            root.style.removeProperty('--brand-primary');
         }
 
+        // Remove all theme classes first
+        Object.values(themes).forEach(t => root.classList.remove(t.class));
+        // Add current theme class
+        root.classList.add(themes[theme].class);
+
         // Apply Style Variant (Solid/Glass)
+        // Check if theme enforces a specific variant, otherwise use selected
+        // User requested: Elegant -> Glass, Clean -> Solid defaults?
+        // But user also said "temas definen background pero usuario define..."
+        // I will keep variant decoupled but maybe set reasonable defaults if I could.
+        // For now, respect the manually selected 'variant'.
         root.setAttribute('data-theme-style', variant);
 
         localStorage.setItem('app-theme', theme);
@@ -59,7 +81,8 @@ export const ThemeProvider = ({ children }) => {
         localStorage.setItem('app-bg-type', backgroundType);
         if (customBackground) localStorage.setItem('app-bg-custom', customBackground);
         localStorage.setItem('app-bg-stock', stockBackground);
-    }, [theme, variant, backgroundType, customBackground, stockBackground]);
+        localStorage.setItem('app-custom-primary', customPrimary);
+    }, [theme, variant, backgroundType, customBackground, stockBackground, customPrimary]);
 
     return (
         <ThemeContext.Provider value={{
@@ -68,6 +91,7 @@ export const ThemeProvider = ({ children }) => {
             backgroundType, setBackgroundType,
             customBackground, setCustomBackground,
             stockBackground, setStockBackground,
+            customPrimary, setCustomPrimary,
             themes
         }}>
             {children}

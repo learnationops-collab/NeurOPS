@@ -20,13 +20,18 @@ def load_user(id):
 @login.request_loader
 def load_user_from_request(request):
     auth_header = request.headers.get('Authorization')
+    print(f"DEBUG AUTH: Authorization header: {auth_header}")
     if auth_header:
         try:
             auth_header = auth_header.replace('Bearer ', '', 1)
             user_id = User.verify_auth_token(auth_header)
+            print(f"DEBUG AUTH: Verified user_id: {user_id}")
             if user_id:
-                return User.query.get(user_id)
-        except Exception:
+                user = User.query.get(user_id)
+                print(f"DEBUG AUTH: Loaded user: {user}")
+                return user
+        except Exception as e:
+            print(f"DEBUG AUTH: Error in load_user_from_request: {e}")
             return None
     return None
 
@@ -58,11 +63,11 @@ class User(UserMixin, db.Model):
                 algorithms=['HS256']
             )
             return data['id']
-        except Exception:
+        except Exception as e:
+            print(f"DEBUG AUTH: Token verification failed: {e}")
             return None
 
-    # Forward references as strings for better decoupling
-    appointments_as_closer = db.relationship('Appointment', foreign_keys='Appointment.closer_id', backref='closer', lazy='dynamic')
+    # Relationships are now defined in Appointment model for better singular access
     availability = db.relationship('Availability', backref='closer', lazy='dynamic', cascade="all, delete-orphan")
     weekly_availability = db.relationship('WeeklyAvailability', backref='closer', lazy='dynamic', cascade="all, delete-orphan")
 

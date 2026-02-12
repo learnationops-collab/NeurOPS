@@ -7,8 +7,8 @@ const GroupModal = ({ groupName, setGroupName, onClose, onSave }) => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
             <Card className="w-full max-w-sm space-y-6 shadow-2xl border-white/5 animate-in zoom-in-95 duration-300">
                 <header>
-                    <h3 className="text-xl font-black uppercase tracking-tight italic">Configurar Grupo</h3>
-                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-1">Categoriza tus embudos de venta</p>
+                    <h3 className="text-xl font-black uppercase tracking-tight italic">Configurar Evento Comercial</h3>
+                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-1">Nombre principal del evento (Ej: Sesión de Aceleración)</p>
                 </header>
                 <input
                     value={groupName}

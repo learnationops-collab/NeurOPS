@@ -126,6 +126,82 @@ strong {
 }
 
 /* ==========================================================================
+   THEME PALETTES (Overrides)
+   ========================================================================== */
+
+/* ==========================================================================
+   THEME PALETTES (Refactored)
+   ========================================================================== */
+
+/* Elegant Blue - Light Glass Optimized */
+.theme-elegant {
+    --brand-primary: #3b82f6;
+    /* Classic Blue */
+    --brand-secondary: #6366f1;
+    /* Indigo */
+    --brand-navy: #f8fafc;
+    /* Light BG Base */
+    --bg-app: fixed linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+    /* Soft Blue Gradient */
+
+    /* Specific overrides for "Low Opacity" */
+    --glass-blur: 12px;
+    /* Softer blur */
+    --bg-card: rgba(255, 255, 255, 0.4);
+    /* More transparent than usual */
+    --bg-sidebar: rgba(255, 255, 255, 0.4);
+    --border-color: rgba(255, 255, 255, 0.3);
+
+    /* Text Colors (Dark on Light) */
+    --text-main: #0f172a;
+    --text-muted: #475569;
+    --text-on-card: #0f172a;
+    --text-input: #0f172a;
+}
+
+/* Clean Mac - Light Solid Optimized */
+.theme-clean {
+    --brand-primary: #2563eb;
+    /* Royal Blue */
+    --brand-secondary: #4f46e5;
+    --brand-navy: #ffffff;
+    --bg-app: #f5f5f7;
+    /* Mac-like Light Gray */
+
+    /* Solid overrides will be applied by [data-theme-style="solid"] */
+    /* But we define base colors here */
+    --bg-card: #ffffff;
+    --bg-sidebar: #ffffff;
+    --border-color: #e5e7eb;
+
+    /* Text Colors */
+    --text-main: #1f2937;
+    --text-muted: #6b7280;
+    --text-on-card: #1f2937;
+    --text-input: #1f2937;
+}
+
+/* Custom Pro - Dark Base with Dynamic Primary */
+.theme-custom {
+    /* --brand-primary is set via JS */
+    --brand-secondary: #ffffff;
+    --brand-navy: #020617;
+    /* Very Dark Base */
+    --bg-app: #020617;
+
+    /* Dark Theme Defaults */
+    --bg-card: rgba(15, 23, 42, 0.6);
+    --bg-sidebar: rgba(15, 23, 42, 0.8);
+    --border-color: rgba(255, 255, 255, 0.1);
+
+    /* Text Colors (Light on Dark) */
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-on-card: #ffffff;
+    --text-input: #ffffff;
+}
+
+/* ==========================================================================
    STYLE: SOLID (Material / Clean)
    ========================================================================== */
 [data-theme-style="solid"],
@@ -133,11 +209,12 @@ strong {
     --glass-blur: 0px;
     --radius-main: 0.75rem;
     --radius-control: 0.5rem;
+    /* Background comes from Theme now */
 }
 
 /* SOLID LIGHT - Dark Surfaces on Light BG */
 [data-theme-style="solid"] {
-    --bg-app: #f1f5f9;
+    /* --bg-app removed */
     --bg-sidebar: var(--brand-navy);
     --bg-card: var(--brand-navy);
     --bg-item: rgba(255, 255, 255, 0.1);
@@ -158,7 +235,7 @@ strong {
 :root.dark [data-theme-style="solid"],
 :root.dark[data-theme-style="solid"],
 .theme-dark-forced[data-theme-style="solid"] {
-    --bg-app: #020617;
+    /* --bg-app removed */
     --bg-sidebar: #cbd5e1;
     --bg-card: #e2e8f0;
     --bg-item: #ffffff;
@@ -182,12 +259,13 @@ strong {
     --glass-blur: 24px;
     --radius-main: 2rem;
     --radius-control: 1rem;
+    /* Background comes from Theme now */
 }
 
 /* GLASS LIGHT - Dark Glass on Light BG */
 [data-theme-style="glass"],
 :root[data-theme-style="glass"] {
-    --bg-app: fixed linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 50%, #fef3c7 100%);
+    /* --bg-app removed */
     --bg-sidebar: rgba(10, 14, 61, 0.85);
     --bg-card: rgba(10, 14, 61, 0.85);
     --bg-item: rgba(255, 255, 255, 0.1);
@@ -211,7 +289,7 @@ strong {
 /* GLASS DARK - Light Glass on Dark BG */
 :root.dark [data-theme-style="glass"],
 :root.dark[data-theme-style="glass"] {
-    --bg-app: fixed linear-gradient(135deg, #020617 0%, #0A0E3D 50%, #05082d 100%);
+    /* --bg-app removed */
     --bg-sidebar: rgba(2, 6, 23, 0.8);
     --bg-card: rgba(2, 6, 23, 0.7);
     --bg-item: rgba(255, 255, 255, 0.1);
@@ -272,6 +350,7 @@ h6 {
     box-shadow: var(--shadow-main);
     transition: all 0.3s ease;
     --text-main: var(--text-on-card);
+    color: var(--text-main);
 }
 
 .theme-sidebar {
@@ -281,16 +360,20 @@ h6 {
     border-right: var(--glass-border);
     transition: all 0.3s ease;
     --text-main: var(--text-on-card);
+    color: var(--text-main);
     border-radius: 0 !important;
 }
 
 /* Utilities */
 .bg-main {
-    background-color: var(--bg-app);
+    background: var(--bg-app);
+    color: var(--text-main);
 }
 
 .bg-surface {
-    background-color: var(--bg-card);
+    background: var(--bg-card);
+    --text-main: var(--text-on-card);
+    color: var(--text-main);
 }
 
 .border-base {

@@ -33,7 +33,8 @@ import {
     Plus,
     RefreshCw,
     XCircle,
-    Send
+    Send,
+    Link as LinkIcon
 } from 'lucide-react';
 
 const CloserDashboard = () => {
@@ -226,7 +227,7 @@ const CloserDashboard = () => {
     );
 
     return (
-        <div className="h-screen overflow-hidden relative bg-main">
+        <div className="h-screen overflow-hidden relative">
             <AnimatePresence>
                 {showSavedToast && (
                     <motion.div
@@ -251,7 +252,7 @@ const CloserDashboard = () => {
 
                 {/* SECTION 0: DASHBOARD (Top 50%) */}
                 <div
-                    className="absolute top-0 left-0 w-full h-[50%] flex flex-col items-center justify-start p-12 bg-main overflow-y-auto custom-scrollbar"
+                    className="absolute top-0 left-0 w-full h-[50%] flex flex-col items-center justify-start p-12 overflow-y-auto custom-scrollbar"
                 >
                     <div className="w-full max-w-6xl space-y-12 py-12">
                         <header className="flex justify-between items-center border-b border-base pb-8 mb-4">
@@ -261,6 +262,14 @@ const CloserDashboard = () => {
                             </div>
 
                             <div className="flex items-center gap-4">
+                                <Button
+                                    onClick={() => setIsLinkModalOpen(true)}
+                                    variant="ghost"
+                                    className="h-12 px-6 rounded-xl bg-surface hover:bg-surface-hover border border-base text-primary font-black tracking-widest text-[10px] gap-2"
+                                    icon={LinkIcon}
+                                >
+                                    Links de agendas
+                                </Button>
                                 <Button
                                     onClick={() => setIsQuickApptOpen(true)}
                                     variant="ghost"
@@ -317,7 +326,7 @@ const CloserDashboard = () => {
 
                 {/* SECTION 1: DAILY SUMMARY (Bottom 50%) */}
                 <div
-                    className="absolute top-[50%] left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start bg-main/50 overflow-y-auto custom-scrollbar"
+                    className="absolute top-[50%] left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start overflow-y-auto custom-scrollbar"
                 >
                     <div className="w-full max-w-6xl space-y-12 py-12">
                         <header className="flex justify-between items-end border-b border-base pb-8">

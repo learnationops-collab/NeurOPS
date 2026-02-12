@@ -232,7 +232,7 @@ const CloserLeadsPage = () => {
     ];
 
     return (
-        <div className="h-screen overflow-hidden relative bg-main">
+        <div className="h-screen overflow-hidden relative">
             <motion.div
                 className="absolute top-0 left-0 w-full h-[200%]"
                 animate={{ y: `-${activeSection * 50}%` }}
@@ -322,7 +322,7 @@ const CloserLeadsPage = () => {
                 </div>
 
                 {/* SECTION 1: DATABASE TABLES (Bottom 50%) */}
-                <div className="absolute top-[50%] left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start bg-main/50 overflow-y-auto">
+                <div className="absolute top-[50%] left-0 w-full h-[50%] p-8 flex flex-col items-center justify-start overflow-y-auto">
                     <div className="w-full max-w-[1800px] space-y-8 pb-32">
                         <header className="flex items-center gap-6 border-b border-base pb-6">
                             <button

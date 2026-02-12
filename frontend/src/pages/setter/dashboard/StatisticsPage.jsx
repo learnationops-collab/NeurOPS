@@ -1,151 +1,304 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import {
-    LineChart,
-    TrendingUp,
-    Users,
-    MessageCircle,
-    CalendarCheck,
-    Loader2,
-    Calendar,
-    Target
-} from 'lucide-react';
-import Card from '../../../components/ui/Card';
-import Badge from '../../../components/ui/Badge';
+import { ArrowLeft, Calendar, Loader2, TrendingUp, Users, Target, CalendarDays, PieChart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
+import Button from '../../../components/ui/Button';
+import { ResponsiveContainer, FunnelChart, Funnel, LabelList, Tooltip, Cell, PieChart as RePieChart, Pie } from 'recharts';
 
 const SetterStatisticsPage = () => {
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState(null);
-    const [dateRange, setDateRange] = useState('month'); // 'today', 'week', 'month', 'all'
+    const [dateRange, setDateRange] = useState({
+        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+        end: new Date().toISOString().split('T')[0]
+    });
 
     useEffect(() => {
-        fetchStats();
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const statsRes = await api.get('/setter/stats/summary', {
+                    params: {
+                        start_date: dateRange.start,
+                        end_date: dateRange.end
+                    }
+                });
+                setStats(statsRes.data || {});
+            } catch (err) {
+                console.error("Error fetching stats:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
     }, [dateRange]);
 
-    const fetchStats = async () => {
-        setLoading(true);
-        try {
-            // Calculate detailed dates based on range
-            const end = new Date();
-            let start = new Date();
-
-            if (dateRange === 'today') {
-                // start remains today
-            } else if (dateRange === 'week') {
-                start.setDate(end.getDate() - 7);
-            } else if (dateRange === 'month') {
-                start.setMonth(end.getMonth() - 1);
-            } else {
-                start = null; // all time
-            }
-
-            const params = {};
-            if (start) params.start_date = start.toISOString().split('T')[0];
-            params.end_date = end.toISOString().split('T')[0];
-
-            const res = await api.get('/setter/stats/summary', { params });
-            setStats(res.data);
-        } catch (err) {
-            console.error("Error fetching stats:", err);
-        } finally {
-            setLoading(false);
-        }
+    const handleDateChange = (e) => {
+        setDateRange(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
-    if (loading && !stats) return <div className="h-screen flex items-center justify-center bg-main"><Loader2 className="animate-spin text-primary" /></div>;
-
-    const kpis = [
-        {
-            label: 'Total Agendas',
-            value: stats?.total_agendas || 0,
-            icon: CalendarCheck,
-            color: 'text-primary'
-        },
-        {
-            label: 'Openings',
-            value: stats?.total_openings || 0,
-            icon: MessageCircle,
-            color: 'text-violet-500'
-        },
-        {
-            label: 'Leads (Inbound)',
-            value: stats?.total_leads || 0,
-            icon: Users,
-            color: 'text-blue-500'
-        },
-        {
-            label: 'Conversión (Open/Book)',
-            value: `${stats?.conversion || 0}%`,
-            icon: Target,
-            color: 'text-emerald-500'
+    // --- CALCULATIONS ---
+    const rawStages = stats?.stage_metrics || [];
+    const funnelData = rawStages.map((stage, index) => {
+        let conversion = 0;
+        let conversionBase = 'N/A';
+        if (index === 0) {
+            conversion = 100;
+        } else if (rawStages[index - 1].value > 0) {
+            conversion = ((stage.value / rawStages[index - 1].value) * 100).toFixed(0);
+            conversionBase = rawStages[index - 1].name;
         }
+        return {
+            ...stage,
+            conversion,
+            conversionBase
+        };
+    });
+
+    const noLeadValue = stats?.total_not_lead || 0;
+    const totalInbound = stats?.total_leads || 0;
+    const qualifiedLeads = Math.max(0, totalInbound - noLeadValue);
+
+    const leadQualityData = [
+        { name: 'Cualificados', value: qualifiedLeads, fill: '#0d9488' },
+        { name: 'Descartados', value: noLeadValue, fill: '#e11d48' }
     ];
 
+    const bookingPct = qualifiedLeads > 0
+        ? ((funnelData[funnelData.length - 1]?.value || 0) / qualifiedLeads * 100).toFixed(0)
+        : 0;
+
     return (
-        <div className="min-h-screen bg-main p-8 md:p-12 pb-32">
-            <div className="max-w-4xl mx-auto space-y-8">
+        <div className="min-h-screen bg-[#f3f4f6] text-[#111827] p-4 md:p-8 font-inter selection:bg-primary/20">
+            <div className="max-w-6xl mx-auto space-y-10">
+
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b-2 border-gray-200 pb-8">
                     <div className="space-y-4">
-                        <Badge variant="neutral" className="bg-surface border border-base text-muted mb-2">Analytics</Badge>
-                        <h1 className="text-4xl md:text-5xl font-black text-base italic uppercase tracking-tighter">
-                            Estadísticas
-                        </h1>
-                        <p className="text-sm font-bold text-muted uppercase tracking-widest">
-                            Rendimiento y conversión de tu gestión.
-                        </p>
-                    </div>
-
-                    {/* Time Filter */}
-                    <div className="flex bg-surface border border-base rounded-2xl p-1">
-                        {[
-                            { id: 'today', label: 'Hoy' },
-                            { id: 'week', label: '7D' },
-                            { id: 'month', label: '30D' },
-                            { id: 'all', label: 'Todo' }
-                        ].map(t => (
-                            <button
-                                key={t.id}
-                                onClick={() => setDateRange(t.id)}
-                                className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${dateRange === t.id
-                                        ? 'bg-primary text-white shadow-lg'
-                                        : 'text-muted hover:text-base hover:bg-main'
-                                    }`}
-                            >
-                                {t.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* KPIs Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {kpis.map((kpi, idx) => (
-                        <Card key={idx} variant="surface" className="p-6 border-base/50 hover:border-primary/20 transition-all group">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className={`p-3 rounded-2xl bg-main border border-base ${kpi.color.replace('text-', 'text-opacity-20 bg-opacity-10 ')}`}>
-                                    <kpi.icon size={20} className={kpi.color} />
-                                </div>
-                                <TrendingUp size={16} className="text-muted opacity-50" />
+                        <button
+                            onClick={() => window.close()}
+                            className="flex items-center gap-2 text-gray-400 hover:text-gray-900 transition-all group"
+                        >
+                            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                            <span className="font-bold uppercase tracking-widest text-[10px]">Cerrar Panel</span>
+                        </button>
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-blue-500 rounded-2xl text-white shadow-lg shadow-blue-200">
+                                <TrendingUp size={32} />
                             </div>
-                            <h3 className="text-3xl font-black text-base italic tracking-tighter mb-1">
-                                {kpi.value}
-                            </h3>
-                            <p className="text-[10px] font-bold text-muted uppercase tracking-widest">{kpi.label}</p>
-                        </Card>
-                    ))}
-                </div>
+                            <div>
+                                <h1 className="text-4xl font-extrabold tracking-tighter text-gray-900">
+                                    RENDIMIENTO <span className="text-blue-600">SETTER</span>
+                                </h1>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Dashboard Operativo • NeurOPS Analytics
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-                {/* NOTE: More charts can be added here in the future */}
-                <Card variant="surface" className="p-12 flex flex-col items-center justify-center text-center opacity-50 hover:opacity-100 transition-opacity border-dashed border-2 border-base">
-                    <LineChart size={48} className="text-muted mb-4" />
-                    <h3 className="text-lg font-black text-base uppercase tracking-widest mb-2">Más Gráficos Próximamente</h3>
-                    <p className="text-sm text-muted">Estamos trabajando en visualizaciones detalladas de tu embudo.</p>
-                </Card>
+                    <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+                        <Calendar size={18} className="text-blue-500 ml-2" />
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="date"
+                                name="start"
+                                value={dateRange.start}
+                                onChange={handleDateChange}
+                                className="bg-transparent border-none text-xs font-black text-gray-700 focus:ring-0 p-0"
+                            />
+                            <span className="text-gray-300 font-bold">—</span>
+                            <input
+                                type="date"
+                                name="end"
+                                value={dateRange.end}
+                                onChange={handleDateChange}
+                                className="bg-transparent border-none text-xs font-black text-gray-700 focus:ring-0 p-0"
+                            />
+                        </div>
+                        {loading && <Loader2 className="animate-spin text-blue-500 ml-2" size={16} />}
+                    </div>
+                </header>
+
+                {loading ? (
+                    <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+                        <Loader2 className="animate-spin text-blue-500" size={48} />
+                        <p className="font-black italic uppercase text-xs text-gray-400 tracking-tighter">Sincronizando Metricas...</p>
+                    </div>
+                ) : (
+                    <div className="space-y-12">
+
+                        {/* 1. Main Metrics Grid */}
+                        <section className="space-y-6">
+                            <div className="flex items-center gap-3">
+                                <i className="w-1.5 h-6 bg-blue-600 rounded-full" />
+                                <h2 className="text-lg font-black uppercase tracking-tight">Cualificación de Entrada</h2>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <MetricCard label="Leads Totales" value={totalInbound} icon={<Users size={20} />} />
+                                    <MetricCard label="Cualificados" value={qualifiedLeads} icon={<Target size={20} />} />
+                                    <MetricCard
+                                        label="% Agendamiento"
+                                        value={`${bookingPct}%`}
+                                        icon={<CalendarDays size={20} />}
+                                        highlight
+                                    />
+                                </div>
+
+                                <div className="bg-white rounded-[32px] p-6 shadow-xl shadow-gray-200/50 border border-gray-100 flex items-center gap-6">
+                                    <div className="w-24 h-24 flex-shrink-0">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <RePieChart>
+                                                <Pie
+                                                    data={leadQualityData}
+                                                    innerRadius={30}
+                                                    outerRadius={45}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                >
+                                                    {leadQualityData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.fill} cornerRadius={4} />
+                                                    ))}
+                                                </Pie>
+                                            </RePieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Calidad de Leads</h4>
+                                        <div className="space-y-1.5">
+                                            <LegendItem color="bg-teal-600" label="Cualificados" percent={totalInbound > 0 ? ((qualifiedLeads / totalInbound) * 100).toFixed(0) : 0} />
+                                            <LegendItem color="bg-rose-600" label="Descartados" percent={totalInbound > 0 ? ((noLeadValue / totalInbound) * 100).toFixed(0) : 0} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* 2. Funnel Visualization */}
+                        <section className="space-y-6">
+                            <div className="flex items-center gap-3">
+                                <i className="w-1.5 h-6 bg-teal-600 rounded-full" />
+                                <h2 className="text-lg font-black uppercase tracking-tight">Evaluación del Embudo</h2>
+                            </div>
+
+                            <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 bg-white rounded-[40px] p-8 shadow-2xl shadow-gray-200/60 border border-gray-100">
+                                {/* Table View */}
+                                <div className="xl:col-span-2 border rounded-3xl overflow-hidden self-start">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-50/80">
+                                            <tr>
+                                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">#</th>
+                                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Etapa</th>
+                                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Total</th>
+                                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">% Conv.</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {funnelData.map((item, i) => (
+                                                <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
+                                                    <td className="px-6 py-4 text-xs font-bold text-gray-400">{i + 1}</td>
+                                                    <td className="px-6 py-4 text-xs font-black uppercase text-gray-700 group-hover:text-blue-600 transition-colors">{item.name}</td>
+                                                    <td className="px-6 py-4 text-sm font-black text-gray-900 text-right">{item.value}</td>
+                                                    <td className="px-6 py-4 text-xs font-black text-blue-500 text-right italic">{item.conversion}%</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Recharts Funnel */}
+                                <div className="xl:col-span-3 h-[450px] flex flex-col items-center justify-center p-4">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <FunnelChart>
+                                            <Tooltip
+                                                contentStyle={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                                itemStyle={{ fontWeight: 'bold' }}
+                                                cursor={{ fill: '#f8fafc' }}
+                                            />
+                                            <Funnel
+                                                dataKey="value"
+                                                data={funnelData}
+                                                isAnimationActive
+                                            >
+                                                <LabelList
+                                                    position="right"
+                                                    fill="#64748b"
+                                                    stroke="none"
+                                                    dataKey="name"
+                                                    className="font-black text-[10px] uppercase tracking-tighter"
+                                                />
+                                                <LabelList
+                                                    position="center"
+                                                    fill="#ffffff"
+                                                    stroke="none"
+                                                    dataKey="value"
+                                                    content={({ x, y, width, height, value }) => (
+                                                        <text x={x + width / 2} y={y + height / 2} fill="#fff" textAnchor="middle" className="font-black text-lg drop-shadow m-0">
+                                                            {value}
+                                                        </text>
+                                                    )}
+                                                />
+                                                {funnelData.map((entry, index) => (
+                                                    <Cell
+                                                        key={`cell-${index}`}
+                                                        fill={index === 0 ? '#3b82f6' : index === funnelData.length - 1 ? '#0d9488' : '#94a3b8'}
+                                                        stroke="#fff"
+                                                        strokeWidth={0.5}
+                                                        opacity={1 - (index * 0.1)}
+                                                    />
+                                                ))}
+                                            </Funnel>
+                                        </FunnelChart>
+                                    </ResponsiveContainer>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-4">Progresión de Conversión • Datos en Tiempo Real</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Footer decorative */}
+                        <footer className="pt-10 text-center">
+                            <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.5em] italic">
+                                ALTO RENDIMIENTO • © {new Date().getFullYear()} NeurOPS SYSTEM
+                            </p>
+                        </footer>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
+
+const MetricCard = ({ label, value, icon, highlight }) => (
+    <div className={`bg-white rounded-[32px] p-8 shadow-xl shadow-gray-200/40 border-b-4 ${highlight ? 'border-teal-500' : 'border-gray-100'} transition-transform hover:scale-[1.02]`}>
+        <div className="flex justify-between items-start mb-6">
+            <span className={`p-2 rounded-xl ${highlight ? 'bg-teal-50 text-teal-600' : 'bg-gray-50 text-gray-400'}`}>
+                {icon}
+            </span>
+        </div>
+        <div>
+            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${highlight ? 'text-teal-600/70' : 'text-gray-400'}`}>
+                {label}
+            </p>
+            <p className={`text-4xl font-extrabold tracking-tighter ${highlight ? 'text-teal-700' : 'text-gray-900'}`}>
+                {value}
+            </p>
+        </div>
+    </div>
+);
+
+const LegendItem = ({ color, label, percent }) => (
+    <div className="flex items-center justify-between gap-6">
+        <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${color}`} />
+            <span className="text-[10px] font-bold text-gray-500 uppercase">{label}</span>
+        </div>
+        <span className="text-[10px] font-black text-gray-900 italic">{percent}%</span>
+    </div>
+);
 
 export default SetterStatisticsPage;

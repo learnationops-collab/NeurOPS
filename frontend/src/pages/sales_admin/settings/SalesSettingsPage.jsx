@@ -28,7 +28,7 @@ const SalesSettingsPage = () => {
     const sections = [
         { id: 'programs', label: 'Programas', icon: Package },
         { id: 'payment_methods', label: 'Metodos de Pago', icon: CreditCard },
-        { id: 'funnels', label: 'Embudos y Eventos', icon: Layers },
+        { id: 'funnels', label: 'Eventos y Links', icon: Layers },
         { id: 'kanban', label: 'Estructura Kanban', icon: KanbanIcon },
         { id: 'setter_metrics', label: 'Metricas Setter', icon: ListChecks },
         { id: 'questions', label: 'Preguntas de Reporte', icon: ClipboardCheck },

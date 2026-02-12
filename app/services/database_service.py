@@ -152,3 +152,18 @@ class DatabaseService:
         except Exception as e:
             db.session.rollback()
             return False, f"Error en la importación: {str(e)}"
+
+    @staticmethod
+    def clear_table(table_key):
+        """Deletes all records from a specific table key."""
+        try:
+            model = DatabaseService.MODEL_MAP.get(table_key)
+            if not model:
+                return False, f"Tabla '{table_key}' no reconocida o no permitida para limpieza."
+            
+            db.session.query(model).delete()
+            db.session.commit()
+            return True, f"Tabla '{table_key}' limpiada correctamente."
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Error al limpiar la tabla: {str(e)}"

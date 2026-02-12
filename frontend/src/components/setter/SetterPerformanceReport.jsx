@@ -11,7 +11,9 @@ import {
     ChevronDown,
     Search,
     BarChart3,
-    TrendingUp
+    TrendingUp,
+    Inbox,
+    Zap
 } from 'lucide-react';
 import Card from '../ui/Card';
 import Counter from '../ui/Counter';
@@ -167,7 +169,7 @@ const SetterPerformanceReport = () => {
                         <Inbox size={24} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Inbound Leads</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Leads Totales</p>
                         <div className="flex items-baseline gap-2">
                             <h2 className="text-4xl font-black text-white italic tracking-tighter">
                                 <Counter value={performance?.stats?.inbound_leads || 0} />
@@ -177,90 +179,69 @@ const SetterPerformanceReport = () => {
                 </Card>
 
                 <Card variant="surface" className="p-8 rounded-[2rem] space-y-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                        <Zap size={24} />
+                    <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500">
+                        <XCircle size={24} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Aperturas</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">No Leads / Descartados</p>
                         <div className="flex items-baseline gap-2">
                             <h2 className="text-4xl font-black text-white italic tracking-tighter">
-                                <Counter value={performance?.stats?.openings || 0} />
+                                <Counter value={performance?.stats?.not_lead || 0} />
                             </h2>
-                            <span className="text-[10px] font-black text-emerald-500/60">
-                                {performance?.stats?.inbound_leads > 0 ? ((performance.stats.openings / performance.stats.inbound_leads) * 100).toFixed(1) : 0}%
+                        </div>
+                    </div>
+                </Card>
+
+                <Card variant="surface" className="p-8 rounded-[2rem] space-y-4 border-indigo-500/10 bg-indigo-500/5">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <CheckCircle2 size={24} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Leads Cualificados</p>
+                        <div className="flex items-baseline gap-2">
+                            <h2 className="text-4xl font-black text-white italic tracking-tighter">
+                                <Counter value={performance?.stats?.qualified_leads || 0} />
+                            </h2>
+                            <span className="text-[10px] font-black text-indigo-500/60">
+                                {performance?.stats?.inbound_leads > 0 ? ((performance.stats.qualified_leads / performance.stats.inbound_leads) * 100).toFixed(1) : 0}%
                             </span>
                         </div>
                     </div>
                 </Card>
 
-                <Card variant="surface" className="p-8 rounded-[2rem] space-y-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                        <Calendar size={24} />
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Agendas booked</p>
-                        <div className="flex items-baseline gap-2">
-                            <h2 className="text-4xl font-black text-white italic tracking-tighter">
-                                <Counter value={performance?.stats?.appointments_booked || 0} />
-                            </h2>
-                            <span className="text-[10px] font-black text-amber-500/60">
-                                {performance?.stats?.openings > 0 ? ((performance.stats.appointments_booked / performance.stats.openings) * 100).toFixed(1) : 0}%
-                            </span>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card variant="surface" className="p-8 rounded-[2rem] space-y-4 border-indigo-500/30 bg-indigo-500/5">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                <Card variant="surface" className="p-8 rounded-[2rem] space-y-4 border-emerald-500/30 bg-emerald-500/5">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
                         <TrendingUp size={24} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Conversión</p>
+                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Tasa de Conversión</p>
                         <div className="flex items-baseline gap-2">
                             <h2 className="text-4xl font-black text-white italic tracking-tighter">
                                 <Counter value={performance?.kpis?.conversion_rate || 0} suffix="%" />
                             </h2>
-                            <span className="text-[10px] font-black text-indigo-500/60">Global</span>
+                            <span className="text-[10px] font-black text-emerald-500/60">Global</span>
                         </div>
                     </div>
                 </Card>
             </div>
 
-            {/* Secondary Stats */}
+            {/* Secondary Stats - DYNAMIC FUNNEL */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                     <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 ml-4">
-                        <BarChart3 size={16} /> Detalle de Actividad
+                        <BarChart3 size={16} /> Etapas del Embudo
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
-                        <StatusItem
-                            label="Ofertas Realizadas"
-                            value={performance?.stats?.new_offers}
-                            icon={CheckCircle}
-                            colorClass="bg-emerald-500"
-                            percentage={performance?.stats?.openings > 0 ? ((performance.stats.new_offers / performance.stats.openings) * 100).toFixed(1) : 0}
-                        />
-                        <StatusItem
-                            label="Links Enviados"
-                            value={performance?.stats?.links_sent}
-                            icon={TrendingUp}
-                            colorClass="bg-blue-500"
-                            percentage={performance?.stats?.openings > 0 ? ((performance.stats.links_sent / performance.stats.openings) * 100).toFixed(1) : 0}
-                        />
-                        <StatusItem
-                            label="No es Lead / Descartados"
-                            value={performance?.stats?.not_lead}
-                            icon={XCircle}
-                            colorClass="bg-rose-500"
-                            percentage={performance?.stats?.inbound_leads > 0 ? ((performance.stats.not_lead / performance.stats.inbound_leads) * 100).toFixed(1) : 0}
-                        />
-                        <StatusItem
-                            label="Follow ups"
-                            value={performance?.stats?.follow_ups}
-                            icon={Clock}
-                            colorClass="bg-amber-500"
-                            percentage={performance?.stats?.openings > 0 ? ((performance.stats.follow_ups / performance.stats.openings) * 100).toFixed(1) : 0}
-                        />
+                        {performance?.stages?.map((stage, idx) => (
+                            <StatusItem
+                                key={stage.id || idx}
+                                label={stage.name}
+                                value={stage.value}
+                                icon={Zap}
+                                colorClass={idx === 0 ? "bg-indigo-500" : "bg-slate-500"}
+                                percentage={idx === 0 ? 100 : (performance.stages[idx - 1].value > 0 ? ((stage.value / performance.stages[idx - 1].value) * 100).toFixed(1) : 0)}
+                            />
+                        ))}
                     </div>
                 </div>
 

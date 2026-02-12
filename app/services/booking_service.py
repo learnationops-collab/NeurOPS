@@ -247,14 +247,14 @@ class BookingService:
             date_str = local_dt.strftime('%d/%m/%Y')
             time_str = local_dt.strftime('%H:%M')
             
-            # Source from Event if available, else appointment origin
-            source = event.utm_source if event else (appointment.origin or "Desconocido")
+            # Source for Discord Display (User request: Setter Name or "Sin Setter")
+            display_source = appointment.setter.username if appointment.setter else "Sin Setter"
             
             payload = {
                 "nombre_completo": client.full_name or "Sin Nombre",
                 "primer_nombre": client.full_name.split(' ')[0] if client.full_name else "",
                 "numero_telefono": client.phone or "",
-                "fuente": source,
+                "fuente": display_source,
                 "fecha_agenda": date_str,
                 "hora_agenda": time_str,
                 "closer": closer.username,

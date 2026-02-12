@@ -8,18 +8,186 @@ from datetime import datetime
 bp = Blueprint('setter', __name__)
 
 @bp.route('/questions', methods=['GET'])
-@login_required
 @role_required(ROLE_SETTER)
 def get_setter_questions():
-    questions = DailyReportQuestion.query.filter_by(role='setter', is_active=True).order_by(DailyReportQuestion.order).all()
-    return jsonify([{"id": q.id, "text": q.text, "type": q.question_type} for q in questions]), 200
+    try:
+        questions = DailyReportQuestion.query.filter_by(role='setter', is_active=True).order_by(DailyReportQuestion.order).all()
+        return jsonify([{"id": q.id, "text": q.text, "type": q.question_type} for q in questions]), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"message": str(e), "trace": traceback.format_exc()}), 500
 
-@bp.route('/report', methods=['POST'])
-@login_required
+def _get_setter_stages_ordered():
+    from app.models import Pipeline, PipelineStage
+    pipeline = Pipeline.query.filter_by(name='setter_default').first()
+    if not pipeline:
+        return []
+    return PipelineStage.query.filter_by(pipeline_id=pipeline.id, is_active=True).order_by(PipelineStage.order).all()
+
+def _trigger_setter_report_webhook(stat):
+    """
+    Triggers the Discord webhook with a generated image of the setter report.
+    """
+    try:
+        import requests
+        import json
+        from app.services.image_service import ImageService
+        
+        # Webhook URL provided by user (using discordapp.com for better SSL compatibility)
+        url = "https://discordapp.com/api/webhooks/1471390632223314072/D0H6JaX8dnGdiOmPsGoDQyqwoN5X6zw1YHdlIs6evOZYk-BbvK7Bt32KjWw_nvkjwhdz"
+        
+        # 1. Prepare Funnel Data
+        stages = _get_setter_stages_ordered()
+        stage_data = []
+        if len(stages) > 0: stage_data.append({"name": stages[0].name, "value": stat.stage_1_value})
+        if len(stages) > 1: stage_data.append({"name": stages[1].name, "value": stat.stage_2_value})
+        if len(stages) > 2: stage_data.append({"name": stages[2].name, "value": stat.stage_3_value})
+        if len(stages) > 3: stage_data.append({"name": stages[3].name, "value": stat.stage_4_value})
+        if len(stages) > 4: stage_data.append({"name": stages[4].name, "value": stat.stage_5_value})
+        
+        # 2. Logic: Qualified Leads = Total - Descartados (Not Lead)
+        inbound = stat.stage_1_value if len(stages) > 0 else 0
+        not_lead = stat.not_lead
+        qualified = max(0, inbound - not_lead)
+
+        # 2b. Qualitative Data
+        from app.models import DailyReportQuestion
+        qualitative_callouts = []
+        if stat.answers:
+            # Fetch all active setter questions to get their text
+            questions = {q.id: q.text for q in DailyReportQuestion.query.filter_by(role='setter', is_active=True).all()}
+            for q_id, answer in stat.answers.items():
+                # Only include if the question is still active (exists in our dictionary)
+                q_id_int = int(q_id)
+                if q_id_int in questions and answer and answer.strip():
+                    qualitative_callouts.append({
+                        "question": questions[q_id_int],
+                        "answer": answer
+                    })
+
+        # 2c. Prepare Funnel Stages (including 1.5)
+        refined_funnel = []
+        if len(stage_data) > 0:
+            # Stage 1
+            refined_funnel.append(stage_data[0])
+            # Stage 1.5: Cualificados
+            refined_funnel.append({"name": "Cualificados", "value": qualified})
+            # Remaining stages from CRM
+            for s in stage_data[1:]:
+                refined_funnel.append(s)
+            
+            # 2d. Appointments Stage (Agendados) - Consulted from DB
+            from app.models.booking import Appointment
+            from sqlalchemy import func
+            
+            # Count appointments for this setter on this specific day
+            # Assuming stat.date is a date object, we compare it with the start_time date
+            appointments_count = Appointment.query.filter(
+                Appointment.setter_id == stat.setter_id,
+                func.date(Appointment.start_time) == stat.date
+            ).count()
+            
+            refined_funnel.append({"name": "Agendados", "value": appointments_count})
+
+        # 3. Prepare Image Data
+        img_data = {
+            "setter_name": current_user.username,
+            "date_str": stat.date.strftime('%d/%m/%Y'),
+            "inbound_leads": inbound,
+            "not_lead": not_lead,
+            "qualified_leads": qualified,
+            "stages": stage_data,
+            "funnel_stages": refined_funnel,
+            "qualitative": qualitative_callouts
+        }
+
+        # 4. Generate Image
+        img_buffer = ImageService.generate_setter_report_card(img_data)
+        
+        # 5. Discord Metadata (Improved format)
+        content = (
+            f"🚀 **REPORTE DIARIO DE SETTER**\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 **Setter:** `{current_user.username}`\n"
+            f"📅 **Fecha:** `{stat.date.strftime('%d/%m/%Y')}`\n"
+            f"📊 **Resumen:** `{inbound}` Leads | `{qualified}` Cualificados | `{not_lead}` Descartados\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"@everyone"
+        )
+        
+        json_payload = {
+            "content": content,
+            "embeds": [{
+                "color": 4521291, # #2DD4BF Teal color
+                "image": {
+                    "url": "attachment://setter_report.png"
+                },
+                "footer": {
+                    "text": "NeurOPS Performance System • " + datetime.now().strftime('%H:%M')
+                }
+            }]
+        }
+        
+        files = {
+            'file': ('setter_report.png', img_buffer, 'image/png')
+        }
+        
+        # 6. Send
+        res = requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
+        print(f"[Discord Setter] Status: {res.status_code}")
+        
+    except Exception as e:
+        print(f"[Discord Setter Error] {e}")
+        import traceback
+        traceback.print_exc()
+
+@bp.route('/daily-report', methods=['POST', 'GET'])
 @role_required(ROLE_SETTER)
 def submit_daily_report():
+    if request.method == 'GET':
+        date_str = request.args.get('date')
+        if not date_str:
+            return jsonify({"message": "Fecha requerida"}), 400
+        
+        try:
+            report_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({"message": "Formato de fecha inválido"}), 400
+
+        stat = SetterDailyStats.query.filter_by(setter_id=current_user.id, date=report_date).first()
+        
+        if not stat:
+            return jsonify(None), 200 # Return null if no report exists
+            
+        # Map fixed columns back to stage_id for frontend compatibility
+        stages = _get_setter_stages_ordered()
+        stage_metrics = {}
+        
+        # Mapping logic: index 0 -> stage_1_value, index 1 -> stage_2_value, etc.
+        if len(stages) > 0: stage_metrics[stages[0].id] = stat.stage_1_value
+        if len(stages) > 1: stage_metrics[stages[1].id] = stat.stage_2_value
+        if len(stages) > 2: stage_metrics[stages[2].id] = stat.stage_3_value
+        if len(stages) > 3: stage_metrics[stages[3].id] = stat.stage_4_value
+        if len(stages) > 4: stage_metrics[stages[4].id] = stat.stage_5_value
+
+        answers = stat.answers or {}
+        
+        return jsonify({
+            "id": stat.id,
+            "date": stat.date.isoformat(),
+            "fixed_stats": {
+                "not_lead": stat.not_lead
+            },
+            "funnel_stats": stage_metrics,
+            "answers": answers
+        }), 200
+
+    # POST Logic
     data = request.get_json() or {}
     
+    from app.models import DailyReportAnswer
+
     # Datos fijos obligatorios
     report_date_str = data.get('date')
     if not report_date_str:
@@ -28,91 +196,107 @@ def submit_daily_report():
     report_date = datetime.strptime(report_date_str, '%Y-%m-%d').date()
     
     # Verificar si ya existe un reporte para este setter en esta fecha
-    existing = SetterDailyStats.query.filter_by(setter_id=current_user.id, date=report_date).first()
-    if existing:
-        # En una versión futura podríamos permitir editar, por ahora bloqueamos duplicados
-        return jsonify({"message": "Ya has enviado un reporte para esta fecha"}), 400
+    stat = SetterDailyStats.query.filter_by(setter_id=current_user.id, date=report_date).first()
     
-    # Crear estadísticas fijas (Legacy/Fallback)
-    stats = SetterDailyStats(
-        setter_id=current_user.id,
-        date=report_date,
-        inbound_leads=data.get('inbound_leads', 0),
-        openings=data.get('openings', 0),
-        not_lead=data.get('not_lead', 0),
-        new_offers=data.get('new_offers', 0),
-        links_sent=data.get('links_sent', 0),
-        appointments_booked=data.get('appointments_booked', 0),
-        follow_ups=data.get('follow_ups', 0)
-    )
+    if stat:
+        # Update existing
+        stat.not_lead = int(data.get('not_lead') or 0)
+        
+    else:
+        # Create new
+        stat = SetterDailyStats(
+            setter_id=current_user.id,
+            date=report_date,
+            not_lead=int(data.get('not_lead') or 0)
+        )
+        db.session.add(stat)
     
-    db.session.add(stats)
-    db.session.flush() # Get ID
-    
-    # Procesar Métricas del Funnel Dinámico
-    from app.models import SetterDailyStageMetric
+    # Process Funnel Metrics -> Map to stage_X_value
     funnel_metrics = data.get('funnel_metrics', [])
+    stages = _get_setter_stages_ordered()
+    stage_id_to_index = {s.id: i for i, s in enumerate(stages)}
+    
+    # Reset stage values
+    stat.stage_1_value = 0
+    stat.stage_2_value = 0
+    stat.stage_3_value = 0
+    stat.stage_4_value = 0
+    stat.stage_5_value = 0
+
     for metric in funnel_metrics:
         stage_id = metric.get('stage_id')
-        value = metric.get('value', 0)
+        value = int(metric.get('value', 0))
         
-        if stage_id:
-            m = SetterDailyStageMetric(
-                daily_stats_id=stats.id,
-                stage_id=stage_id,
-                value=int(value)
-            )
-            db.session.add(m)
+        if stage_id in stage_id_to_index:
+            idx = stage_id_to_index[stage_id]
+            if idx == 0: stat.stage_1_value = value
+            elif idx == 1: stat.stage_2_value = value
+            elif idx == 2: stat.stage_3_value = value
+            elif idx == 3: stat.stage_4_value = value
+            elif idx == 4: stat.stage_5_value = value
     
-    # Procesar preguntas dinámicas (Legacy/Extra Questions)
-    answers = data.get('answers', [])
-    for ans in answers:
-        question_id = ans.get('question_id')
+    # Process dynamic questions (Qualitative feedback) -> Store in JSON
+    answers_data = data.get('answers', [])
+    answers_json = {}
+    for ans in answers_data:
+        question_id = str(ans.get('question_id'))
         answer_text = str(ans.get('answer', ''))
-        
         if question_id:
-            answer_obj = DailyReportAnswer(
-                setter_stats_id=stats.id,
-                question_id=question_id,
-                answer=answer_text
-            )
-            db.session.add(answer_obj)
+            answers_json[question_id] = answer_text
+    
+    stat.answers = answers_json
             
     try:
         db.session.commit()
+        # Trigger Webhook after successful commit
+        _trigger_setter_report_webhook(stat)
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar el reporte: {str(e)}"}), 500
         
-    return jsonify({"message": "Reporte enviado con éxito", "id": stats.id}), 201
+    return jsonify({"message": "Reporte enviado con éxito", "id": stat.id}), 201
 
 @bp.route('/stats/summary', methods=['GET'])
-@login_required
 @role_required(ROLE_SETTER)
 def get_stats_summary():
     from sqlalchemy import func
     from datetime import date, timedelta
+
     
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     
-    query = db.session.query(
-        func.sum(SetterDailyStats.appointments_booked).label('total_agendas'),
-        func.sum(SetterDailyStats.openings).label('total_openings'),
-        func.sum(SetterDailyStats.inbound_leads).label('total_leads')
+    # 1. Fetch Fixed Stats
+    query_fixed = db.session.query(
+        func.sum(SetterDailyStats.not_lead).label('total_not_lead'),
+        func.sum(SetterDailyStats.stage_1_value).label('total_stage_1'),
+        func.sum(SetterDailyStats.stage_2_value).label('total_stage_2'),
+        func.sum(SetterDailyStats.stage_3_value).label('total_stage_3'),
+        func.sum(SetterDailyStats.stage_4_value).label('total_stage_4'),
+        func.sum(SetterDailyStats.stage_5_value).label('total_stage_5')
     ).filter_by(setter_id=current_user.id)
     
     if start_date_str:
-        query = query.filter(SetterDailyStats.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
-    if end_date_str:
-        query = query.filter(SetterDailyStats.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        query_fixed = query_fixed.filter(SetterDailyStats.date >= start_date)
         
-    stats = query.first()
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        query_fixed = query_fixed.filter(SetterDailyStats.date <= end_date)
+        
+    fixed_stats = query_fixed.first()
     
-    # Conversión en el periodo seleccionado o histórica
-    conversion = 0
-    if stats and stats.total_openings and stats.total_openings > 0:
-        conversion = round((stats.total_agendas / stats.total_openings) * 100, 1)
+    # Map back to stage_id with names
+    stages_ordered = _get_setter_stages_ordered()
+    stage_data = []
+    if fixed_stats:
+        vals = [fixed_stats.total_stage_1, fixed_stats.total_stage_2, fixed_stats.total_stage_3, fixed_stats.total_stage_4, fixed_stats.total_stage_5]
+        for i, s in enumerate(stages_ordered[:5]):
+            stage_data.append({
+                "id": s.id,
+                "name": s.name,
+                "value": int(vals[i] or 0)
+            })
     
     # Fetch pending agendas (appointments booked by this setter with no result)
     from app.models import Appointment
@@ -124,11 +308,9 @@ def get_stats_summary():
     ).order_by(Appointment.start_time.desc()).limit(50).all()
     
     return jsonify({
-        "total_agendas": int(stats.total_agendas or 0),
-        "total_openings": int(stats.total_openings or 0),
-        "total_leads": int(stats.total_leads or 0),
-        "conversion": conversion,
-        "new_leads": [], # Deprecated or Empty
+        "total_not_lead": int(fixed_stats.total_not_lead or 0) if fixed_stats else 0,
+        "total_leads": int(fixed_stats.total_stage_1 or 0) if fixed_stats else 0,
+        "stage_metrics": stage_data,
         "pending_agendas": [{
             "id": a.id,
             "lead_name": a.client.full_name or a.client.email,
@@ -138,8 +320,64 @@ def get_stats_summary():
         } for a in pending_agendas]
     }), 200
 
+@bp.route('/my-reports', methods=['GET'])
+@role_required(ROLE_SETTER)
+def get_my_reports():
+    # Fetch last 30 reports
+    reports = SetterDailyStats.query.filter_by(setter_id=current_user.id)\
+        .order_by(SetterDailyStats.date.desc())\
+        .limit(30).all()
+        
+    result = []
+    
+    # Pre-fetch stages to avoid query in loop if possible, but simplest is to reuse helper
+    stages = _get_setter_stages_ordered()
+    
+    for r in reports:
+        # Get dynamic metrics for this report
+        stage_metrics = {}
+        if len(stages) > 0: stage_metrics[stages[0].id] = r.stage_1_value
+        if len(stages) > 1: stage_metrics[stages[1].id] = r.stage_2_value
+        if len(stages) > 2: stage_metrics[stages[2].id] = r.stage_3_value
+        if len(stages) > 3: stage_metrics[stages[3].id] = r.stage_4_value
+        if len(stages) > 4: stage_metrics[stages[4].id] = r.stage_5_value
+        
+        # Get answers from JSON column
+        answers = r.answers or {}
+        
+        result.append({
+            "id": r.id,
+            "date": r.date.isoformat(),
+            "fixed_stats": {
+                "not_lead": r.not_lead
+            },
+            "funnel_stats": stage_metrics,
+            "answers": answers
+        })
+        
+    return jsonify(result), 200
+
+@bp.route('/daily-report/<int:report_id>', methods=['DELETE'])
+@role_required(ROLE_SETTER)
+def delete_daily_report(report_id):
+    report = SetterDailyStats.query.filter_by(id=report_id, setter_id=current_user.id).first()
+    if not report:
+        return jsonify({"message": "Reporte no encontrado"}), 404
+        
+    try:
+        # Delete related data first
+        DailyReportAnswer.query.filter_by(setter_stats_id=report.id).delete()
+
+        
+        # Delete report
+        db.session.delete(report)
+        db.session.commit()
+        return jsonify({"message": "Reporte eliminado"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error al eliminar: {str(e)}"}), 500
+
 @bp.route('/leads', methods=['GET'])
-@login_required
 @role_required(ROLE_SETTER)
 def get_leads():
     from app.models import Lead, PipelineStage
@@ -166,7 +404,6 @@ def get_leads():
     } for l in leads]), 200
 
 @bp.route('/stages', methods=['GET'])
-@login_required
 @role_required(ROLE_SETTER)
 def get_stages():
     from app.models import Pipeline, PipelineStage
@@ -181,11 +418,10 @@ def get_stages():
     return jsonify([{
         "id": s.id, 
         "name": s.name,
-        "order": s.order
+        "order_index": s.order
     } for s in stages]), 200
 
 @bp.route('/links', methods=['GET'])
-@login_required
 @role_required(ROLE_SETTER)
 def get_available_links():
     from app.models import Event, User
@@ -206,7 +442,6 @@ def get_available_links():
     }), 200
 
 @bp.route('/notifications', methods=['GET'])
-@login_required
 @role_required(ROLE_SETTER)
 def get_notifications():
     from app.models import Notification
@@ -240,7 +475,6 @@ def get_notifications():
     return jsonify(relevant), 200
 
 @bp.route('/notifications/<int:id>/read', methods=['POST'])
-@login_required
 @role_required(ROLE_SETTER)
 def mark_notification_read(id):
     from app.models import Notification
@@ -260,3 +494,5 @@ def mark_notification_read(id):
         db.session.commit()
         
     return jsonify({"message": "Marked as read"}), 200
+
+

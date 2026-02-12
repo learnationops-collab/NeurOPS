@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root {
+            --bg-surface: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #111827;
+            --text-muted: #4b5563;
+            --accent-primary: #3b82f6;
+            --accent-teal: #0d9488;
+            --accent-rose: #e11d48;
+            --border: #e5e7eb;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+        }
+
+        body {
+            margin: 0;
+            padding: 30px;
+            background-color: var(--bg-surface);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--text-main);
+            width: 1140px;
+            /* Internal width for the card within 1200px canvas */
+        }
+
+        .report-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 50px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        /* 1. HEADER - CLEAN */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .setter-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .setter-avatar {
+            width: 50px;
+            height: 50px;
+            background: var(--accent-primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+        }
+
+        .setter-details h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .report-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .date-badge {
+            background: #f3f4f6;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* 2. TESTIMONIOS SECTION - NOW ON TOP */
+        .section-container {
+            margin-bottom: 50px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #111827;
+        }
+
+        .section-title i {
+            display: block;
+            width: 6px;
+            height: 24px;
+            background: var(--accent-primary);
+            border-radius: 3px;
+        }
+
+        .testimonios-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        .testimonio-card {
+            background: #fafafb;
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            position: relative;
+            transition: transform 0.2s;
+        }
+
+        .testimonio-icon {
+            font-size: 24px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .testimonio-q {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .testimonio-a {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-main);
+            font-weight: 500;
+            font-style: italic;
+        }
+
+        /* 3. CUALIFICACIÓN SECTION (Metrics + Pie) */
+        .dual-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .metrics-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+
+        .metric-value {
+            font-size: 40px;
+            font-weight: 800;
+        }
+
+        .pie-container {
+            background: #f9fafb;
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .pie-chart {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .pie-info h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-muted);
+        }
+
+        .pie-legend {
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        /* 4. EMBUDO SECTION (Table + Chart) */
+        .funnel-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 60px;
+            background: #ffffff;
+            padding: 20px;
+        }
+
+        .table-wrap {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f9fafb;
+            padding: 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 18px 16px;
+            font-size: 14px;
+            border-top: 1px solid var(--border);
+            font-weight: 600;
+        }
+
+        .td-step {
+            color: var(--text-muted);
+        }
+
+        .td-val {
+            text-align: right;
+            font-weight: 800;
+        }
+
+        .td-pct {
+            text-align: right;
+            color: var(--accent-primary);
+            font-weight: 800;
+        }
+
+        .funnel-viz {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            padding-top: 20px;
+        }
+
+        .funnel-bar {
+            height: 44px;
+            background: var(--accent-teal);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 15px;
+            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);
+            position: relative;
+            min-width: 80px;
+        }
+
+        .bar-label {
+            position: absolute;
+            top: -18px;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .conv-label {
+            background: #eff6ff;
+            color: var(--accent-primary);
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 800;
+            border: 1px solid #dbeafe;
+        }
+
+        .footer {
+            margin-top: 60px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+
+    {% set lead_pct = ((qualified_leads / inbound_leads * 100)|round|int) if inbound_leads > 0 else 0 %}
+    {% set discard_pct = 100 - lead_pct %}
+    {% set appts_count = funnel_stages[-1].value if funnel_stages else 0 %}
+    {% set booking_pct = ((appts_count / qualified_leads * 100)|round|int) if qualified_leads > 0 else 0 %}
+
+    <div class="report-card">
+        <!-- 1. HEADER -->
+        <div class="header">
+            <div class="setter-info">
+                <div class="setter-avatar">{{ setter_name[0].upper() }}</div>
+                <div class="setter-details">
+                    <div class="report-label">Reporte Diario de Setter</div>
+                    <h1>{{ setter_name }}</h1>
+                </div>
+            </div>
+            <div class="date-badge">{{ date_str }}</div>
+        </div>
+
+        <!-- 2. TESTIMONIOS -->
+        {% if qualitative %}
+        <div class="section-container">
+            <div class="section-title"><i></i> TESTIMONIOS Y VICTORIAS</div>
+            <div class="testimonios-grid">
+                {% for item in qualitative %}
+                <div class="testimonio-card">
+                    <span class="testimonio-icon">
+                        {% if "victoria" in item.question.lower() or "ganado" in item.question.lower() or "venta" in
+                        item.question.lower() %}🏆
+                        {% elif "mejor" in item.question.lower() or "aprend" in item.question.lower() or "objetivo" in
+                        item.question.lower() %}💡
+                        {% elif "bloqueo" in item.question.lower() or "dificul" in item.question.lower() or "problema"
+                        in item.question.lower() %}🚨
+                        {% else %}💬{% endif %}
+                    </span>
+                    <div class="testimonio-q">{{ item.question }}</div>
+                    <div class="testimonio-a">"{{ item.answer }}"</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 3. CUALIFICACIÓN (Metrics + Pie) -->
+        <div class="section-container">
+            <div class="section-title"><i></i> CUALIFICACIÓN DE ENTRADA</div>
+            <div class="dual-row">
+                <div class="metrics-panel">
+                    <div class="metric-card">
+                        <div class="metric-label">Leads Totales</div>
+                        <div class="metric-value">{{ inbound_leads }}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Cualificados</div>
+                        <div class="metric-value">{{ qualified_leads }}</div>
+                    </div>
+                    <div class="metric-card" style="border-bottom: 5px solid var(--accent-teal);">
+                        <div class="metric-label" style="color: var(--accent-teal);">% Agendamiento</div>
+                        <div class="metric-value">{{ booking_pct }}%</div>
+                    </div>
+                </div>
+                <div class="pie-container">
+                    <div class="pie-chart"
+                        style="background: conic-gradient(var(--accent-teal) 0% {{ lead_pct }}%, var(--accent-rose) {{ lead_pct }}% 100%);">
+                    </div>
+                    <div class="pie-info">
+                        <h4>CALIDAD DE LEADS</h4>
+                        <div class="pie-legend">
+                            <div><span class="legend-dot" style="background: var(--accent-teal);"></span> {{ lead_pct
+                                }}% Cualificados</div>
+                            <div><span class="legend-dot" style="background: var(--accent-rose);"></span> {{ discard_pct
+                                }}% No-Leads</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. EMBUDO -->
+        <div class="section-container">
+            <div class="section-title"><i></i> EVALUACIÓN DEL EMBUDO</div>
+            <div class="funnel-layout">
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">#</th>
+                                <th>Etapa</th>
+                                <th style="text-align: right;">Total</th>
+                                <th style="text-align: right;">% CONVERSIÓN</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fs in funnel_stages %}
+                            <tr>
+                                <td class="td-step">{{ loop.index }}</td>
+                                <td
+                                    style="color: {{ 'var(--accent-teal)' if fs.name == 'Cualificados' else 'inherit' }};">
+                                    {{ fs.name.upper() }}
+                                </td>
+                                <td class="td-val">{{ fs.value }}</td>
+                                <td class="td-pct">
+                                    {% if loop.first %}
+                                    100%
+                                    {% else %}
+                                    {% set prev_val = funnel_stages[loop.index0 - 1].value %}
+                                    {{ ((fs.value / prev_val * 100)|round|int) if prev_val > 0 else 0 }}%
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="funnel-viz">
+                    <svg viewBox="0 0 650 500" preserveAspectRatio="xMidYMid meet">
+                        {% set total_stages = funnel_stages|length %}
+                        {% set funnel_width = 380 %}
+                        {% set max_width = 650 %}
+                        {% set segment_height = (420 / total_stages)|round|int %}
+                        {% set initial_width = 380 %}
+
+                        {% for fs in funnel_stages %}
+                        {% set current_width = (fs.value / inbound_leads * initial_width)|round|int if inbound_leads > 0
+                        else 50 %}
+                        {% set current_width = [current_width, 40]|max %}
+
+                        {% set next_idx = loop.index0 + 1 %}
+                        {% if next_idx < total_stages %} {% set next_width=(funnel_stages[next_idx].value /
+                            inbound_leads * initial_width)|round|int if inbound_leads> 0 else 40 %}
+                            {% set next_width = [next_width, 30]|max %}
+                            {% else %}
+                            {% set next_width = current_width %}
+                            {% endif %}
+
+                            {% set x_center = 200 %}
+                            {% set y_top = loop.index0 * (segment_height + 5) %}
+                            {% set y_bottom = y_top + segment_height %}
+                            {% set x_top_left = x_center - (current_width / 2) %}
+                            {% set x_top_right = x_center + (current_width / 2) %}
+                            {% set x_bottom_left = x_center - (next_width / 2) %}
+                            {% set x_bottom_right = x_center + (next_width / 2) %}
+
+                            <!-- Segment -->
+                            <polygon
+                                points="{{ x_top_left }},{{ y_top }} {{ x_top_right }},{{ y_top }} {{ x_bottom_right }},{{ y_bottom }} {{ x_bottom_left }},{{ y_bottom }}"
+                                fill="{{ 'var(--accent-teal)' if fs.name == 'Cualificados' or fs.name == 'Agendados' else 'var(--accent-primary)' if loop.first else '#94a3b8' }}"
+                                fill-opacity="{{ 1 - (loop.index0 * 0.1) }}" />
+
+                            <!-- Side Label -->
+                            <text x="{{ x_top_right + 20 }}" y="{{ y_top + (segment_height / 2) + 5 }}"
+                                class="svg-label"
+                                style="font-size: 11px; font-weight: 800; fill: var(--text-muted); text-transform: uppercase;">
+                                {{ fs.name }} ({{ fs.value }})
+                            </text>
+                            {% endfor %}
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">ALTO RENDIMIENTO • © {{ date_str.split('/')[-1] }}</div>
+    </div>
+
+</body>
+
+</html>

@@ -135,13 +135,12 @@ class DashboardService(BaseService):
         if isinstance(end_date, date): end_date = datetime.combine(end_date, time.max)
         
         query = db.session.query(
-            func.sum(SetterDailyStats.inbound_leads).label('inbound_leads'),
-            func.sum(SetterDailyStats.openings).label('openings'),
             func.sum(SetterDailyStats.not_lead).label('not_lead'),
-            func.sum(SetterDailyStats.new_offers).label('new_offers'),
-            func.sum(SetterDailyStats.links_sent).label('links_sent'),
-            func.sum(SetterDailyStats.appointments_booked).label('appointments_booked'),
-            func.sum(SetterDailyStats.follow_ups).label('follow_ups'),
+            func.sum(SetterDailyStats.stage_1_value).label('s1'),
+            func.sum(SetterDailyStats.stage_2_value).label('s2'),
+            func.sum(SetterDailyStats.stage_3_value).label('s3'),
+            func.sum(SetterDailyStats.stage_4_value).label('s4'),
+            func.sum(SetterDailyStats.stage_5_value).label('s5'),
             func.count(SetterDailyStats.id).label('report_count')
         ).filter(SetterDailyStats.date >= start_date.date(), SetterDailyStats.date <= end_date.date())
         
@@ -152,18 +151,34 @@ class DashboardService(BaseService):
         
         def safe_div(n, d): return (n / d * 100) if d > 0 else 0
         
+        # We need the stage names to be dynamic
+        from app.api.setter import _get_setter_stages_ordered
+        db_stages = _get_setter_stages_ordered()
+        
+        # Create a dynamic stages list with actual names
+        stages_output = []
+        stage_values = [res.s1, res.s2, res.s3, res.s4, res.s5]
+        
+        for i, db_stage in enumerate(db_stages[:5]):
+            stages_output.append({
+                "id": db_stage.id,
+                "name": db_stage.name,
+                "value": int(stage_values[i] or 0)
+            })
+            
+        inbound = int(res.s1 or 0)
+        not_lead = int(res.not_lead or 0)
+        qualified = max(0, inbound - not_lead)
+        
         return {
             'stats': {
-                'inbound_leads': int(res.inbound_leads or 0),
-                'openings': int(res.openings or 0),
-                'not_lead': int(res.not_lead or 0),
-                'new_offers': int(res.new_offers or 0),
-                'links_sent': int(res.links_sent or 0),
-                'appointments_booked': int(res.appointments_booked or 0),
-                'follow_ups': int(res.follow_ups or 0)
+                'inbound_leads': inbound,
+                'not_lead': not_lead,
+                'qualified_leads': qualified
             },
+            'stages': stages_output,
             'kpis': {
-                'conversion_rate': safe_div(float(res.appointments_booked or 0), float(res.openings or 0))
+                'conversion_rate': safe_div(float(int(res.s4 or 0)), float(inbound))
             },
             'count': int(res.report_count or 0)
         }

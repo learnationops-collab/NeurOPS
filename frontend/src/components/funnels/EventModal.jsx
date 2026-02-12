@@ -15,13 +15,13 @@ const EventModal = ({
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
             <Card className="w-full max-w-lg space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl border-white/5 animate-in zoom-in-95 duration-300">
                 <header className="border-b border-base pb-6">
-                    <h3 className="text-xl font-black uppercase tracking-tight italic">Configuración de Evento</h3>
-                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-1">Define el link y la duración</p>
+                    <h3 className="text-xl font-black uppercase tracking-tight italic">Configuración de Link / Variante</h3>
+                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-1">Define el slug personalizado y configuraciones del link</p>
                 </header>
                 <div className="grid grid-cols-2 gap-6 text-left">
                     <div className="col-span-2 space-y-3">
-                        <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">Nombre Comercial</label>
-                        <input value={eventForm.name} onChange={e => setEventForm({ ...eventForm, name: e.target.value })} placeholder="Ej: Llamada de Estrategia" className="w-full bg-main border border-base rounded-xl px-4 py-4 font-bold text-sm outline-none focus:ring-2 focus:ring-primary/50" />
+                        <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">Identificador Interno</label>
+                        <input value={eventForm.name} onChange={e => setEventForm({ ...eventForm, name: e.target.value })} placeholder="Ej: Elias (JC)" className="w-full bg-main border border-base rounded-xl px-4 py-4 font-bold text-sm outline-none focus:ring-2 focus:ring-primary/50" />
                     </div>
                     <div className="col-span-2 space-y-3">
                         <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">Identificador de Link (URL)</label>
@@ -47,9 +47,9 @@ const EventModal = ({
                         <input value={eventForm.redirect_url_fail} onChange={e => setEventForm({ ...eventForm, redirect_url_fail: e.target.value })} placeholder="https://..." className="w-full bg-main border border-base rounded-xl px-4 py-4 font-bold text-sm outline-none" />
                     </div>
                     <div className="col-span-2 space-y-3">
-                        <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">Asignar Grupo</label>
+                        <label className="text-[10px] font-black uppercase text-muted tracking-widest ml-1">Evento Comercial (Padre)</label>
                         <select value={eventForm.group_id} onChange={e => setEventForm({ ...eventForm, group_id: e.target.value })} className="w-full bg-main border border-base rounded-xl px-4 py-4 font-bold text-sm outline-none cursor-pointer">
-                            <option value="">Selecciona un grupo...</option>
+                            <option value="">Selecciona el evento comercial...</option>
                             {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                         </select>
                     </div>
@@ -102,7 +102,7 @@ const EventModal = ({
                 </div>
                 <div className="flex justify-end gap-3 pt-6 border-t border-base">
                     <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-                    <Button variant="primary" onClick={onSave} className="px-10">Guardar Evento</Button>
+                    <Button variant="primary" onClick={onSave} className="px-10">Guardar Link</Button>
                 </div>
             </Card>
         </div>
