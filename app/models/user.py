@@ -70,6 +70,13 @@ class User(UserMixin, db.Model):
     # Relationships are now defined in Appointment model for better singular access
     availability = db.relationship('Availability', backref='closer', lazy='dynamic', cascade="all, delete-orphan")
     weekly_availability = db.relationship('WeeklyAvailability', backref='closer', lazy='dynamic', cascade="all, delete-orphan")
+    
+    # Adding missing cascades for other related models
+    comments_authored = db.relationship('Comment', backref='author_rel', lazy='dynamic', cascade="all, delete-orphan")
+    client_comments = db.relationship('ClientComment', backref='author_rel', lazy='dynamic', cascade="all, delete-orphan")
+    setter_daily_stats_rel = db.relationship('SetterDailyStats', backref='user_rel', lazy='dynamic', cascade="all, delete-orphan")
+    closer_daily_stats_rel = db.relationship('CloserDailyStats', backref='user_rel', lazy='dynamic', cascade="all, delete-orphan")
+    view_settings = db.relationship('UserViewSetting', backref='user', lazy='dynamic', cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

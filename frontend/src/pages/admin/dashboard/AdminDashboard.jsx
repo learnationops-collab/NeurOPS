@@ -60,7 +60,7 @@ const AdminDashboard = () => {
   };
 
   const handleBulkDeleteLegacy = async () => {
-    if (!window.confirm("¿Estás seguro de que deseas eliminar a TODOS los usuarios con roles de 'student' o 'user'? Esta acción no se puede deshacer.")) return;
+    if (!window.confirm("¿Estás seguro de que deseas eliminar a TODOS los usuarios excepto Admins y Closers? Esta acción no se puede deshacer.")) return;
 
     setLoading(true);
     try {

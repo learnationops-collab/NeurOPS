@@ -397,9 +397,10 @@ def user_operations(id):
 @admin_required
 def bulk_delete_legacy_users():
     try:
-        legacy_roles = ['student', 'user']
-        # Query for users with legacy roles, excluding the current user just in case
-        users_to_delete = User.query.filter(User.role.in_(legacy_roles), User.id != current_user.id).all()
+        # We keep only admins and closers, delete everything else
+        protected_roles = ['admin', 'closer']
+        # Query for users with roles NOT in protected_roles, excluding current user for safety
+        users_to_delete = User.query.filter(~User.role.in_(protected_roles), User.id != current_user.id).all()
         count = len(users_to_delete)
         
         for user in users_to_delete:
@@ -408,7 +409,7 @@ def bulk_delete_legacy_users():
         db.session.commit()
         return jsonify({
             "success": True, 
-            "message": f"Se han eliminado {count} usuarios con roles legados (student/user).",
+            "message": f"Se han eliminado {count} usuarios (todos excepto Admins y Closers).",
             "deleted_count": count
         }), 200
     except Exception as e:
