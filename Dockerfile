@@ -51,4 +51,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Run the application
-CMD ["gunicorn", "--timeout", "120", "--bind", "0.0.0.0:8080", "run:app"]
+CMD gunicorn --timeout 120 --bind 0.0.0.0:$PORT run:app
