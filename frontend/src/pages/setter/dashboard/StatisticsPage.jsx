@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Loader2, TrendingUp, Users, Target, CalendarDays, PieChart } from 'lucide-react';
+import { ArrowLeft, Calendar, Loader2, TrendingUp, Users, Target, CalendarDays, PieChart, BarChart3, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
 import Button from '../../../components/ui/Button';
+import Card from '../../../components/ui/Card';
+import Badge from '../../../components/ui/Badge';
 import { ResponsiveContainer, FunnelChart, Funnel, LabelList, Tooltip, Cell, PieChart as RePieChart, Pie } from 'recharts';
 
 const SetterStatisticsPage = () => {
@@ -63,8 +65,8 @@ const SetterStatisticsPage = () => {
     const qualifiedLeads = Math.max(0, totalInbound - noLeadValue);
 
     const leadQualityData = [
-        { name: 'Cualificados', value: qualifiedLeads, fill: '#0d9488' },
-        { name: 'Descartados', value: noLeadValue, fill: '#e11d48' }
+        { name: 'Cualificados', value: qualifiedLeads, fill: 'var(--color-primary)' },
+        { name: 'Descartados', value: noLeadValue, fill: '#ef4444' }
     ];
 
     const bookingPct = qualifiedLeads > 0
@@ -72,74 +74,84 @@ const SetterStatisticsPage = () => {
         : 0;
 
     return (
-        <div className="min-h-screen bg-[#f3f4f6] text-[#111827] p-4 md:p-8 font-inter selection:bg-primary/20">
-            <div className="max-w-6xl mx-auto space-y-10">
+        <div className="min-h-screen text-base p-4 md:p-12 font-main selection:bg-primary/20 overflow-y-auto custom-scrollbar">
+            <div className="max-w-7xl mx-auto space-y-12">
 
                 {/* Header */}
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b-2 border-gray-200 pb-8">
-                    <div className="space-y-4">
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-base pb-10">
+                    <div className="space-y-6">
                         <button
                             onClick={() => window.close()}
-                            className="flex items-center gap-2 text-gray-400 hover:text-gray-900 transition-all group"
+                            className="flex items-center gap-2 text-muted hover:text-base transition-all group"
                         >
-                            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-                            <span className="font-bold uppercase tracking-widest text-[10px]">Cerrar Panel</span>
+                            <X size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+                            <span className="font-black uppercase tracking-widest text-[9px]">Cerrar Panel de Estadísticas</span>
                         </button>
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-blue-500 rounded-2xl text-white shadow-lg shadow-blue-200">
+                        <div className="flex items-center gap-5">
+                            <div className="p-4 bg-primary/10 rounded-[2rem] text-primary border border-primary/20 shadow-lg shadow-primary/5">
                                 <TrendingUp size={32} />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-extrabold tracking-tighter text-gray-900">
-                                    RENDIMIENTO <span className="text-blue-600">SETTER</span>
+                                <h1 className="text-5xl font-black italic tracking-tighter uppercase text-base leading-none">
+                                    Rendimiento <span className="text-primary underline decoration-primary/20 underline-offset-8">Setter</span>
                                 </h1>
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                    Dashboard Operativo • NeurOPS Analytics
+                                <p className="text-[10px] font-black text-muted uppercase tracking-[0.3em] mt-3">
+                                    Analytics & Performance Metrics
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
-                        <Calendar size={18} className="text-blue-500 ml-2" />
-                        <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 bg-surface p-2 rounded-2xl shadow-xl border border-base">
+                        <Calendar size={18} className="text-primary ml-3" />
+                        <div className="flex items-center gap-3 pr-2">
                             <input
                                 type="date"
                                 name="start"
                                 value={dateRange.start}
                                 onChange={handleDateChange}
-                                className="bg-transparent border-none text-xs font-black text-gray-700 focus:ring-0 p-0"
+                                className="bg-transparent border-none text-[10px] font-black text-base focus:ring-0 p-0 uppercase"
                             />
-                            <span className="text-gray-300 font-bold">—</span>
+                            <span className="text-muted font-black">—</span>
                             <input
                                 type="date"
                                 name="end"
                                 value={dateRange.end}
                                 onChange={handleDateChange}
-                                className="bg-transparent border-none text-xs font-black text-gray-700 focus:ring-0 p-0"
+                                className="bg-transparent border-none text-[10px] font-black text-base focus:ring-0 p-0 uppercase"
                             />
                         </div>
-                        {loading && <Loader2 className="animate-spin text-blue-500 ml-2" size={16} />}
+                        {loading && (
+                            <div className="pr-2 border-l border-base ml-2 pl-3">
+                                <Loader2 className="animate-spin text-primary" size={16} />
+                            </div>
+                        )}
                     </div>
                 </header>
 
-                {loading ? (
-                    <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-                        <Loader2 className="animate-spin text-blue-500" size={48} />
-                        <p className="font-black italic uppercase text-xs text-gray-400 tracking-tighter">Sincronizando Metricas...</p>
+                {loading && !stats ? (
+                    <div className="h-[50vh] flex flex-col items-center justify-center gap-6">
+                        <Loader2 className="animate-spin text-primary" size={56} />
+                        <div className="text-center space-y-2">
+                            <p className="font-black italic uppercase text-sm text-base tracking-tighter">Sincronizando Métricas...</p>
+                            <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Calculando kpis en tiempo real</p>
+                        </div>
                     </div>
                 ) : (
-                    <div className="space-y-12">
-
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-16"
+                    >
                         {/* 1. Main Metrics Grid */}
-                        <section className="space-y-6">
-                            <div className="flex items-center gap-3">
-                                <i className="w-1.5 h-6 bg-blue-600 rounded-full" />
-                                <h2 className="text-lg font-black uppercase tracking-tight">Cualificación de Entrada</h2>
+                        <div className="space-y-8">
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-xs font-black uppercase tracking-[0.4em] text-muted">Resumen Operativo</h2>
+                                <div className="h-px bg-base flex-1" />
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                                <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <MetricCard label="Leads Totales" value={totalInbound} icon={<Users size={20} />} />
                                     <MetricCard label="Cualificados" value={qualifiedLeads} icon={<Target size={20} />} />
                                     <MetricCard
@@ -150,75 +162,102 @@ const SetterStatisticsPage = () => {
                                     />
                                 </div>
 
-                                <div className="bg-white rounded-[32px] p-6 shadow-xl shadow-gray-200/50 border border-gray-100 flex items-center gap-6">
-                                    <div className="w-24 h-24 flex-shrink-0">
+                                <Card variant="surface" className="lg:col-span-4 p-8 flex items-center gap-8 border-base/50 shadow-2xl">
+                                    <div className="w-32 h-32 flex-shrink-0 relative">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <RePieChart>
                                                 <Pie
                                                     data={leadQualityData}
-                                                    innerRadius={30}
-                                                    outerRadius={45}
-                                                    paddingAngle={5}
+                                                    innerRadius={35}
+                                                    outerRadius={55}
+                                                    paddingAngle={8}
                                                     dataKey="value"
+                                                    stroke="none"
                                                 >
                                                     {leadQualityData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.fill} cornerRadius={4} />
+                                                        <Cell key={`cell-${index}`} fill={entry.fill} cornerRadius={6} />
                                                     ))}
                                                 </Pie>
                                             </RePieChart>
                                         </ResponsiveContainer>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Calidad de Leads</h4>
-                                        <div className="space-y-1.5">
-                                            <LegendItem color="bg-teal-600" label="Cualificados" percent={totalInbound > 0 ? ((qualifiedLeads / totalInbound) * 100).toFixed(0) : 0} />
-                                            <LegendItem color="bg-rose-600" label="Descartados" percent={totalInbound > 0 ? ((noLeadValue / totalInbound) * 100).toFixed(0) : 0} />
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <PieChart className="text-muted/20" size={24} />
                                         </div>
                                     </div>
-                                </div>
+                                    <div className="space-y-4 flex-1">
+                                        <h4 className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">Calidad de Leads</h4>
+                                        <div className="space-y-3">
+                                            <LegendItem color="bg-primary" label="Cualificados" percent={totalInbound > 0 ? ((qualifiedLeads / totalInbound) * 100).toFixed(0) : 0} />
+                                            <LegendItem color="bg-rose-500" label="Descartados" percent={totalInbound > 0 ? ((noLeadValue / totalInbound) * 100).toFixed(0) : 0} />
+                                        </div>
+                                    </div>
+                                </Card>
                             </div>
-                        </section>
+                        </div>
 
                         {/* 2. Funnel Visualization */}
-                        <section className="space-y-6">
-                            <div className="flex items-center gap-3">
-                                <i className="w-1.5 h-6 bg-teal-600 rounded-full" />
-                                <h2 className="text-lg font-black uppercase tracking-tight">Evaluación del Embudo</h2>
+                        <div className="space-y-8">
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-xs font-black uppercase tracking-[0.4em] text-muted">Pipeline de Conversión</h2>
+                                <div className="h-px bg-base flex-1" />
                             </div>
 
-                            <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 bg-white rounded-[40px] p-8 shadow-2xl shadow-gray-200/60 border border-gray-100">
+                            <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
                                 {/* Table View */}
-                                <div className="xl:col-span-2 border rounded-3xl overflow-hidden self-start">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-gray-50/80">
-                                            <tr>
-                                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">#</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Etapa</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Total</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">% Conv.</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                            {funnelData.map((item, i) => (
-                                                <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
-                                                    <td className="px-6 py-4 text-xs font-bold text-gray-400">{i + 1}</td>
-                                                    <td className="px-6 py-4 text-xs font-black uppercase text-gray-700 group-hover:text-blue-600 transition-colors">{item.name}</td>
-                                                    <td className="px-6 py-4 text-sm font-black text-gray-900 text-right">{item.value}</td>
-                                                    <td className="px-6 py-4 text-xs font-black text-blue-500 text-right italic">{item.conversion}%</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div className="xl:col-span-5 self-start">
+                                    <Card variant="surface" padding="p-0" className="border-base/50 overflow-hidden shadow-2xl">
+                                        <div className="p-6 border-b border-base bg-surface-hover/30">
+                                            <h3 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                                <BarChart3 size={14} /> Detalle por Etapa
+                                            </h3>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left">
+                                                <thead className="bg-main/20 border-b border-base">
+                                                    <tr>
+                                                        <th className="px-6 py-4 text-[9px] font-black text-muted uppercase tracking-widest">#</th>
+                                                        <th className="px-6 py-4 text-[9px] font-black text-muted uppercase tracking-widest">Etapa</th>
+                                                        <th className="px-6 py-4 text-[9px] font-black text-muted uppercase tracking-widest text-right">Total</th>
+                                                        <th className="px-6 py-4 text-[9px] font-black text-muted uppercase tracking-widest text-right">% Conv.</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-base/30">
+                                                    {funnelData.map((item, i) => (
+                                                        <tr key={item.id} className="hover:bg-primary/5 transition-all group">
+                                                            <td className="px-6 py-4 text-[10px] font-bold text-muted/50">{i + 1}</td>
+                                                            <td className="px-6 py-4 text-[10px] font-black uppercase text-base tracking-tight group-hover:text-primary transition-colors">{item.name}</td>
+                                                            <td className="px-6 py-4 text-xs font-black text-base text-right font-mono">{item.value}</td>
+                                                            <td className="px-6 py-4 text-[10px] font-black text-primary text-right italic">
+                                                                <Badge variant="primary" className="px-2 py-0.5">{item.conversion}%</Badge>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    {funnelData.length === 0 && (
+                                                        <tr>
+                                                            <td colSpan="4" className="px-6 py-12 text-center text-muted italic text-[10px] font-bold uppercase tracking-widest">No hay datos de embudo disponibes</td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </Card>
                                 </div>
 
                                 {/* Recharts Funnel */}
-                                <div className="xl:col-span-3 h-[450px] flex flex-col items-center justify-center p-4">
+                                <Card variant="surface" className="xl:col-span-12 lg:xl:col-span-7 h-[500px] flex flex-col items-center justify-center p-8 border-base/50 shadow-2xl">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <FunnelChart>
                                             <Tooltip
-                                                contentStyle={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                                                itemStyle={{ fontWeight: 'bold' }}
-                                                cursor={{ fill: '#f8fafc' }}
+                                                contentStyle={{
+                                                    backgroundColor: 'var(--color-surface)',
+                                                    borderRadius: '16px',
+                                                    border: '1px solid var(--color-border)',
+                                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)',
+                                                    padding: '12px'
+                                                }}
+                                                itemStyle={{ fontWeight: '900', color: 'var(--color-text-base)', textTransform: 'uppercase', fontSize: '10px' }}
+                                                labelStyle={{ display: 'none' }}
+                                                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                             />
                                             <Funnel
                                                 dataKey="value"
@@ -227,10 +266,10 @@ const SetterStatisticsPage = () => {
                                             >
                                                 <LabelList
                                                     position="right"
-                                                    fill="#64748b"
+                                                    fill="var(--color-text-muted)"
                                                     stroke="none"
                                                     dataKey="name"
-                                                    className="font-black text-[10px] uppercase tracking-tighter"
+                                                    className="font-black text-[9px] uppercase tracking-tighter"
                                                 />
                                                 <LabelList
                                                     position="center"
@@ -238,7 +277,7 @@ const SetterStatisticsPage = () => {
                                                     stroke="none"
                                                     dataKey="value"
                                                     content={({ x, y, width, height, value }) => (
-                                                        <text x={x + width / 2} y={y + height / 2} fill="#fff" textAnchor="middle" className="font-black text-lg drop-shadow m-0">
+                                                        <text x={x + width / 2} y={y + height / 2} fill="#fff" textAnchor="middle" className="font-black text-xl drop-shadow-md">
                                                             {value}
                                                         </text>
                                                     )}
@@ -246,27 +285,31 @@ const SetterStatisticsPage = () => {
                                                 {funnelData.map((entry, index) => (
                                                     <Cell
                                                         key={`cell-${index}`}
-                                                        fill={index === 0 ? '#3b82f6' : index === funnelData.length - 1 ? '#0d9488' : '#94a3b8'}
-                                                        stroke="#fff"
-                                                        strokeWidth={0.5}
-                                                        opacity={1 - (index * 0.1)}
+                                                        fill={index === 0 ? 'var(--color-primary)' : index === funnelData.length - 1 ? 'var(--color-primary)' : 'var(--color-border)'}
+                                                        stroke="var(--color-bg)"
+                                                        strokeWidth={2}
+                                                        opacity={1 - (index * 0.12)}
                                                     />
                                                 ))}
                                             </Funnel>
                                         </FunnelChart>
                                     </ResponsiveContainer>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-4">Progresión de Conversión • Datos en Tiempo Real</p>
-                                </div>
+                                    <div className="mt-8 flex items-center gap-4 text-[9px] font-black text-muted uppercase tracking-[0.2em] bg-main/50 px-6 py-2 rounded-full border border-base">
+                                        <span>Progresión de Conversión</span>
+                                        <div className="w-1 h-1 bg-primary rounded-full" />
+                                        <span>Últimos 30 días</span>
+                                    </div>
+                                </Card>
                             </div>
-                        </section>
+                        </div>
 
                         {/* Footer decorative */}
-                        <footer className="pt-10 text-center">
-                            <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.5em] italic">
-                                ALTO RENDIMIENTO • © {new Date().getFullYear()} NeurOPS SYSTEM
+                        <footer className="pt-20 text-center border-t border-base/30">
+                            <p className="text-[9px] font-black text-muted/30 uppercase tracking-[0.8em] italic">
+                                ALTO RENDIMIENTO • © {new Date().getFullYear()} NEUROPS ANALYTICS SYSTEM
                             </p>
                         </footer>
-                    </div>
+                    </motion.div>
                 )}
             </div>
         </div>
@@ -274,30 +317,30 @@ const SetterStatisticsPage = () => {
 };
 
 const MetricCard = ({ label, value, icon, highlight }) => (
-    <div className={`bg-white rounded-[32px] p-8 shadow-xl shadow-gray-200/40 border-b-4 ${highlight ? 'border-teal-500' : 'border-gray-100'} transition-transform hover:scale-[1.02]`}>
-        <div className="flex justify-between items-start mb-6">
-            <span className={`p-2 rounded-xl ${highlight ? 'bg-teal-50 text-teal-600' : 'bg-gray-50 text-gray-400'}`}>
+    <Card variant="surface" className={`p-8 border-base/50 shadow-xl border-b-4 ${highlight ? 'border-primary shadow-primary/5' : 'border-base'} transition-all hover:translate-y-[-4px] group`}>
+        <div className="flex justify-between items-start mb-8">
+            <span className={`p-3 rounded-2xl ${highlight ? 'bg-primary/20 text-primary shadow-glow shadow-primary/20' : 'bg-surface-hover/50 text-muted'} border border-white/5 transition-all duration-500 group-hover:scale-110`}>
                 {icon}
             </span>
         </div>
-        <div>
-            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${highlight ? 'text-teal-600/70' : 'text-gray-400'}`}>
+        <div className="space-y-1">
+            <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 ${highlight ? 'text-primary' : 'text-muted'}`}>
                 {label}
             </p>
-            <p className={`text-4xl font-extrabold tracking-tighter ${highlight ? 'text-teal-700' : 'text-gray-900'}`}>
+            <p className={`text-5xl font-black italic tracking-tighter ${highlight ? 'text-base' : 'text-base opacity-90'}`}>
                 {value}
             </p>
         </div>
-    </div>
+    </Card>
 );
 
 const LegendItem = ({ color, label, percent }) => (
-    <div className="flex items-center justify-between gap-6">
-        <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${color}`} />
-            <span className="text-[10px] font-bold text-gray-500 uppercase">{label}</span>
+    <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+            <div className={`w-2.5 h-2.5 rounded-full ${color} shadow-lg ${color === 'bg-primary' ? 'shadow-primary/40' : 'shadow-rose-500/40'}`} />
+            <span className="text-[10px] font-black text-muted uppercase tracking-tight">{label}</span>
         </div>
-        <span className="text-[10px] font-black text-gray-900 italic">{percent}%</span>
+        <Badge variant={color === 'bg-primary' ? 'primary' : 'rose'} className="px-2 py-0.5 font-mono text-[10px]">{percent}%</Badge>
     </div>
 );
 

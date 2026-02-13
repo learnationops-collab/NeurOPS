@@ -313,10 +313,14 @@ def get_stats_summary():
         "stage_metrics": stage_data,
         "pending_agendas": [{
             "id": a.id,
-            "lead_name": a.client.full_name or a.client.email,
+            "lead_name": a.client.full_name or a.client.email if a.client else "Unknown",
             "closer_name": a.closer.username if a.closer else "Unassigned",
             "start_time": a.start_time.isoformat(),
-            "origin": a.origin
+            "origin": a.origin,
+            "client_id": a.client_id,
+            "phone": a.client.phone if a.client else "",
+            "last_stage": a.last_stage,
+            "type": a.origin or 'Manual'
         } for a in pending_agendas]
     }), 200
 
@@ -469,7 +473,9 @@ def get_notifications():
                 "subject": n.subject,
                 "content": n.content,
                 "created_at": n.created_at.isoformat(),
-                "is_read": is_read
+                "is_read": is_read,
+                "associated_id": n.associated_id,
+                "associated_type": n.associated_type
             })
             
     return jsonify(relevant), 200

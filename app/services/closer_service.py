@@ -21,7 +21,7 @@ class CloserService:
             query = query.filter(
                 or_(
                     Client.enrollments.any(Enrollment.closer_id == closer_id),
-                    Client.appointments.any(Appointment.closer_id == closer_id)
+                    Client.appointments.any(or_(Appointment.closer_id == closer_id, Appointment.setter_id == closer_id))
                 )
             )
         
@@ -69,7 +69,7 @@ class CloserService:
         if current_user.role != 'admin':
             kpi_query = kpi_query.filter(or_(
                 Client.enrollments.any(Enrollment.closer_id == closer_id), 
-                Client.appointments.any(Appointment.closer_id == closer_id)
+                Client.appointments.any(or_(Appointment.closer_id == closer_id, Appointment.setter_id == closer_id))
             ))
         kpi_query = apply_lead_filters(kpi_query)
         total_clients = kpi_query.count()
@@ -164,7 +164,7 @@ class CloserService:
         if not is_admin:
             recent_query = recent_query.filter(or_(
                 Client.enrollments.any(Enrollment.closer_id == closer_id),
-                Client.appointments.any(Appointment.closer_id == closer_id)
+                Client.appointments.any(or_(Appointment.closer_id == closer_id, Appointment.setter_id == closer_id))
             ))
         recent_clients = recent_query.order_by(Client.created_at.desc()).limit(10).all()
 
@@ -427,7 +427,7 @@ class CloserService:
         from app.services.booking_service import BookingService
         
         appt = Appointment.query.get_or_404(appt_id)
-        if appt.closer_id != closer_id:
+        if appt.closer_id != closer_id and appt.setter_id != closer_id:
             raise Exception("No tienes permiso sobre esta agenda")
             
         new_status = data.get('status') # Completada, Primera Agenda, Cancelada, No Show, Reprogramada

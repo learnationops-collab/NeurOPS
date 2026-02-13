@@ -25,6 +25,7 @@ import HotkeysTable from '../../../components/dashboard/HotkeysTable';
 import NotificationWidget from '../../../components/dashboard/NotificationWidget';
 
 import ReportsHistoryModal from './ReportsHistoryModal';
+import AgendaManagerModal from '../../../components/modals/AgendaManagerModal';
 
 const SetterDashboard = () => {
     const [loading, setLoading] = useState(true);
@@ -44,6 +45,10 @@ const SetterDashboard = () => {
     // Links Modal State
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [availableLinks, setAvailableLinks] = useState({ events: [], closers: [] });
+
+    // Agenda Modal State
+    const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
+    const [selectedAgenda, setSelectedAgenda] = useState(null);
 
     // --- FORM STATES ---
     const [formData, setFormData] = useState({
@@ -176,6 +181,30 @@ const SetterDashboard = () => {
             fetchNotifications();
         } catch (err) {
             console.error("Error marking as read", err);
+        }
+    };
+
+    const handleAgendaClick = (appt) => {
+        setSelectedAgenda(appt);
+        setIsAgendaModalOpen(true);
+    };
+
+    const handleNotificationClick = async (noti) => {
+        if (noti.associated_type === 'appointment' && noti.associated_id) {
+            try {
+                // If it's an appointment notification, we might want to fetch details or just use ID if we have enough
+                // However, most modals like AgendaManagerModal expect a fuller object or at least lead_name etc.
+                // Let's try to match what CloserDashboard does.
+                const res = await api.get(`/closer/appointments/${noti.associated_id}`);
+                setSelectedAgenda(res.data);
+                setIsAgendaModalOpen(true);
+            } catch (err) {
+                console.error("Error fetching appointment for notification", err);
+            }
+        }
+        // Mark as read when clicked
+        if (!noti.is_read) {
+            handleMarkAsRead(noti.id);
         }
     };
 
@@ -345,6 +374,7 @@ const SetterDashboard = () => {
                                 <NotificationWidget
                                     notifications={notifications}
                                     onMarkAsRead={handleMarkAsRead}
+                                    onNotificationClick={handleNotificationClick}
                                 />
                             </div>
                         </div>
@@ -410,7 +440,11 @@ const SetterDashboard = () => {
 
                                     <div className="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
                                         {summaryStats?.pending_agendas?.length > 0 ? (summaryStats.pending_agendas.map(agenda => (
-                                            <div key={agenda.id} className="flex flex-col gap-3 p-4 bg-primary/5 rounded-xl border border-primary/10 group hover:border-primary/30 transition-all">
+                                            <div
+                                                key={agenda.id}
+                                                onClick={() => handleAgendaClick(agenda)}
+                                                className="flex flex-col gap-3 p-4 bg-primary/5 rounded-xl border border-primary/10 group hover:border-primary/30 transition-all cursor-pointer"
+                                            >
                                                 <div className="flex justify-between items-start">
                                                     <div className="space-y-1">
                                                         <p className="text-xs font-black text-base italic">{agenda.lead_name}</p>
@@ -702,6 +736,13 @@ const SetterDashboard = () => {
                 isOpen={isHistoryModalOpen}
                 onClose={() => setIsHistoryModalOpen(false)}
                 onEdit={handleEditReport}
+            />
+
+            <AgendaManagerModal
+                isOpen={isAgendaModalOpen}
+                appointment={selectedAgenda}
+                onClose={() => setIsAgendaModalOpen(false)}
+                onSuccess={fetchQuestionsAndStats}
             />
 
         </div >

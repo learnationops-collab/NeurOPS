@@ -399,7 +399,7 @@ def update_appointment(id):
         return jsonify({"message": "Forbidden"}), 403
     
     appt = Appointment.query.get_or_404(id)
-    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+    if current_user.role != 'admin' and appt.closer_id != current_user.id and appt.setter_id != current_user.id:
         return jsonify({"message": "Forbidden"}), 403
         
     data = request.get_json() or {}
@@ -420,7 +420,7 @@ def get_appointment(id):
         return jsonify({"message": "Forbidden"}), 403
     
     appt = Appointment.query.get_or_404(id)
-    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+    if current_user.role != 'admin' and appt.closer_id != current_user.id and appt.setter_id != current_user.id:
         return jsonify({"message": "Forbidden"}), 403
         
     return jsonify({
@@ -696,7 +696,7 @@ def update_appointment_stage(id):
         return jsonify({"message": "Forbidden"}), 403
     
     appt = Appointment.query.get_or_404(id)
-    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+    if current_user.role != 'admin' and appt.closer_id != current_user.id and appt.setter_id != current_user.id:
         return jsonify({"message": "Forbidden"}), 403
         
     data = request.get_json() or {}
@@ -718,7 +718,7 @@ def update_appointment_outcome(id):
         return jsonify({"message": "Forbidden"}), 403
     
     appt = Appointment.query.get_or_404(id)
-    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+    if current_user.role != 'admin' and appt.closer_id != current_user.id and appt.setter_id != current_user.id:
         return jsonify({"message": "Forbidden"}), 403
         
     data = request.get_json() or {}
