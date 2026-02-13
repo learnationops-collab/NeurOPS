@@ -392,6 +392,29 @@ def user_operations(id):
         db.session.commit()
         return jsonify({"message": "User updated"}), 200
 
+@bp.route('/admin/users/bulk-delete-legacy', methods=['DELETE'])
+@login_required
+@admin_required
+def bulk_delete_legacy_users():
+    try:
+        legacy_roles = ['student', 'user']
+        # Query for users with legacy roles, excluding the current user just in case
+        users_to_delete = User.query.filter(User.role.in_(legacy_roles), User.id != current_user.id).all()
+        count = len(users_to_delete)
+        
+        for user in users_to_delete:
+            db.session.delete(user)
+            
+        db.session.commit()
+        return jsonify({
+            "success": True, 
+            "message": f"Se han eliminado {count} usuarios con roles legados (student/user).",
+            "deleted_count": count
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Error al eliminar usuarios: {str(e)}"}), 500
+
 @bp.route('/admin/leads/search', methods=['GET'])
 @login_required
 @admin_required

@@ -216,8 +216,8 @@ const TeamManagementPage = () => {
                                     key={role.id}
                                     onClick={() => setActiveRole(role.id)}
                                     className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${activeRole === role.id
-                                            ? 'bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-[1.02]'
-                                            : 'bg-surface border-base text-muted hover:border-primary/40'
+                                        ? 'bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-[1.02]'
+                                        : 'bg-surface border-base text-muted hover:border-primary/40'
                                         }`}
                                 >
                                     <div className="flex items-center gap-3">
@@ -292,8 +292,8 @@ const TeamManagementPage = () => {
                                                     onClick={(e) => handleImpersonate(e, u)}
                                                     disabled={!u.is_active || impersonatingId === u.id}
                                                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${u.is_active
-                                                            ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-black shadow-lg shadow-amber-500/5'
-                                                            : 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                                                        ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-black shadow-lg shadow-amber-500/5'
+                                                        : 'bg-slate-800 text-slate-600 cursor-not-allowed'
                                                         }`}
                                                 >
                                                     {impersonatingId === u.id ? <Loader2 size={14} className="animate-spin" /> : <Ghost size={14} />}

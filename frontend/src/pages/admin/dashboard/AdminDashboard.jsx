@@ -59,6 +59,20 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleBulkDeleteLegacy = async () => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar a TODOS los usuarios con roles de 'student' o 'user'? Esta acción no se puede deshacer.")) return;
+
+    setLoading(true);
+    try {
+      const res = await api.delete('/admin/users/bulk-delete-legacy');
+      alert(res.data.message);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error al realizar la eliminación masiva');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Centralized state for all filters with persistence
   const [filters, setFilters] = useState({
     period: 'this_month',
@@ -424,6 +438,15 @@ const AdminDashboard = () => {
                 "Accesos rápidos y notificaciones."
               </p>
             </div>
+
+            <Button
+              onClick={handleBulkDeleteLegacy}
+              variant="outline"
+              className="h-14 px-6 rounded-2xl border-rose-500/30 text-rose-500 hover:bg-rose-500/10 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"
+            >
+              <Trash2 size={18} />
+              Limpiar Legados
+            </Button>
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-[1600px] mx-auto">
