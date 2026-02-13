@@ -10,7 +10,8 @@ import {
     TrendingUp,
     Settings,
     Zap,
-    Ghost
+    Ghost,
+    Activity
 } from 'lucide-react';
 
 /**
@@ -117,6 +118,31 @@ const useDockNavigation = () => {
             return [
                 { id: 'home', icon: LayoutDashboard, label: 'Inicio' },
                 { id: 'summary', icon: ClipboardList, label: 'Resumen' }
+            ];
+        }
+
+        // Secciones para Sales Admin Dashboard
+        if (activePage.id === 'dashboard' && user?.role === 'sales_admin') {
+            return [
+                { id: 'overview', icon: LayoutDashboard, label: 'Resumen' },
+                { id: 'activity', icon: Activity, label: 'Rendimiento' }
+            ];
+        }
+
+        // Secciones para Team Management
+        if (activePage.id === 'team') {
+            return [
+                { id: 'management', icon: Users, label: 'Gestión' },
+                { id: 'stats', icon: BarChart3, label: 'Estadísticas' }
+            ];
+        }
+
+        // Secciones para Settings (Común para todos)
+        if (activePage.id === 'settings') {
+            return [
+                { id: 'profile', icon: Users, label: 'Perfil' },
+                { id: 'team', icon: Users, label: 'Equipo' },
+                { id: 'appearance', icon: Settings, label: 'Apariencia' }
             ];
         }
 

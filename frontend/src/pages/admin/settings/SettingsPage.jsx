@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import { Shield, User, LogOut, Palette, AlertTriangle } from 'lucide-react';
 import TeamManagementPage from '../team/TeamManagementPage';
@@ -13,6 +13,29 @@ const SettingsPage = () => {
         { id: 'team', label: 'Gestion de Equipo', icon: Shield },
         { id: 'appearance', label: 'Apariencia', icon: Palette },
     ];
+
+    // Listen for section change requests from DOCK
+    useEffect(() => {
+        const handleRequest = (e) => {
+            const { index } = e.detail;
+            if (sections[index]) {
+                setActiveSection(sections[index].id);
+            }
+        };
+        window.addEventListener('request-section-change', handleRequest);
+        return () => window.removeEventListener('request-section-change', handleRequest);
+    }, []);
+
+    // Send active section to Dock
+    useEffect(() => {
+        const index = sections.findIndex(s => s.id === activeSection);
+        if (index !== -1) {
+            const event = new CustomEvent('page-section-changed', {
+                detail: { activeSection: index, category: 'Ajustes' }
+            });
+            window.dispatchEvent(event);
+        }
+    }, [activeSection]);
 
     const handleLogout = async () => {
         try {

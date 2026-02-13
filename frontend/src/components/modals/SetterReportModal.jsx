@@ -75,7 +75,7 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            await api.post('/setter/report', formData);
+            await api.post('/setter/daily-report', formData);
             alert('Reporte enviado correctamente');
             onSuccess?.();
             onClose();

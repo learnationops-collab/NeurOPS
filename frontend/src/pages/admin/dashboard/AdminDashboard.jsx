@@ -38,6 +38,14 @@ const AdminDashboard = () => {
   }, []);
 
   useEffect(() => {
+    const category = 'Admin Dashboard';
+    const event = new CustomEvent('page-section-changed', {
+      detail: { activeSection, category }
+    });
+    window.dispatchEvent(event);
+  }, [activeSection]);
+
+  useEffect(() => {
     fetchNotifications();
   }, []);
 
