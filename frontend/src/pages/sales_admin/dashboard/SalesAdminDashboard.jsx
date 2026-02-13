@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
     Users,
     TrendingUp,
@@ -15,6 +16,7 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 
 const SalesAdminDashboard = () => {
+    const navigate = useNavigate();
     // Mock data for the premium UI
     const stats = [
         { label: 'Revenue Equipo', value: '$45,200', change: '+12.5%', icon: DollarSign, color: 'text-emerald-500' },
@@ -83,7 +85,12 @@ const SalesAdminDashboard = () => {
                             <Activity size={18} className="text-primary" />
                             <h3 className="text-[11px] font-black tracking-[0.2em] uppercase">Rendimiento del Equipo</h3>
                         </div>
-                        <button className="text-[9px] font-black tracking-widest text-primary hover:underline">VER TODO</button>
+                        <button
+                            onClick={() => navigate('/sales-admin/team')}
+                            className="text-[9px] font-black tracking-widest text-primary hover:underline"
+                        >
+                            VER TODO
+                        </button>
                     </div>
 
                     <div className="space-y-4">
@@ -145,7 +152,11 @@ const SalesAdminDashboard = () => {
                         </div>
                     </Card>
 
-                    <Card variant="surface" className="p-8 group hover:bg-primary transition-all duration-500 cursor-pointer overflow-hidden relative">
+                    <Card
+                        variant="surface"
+                        onClick={() => navigate('/sales-admin/team')}
+                        className="p-8 group hover:bg-primary transition-all duration-500 cursor-pointer overflow-hidden relative"
+                    >
                         <div className="relative z-10 space-y-2">
                             <h3 className="text-xl font-black italic tracking-tighter group-hover:text-white transition-colors">Team Builder</h3>
                             <p className="text-[10px] font-bold text-muted uppercase group-hover:text-white/60 transition-colors">AÑADIR NUEVO MIEMBRO AL EQUIPO</p>

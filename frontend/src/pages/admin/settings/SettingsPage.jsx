@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import api from '../../../services/api';
 import { Shield, User, LogOut, Palette, AlertTriangle } from 'lucide-react';
-import UsersPage from '../../legacy/UsersPage';
+import TeamManagementPage from '../team/TeamManagementPage';
 import Card from '../../../components/ui/Card';
 import ThemeSelector from '../../../components/ui/ThemeSelector';
 
@@ -61,7 +61,7 @@ const SettingsPage = () => {
                 <div className="lg:col-span-3">
                     {activeSection === 'team' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                            <UsersPage />
+                            <TeamManagementPage />
                         </div>
                     )}
 

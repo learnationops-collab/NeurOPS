@@ -193,9 +193,20 @@ const UsersPage = () => {
                                         ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                                         : user.role === 'closer'
                                             ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-                                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                            : user.role === 'sales_admin'
+                                                ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                         }`}>
-                                        {user.role}
+                                        {user.role === 'admin'
+                                            ? 'Administrador'
+                                            : user.role === 'closer'
+                                                ? 'Closer'
+                                                : user.role === 'setter'
+                                                    ? 'Setter'
+                                                    : user.role === 'sales_admin'
+                                                        ? 'Sales Admin'
+                                                        : 'Operador'
+                                        }
                                     </span>
                                 </td>
                                 <td className="px-8 py-6">
@@ -288,6 +299,7 @@ const UsersPage = () => {
                                         <option value="closer">Closer</option>
                                         <option value="setter">Setter</option>
                                         <option value="operator">Operador</option>
+                                        <option value="sales_admin">Sales Admin</option>
                                     </select>
                                 </div>
 

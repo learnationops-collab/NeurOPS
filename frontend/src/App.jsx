@@ -297,7 +297,7 @@ function App() {
               element={
                 <ProtectedRoute roles={['sales_admin']}>
                   <MainLayout>
-                    <TeamManagement />
+                    <TeamManagementPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
