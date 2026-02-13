@@ -155,6 +155,11 @@ const TeamManagementPage = () => {
         { id: 'admin', label: 'Admins', icon: Shield },
     ];
 
+    const getRoleLabel = (roleId) => {
+        const role = roles.find(r => r.id === roleId);
+        return role ? role.label : roleId.replace('_', ' ').toUpperCase();
+    };
+
     const filteredUsers = users.filter(u => {
         const matchesSearch = u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
             u.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -285,7 +290,7 @@ const TeamManagementPage = () => {
 
                                             <div className="flex items-center justify-between mt-auto pt-4 border-t border-base/50">
                                                 <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-3">
-                                                    {u.role}
+                                                    {getRoleLabel(u.role)}
                                                 </Badge>
 
                                                 <button
@@ -390,7 +395,7 @@ const TeamManagementPage = () => {
                                                 <option value="closer">Closer Principal</option>
                                                 <option value="setter">Setter de Leads</option>
                                                 <option value="operator">Operador Técnico</option>
-                                                <option value="sales_admin">Sales Manager</option>
+                                                <option value="sales_admin">Sales Admin</option>
                                             </select>
                                         </div>
 
