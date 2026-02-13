@@ -21,10 +21,22 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-# libpq-dev is often needed for psycopg2 (PostgreSQL adapter)
+# libpq-dev for PostgreSQL, Chromium for html2image
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
+    chromium \
+    chromium-driver \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy backend requirements

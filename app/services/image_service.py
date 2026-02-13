@@ -34,7 +34,22 @@ class ImageService:
 
         # 3. Configure html2image
         output_filename = f"agenda_{uuid.uuid4().hex}.png"
-        hti = Html2Image(size=(800, 600)) # Adapted size for agenda card
+        
+        # Docker/Linux compatibility
+        custom_flags = []
+        browser_executable = None
+        if os.name != 'nt':
+            custom_flags = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--headless']
+            for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
+                if os.path.exists(path):
+                    browser_executable = path
+                    break
+
+        hti = Html2Image(
+            size=(800, 600), 
+            custom_flags=custom_flags,
+            browser_executable=browser_executable
+        ) 
         
         try:
             paths = hti.screenshot(html_str=rendered_html, save_as=output_filename)
@@ -181,8 +196,23 @@ class ImageService:
         # We output to a temp file then read it back to match the buffer return type
         output_filename = f"report_{uuid.uuid4().hex}.png"
         
-        # Custom size and background (Widened for better UX)
-        hti = Html2Image(size=(1200, 1500)) 
+        # Determine if we are in Docker/Linux to set correct flags
+        custom_flags = []
+        browser_executable = None
+        
+        if os.name != 'nt': # Not Windows
+            custom_flags = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--headless']
+            # Common paths for chromium in linux
+            for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
+                if os.path.exists(path):
+                    browser_executable = path
+                    break
+
+        hti = Html2Image(
+            size=(1200, 1500), 
+            custom_flags=custom_flags,
+            browser_executable=browser_executable
+        ) 
         
         try:
             # Render to image
