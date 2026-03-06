@@ -339,3 +339,99 @@ def book_appointment():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+@bp.route('/public/active-setters', methods=['GET'])
+def get_active_setters():
+    """Retorna lista de setters activos (Nombre e ID)"""
+    setters = User.query.filter_by(role='setter', is_active=True).all()
+    return jsonify([
+        {"id": s.id, "name": f"{s.first_name} {s.last_name}".strip() or s.username} 
+        for s in setters
+    ]), 200
+
+@bp.route('/public/setter-questions', methods=['GET'])
+def get_public_setter_questions():
+    """Retorna las preguntas configuradas para los setters"""
+    from app.models import DailyReportQuestion
+    try:
+        questions = DailyReportQuestion.query.filter_by(role='setter', is_active=True).order_by(DailyReportQuestion.order).all()
+        return jsonify([{"id": q.id, "text": q.text, "type": q.question_type} for q in questions]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/public/setter-report', methods=['POST'])
+def submit_public_setter_report():
+    """Recibe y guarda el reporte diario de un setter, disparando las automatizaciones."""
+    from app.models import SetterDailyStats, PipelineStage
+    from app.api.setter import _trigger_setter_report_webhook, _get_setter_stages_ordered
+    
+    data = request.get_json() or {}
+    
+    setter_id = data.get('setter_id')
+    report_date_str = data.get('date')
+    
+    if not setter_id or not report_date_str:
+        return jsonify({"message": "ID del setter y fecha son obligatorios"}), 400
+        
+    try:
+        report_date = datetime.strptime(report_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({"message": "Formato de fecha inválido"}), 400
+        
+    # Verificar existencia
+    stat = SetterDailyStats.query.filter_by(setter_id=setter_id, date=report_date).first()
+    
+    if stat:
+        stat.not_lead = int(data.get('not_lead') or 0)
+    else:
+        stat = SetterDailyStats(
+            setter_id=setter_id,
+            date=report_date,
+            not_lead=int(data.get('not_lead') or 0)
+        )
+        db.session.add(stat)
+        
+    # Procesar Funnel Metrics -> Map to stage_X_value
+    funnel_metrics = data.get('funnel_metrics', [])
+    stages = _get_setter_stages_ordered()
+    stage_id_to_index = {s.id: i for i, s in enumerate(stages)}
+    
+    stat.stage_1_value = 0
+    stat.stage_2_value = 0
+    stat.stage_3_value = 0
+    stat.stage_4_value = 0
+    stat.stage_5_value = 0
+
+    for metric in funnel_metrics:
+        stage_id = metric.get('stage_id')
+        value = int(metric.get('value', 0))
+        
+        if stage_id in stage_id_to_index:
+            idx = stage_id_to_index[stage_id]
+            if idx == 0: stat.stage_1_value = value
+            elif idx == 1: stat.stage_2_value = value
+            elif idx == 2: stat.stage_3_value = value
+            elif idx == 3: stat.stage_4_value = value
+            elif idx == 4: stat.stage_5_value = value
+            
+    # Process dinamic answers
+    answers_data = data.get('answers', [])
+    answers_json = {}
+    for ans in answers_data:
+        question_id = str(ans.get('question_id'))
+        answer_text = str(ans.get('answer', ''))
+        if question_id:
+            answers_json[question_id] = answer_text
+            
+    stat.answers = answers_json
+    
+    try:
+        db.session.commit()
+        # Trigger webhook AFTER successful save (imported directly from setter.py logic)
+        _trigger_setter_report_webhook(stat)
+        return jsonify({"message": "Reporte guardado exitosamente"}), 201
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
