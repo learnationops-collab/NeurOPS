@@ -343,11 +343,14 @@ def book_appointment():
 @bp.route('/public/active-setters', methods=['GET'])
 def get_active_setters():
     """Retorna lista de setters activos (Nombre e ID)"""
-    setters = User.query.filter_by(role='setter', is_active=True).all()
-    return jsonify([
-        {"id": s.id, "name": f"{s.first_name} {s.last_name}".strip() or s.username} 
-        for s in setters
-    ]), 200
+    try:
+        setters = User.query.filter_by(role='setter', is_active=True).all()
+        return jsonify([
+            {"id": s.id, "name": s.username} 
+            for s in setters
+        ]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @bp.route('/public/setter-questions', methods=['GET'])
 def get_public_setter_questions():

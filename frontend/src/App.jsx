@@ -30,6 +30,7 @@ import OperationsSettingsPage from './pages/operations/settings/OperationsSettin
 import BookingPage from './pages/public/BookingPage';
 import BackupPage from './pages/public/BackupPage';
 import RestorePage from './pages/public/RestorePage';
+import PublicSetterReportPage from './pages/public/PublicSetterReportPage';
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
 import { ThemeProvider } from './context/ThemeContext';
@@ -71,6 +72,7 @@ function App() {
             <Route path="/book/:event_slug" element={<BookingPage />} />
             <Route path="/backup" element={<BackupPage />} />
             <Route path="/restore" element={<RestorePage />} />
+            <Route path="/reporte-setter" element={<PublicSetterReportPage />} />
 
 
             {/* Protected Admin Routes */}
