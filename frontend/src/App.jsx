@@ -20,8 +20,10 @@ import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage'
 import SalesAdminDashboard from './pages/sales_admin/dashboard/SalesAdminDashboard';
 import TeamManagement from './pages/sales_admin/team/TeamManagement';
 import SalesSettingsPage from './pages/sales_admin/settings/SalesSettingsPage';
+import SalesAgendasPage from './pages/sales_admin/agendas/SalesAgendasPage';
 import SetterDashboard from './pages/setter/dashboard/SetterDashboard';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
+import SetterAgendasPage from './pages/setter/agendas/SetterAgendasPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
 import OperationsDashboard from './pages/operations/dashboard/OperationsDashboard';
 import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
@@ -47,7 +49,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     // Redirigir a su dashboard correspondiente si intenta entrar a ruta ajena
     if (user.role === 'admin') return <Navigate to="/admin/dashboard" />;
     if (user.role === 'operator') return <Navigate to="/ops/dashboard" />;
-    if (user.role === 'setter') return <Navigate to="/setter/dashboard" />;
+    if (user.role === 'setter') return <Navigate to="/setter/agendas" />;
     if (user.role === 'sales_admin') return <Navigate to="/sales-admin/dashboard" />;
     return <Navigate to="/closer/dashboard" />;
   }
@@ -229,6 +231,16 @@ function App() {
 
             {/* Protected Setter Routes */}
             <Route
+              path="/setter/agendas"
+              element={
+                <ProtectedRoute roles={['setter']}>
+                  <MainLayout>
+                    <SetterAgendasPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/setter/dashboard"
               element={
                 <ProtectedRoute roles={['setter']}>
@@ -288,6 +300,16 @@ function App() {
                 <ProtectedRoute roles={['sales_admin']}>
                   <MainLayout>
                     <SalesAdminDashboard />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sales-admin/agendas"
+              element={
+                <ProtectedRoute roles={['sales_admin']}>
+                  <MainLayout>
+                    <SalesAgendasPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

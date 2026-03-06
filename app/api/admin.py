@@ -7,7 +7,7 @@ from app.services.dashboard_service import DashboardService
 from app.services.admin_ops_service import AdminOperationService
 from app.services.import_service import ImportService
 from app.services.database_service import DatabaseService
-from app.decorators import admin_required, operator_required
+from app.decorators import admin_required, operator_required, role_required
 import pandas as pd
 import io
 import json

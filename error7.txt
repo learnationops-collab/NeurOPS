@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+    create_app()
+    ~~~~~~~~~~^^
+  File "C:\Users\coros\Downloads\Trabajo\Learnation Workers\NeurOPS\app\__init__.py", line 79, in create_app
+    from app.api.setter import bp as setter_api_bp
+  File "C:\Users\coros\Downloads\Trabajo\Learnation Workers\NeurOPS\app\api\setter.py", line 4, in <module>
+    from app.models import DailyReportQuestion, DailyReportAnswer, SetterDailyStats, ROLE_SETTER, User, Client, Appointment, Event, EventGroup, CustomField, ClientCustomFieldValue
+ImportError: cannot import name 'CustomField' from 'app.models' (C:\Users\coros\Downloads\Trabajo\Learnation Workers\NeurOPS\app\models\__init__.py)

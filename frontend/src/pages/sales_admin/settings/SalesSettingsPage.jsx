@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import ReportQuestionsManager from '../../../components/admin/ReportQuestionsManager';
 import ProgramsManager from '../../../components/sales/ProgramsManager';
-import FunnelsManager from '../../../components/sales/FunnelsManager';
 import IntegrationsManager from '../../../components/admin/IntegrationsManager';
 import GoogleCalendarSettings from '../../../components/GoogleCalendarSettings';
 import PaymentMethodsManager from '../../../components/sales/PaymentMethodsManager';
@@ -28,7 +27,6 @@ const SalesSettingsPage = () => {
     const sections = [
         { id: 'programs', label: 'Programas', icon: Package },
         { id: 'payment_methods', label: 'Metodos de Pago', icon: CreditCard },
-        { id: 'funnels', label: 'Eventos y Links', icon: Layers },
         { id: 'kanban', label: 'Estructura Kanban', icon: KanbanIcon },
         { id: 'setter_metrics', label: 'Metricas Setter', icon: ListChecks },
         { id: 'questions', label: 'Preguntas de Reporte', icon: ClipboardCheck },
@@ -77,12 +75,6 @@ const SalesSettingsPage = () => {
                     {activeSection === 'questions' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                             <ReportQuestionsManager />
-                        </div>
-                    )}
-
-                    {activeSection === 'funnels' && (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-500 text-left">
-                            <FunnelsManager />
                         </div>
                     )}
 

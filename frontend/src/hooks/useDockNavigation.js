@@ -11,7 +11,8 @@ import {
     Settings,
     Zap,
     Ghost,
-    Activity
+    Activity,
+    CalendarDays
 } from 'lucide-react';
 
 /**
@@ -44,6 +45,7 @@ const useDockNavigation = () => {
             ];
         } else if (isSetter) {
             return [
+                { id: 'agendas', icon: CalendarDays, label: 'Agendas', path: '/setter/agendas' },
                 { id: 'board', icon: LayoutDashboard, label: 'Board', path: '/setter/dashboard' },
                 { id: 'stats', icon: BarChart3, label: 'Stats', path: '/setter/stats' }
             ];
@@ -56,6 +58,7 @@ const useDockNavigation = () => {
         } else if (user?.role === 'sales_admin') {
             return [
                 { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/sales-admin/dashboard' },
+                { id: 'agendas', icon: CalendarDays, label: 'Agendas', path: '/sales-admin/agendas' },
                 { id: 'team', icon: Users, label: 'Equipo', path: '/sales-admin/team' },
                 { id: 'settings', icon: Settings, label: 'Ajustes', path: '/sales-admin/settings' }
             ];
