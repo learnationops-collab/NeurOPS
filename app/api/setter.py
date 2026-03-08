@@ -35,31 +35,18 @@ def _trigger_setter_report_webhook(stat):
         import json
         from app.services.image_service import ImageService
         
-        # Webhook URL provided by user (using discordapp.com for better SSL compatibility)
+        # Webhook URL provided by user
         url = "https://discordapp.com/api/webhooks/1471390632223314072/D0H6JaX8dnGdiOmPsGoDQyqwoN5X6zw1YHdlIs6evOZYk-BbvK7Bt32KjWw_nvkjwhdz"
         
-        # 1. Prepare Funnel Data
-        stages = _get_setter_stages_ordered()
-        stage_data = []
-        if len(stages) > 0: stage_data.append({"name": stages[0].name, "value": stat.stage_1_value})
-        if len(stages) > 1: stage_data.append({"name": stages[1].name, "value": stat.stage_2_value})
-        if len(stages) > 2: stage_data.append({"name": stages[2].name, "value": stat.stage_3_value})
-        if len(stages) > 3: stage_data.append({"name": stages[3].name, "value": stat.stage_4_value})
-        if len(stages) > 4: stage_data.append({"name": stages[4].name, "value": stat.stage_5_value})
+        # 1. Prepare Data for Image
+        setter_name = stat.setter.username if stat.setter else "Setter"
         
-        # 2. Logic: Qualified Leads = Total - Descartados (Not Lead)
-        inbound = stat.stage_1_value if len(stages) > 0 else 0
-        not_lead = stat.not_lead
-        qualified = max(0, inbound - not_lead)
-
-        # 2b. Qualitative Data
+        # 2. Qualitative Data
         from app.models import DailyReportQuestion
         qualitative_callouts = []
         if stat.answers:
-            # Fetch all active setter questions to get their text
             questions = {q.id: q.text for q in DailyReportQuestion.query.filter_by(role='setter', is_active=True).all()}
             for q_id, answer in stat.answers.items():
-                # Only include if the question is still active (exists in our dictionary)
                 q_id_int = int(q_id)
                 if q_id_int in questions and answer and answer.strip():
                     qualitative_callouts.append({
@@ -67,39 +54,70 @@ def _trigger_setter_report_webhook(stat):
                         "answer": answer
                     })
 
-        # 2c. Prepare Funnel Stages (including 1.5)
-        refined_funnel = []
-        if len(stage_data) > 0:
-            # Stage 1
-            refined_funnel.append(stage_data[0])
-            # Stage 1.5: Cualificados
-            refined_funnel.append({"name": "Cualificados", "value": qualified})
-            # Remaining stages from CRM
-            for s in stage_data[1:]:
-                refined_funnel.append(s)
-            
-            # 2d. Appointments Stage (Agendados) - Consulted from DB
-            from app.models.booking import Appointment
-            from sqlalchemy import func
-            
-            # Count appointments for this setter on this specific day
-            # Assuming stat.date is a date object, we compare it with the start_time date
-            appointments_count = Appointment.query.filter(
-                Appointment.setter_id == stat.setter_id,
-                func.date(Appointment.start_time) == stat.date
-            ).count()
-            
-            refined_funnel.append({"name": "Agendados", "value": appointments_count})
+        # Calculate percentages
+        def safe_percent(part, total):
+            try:
+                if total > 0:
+                    return round((part / total) * 100)
+            except:
+                pass
+            return 0
 
-        # 3. Prepare Image Data
+        inbox_entrantes = stat.inbox_entrantes or 0
+        not_lead = stat.not_lead or 0
+        inabribles = stat.inbox_inabribles or 0
+        opened = stat.opening_submitted or 0
+        op_resp = stat.opening_responded or 0
+        qual = stat.funnel_qualification or 0
+        pain = stat.funnel_pain or 0
+        offer = stat.funnel_offer or 0
+        link = stat.funnel_link or 0
+        agenda = stat.funnel_agenda or 0
+        fu_sub = stat.follow_up_submitted or 0
+        fu_resp = stat.follow_up_responded or 0
+
+        # 3. Prepare Stats Structure for the new template layout
         img_data = {
-            "setter_name": current_user.username,
+            "setter_name": setter_name,
             "date_str": stat.date.strftime('%d/%m/%Y'),
-            "inbound_leads": inbound,
-            "not_lead": not_lead,
-            "qualified_leads": qualified,
-            "stages": stage_data,
-            "funnel_stages": refined_funnel,
+            
+            # INBOX
+            "inbox": {
+                "entrantes": inbox_entrantes,
+                "not_lead": not_lead,
+                "inabribles": inabribles,
+                "leads": stat.inbox_leads or 0,
+                "no_lead_pct": safe_percent(not_lead, inbox_entrantes),
+                "inabribles_pct": safe_percent(inabribles, inbox_entrantes)
+            },
+            
+            # OPENING
+            "opening": {
+                "submitted": opened,
+                "responded": op_resp,
+                "response_pct": safe_percent(op_resp, opened)
+            },
+            
+            # FUNNEL
+            "funnel": {
+                "qualification": qual,
+                "pain": pain,
+                "offer": offer,
+                "link": link,
+                "agenda": agenda,
+                "qual_to_pain": safe_percent(pain, qual),
+                "pain_to_offer": safe_percent(offer, pain),
+                "offer_to_link": safe_percent(link, offer),
+                "link_to_agenda": safe_percent(agenda, link)
+            },
+            
+            # FOLLOW UPS
+            "follow_up": {
+                "submitted": fu_sub,
+                "responded": fu_resp,
+                "response_pct": safe_percent(fu_resp, fu_sub)
+            },
+            
             "qualitative": qualitative_callouts
         }
 
@@ -107,12 +125,14 @@ def _trigger_setter_report_webhook(stat):
         img_buffer = ImageService.generate_setter_report_card(img_data)
         
         # 5. Discord Metadata (Improved format)
+        resumen_str = f"{stat.inbox_entrantes} Entrantes | {stat.funnel_agenda} Agendas"
+        
         content = (
             f"🚀 **REPORTE DIARIO DE SETTER**\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 **Setter:** `{current_user.username}`\n"
+            f"👤 **Setter:** `{setter_name}`\n"
             f"📅 **Fecha:** `{stat.date.strftime('%d/%m/%Y')}`\n"
-            f"📊 **Resumen:** `{inbound}` Leads | `{qualified}` Cualificados | `{not_lead}` Descartados\n"
+            f"📊 **Resumen:** `{resumen_str}`\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"@everyone"
         )
@@ -178,7 +198,19 @@ def submit_daily_report():
             "id": stat.id,
             "date": stat.date.isoformat(),
             "fixed_stats": {
-                "not_lead": stat.not_lead
+                "not_lead": stat.not_lead,
+                "inbox_entrantes": stat.inbox_entrantes,
+                "inbox_inabribles": stat.inbox_inabribles,
+                "inbox_leads": stat.inbox_leads,
+                "opening_submitted": stat.opening_submitted,
+                "opening_responded": stat.opening_responded,
+                "funnel_qualification": stat.funnel_qualification,
+                "funnel_pain": stat.funnel_pain,
+                "funnel_offer": stat.funnel_offer,
+                "funnel_link": stat.funnel_link,
+                "funnel_agenda": stat.funnel_agenda,
+                "follow_up_submitted": stat.follow_up_submitted,
+                "follow_up_responded": stat.follow_up_responded
             },
             "funnel_stats": stage_metrics,
             "answers": answers
@@ -202,13 +234,37 @@ def submit_daily_report():
     if stat:
         # Update existing
         stat.not_lead = int(data.get('not_lead') or 0)
+        stat.inbox_entrantes = int(data.get('inbox_entrantes') or 0)
+        stat.inbox_inabribles = int(data.get('inbox_inabribles') or 0)
+        stat.inbox_leads = int(data.get('inbox_leads') or 0)
+        stat.opening_submitted = int(data.get('opening_submitted') or 0)
+        stat.opening_responded = int(data.get('opening_responded') or 0)
+        stat.funnel_qualification = int(data.get('funnel_qualification') or 0)
+        stat.funnel_pain = int(data.get('funnel_pain') or 0)
+        stat.funnel_offer = int(data.get('funnel_offer') or 0)
+        stat.funnel_link = int(data.get('funnel_link') or 0)
+        stat.funnel_agenda = int(data.get('funnel_agenda') or 0)
+        stat.follow_up_submitted = int(data.get('follow_up_submitted') or 0)
+        stat.follow_up_responded = int(data.get('follow_up_responded') or 0)
         
     else:
         # Create new
         stat = SetterDailyStats(
             setter_id=current_user.id,
             date=report_date,
-            not_lead=int(data.get('not_lead') or 0)
+            not_lead=int(data.get('not_lead') or 0),
+            inbox_entrantes=int(data.get('inbox_entrantes') or 0),
+            inbox_inabribles=int(data.get('inbox_inabribles') or 0),
+            inbox_leads=int(data.get('inbox_leads') or 0),
+            opening_submitted=int(data.get('opening_submitted') or 0),
+            opening_responded=int(data.get('opening_responded') or 0),
+            funnel_qualification=int(data.get('funnel_qualification') or 0),
+            funnel_pain=int(data.get('funnel_pain') or 0),
+            funnel_offer=int(data.get('funnel_offer') or 0),
+            funnel_link=int(data.get('funnel_link') or 0),
+            funnel_agenda=int(data.get('funnel_agenda') or 0),
+            follow_up_submitted=int(data.get('follow_up_submitted') or 0),
+            follow_up_responded=int(data.get('follow_up_responded') or 0)
         )
         db.session.add(stat)
     

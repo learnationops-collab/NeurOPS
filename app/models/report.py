@@ -47,7 +47,24 @@ class SetterDailyStats(db.Model):
     
     not_lead = db.Column(db.Integer, default=0)
 
-    # Fixed Funnel Stages (Max 5)
+    # Hardcoded Funnel Fields
+    inbox_entrantes = db.Column(db.Integer, default=0)
+    inbox_inabribles = db.Column(db.Integer, default=0)
+    inbox_leads = db.Column(db.Integer, default=0)
+    
+    opening_submitted = db.Column(db.Integer, default=0)
+    opening_responded = db.Column(db.Integer, default=0)
+    
+    funnel_qualification = db.Column(db.Integer, default=0)
+    funnel_pain = db.Column(db.Integer, default=0)
+    funnel_offer = db.Column(db.Integer, default=0)
+    funnel_link = db.Column(db.Integer, default=0)
+    funnel_agenda = db.Column(db.Integer, default=0)
+    
+    follow_up_submitted = db.Column(db.Integer, default=0)
+    follow_up_responded = db.Column(db.Integer, default=0)
+
+    # Fixed Funnel Stages (Max 5) - Managed as Legacy/Optional
     stage_1_value = db.Column(db.Integer, default=0)
     stage_2_value = db.Column(db.Integer, default=0)
     stage_3_value = db.Column(db.Integer, default=0)

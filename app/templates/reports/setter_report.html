@@ -5,497 +5,598 @@
     <meta charset="UTF-8">
     <style>
         :root {
-            --bg-surface: #f3f4f6;
-            --card-bg: #ffffff;
-            --text-main: #111827;
-            --text-muted: #4b5563;
-            --accent-primary: #3b82f6;
-            --accent-teal: #0d9488;
-            --accent-rose: #e11d48;
-            --border: #e5e7eb;
-            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            --slate-950: #020617;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-300: #cbd5e1;
+            --slate-50: #f8fafc;
+
+            --pink-600: #db2777;
+            --pink-500: #ec4899;
+            --pink-400: #f472b6;
+
+            --fuchsia-600: #c026d3;
+            --fuchsia-500: #d946ef;
+            --fuchsia-400: #e879f9;
+
+            --indigo-600: #4f46e5;
+            --indigo-500: #6366f1;
+
+            --rose-600: #e11d48;
+            --rose-500: #f43f5e;
+            --rose-400: #fb7185;
+
+            --teal-600: #0d9488;
+            --teal-500: #14b8a6;
+            --teal-400: #2dd4bf;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
         body {
-            margin: 0;
-            padding: 30px;
-            background-color: var(--bg-surface);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: var(--text-main);
-            width: 1140px;
-            /* Internal width for the card within 1200px canvas */
+            background-color: var(--slate-950);
+            color: var(--slate-50);
+            padding: 40px;
+            width: 1200px;
         }
 
-        .report-card {
-            background: var(--card-bg);
-            border-radius: 24px;
-            padding: 50px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-        }
-
-        /* 1. HEADER - CLEAN */
         .header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-end;
             margin-bottom: 40px;
+            border-bottom: 2px solid var(--slate-800);
             padding-bottom: 20px;
-            border-bottom: 2px solid #f3f4f6;
         }
 
-        .setter-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
+        .header-left .logo-text {
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--indigo-500);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
         }
 
-        .setter-avatar {
-            width: 50px;
-            height: 50px;
-            background: var(--accent-primary);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 20px;
+        .setter-name {
+            font-size: 48px;
+            font-weight: 900;
+            margin: 0;
+            background: linear-gradient(to right, #f472b6, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .setter-details h1 {
+        .date-str {
             font-size: 24px;
             font-weight: 800;
-            margin: 0;
-            letter-spacing: -0.5px;
+            color: var(--slate-400);
         }
 
-        .report-label {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--accent-primary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        /* Card grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-bottom: 32px;
         }
 
-        .date-badge {
-            background: #f3f4f6;
-            padding: 8px 16px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 14px;
-            color: var(--text-muted);
+        .card {
+            background-color: var(--slate-900);
+            border: 1px solid var(--slate-800);
+            border-radius: 24px;
+            padding: 24px;
+            border-top-style: solid;
+            border-top-width: 4px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
         }
 
-        /* 2. TESTIMONIOS SECTION - NOW ON TOP */
-        .section-container {
-            margin-bottom: 50px;
+        .card.inbox {
+            border-top-color: var(--pink-600);
         }
 
-        .section-title {
-            font-size: 18px;
-            font-weight: 800;
-            margin-bottom: 30px;
+        .card.opening {
+            border-top-color: var(--fuchsia-600);
+        }
+
+        .card.funnel {
+            border-top-color: var(--indigo-600);
+        }
+
+        .card.followup {
+            border-top-color: var(--rose-600);
+        }
+
+        .card.qualitative {
+            border-top-color: var(--teal-600);
+        }
+
+        .card-header {
             display: flex;
             align-items: center;
             gap: 12px;
-            color: #111827;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+            padding-bottom: 16px;
         }
 
-        .section-title i {
-            display: block;
-            width: 6px;
-            height: 24px;
-            background: var(--accent-primary);
-            border-radius: 3px;
+        .icon-box {
+            padding: 10px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 14px;
+            font-size: 20px;
+            line-height: 1;
         }
 
-        .testimonios-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 25px;
-        }
-
-        .testimonio-card {
-            background: #fafafb;
-            padding: 30px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            position: relative;
-            transition: transform 0.2s;
-        }
-
-        .testimonio-icon {
-            font-size: 24px;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .testimonio-q {
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            letter-spacing: 0.5px;
-        }
-
-        .testimonio-a {
-            font-size: 15px;
-            line-height: 1.6;
-            color: var(--text-main);
-            font-weight: 500;
+        .card-title {
+            font-size: 20px;
+            font-weight: 900;
+            color: white;
             font-style: italic;
+            letter-spacing: -0.5px;
         }
 
-        /* 3. CUALIFICACIÓN SECTION (Metrics + Pie) */
-        .dual-row {
+        /* Specific colors */
+        .inbox .card-title {
+            color: var(--pink-500);
+        }
+
+        .opening .card-title {
+            color: var(--fuchsia-500);
+        }
+
+        .funnel .card-title {
+            color: var(--indigo-500);
+        }
+
+        .followup .card-title {
+            color: var(--rose-500);
+        }
+
+        .qualitative .card-title {
+            color: var(--teal-400);
+        }
+
+        .card-body {
             display: grid;
-            grid-template-columns: 1.5fr 1fr;
-            gap: 40px;
-            align-items: center;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            flex: 1;
         }
 
-        .metrics-panel {
+        .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            align-content: start;
         }
 
-        .metric-card {
-            background: white;
-            padding: 25px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            text-align: center;
+        .metric-input {
+            margin-bottom: 8px;
         }
 
         .metric-label {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--slate-400);
             text-transform: uppercase;
-            margin-bottom: 15px;
             letter-spacing: 1px;
+            margin-bottom: 6px;
+            display: block;
         }
 
         .metric-value {
-            font-size: 40px;
-            font-weight: 800;
-        }
-
-        .pie-container {
-            background: #f9fafb;
-            padding: 30px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 30px;
-        }
-
-        .pie-chart {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .pie-info h4 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
-            font-weight: 800;
-            color: var(--text-muted);
-        }
-
-        .pie-legend {
-            font-size: 13px;
-            font-weight: 700;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .legend-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 3px;
-            display: inline-block;
-            margin-right: 8px;
-        }
-
-        /* 4. EMBUDO SECTION (Table + Chart) */
-        .funnel-layout {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 60px;
-            background: #ffffff;
-            padding: 20px;
-        }
-
-        .table-wrap {
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-        }
-
-        table {
             width: 100%;
-            border-collapse: collapse;
+            padding: 12px 16px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            border-radius: 16px;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            line-height: 1;
         }
 
-        th {
-            background: #f9fafb;
-            padding: 16px;
-            text-align: left;
-            font-size: 11px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
+        .inbox .metric-value {
+            background: var(--slate-800);
+            border-color: var(--slate-600);
         }
 
-        td {
-            padding: 18px 16px;
-            font-size: 14px;
-            border-top: 1px solid var(--border);
-            font-weight: 600;
+        .opening .metric-value {
+            background: var(--slate-800);
+            border-color: var(--slate-600);
         }
 
-        .td-step {
-            color: var(--text-muted);
+        .funnel .metric-value {
+            background: var(--slate-800);
+            border-color: var(--slate-600);
         }
 
-        .td-val {
-            text-align: right;
-            font-weight: 800;
+        .followup .metric-value {
+            background: var(--slate-800);
+            border-color: var(--slate-600);
         }
 
-        .td-pct {
-            text-align: right;
-            color: var(--accent-primary);
-            font-weight: 800;
-        }
-
-        .funnel-viz {
+        .live-panel {
+            background: rgba(30, 41, 59, 0.3);
+            border-radius: 16px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            align-items: center;
-            padding-top: 20px;
+            justify-content: center;
         }
 
-        .funnel-bar {
-            height: 44px;
-            background: var(--accent-teal);
-            border-radius: 10px;
+        /* Live Panel variations */
+        /* Inbox live panel has 3 columns */
+        .live-panel.inbox-live {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            padding: 20px 10px;
+        }
+
+        .live-stat {
+            text-align: center;
+            border-left: 1px solid rgba(51, 65, 85, 0.5);
+            padding-left: 8px;
+        }
+
+        .live-stat:first-child {
+            border-left: none;
+            padding-left: 0;
+        }
+
+        .live-stat-label {
+            font-size: 10px;
+            font-weight: 900;
+            color: var(--slate-500);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .live-stat-val {
+            font-size: 28px;
+            font-weight: 900;
+            color: white;
+        }
+
+        .live-stat-val.pink {
+            color: var(--pink-400);
+        }
+
+        /* Opening/Followups are big center stats */
+        .live-panel.center-stat {
+            align-items: center;
+        }
+
+        .live-panel.center-stat .live-stat-label {
+            margin-bottom: 8px;
+        }
+
+        .live-panel.center-stat .live-stat-val {
+            font-size: 48px;
+        }
+
+        .live-stat-val.fuchsia {
+            color: var(--fuchsia-400);
+        }
+
+        .live-stat-val.rose {
+            color: var(--rose-400);
+        }
+
+        /* Funnel chart and top percentages */
+        .live-panel.funnel-live {
+            justify-content: flex-start;
+            padding: 16px;
+        }
+
+        .funnel-pcts {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            text-align: center;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+        }
+
+        .funnel-pcts .live-stat-label {
+            font-size: 9px;
+            margin-bottom: 4px;
+        }
+
+        .funnel-pcts .live-stat-val {
+            font-size: 14px;
+            color: white;
+        }
+
+        .funnel-graphic {
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* A simple CSS funnel graphic since we can't render Recharts here without JS waiting */
+        .css-funnel {
+            width: 100%;
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .css-funnel-bar {
+            background: linear-gradient(90deg, #4f46e5 0%, #818cf8 100%);
+            height: 32px;
+            border-radius: 4px;
             color: white;
-            font-weight: 800;
-            font-size: 15px;
-            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);
-            position: relative;
-            min-width: 80px;
-        }
-
-        .bar-label {
-            position: absolute;
-            top: -18px;
-            font-size: 10px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        .conv-label {
-            background: #eff6ff;
-            color: var(--accent-primary);
-            padding: 4px 12px;
-            border-radius: 99px;
             font-size: 12px;
             font-weight: 800;
-            border: 1px solid #dbeafe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Qualitative */
+        .qualitative-section {
+            grid-column: span 2;
+            background-color: var(--slate-900);
+            border: 1px solid var(--slate-800);
+            border-radius: 24px;
+            padding: 32px;
+            border-top: 4px solid var(--teal-600);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .qa-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .qa-item {
+            margin-bottom: 16px;
+        }
+
+        .qa-q {
+            font-size: 12px;
+            font-weight: 900;
+            color: var(--slate-400);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            margin-left: 4px;
+        }
+
+        .qa-a {
+            background: var(--slate-800);
+            border: 1px solid var(--slate-600);
+            border-radius: 16px;
+            padding: 16px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            color: white;
+            line-height: 1.5;
+            min-height: 80px;
         }
 
         .footer {
-            margin-top: 60px;
             text-align: center;
+            margin-top: 40px;
             font-size: 12px;
-            font-weight: 700;
-            color: var(--text-muted);
-            letter-spacing: 2px;
+            font-weight: 800;
+            color: var(--slate-600);
             text-transform: uppercase;
+            letter-spacing: 4px;
         }
     </style>
 </head>
 
 <body>
+    <div class="header">
+        <div class="header-left">
+            <div class="logo-text">NeurOPS Performance System</div>
+            <h1 class="setter-name">{{ setter_name }}</h1>
+        </div>
+        <div class="date-str">{{ date_str }}</div>
+    </div>
 
-    {% set lead_pct = ((qualified_leads / inbound_leads * 100)|round|int) if inbound_leads > 0 else 0 %}
-    {% set discard_pct = 100 - lead_pct %}
-    {% set appts_count = funnel_stages[-1].value if funnel_stages else 0 %}
-    {% set booking_pct = ((appts_count / qualified_leads * 100)|round|int) if qualified_leads > 0 else 0 %}
-
-    <div class="report-card">
-        <!-- 1. HEADER -->
-        <div class="header">
-            <div class="setter-info">
-                <div class="setter-avatar">{{ setter_name[0].upper() }}</div>
-                <div class="setter-details">
-                    <div class="report-label">Reporte Diario de Setter</div>
-                    <h1>{{ setter_name }}</h1>
+    <div class="cards-grid">
+        <!-- 1. INBOX -->
+        <div class="card inbox">
+            <div class="card-header">
+                <div class="icon-box" style="color: var(--pink-500)">📥</div>
+                <div class="card-title">INBOX</div>
+            </div>
+            <div class="card-body">
+                <div class="metrics-grid">
+                    <div class="metric-input">
+                        <div class="metric-label">Entrantes</div>
+                        <div class="metric-value">{{ inbox.entrantes }}</div>
+                    </div>
+                    <div class="metric-input">
+                        <div class="metric-label">No Lead</div>
+                        <div class="metric-value">{{ inbox.not_lead }}</div>
+                    </div>
+                    <div class="metric-input">
+                        <div class="metric-label">In-abribles</div>
+                        <div class="metric-value">{{ inbox.inabribles }}</div>
+                    </div>
+                </div>
+                <div class="live-panel inbox-live">
+                    <div class="live-stat">
+                        <div class="live-stat-label">Leads</div>
+                        <div class="live-stat-val pink">{{ inbox.leads }}</div>
+                    </div>
+                    <div class="live-stat">
+                        <div class="live-stat-label">% No Ld</div>
+                        <div class="live-stat-val">{{ inbox.no_lead_pct }}%</div>
+                    </div>
+                    <div class="live-stat">
+                        <div class="live-stat-label">% Inab.</div>
+                        <div class="live-stat-val">{{ inbox.inabribles_pct }}%</div>
+                    </div>
                 </div>
             </div>
-            <div class="date-badge">{{ date_str }}</div>
         </div>
 
-        <!-- 2. TESTIMONIOS -->
-        {% if qualitative %}
-        <div class="section-container">
-            <div class="section-title"><i></i> TESTIMONIOS Y VICTORIAS</div>
-            <div class="testimonios-grid">
-                {% for item in qualitative %}
-                <div class="testimonio-card">
-                    <span class="testimonio-icon">
-                        {% if "victoria" in item.question.lower() or "ganado" in item.question.lower() or "venta" in
-                        item.question.lower() %}🏆
-                        {% elif "mejor" in item.question.lower() or "aprend" in item.question.lower() or "objetivo" in
-                        item.question.lower() %}💡
-                        {% elif "bloqueo" in item.question.lower() or "dificul" in item.question.lower() or "problema"
-                        in item.question.lower() %}🚨
-                        {% else %}💬{% endif %}
-                    </span>
-                    <div class="testimonio-q">{{ item.question }}</div>
-                    <div class="testimonio-a">"{{ item.answer }}"</div>
+        <!-- 2. OPENING -->
+        <div class="card opening">
+            <div class="card-header">
+                <div class="icon-box" style="color: var(--fuchsia-500)">💬</div>
+                <div class="card-title">OPENING</div>
+            </div>
+            <div class="card-body">
+                <div class="metrics-grid">
+                    <div class="metric-input">
+                        <div class="metric-label">Op. Submitted</div>
+                        <div class="metric-value">{{ opening.submitted }}</div>
+                    </div>
+                    <div class="metric-input">
+                        <div class="metric-label">Op. Responded</div>
+                        <div class="metric-value">{{ opening.responded }}</div>
+                    </div>
                 </div>
-                {% endfor %}
+                <div class="live-panel center-stat">
+                    <div class="live-stat-label">Tasa de Respuesta</div>
+                    <div class="live-stat-val fuchsia">{{ opening.response_pct }}%</div>
+                </div>
             </div>
         </div>
-        {% endif %}
 
-        <!-- 3. CUALIFICACIÓN (Metrics + Pie) -->
-        <div class="section-container">
-            <div class="section-title"><i></i> CUALIFICACIÓN DE ENTRADA</div>
-            <div class="dual-row">
-                <div class="metrics-panel">
-                    <div class="metric-card">
-                        <div class="metric-label">Leads Totales</div>
-                        <div class="metric-value">{{ inbound_leads }}</div>
+        <!-- 3. FUNNEL -->
+        <div class="card funnel" style="grid-column: 1;">
+            <div class="card-header">
+                <div class="icon-box" style="color: var(--indigo-500)">⏬</div>
+                <div class="card-title">FUNNEL</div>
+            </div>
+            <div class="card-body" style="grid-template-columns: auto 1fr;">
+                <div class="metrics-grid" style="display:flex; flex-direction:column;">
+                    <div class="metric-input">
+                        <div class="metric-label">Qualification</div>
+                        <div class="metric-value">{{ funnel.qualification }}</div>
                     </div>
-                    <div class="metric-card">
-                        <div class="metric-label">Cualificados</div>
-                        <div class="metric-value">{{ qualified_leads }}</div>
+                    <div class="metric-input">
+                        <div class="metric-label">Pain</div>
+                        <div class="metric-value">{{ funnel.pain }}</div>
                     </div>
-                    <div class="metric-card" style="border-bottom: 5px solid var(--accent-teal);">
-                        <div class="metric-label" style="color: var(--accent-teal);">% Agendamiento</div>
-                        <div class="metric-value">{{ booking_pct }}%</div>
+                    <div class="metric-input">
+                        <div class="metric-label">Offer</div>
+                        <div class="metric-value">{{ funnel.offer }}</div>
+                    </div>
+                    <div class="metric-input">
+                        <div class="metric-label">Link</div>
+                        <div class="metric-value">{{ funnel.link }}</div>
+                    </div>
+                    <div class="metric-input">
+                        <div class="metric-label">Agenda</div>
+                        <div class="metric-value">{{ funnel.agenda }}</div>
                     </div>
                 </div>
-                <div class="pie-container">
-                    <div class="pie-chart"
-                        style="background: conic-gradient(var(--accent-teal) 0% {{ lead_pct }}%, var(--accent-rose) {{ lead_pct }}% 100%);">
+                <div class="live-panel funnel-live">
+                    <div class="funnel-pcts">
+                        <div>
+                            <div class="live-stat-label">Qual→Pain</div>
+                            <div class="live-stat-val">{{ funnel.qual_to_pain }}%</div>
+                        </div>
+                        <div>
+                            <div class="live-stat-label">Pain→Off</div>
+                            <div class="live-stat-val">{{ funnel.pain_to_offer }}%</div>
+                        </div>
+                        <div>
+                            <div class="live-stat-label">Off→Link</div>
+                            <div class="live-stat-val">{{ funnel.offer_to_link }}%</div>
+                        </div>
+                        <div>
+                            <div class="live-stat-label">Link→Agnd</div>
+                            <div class="live-stat-val">{{ funnel.link_to_agenda }}%</div>
+                        </div>
                     </div>
-                    <div class="pie-info">
-                        <h4>CALIDAD DE LEADS</h4>
-                        <div class="pie-legend">
-                            <div><span class="legend-dot" style="background: var(--accent-teal);"></span> {{ lead_pct
-                                }}% Cualificados</div>
-                            <div><span class="legend-dot" style="background: var(--accent-rose);"></span> {{ discard_pct
-                                }}% No-Leads</div>
+                    <div class="funnel-graphic">
+                        <div class="css-funnel">
+                            <!-- Let's calculate CSS funnel bar widths based on max = qualification -->
+                            {% set fw_max = funnel.qualification if funnel.qualification > 0 else 1 %}
+                            <div class="css-funnel-bar" style="width: 100%;">{{ funnel.qualification }}</div>
+                            <div class="css-funnel-bar"
+                                style="width: {{ (funnel.pain / fw_max * 100) if fw_max > 0 else 0 }}%; min-width: 30px;">
+                                {{ funnel.pain }}</div>
+                            <div class="css-funnel-bar"
+                                style="width: {{ (funnel.offer / fw_max * 100) if fw_max > 0 else 0 }}%; min-width: 30px;">
+                                {{ funnel.offer }}</div>
+                            <div class="css-funnel-bar"
+                                style="width: {{ (funnel.link / fw_max * 100) if fw_max > 0 else 0 }}%; min-width: 30px;">
+                                {{ funnel.link }}</div>
+                            <div class="css-funnel-bar"
+                                style="width: {{ (funnel.agenda / fw_max * 100) if fw_max > 0 else 0 }}%; min-width: 30px; background: #2dd4bf;">
+                                {{ funnel.agenda }}</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 4. EMBUDO -->
-        <div class="section-container">
-            <div class="section-title"><i></i> EVALUACIÓN DEL EMBUDO</div>
-            <div class="funnel-layout">
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 40px;">#</th>
-                                <th>Etapa</th>
-                                <th style="text-align: right;">Total</th>
-                                <th style="text-align: right;">% CONVERSIÓN</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for fs in funnel_stages %}
-                            <tr>
-                                <td class="td-step">{{ loop.index }}</td>
-                                <td
-                                    style="color: {{ 'var(--accent-teal)' if fs.name == 'Cualificados' else 'inherit' }};">
-                                    {{ fs.name.upper() }}
-                                </td>
-                                <td class="td-val">{{ fs.value }}</td>
-                                <td class="td-pct">
-                                    {% if loop.first %}
-                                    100%
-                                    {% else %}
-                                    {% set prev_val = funnel_stages[loop.index0 - 1].value %}
-                                    {{ ((fs.value / prev_val * 100)|round|int) if prev_val > 0 else 0 }}%
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <!-- 4. FOLLOW UPS -->
+        <div class="card followup" style="grid-column: 2; height: fit-content;">
+            <div class="card-header">
+                <div class="icon-box" style="color: var(--rose-500)">🔄</div>
+                <div class="card-title">FOLLOW UPs</div>
+            </div>
+            <div class="card-body">
+                <div class="metrics-grid">
+                    <div class="metric-input">
+                        <div class="metric-label">Submitted</div>
+                        <div class="metric-value">{{ follow_up.submitted }}</div>
+                    </div>
+                    <div class="metric-input">
+                        <div class="metric-label">Responded</div>
+                        <div class="metric-value">{{ follow_up.responded }}</div>
+                    </div>
                 </div>
-                <div class="funnel-viz">
-                    <svg viewBox="0 0 650 500" preserveAspectRatio="xMidYMid meet">
-                        {% set total_stages = funnel_stages|length %}
-                        {% set funnel_width = 380 %}
-                        {% set max_width = 650 %}
-                        {% set segment_height = (420 / total_stages)|round|int %}
-                        {% set initial_width = 380 %}
-
-                        {% for fs in funnel_stages %}
-                        {% set current_width = (fs.value / inbound_leads * initial_width)|round|int if inbound_leads > 0
-                        else 50 %}
-                        {% set current_width = [current_width, 40]|max %}
-
-                        {% set next_idx = loop.index0 + 1 %}
-                        {% if next_idx < total_stages %} {% set next_width=(funnel_stages[next_idx].value /
-                            inbound_leads * initial_width)|round|int if inbound_leads> 0 else 40 %}
-                            {% set next_width = [next_width, 30]|max %}
-                            {% else %}
-                            {% set next_width = current_width %}
-                            {% endif %}
-
-                            {% set x_center = 200 %}
-                            {% set y_top = loop.index0 * (segment_height + 5) %}
-                            {% set y_bottom = y_top + segment_height %}
-                            {% set x_top_left = x_center - (current_width / 2) %}
-                            {% set x_top_right = x_center + (current_width / 2) %}
-                            {% set x_bottom_left = x_center - (next_width / 2) %}
-                            {% set x_bottom_right = x_center + (next_width / 2) %}
-
-                            <!-- Segment -->
-                            <polygon
-                                points="{{ x_top_left }},{{ y_top }} {{ x_top_right }},{{ y_top }} {{ x_bottom_right }},{{ y_bottom }} {{ x_bottom_left }},{{ y_bottom }}"
-                                fill="{{ 'var(--accent-teal)' if fs.name == 'Cualificados' or fs.name == 'Agendados' else 'var(--accent-primary)' if loop.first else '#94a3b8' }}"
-                                fill-opacity="{{ 1 - (loop.index0 * 0.1) }}" />
-
-                            <!-- Side Label -->
-                            <text x="{{ x_top_right + 20 }}" y="{{ y_top + (segment_height / 2) + 5 }}"
-                                class="svg-label"
-                                style="font-size: 11px; font-weight: 800; fill: var(--text-muted); text-transform: uppercase;">
-                                {{ fs.name }} ({{ fs.value }})
-                            </text>
-                            {% endfor %}
-                    </svg>
+                <div class="live-panel center-stat">
+                    <div class="live-stat-label">Tasa de Respuesta</div>
+                    <div class="live-stat-val rose">{{ follow_up.response_pct }}%</div>
                 </div>
             </div>
         </div>
 
-        <div class="footer">ALTO RENDIMIENTO • © {{ date_str.split('/')[-1] }}</div>
+        <!-- 5. QUALITATIVE -->
+        {% if qualitative %}
+        <div class="qualitative-section">
+            <div class="card-header border-none" style="margin-bottom:16px;">
+                <div class="icon-box" style="color: var(--teal-400)">⭐</div>
+                <div class="card-title qualitative">VICTORIAS Y FEEDBACK DEL DÍA</div>
+            </div>
+
+            <div class="qa-list">
+                {% for item in qualitative %}
+                <div class="qa-item">
+                    <div class="qa-q">{{ item.question }}</div>
+                    <div class="qa-a">"{{ item.answer }}"</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 
+    <div class="footer">
+        NEUROPS PERFORMANCE SYSTEM • REPORTE GENERADO EL {{ date_str }}
+    </div>
 </body>
 
 </html>

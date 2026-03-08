@@ -31,6 +31,7 @@ import BookingPage from './pages/public/BookingPage';
 import BackupPage from './pages/public/BackupPage';
 import RestorePage from './pages/public/RestorePage';
 import PublicSetterReportPage from './pages/public/PublicSetterReportPage';
+import PublicSetterStatsPage from './pages/public/PublicSetterStatsPage';
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
 import { ThemeProvider } from './context/ThemeContext';
@@ -73,6 +74,7 @@ function App() {
             <Route path="/backup" element={<BackupPage />} />
             <Route path="/restore" element={<RestorePage />} />
             <Route path="/reporte-setter" element={<PublicSetterReportPage />} />
+            <Route path="/estadisticas-setters" element={<PublicSetterStatsPage />} />
 
 
             {/* Protected Admin Routes */}

@@ -8,6 +8,7 @@ from .marketing import Campaign, AdSet, Ad, MarketingBudget
 from .report import SetterDailyStats, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Expense, RecurringExpense
 from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment
 from .integration import Integration
+from .public_registration import PublicRegistration
 
 # Export all for easy access via from app.models import ...
 __all__ = [
@@ -19,5 +20,5 @@ __all__ = [
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget',
     'SetterDailyStats', 'CloserDailyStats', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment',
-    'Integration'
+    'Integration', 'PublicRegistration'
 ]
