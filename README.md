@@ -105,4 +105,4 @@ Accede en tu navegador a: `http://localhost:5000`
 *   **Design System & IA Rules**: Para mantener la coherencia visual y técnica, consulta `ANTIGRAVITY_RULES.md`. Este archivo contiene las guías sobre el sistema de temas y componentes UI para desarrolladores y asistentes IA.
 
 ## Licencia
-© 2026 LeadOps Automation. Todos los derechos reservados.
+© 2026 LeadOps Automation. Todos los derechos reservados. (Deployment trigger)
