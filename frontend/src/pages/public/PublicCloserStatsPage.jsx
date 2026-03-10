@@ -3,12 +3,13 @@ import api from '../../services/api';
 import {
     Loader2, BarChart3, DollarSign, Phone, Target,
     CalendarDays, Layers, TrendingUp, Users,
-    CheckCircle, XCircle, PhoneOff, RefreshCw, Table
+    CheckCircle, XCircle, PhoneOff, RefreshCw, Table, List
 } from 'lucide-react';
 import CloserAdvancedStatsView from './CloserAdvancedStatsView';
+import CloserReportsTable from './CloserReportsTable';
 
 const PublicCloserStatsPage = () => {
-    const [activeTab, setActiveTab] = useState('general'); // 'general', 'advanced'
+    const [activeTab, setActiveTab] = useState('general'); // 'general', 'advanced', 'history'
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [closers, setClosers] = useState([]);
@@ -58,8 +59,9 @@ const PublicCloserStatsPage = () => {
 
     // Fetch stats
     useEffect(() => {
+        if (activeTab === 'history') return; // History handles its own fetch
         fetchStats();
-    }, [filters]);
+    }, [filters, activeTab]);
 
     const fetchStats = async () => {
         setLoading(true);
@@ -159,6 +161,7 @@ const PublicCloserStatsPage = () => {
                 <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
                     <TabButton id="general" label="Vista General" icon={BarChart3} />
                     <TabButton id="advanced" label="Métricas Detalladas" icon={Table} />
+                    <TabButton id="history" label="Historial de Reportes" icon={List} />
                 </div>
 
                 {/* FILTROS (Comunes para ambas vistas) */}
@@ -442,7 +445,14 @@ const PublicCloserStatsPage = () => {
                             </div>
                         )}
 
-                        {!loading && !stats && (
+                        {/* TAB HISTORIAL DE REPORTES */}
+                        {activeTab === 'history' && (
+                            <div className="animate-in fade-in duration-500">
+                                <CloserReportsTable closers={closers} />
+                            </div>
+                        )}
+
+                        {!loading && !stats && activeTab !== 'history' && (
                             <div className="py-40 text-center text-slate-500 font-bold italic uppercase tracking-widest">Sin datos disponibles para este periodo</div>
                         )}
                     </>

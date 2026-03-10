@@ -33,29 +33,23 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
 
             <div className="bg-slate-800/30 rounded-2xl overflow-hidden">
                 {/* Header */}
-                <div className="grid grid-cols-[50%_25%_25%] gap-0">
+                <div className="grid grid-cols-[60%_40%] gap-0">
                     <div className="p-3 bg-slate-700/50">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Métrica</p>
                     </div>
                     <div className="p-3 text-center bg-slate-700/40 flex items-center justify-center">
                         <p className="text-[9px] font-black text-slate-300 uppercase tracking-wider">Periodo</p>
                     </div>
-                    <div className="p-3 text-center bg-slate-700/30 flex items-center justify-center">
-                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Comp.</p>
-                    </div>
                 </div>
 
                 {/* Rows */}
                 {rows.map((r, i) => (
-                    <div key={i} className={`grid grid-cols-[50%_25%_25%] gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
+                    <div key={i} className={`grid grid-cols-[60%_40%] gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
                         <div className="p-3 flex items-center border-r border-slate-700/30">
                             <p className="text-[10px] font-bold text-slate-300">{r.label}</p>
                         </div>
-                        <div className="p-3 text-center border-r border-slate-700/30 flex items-center justify-center">
-                            <p className="text-sm font-black text-white tabular-nums">{r.value}</p>
-                        </div>
                         <div className="p-3 text-center flex items-center justify-center">
-                            <p className="text-xs font-bold text-slate-500 tabular-nums">{r.comp || '-'}</p>
+                            <p className="text-sm font-black text-white tabular-nums">{r.value}</p>
                         </div>
                     </div>
                 ))}

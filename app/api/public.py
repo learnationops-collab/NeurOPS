@@ -1013,3 +1013,140 @@ def get_public_closer_stats():
     }
 
     return jsonify(res), 200
+
+@bp.route('/public/closer-reports', methods=['GET'])
+def get_public_closer_reports():
+    """Retorna lista paginada de reportes de closers con filtros."""
+    from app.models import CloserDailyReport, User
+    
+    closer_id = request.args.get('closer_id')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 50))
+    
+    query = CloserDailyReport.query
+    
+    if closer_id:
+        query = query.filter(CloserDailyReport.closer_id == closer_id)
+    if start_date_str:
+        query = query.filter(CloserDailyReport.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
+    if end_date_str:
+        query = query.filter(CloserDailyReport.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+        
+    pagination = query.order_by(CloserDailyReport.date.desc()).paginate(page=page, per_page=per_page)
+    
+    reports = []
+    for r in pagination.items:
+        reports.append({
+            "id": r.id,
+            "date": r.date.isoformat(),
+            "closer_id": r.closer_id,
+            "closer_name": r.closer.username if r.closer else "Unknown",
+            "slots": r.slots,
+            "offers_made": r.offers_made,
+            "first_call_scheduled": r.first_call_scheduled,
+            "first_call_attended": r.first_call_attended,
+            "first_call_no_show": r.first_call_no_show,
+            "first_call_rescheduled": r.first_call_rescheduled,
+            "first_call_canceled": r.first_call_canceled,
+            "second_call_scheduled": r.second_call_scheduled,
+            "second_call_attended": r.second_call_attended,
+            "second_call_no_show": r.second_call_no_show,
+            "second_call_rescheduled": r.second_call_rescheduled,
+            "second_call_canceled": r.second_call_canceled,
+            "pif_count": r.pif_count,
+            "pif_cash_collected": r.pif_cash_collected,
+            "pif_in_call_count": r.pif_in_call_count,
+            "pif_in_call_cash": r.pif_in_call_cash,
+            "split_count": r.split_count,
+            "split_cash_collected": r.split_cash_collected,
+            "split_in_call_count": r.split_in_call_count,
+            "split_in_call_cash": r.split_in_call_cash,
+            "deposit_count": r.deposit_count,
+            "deposit_cash_collected": r.deposit_cash_collected,
+            "deposit_in_call_count": r.deposit_in_call_count,
+            "deposit_in_call_cash": r.deposit_in_call_cash,
+            "follow_ups_sent": r.follow_ups_sent,
+            "follow_ups_replied": r.follow_ups_replied
+        })
+        
+    return jsonify({
+        "reports": reports,
+        "total": pagination.total,
+        "pages": pagination.pages,
+        "current_page": pagination.page
+    }), 200
+
+@bp.route('/public/closer-reports/<int:report_id>', methods=['PUT'])
+def update_public_closer_report(report_id):
+    """Actualiza un reporte existente."""
+    from app.models import CloserDailyReport
+    
+    stat = CloserDailyReport.query.get_or_404(report_id)
+    data = request.get_json() or {}
+    
+    def get_int(key, current):
+        val = data.get(key)
+        if val is None or val == '': return current
+        try: return int(val)
+        except (ValueError, TypeError): return current
+
+    def get_float(key, current):
+        val = data.get(key)
+        if val is None or val == '': return current
+        try: return float(val)
+        except (ValueError, TypeError): return current
+    
+    try:
+        stat.slots = get_int('slots', stat.slots)
+        stat.offers_made = get_int('offers_made', stat.offers_made)
+        
+        stat.first_call_scheduled = get_int('first_call_scheduled', stat.first_call_scheduled)
+        stat.first_call_attended = get_int('first_call_attended', stat.first_call_attended)
+        stat.first_call_no_show = get_int('first_call_no_show', stat.first_call_no_show)
+        stat.first_call_rescheduled = get_int('first_call_rescheduled', stat.first_call_rescheduled)
+        stat.first_call_canceled = get_int('first_call_canceled', stat.first_call_canceled)
+        
+        stat.second_call_scheduled = get_int('second_call_scheduled', stat.second_call_scheduled)
+        stat.second_call_attended = get_int('second_call_attended', stat.second_call_attended)
+        stat.second_call_no_show = get_int('second_call_no_show', stat.second_call_no_show)
+        stat.second_call_rescheduled = get_int('second_call_rescheduled', stat.second_call_rescheduled)
+        stat.second_call_canceled = get_int('second_call_canceled', stat.second_call_canceled)
+        
+        stat.pif_count = get_int('pif_count', stat.pif_count)
+        stat.pif_cash_collected = get_float('pif_cash_collected', stat.pif_cash_collected)
+        stat.pif_in_call_count = get_int('pif_in_call_count', stat.pif_in_call_count)
+        stat.pif_in_call_cash = get_float('pif_in_call_cash', stat.pif_in_call_cash)
+        
+        stat.split_count = get_int('split_count', stat.split_count)
+        stat.split_cash_collected = get_float('split_cash_collected', stat.split_cash_collected)
+        stat.split_in_call_count = get_int('split_in_call_count', stat.split_in_call_count)
+        stat.split_in_call_cash = get_float('split_in_call_cash', stat.split_in_call_cash)
+        
+        stat.deposit_count = get_int('deposit_count', stat.deposit_count)
+        stat.deposit_cash_collected = get_float('deposit_cash_collected', stat.deposit_cash_collected)
+        stat.deposit_in_call_count = get_int('deposit_in_call_count', stat.deposit_in_call_count)
+        stat.deposit_in_call_cash = get_float('deposit_in_call_cash', stat.deposit_in_call_cash)
+        
+        stat.follow_ups_sent = get_int('follow_ups_sent', stat.follow_ups_sent)
+        stat.follow_ups_replied = get_int('follow_ups_replied', stat.follow_ups_replied)
+        
+        db.session.commit()
+        return jsonify({"message": "Reporte actualizado"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+@bp.route('/public/closer-reports/<int:report_id>', methods=['DELETE'])
+def delete_public_closer_report(report_id):
+    """Elimina un reporte."""
+    from app.models import CloserDailyReport
+    stat = CloserDailyReport.query.get_or_404(report_id)
+    try:
+        db.session.delete(stat)
+        db.session.commit()
+        return jsonify({"message": "Reporte eliminado"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
