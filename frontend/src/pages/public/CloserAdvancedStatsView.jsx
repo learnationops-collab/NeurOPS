@@ -81,6 +81,30 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
         </div>
     );
 
+    const ChartTable = ({ data, colors }) => (
+        <div className="w-full mt-2 bg-slate-950/50 rounded-xl overflow-hidden border border-slate-800/50">
+            <table className="w-full text-left text-[10px] text-slate-300">
+                <thead className="bg-slate-800/50 text-slate-400 uppercase tracking-widest">
+                    <tr>
+                        <th className="px-3 py-2 font-black">Métrica</th>
+                        <th className="px-3 py-2 text-right font-black">Total</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                    {data.map((item, i) => (
+                        <tr key={i} className="hover:bg-slate-800/20 transition-colors">
+                            <td className="px-3 py-1.5 flex items-center gap-2 font-bold">
+                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colors[i % colors.length] }} />
+                                {item.name}
+                            </td>
+                            <td className="px-3 py-1.5 text-right font-black text-white tabular-nums">{item.value}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+
     if (loading || !stats) {
         return (
             <div className="flex flex-col items-center justify-center py-32 space-y-4">
@@ -253,18 +277,21 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center">
                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Tipo de Cierre</h4>
                     <SimplePieChart data={salesData} colors={salesColors} />
+                    <ChartTable data={salesData} colors={salesColors} />
                 </div>
 
                 {/* Attendance Distribution */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center">
                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Estado de Agendas</h4>
                     <SimplePieChart data={attendanceData} colors={attendanceColors} />
+                    <ChartTable data={attendanceData} colors={attendanceColors} />
                 </div>
 
                 {/* Follow Ups Distribution */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center relative group">
                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Seguimientos (Re-engagement)</h4>
                     <SimplePieChart data={followUpsData} colors={followUpsColors} />
+                    <ChartTable data={followUpsData} colors={followUpsColors} />
 
                     {/* Note Box inside Follow Ups */}
                     <div className="absolute top-4 left-4 right-4 md:right-auto md:w-48 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
