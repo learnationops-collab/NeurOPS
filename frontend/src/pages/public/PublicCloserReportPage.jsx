@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users } from 'lucide-react';
+import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 // Componente reutilizable para inputs numéricos
@@ -213,14 +213,61 @@ const PublicCloserReportPage = () => {
     const followUpsComplete = isSectionComplete(followUpsFields);
     const salesComplete = isSectionComplete(salesFields);
 
-    // Auto-colapsar logica
+    // Auto-colapsar logica (solo una vez por sección)
+    const autoAdvancedRef = useRef({ agendas: false, seguimientos: false });
+
     useEffect(() => {
-        if (openSection === 'agendas' && agendaComplete) {
+        if (openSection === 'agendas' && agendaComplete && !autoAdvancedRef.current.agendas) {
+            autoAdvancedRef.current.agendas = true;
             setOpenSection('seguimientos');
-        } else if (openSection === 'seguimientos' && followUpsComplete) {
+        } else if (openSection === 'seguimientos' && followUpsComplete && !autoAdvancedRef.current.seguimientos) {
+            autoAdvancedRef.current.seguimientos = true;
             setOpenSection('ventas');
         }
     }, [agendaComplete, followUpsComplete, openSection]);
+
+    // Métricas computadas en tiempo real para el sidebar
+    const liveMetrics = useMemo(() => {
+        const totalScheduled = (parseInt(formData.first_call_scheduled) || 0) + (parseInt(formData.second_call_scheduled) || 0);
+        const totalAttended = (parseInt(formData.first_call_attended) || 0) + (parseInt(formData.second_call_attended) || 0);
+        const totalNoShow = (parseInt(formData.first_call_no_show) || 0) + (parseInt(formData.second_call_no_show) || 0);
+        const totalSales = (parseInt(formData.pif_count) || 0) + (parseInt(formData.split_count) || 0) + (parseInt(formData.deposit_count) || 0);
+        const totalCash = (parseFloat(formData.pif_cash_collected) || 0) + (parseFloat(formData.split_cash_collected) || 0) + (parseFloat(formData.deposit_cash_collected) || 0);
+        const totalInCallSales = (parseInt(formData.pif_in_call_count) || 0) + (parseInt(formData.split_in_call_count) || 0) + (parseInt(formData.deposit_in_call_count) || 0);
+        const totalInCallCash = (parseFloat(formData.pif_in_call_cash) || 0) + (parseFloat(formData.split_in_call_cash) || 0) + (parseFloat(formData.deposit_in_call_cash) || 0);
+        const slots = parseInt(formData.slots) || 0;
+        const offers = parseInt(formData.offers_made) || 0;
+        const fuHotSent = parseInt(formData.follow_ups_hot_sent) || 0;
+        const fuHotReplied = parseInt(formData.follow_ups_hot_replied) || 0;
+        const fuColdSent = parseInt(formData.follow_ups_cold_sent) || 0;
+        const fuColdReplied = parseInt(formData.follow_ups_cold_replied) || 0;
+
+        const pct = (a, b) => b > 0 ? ((a / b) * 100).toFixed(1) : '0.0';
+
+        return {
+            slots,
+            offers,
+            totalScheduled,
+            totalAttended,
+            totalNoShow,
+            totalSales,
+            totalCash,
+            totalInCallSales,
+            totalInCallCash,
+            showRate: pct(totalAttended, totalScheduled),
+            closeRate: pct(totalSales, totalAttended),
+            offerToSale: pct(totalSales, offers),
+            pitchRate: pct(offers, totalAttended),
+            ticketPromedio: totalSales > 0 ? (totalCash / totalSales).toFixed(0) : '0',
+            inCallPct: pct(totalInCallSales, totalSales),
+            fuHotRate: pct(fuHotReplied, fuHotSent),
+            fuColdRate: pct(fuColdReplied, fuColdSent),
+            fuHotSent,
+            fuHotReplied,
+            fuColdSent,
+            fuColdReplied,
+        };
+    }, [formData]);
 
     // Filas de la tabla de doble entrada de agendas
     const agendaRows = [
@@ -239,11 +286,11 @@ const PublicCloserReportPage = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col items-center justify-center p-4 py-12 relative overflow-hidden">
+        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 py-12 relative overflow-hidden">
             {/* Background */}
             <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-violet-900/20 to-transparent pointer-events-none" />
 
-            <div className="w-full max-w-4xl z-10 space-y-8">
+            <div className="w-full max-w-7xl mx-auto z-10 space-y-8">
                 {/* Header */}
                 <div className="text-center space-y-4 mb-2">
                     <p className="text-violet-400 font-bold tracking-widest text-xs uppercase">NeurOPS High Performance</p>
@@ -258,342 +305,490 @@ const PublicCloserReportPage = () => {
                         <p className="text-slate-500 font-medium animate-pulse">Cargando módulos de reporte...</p>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} className="space-y-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                        {/* Barra de progreso */}
-                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3 sticky top-4 z-50">
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs font-black uppercase text-slate-400 tracking-widest">Progreso del Reporte</span>
-                                <span className="text-sm font-black text-violet-400">{calculateProgress()}%</span>
-                            </div>
-                            <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                                <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${calculateProgress()}%` }}></div>
-                            </div>
-                        </div>
+                        {/* ═══ COLUMNA 1: FORMULARIO ═══ */}
+                        <div className="lg:col-span-2">
+                            <form onSubmit={handleSubmit} className="space-y-8">
 
-                        {/* Identificación */}
-                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-xl grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">¿Quién eres?</label>
-                                <select
-                                    required
-                                    className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700/80 rounded-2xl text-white outline-none focus:border-violet-500 transition-all font-bold cursor-pointer"
-                                    value={formData.closer_id}
-                                    onChange={e => setFormData({ ...formData, closer_id: e.target.value })}
+                                {/* Barra de progreso */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3 sticky top-4 z-50">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-black uppercase text-slate-400 tracking-widest">Progreso del Reporte</span>
+                                        <span className="text-sm font-black text-violet-400">{calculateProgress()}%</span>
+                                    </div>
+                                    <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                                        <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${calculateProgress()}%` }}></div>
+                                    </div>
+                                </div>
+
+                                {/* Identificación */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-xl grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">¿Quién eres?</label>
+                                        <select
+                                            required
+                                            className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700/80 rounded-2xl text-white outline-none focus:border-violet-500 transition-all font-bold cursor-pointer"
+                                            value={formData.closer_id}
+                                            onChange={e => setFormData({ ...formData, closer_id: e.target.value })}
+                                        >
+                                            <option value="" disabled>Selecciona tu nombre</option>
+                                            {closers.map(c => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha del Informe</label>
+                                        <input
+                                            type="date"
+                                            required
+                                            className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700/80 rounded-2xl text-white outline-none focus:border-violet-500 transition-all font-bold"
+                                            value={formData.date}
+                                            onChange={e => setFormData({ ...formData, date: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Sección Agendas */}
+                                <CollapsibleSection
+                                    id="agendas"
+                                    currentOpen={openSection}
+                                    setOpen={setOpenSection}
+                                    title="Métricas de Agendas"
+                                    icon={Phone}
+                                    isComplete={agendaComplete}
+                                    colorClass="text-emerald-500"
+                                    borderColorClass="border-t-emerald-600"
                                 >
-                                    <option value="" disabled>Selecciona tu nombre</option>
-                                    {closers.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    {/* Campos generales */}
+                                    <div className="grid grid-cols-2 gap-4 mb-6 mt-2">
+                                        <MetricInput
+                                            label="Slots Disponibles"
+                                            field="slots"
+                                            color="emerald"
+                                            value={formData.slots}
+                                            onChange={handleFieldChange}
+                                            isLightMode={agendaComplete}
+                                        />
+                                        <MetricInput
+                                            label="Ofertas Hechas"
+                                            field="offers_made"
+                                            color="emerald"
+                                            value={formData.offers_made}
+                                            onChange={handleFieldChange}
+                                            isLightMode={agendaComplete}
+                                        />
+                                    </div>
+
+                                    {/* Tabla de doble entrada */}
+                                    <div className={`${agendaComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl overflow-hidden transition-colors duration-500`}>
+                                        {/* Header de la tabla */}
+                                        <div className="grid grid-cols-3 gap-0">
+                                            <div className={`p-3 ${agendaComplete ? 'bg-slate-200' : 'bg-slate-700/50'}`}>
+                                                <p className={`text-[10px] font-black uppercase tracking-wider ${agendaComplete ? 'text-slate-500' : 'text-slate-400'}`}></p>
+                                            </div>
+                                            <div className={`p-3 text-center ${agendaComplete ? 'bg-emerald-100' : 'bg-emerald-900/30'}`}>
+                                                <p className={`text-[10px] font-black uppercase tracking-wider ${agendaComplete ? 'text-emerald-700' : 'text-emerald-400'}`}>1ra Llamada</p>
+                                            </div>
+                                            <div className={`p-3 text-center ${agendaComplete ? 'bg-sky-100' : 'bg-sky-900/30'}`}>
+                                                <p className={`text-[10px] font-black uppercase tracking-wider ${agendaComplete ? 'text-sky-700' : 'text-sky-400'}`}>2da Llamada</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Filas de datos */}
+                                        {agendaRows.map((row, i) => (
+                                            <div key={row.label} className={`grid grid-cols-3 gap-0 ${i % 2 === 0 ? '' : (agendaComplete ? 'bg-slate-100/50' : 'bg-slate-800/20')}`}>
+                                                <div className={`p-3 flex items-center ${agendaComplete ? 'border-r border-slate-200' : 'border-r border-slate-700/30'}`}>
+                                                    <p className={`text-xs font-bold ${agendaComplete ? 'text-slate-700' : 'text-slate-300'}`}>{row.label}</p>
+                                                </div>
+                                                <div className={`p-2 ${agendaComplete ? 'border-r border-slate-200' : 'border-r border-slate-700/30'}`}>
+                                                    <MetricInput
+                                                        field={row.firstField}
+                                                        color="emerald"
+                                                        value={formData[row.firstField]}
+                                                        onChange={handleFieldChange}
+                                                        isLightMode={agendaComplete}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div className="p-2">
+                                                    <MetricInput
+                                                        field={row.secondField}
+                                                        color="sky"
+                                                        value={formData[row.secondField]}
+                                                        onChange={handleFieldChange}
+                                                        isLightMode={agendaComplete}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Totales en vivo */}
+                                    <div className={`mt-4 ${agendaComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Agendas</p>
+                                                <p className="text-2xl font-black text-emerald-500">
+                                                    {(parseInt(formData.first_call_scheduled) || 0) + (parseInt(formData.second_call_scheduled) || 0)}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Asistencias</p>
+                                                <p className="text-2xl font-black text-sky-500">
+                                                    {(parseInt(formData.first_call_attended) || 0) + (parseInt(formData.second_call_attended) || 0)}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total No Shows</p>
+                                                <p className="text-2xl font-black text-rose-500">
+                                                    {(parseInt(formData.first_call_no_show) || 0) + (parseInt(formData.second_call_no_show) || 0)}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Cancelaciones</p>
+                                                <p className="text-2xl font-black text-amber-500">
+                                                    {(parseInt(formData.first_call_canceled) || 0) + (parseInt(formData.second_call_canceled) || 0)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CollapsibleSection>
+
+                                {/* Seguimientos */}
+                                <CollapsibleSection
+                                    id="seguimientos"
+                                    currentOpen={openSection}
+                                    setOpen={setOpenSection}
+                                    title="Seguimientos"
+                                    icon={Users}
+                                    isComplete={followUpsComplete}
+                                    colorClass="text-blue-500"
+                                    borderColorClass="border-t-blue-600"
+                                >
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+                                        {/* Flujo Caliente */}
+                                        <div className={`p-5 rounded-2xl border ${followUpsComplete ? 'bg-white/60 border-rose-200' : 'bg-rose-950/20 border-rose-900/50'}`}>
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
+                                                <span className={`text-[10px] font-black uppercase tracking-widest ${followUpsComplete ? 'text-rose-600' : 'text-rose-400'}`}>Flujo Caliente</span>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <MetricInput
+                                                    label="Enviados (Hot)"
+                                                    field="follow_ups_hot_sent"
+                                                    color="rose"
+                                                    value={formData.follow_ups_hot_sent}
+                                                    onChange={handleFieldChange}
+                                                    isLightMode={followUpsComplete}
+                                                    placeholder="0"
+                                                />
+                                                <MetricInput
+                                                    label="Respondidos (Hot)"
+                                                    field="follow_ups_hot_replied"
+                                                    color="rose"
+                                                    value={formData.follow_ups_hot_replied}
+                                                    onChange={handleFieldChange}
+                                                    isLightMode={followUpsComplete}
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Flujo Frío */}
+                                        <div className={`p-5 rounded-2xl border ${followUpsComplete ? 'bg-white/60 border-blue-200' : 'bg-blue-950/20 border-blue-900/50'}`}>
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                <span className={`text-[10px] font-black uppercase tracking-widest ${followUpsComplete ? 'text-blue-600' : 'text-blue-400'}`}>Flujo Frío</span>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <MetricInput
+                                                    label="Enviados (Cold)"
+                                                    field="follow_ups_cold_sent"
+                                                    color="blue"
+                                                    value={formData.follow_ups_cold_sent}
+                                                    onChange={handleFieldChange}
+                                                    isLightMode={followUpsComplete}
+                                                    placeholder="0"
+                                                />
+                                                <MetricInput
+                                                    label="Respondidos (Cold)"
+                                                    field="follow_ups_cold_replied"
+                                                    color="blue"
+                                                    value={formData.follow_ups_cold_replied}
+                                                    onChange={handleFieldChange}
+                                                    isLightMode={followUpsComplete}
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className={`mt-4 ${followUpsComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
+                                        <div className="grid grid-cols-2 gap-4 text-center">
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Enviados</p>
+                                                <p className="text-2xl font-black text-slate-400">
+                                                    {(parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0)}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Respondidos</p>
+                                                <p className="text-2xl font-black text-blue-500">
+                                                    {(parseInt(formData.follow_ups_hot_replied) || 0) + (parseInt(formData.follow_ups_cold_replied) || 0)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CollapsibleSection>
+
+                                {/* Ventas */}
+                                <CollapsibleSection
+                                    id="ventas"
+                                    currentOpen={openSection}
+                                    setOpen={setOpenSection}
+                                    title="Ventas"
+                                    icon={DollarSign}
+                                    isComplete={salesComplete}
+                                    colorClass="text-amber-500"
+                                    borderColorClass="border-t-amber-600"
+                                >
+                                    <div className="space-y-4 mt-2">
+                                        {salesRows.map(row => (
+                                            <div key={row.label} className={`${salesComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
+                                                <p className={`text-xs font-black uppercase tracking-wider mb-3 ${salesComplete ? 'text-slate-700' : 'text-white'}`}>{row.label}</p>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                    <MetricInput
+                                                        label="Cantidad"
+                                                        field={row.countField}
+                                                        color="amber"
+                                                        value={formData[row.countField]}
+                                                        onChange={handleFieldChange}
+                                                        isLightMode={salesComplete}
+                                                    />
+                                                    <MetricInput
+                                                        label="Cash Collected"
+                                                        field={row.cashField}
+                                                        color="amber"
+                                                        value={formData[row.cashField]}
+                                                        onChange={handleFieldChange}
+                                                        isLightMode={salesComplete}
+                                                        type="number"
+                                                        step="0.01"
+                                                    />
+                                                    <MetricInput
+                                                        label="En Llamada"
+                                                        field={row.inCallField}
+                                                        color="amber"
+                                                        value={formData[row.inCallField]}
+                                                        onChange={handleFieldChange}
+                                                        isLightMode={salesComplete}
+                                                    />
+                                                    <MetricInput
+                                                        label="Cash En Llamada"
+                                                        field={row.inCallCashField}
+                                                        color="amber"
+                                                        value={formData[row.inCallCashField]}
+                                                        onChange={handleFieldChange}
+                                                        isLightMode={salesComplete}
+                                                        type="number"
+                                                        step="0.01"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Totales en vivo */}
+                                    <div className={`mt-5 ${salesComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Ventas</p>
+                                                <p className="text-2xl font-black text-amber-500">
+                                                    {(parseInt(formData.pif_count) || 0) + (parseInt(formData.split_count) || 0) + (parseInt(formData.deposit_count) || 0)}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Cash</p>
+                                                <p className="text-2xl font-black text-emerald-500">
+                                                    ${((parseFloat(formData.pif_cash_collected) || 0) + (parseFloat(formData.split_cash_collected) || 0) + (parseFloat(formData.deposit_cash_collected) || 0)).toLocaleString()}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">En Llamada</p>
+                                                <p className="text-2xl font-black text-sky-500">
+                                                    {(parseInt(formData.pif_in_call_count) || 0) + (parseInt(formData.split_in_call_count) || 0) + (parseInt(formData.deposit_in_call_count) || 0)}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Cash En Llamada</p>
+                                                <p className="text-2xl font-black text-violet-500">
+                                                    ${((parseFloat(formData.pif_in_call_cash) || 0) + (parseFloat(formData.split_in_call_cash) || 0) + (parseFloat(formData.deposit_in_call_cash) || 0)).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CollapsibleSection>
+
+                                {/* Botón de envío */}
+                                <div className="pt-4">
+                                    <button
+                                        type="submit"
+                                        disabled={submitting || !formData.closer_id}
+                                        className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-5 rounded-3xl font-black uppercase text-base tracking-[0.2em] transition-all shadow-2xl shadow-violet-600/30 flex items-center justify-center gap-3 active:scale-[0.98]"
+                                    >
+                                        {submitting ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}
+                                        {submitting ? 'Procesando Envío...' : 'ENVIAR REPORTE AL SISTEMA'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* ═══ COLUMNA 2: SIDEBAR DE STATS EN VIVO ═══ */}
+                        <div className="lg:col-span-1">
+                            <div className="sticky top-4 space-y-4">
+
+                                {/* Mini Dashboard Header */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-500">
+                                            <Activity size={16} />
+                                        </div>
+                                        <h3 className="text-sm font-black text-white italic tracking-tight uppercase">Live Preview</h3>
+                                    </div>
+
+                                    {/* Mini stat cards */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-slate-950/70 rounded-xl p-3 border border-slate-800/50 text-center">
+                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Slots</p>
+                                            <p className="text-xl font-black text-violet-400 tabular-nums">{liveMetrics.slots}</p>
+                                        </div>
+                                        <div className="bg-slate-950/70 rounded-xl p-3 border border-slate-800/50 text-center">
+                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Agendas</p>
+                                            <p className="text-xl font-black text-emerald-400 tabular-nums">{liveMetrics.totalScheduled}</p>
+                                        </div>
+                                        <div className="bg-slate-950/70 rounded-xl p-3 border border-slate-800/50 text-center">
+                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Ventas</p>
+                                            <p className="text-xl font-black text-amber-400 tabular-nums">{liveMetrics.totalSales}</p>
+                                        </div>
+                                        <div className="bg-slate-950/70 rounded-xl p-3 border border-slate-800/50 text-center">
+                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Cash</p>
+                                            <p className="text-lg font-black text-emerald-400 tabular-nums">${Number(liveMetrics.totalCash).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Conversiones en vivo */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+                                            <TrendingUp size={16} />
+                                        </div>
+                                        <h3 className="text-sm font-black text-white italic tracking-tight uppercase">Conversiones</h3>
+                                    </div>
+
+                                    {[
+                                        { label: 'Show Rate', value: liveMetrics.showRate, color: 'emerald' },
+                                        { label: 'Pitch Rate', value: liveMetrics.pitchRate, color: 'fuchsia' },
+                                        { label: 'Close Rate', value: liveMetrics.closeRate, color: 'amber' },
+                                        { label: 'Offer → Sale', value: liveMetrics.offerToSale, color: 'violet' },
+                                    ].map(item => (
+                                        <div key={item.label} className="space-y-1.5">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{item.label}</span>
+                                                <span className={`text-xs font-black text-${item.color}-400 tabular-nums`}>{item.value}%</span>
+                                            </div>
+                                            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                                <div className={`h-full rounded-full bg-${item.color}-500 transition-all duration-700`} style={{ width: `${Math.min(parseFloat(item.value), 100)}%` }} />
+                                            </div>
+                                        </div>
                                     ))}
-                                </select>
-                            </div>
+                                </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha del Informe</label>
-                                <input
-                                    type="date"
-                                    required
-                                    className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700/80 rounded-2xl text-white outline-none focus:border-violet-500 transition-all font-bold"
-                                    value={formData.date}
-                                    onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                />
+                                {/* Ticket y En Llamada */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                                            <DollarSign size={16} />
+                                        </div>
+                                        <h3 className="text-sm font-black text-white italic tracking-tight uppercase">Ventas</h3>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800/50">
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Ticket Prom.</span>
+                                            <span className="text-base font-black text-white tabular-nums">${Number(liveMetrics.ticketPromedio).toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800/50">
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">En Llamada</span>
+                                            <span className="text-base font-black text-sky-400 tabular-nums">{liveMetrics.totalInCallSales} ({liveMetrics.inCallPct}%)</span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/10">
+                                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Cash Total</span>
+                                            <span className="text-base font-black text-emerald-400 tabular-nums">${Number(liveMetrics.totalCash).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Re-engagement */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500">
+                                            <Users size={16} />
+                                        </div>
+                                        <h3 className="text-sm font-black text-white italic tracking-tight uppercase">Re-engagement</h3>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-rose-500/5 rounded-xl p-3 border border-rose-500/10 text-center">
+                                            <p className="text-[8px] font-black text-rose-400 uppercase tracking-widest mb-1">Hot</p>
+                                            <p className="text-lg font-black text-white tabular-nums">{liveMetrics.fuHotReplied}/{liveMetrics.fuHotSent}</p>
+                                            <p className="text-[9px] font-bold text-rose-400">{liveMetrics.fuHotRate}%</p>
+                                        </div>
+                                        <div className="bg-sky-500/5 rounded-xl p-3 border border-sky-500/10 text-center">
+                                            <p className="text-[8px] font-black text-sky-400 uppercase tracking-widest mb-1">Cold</p>
+                                            <p className="text-lg font-black text-white tabular-nums">{liveMetrics.fuColdReplied}/{liveMetrics.fuColdSent}</p>
+                                            <p className="text-[9px] font-bold text-sky-400">{liveMetrics.fuColdRate}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Mini Embudo Visual */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="p-2 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-500">
+                                            <Zap size={16} />
+                                        </div>
+                                        <h3 className="text-sm font-black text-white italic tracking-tight uppercase">Embudo</h3>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {[
+                                            { label: 'Slots', value: liveMetrics.slots, color: 'violet', maxWidth: 100 },
+                                            { label: 'Agendas', value: liveMetrics.totalScheduled, color: 'emerald', maxWidth: liveMetrics.slots > 0 ? (liveMetrics.totalScheduled / liveMetrics.slots) * 100 : 0 },
+                                            { label: 'Asistencias', value: liveMetrics.totalAttended, color: 'sky', maxWidth: liveMetrics.slots > 0 ? (liveMetrics.totalAttended / liveMetrics.slots) * 100 : 0 },
+                                            { label: 'Ofertas', value: liveMetrics.offers, color: 'fuchsia', maxWidth: liveMetrics.slots > 0 ? (liveMetrics.offers / liveMetrics.slots) * 100 : 0 },
+                                            { label: 'Ventas', value: liveMetrics.totalSales, color: 'amber', maxWidth: liveMetrics.slots > 0 ? (liveMetrics.totalSales / liveMetrics.slots) * 100 : 0 },
+                                        ].map(step => (
+                                            <div key={step.label} className="flex items-center gap-3">
+                                                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest w-16 text-right shrink-0">{step.label}</span>
+                                                <div className="flex-1 h-5 bg-slate-800 rounded-full overflow-hidden relative">
+                                                    <div
+                                                        className={`h-full rounded-full bg-${step.color}-500 transition-all duration-700 flex items-center justify-end pr-2`}
+                                                        style={{ width: `${Math.max(step.maxWidth, step.value > 0 ? 12 : 0)}%` }}
+                                                    >
+                                                        {step.value > 0 && <span className="text-[9px] font-black text-white">{step.value}</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
 
-                        {/* Sección Agendas */}
-                        <CollapsibleSection
-                            id="agendas"
-                            currentOpen={openSection}
-                            setOpen={setOpenSection}
-                            title="Métricas de Agendas"
-                            icon={Phone}
-                            isComplete={agendaComplete}
-                            colorClass="text-emerald-500"
-                            borderColorClass="border-t-emerald-600"
-                        >
-                            {/* Campos generales */}
-                            <div className="grid grid-cols-2 gap-4 mb-6 mt-2">
-                                <MetricInput
-                                    label="Slots Disponibles"
-                                    field="slots"
-                                    color="emerald"
-                                    value={formData.slots}
-                                    onChange={handleFieldChange}
-                                    isLightMode={agendaComplete}
-                                />
-                                <MetricInput
-                                    label="Ofertas Hechas"
-                                    field="offers_made"
-                                    color="emerald"
-                                    value={formData.offers_made}
-                                    onChange={handleFieldChange}
-                                    isLightMode={agendaComplete}
-                                />
-                            </div>
-
-                            {/* Tabla de doble entrada */}
-                            <div className={`${agendaComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl overflow-hidden transition-colors duration-500`}>
-                                {/* Header de la tabla */}
-                                <div className="grid grid-cols-3 gap-0">
-                                    <div className={`p-3 ${agendaComplete ? 'bg-slate-200' : 'bg-slate-700/50'}`}>
-                                        <p className={`text-[10px] font-black uppercase tracking-wider ${agendaComplete ? 'text-slate-500' : 'text-slate-400'}`}></p>
-                                    </div>
-                                    <div className={`p-3 text-center ${agendaComplete ? 'bg-emerald-100' : 'bg-emerald-900/30'}`}>
-                                        <p className={`text-[10px] font-black uppercase tracking-wider ${agendaComplete ? 'text-emerald-700' : 'text-emerald-400'}`}>1ra Llamada</p>
-                                    </div>
-                                    <div className={`p-3 text-center ${agendaComplete ? 'bg-sky-100' : 'bg-sky-900/30'}`}>
-                                        <p className={`text-[10px] font-black uppercase tracking-wider ${agendaComplete ? 'text-sky-700' : 'text-sky-400'}`}>2da Llamada</p>
-                                    </div>
-                                </div>
-
-                                {/* Filas de datos */}
-                                {agendaRows.map((row, i) => (
-                                    <div key={row.label} className={`grid grid-cols-3 gap-0 ${i % 2 === 0 ? '' : (agendaComplete ? 'bg-slate-100/50' : 'bg-slate-800/20')}`}>
-                                        <div className={`p-3 flex items-center ${agendaComplete ? 'border-r border-slate-200' : 'border-r border-slate-700/30'}`}>
-                                            <p className={`text-xs font-bold ${agendaComplete ? 'text-slate-700' : 'text-slate-300'}`}>{row.label}</p>
-                                        </div>
-                                        <div className={`p-2 ${agendaComplete ? 'border-r border-slate-200' : 'border-r border-slate-700/30'}`}>
-                                            <MetricInput
-                                                field={row.firstField}
-                                                color="emerald"
-                                                value={formData[row.firstField]}
-                                                onChange={handleFieldChange}
-                                                isLightMode={agendaComplete}
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                        <div className="p-2">
-                                            <MetricInput
-                                                field={row.secondField}
-                                                color="sky"
-                                                value={formData[row.secondField]}
-                                                onChange={handleFieldChange}
-                                                isLightMode={agendaComplete}
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Totales en vivo */}
-                            <div className={`mt-4 ${agendaComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Agendas</p>
-                                        <p className="text-2xl font-black text-emerald-500">
-                                            {(parseInt(formData.first_call_scheduled) || 0) + (parseInt(formData.second_call_scheduled) || 0)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Asistencias</p>
-                                        <p className="text-2xl font-black text-sky-500">
-                                            {(parseInt(formData.first_call_attended) || 0) + (parseInt(formData.second_call_attended) || 0)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total No Shows</p>
-                                        <p className="text-2xl font-black text-rose-500">
-                                            {(parseInt(formData.first_call_no_show) || 0) + (parseInt(formData.second_call_no_show) || 0)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Cancelaciones</p>
-                                        <p className="text-2xl font-black text-amber-500">
-                                            {(parseInt(formData.first_call_canceled) || 0) + (parseInt(formData.second_call_canceled) || 0)}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CollapsibleSection>
-
-                        {/* Seguimientos */}
-                        <CollapsibleSection
-                            id="seguimientos"
-                            currentOpen={openSection}
-                            setOpen={setOpenSection}
-                            title="Seguimientos"
-                            icon={Users}
-                            isComplete={followUpsComplete}
-                            colorClass="text-blue-500"
-                            borderColorClass="border-t-blue-600"
-                        >
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-                                {/* Flujo Caliente */}
-                                <div className={`p-5 rounded-2xl border ${followUpsComplete ? 'bg-white/60 border-rose-200' : 'bg-rose-950/20 border-rose-900/50'}`}>
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
-                                        <span className={`text-[10px] font-black uppercase tracking-widest ${followUpsComplete ? 'text-rose-600' : 'text-rose-400'}`}>Flujo Caliente</span>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <MetricInput
-                                            label="Enviados (Hot)"
-                                            field="follow_ups_hot_sent"
-                                            color="rose"
-                                            value={formData.follow_ups_hot_sent}
-                                            onChange={handleFieldChange}
-                                            isLightMode={followUpsComplete}
-                                            placeholder="0"
-                                        />
-                                        <MetricInput
-                                            label="Respondidos (Hot)"
-                                            field="follow_ups_hot_replied"
-                                            color="rose"
-                                            value={formData.follow_ups_hot_replied}
-                                            onChange={handleFieldChange}
-                                            isLightMode={followUpsComplete}
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Flujo Frío */}
-                                <div className={`p-5 rounded-2xl border ${followUpsComplete ? 'bg-white/60 border-blue-200' : 'bg-blue-950/20 border-blue-900/50'}`}>
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                        <span className={`text-[10px] font-black uppercase tracking-widest ${followUpsComplete ? 'text-blue-600' : 'text-blue-400'}`}>Flujo Frío</span>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <MetricInput
-                                            label="Enviados (Cold)"
-                                            field="follow_ups_cold_sent"
-                                            color="blue"
-                                            value={formData.follow_ups_cold_sent}
-                                            onChange={handleFieldChange}
-                                            isLightMode={followUpsComplete}
-                                            placeholder="0"
-                                        />
-                                        <MetricInput
-                                            label="Respondidos (Cold)"
-                                            field="follow_ups_cold_replied"
-                                            color="blue"
-                                            value={formData.follow_ups_cold_replied}
-                                            onChange={handleFieldChange}
-                                            isLightMode={followUpsComplete}
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className={`mt-4 ${followUpsComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
-                                <div className="grid grid-cols-2 gap-4 text-center">
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Enviados</p>
-                                        <p className="text-2xl font-black text-slate-400">
-                                            {(parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Respondidos</p>
-                                        <p className="text-2xl font-black text-blue-500">
-                                            {(parseInt(formData.follow_ups_hot_replied) || 0) + (parseInt(formData.follow_ups_cold_replied) || 0)}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CollapsibleSection>
-
-                        {/* Ventas */}
-                        <CollapsibleSection
-                            id="ventas"
-                            currentOpen={openSection}
-                            setOpen={setOpenSection}
-                            title="Ventas"
-                            icon={DollarSign}
-                            isComplete={salesComplete}
-                            colorClass="text-amber-500"
-                            borderColorClass="border-t-amber-600"
-                        >
-                            <div className="space-y-4 mt-2">
-                                {salesRows.map(row => (
-                                    <div key={row.label} className={`${salesComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
-                                        <p className={`text-xs font-black uppercase tracking-wider mb-3 ${salesComplete ? 'text-slate-700' : 'text-white'}`}>{row.label}</p>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                            <MetricInput
-                                                label="Cantidad"
-                                                field={row.countField}
-                                                color="amber"
-                                                value={formData[row.countField]}
-                                                onChange={handleFieldChange}
-                                                isLightMode={salesComplete}
-                                            />
-                                            <MetricInput
-                                                label="Cash Collected"
-                                                field={row.cashField}
-                                                color="amber"
-                                                value={formData[row.cashField]}
-                                                onChange={handleFieldChange}
-                                                isLightMode={salesComplete}
-                                                type="number"
-                                                step="0.01"
-                                            />
-                                            <MetricInput
-                                                label="En Llamada"
-                                                field={row.inCallField}
-                                                color="amber"
-                                                value={formData[row.inCallField]}
-                                                onChange={handleFieldChange}
-                                                isLightMode={salesComplete}
-                                            />
-                                            <MetricInput
-                                                label="Cash En Llamada"
-                                                field={row.inCallCashField}
-                                                color="amber"
-                                                value={formData[row.inCallCashField]}
-                                                onChange={handleFieldChange}
-                                                isLightMode={salesComplete}
-                                                type="number"
-                                                step="0.01"
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Totales en vivo */}
-                            <div className={`mt-5 ${salesComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Ventas</p>
-                                        <p className="text-2xl font-black text-amber-500">
-                                            {(parseInt(formData.pif_count) || 0) + (parseInt(formData.split_count) || 0) + (parseInt(formData.deposit_count) || 0)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Cash</p>
-                                        <p className="text-2xl font-black text-emerald-500">
-                                            ${((parseFloat(formData.pif_cash_collected) || 0) + (parseFloat(formData.split_cash_collected) || 0) + (parseFloat(formData.deposit_cash_collected) || 0)).toLocaleString()}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">En Llamada</p>
-                                        <p className="text-2xl font-black text-sky-500">
-                                            {(parseInt(formData.pif_in_call_count) || 0) + (parseInt(formData.split_in_call_count) || 0) + (parseInt(formData.deposit_in_call_count) || 0)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Cash En Llamada</p>
-                                        <p className="text-2xl font-black text-violet-500">
-                                            ${((parseFloat(formData.pif_in_call_cash) || 0) + (parseFloat(formData.split_in_call_cash) || 0) + (parseFloat(formData.deposit_in_call_cash) || 0)).toLocaleString()}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CollapsibleSection>
-
-                        {/* Botón de envío */}
-                        <div className="pt-4">
-                            <button
-                                type="submit"
-                                disabled={submitting || !formData.closer_id}
-                                className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-5 rounded-3xl font-black uppercase text-base tracking-[0.2em] transition-all shadow-2xl shadow-violet-600/30 flex items-center justify-center gap-3 active:scale-[0.98]"
-                            >
-                                {submitting ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}
-                                {submitting ? 'Procesando Envío...' : 'ENVIAR REPORTE AL SISTEMA'}
-                            </button>
-                        </div>
-                    </form>
+                    </div>
                 )}
 
                 <div className="text-center pt-8">
