@@ -1,0 +1,53 @@
+from app import db
+
+
+class CloserDailyReport(db.Model):
+    """Reporte diario de closers con agendas segmentadas y ventas detalladas."""
+    __tablename__ = 'closer_daily_reports'
+
+    id = db.Column(db.Integer, primary_key=True)
+    closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+
+    # --- GENERALES ---
+    slots = db.Column(db.Integer, default=0)
+    offers_made = db.Column(db.Integer, default=0)
+
+    # --- AGENDAS: Primera Llamada ---
+    first_call_scheduled = db.Column(db.Integer, default=0)
+    first_call_attended = db.Column(db.Integer, default=0)
+    first_call_no_show = db.Column(db.Integer, default=0)
+    first_call_rescheduled = db.Column(db.Integer, default=0)
+    first_call_canceled = db.Column(db.Integer, default=0)
+
+    # --- AGENDAS: Segunda Llamada ---
+    second_call_scheduled = db.Column(db.Integer, default=0)
+    second_call_attended = db.Column(db.Integer, default=0)
+    second_call_no_show = db.Column(db.Integer, default=0)
+    second_call_rescheduled = db.Column(db.Integer, default=0)
+    second_call_canceled = db.Column(db.Integer, default=0)
+
+    # --- VENTAS: PIF ---
+    pif_count = db.Column(db.Integer, default=0)
+    pif_cash_collected = db.Column(db.Float, default=0.0)
+    pif_in_call_count = db.Column(db.Integer, default=0)
+    pif_in_call_cash = db.Column(db.Float, default=0.0)
+
+    # --- VENTAS: Split Pay ---
+    split_count = db.Column(db.Integer, default=0)
+    split_cash_collected = db.Column(db.Float, default=0.0)
+    split_in_call_count = db.Column(db.Integer, default=0)
+    split_in_call_cash = db.Column(db.Float, default=0.0)
+
+    # --- VENTAS: Señas ---
+    deposit_count = db.Column(db.Integer, default=0)
+    deposit_cash_collected = db.Column(db.Float, default=0.0)
+    deposit_in_call_count = db.Column(db.Integer, default=0)
+    deposit_in_call_cash = db.Column(db.Float, default=0.0)
+
+    # --- SEGUIMIENTOS ---
+    follow_ups_sent = db.Column(db.Integer, default=0)
+    follow_ups_replied = db.Column(db.Integer, default=0)
+
+    closer = db.relationship('User', foreign_keys=[closer_id], overlaps="closer_daily_reports_rel")
+    __table_args__ = (db.UniqueConstraint('closer_id', 'date', name='_closer_report_date_uc'),)

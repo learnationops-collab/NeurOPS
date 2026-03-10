@@ -1,0 +1,459 @@
+import React, { useState, useEffect } from 'react';
+import api from '../../services/api';
+import {
+    Loader2, BarChart3, DollarSign, Phone, Target,
+    CalendarDays, Layers, TrendingUp, Users,
+    CheckCircle, XCircle, PhoneOff, RefreshCw, Table
+} from 'lucide-react';
+import CloserAdvancedStatsView from './CloserAdvancedStatsView';
+
+const PublicCloserStatsPage = () => {
+    const [activeTab, setActiveTab] = useState('general'); // 'general', 'advanced'
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [closers, setClosers] = useState([]);
+    const [filters, setFilters] = useState({
+        closer_id: '',
+        start_date: '',
+        end_date: '',
+        agg_type: 'sum',
+        time_preset: 'last_days',
+        custom_days: 7
+    });
+
+    // Cálculo de fechas según preset
+    useEffect(() => {
+        if (filters.time_preset === 'custom') return;
+        const now = new Date();
+        let start = '';
+        let end = now.toISOString().split('T')[0];
+
+        if (filters.time_preset === 'yesterday') {
+            const yesterday = new Date();
+            yesterday.setDate(now.getDate() - 1);
+            start = yesterday.toISOString().split('T')[0];
+            end = start;
+        } else if (filters.time_preset === 'last_days') {
+            const d = new Date();
+            d.setDate(now.getDate() - parseInt(filters.custom_days || 7));
+            start = d.toISOString().split('T')[0];
+        } else if (filters.time_preset === 'all_time') {
+            start = '';
+            end = '';
+        }
+
+        setFilters(prev => ({ ...prev, start_date: start, end_date: end }));
+    }, [filters.time_preset, filters.custom_days]);
+
+    // Fetch closers
+    useEffect(() => {
+        const fetchClosers = async () => {
+            try {
+                const res = await api.get('/public/active-closers');
+                setClosers(res.data);
+            } catch (e) { console.error(e); }
+        };
+        fetchClosers();
+    }, []);
+
+    // Fetch stats
+    useEffect(() => {
+        fetchStats();
+    }, [filters]);
+
+    const fetchStats = async () => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams();
+            if (filters.closer_id) params.append('closer_id', filters.closer_id);
+            if (filters.start_date) params.append('start_date', filters.start_date);
+            if (filters.end_date) params.append('end_date', filters.end_date);
+            params.append('agg_type', filters.agg_type);
+
+            const res = await api.get(`/public/closer-stats?${params.toString()}`);
+            setStats(res.data);
+        } catch (err) {
+            console.error("Error fetching closer stats:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Componentes de UI
+    const TabButton = ({ id, label, icon: Icon }) => (
+        <button
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === id
+                ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
+                : 'text-slate-500 hover:bg-slate-800'
+                }`}
+        >
+            <Icon size={14} />
+            {label}
+        </button>
+    );
+
+    const StatCard = ({ title, value, icon: Icon, colorClass, subtitle }) => (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+            <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity ${colorClass.replace('text-', 'bg-')}`} />
+            <div className="flex items-start justify-between relative z-10">
+                <div className="space-y-1">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{title}</p>
+                    <h3 className="text-3xl font-black text-white italic tracking-tighter">{value}</h3>
+                    {subtitle && <p className="text-[9px] text-slate-600 font-bold uppercase mt-1">{subtitle}</p>}
+                </div>
+                <div className={`p-3 rounded-2xl bg-slate-800 border border-slate-700/50 ${colorClass}`}>
+                    <Icon size={18} />
+                </div>
+            </div>
+        </div>
+    );
+
+    const ProgressRow = ({ label, percentage, colorClass, absolute }) => (
+        <div className="space-y-2">
+            <div className="flex justify-between items-end">
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+                    {absolute !== undefined && <span className="text-[10px] font-bold text-slate-600">({absolute})</span>}
+                </div>
+                <span className={`text-xs font-black ${colorClass}`}>{percentage}%</span>
+            </div>
+            <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/30">
+                <div
+                    className={`h-full rounded-full transition-all duration-1000 ${colorClass.replace('text-', 'bg-')}`}
+                    style={{ width: `${Math.min(percentage, 100)}%` }}
+                />
+            </div>
+        </div>
+    );
+
+    const fmt = (n) => {
+        if (n === undefined || n === null) return 0;
+        return typeof n === 'number' && !Number.isInteger(n) ? n.toFixed(1) : n;
+    };
+
+    const fmtCash = (n) => {
+        if (!n) return '$0';
+        return `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-violet-900/10 to-transparent pointer-events-none" />
+
+            <div className="max-w-7xl mx-auto z-10 relative space-y-8">
+                {/* Header */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-slate-800/50">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                            <Layers className="text-violet-500" size={24} />
+                            <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
+                                Closer <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-amber-500">Dashboard</span>
+                            </h1>
+                        </div>
+                        <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]">NeurOPS Closer Performance Analytics</p>
+                    </div>
+                </div>
+
+                {/* TABS */}
+                <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
+                    <TabButton id="general" label="Vista General" icon={BarChart3} />
+                    <TabButton id="advanced" label="Métricas Detalladas" icon={Table} />
+                </div>
+
+                {/* FILTROS (Comunes para ambas vistas) */}
+                <div className="flex flex-wrap items-center gap-6 bg-slate-900/80 p-6 rounded-[2rem] border border-slate-800 shadow-2xl">
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Closer / Equipo</label>
+                        <select
+                            className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all cursor-pointer min-w-[200px]"
+                            value={filters.closer_id}
+                            onChange={e => setFilters({ ...filters, closer_id: e.target.value })}
+                        >
+                            <option value="">Todo el Equipo ({filters.agg_type === 'sum' ? 'Suma' : 'Promedio'})</option>
+                            {closers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
+                        <select
+                            className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all cursor-pointer min-w-[150px]"
+                            value={filters.time_preset}
+                            onChange={e => setFilters({ ...filters, time_preset: e.target.value })}
+                        >
+                            <option value="yesterday">Ayer</option>
+                            <option value="last_days">Últimos X días</option>
+                            <option value="all_time">Todo el tiempo</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                    </div>
+
+                    {filters.time_preset === 'last_days' && (
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Días</label>
+                            <input
+                                type="number"
+                                className="w-16 bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black text-center"
+                                value={filters.custom_days}
+                                onChange={e => setFilters({ ...filters, custom_days: parseInt(e.target.value) || 0 })}
+                            />
+                        </div>
+                    )}
+
+                    {filters.time_preset === 'custom' && (
+                        <>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Desde</label>
+                                <input
+                                    type="date"
+                                    className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black"
+                                    value={filters.start_date}
+                                    onChange={e => setFilters({ ...filters, start_date: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Hasta</label>
+                                <input
+                                    type="date"
+                                    className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black"
+                                    value={filters.end_date}
+                                    onChange={e => setFilters({ ...filters, end_date: e.target.value })}
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    <div className="flex flex-col gap-2 ml-auto">
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 text-right">Agregación</label>
+                        <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                            <button
+                                onClick={() => setFilters({ ...filters, agg_type: 'sum' })}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${filters.agg_type === 'sum' ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                Suma
+                            </button>
+                            <button
+                                onClick={() => setFilters({ ...filters, agg_type: 'avg' })}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${filters.agg_type === 'avg' ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                Promedio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* CONTENIDO PRINCIPAL */}
+                {loading && !stats ? (
+                    <div className="flex flex-col items-center justify-center py-40 space-y-4">
+                        <Loader2 className="animate-spin text-violet-500" size={48} />
+                        <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Sincronizando datos...</p>
+                    </div>
+                ) : (
+                    <>
+                        {stats && activeTab === 'general' && (
+                            <div className="space-y-10 animate-in fade-in duration-500">
+
+                                {/* KPI CARDS */}
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                    <StatCard title="Slots" value={fmt(stats.general.slots)} icon={Target} colorClass="text-violet-500" />
+                                    <StatCard title="Ofertas" value={fmt(stats.general.offers_made)} icon={TrendingUp} colorClass="text-fuchsia-500" />
+                                    <StatCard title="Total Agendas" value={fmt(stats.agendas.totals.scheduled)} icon={CalendarDays} colorClass="text-emerald-500" />
+                                    <StatCard title="Asistencias" value={fmt(stats.agendas.totals.attended)} icon={CheckCircle} colorClass="text-sky-500" />
+                                    <StatCard title="Total Ventas" value={fmt(stats.sales.totals.count)} icon={DollarSign} colorClass="text-amber-500" />
+                                    <StatCard title="Total Cash" value={fmtCash(stats.sales.totals.cash)} icon={DollarSign} colorClass="text-emerald-500" />
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                                    {/* AGENDAS - Tabla de doble entrada */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+                                                    <Phone size={20} />
+                                                </div>
+                                                <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Agenda Breakdown</h3>
+                                            </div>
+                                            <div className="text-[10px] font-black text-slate-500 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+                                                {stats.metadata.days_analyzed} DÍAS
+                                            </div>
+                                        </div>
+
+                                        {/* Tabla */}
+                                        <div className="bg-slate-800/30 rounded-2xl overflow-hidden">
+                                            {/* Header */}
+                                            <div className="grid grid-cols-4 gap-0">
+                                                <div className="p-3 bg-slate-700/50" />
+                                                <div className="p-3 text-center bg-emerald-900/30">
+                                                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">1ra</p>
+                                                </div>
+                                                <div className="p-3 text-center bg-sky-900/30">
+                                                    <p className="text-[9px] font-black text-sky-400 uppercase tracking-wider">2da</p>
+                                                </div>
+                                                <div className="p-3 text-center bg-violet-900/30">
+                                                    <p className="text-[9px] font-black text-violet-400 uppercase tracking-wider">Total</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Rows */}
+                                            {[
+                                                { label: 'Agendas', key: 'scheduled', icon: CalendarDays },
+                                                { label: 'Asistencias', key: 'attended', icon: CheckCircle },
+                                                { label: 'No Shows', key: 'no_show', icon: PhoneOff },
+                                                { label: 'Reprog.', key: 'rescheduled', icon: RefreshCw },
+                                                { label: 'Cancelac.', key: 'canceled', icon: XCircle },
+                                            ].map((row, i) => (
+                                                <div key={row.key} className={`grid grid-cols-4 gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
+                                                    <div className="p-3 flex items-center gap-2 border-r border-slate-700/30">
+                                                        <row.icon size={12} className="text-slate-500" />
+                                                        <p className="text-[10px] font-bold text-slate-300">{row.label}</p>
+                                                    </div>
+                                                    <div className="p-3 text-center border-r border-slate-700/30">
+                                                        <p className="text-sm font-black text-emerald-400 tabular-nums">{fmt(stats.agendas.first_call[row.key])}</p>
+                                                    </div>
+                                                    <div className="p-3 text-center border-r border-slate-700/30">
+                                                        <p className="text-sm font-black text-sky-400 tabular-nums">{fmt(stats.agendas.second_call[row.key])}</p>
+                                                    </div>
+                                                    <div className="p-3 text-center">
+                                                        <p className="text-sm font-black text-white tabular-nums">{fmt(stats.agendas.totals[row.key])}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Tasas */}
+                                        <div className="space-y-4 pt-4 border-t border-slate-800">
+                                            <ProgressRow label="Show Rate" percentage={stats.percentages.show_rate} colorClass="text-emerald-500" absolute={`${fmt(stats.agendas.totals.attended)} / ${fmt(stats.agendas.totals.scheduled)}`} />
+                                            <ProgressRow label="No Show Rate" percentage={stats.percentages.no_show_rate} colorClass="text-rose-500" absolute={fmt(stats.agendas.totals.no_show)} />
+                                            <ProgressRow label="Cancel Rate" percentage={stats.percentages.cancel_rate} colorClass="text-amber-500" absolute={fmt(stats.agendas.totals.canceled)} />
+                                        </div>
+                                    </div>
+
+                                    {/* VENTAS */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                                                <DollarSign size={20} />
+                                            </div>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Ventas Breakdown</h3>
+                                        </div>
+
+                                        {/* Tabla de ventas */}
+                                        <div className="bg-slate-800/30 rounded-2xl overflow-hidden">
+                                            {/* Header */}
+                                            <div className="grid grid-cols-5 gap-0">
+                                                <div className="p-3 bg-slate-700/50" />
+                                                <div className="p-3 text-center bg-amber-900/20">
+                                                    <p className="text-[8px] font-black text-amber-400 uppercase tracking-wider">Cant.</p>
+                                                </div>
+                                                <div className="p-3 text-center bg-emerald-900/20">
+                                                    <p className="text-[8px] font-black text-emerald-400 uppercase tracking-wider">Cash</p>
+                                                </div>
+                                                <div className="p-3 text-center bg-sky-900/20">
+                                                    <p className="text-[8px] font-black text-sky-400 uppercase tracking-wider">En Llam.</p>
+                                                </div>
+                                                <div className="p-3 text-center bg-violet-900/20">
+                                                    <p className="text-[8px] font-black text-violet-400 uppercase tracking-wider">Cash LL</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Rows */}
+                                            {[
+                                                { label: 'PIF', data: stats.sales.pif },
+                                                { label: 'Split Pay', data: stats.sales.split },
+                                                { label: 'Señas', data: stats.sales.deposit },
+                                            ].map((row, i) => (
+                                                <div key={row.label} className={`grid grid-cols-5 gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
+                                                    <div className="p-3 flex items-center border-r border-slate-700/30">
+                                                        <p className="text-[10px] font-bold text-slate-300">{row.label}</p>
+                                                    </div>
+                                                    <div className="p-3 text-center border-r border-slate-700/30">
+                                                        <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(row.data.count)}</p>
+                                                    </div>
+                                                    <div className="p-3 text-center border-r border-slate-700/30">
+                                                        <p className="text-sm font-black text-emerald-400 tabular-nums">{fmtCash(row.data.cash)}</p>
+                                                    </div>
+                                                    <div className="p-3 text-center border-r border-slate-700/30">
+                                                        <p className="text-sm font-black text-sky-400 tabular-nums">{fmt(row.data.in_call_count)}</p>
+                                                    </div>
+                                                    <div className="p-3 text-center">
+                                                        <p className="text-sm font-black text-violet-400 tabular-nums">{fmtCash(row.data.in_call_cash)}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {/* Totals */}
+                                            <div className="grid grid-cols-5 gap-0 bg-slate-700/30 border-t border-slate-600/40">
+                                                <div className="p-3 flex items-center border-r border-slate-600/30">
+                                                    <p className="text-[10px] font-black text-white uppercase tracking-wider">Total</p>
+                                                </div>
+                                                <div className="p-3 text-center border-r border-slate-600/30">
+                                                    <p className="text-sm font-black text-white tabular-nums">{fmt(stats.sales.totals.count)}</p>
+                                                </div>
+                                                <div className="p-3 text-center border-r border-slate-600/30">
+                                                    <p className="text-sm font-black text-emerald-400 tabular-nums">{fmtCash(stats.sales.totals.cash)}</p>
+                                                </div>
+                                                <div className="p-3 text-center border-r border-slate-600/30">
+                                                    <p className="text-sm font-black text-white tabular-nums">{fmt(stats.sales.totals.in_call_count)}</p>
+                                                </div>
+                                                <div className="p-3 text-center">
+                                                    <p className="text-sm font-black text-violet-400 tabular-nums">{fmtCash(stats.sales.totals.in_call_cash)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Conversion Rates */}
+                                        <div className="space-y-4 pt-4 border-t border-slate-800">
+                                            <ProgressRow
+                                                label="Close Rate (Ventas / Asistencias)"
+                                                percentage={stats.percentages.close_rate}
+                                                colorClass="text-amber-500"
+                                                absolute={`${fmt(stats.sales.totals.count)} / ${fmt(stats.agendas.totals.attended)}`}
+                                            />
+                                            <ProgressRow
+                                                label="Offer → Sale (Ventas / Ofertas)"
+                                                percentage={stats.percentages.offer_to_sale}
+                                                colorClass="text-fuchsia-500"
+                                                absolute={`${fmt(stats.sales.totals.count)} / ${fmt(stats.general.offers_made)}`}
+                                            />
+                                        </div>
+
+                                        {/* Cash Totals */}
+                                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
+                                            <div className="p-5 bg-emerald-600/10 rounded-2xl border border-emerald-600/20 text-center space-y-1">
+                                                <p className="text-[8px] font-black text-emerald-400 uppercase tracking-tighter">Total Cash Collected</p>
+                                                <p className="text-2xl font-black text-white italic">{fmtCash(stats.sales.totals.cash)}</p>
+                                            </div>
+                                            <div className="p-5 bg-violet-600/10 rounded-2xl border border-violet-600/20 text-center space-y-1">
+                                                <p className="text-[8px] font-black text-violet-400 uppercase tracking-tighter">Cash En Llamada</p>
+                                                <p className="text-2xl font-black text-white italic">{fmtCash(stats.sales.totals.in_call_cash)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ADVANCED TAB */}
+                        {activeTab === 'advanced' && (
+                            <div className="animate-in fade-in duration-500">
+                                <CloserAdvancedStatsView stats={stats} loading={loading} />
+                            </div>
+                        )}
+
+                        {!loading && !stats && (
+                            <div className="py-40 text-center text-slate-500 font-bold italic uppercase tracking-widest">Sin datos disponibles para este periodo</div>
+                        )}
+                    </>
+                )}
+
+                <div className="text-center pt-20 pb-10">
+                    <p className="text-[9px] text-slate-600 font-black tracking-[0.4em] uppercase">NeurOPS Closer Intelligence Board • © 2026 • AI Powered Dashboard</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default PublicCloserStatsPage;

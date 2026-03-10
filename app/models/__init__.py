@@ -6,6 +6,7 @@ from .booking import Appointment, Availability, WeeklyAvailability, SurveyQuesti
 from .payment import Enrollment, PaymentMethod, Payment
 from .marketing import Campaign, AdSet, Ad, MarketingBudget
 from .report import SetterDailyStats, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Expense, RecurringExpense
+from .closer_report import CloserDailyReport
 from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment
 from .integration import Integration
 from .public_registration import PublicRegistration
@@ -18,7 +19,7 @@ __all__ = [
     'Appointment', 'Availability', 'WeeklyAvailability', 'SurveyQuestion', 'SurveyAnswer',
     'Enrollment', 'PaymentMethod', 'Payment',
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget',
-    'SetterDailyStats', 'CloserDailyStats', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
+    'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment',
     'Integration', 'PublicRegistration'
 ]

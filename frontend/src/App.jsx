@@ -32,6 +32,8 @@ import BackupPage from './pages/public/BackupPage';
 import RestorePage from './pages/public/RestorePage';
 import PublicSetterReportPage from './pages/public/PublicSetterReportPage';
 import PublicSetterStatsPage from './pages/public/PublicSetterStatsPage';
+import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
+import PublicCloserStatsPage from './pages/public/PublicCloserStatsPage';
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
 import { ThemeProvider } from './context/ThemeContext';
@@ -75,6 +77,8 @@ function App() {
             <Route path="/restore" element={<RestorePage />} />
             <Route path="/reporte-setter" element={<PublicSetterReportPage />} />
             <Route path="/estadisticas-setters" element={<PublicSetterStatsPage />} />
+            <Route path="/reporte-closer" element={<PublicCloserReportPage />} />
+            <Route path="/estadisticas-closers" element={<PublicCloserStatsPage />} />
 
 
             {/* Protected Admin Routes */}

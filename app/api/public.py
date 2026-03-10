@@ -658,3 +658,358 @@ def delete_public_setter_report(report_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+# ============================================================
+# CLOSER DAILY REPORT
+# ============================================================
+
+@bp.route('/public/active-closers', methods=['GET'])
+def get_active_closers():
+    """Retorna lista de closers activos (ID y nombre)."""
+    try:
+        closers = User.query.filter_by(role='closer', is_active=True).all()
+        return jsonify([
+            {"id": c.id, "name": c.username}
+            for c in closers
+        ]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/public/closer-report', methods=['POST'])
+def submit_public_closer_report():
+    """Recibe y guarda el reporte diario de un closer."""
+    from app.models import CloserDailyReport
+
+    data = request.get_json() or {}
+
+    closer_id = data.get('closer_id')
+    report_date_str = data.get('date')
+
+    if not closer_id or not report_date_str:
+        return jsonify({"message": "ID del closer y fecha son obligatorios"}), 400
+
+    try:
+        report_date = datetime.strptime(report_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({"message": "Formato de fecha inválido"}), 400
+
+    # Buscar reporte existente o crear nuevo
+    report = CloserDailyReport.query.filter_by(closer_id=closer_id, date=report_date).first()
+
+    # Helper para parsear enteros y floats del payload
+    def get_int(key):
+        return int(data.get(key) or 0)
+
+    def get_float(key):
+        return float(data.get(key) or 0.0)
+
+    field_values = {
+        # Generales
+        'slots': get_int('slots'),
+        'offers_made': get_int('offers_made'),
+        # Primera Llamada
+        'first_call_scheduled': get_int('first_call_scheduled'),
+        'first_call_attended': get_int('first_call_attended'),
+        'first_call_no_show': get_int('first_call_no_show'),
+        'first_call_rescheduled': get_int('first_call_rescheduled'),
+        'first_call_canceled': get_int('first_call_canceled'),
+        # Segunda Llamada
+        'second_call_scheduled': get_int('second_call_scheduled'),
+        'second_call_attended': get_int('second_call_attended'),
+        'second_call_no_show': get_int('second_call_no_show'),
+        'second_call_rescheduled': get_int('second_call_rescheduled'),
+        'second_call_canceled': get_int('second_call_canceled'),
+        # Ventas PIF
+        'pif_count': get_int('pif_count'),
+        'pif_cash_collected': get_float('pif_cash_collected'),
+        'pif_in_call_count': get_int('pif_in_call_count'),
+        'pif_in_call_cash': get_float('pif_in_call_cash'),
+        # Ventas Split Pay
+        'split_count': get_int('split_count'),
+        'split_cash_collected': get_float('split_cash_collected'),
+        'split_in_call_count': get_int('split_in_call_count'),
+        'split_in_call_cash': get_float('split_in_call_cash'),
+        # Ventas Señas
+        'deposit_count': get_int('deposit_count'),
+        'deposit_cash_collected': get_float('deposit_cash_collected'),
+        'deposit_in_call_count': get_int('deposit_in_call_count'),
+        'deposit_in_call_cash': get_float('deposit_in_call_cash'),
+        # Seguimientos
+        'follow_ups_sent': get_int('follow_ups_sent'),
+        'follow_ups_replied': get_int('follow_ups_replied'),
+    }
+
+    if report:
+        for key, val in field_values.items():
+            setattr(report, key, val)
+    else:
+        report = CloserDailyReport(closer_id=closer_id, date=report_date, **field_values)
+        db.session.add(report)
+
+    try:
+        db.session.commit()
+        # Disparar webhook de Discord después de guardar
+        _trigger_closer_report_discord(report)
+        return jsonify({"message": "Reporte de closer guardado exitosamente"}), 201
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+def _trigger_closer_report_discord(report):
+    """Envía el reporte diario del closer a Discord con un embed formateado."""
+    try:
+        import requests as req
+        import json
+
+        # Mismo webhook que los setters
+        url = "https://discordapp.com/api/webhooks/1471390632223314072/D0H6JaX8dnGdiOmPsGoDQyqwoN5X6zw1YHdlIs6evOZYk-BbvK7Bt32KjWw_nvkjwhdz"
+
+        closer_name = report.closer.username if report.closer else "Closer"
+        date_str = report.date.strftime('%d/%m/%Y')
+
+        # Totales de ventas
+        total_sales = (report.pif_count or 0) + (report.split_count or 0) + (report.deposit_count or 0)
+        total_cash = (report.pif_cash_collected or 0) + (report.split_cash_collected or 0) + (report.deposit_cash_collected or 0)
+
+        # Totales de agendas
+        total_scheduled = (report.first_call_scheduled or 0) + (report.second_call_scheduled or 0)
+        total_attended = (report.first_call_attended or 0) + (report.second_call_attended or 0)
+
+        # Helper formato
+        def pct(part, total):
+            return f"{round((part/total)*100)}%" if total > 0 else "0%"
+
+        # Construir tabla de agendas
+        agenda_table = (
+            "```\n"
+            f"{'':15s} {'1ra':>6s} {'2da':>6s}\n"
+            f"{'─'*29}\n"
+            f"{'Agendas':15s} {report.first_call_scheduled or 0:>6d} {report.second_call_scheduled or 0:>6d}\n"
+            f"{'Asistencias':15s} {report.first_call_attended or 0:>6d} {report.second_call_attended or 0:>6d}\n"
+            f"{'No Shows':15s} {report.first_call_no_show or 0:>6d} {report.second_call_no_show or 0:>6d}\n"
+            f"{'Reprog.':15s} {report.first_call_rescheduled or 0:>6d} {report.second_call_rescheduled or 0:>6d}\n"
+            f"{'Cancelaciones':15s} {report.first_call_canceled or 0:>6d} {report.second_call_canceled or 0:>6d}\n"
+            "```"
+        )
+
+        # Construir tabla de ventas
+        sales_table = (
+            "```\n"
+            f"{'':12s} {'Cant':>5s} {'Cash':>10s} {'EnLlam':>6s} {'CashLL':>10s}\n"
+            f"{'─'*45}\n"
+            f"{'PIF':12s} {report.pif_count or 0:>5d} ${report.pif_cash_collected or 0:>9,.0f} {report.pif_in_call_count or 0:>6d} ${report.pif_in_call_cash or 0:>9,.0f}\n"
+            f"{'Split Pay':12s} {report.split_count or 0:>5d} ${report.split_cash_collected or 0:>9,.0f} {report.split_in_call_count or 0:>6d} ${report.split_in_call_cash or 0:>9,.0f}\n"
+            f"{'Señas':12s} {report.deposit_count or 0:>5d} ${report.deposit_cash_collected or 0:>9,.0f} {report.deposit_in_call_count or 0:>6d} ${report.deposit_in_call_cash or 0:>9,.0f}\n"
+            "```"
+        )
+
+        content = (
+            f"💼 **REPORTE DIARIO DE CLOSER**\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 **Closer:** `{closer_name}`\n"
+            f"📅 **Fecha:** `{date_str}`\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"@everyone"
+        )
+
+        payload = {
+            "content": content,
+            "embeds": [
+                {
+                    "title": "📊 RESUMEN GENERAL",
+                    "color": 7419530,  # Violeta
+                    "fields": [
+                        {"name": "🎯 Slots", "value": f"`{report.slots or 0}`", "inline": True},
+                        {"name": "📣 Ofertas Hechas", "value": f"`{report.offers_made or 0}`", "inline": True},
+                        {"name": "📞 Total Agendas", "value": f"`{total_scheduled}`", "inline": True},
+                        {"name": "✅ Total Asistencias", "value": f"`{total_attended}`", "inline": True},
+                        {"name": "💰 Total Ventas", "value": f"`{total_sales}`", "inline": True},
+                        {"name": "💵 Total Cash", "value": f"`${total_cash:,.0f}`", "inline": True},
+                    ]
+                },
+                {
+                    "title": "📞 AGENDAS (1ra vs 2da Llamada)",
+                    "description": agenda_table,
+                    "color": 3066993  # Verde
+                },
+                {
+                    "title": "💰 VENTAS DETALLADAS",
+                    "description": sales_table,
+                    "color": 15844367  # Dorado
+                }
+            ]
+        }
+
+        res = req.post(url, json=payload, timeout=10)
+        print(f"[Discord Closer] Status: {res.status_code}")
+
+    except Exception as e:
+        print(f"[Discord Closer Error] {e}")
+        import traceback
+        traceback.print_exc()
+
+
+@bp.route('/public/closer-stats', methods=['GET'])
+def get_public_closer_stats():
+    """Retorna estadísticas agregadas de closers con soporte de suma/promedio."""
+    from app.models import CloserDailyReport
+    from sqlalchemy import func
+
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    closer_id = request.args.get('closer_id')
+    agg_type = request.args.get('agg_type', 'sum')
+
+    # Contar días para promedios
+    days_count_query = db.session.query(func.count(CloserDailyReport.id))
+
+    query = db.session.query(
+        # Generales
+        func.sum(CloserDailyReport.slots).label('slots'),
+        func.sum(CloserDailyReport.offers_made).label('offers_made'),
+        # Primera llamada
+        func.sum(CloserDailyReport.first_call_scheduled).label('fc_scheduled'),
+        func.sum(CloserDailyReport.first_call_attended).label('fc_attended'),
+        func.sum(CloserDailyReport.first_call_no_show).label('fc_no_show'),
+        func.sum(CloserDailyReport.first_call_rescheduled).label('fc_rescheduled'),
+        func.sum(CloserDailyReport.first_call_canceled).label('fc_canceled'),
+        # Segunda llamada
+        func.sum(CloserDailyReport.second_call_scheduled).label('sc_scheduled'),
+        func.sum(CloserDailyReport.second_call_attended).label('sc_attended'),
+        func.sum(CloserDailyReport.second_call_no_show).label('sc_no_show'),
+        func.sum(CloserDailyReport.second_call_rescheduled).label('sc_rescheduled'),
+        func.sum(CloserDailyReport.second_call_canceled).label('sc_canceled'),
+        # Ventas PIF
+        func.sum(CloserDailyReport.pif_count).label('pif_count'),
+        func.sum(CloserDailyReport.pif_cash_collected).label('pif_cash'),
+        func.sum(CloserDailyReport.pif_in_call_count).label('pif_ic_count'),
+        func.sum(CloserDailyReport.pif_in_call_cash).label('pif_ic_cash'),
+        # Ventas Split
+        func.sum(CloserDailyReport.split_count).label('split_count'),
+        func.sum(CloserDailyReport.split_cash_collected).label('split_cash'),
+        func.sum(CloserDailyReport.split_in_call_count).label('split_ic_count'),
+        func.sum(CloserDailyReport.split_in_call_cash).label('split_ic_cash'),
+        # Ventas Señas
+        func.sum(CloserDailyReport.deposit_count).label('deposit_count'),
+        func.sum(CloserDailyReport.deposit_cash_collected).label('deposit_cash'),
+        func.sum(CloserDailyReport.deposit_in_call_count).label('deposit_ic_count'),
+        func.sum(CloserDailyReport.deposit_in_call_cash).label('deposit_ic_cash'),
+        # Seguimientos
+        func.sum(CloserDailyReport.follow_ups_sent).label('fu_sent'),
+        func.sum(CloserDailyReport.follow_ups_replied).label('fu_replied'),
+    )
+
+    filters = []
+    if start_date_str:
+        filters.append(CloserDailyReport.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
+    if end_date_str:
+        filters.append(CloserDailyReport.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+    if closer_id:
+        filters.append(CloserDailyReport.closer_id == closer_id)
+
+    for f in filters:
+        query = query.filter(f)
+        days_count_query = days_count_query.filter(f)
+
+    stats = query.one()
+    days_count = days_count_query.scalar() or 1
+
+    def val(v):
+        n = float(v or 0)
+        if agg_type == 'avg':
+            return round(n / days_count, 2)
+        return n
+
+    def div(n, d):
+        return round((n / d) * 100, 1) if d and d > 0 else 0
+
+    # Totales
+    total_scheduled = val(stats.fc_scheduled) + val(stats.sc_scheduled)
+    total_attended = val(stats.fc_attended) + val(stats.sc_attended)
+    total_no_show = val(stats.fc_no_show) + val(stats.sc_no_show)
+    total_rescheduled = val(stats.fc_rescheduled) + val(stats.sc_rescheduled)
+    total_canceled = val(stats.fc_canceled) + val(stats.sc_canceled)
+
+    total_sales = val(stats.pif_count) + val(stats.split_count) + val(stats.deposit_count)
+    total_cash = val(stats.pif_cash) + val(stats.split_cash) + val(stats.deposit_cash)
+    total_ic_sales = val(stats.pif_ic_count) + val(stats.split_ic_count) + val(stats.deposit_ic_count)
+    total_ic_cash = val(stats.pif_ic_cash) + val(stats.split_ic_cash) + val(stats.deposit_ic_cash)
+
+    res = {
+        "metadata": {
+            "days_analyzed": days_count,
+            "agg_type": agg_type
+        },
+        "general": {
+            "slots": val(stats.slots),
+            "offers_made": val(stats.offers_made),
+        },
+        "agendas": {
+            "first_call": {
+                "scheduled": val(stats.fc_scheduled),
+                "attended": val(stats.fc_attended),
+                "no_show": val(stats.fc_no_show),
+                "rescheduled": val(stats.fc_rescheduled),
+                "canceled": val(stats.fc_canceled),
+            },
+            "second_call": {
+                "scheduled": val(stats.sc_scheduled),
+                "attended": val(stats.sc_attended),
+                "no_show": val(stats.sc_no_show),
+                "rescheduled": val(stats.sc_rescheduled),
+                "canceled": val(stats.sc_canceled),
+            },
+            "totals": {
+                "scheduled": total_scheduled,
+                "attended": total_attended,
+                "no_show": total_no_show,
+                "rescheduled": total_rescheduled,
+                "canceled": total_canceled,
+            }
+        },
+        "sales": {
+            "pif": {
+                "count": val(stats.pif_count),
+                "cash": val(stats.pif_cash),
+                "in_call_count": val(stats.pif_ic_count),
+                "in_call_cash": val(stats.pif_ic_cash),
+            },
+            "split": {
+                "count": val(stats.split_count),
+                "cash": val(stats.split_cash),
+                "in_call_count": val(stats.split_ic_count),
+                "in_call_cash": val(stats.split_ic_cash),
+            },
+            "deposit": {
+                "count": val(stats.deposit_count),
+                "cash": val(stats.deposit_cash),
+                "in_call_count": val(stats.deposit_ic_count),
+                "in_call_cash": val(stats.deposit_ic_cash),
+            },
+            "totals": {
+                "count": total_sales,
+                "cash": total_cash,
+                "in_call_count": total_ic_sales,
+                "in_call_cash": total_ic_cash,
+            }
+        },
+        "follow_ups": {
+            "sent": val(stats.fu_sent),
+            "replied": val(stats.fu_replied)
+        },
+        "percentages": {
+            "show_rate": div(total_attended, total_scheduled),
+            "no_show_rate": div(total_no_show, total_scheduled),
+            "cancel_rate": div(total_canceled, total_scheduled),
+            "close_rate": div(total_sales, total_attended) if total_attended else 0,
+            "offer_to_sale": div(total_sales, float(stats.offers_made or 0)),
+            "respond_rate": div(val(stats.fu_replied), val(stats.fu_sent))
+        }
+    }
+
+    return jsonify(res), 200
