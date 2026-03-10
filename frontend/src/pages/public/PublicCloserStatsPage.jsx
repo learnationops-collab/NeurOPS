@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import {
     Loader2, BarChart3, DollarSign, Phone, Target,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import CloserAdvancedStatsView from './CloserAdvancedStatsView';
 import CloserReportsTable from './CloserReportsTable';
+import FunnelChart from '../../components/charts/FunnelChart';
 
 const PublicCloserStatsPage = () => {
     const [activeTab, setActiveTab] = useState('general'); // 'general', 'advanced', 'history'
@@ -139,6 +140,17 @@ const PublicCloserStatsPage = () => {
         return `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     };
 
+    const funnelData = useMemo(() => {
+        if (!stats) return [];
+        return [
+            { name: 'Slots', value: stats.general.slots, fill: '#8b5cf6' }, // violet
+            { name: 'Agendas', value: stats.agendas.totals.scheduled, fill: '#10b981' }, // emerald
+            { name: 'Asistencias', value: stats.agendas.totals.attended, fill: '#0ea5e9' }, // sky
+            { name: 'Ofertas', value: stats.general.offers_made, fill: '#d946ef' }, // fuchsia
+            { name: 'Ventas', value: stats.sales.totals.count, fill: '#f59e0b' } // amber
+        ];
+    }, [stats]);
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden">
             <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-violet-900/10 to-transparent pointer-events-none" />
@@ -257,14 +269,46 @@ const PublicCloserStatsPage = () => {
                         {stats && activeTab === 'general' && (
                             <div className="space-y-10 animate-in fade-in duration-500">
 
-                                {/* KPI CARDS */}
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                                    <StatCard title="Slots" value={fmt(stats.general.slots)} icon={Target} colorClass="text-violet-500" />
-                                    <StatCard title="Ofertas" value={fmt(stats.general.offers_made)} icon={TrendingUp} colorClass="text-fuchsia-500" />
-                                    <StatCard title="Total Agendas" value={fmt(stats.agendas.totals.scheduled)} icon={CalendarDays} colorClass="text-emerald-500" />
-                                    <StatCard title="Asistencias" value={fmt(stats.agendas.totals.attended)} icon={CheckCircle} colorClass="text-sky-500" />
-                                    <StatCard title="Total Ventas" value={fmt(stats.sales.totals.count)} icon={DollarSign} colorClass="text-amber-500" />
-                                    <StatCard title="Total Cash" value={fmtCash(stats.sales.totals.cash)} icon={DollarSign} colorClass="text-emerald-500" />
+                                {/* GRÁFICO DE EMBUDO REEMPLAZANDO TARJETAS GLOBALES */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                                    {/* MASA DE DATOS */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-8 flex flex-col justify-center">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
+                                                <Layers size={20} />
+                                            </div>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Métricas de Proceso</h3>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <ProgressRow label="Total Slots" percentage={100} colorClass="text-violet-500" absolute={fmt(stats.general.slots)} />
+                                            <ProgressRow label="Agendas Confirmadas" percentage={stats.general.slots ? (stats.agendas.totals.scheduled / stats.general.slots) * 100 : 0} colorClass="text-emerald-500" absolute={fmt(stats.agendas.totals.scheduled)} />
+                                            <ProgressRow label="Asistencias Efectivas" percentage={stats.agendas.totals.scheduled ? (stats.agendas.totals.attended / stats.agendas.totals.scheduled) * 100 : 0} colorClass="text-sky-500" absolute={fmt(stats.agendas.totals.attended)} />
+                                            <ProgressRow label="Ofertas Presentadas" percentage={stats.agendas.totals.attended ? (stats.general.offers_made / stats.agendas.totals.attended) * 100 : 0} colorClass="text-fuchsia-500" absolute={fmt(stats.general.offers_made)} />
+                                            <ProgressRow label="Ventas Cerradas" percentage={stats.general.offers_made ? (stats.sales.totals.count / stats.general.offers_made) * 100 : 0} colorClass="text-amber-500" absolute={fmt(stats.sales.totals.count)} />
+                                        </div>
+
+                                        {/* TOTAL CASH EXTRA CARD */}
+                                        <div className="pt-4 border-t border-slate-800">
+                                            <div className="p-4 bg-emerald-600/10 rounded-2xl border border-emerald-600/20 flex flex-col items-center justify-center space-y-1">
+                                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Total Cash Recaudado</p>
+                                                <p className="text-3xl font-black text-white italic">{fmtCash(stats.sales.totals.cash)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* EMBUDO */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 flex flex-col items-center">
+                                        <div className="w-full flex items-center gap-3 mb-8">
+                                            <div className="p-3 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-500">
+                                                <TrendingUp size={20} />
+                                            </div>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Visualización Embudo</h3>
+                                        </div>
+                                        <div className="w-full h-[400px]">
+                                            <FunnelChart data={funnelData} />
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
