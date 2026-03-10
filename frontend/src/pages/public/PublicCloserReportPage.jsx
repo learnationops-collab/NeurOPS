@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3 } from 'lucide-react';
+import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 // Componente reutilizable para inputs numéricos
