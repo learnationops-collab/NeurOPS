@@ -160,7 +160,7 @@ const PublicCloserStatsPage = () => {
                 {/* TABS */}
                 <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
                     <TabButton id="general" label="Vista General" icon={BarChart3} />
-                    <TabButton id="advanced" label="Métricas Detalladas" icon={Table} />
+                    <TabButton id="advanced" label="% Rendimiento" icon={Table} />
                     <TabButton id="history" label="Historial de Reportes" icon={List} />
                 </div>
 
