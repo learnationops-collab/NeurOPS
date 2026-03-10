@@ -4,7 +4,6 @@ import {
     Search, Trash2, Edit3, Loader2, Calendar,
     ChevronLeft, ChevronRight, X, Save, AlertCircle, PhoneCall, Flag, Activity, Users
 } from 'lucide-react';
-import SectionHeader from '../../components/SectionHeader';
 
 // Modal de Edición Compleja para Closers
 const EditCloserReportModal = ({ report, onClose, onSave }) => {
