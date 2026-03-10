@@ -270,40 +270,118 @@ const PublicCloserStatsPage = () => {
                             <div className="space-y-10 animate-in fade-in duration-500">
 
                                 {/* GRÁFICO DE EMBUDO REEMPLAZANDO TARJETAS GLOBALES */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                                    {/* MASA DE DATOS */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-8 flex flex-col justify-center">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+
+                                    {/* COL 1: CANTIDADES */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 flex flex-col">
                                         <div className="flex items-center gap-3">
                                             <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
-                                                <Layers size={20} />
+                                                <List size={20} />
                                             </div>
-                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Métricas de Proceso</h3>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Cantidades</h3>
                                         </div>
 
-                                        <div className="space-y-4">
-                                            <ProgressRow label="Total Slots" percentage={100} colorClass="text-violet-500" absolute={fmt(stats.general.slots)} />
-                                            <ProgressRow label="Agendas Confirmadas" percentage={stats.general.slots ? (stats.agendas.totals.scheduled / stats.general.slots) * 100 : 0} colorClass="text-emerald-500" absolute={fmt(stats.agendas.totals.scheduled)} />
-                                            <ProgressRow label="Asistencias Efectivas" percentage={stats.agendas.totals.scheduled ? (stats.agendas.totals.attended / stats.agendas.totals.scheduled) * 100 : 0} colorClass="text-sky-500" absolute={fmt(stats.agendas.totals.attended)} />
-                                            <ProgressRow label="Ofertas Presentadas" percentage={stats.agendas.totals.attended ? (stats.general.offers_made / stats.agendas.totals.attended) * 100 : 0} colorClass="text-fuchsia-500" absolute={fmt(stats.general.offers_made)} />
-                                            <ProgressRow label="Ventas Cerradas" percentage={stats.general.offers_made ? (stats.sales.totals.count / stats.general.offers_made) * 100 : 0} colorClass="text-amber-500" absolute={fmt(stats.sales.totals.count)} />
+                                        <div className="space-y-3 flex-1">
+                                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                                                <span className="text-[10px] font-black text-violet-500 uppercase tracking-widest">Slots</span>
+                                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.general.slots)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Agendas</span>
+                                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.totals.scheduled)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                                                <span className="text-[10px] font-black text-sky-500 uppercase tracking-widest">Asistencias</span>
+                                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.totals.attended)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                                                <span className="text-[10px] font-black text-fuchsia-500 uppercase tracking-widest">Ofertas</span>
+                                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.general.offers_made)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Ventas</span>
+                                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.sales.totals.count)}</span>
+                                            </div>
                                         </div>
 
                                         {/* TOTAL CASH EXTRA CARD */}
-                                        <div className="pt-4 border-t border-slate-800">
+                                        <div className="pt-4 border-t border-slate-800 mt-auto">
                                             <div className="p-4 bg-emerald-600/10 rounded-2xl border border-emerald-600/20 flex flex-col items-center justify-center space-y-1">
-                                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Total Cash Recaudado</p>
-                                                <p className="text-3xl font-black text-white italic">{fmtCash(stats.sales.totals.cash)}</p>
+                                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Total Cash</p>
+                                                <p className="text-2xl font-black text-white italic">{fmtCash(stats.sales.totals.cash)}</p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* EMBUDO */}
+                                    {/* COL 2: PORCENTAJES */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 flex flex-col">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
+                                                <TrendingUp size={20} />
+                                            </div>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Conversiones</h3>
+                                        </div>
+
+                                        <div className="space-y-4 flex-1 flex flex-col justify-center">
+                                            <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
+                                                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Agendamiento</p>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-bold text-slate-400">Slots → Agendas</span>
+                                                    <span className="text-lg font-black text-white tabular-nums">
+                                                        {stats.general.slots ? ((stats.agendas.totals.scheduled / stats.general.slots) * 100).toFixed(1) : 0}%
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
+                                                <p className="text-[9px] font-black text-sky-500 uppercase tracking-widest">Show Rate</p>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-bold text-slate-400">Agendas → Asistencias</span>
+                                                    <span className="text-lg font-black text-white tabular-nums">
+                                                        {stats.agendas.totals.scheduled ? ((stats.agendas.totals.attended / stats.agendas.totals.scheduled) * 100).toFixed(1) : 0}%
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
+                                                <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest">Pitch Rate</p>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-bold text-slate-400">Asistencias → Ofertas</span>
+                                                    <span className="text-lg font-black text-white tabular-nums">
+                                                        {stats.agendas.totals.attended ? ((stats.general.offers_made / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
+                                                <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Close Rate (Ofertas)</p>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-bold text-slate-400">Ofertas → Ventas</span>
+                                                    <span className="text-lg font-black text-white tabular-nums">
+                                                        {stats.general.offers_made ? ((stats.sales.totals.count / stats.general.offers_made) * 100).toFixed(1) : 0}%
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 flex flex-col justify-center space-y-2">
+                                                <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Global Win Rate</p>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-bold text-indigo-300">Asistencias → Ventas</span>
+                                                    <span className="text-lg font-black text-indigo-400 tabular-nums">
+                                                        {stats.agendas.totals.attended ? ((stats.sales.totals.count / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* COL 3: EMBUDO */}
                                     <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 flex flex-col items-center">
                                         <div className="w-full flex items-center gap-3 mb-8">
                                             <div className="p-3 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-500">
                                                 <TrendingUp size={20} />
                                             </div>
-                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Visualización Embudo</h3>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Visualización</h3>
                                         </div>
                                         <div className="w-full h-[400px]">
                                             <FunnelChart data={funnelData} />
