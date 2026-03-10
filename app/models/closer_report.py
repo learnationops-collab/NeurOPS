@@ -48,6 +48,10 @@ class CloserDailyReport(db.Model):
     # --- SEGUIMIENTOS ---
     follow_ups_sent = db.Column(db.Integer, default=0)
     follow_ups_replied = db.Column(db.Integer, default=0)
+    follow_ups_hot_sent = db.Column(db.Integer, default=0)
+    follow_ups_hot_replied = db.Column(db.Integer, default=0)
+    follow_ups_cold_sent = db.Column(db.Integer, default=0)
+    follow_ups_cold_replied = db.Column(db.Integer, default=0)
 
     closer = db.relationship('User', foreign_keys=[closer_id], overlaps="closer_daily_reports_rel")
     __table_args__ = (db.UniqueConstraint('closer_id', 'date', name='_closer_report_date_uc'),)

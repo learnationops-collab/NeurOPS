@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root {
+            --slate-950: #020617;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-300: #cbd5e1;
+            --slate-50: #f8fafc;
+
+            --emerald-600: #059669;
+            --emerald-500: #10b981;
+            --emerald-400: #34d399;
+
+            --amber-600: #d97706;
+            --amber-500: #f59e0b;
+            --amber-400: #fbbf24;
+
+            --blue-600: #2563eb;
+            --blue-500: #3b82f6;
+            --blue-400: #60a5fa;
+
+            --rose-600: #e11d48;
+            --rose-500: #f43f5e;
+            --rose-400: #fb7185;
+
+            --sky-600: #0284c7;
+            --sky-500: #0ea5e9;
+            --sky-400: #38bdf8;
+            
+            --violet-500: #8b5cf6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--slate-950);
+            color: var(--slate-50);
+            padding: 40px;
+            width: 1200px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 40px;
+            border-bottom: 2px solid var(--slate-800);
+            padding-bottom: 20px;
+        }
+
+        .header-left .logo-text {
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--violet-500);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .closer-name {
+            font-size: 48px;
+            font-weight: 900;
+            margin: 0;
+            background: linear-gradient(to right, #a78bfa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .date-str {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--slate-400);
+        }
+
+        /* Card layout */
+        .cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background-color: var(--slate-900);
+            border: 1px solid var(--slate-800);
+            border-radius: 24px;
+            padding: 24px;
+            border-top-style: solid;
+            border-top-width: 4px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card.agendas { border-top-color: var(--emerald-600); }
+        .card.sales { border-top-color: var(--amber-600); }
+        .card.followup { border-top-color: var(--blue-600); }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+            padding-bottom: 16px;
+        }
+
+        .icon-box {
+            padding: 10px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 14px;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 900;
+            color: white;
+            font-style: italic;
+            letter-spacing: -0.5px;
+        }
+
+        .agendas .card-title { color: var(--emerald-500); }
+        .sales .card-title { color: var(--amber-500); }
+        .followup .card-title { color: var(--blue-500); }
+
+        /* General Metric Grid */
+        .metrics-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .metrics-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-box {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(51, 65, 85, 0.4);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .metric-box.highlight-emerald { border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
+        .metric-box.highlight-amber { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05); }
+        .metric-box.highlight-blue { border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.05); }
+
+        .metric-label {
+            font-size: 10px;
+            font-weight: 900;
+            color: var(--slate-400);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-weight: 900;
+            font-size: 28px;
+            color: white;
+            line-height: 1;
+        }
+        
+        .val-emerald { color: var(--emerald-400); }
+        .val-amber { color: var(--amber-400); }
+        .val-blue { color: var(--blue-400); }
+        .val-sky { color: var(--sky-400); }
+        .val-rose { color: var(--rose-400); }
+
+        /* Dual Entry Table for Agendas */
+        .dual-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(30, 41, 59, 0.3);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .dual-table th {
+            padding: 12px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .dual-table td {
+            padding: 12px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            border-top: 1px solid rgba(51, 65, 85, 0.5);
+            color: white;
+        }
+        
+        .dual-table td.col-label {
+            text-align: left;
+            font-size: 12px;
+            color: var(--slate-300);
+            font-weight: 800;
+        }
+
+        .col-1st { color: var(--emerald-400); background: rgba(16, 185, 129, 0.05); }
+        .col-2nd { color: var(--sky-400); background: rgba(56, 189, 248, 0.05); }
+
+        /* Follow Ups Grid */
+        .fu-flows {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .flow-box {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid;
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .flow-box.hot { border-color: rgba(244, 63, 94, 0.3); }
+        .flow-box.cold { border-color: rgba(59, 130, 246, 0.3); }
+        
+        .flow-title {
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .flow-box.hot .flow-title { color: var(--rose-400); }
+        .flow-box.cold .flow-title { color: var(--blue-400); }
+
+        .flow-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            text-align: center;
+            gap: 12px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--slate-600);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="logo-text">NeurOPS Performance System</div>
+            <h1 class="closer-name">{{ closer_name }}</h1>
+        </div>
+        <div class="date-str">{{ date_str }}</div>
+    </div>
+
+    <div class="cards-container">
+        <!-- 1. AGENDAS -->
+        <div class="card agendas">
+            <div class="card-header">
+                <div class="icon-box" style="color: var(--emerald-500)">📞</div>
+                <div class="card-title">MÉTRICAS DE AGENDAS</div>
+            </div>
+            
+            <div class="metrics-grid-4">
+                <div class="metric-box highlight-emerald">
+                    <div class="metric-label">Total Agendas</div>
+                    <div class="metric-value val-emerald">{{ agendas.totals.scheduled }}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Total Asist.</div>
+                    <div class="metric-value val-sky">{{ agendas.totals.attended }}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Total No Show</div>
+                    <div class="metric-value val-rose">{{ agendas.totals.no_show }}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Total Canc/Rep</div>
+                    <div class="metric-value val-amber">{{ agendas.totals.canceled + agendas.totals.rescheduled }}</div>
+                </div>
+            </div>
+
+            <table class="dual-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: left;">Métrica</th>
+                        <th class="col-1st">1ra Llamada</th>
+                        <th class="col-2nd">2da Llamada</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="col-label">Agendas</td>
+                        <td class="col-1st">{{ agendas.first_call.scheduled }}</td>
+                        <td class="col-2nd">{{ agendas.second_call.scheduled }}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Asistencias</td>
+                        <td class="col-1st">{{ agendas.first_call.attended }}</td>
+                        <td class="col-2nd">{{ agendas.second_call.attended }}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">No Shows</td>
+                        <td class="col-1st">{{ agendas.first_call.no_show }}</td>
+                        <td class="col-2nd">{{ agendas.second_call.no_show }}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Reprogramaciones</td>
+                        <td class="col-1st">{{ agendas.first_call.rescheduled }}</td>
+                        <td class="col-2nd">{{ agendas.second_call.rescheduled }}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Cancelaciones</td>
+                        <td class="col-1st">{{ agendas.first_call.canceled }}</td>
+                        <td class="col-2nd">{{ agendas.second_call.canceled }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2. VENTAS -->
+        <div class="card sales">
+            <div class="card-header">
+                <div class="icon-box" style="color: var(--amber-500)">💰</div>
+                <div class="card-title">VENTAS</div>
+            </div>
+            
+            <div class="metrics-grid-4">
+                <div class="metric-box highlight-amber">
+                    <div class="metric-label">Total Ventas</div>
+                    <div class="metric-value val-amber">{{ sales.totals.count }}</div>
+                </div>
+                <div class="metric-box highlight-emerald">
+                    <div class="metric-label">Cash Collected</div>
+                    <div class="metric-value val-emerald">${{ sales.totals.cash }}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">En Llamada</div>
+                    <div class="metric-value val-sky">{{ sales.totals.in_call_count }}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Cash (En Llamada)</div>
+                    <div class="metric-value">${{ sales.totals.in_call_cash }}</div>
+                </div>
+            </div>
+
+            <table class="dual-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: left; color: var(--amber-500)">Tipo</th>
+                        <th>Cantidad</th>
+                        <th>Cash Coll.</th>
+                        <th>En Llamada (Cant)</th>
+                        <th>En Llamada (Cash)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="col-label">PIF</td>
+                        <td>{{ sales.pif.count }}</td>
+                        <td class="val-emerald">${{ sales.pif.cash }}</td>
+                        <td>{{ sales.pif.in_call_count }}</td>
+                        <td>${{ sales.pif.in_call_cash }}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Split Pay</td>
+                        <td>{{ sales.split.count }}</td>
+                        <td class="val-emerald">${{ sales.split.cash }}</td>
+                        <td>{{ sales.split.in_call_count }}</td>
+                        <td>${{ sales.split.in_call_cash }}</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Señas</td>
+                        <td>{{ sales.deposit.count }}</td>
+                        <td class="val-emerald">${{ sales.deposit.cash }}</td>
+                        <td>{{ sales.deposit.in_call_count }}</td>
+                        <td>${{ sales.deposit.in_call_cash }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 3. FOLLOW UPS -->
+        <div class="card followup">
+            <div class="card-header">
+                <div class="icon-box" style="color: var(--blue-500)">🔄</div>
+                <div class="card-title">SEGUIMIENTOS</div>
+            </div>
+            
+            <div class="fu-flows">
+                <div class="flow-box hot">
+                    <div class="flow-title">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--rose-500);"></span>
+                        Flujo Caliente
+                    </div>
+                    <div class="flow-stats">
+                        <div>
+                            <div class="metric-label">Enviados</div>
+                            <div class="metric-value">{{ follow_up.hot_sent }}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Respondidos</div>
+                            <div class="metric-value">{{ follow_up.hot_replied }}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Response Rate</div>
+                            <div class="metric-value val-rose">{{ follow_up.hot_response_pct }}%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flow-box cold">
+                    <div class="flow-title">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--blue-500);"></span>
+                        Flujo Frío
+                    </div>
+                    <div class="flow-stats">
+                        <div>
+                            <div class="metric-label">Enviados</div>
+                            <div class="metric-value">{{ follow_up.cold_sent }}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Respondidos</div>
+                            <div class="metric-value">{{ follow_up.cold_replied }}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Response Rate</div>
+                            <div class="metric-value val-blue">{{ follow_up.cold_response_pct }}%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metrics-grid-2">
+                <div class="metric-box">
+                    <div class="metric-label">Total Enviados</div>
+                    <div class="metric-value">{{ follow_up.total_sent }}</div>
+                </div>
+                <div class="metric-box highlight-blue">
+                    <div class="metric-label">Total Respondidos</div>
+                    <div class="metric-value val-blue">{{ follow_up.total_replied }}</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        NEUROPS PERFORMANCE SYSTEM • REPORTE GENERADO EL {{ date_str }}
+    </div>
+</body>
+
+</html>

@@ -302,6 +302,14 @@ const PublicCloserStatsPage = () => {
                                                 <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Ventas</span>
                                                 <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.sales.totals.count)}</span>
                                             </div>
+                                            <div className="flex justify-between items-center p-4 bg-rose-500/5 rounded-2xl border border-rose-500/10">
+                                                <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Seg. Hot</span>
+                                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.follow_ups?.hot_sent)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center p-4 bg-sky-500/5 rounded-2xl border border-sky-500/10">
+                                                <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Seg. Cold</span>
+                                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.follow_ups?.cold_sent)}</span>
+                                            </div>
                                         </div>
 
                                         {/* TOTAL CASH EXTRA CARD */}
@@ -370,6 +378,21 @@ const PublicCloserStatsPage = () => {
                                                     <span className="text-lg font-black text-indigo-400 tabular-nums">
                                                         {stats.agendas.totals.attended ? ((stats.sales.totals.count / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
                                                     </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3 mt-1">
+                                                <div className="p-3 bg-rose-500/5 rounded-2xl border border-rose-500/10 flex flex-col justify-center space-y-1">
+                                                    <p className="text-[8px] font-black text-rose-500 uppercase tracking-widest text-center">% Rpta Hot</p>
+                                                    <p className="text-sm font-black text-white text-center">
+                                                        {stats.follow_ups?.hot_sent ? ((stats.follow_ups.hot_replied / stats.follow_ups.hot_sent) * 100).toFixed(1) : 0}%
+                                                    </p>
+                                                </div>
+                                                <div className="p-3 bg-sky-500/5 rounded-2xl border border-sky-500/10 flex flex-col justify-center space-y-1">
+                                                    <p className="text-[8px] font-black text-sky-500 uppercase tracking-widest text-center">% Rpta Cold</p>
+                                                    <p className="text-sm font-black text-white text-center">
+                                                        {stats.follow_ups?.cold_sent ? ((stats.follow_ups.cold_replied / stats.follow_ups.cold_sent) * 100).toFixed(1) : 0}%
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -557,6 +580,79 @@ const PublicCloserStatsPage = () => {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* SEGUIMIENTOS */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 lg:col-span-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-500">
+                                            <RefreshCw size={20} />
+                                        </div>
+                                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Re-engagement Breakdown</h3>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Hot Flow */}
+                                        <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 blur-[50px] pointer-events-none" />
+                                            <div className="flex items-center gap-2 mb-6 border-b border-slate-700/50 pb-4">
+                                                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                                                <h4 className="text-sm font-black text-rose-400 uppercase tracking-widest">Flujo Caliente</h4>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enviados</span>
+                                                    <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.hot_sent)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Respondidos</span>
+                                                    <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.hot_replied)}</span>
+                                                </div>
+                                                <ProgressRow
+                                                    label="Response Rate (Hot)"
+                                                    percentage={stats.follow_ups?.hot_sent ? ((stats.follow_ups.hot_replied / stats.follow_ups.hot_sent) * 100).toFixed(1) : 0}
+                                                    colorClass="text-rose-500"
+                                                    absolute={fmt(stats.follow_ups?.hot_replied)}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Cold Flow */}
+                                        <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 blur-[50px] pointer-events-none" />
+                                            <div className="flex items-center gap-2 mb-6 border-b border-slate-700/50 pb-4">
+                                                <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+                                                <h4 className="text-sm font-black text-sky-400 uppercase tracking-widest">Flujo Frío</h4>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enviados</span>
+                                                    <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.cold_sent)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Respondidos</span>
+                                                    <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.cold_replied)}</span>
+                                                </div>
+                                                <ProgressRow
+                                                    label="Response Rate (Cold)"
+                                                    percentage={stats.follow_ups?.cold_sent ? ((stats.follow_ups.cold_replied / stats.follow_ups.cold_sent) * 100).toFixed(1) : 0}
+                                                    colorClass="text-sky-500"
+                                                    absolute={fmt(stats.follow_ups?.cold_replied)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
+                                        <div className="p-5 bg-blue-600/10 rounded-2xl border border-blue-600/20 text-center space-y-1">
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Total Re-engagement Enviados</p>
+                                            <p className="text-2xl font-black text-white italic">{fmt(stats.follow_ups?.sent)}</p>
+                                        </div>
+                                        <div className="p-5 bg-blue-600/10 rounded-2xl border border-blue-600/20 text-center space-y-1">
+                                            <p className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Total Re-engagement Respondidos</p>
+                                            <p className="text-2xl font-black text-white italic">{fmt(stats.follow_ups?.replied)}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -584,7 +680,7 @@ const PublicCloserStatsPage = () => {
                     <p className="text-[9px] text-slate-600 font-black tracking-[0.4em] uppercase">NeurOPS Closer Intelligence Board • © 2026 • AI Powered Dashboard</p>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

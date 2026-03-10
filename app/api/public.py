@@ -739,6 +739,10 @@ def submit_public_closer_report():
         # Seguimientos
         'follow_ups_sent': get_int('follow_ups_sent'),
         'follow_ups_replied': get_int('follow_ups_replied'),
+        'follow_ups_hot_sent': get_int('follow_ups_hot_sent'),
+        'follow_ups_hot_replied': get_int('follow_ups_hot_replied'),
+        'follow_ups_cold_sent': get_int('follow_ups_cold_sent'),
+        'follow_ups_cold_replied': get_int('follow_ups_cold_replied'),
     }
 
     if report:
@@ -761,16 +765,26 @@ def submit_public_closer_report():
 
 
 def _trigger_closer_report_discord(report):
-    """Envía el reporte diario del closer a Discord con un embed formateado."""
+    """Envía el reporte diario del closer a Discord con un embed formateado y una imagen renderizada."""
     try:
         import requests as req
         import json
+        from datetime import datetime
+        from app.services.image_service import ImageService
 
         # Mismo webhook que los setters
         url = "https://discordapp.com/api/webhooks/1471390632223314072/D0H6JaX8dnGdiOmPsGoDQyqwoN5X6zw1YHdlIs6evOZYk-BbvK7Bt32KjWw_nvkjwhdz"
 
         closer_name = report.closer.username if report.closer else "Closer"
         date_str = report.date.strftime('%d/%m/%Y')
+
+        def safe_percent(part, total):
+            try:
+                if total > 0:
+                    return round((part / total) * 100)
+            except:
+                pass
+            return 0
 
         # Totales de ventas
         total_sales = (report.pif_count or 0) + (report.split_count or 0) + (report.deposit_count or 0)
@@ -780,72 +794,105 @@ def _trigger_closer_report_discord(report):
         total_scheduled = (report.first_call_scheduled or 0) + (report.second_call_scheduled or 0)
         total_attended = (report.first_call_attended or 0) + (report.second_call_attended or 0)
 
-        # Helper formato
-        def pct(part, total):
-            return f"{round((part/total)*100)}%" if total > 0 else "0%"
+        # Construct image data
+        img_data = {
+            "closer_name": closer_name,
+            "date_str": date_str,
+            "agendas": {
+                "totals": {
+                    "scheduled": total_scheduled,
+                    "attended": total_attended,
+                    "no_show": (report.first_call_no_show or 0) + (report.second_call_no_show or 0),
+                    "canceled": (report.first_call_canceled or 0) + (report.second_call_canceled or 0),
+                    "rescheduled": (report.first_call_rescheduled or 0) + (report.second_call_rescheduled or 0),
+                },
+                "first_call": {
+                    "scheduled": report.first_call_scheduled or 0,
+                    "attended": report.first_call_attended or 0,
+                    "no_show": report.first_call_no_show or 0,
+                    "canceled": report.first_call_canceled or 0,
+                    "rescheduled": report.first_call_rescheduled or 0,
+                },
+                "second_call": {
+                    "scheduled": report.second_call_scheduled or 0,
+                    "attended": report.second_call_attended or 0,
+                    "no_show": report.second_call_no_show or 0,
+                    "canceled": report.second_call_canceled or 0,
+                    "rescheduled": report.second_call_rescheduled or 0,
+                }
+            },
+            "sales": {
+                "totals": {
+                    "count": total_sales,
+                    "cash": total_cash,
+                    "in_call_count": (report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0),
+                    "in_call_cash": (report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0),
+                },
+                "pif": {
+                    "count": report.pif_count or 0,
+                    "cash": report.pif_cash_collected or 0,
+                    "in_call_count": report.pif_in_call_count or 0,
+                    "in_call_cash": report.pif_in_call_cash or 0,
+                },
+                "split": {
+                    "count": report.split_count or 0,
+                    "cash": report.split_cash_collected or 0,
+                    "in_call_count": report.split_in_call_count or 0,
+                    "in_call_cash": report.split_in_call_cash or 0,
+                },
+                "deposit": {
+                    "count": report.deposit_count or 0,
+                    "cash": report.deposit_cash_collected or 0,
+                    "in_call_count": report.deposit_in_call_count or 0,
+                    "in_call_cash": report.deposit_in_call_cash or 0,
+                }
+            },
+            "follow_up": {
+                "hot_sent": report.follow_ups_hot_sent or 0,
+                "hot_replied": report.follow_ups_hot_replied or 0,
+                "hot_response_pct": safe_percent(report.follow_ups_hot_replied or 0, report.follow_ups_hot_sent or 0),
+                "cold_sent": report.follow_ups_cold_sent or 0,
+                "cold_replied": report.follow_ups_cold_replied or 0,
+                "cold_response_pct": safe_percent(report.follow_ups_cold_replied or 0, report.follow_ups_cold_sent or 0),
+                "total_sent": report.follow_ups_sent or 0,
+                "total_replied": report.follow_ups_replied or 0,
+            }
+        }
 
-        # Construir tabla de agendas
-        agenda_table = (
-            "```\n"
-            f"{'':15s} {'1ra':>6s} {'2da':>6s}\n"
-            f"{'─'*29}\n"
-            f"{'Agendas':15s} {report.first_call_scheduled or 0:>6d} {report.second_call_scheduled or 0:>6d}\n"
-            f"{'Asistencias':15s} {report.first_call_attended or 0:>6d} {report.second_call_attended or 0:>6d}\n"
-            f"{'No Shows':15s} {report.first_call_no_show or 0:>6d} {report.second_call_no_show or 0:>6d}\n"
-            f"{'Reprog.':15s} {report.first_call_rescheduled or 0:>6d} {report.second_call_rescheduled or 0:>6d}\n"
-            f"{'Cancelaciones':15s} {report.first_call_canceled or 0:>6d} {report.second_call_canceled or 0:>6d}\n"
-            "```"
-        )
+        # Generate Image
+        img_buffer = ImageService.generate_closer_report_card(img_data)
 
-        # Construir tabla de ventas
-        sales_table = (
-            "```\n"
-            f"{'':12s} {'Cant':>5s} {'Cash':>10s} {'EnLlam':>6s} {'CashLL':>10s}\n"
-            f"{'─'*45}\n"
-            f"{'PIF':12s} {report.pif_count or 0:>5d} ${report.pif_cash_collected or 0:>9,.0f} {report.pif_in_call_count or 0:>6d} ${report.pif_in_call_cash or 0:>9,.0f}\n"
-            f"{'Split Pay':12s} {report.split_count or 0:>5d} ${report.split_cash_collected or 0:>9,.0f} {report.split_in_call_count or 0:>6d} ${report.split_in_call_cash or 0:>9,.0f}\n"
-            f"{'Señas':12s} {report.deposit_count or 0:>5d} ${report.deposit_cash_collected or 0:>9,.0f} {report.deposit_in_call_count or 0:>6d} ${report.deposit_in_call_cash or 0:>9,.0f}\n"
-            "```"
-        )
-
+        # Discord Text & Metadata
+        resumen_str = f"{total_attended} Asistencias | {total_sales} Ventas (${total_cash:,.0f})"
+        
         content = (
-            f"💼 **REPORTE DIARIO DE CLOSER**\n"
+            f"💰 **REPORTE DIARIO DE CLOSER**\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"👤 **Closer:** `{closer_name}`\n"
             f"📅 **Fecha:** `{date_str}`\n"
+            f"📊 **Resumen:** `{resumen_str}`\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"@everyone"
         )
-
-        payload = {
+        
+        json_payload = {
             "content": content,
-            "embeds": [
-                {
-                    "title": "📊 RESUMEN GENERAL",
-                    "color": 7419530,  # Violeta
-                    "fields": [
-                        {"name": "🎯 Slots", "value": f"`{report.slots or 0}`", "inline": True},
-                        {"name": "📣 Ofertas Hechas", "value": f"`{report.offers_made or 0}`", "inline": True},
-                        {"name": "📞 Total Agendas", "value": f"`{total_scheduled}`", "inline": True},
-                        {"name": "✅ Total Asistencias", "value": f"`{total_attended}`", "inline": True},
-                        {"name": "💰 Total Ventas", "value": f"`{total_sales}`", "inline": True},
-                        {"name": "💵 Total Cash", "value": f"`${total_cash:,.0f}`", "inline": True},
-                    ]
+            "embeds": [{
+                "color": 16753920, # #FFB100 Amber color
+                "image": {
+                    "url": "attachment://closer_report.png"
                 },
-                {
-                    "title": "📞 AGENDAS (1ra vs 2da Llamada)",
-                    "description": agenda_table,
-                    "color": 3066993  # Verde
-                },
-                {
-                    "title": "💰 VENTAS DETALLADAS",
-                    "description": sales_table,
-                    "color": 15844367  # Dorado
+                "footer": {
+                    "text": "NeurOPS Performance System • " + datetime.now().strftime('%H:%M')
                 }
-            ]
+            }]
         }
-
-        res = req.post(url, json=payload, timeout=10)
+        
+        files = {
+            'file': ('closer_report.png', img_buffer, 'image/png')
+        }
+        
+        res = req.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
         print(f"[Discord Closer] Status: {res.status_code}")
 
     except Exception as e:
@@ -902,6 +949,10 @@ def get_public_closer_stats():
         # Seguimientos
         func.sum(CloserDailyReport.follow_ups_sent).label('fu_sent'),
         func.sum(CloserDailyReport.follow_ups_replied).label('fu_replied'),
+        func.sum(CloserDailyReport.follow_ups_hot_sent).label('fu_hot_sent'),
+        func.sum(CloserDailyReport.follow_ups_hot_replied).label('fu_hot_replied'),
+        func.sum(CloserDailyReport.follow_ups_cold_sent).label('fu_cold_sent'),
+        func.sum(CloserDailyReport.follow_ups_cold_replied).label('fu_cold_replied')
     )
 
     filters = []
@@ -1000,7 +1051,11 @@ def get_public_closer_stats():
         },
         "follow_ups": {
             "sent": val(stats.fu_sent),
-            "replied": val(stats.fu_replied)
+            "replied": val(stats.fu_replied),
+            "hot_sent": val(stats.fu_hot_sent),
+            "hot_replied": val(stats.fu_hot_replied),
+            "cold_sent": val(stats.fu_cold_sent),
+            "cold_replied": val(stats.fu_cold_replied)
         },
         "percentages": {
             "show_rate": div(total_attended, total_scheduled),
@@ -1068,7 +1123,11 @@ def get_public_closer_reports():
             "deposit_in_call_count": r.deposit_in_call_count,
             "deposit_in_call_cash": r.deposit_in_call_cash,
             "follow_ups_sent": r.follow_ups_sent,
-            "follow_ups_replied": r.follow_ups_replied
+            "follow_ups_replied": r.follow_ups_replied,
+            "follow_ups_hot_sent": r.follow_ups_hot_sent,
+            "follow_ups_hot_replied": r.follow_ups_hot_replied,
+            "follow_ups_cold_sent": r.follow_ups_cold_sent,
+            "follow_ups_cold_replied": r.follow_ups_cold_replied
         })
         
     return jsonify({
@@ -1131,6 +1190,11 @@ def update_public_closer_report(report_id):
         
         stat.follow_ups_sent = get_int('follow_ups_sent', stat.follow_ups_sent)
         stat.follow_ups_replied = get_int('follow_ups_replied', stat.follow_ups_replied)
+
+        stat.follow_ups_hot_sent = get_int('follow_ups_hot_sent', stat.follow_ups_hot_sent)
+        stat.follow_ups_hot_replied = get_int('follow_ups_hot_replied', stat.follow_ups_hot_replied)
+        stat.follow_ups_cold_sent = get_int('follow_ups_cold_sent', stat.follow_ups_cold_sent)
+        stat.follow_ups_cold_replied = get_int('follow_ups_cold_replied', stat.follow_ups_cold_replied)
         
         db.session.commit()
         return jsonify({"message": "Reporte actualizado"}), 200

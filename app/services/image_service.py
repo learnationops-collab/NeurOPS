@@ -241,3 +241,66 @@ class ImageService:
             traceback.print_exc()
             # If rendering fails, Fallback to a super simple PIL or just re-raise
             raise e
+
+    @staticmethod
+    def generate_closer_report_card(data):
+        """
+        Generates a high-fidelity 'Premium Dashboard' report for Closers using HTML/CSS rendering.
+        """
+        import os
+        from flask import render_template_string
+        from html2image import Html2Image
+        import io
+        import uuid
+        
+        # 1. Read the template
+        template_path = os.path.join('app', 'templates', 'reports', 'closer_report.html')
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+
+        # 2. Render HTML with Data using Flask's render_template_string (Jinja2)
+        rendered_html = render_template_string(template_content, **data)
+
+        # 3. Configure html2image
+        output_filename = f"closer_report_{uuid.uuid4().hex}.png"
+        
+        custom_flags = []
+        browser_executable = None
+        
+        if os.name != 'nt': # Not Windows
+            custom_flags = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--headless']
+            for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
+                if os.path.exists(path):
+                    browser_executable = path
+                    break
+
+        hti = Html2Image(
+            size=(1200, 1500), # Similar size
+            custom_flags=custom_flags,
+            browser_executable=browser_executable
+        ) 
+        
+        try:
+            paths = hti.screenshot(html_str=rendered_html, save_as=output_filename)
+            
+            if not paths:
+                raise Exception("html2image failed to create screenshot")
+            
+            final_path = paths[0]
+            
+            # 4. Read into buffer
+            with open(final_path, 'rb') as img_f:
+                buf = io.BytesIO(img_f.read())
+            
+            # Cleanup temp file
+            if os.path.exists(final_path):
+                os.remove(final_path)
+                
+            buf.seek(0)
+            return buf
+            
+        except Exception as e:
+            print(f"[ImageService Error] {e}")
+            import traceback
+            traceback.print_exc()
+            raise e

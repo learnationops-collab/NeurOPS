@@ -71,8 +71,18 @@ const EditCloserReportModal = ({ report, onClose, onSave }) => {
                         <div className="bg-blue-900/10 p-5 rounded-2xl border border-blue-900/30">
                             <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-blue-400 uppercase mb-4 pb-2 border-b border-blue-900/50"><Users size={14} /> Seguimientos</h4>
                             <div className="space-y-1">
-                                <InputRow label="Seguimientos Enviados" field="follow_ups_sent" />
-                                <InputRow label="Respuestas Recibidas" field="follow_ups_replied" />
+                                <p className="text-[10px] font-black uppercase text-rose-400 mt-2 mb-1">Flujo Caliente</p>
+                                <InputRow label="Enviados (Hot)" field="follow_ups_hot_sent" />
+                                <InputRow label="Respuestas (Hot)" field="follow_ups_hot_replied" />
+
+                                <p className="text-[10px] font-black uppercase text-sky-400 mt-4 mb-1">Flujo Frío</p>
+                                <InputRow label="Enviados (Cold)" field="follow_ups_cold_sent" />
+                                <InputRow label="Respuestas (Cold)" field="follow_ups_cold_replied" />
+
+                                <div className="mt-4 pt-3 border-t border-blue-900/40 opacity-70">
+                                    <InputRow label="Total Total Enviados" field="follow_ups_sent" />
+                                    <InputRow label="Total Total Respuestas" field="follow_ups_replied" />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -329,6 +339,7 @@ const CloserReportsTable = ({ closers }) => {
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Slots</th>
                                 <th className="p-4 text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center" colSpan="2">1ra Llamada</th>
                                 <th className="p-4 text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center" colSpan="2">2da Llamada</th>
+                                <th className="p-4 text-[9px] font-black text-rose-500 uppercase tracking-widest text-center" colSpan="2">Seguimientos</th>
                                 <th className="p-4 text-[9px] font-black text-amber-500 uppercase tracking-widest text-center" colSpan="2">Ventas / Cash</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
                             </tr>
@@ -340,6 +351,8 @@ const CloserReportsTable = ({ closers }) => {
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Asist.</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Agendas</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Asist.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Hot (R/S)</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Cold (R/S)</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Total</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Cash</th>
                                 <th></th>
@@ -348,14 +361,14 @@ const CloserReportsTable = ({ closers }) => {
                         <tbody className="divide-y divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="10" className="py-20 text-center">
+                                    <td colSpan="12" className="py-20 text-center">
                                         <Loader2 className="animate-spin mx-auto text-indigo-500 mb-2" size={32} />
                                         <span className="text-[10px] font-black text-slate-500 uppercase">Cargando registros...</span>
                                     </td>
                                 </tr>
                             ) : reports.length === 0 ? (
                                 <tr>
-                                    <td colSpan="10" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
+                                    <td colSpan="12" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
                                 </tr>
                             ) : reports.map(r => {
                                 const totalSales = (r.pif_count || 0) + (r.split_count || 0) + (r.deposit_count || 0);
@@ -372,6 +385,13 @@ const CloserReportsTable = ({ closers }) => {
 
                                         <td className="p-4 border-l border-slate-800 text-xs font-black text-emerald-400 tabular-nums text-center">{r.second_call_scheduled || 0}</td>
                                         <td className="p-4 border-r border-slate-800 text-xs font-black text-slate-300 tabular-nums text-center">{r.second_call_attended || 0}</td>
+
+                                        <td className="p-4 text-xs font-black text-rose-400 tabular-nums text-center">
+                                            {r.follow_ups_hot_replied || 0} / {r.follow_ups_hot_sent || 0}
+                                        </td>
+                                        <td className="p-4 border-r border-slate-800 text-xs font-black text-sky-400 tabular-nums text-center">
+                                            {r.follow_ups_cold_replied || 0} / {r.follow_ups_cold_sent || 0}
+                                        </td>
 
                                         <td className="p-4 text-xs font-black text-amber-500 tabular-nums text-center">{totalSales}</td>
                                         <td className="p-4 text-xs font-black text-amber-500 tabular-nums text-center">${totalCash.toLocaleString()}</td>

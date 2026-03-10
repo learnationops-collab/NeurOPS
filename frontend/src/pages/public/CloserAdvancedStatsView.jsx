@@ -137,17 +137,31 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
     const attendanceColors = attendanceData[0].name === 'Sin Agendas' ? ['#334155'] : ['#8b5cf6', '#f59e0b', '#ef4444'];
 
 
-    const followUpsReplied = stats.follow_ups?.replied || 0;
-    const followUpsSent = stats.follow_ups?.sent || 0;
-    const followUpsNoReply = Math.max(0, followUpsSent - followUpsReplied);
+    // Hot Follow Ups
+    const fuHotReplied = stats.follow_ups?.hot_replied || 0;
+    const fuHotSent = stats.follow_ups?.hot_sent || 0;
+    const fuHotNoReply = Math.max(0, fuHotSent - fuHotReplied);
 
-    const followUpsData = [
-        { name: 'Respondido', value: followUpsReplied },
-        { name: 'Sin Respuesta', value: followUpsNoReply },
+    const fuHotData = [
+        { name: 'Respondido', value: fuHotReplied },
+        { name: 'Sin Respuesta', value: fuHotNoReply },
     ].filter(d => d.value > 0);
 
-    if (followUpsData.length === 0) followUpsData.push({ name: 'Sin Seguimientos', value: 1 });
-    const followUpsColors = followUpsData[0].name === 'Sin Seguimientos' ? ['#334155'] : ['#0ea5e9', '#64748b'];
+    if (fuHotData.length === 0) fuHotData.push({ name: 'Sin Datos', value: 1 });
+    const fuHotColors = fuHotData[0].name === 'Sin Datos' ? ['#334155'] : ['#f43f5e', '#881337'];
+
+    // Cold Follow Ups
+    const fuColdReplied = stats.follow_ups?.cold_replied || 0;
+    const fuColdSent = stats.follow_ups?.cold_sent || 0;
+    const fuColdNoReply = Math.max(0, fuColdSent - fuColdReplied);
+
+    const fuColdData = [
+        { name: 'Respondido', value: fuColdReplied },
+        { name: 'Sin Respuesta', value: fuColdNoReply },
+    ].filter(d => d.value > 0);
+
+    if (fuColdData.length === 0) fuColdData.push({ name: 'Sin Datos', value: 1 });
+    const fuColdColors = fuColdData[0].name === 'Sin Datos' ? ['#334155'] : ['#0ea5e9', '#0c4a6e'];
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -271,7 +285,7 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
             </div>
 
             {/* BOTTOM ROW: DISTRIBUTION CHARTS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
                 {/* Sales Type Distribution */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center">
@@ -287,17 +301,30 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
                     <ChartTable data={attendanceData} colors={attendanceColors} />
                 </div>
 
-                {/* Follow Ups Distribution */}
+                {/* Hot Follow Ups Distribution */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center relative group">
-                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Seguimientos (Re-engagement)</h4>
-                    <SimplePieChart data={followUpsData} colors={followUpsColors} />
-                    <ChartTable data={followUpsData} colors={followUpsColors} />
+                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Re-engagement (Hot)</h4>
+                    <SimplePieChart data={fuHotData} colors={fuHotColors} />
+                    <ChartTable data={fuHotData} colors={fuHotColors} />
 
-                    {/* Note Box inside Follow Ups */}
-                    <div className="absolute top-4 left-4 right-4 md:right-auto md:w-48 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <div className="absolute top-4 left-4 right-4 md:right-auto md:w-56 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                         <div className="bg-slate-800 p-3 border border-slate-700 rounded-xl flex items-start gap-2 shadow-2xl">
                             <Info size={14} className="text-amber-500 mt-0.5 shrink-0" />
-                            <p className="text-[9px] text-slate-300">Datos externos integrados a la vista general.</p>
+                            <p className="text-[9px] text-slate-300">Flujo Caliente (Leads que ya respondieron en el pasado o mostraron interés de compra).</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Cold Follow Ups Distribution */}
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center relative group">
+                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Re-engagement (Cold)</h4>
+                    <SimplePieChart data={fuColdData} colors={fuColdColors} />
+                    <ChartTable data={fuColdData} colors={fuColdColors} />
+
+                    <div className="absolute top-4 left-4 right-4 md:right-auto md:w-56 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                        <div className="bg-slate-800 p-3 border border-slate-700 rounded-xl flex items-start gap-2 shadow-2xl">
+                            <Info size={14} className="text-amber-500 mt-0.5 shrink-0" />
+                            <p className="text-[9px] text-slate-300">Flujo Frío (Leads antiguos abandonados o prospección nueva).</p>
                         </div>
                     </div>
                 </div>

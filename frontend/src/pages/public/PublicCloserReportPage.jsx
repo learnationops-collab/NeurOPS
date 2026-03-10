@@ -27,15 +27,38 @@ const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly
     );
 };
 
-// Header de sección
-const SectionHeader = ({ icon: Icon, title, colorClass, isLightMode = false }) => (
-    <div className="flex items-center gap-3 mb-5 border-b border-slate-800/50 pb-3">
-        <div className={`p-2.5 ${isLightMode ? 'bg-slate-100 text-slate-700' : 'bg-slate-800/50'} rounded-xl`}>
-            <Icon className={colorClass} size={22} />
+// Seccion colapsable
+const CollapsibleSection = ({ id, currentOpen, setOpen, title, icon: Icon, isComplete, children, colorClass, borderColorClass }) => {
+    const isOpen = currentOpen === id;
+
+    return (
+        <div className={`${isComplete ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl overflow-hidden transition-all duration-500 border-t-4 ${borderColorClass}`}>
+            <div
+                className="p-5 md:p-6 cursor-pointer flex items-center justify-between select-none"
+                onClick={() => setOpen(isOpen ? null : id)}
+            >
+                <div className="flex items-center gap-3">
+                    <div className={`p-2.5 ${isComplete ? 'bg-slate-100 text-slate-700' : 'bg-slate-800/50'} rounded-xl`}>
+                        <Icon className={colorClass} size={22} />
+                    </div>
+                    <h2 className={`text-lg font-black italic tracking-tighter uppercase ${isComplete ? 'text-slate-800' : 'text-white'}`}>{title}</h2>
+                </div>
+                <div>
+                    <div className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isComplete ? "text-slate-500" : "text-slate-400"}><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                </div>
+            </div>
+            <div
+                className={`transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}
+            >
+                <div className={`p-5 md:p-6 pt-0 ${isComplete ? 'border-t border-slate-300/50' : 'border-t border-slate-800/50'}`}>
+                    {children}
+                </div>
+            </div>
         </div>
-        <h2 className={`text-lg font-black italic tracking-tighter uppercase ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{title}</h2>
-    </div>
-);
+    );
+};
 
 const PublicCloserReportPage = () => {
     const [closers, setClosers] = useState([]);
@@ -85,9 +108,14 @@ const PublicCloserReportPage = () => {
         // Seguimientos
         follow_ups_sent: '',
         follow_ups_replied: '',
+        follow_ups_hot_sent: '',
+        follow_ups_hot_replied: '',
+        follow_ups_cold_sent: '',
+        follow_ups_cold_replied: '',
     };
 
     const [formData, setFormData] = useState(initialFormData);
+    const [openSection, setOpenSection] = useState('agendas');
 
     useEffect(() => {
         fetchClosers();
@@ -126,7 +154,14 @@ const PublicCloserReportPage = () => {
 
         setSubmitting(true);
         try {
-            await api.post('/public/closer-report', formData);
+            // Computar los totales de seguimiento antes de enviar
+            const finalData = {
+                ...formData,
+                follow_ups_sent: (parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0),
+                follow_ups_replied: (parseInt(formData.follow_ups_hot_replied) || 0) + (parseInt(formData.follow_ups_cold_replied) || 0)
+            };
+
+            await api.post('/public/closer-report', finalData);
             alert('¡Reporte enviado correctamente! Buen trabajo.');
 
             // Reset pero mantener closer y fecha
@@ -135,6 +170,7 @@ const PublicCloserReportPage = () => {
                 closer_id: prev.closer_id,
                 date: prev.date,
             }));
+            setOpenSection('agendas');
         } catch (err) {
             alert(err.response?.data?.message || err.response?.data?.error || 'Error al enviar el reporte.');
         } finally {
@@ -170,10 +206,21 @@ const PublicCloserReportPage = () => {
         'first_call_scheduled', 'first_call_attended', 'first_call_no_show', 'first_call_rescheduled', 'first_call_canceled',
         'second_call_scheduled', 'second_call_attended', 'second_call_no_show', 'second_call_rescheduled', 'second_call_canceled'
     ];
+    const followUpsFields = ['follow_ups_hot_sent', 'follow_ups_hot_replied', 'follow_ups_cold_sent', 'follow_ups_cold_replied'];
     const salesFields = ['pif_count', 'pif_cash_collected', 'pif_in_call_count', 'pif_in_call_cash', 'split_count', 'split_cash_collected', 'split_in_call_count', 'split_in_call_cash', 'deposit_count', 'deposit_cash_collected', 'deposit_in_call_count', 'deposit_in_call_cash'];
 
     const agendaComplete = isSectionComplete([...generalFields, ...agendaFields]);
+    const followUpsComplete = isSectionComplete(followUpsFields);
     const salesComplete = isSectionComplete(salesFields);
+
+    // Auto-colapsar logica
+    useEffect(() => {
+        if (openSection === 'agendas' && agendaComplete) {
+            setOpenSection('seguimientos');
+        } else if (openSection === 'seguimientos' && followUpsComplete) {
+            setOpenSection('ventas');
+        }
+    }, [agendaComplete, followUpsComplete, openSection]);
 
     // Filas de la tabla de doble entrada de agendas
     const agendaRows = [
@@ -253,12 +300,19 @@ const PublicCloserReportPage = () => {
                             </div>
                         </div>
 
-                        {/* Sección Agendas — Tabla de doble entrada */}
-                        <div className={`${agendaComplete ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl p-5 md:p-6 border-t-4 border-t-emerald-600 transition-colors duration-500`}>
-                            <SectionHeader icon={Phone} title="AGENDAS" colorClass="text-emerald-500" isLightMode={agendaComplete} />
-
+                        {/* Sección Agendas */}
+                        <CollapsibleSection
+                            id="agendas"
+                            currentOpen={openSection}
+                            setOpen={setOpenSection}
+                            title="Métricas de Agendas"
+                            icon={Phone}
+                            isComplete={agendaComplete}
+                            colorClass="text-emerald-500"
+                            borderColorClass="border-t-emerald-600"
+                        >
                             {/* Campos generales */}
-                            <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="grid grid-cols-2 gap-4 mb-6 mt-2">
                                 <MetricInput
                                     label="Slots Disponibles"
                                     field="slots"
@@ -295,11 +349,9 @@ const PublicCloserReportPage = () => {
                                 {/* Filas de datos */}
                                 {agendaRows.map((row, i) => (
                                     <div key={row.label} className={`grid grid-cols-3 gap-0 ${i % 2 === 0 ? '' : (agendaComplete ? 'bg-slate-100/50' : 'bg-slate-800/20')}`}>
-                                        {/* Nombre de la variable */}
                                         <div className={`p-3 flex items-center ${agendaComplete ? 'border-r border-slate-200' : 'border-r border-slate-700/30'}`}>
                                             <p className={`text-xs font-bold ${agendaComplete ? 'text-slate-700' : 'text-slate-300'}`}>{row.label}</p>
                                         </div>
-                                        {/* Primera llamada */}
                                         <div className={`p-2 ${agendaComplete ? 'border-r border-slate-200' : 'border-r border-slate-700/30'}`}>
                                             <MetricInput
                                                 field={row.firstField}
@@ -310,7 +362,6 @@ const PublicCloserReportPage = () => {
                                                 placeholder="0"
                                             />
                                         </div>
-                                        {/* Segunda llamada */}
                                         <div className="p-2">
                                             <MetricInput
                                                 field={row.secondField}
@@ -354,14 +405,107 @@ const PublicCloserReportPage = () => {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </CollapsibleSection>
+
+                        {/* Seguimientos */}
+                        <CollapsibleSection
+                            id="seguimientos"
+                            currentOpen={openSection}
+                            setOpen={setOpenSection}
+                            title="Seguimientos"
+                            icon={Users}
+                            isComplete={followUpsComplete}
+                            colorClass="text-blue-500"
+                            borderColorClass="border-t-blue-600"
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+                                {/* Flujo Caliente */}
+                                <div className={`p-5 rounded-2xl border ${followUpsComplete ? 'bg-white/60 border-rose-200' : 'bg-rose-950/20 border-rose-900/50'}`}>
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest ${followUpsComplete ? 'text-rose-600' : 'text-rose-400'}`}>Flujo Caliente</span>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <MetricInput
+                                            label="Enviados (Hot)"
+                                            field="follow_ups_hot_sent"
+                                            color="rose"
+                                            value={formData.follow_ups_hot_sent}
+                                            onChange={handleFieldChange}
+                                            isLightMode={followUpsComplete}
+                                            placeholder="0"
+                                        />
+                                        <MetricInput
+                                            label="Respondidos (Hot)"
+                                            field="follow_ups_hot_replied"
+                                            color="rose"
+                                            value={formData.follow_ups_hot_replied}
+                                            onChange={handleFieldChange}
+                                            isLightMode={followUpsComplete}
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Flujo Frío */}
+                                <div className={`p-5 rounded-2xl border ${followUpsComplete ? 'bg-white/60 border-blue-200' : 'bg-blue-950/20 border-blue-900/50'}`}>
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest ${followUpsComplete ? 'text-blue-600' : 'text-blue-400'}`}>Flujo Frío</span>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <MetricInput
+                                            label="Enviados (Cold)"
+                                            field="follow_ups_cold_sent"
+                                            color="blue"
+                                            value={formData.follow_ups_cold_sent}
+                                            onChange={handleFieldChange}
+                                            isLightMode={followUpsComplete}
+                                            placeholder="0"
+                                        />
+                                        <MetricInput
+                                            label="Respondidos (Cold)"
+                                            field="follow_ups_cold_replied"
+                                            color="blue"
+                                            value={formData.follow_ups_cold_replied}
+                                            onChange={handleFieldChange}
+                                            isLightMode={followUpsComplete}
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className={`mt-4 ${followUpsComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
+                                <div className="grid grid-cols-2 gap-4 text-center">
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Enviados</p>
+                                        <p className="text-2xl font-black text-slate-400">
+                                            {(parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0)}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Respondidos</p>
+                                        <p className="text-2xl font-black text-blue-500">
+                                            {(parseInt(formData.follow_ups_hot_replied) || 0) + (parseInt(formData.follow_ups_cold_replied) || 0)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CollapsibleSection>
 
                         {/* Ventas */}
-                        <div className={`${salesComplete ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl p-5 md:p-6 border-t-4 border-t-amber-600 transition-colors duration-500`}>
-                            <SectionHeader icon={DollarSign} title="VENTAS" colorClass="text-amber-500" isLightMode={salesComplete} />
-
-                            {/* Filas de ventas */}
-                            <div className="space-y-4">
+                        <CollapsibleSection
+                            id="ventas"
+                            currentOpen={openSection}
+                            setOpen={setOpenSection}
+                            title="Ventas"
+                            icon={DollarSign}
+                            isComplete={salesComplete}
+                            colorClass="text-amber-500"
+                            borderColorClass="border-t-amber-600"
+                        >
+                            <div className="space-y-4 mt-2">
                                 {salesRows.map(row => (
                                     <div key={row.label} className={`${salesComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
                                         <p className={`text-xs font-black uppercase tracking-wider mb-3 ${salesComplete ? 'text-slate-700' : 'text-white'}`}>{row.label}</p>
@@ -436,33 +580,7 @@ const PublicCloserReportPage = () => {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Seguimientos */}
-                        <div className={`${(formData.follow_ups_sent !== '' && formData.follow_ups_replied !== '') ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl p-5 md:p-6 border-t-4 border-t-blue-600 transition-colors duration-500`}>
-                            <SectionHeader icon={Users} title="SEGUIMIENTOS" colorClass="text-blue-500" isLightMode={(formData.follow_ups_sent !== '' && formData.follow_ups_replied !== '')} />
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <MetricInput
-                                    label="Total Seguimientos Enviados"
-                                    field="follow_ups_sent"
-                                    color="blue"
-                                    value={formData.follow_ups_sent}
-                                    onChange={handleFieldChange}
-                                    isLightMode={(formData.follow_ups_sent !== '' && formData.follow_ups_replied !== '')}
-                                    placeholder="0"
-                                />
-                                <MetricInput
-                                    label="Total Respuestas Recibidas"
-                                    field="follow_ups_replied"
-                                    color="blue"
-                                    value={formData.follow_ups_replied}
-                                    onChange={handleFieldChange}
-                                    isLightMode={(formData.follow_ups_sent !== '' && formData.follow_ups_replied !== '')}
-                                    placeholder="0"
-                                />
-                            </div>
-                        </div>
+                        </CollapsibleSection>
 
                         {/* Botón de envío */}
                         <div className="pt-4">
