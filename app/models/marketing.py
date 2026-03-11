@@ -51,3 +51,35 @@ class MarketingBudget(db.Model):
     budget = db.Column(db.Float, default=0.0)
     spent = db.Column(db.Float, default=0.0)
     source = db.Column(db.String(50))
+
+
+class AdDailySpend(db.Model):
+    __tablename__ = 'ad_daily_spends'
+    id = db.Column(db.Integer, primary_key=True)
+    ad_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    spend = db.Column(db.Float, default=0.0)
+    entrantes = db.Column(db.Integer, default=0)
+    agendas = db.Column(db.Integer, default=0)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Evitar duplicados de gasto por anuncio por día
+    __table_args__ = (db.UniqueConstraint('ad_id', 'date', name='uq_ad_daily_spend'),)
+
+    ad = db.relationship('Ad', backref=db.backref('daily_spends', lazy='dynamic'))
+
+
+class ManychatAdLead(db.Model):
+    """Lead recibido desde ManyChat, vinculado a un anuncio por ad_id/keyword."""
+    __tablename__ = 'manychat_ad_leads'
+    id = db.Column(db.Integer, primary_key=True)
+    manychat_id = db.Column(db.String(100), unique=True, nullable=False)
+    ad_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=True)
+    keyword = db.Column(db.String(100))
+    qualification = db.Column(db.String(10), default='null')  # 'true', 'false', 'null'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    ad = db.relationship('Ad', backref=db.backref('manychat_leads', lazy='dynamic'))
+

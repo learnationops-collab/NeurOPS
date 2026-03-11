@@ -34,6 +34,7 @@ import PublicSetterReportPage from './pages/public/PublicSetterReportPage';
 import PublicSetterStatsPage from './pages/public/PublicSetterStatsPage';
 import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
 import PublicCloserStatsPage from './pages/public/PublicCloserStatsPage';
+import AdManagementPage from './pages/public/AdManagementPage';
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
 import { ThemeProvider } from './context/ThemeContext';
@@ -79,6 +80,7 @@ function App() {
             <Route path="/estadisticas-setters" element={<PublicSetterStatsPage />} />
             <Route path="/reporte-closer" element={<PublicCloserReportPage />} />
             <Route path="/estadisticas-closers" element={<PublicCloserStatsPage />} />
+            <Route path="/gestion-anuncios" element={<AdManagementPage />} />
 
 
             {/* Protected Admin Routes */}

@@ -104,6 +104,10 @@ def create_app(config_class=Config):
     app.register_blueprint(comments_bp, url_prefix='/api/comments')
     csrf.exempt(comments_bp)
 
+    from app.api.manychat import bp as manychat_bp
+    app.register_blueprint(manychat_bp, url_prefix='/api')
+    csrf.exempt(manychat_bp)
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):

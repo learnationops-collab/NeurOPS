@@ -1214,3 +1214,230 @@ def delete_public_closer_report(report_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+# ============================================================
+# ADS MANAGEMENT (Público)
+# ============================================================
+
+@bp.route('/public/ads', methods=['GET'])
+def get_public_ads():
+    """Lista todos los anuncios con spend acumulado y leads."""
+    from app.models import Ad, AdDailySpend, ManychatAdLead
+    from sqlalchemy import func
+
+    ads = Ad.query.order_by(Ad.created_at.desc()).all()
+
+    # Pre-cargar stats de leads por ad_id
+    lead_stats = db.session.query(
+        ManychatAdLead.ad_id,
+        func.count(ManychatAdLead.id).label('total_leads'),
+        func.sum(db.case((ManychatAdLead.qualification == 'true', 1), else_=0)).label('qualified_leads')
+    ).group_by(ManychatAdLead.ad_id).all()
+    lead_map = {s.ad_id: {'total': s.total_leads, 'qualified': int(s.qualified_leads or 0)} for s in lead_stats}
+
+    result = []
+    for a in ads:
+        total_spend = db.session.query(func.coalesce(func.sum(AdDailySpend.spend), 0)).filter(
+            AdDailySpend.ad_id == a.id
+        ).scalar()
+
+        ls = lead_map.get(a.id, {'total': 0, 'qualified': 0})
+        cpl = round(float(total_spend) / ls['total'], 2) if ls['total'] > 0 and float(total_spend) > 0 else 0
+
+        result.append({
+            'id': a.id,
+            'name': a.name,
+            'keyword': a.keyword,
+            'status': a.status,
+            'total_spend': round(float(total_spend), 2),
+            'total_leads': ls['total'],
+            'qualified_leads': ls['qualified'],
+            'cost_per_lead': cpl,
+            'created_at': a.created_at.isoformat() if a.created_at else None
+        })
+
+    return jsonify(result), 200
+
+
+@bp.route('/public/ads', methods=['POST'])
+def create_public_ad():
+    """Crea un anuncio rápido (auto-genera Campaign y AdSet si no existen)."""
+    from app.models import Ad, AdSet, Campaign
+
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    keyword = data.get('keyword', '').strip()
+
+    if not name:
+        return jsonify({"message": "El nombre del anuncio es obligatorio"}), 400
+    if not keyword:
+        return jsonify({"message": "La keyword es obligatoria"}), 400
+
+    try:
+        # Buscar o crear campaña genérica para anuncios rápidos
+        campaign = Campaign.query.filter_by(name='Anuncios Rápidos').first()
+        if not campaign:
+            campaign = Campaign(name='Anuncios Rápidos', status='active', type='quick')
+            db.session.add(campaign)
+            db.session.flush()
+            campaign.external_id = f"CAM-{campaign.id}"
+
+        # Buscar o crear ad_set genérico
+        ad_set = AdSet.query.filter_by(campaign_id=campaign.id, name='Grupo General').first()
+        if not ad_set:
+            ad_set = AdSet(name='Grupo General', campaign_id=campaign.id, status='active')
+            db.session.add(ad_set)
+            db.session.flush()
+            ad_set.external_id = f"SET-{ad_set.id}"
+
+        ad = Ad(
+            name=name,
+            ad_set_id=ad_set.id,
+            keyword=keyword,
+            status='active',
+            total_spend=0.0
+        )
+        db.session.add(ad)
+        db.session.flush()
+        ad.external_id = f"ADS-{ad.id}"
+        db.session.commit()
+
+        return jsonify({"message": "Anuncio creado", "id": ad.id, "keyword": ad.keyword}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/public/ads/<int:ad_id>', methods=['PUT'])
+def update_public_ad(ad_id):
+    """Edita nombre, keyword o status de un anuncio."""
+    from app.models import Ad
+
+    ad = Ad.query.get_or_404(ad_id)
+    data = request.get_json() or {}
+
+    if 'name' in data: ad.name = data['name']
+    if 'keyword' in data: ad.keyword = data['keyword']
+    if 'status' in data: ad.status = data['status']
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Anuncio actualizado"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+@bp.route('/public/ads/<int:ad_id>', methods=['DELETE'])
+def delete_public_ad(ad_id):
+    """Elimina un anuncio y sus registros de gasto diario."""
+    from app.models import Ad, AdDailySpend
+
+    ad = Ad.query.get_or_404(ad_id)
+    try:
+        # Eliminar gastos diarios asociados
+        AdDailySpend.query.filter_by(ad_id=ad.id).delete()
+        db.session.delete(ad)
+        db.session.commit()
+        return jsonify({"message": "Anuncio eliminado"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+# --- Daily Spend ---
+
+@bp.route('/public/ads/daily-spend', methods=['GET'])
+def get_public_daily_spend():
+    """Lista registros de gasto diario filtrados por fecha."""
+    from app.models import AdDailySpend, Ad
+
+    date_str = request.args.get('date')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    query = AdDailySpend.query
+
+    if date_str:
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        query = query.filter(AdDailySpend.date == target_date)
+    else:
+        if start_date_str:
+            query = query.filter(AdDailySpend.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
+        if end_date_str:
+            query = query.filter(AdDailySpend.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+
+    spends = query.order_by(AdDailySpend.date.desc()).all()
+
+    return jsonify([{
+        'id': s.id,
+        'ad_id': s.ad_id,
+        'ad_name': s.ad.name if s.ad else 'Unknown',
+        'ad_keyword': s.ad.keyword if s.ad else '',
+        'date': s.date.isoformat(),
+        'spend': s.spend,
+        'entrantes': s.entrantes or 0,
+        'agendas': s.agendas or 0,
+        'notes': s.notes,
+    } for s in spends]), 200
+
+
+@bp.route('/public/ads/daily-spend', methods=['POST'])
+def save_public_daily_spend():
+    """Guarda o actualiza gasto diario de un anuncio (upsert por ad_id + date)."""
+    from app.models import AdDailySpend
+
+    data = request.get_json() or {}
+
+    # Soporta batch (lista) o individual (objeto)
+    entries = data.get('entries', [data]) if 'entries' in data else [data]
+
+    saved = 0
+    for entry in entries:
+        ad_id = entry.get('ad_id')
+        date_str = entry.get('date')
+        spend = float(entry.get('spend', 0))
+        entrantes = int(entry.get('entrantes', 0) or 0)
+        agendas = int(entry.get('agendas', 0) or 0)
+        notes = entry.get('notes', '')
+
+        if not ad_id or not date_str:
+            continue
+
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        # Upsert: buscar existente o crear nuevo
+        record = AdDailySpend.query.filter_by(ad_id=ad_id, date=target_date).first()
+        if record:
+            record.spend = spend
+            record.entrantes = entrantes
+            record.agendas = agendas
+            record.notes = notes
+        else:
+            record = AdDailySpend(ad_id=ad_id, date=target_date, spend=spend, entrantes=entrantes, agendas=agendas, notes=notes)
+            db.session.add(record)
+        saved += 1
+
+    try:
+        db.session.commit()
+        return jsonify({"message": f"{saved} registro(s) de gasto guardados"}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/public/ads/daily-spend/<int:spend_id>', methods=['DELETE'])
+def delete_public_daily_spend(spend_id):
+    """Elimina un registro de gasto diario."""
+    from app.models import AdDailySpend
+
+    record = AdDailySpend.query.get_or_404(spend_id)
+    try:
+        db.session.delete(record)
+        db.session.commit()
+        return jsonify({"message": "Registro eliminado"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400

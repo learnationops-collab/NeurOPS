@@ -4,7 +4,7 @@ from .client import Client, Lead, ClientComment
 from .funnel import Event, EventGroup, Program, event_closers
 from .booking import Appointment, Availability, WeeklyAvailability, SurveyQuestion, SurveyAnswer
 from .payment import Enrollment, PaymentMethod, Payment
-from .marketing import Campaign, AdSet, Ad, MarketingBudget
+from .marketing import Campaign, AdSet, Ad, MarketingBudget, AdDailySpend, ManychatAdLead
 from .report import SetterDailyStats, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Expense, RecurringExpense
 from .closer_report import CloserDailyReport
 from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment
@@ -18,7 +18,7 @@ __all__ = [
     'Event', 'EventGroup', 'Program', 'event_closers',
     'Appointment', 'Availability', 'WeeklyAvailability', 'SurveyQuestion', 'SurveyAnswer',
     'Enrollment', 'PaymentMethod', 'Payment',
-    'Campaign', 'AdSet', 'Ad', 'MarketingBudget',
+    'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdDailySpend', 'ManychatAdLead',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment',
     'Integration', 'PublicRegistration'
