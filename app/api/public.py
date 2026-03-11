@@ -1263,11 +1263,17 @@ def get_public_ads():
 @bp.route('/public/ads', methods=['POST'])
 def create_public_ad():
     """Crea un anuncio rápido (auto-genera Campaign y AdSet si no existen)."""
+    import logging
+    logger = logging.getLogger(__name__)
+
     from app.models import Ad, AdSet, Campaign
+    import traceback
 
     data = request.get_json() or {}
     name = data.get('name', '').strip()
     keyword = data.get('keyword', '').strip()
+
+    logger.info(f"[ADS] Inicio crear anuncio: name='{name}', keyword='{keyword}'")
 
     if not name:
         return jsonify({"message": "El nombre del anuncio es obligatorio"}), 400
@@ -1275,39 +1281,65 @@ def create_public_ad():
         return jsonify({"message": "La keyword es obligatoria"}), 400
 
     try:
-        # Buscar o crear campaña genérica para anuncios rápidos
+        # Paso 1: Buscar o crear campaña genérica
+        logger.info("[ADS] Paso 1: Buscando campaña 'Anuncios Rápidos'...")
         campaign = Campaign.query.filter_by(name='Anuncios Rápidos').first()
-        if not campaign:
-            campaign = Campaign(name='Anuncios Rápidos', status='active', type='quick')
+        if campaign:
+            logger.info(f"[ADS] Campaña encontrada: id={campaign.id}")
+        else:
+            logger.info("[ADS] Campaña no encontrada, creando nueva...")
+            campaign = Campaign(
+                name='Anuncios Rápidos',
+                status='active',
+                type='quick',
+                external_id='CAM-QUICK-ADS'
+            )
             db.session.add(campaign)
             db.session.flush()
-            campaign.external_id = f"CAM-{campaign.id}"
+            logger.info(f"[ADS] Campaña creada: id={campaign.id}")
 
-        # Buscar o crear ad_set genérico
+        # Paso 2: Buscar o crear ad_set genérico
+        logger.info(f"[ADS] Paso 2: Buscando AdSet 'Grupo General' para campaign_id={campaign.id}...")
         ad_set = AdSet.query.filter_by(campaign_id=campaign.id, name='Grupo General').first()
-        if not ad_set:
-            ad_set = AdSet(name='Grupo General', campaign_id=campaign.id, status='active')
+        if ad_set:
+            logger.info(f"[ADS] AdSet encontrado: id={ad_set.id}")
+        else:
+            logger.info("[ADS] AdSet no encontrado, creando nuevo...")
+            ad_set = AdSet(
+                name='Grupo General',
+                campaign_id=campaign.id,
+                status='active',
+                external_id=f'SET-QUICK-{campaign.id}'
+            )
             db.session.add(ad_set)
             db.session.flush()
-            ad_set.external_id = f"SET-{ad_set.id}"
+            logger.info(f"[ADS] AdSet creado: id={ad_set.id}")
+
+        # Paso 3: Crear anuncio
+        logger.info(f"[ADS] Paso 3: Creando anuncio name='{name}', keyword='{keyword}', ad_set_id={ad_set.id}...")
+        import uuid
+        unique_ext_id = f"ADS-{keyword}-{uuid.uuid4().hex[:6]}"
 
         ad = Ad(
             name=name,
             ad_set_id=ad_set.id,
             keyword=keyword,
             status='active',
-            total_spend=0.0
+            total_spend=0.0,
+            external_id=unique_ext_id
         )
         db.session.add(ad)
-        db.session.flush()
-        ad.external_id = f"ADS-{ad.id}"
         db.session.commit()
+        logger.info(f"[ADS] Anuncio creado exitosamente: id={ad.id}, external_id='{ad.external_id}'")
 
         return jsonify({"message": "Anuncio creado", "id": ad.id, "keyword": ad.keyword}), 201
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        error_details = traceback.format_exc()
+        logger.error(f"[ADS] ERROR al crear anuncio: {str(e)}")
+        logger.error(f"[ADS] Traceback completo:\n{error_details}")
+        return jsonify({"message": f"Error al crear anuncio: {str(e)}"}), 500
 
 
 @bp.route('/public/ads/<int:ad_id>', methods=['PUT'])
