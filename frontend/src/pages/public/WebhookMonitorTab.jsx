@@ -109,13 +109,14 @@ const WebhookMonitorTab = () => {
                         <div key={log.id} className="flex items-center gap-4 p-3.5 bg-slate-800/30 hover:bg-slate-800/50 border border-slate-800/50 rounded-xl transition-colors">
                             {/* Indicador de estado */}
                             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${log.qualification === 'true' ? 'bg-emerald-400' :
-                                    log.qualification === 'false' ? 'bg-red-400' : 'bg-slate-500'
+                                log.qualification === 'false' ? 'bg-red-400' : 'bg-slate-500'
                                 }`} />
 
                             {/* Info principal */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-xs font-mono text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded">{log.manychat_id}</span>
+                                    <span className="text-sm font-bold text-white">{log.lead_name || 'Desconocido'}</span>
+                                    <span className="text-xs font-mono text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded">ID: {log.manychat_id}</span>
                                     <QualificationBadge value={log.qualification} />
                                 </div>
                                 <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
@@ -144,8 +145,8 @@ const WebhookMonitorTab = () => {
                 <code className="block text-xs text-violet-400 bg-slate-900/50 p-3 rounded-lg font-mono">
                     POST /api/manychat-webhook
                 </code>
-                <p className="text-[10px] text-slate-600 mt-2">
-                    Body: <code className="text-slate-400">{`{ "manychat_id": "...", "ad_id": N, "keyword": "...", "cualificacion": "true/false/null" }`}</code>
+                <p className="text-[10px] text-slate-600 mt-2 whitespace-pre-wrap font-mono">
+                    Body: {`{ \n  "manychat_id": "...",\n  "lead_name": "...",\n  "ad_id": N,\n  "keyword": "...",\n  "cualificacion": "true/false/null"\n}`}
                 </p>
             </div>
         </div>

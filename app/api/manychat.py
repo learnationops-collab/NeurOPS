@@ -27,6 +27,7 @@ def receive_manychat_ad_lead():
     manychat_id = data.get('manychat_id')
     ad_id_raw = data.get('ad_id')
     keyword = data.get('keyword', '')
+    lead_name = data.get('lead_name', '')
     qualification_raw = data.get('cualificacion')
 
     if not manychat_id:
@@ -66,18 +67,21 @@ def receive_manychat_ad_lead():
             lead.qualification = qualification
             if keyword:
                 lead.keyword = keyword
+            if lead_name:
+                lead.lead_name = lead_name
             action = 'updated'
-            logger.info(f"[WEBHOOK] Lead actualizado: manychat_id={manychat_id}, qualification={qualification}")
+            logger.info(f"[WEBHOOK] Lead actualizado: manychat_id={manychat_id}, qualification={qualification}, lead_name={lead_name}")
         else:
             lead = ManychatAdLead(
                 manychat_id=str(manychat_id),
+                lead_name=lead_name,
                 ad_id=ad_id,
                 keyword=keyword,
                 qualification=qualification
             )
             db.session.add(lead)
             action = 'created'
-            logger.info(f"[WEBHOOK] Lead creado: manychat_id={manychat_id}, ad_id={ad_id}, keyword={keyword}")
+            logger.info(f"[WEBHOOK] Lead creado: manychat_id={manychat_id}, lead_name={lead_name}, ad_id={ad_id}, keyword={keyword}")
 
         db.session.commit()
 
@@ -87,6 +91,7 @@ def receive_manychat_ad_lead():
             "lead": {
                 "id": lead.id,
                 "manychat_id": lead.manychat_id,
+                "lead_name": lead.lead_name,
                 "ad_id": lead.ad_id,
                 "qualification": lead.qualification
             }
@@ -118,6 +123,7 @@ def get_webhook_log():
     return jsonify([{
         'id': l.id,
         'manychat_id': l.manychat_id,
+        'lead_name': l.lead_name,
         'ad_id': l.ad_id,
         'ad_name': ads_map[l.ad_id].name if l.ad_id and l.ad_id in ads_map else '—',
         'keyword': l.keyword,
