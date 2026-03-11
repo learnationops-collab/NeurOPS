@@ -75,11 +75,9 @@ class ManychatAdLead(db.Model):
     __tablename__ = 'manychat_ad_leads'
     id = db.Column(db.Integer, primary_key=True)
     manychat_id = db.Column(db.String(100), unique=True, nullable=False)
-    ad_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=True)
+    ad_id = db.Column(db.Integer, nullable=True)  # Sin FK, acepta cualquier valor
     keyword = db.Column(db.String(100))
     qualification = db.Column(db.String(10), default='null')  # 'true', 'false', 'null'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    ad = db.relationship('Ad', backref=db.backref('manychat_leads', lazy='dynamic'))
 
