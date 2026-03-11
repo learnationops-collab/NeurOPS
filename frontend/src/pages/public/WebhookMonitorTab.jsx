@@ -25,6 +25,10 @@ const WebhookMonitorTab = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
+    const [editingId, setEditingId] = useState(null);
+    const [editForm, setEditForm] = useState({ lead_name: '', qualification: '', ad_id: '' });
+    const [saving, setSaving] = useState(false);
+
     useEffect(() => {
         fetchLogs();
     }, []);
@@ -40,6 +44,33 @@ const WebhookMonitorTab = () => {
         } finally {
             setLoading(false);
             setRefreshing(false);
+        }
+    };
+
+    const startEditing = (log) => {
+        setEditingId(log.id);
+        setEditForm({
+            lead_name: log.lead_name || '',
+            qualification: log.qualification || 'null',
+            ad_id: log.ad_id || ''
+        });
+    };
+
+    const cancelEditing = () => {
+        setEditingId(null);
+    };
+
+    const saveEdit = async (id) => {
+        try {
+            setSaving(true);
+            await api.put(`/manychat-webhook/${id}`, editForm);
+            setEditingId(null);
+            fetchLogs(true);
+        } catch (err) {
+            console.error('Error saving lead:', err);
+            alert('Error al guardar los cambios');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -105,37 +136,90 @@ const WebhookMonitorTab = () => {
                 </div>
             ) : (
                 <div className="space-y-2">
-                    {logs.map(log => (
-                        <div key={log.id} className="flex items-center gap-4 p-3.5 bg-slate-800/30 hover:bg-slate-800/50 border border-slate-800/50 rounded-xl transition-colors">
-                            {/* Indicador de estado */}
-                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${log.qualification === 'true' ? 'bg-emerald-400' :
-                                log.qualification === 'false' ? 'bg-red-400' : 'bg-slate-500'
-                                }`} />
-
-                            {/* Info principal */}
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-bold text-white">{log.lead_name || 'Desconocido'}</span>
-                                    <span className="text-xs font-mono text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded">ID: {log.manychat_id}</span>
-                                    <QualificationBadge value={log.qualification} />
+                    {logs.map(log =>
+                        editingId === log.id ? (
+                            <div key={log.id} className="p-4 bg-slate-800 border border-slate-700 rounded-xl space-y-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Nombre</label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm outline-none focus:border-violet-500"
+                                            value={editForm.lead_name}
+                                            onChange={e => setEditForm({ ...editForm, lead_name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Ad ID</label>
+                                        <input
+                                            type="number"
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm outline-none focus:border-violet-500 font-mono"
+                                            value={editForm.ad_id}
+                                            onChange={e => setEditForm({ ...editForm, ad_id: e.target.value })}
+                                            placeholder="Dejar vacío si no aplica"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Cualificación</label>
+                                        <select
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm outline-none focus:border-violet-500"
+                                            value={editForm.qualification}
+                                            onChange={e => setEditForm({ ...editForm, qualification: e.target.value })}
+                                        >
+                                            <option value="true">Cualificado</option>
+                                            <option value="false">No Cualificado</option>
+                                            <option value="null">Pendiente / Desconocido</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
-                                    <span>Anuncio: <strong className="text-slate-300">{log.ad_name}</strong></span>
-                                    {log.keyword && <span className="font-mono text-slate-600">kw:{log.keyword}</span>}
+                                <div className="flex justify-end gap-2 pt-1 border-t border-slate-700/50 mt-2">
+                                    <button onClick={cancelEditing} disabled={saving} className="px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-colors">Cancelar</button>
+                                    <button onClick={() => saveEdit(log.id)} disabled={saving} className="px-4 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1">
+                                        {saving ? <Loader2 size={12} className="animate-spin" /> : null} Guardar
+                                    </button>
                                 </div>
                             </div>
+                        ) : (
+                            <div key={log.id} className="flex items-center gap-4 p-3.5 bg-slate-800/30 hover:bg-slate-800/50 border border-slate-800/50 rounded-xl transition-colors group">
+                                {/* Indicador de estado */}
+                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${log.qualification === 'true' ? 'bg-emerald-400' :
+                                    log.qualification === 'false' ? 'bg-red-400' : 'bg-slate-500'
+                                    }`} />
 
-                            {/* Timestamp */}
-                            <div className="text-right flex-shrink-0">
-                                <p className="text-[10px] text-slate-600">
-                                    {log.created_at ? new Date(log.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) : '—'}
-                                </p>
-                                <p className="text-[10px] text-slate-500 font-mono">
-                                    {log.created_at ? new Date(log.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                                </p>
+                                {/* Info principal */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-sm font-bold text-white">{log.lead_name || 'Desconocido'}</span>
+                                        <span className="text-xs font-mono text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded">ID: {log.manychat_id}</span>
+                                        <QualificationBadge value={log.qualification} />
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
+                                        <span>Anuncio: <strong className="text-slate-300">{log.ad_name}</strong> {log.ad_id ? `(#${log.ad_id})` : ''}</span>
+                                        {log.keyword && <span className="font-mono text-slate-600">kw:{log.keyword}</span>}
+                                    </div>
+                                </div>
+
+                                {/* Timestamp y Acciones */}
+                                <div className="flex items-center gap-3 flex-shrink-0">
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-slate-600">
+                                            {log.created_at ? new Date(log.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) : '—'}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500 font-mono">
+                                            {log.created_at ? new Date(log.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => startEditing(log)}
+                                        className="p-1.5 text-slate-500 hover:text-white hover:bg-slate-700/50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                        title="Editar Lead"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        )
+                    )}
                 </div>
             )}
 

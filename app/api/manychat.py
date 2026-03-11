@@ -154,3 +154,30 @@ def get_ad_lead_stats():
         }
         for s in stats if s.ad_id is not None
     }), 200
+
+
+@bp.route('/manychat-webhook/<int:lead_id>', methods=['PUT'])
+def update_ad_lead(lead_id):
+    """Permite editar manualmente un lead (cualificación, nombre, ad_id)."""
+    from app.models import ManychatAdLead
+
+    lead = ManychatAdLead.query.get_or_404(lead_id)
+    data = request.get_json() or {}
+
+    if 'qualification' in data:
+        lead.qualification = data.get('qualification')
+    if 'lead_name' in data:
+        lead.lead_name = data.get('lead_name')
+    if 'ad_id' in data:
+        ad_id_raw = data.get('ad_id')
+        try:
+            lead.ad_id = int(ad_id_raw) if ad_id_raw else None
+        except ValueError:
+            pass
+
+    try:
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Lead actualizado"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
