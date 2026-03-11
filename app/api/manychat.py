@@ -8,16 +8,21 @@ logger = logging.getLogger(__name__)
 bp = Blueprint('manychat', __name__)
 
 
-@bp.route('/manychat-webhook', methods=['POST'])
+@bp.route('/manychat-webhook', methods=['GET', 'POST'], strict_slashes=False)
 def receive_manychat_ad_lead():
     """
     Recibe un lead de ManyChat y lo vincula a un anuncio.
     Siempre responde 200/201, incluso si el anuncio no existe.
+    GET: verificación de URL por ManyChat.
     """
+    # Verificación de URL por ManyChat (GET)
+    if request.method == 'GET':
+        return jsonify({"status": "ok", "message": "Webhook activo"}), 200
+
     from app.models import ManychatAdLead, Ad
 
     data = request.get_json(silent=True) or {}
-    logger.info(f"[WEBHOOK] Recibido: {data}")
+    logger.info(f"[WEBHOOK] Recibido ({request.method}): {data}")
 
     manychat_id = data.get('manychat_id')
     ad_id_raw = data.get('ad_id')
