@@ -20,15 +20,11 @@ def upgrade():
     # La FK 'fk_ads_ad_set_id_ad_groups' apunta a la tabla vieja 'ad_groups'.
     # Necesitamos corregirla para que apunte a 'ad_sets'.
     bind = op.get_bind()
-    dialect = bind.dialect.name
 
-    if dialect == 'postgresql':
-        # Solo PostgreSQL tiene constraints nombrados que importan aquí
-        try:
-            op.drop_constraint('fk_ads_ad_set_id_ad_groups', 'ads', type_='foreignkey')
-        except Exception:
-            pass  # Si no existe, seguimos adelante
-
+    if bind.dialect.name == 'postgresql':
+        bind.execute(sa.text(
+            "ALTER TABLE ads DROP CONSTRAINT IF EXISTS fk_ads_ad_set_id_ad_groups"
+        ))
         op.create_foreign_key(
             'fk_ads_ad_set_id_ad_sets', 'ads', 'ad_sets',
             ['ad_set_id'], ['id']

@@ -19,16 +19,13 @@ depends_on = None
 def upgrade():
     bind = op.get_bind()
     if bind.dialect.name == 'postgresql':
-        # Eliminar FK que vincula manychat_ad_leads.ad_id -> ads.id
-        try:
-            op.drop_constraint('fk_manychat_ad_leads_ad_id_ads', 'manychat_ad_leads', type_='foreignkey')
-        except Exception:
-            pass
-        # Probar nombre alternativo por si Alembic lo generó distinto
-        try:
-            op.drop_constraint('manychat_ad_leads_ad_id_fkey', 'manychat_ad_leads', type_='foreignkey')
-        except Exception:
-            pass
+        # Usar IF EXISTS para evitar que una excepción aborte la transacción
+        bind.execute(sa.text(
+            "ALTER TABLE manychat_ad_leads DROP CONSTRAINT IF EXISTS fk_manychat_ad_leads_ad_id_ads"
+        ))
+        bind.execute(sa.text(
+            "ALTER TABLE manychat_ad_leads DROP CONSTRAINT IF EXISTS manychat_ad_leads_ad_id_fkey"
+        ))
 
 
 def downgrade():
