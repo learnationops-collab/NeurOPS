@@ -61,7 +61,21 @@ def receive_manychat_ad_lead():
             pass  # Si falla la búsqueda, seguimos sin ad_id
 
     try:
-        lead = ManychatAdLead.query.filter_by(manychat_id=str(manychat_id)).first()
+        # Lógica de upsert:
+        # Buscamos si existe un registro exacto para este manychat_id + ad_id (o keyword)
+        # Si no viene info de ad, simplemente actualizamos el último registro insertado
+        lead = None
+        if ad_id:
+            lead = ManychatAdLead.query.filter_by(manychat_id=str(manychat_id), ad_id=ad_id).first()
+        elif keyword:
+            lead = ManychatAdLead.query.filter_by(manychat_id=str(manychat_id), keyword=keyword).first()
+
+        # Si no lo encontramos por ad/keyword pero sí mandaron info de ad/keyword, 
+        # significa que es una respuesta a un anuncio NUEVO, y lead quedará en None -> insertará.
+
+        # Si no enviaron ni ad_id ni keyword (solo vinieron a cualificar), buscamos el último
+        if not lead and not ad_id and not keyword:
+            lead = ManychatAdLead.query.filter_by(manychat_id=str(manychat_id)).order_by(ManychatAdLead.created_at.desc()).first()
 
         if lead:
             lead.qualification = qualification

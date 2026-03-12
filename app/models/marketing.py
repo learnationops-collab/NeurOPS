@@ -74,7 +74,7 @@ class ManychatAdLead(db.Model):
     """Lead recibido desde ManyChat, vinculado a un anuncio por ad_id/keyword."""
     __tablename__ = 'manychat_ad_leads'
     id = db.Column(db.Integer, primary_key=True)
-    manychat_id = db.Column(db.String(100), unique=True, nullable=False)
+    manychat_id = db.Column(db.String(100), nullable=False)
     lead_name = db.Column(db.String(150))
     ad_id = db.Column(db.Integer, nullable=True)  # Sin FK, acepta cualquier valor
     keyword = db.Column(db.String(100))
