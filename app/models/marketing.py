@@ -71,13 +71,43 @@ class AdDailySpend(db.Model):
 
 
 class ManychatAdLead(db.Model):
-    """Lead recibido desde ManyChat, vinculado a un anuncio por ad_id/keyword."""
+    """Old lead table. Preserved for data migration."""
     __tablename__ = 'manychat_ad_leads'
     id = db.Column(db.Integer, primary_key=True)
     manychat_id = db.Column(db.String(100), nullable=False)
     lead_name = db.Column(db.String(150))
     ad_id = db.Column(db.Integer, nullable=True)  # Sin FK, acepta cualquier valor
     keyword = db.Column(db.String(100))
+    qualification = db.Column(db.String(10), default='null')  # 'true', 'false', 'null'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ManychatLead(db.Model):
+    """Información persistente y única del prospecto que ingresó vía ManyChat"""
+    __tablename__ = 'manychat_leads'
+    id = db.Column(db.Integer, primary_key=True)
+    manychat_id = db.Column(db.String(100), unique=True, nullable=False)
+    name = db.Column(db.String(150))
+    ig = db.Column(db.String(100))
+    follower = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Un Lead puede interactuar con múltiples anuncios/webhooks
+    answers = db.relationship('LeadAnswer', backref='lead', lazy='dynamic', cascade="all, delete-orphan")
+
+
+class LeadAnswer(db.Model):
+    """Respuesta/Interacción específica de un Lead a un Anuncio"""
+    __tablename__ = 'lead_answers'
+    id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(db.Integer, db.ForeignKey('manychat_leads.id'), nullable=False)
+    ad_id = db.Column(db.Integer, nullable=True)  # Sin FK rígida para admitir ads no registrados todavía
+    keyword = db.Column(db.String(100))
+    fecha_recibida = db.Column(db.String(50)) # Fecha string que pasa manychat
+    opening = db.Column(db.String(100))
+    variante = db.Column(db.String(100))
     qualification = db.Column(db.String(10), default='null')  # 'true', 'false', 'null'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

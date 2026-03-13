@@ -12,26 +12,40 @@ bp = Blueprint('manychat', __name__)
 def receive_manychat_ad_lead():
     """
     Recibe un lead de ManyChat y lo vincula a un anuncio.
-    Siempre responde 200/201, incluso si el anuncio no existe.
+    Maneja el Lead (ManychatLead) y su respuesta/interacción (LeadAnswer)
     GET: verificación de URL por ManyChat.
     """
     # Verificación de URL por ManyChat (GET)
     if request.method == 'GET':
         return jsonify({"status": "ok", "message": "Webhook activo"}), 200
 
-    from app.models import ManychatAdLead, Ad
+    from app.models import ManychatLead, LeadAnswer, Ad
 
     data = request.get_json(silent=True) or {}
-    logger.info(f"[WEBHOOK] Recibido ({request.method}): {data}")
+    logger.info(f"[WEBHOOK NUEVO FORMATO] Recibido ({request.method}): {data}")
 
     manychat_id = data.get('manychat_id')
-    ad_id_raw = data.get('ad_id')
-    keyword = data.get('keyword', '')
-    lead_name = data.get('lead_name', '')
-    qualification_raw = data.get('cualificacion')
-
+    
     if not manychat_id:
         return jsonify({"status": "error", "message": "manychat_id es obligatorio"}), 400
+
+    # ----- Datos del LEAD -----
+    lead_name = data.get('lead_name', '')
+    lead_ig = data.get('lead_ig', '')
+    
+    # Parse follower boolean
+    follower_raw = data.get('follower')
+    follower = False
+    if str(follower_raw).lower() in ('true', '1', 'si', 'sí', 'yes'):
+        follower = True
+
+    # ----- Datos de la RESPUESTA (Answer) -----
+    ad_id_raw = data.get('ad_id')
+    keyword = data.get('keyword', '')
+    fecha = data.get('fecha', '')
+    opening = data.get('opening', '')
+    variante = data.get('variante', '')
+    qualification_raw = data.get('cualificacion')
 
     # Convertir ad_id a int de forma segura
     ad_id = None
@@ -42,7 +56,7 @@ def receive_manychat_ad_lead():
             ad_id = None
             logger.warning(f"[WEBHOOK] ad_id no es un entero válido: '{ad_id_raw}', se guardará como None")
 
-    # Normalizar cualificación a string
+    # Normalizar cualificación a string limitados (true/false/null)
     if qualification_raw is None or str(qualification_raw).lower() in ('null', 'none', ''):
         qualification = 'null'
     elif str(qualification_raw).lower() in ('true', '1', 'si', 'sí', 'yes'):
@@ -61,41 +75,61 @@ def receive_manychat_ad_lead():
             pass  # Si falla la búsqueda, seguimos sin ad_id
 
     try:
-        # Lógica de upsert:
-        # Buscamos si existe un registro exacto para este manychat_id + ad_id (o keyword)
-        # Si no viene info de ad, simplemente actualizamos el último registro insertado
-        lead = None
-        if ad_id:
-            lead = ManychatAdLead.query.filter_by(manychat_id=str(manychat_id), ad_id=ad_id).first()
-        elif keyword:
-            lead = ManychatAdLead.query.filter_by(manychat_id=str(manychat_id), keyword=keyword).first()
-
-        # Si no lo encontramos por ad/keyword pero sí mandaron info de ad/keyword, 
-        # significa que es una respuesta a un anuncio NUEVO, y lead quedará en None -> insertará.
-
-        # Si no enviaron ni ad_id ni keyword (solo vinieron a cualificar), buscamos el último
-        if not lead and not ad_id and not keyword:
-            lead = ManychatAdLead.query.filter_by(manychat_id=str(manychat_id)).order_by(ManychatAdLead.created_at.desc()).first()
-
+        # 1. UPSERT LEAD
+        lead = ManychatLead.query.filter_by(manychat_id=str(manychat_id)).first()
         if lead:
-            lead.qualification = qualification
-            if keyword:
-                lead.keyword = keyword
-            if lead_name:
-                lead.lead_name = lead_name
-            action = 'updated'
-            logger.info(f"[WEBHOOK] Lead actualizado: manychat_id={manychat_id}, qualification={qualification}, lead_name={lead_name}")
+            # Actualizamos datos del usuario
+            if lead_name: lead.name = lead_name
+            if lead_ig: lead.ig = lead_ig
+            lead.follower = follower
+            logger.info(f"[WEBHOOK] ManychatLead actualizado: {manychat_id}")
         else:
-            lead = ManychatAdLead(
+            # Lo creamos
+            lead = ManychatLead(
                 manychat_id=str(manychat_id),
-                lead_name=lead_name,
-                ad_id=ad_id,
-                keyword=keyword,
-                qualification=qualification
+                name=lead_name,
+                ig=lead_ig,
+                follower=follower
             )
             db.session.add(lead)
+            db.session.flush() # Para obtener lead.id antes del commit
+            logger.info(f"[WEBHOOK] ManychatLead creado: {manychat_id} (ID DB: {lead.id})")
+
+        # 2. UPSERT ANSWER
+        # Buscamos si ya existe una respuesta de este lead para este anuncio (o keyword)
+        answer = None
+        if ad_id:
+            answer = LeadAnswer.query.filter_by(lead_id=lead.id, ad_id=ad_id).first()
+        elif keyword:
+            answer = LeadAnswer.query.filter_by(lead_id=lead.id, keyword=keyword).first()
+
+        # Si mandaron a cualificar pero no dijeron qué anuncio, buscamos la última respuesta del Lead
+        if not answer and not ad_id and not keyword:
+            answer = LeadAnswer.query.filter_by(lead_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
+
+        if answer:
+            # Actualizar respuesta existente
+            if qualification_raw is not None: answer.qualification = qualification
+            if fecha: answer.fecha_recibida = fecha
+            if opening: answer.opening = opening
+            if variante: answer.variante = variante
+            if keyword: answer.keyword = keyword
+            action = 'updated'
+            logger.info(f"[WEBHOOK] LeadAnswer actualizado para Manychat_ID: {manychat_id}")
+        else:
+            # Crear nueva respuesta (Primer contacto con este Anuncio/Variante)
+            answer = LeadAnswer(
+                lead_id=lead.id,
+                ad_id=ad_id,
+                keyword=keyword,
+                fecha_recibida=fecha,
+                opening=opening,
+                variante=variante,
+                qualification=qualification
+            )
+            db.session.add(answer)
             action = 'created'
-            logger.info(f"[WEBHOOK] Lead creado: manychat_id={manychat_id}, lead_name={lead_name}, ad_id={ad_id}, keyword={keyword}")
+            logger.info(f"[WEBHOOK] LeadAnswer creado para Manychat_ID: {manychat_id}, Ad_ID: {ad_id}")
 
         db.session.commit()
 
@@ -105,9 +139,12 @@ def receive_manychat_ad_lead():
             "lead": {
                 "id": lead.id,
                 "manychat_id": lead.manychat_id,
-                "lead_name": lead.lead_name,
-                "ad_id": lead.ad_id,
-                "qualification": lead.qualification
+                "lead_name": lead.name
+            },
+            "answer": {
+                "id": answer.id,
+                "ad_id": answer.ad_id,
+                "qualification": answer.qualification
             }
         }), 201 if action == 'created' else 200
 
@@ -121,45 +158,52 @@ def receive_manychat_ad_lead():
 
 @bp.route('/manychat-webhook/log', methods=['GET'])
 def get_webhook_log():
-    """Retorna los últimos N webhooks recibidos."""
-    from app.models import ManychatAdLead, Ad
+    """Retorna las últimas N interacciones recibidas."""
+    from app.models import LeadAnswer, ManychatLead, Ad
 
     limit = int(request.args.get('limit', 10))
-    leads = ManychatAdLead.query.order_by(ManychatAdLead.created_at.desc()).limit(limit).all()
+    # Traemos las respuestas ordenadas por creación
+    answers = LeadAnswer.query.order_by(LeadAnswer.created_at.desc()).limit(limit).all()
 
-    # Cargar nombres de anuncios por ad_id (sin relationship)
-    ad_ids = [l.ad_id for l in leads if l.ad_id]
+    # Cargar nombres de anuncios y leads
+    ad_ids = [a.ad_id for a in answers if a.ad_id]
     ads_map = {}
     if ad_ids:
         ads = Ad.query.filter(Ad.id.in_(ad_ids)).all()
         ads_map = {a.id: a for a in ads}
 
     return jsonify([{
-        'id': l.id,
-        'manychat_id': l.manychat_id,
-        'lead_name': l.lead_name,
-        'ad_id': l.ad_id,
-        'ad_name': ads_map[l.ad_id].name if l.ad_id and l.ad_id in ads_map else '—',
-        'keyword': l.keyword,
-        'qualification': l.qualification,
-        'created_at': l.created_at.isoformat() if l.created_at else None,
-        'updated_at': l.updated_at.isoformat() if l.updated_at else None
-    } for l in leads]), 200
+        'id': ans.id,  # ID de la respuesta, usado para editar
+        'lead_id': ans.lead.id,
+        'manychat_id': ans.lead.manychat_id,
+        'lead_name': ans.lead.name,
+        'lead_ig': ans.lead.ig,
+        'follower': ans.lead.follower,
+        'ad_id': ans.ad_id,
+        'ad_name': ads_map[ans.ad_id].name if ans.ad_id and ans.ad_id in ads_map else '—',
+        'keyword': ans.keyword,
+        'fecha': ans.fecha_recibida,
+        'opening': ans.opening,
+        'variante': ans.variante,
+        'qualification': ans.qualification,
+        'created_at': ans.created_at.isoformat() if ans.created_at else None,
+        'updated_at': ans.updated_at.isoformat() if ans.updated_at else None
+    } for ans in answers]), 200
 
 
 @bp.route('/manychat-webhook/stats', methods=['GET'])
 def get_ad_lead_stats():
     """Retorna leads totales y cualificados por anuncio."""
-    from app.models import ManychatAdLead
+    from app.models import LeadAnswer
     from sqlalchemy import func
 
     stats = db.session.query(
-        ManychatAdLead.ad_id,
-        func.count(ManychatAdLead.id).label('total_leads'),
+        LeadAnswer.ad_id,
+        func.count(LeadAnswer.id).label('total_leads'),
         func.sum(
-            db.case((ManychatAdLead.qualification == 'true', 1), else_=0)
+            db.case((LeadAnswer.qualification == 'true', 1), else_=0)
         ).label('qualified_leads')
-    ).group_by(ManychatAdLead.ad_id).all()
+    ).group_by(LeadAnswer.ad_id).all()
 
     return jsonify({
         str(s.ad_id): {
@@ -170,24 +214,29 @@ def get_ad_lead_stats():
     }), 200
 
 
-@bp.route('/manychat-webhook/<int:lead_id>', methods=['PUT'])
-def update_ad_lead(lead_id):
-    """Permite editar manualmente un lead (cualificación, nombre, ad_id)."""
-    from app.models import ManychatAdLead
-
-    lead = ManychatAdLead.query.get_or_404(lead_id)
+@bp.route('/manychat-webhook/answer/<int:answer_id>', methods=['PUT'])
+def update_ad_lead(answer_id):
+    """Permite editar manualmente una respuesta/lead en el monitor."""
+    from app.models import LeadAnswer
+    
+    answer = LeadAnswer.query.get_or_404(answer_id)
     data = request.get_json() or {}
 
-    if 'qualification' in data:
-        lead.qualification = data.get('qualification')
-    if 'lead_name' in data:
-        lead.lead_name = data.get('lead_name')
+    # Editar datos de la interacción
+    if 'qualification' in data: answer.qualification = data.get('qualification')
     if 'ad_id' in data:
         ad_id_raw = data.get('ad_id')
         try:
-            lead.ad_id = int(ad_id_raw) if ad_id_raw else None
+            answer.ad_id = int(ad_id_raw) if ad_id_raw else None
         except ValueError:
             pass
+            
+    # Editar datos del usuario vinculado (ManychatLead)
+    if 'lead_name' in data: answer.lead.name = data.get('lead_name')
+    if 'lead_ig' in data: answer.lead.ig = data.get('lead_ig')
+    if 'follower' in data:
+        f_raw = data.get('follower')
+        answer.lead.follower = True if str(f_raw).lower() in ('true', '1') else False
 
     try:
         db.session.commit()
@@ -200,19 +249,19 @@ def update_ad_lead(lead_id):
 @bp.route('/manychat-webhook/stats/dashboard', methods=['GET'])
 def get_ad_dashboard_stats():
     """Retorna leads totales y % cualificados agrupados por ad_id."""
-    from app.models import ManychatAdLead, Ad
+    from app.models import LeadAnswer, Ad
     from sqlalchemy import func
 
     # Filtrar solo los que tienen ad_id
     stats = db.session.query(
-        ManychatAdLead.ad_id,
-        func.count(ManychatAdLead.id).label('total_leads'),
+        LeadAnswer.ad_id,
+        func.count(LeadAnswer.id).label('total_leads'),
         func.sum(
-            db.case((ManychatAdLead.qualification == 'true', 1), else_=0)
+            db.case((LeadAnswer.qualification == 'true', 1), else_=0)
         ).label('qualified_leads')
     ).filter(
-        ManychatAdLead.ad_id != None
-    ).group_by(ManychatAdLead.ad_id).all()
+        LeadAnswer.ad_id != None
+    ).group_by(LeadAnswer.ad_id).all()
 
     # Cargar nombres de anuncios correspondientes
     ad_ids = [s.ad_id for s in stats]

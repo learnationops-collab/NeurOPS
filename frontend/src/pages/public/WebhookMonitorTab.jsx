@@ -26,7 +26,13 @@ const WebhookMonitorTab = () => {
     const [refreshing, setRefreshing] = useState(false);
 
     const [editingId, setEditingId] = useState(null);
-    const [editForm, setEditForm] = useState({ lead_name: '', qualification: '', ad_id: '' });
+    const [editForm, setEditForm] = useState({
+        lead_name: '',
+        lead_ig: '',
+        follower: '',
+        qualification: '',
+        ad_id: ''
+    });
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -47,14 +53,14 @@ const WebhookMonitorTab = () => {
         }
     };
 
-    const startEditing = (log) => {
-        setEditingId(log.id);
-        setEditForm({
-            lead_name: log.lead_name || '',
-            qualification: log.qualification || 'null',
-            ad_id: log.ad_id || ''
-        });
-    };
+    setEditingId(log.id);
+    setEditForm({
+        lead_name: log.lead_name || '',
+        lead_ig: log.lead_ig || '',
+        follower: log.follower === true ? 'true' : 'false',
+        qualification: log.qualification || 'null',
+        ad_id: log.ad_id || ''
+    });
 
     const cancelEditing = () => {
         setEditingId(null);
@@ -63,7 +69,7 @@ const WebhookMonitorTab = () => {
     const saveEdit = async (id) => {
         try {
             setSaving(true);
-            await api.put(`/manychat-webhook/${id}`, editForm);
+            await api.put(`/manychat-webhook/answer/${id}`, editForm);
             setEditingId(null);
             fetchLogs(true);
         } catch (err) {
@@ -139,7 +145,7 @@ const WebhookMonitorTab = () => {
                     {logs.map(log =>
                         editingId === log.id ? (
                             <div key={log.id} className="p-4 bg-slate-800 border border-slate-700 rounded-xl space-y-3">
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                                     <div className="space-y-1">
                                         <label className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Nombre</label>
                                         <input
@@ -150,13 +156,33 @@ const WebhookMonitorTab = () => {
                                         />
                                     </div>
                                     <div className="space-y-1">
+                                        <label className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">IG Username</label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm outline-none focus:border-violet-500"
+                                            value={editForm.lead_ig}
+                                            onChange={e => setEditForm({ ...editForm, lead_ig: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Follower</label>
+                                        <select
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm outline-none focus:border-violet-500"
+                                            value={editForm.follower}
+                                            onChange={e => setEditForm({ ...editForm, follower: e.target.value })}
+                                        >
+                                            <option value="true">Sí (Follower)</option>
+                                            <option value="false">No Follower</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
                                         <label className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Ad ID</label>
                                         <input
                                             type="number"
                                             className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm outline-none focus:border-violet-500 font-mono"
                                             value={editForm.ad_id}
                                             onChange={e => setEditForm({ ...editForm, ad_id: e.target.value })}
-                                            placeholder="Dejar vacío si no aplica"
+                                            placeholder="Vacio = N/A"
                                         />
                                     </div>
                                     <div className="space-y-1">
@@ -168,7 +194,7 @@ const WebhookMonitorTab = () => {
                                         >
                                             <option value="true">Cualificado</option>
                                             <option value="false">No Cualificado</option>
-                                            <option value="null">Pendiente / Desconocido</option>
+                                            <option value="null">Pendiente</option>
                                         </select>
                                     </div>
                                 </div>
@@ -189,13 +215,26 @@ const WebhookMonitorTab = () => {
                                 {/* Info principal */}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-sm font-bold text-white">{log.lead_name || 'Desconocido'}</span>
-                                        <span className="text-xs font-mono text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded">ID: {log.manychat_id}</span>
+                                        <span className="text-sm font-bold text-white leading-none">{log.lead_name || 'Desconocido'}</span>
+                                        {log.lead_ig && (
+                                            <a href={`https://instagram.com/${log.lead_ig}`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-pink-400 hover:underline">
+                                                @{log.lead_ig}
+                                            </a>
+                                        )}
+                                        {log.follower && (
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-violet-300 bg-violet-500/20 px-1.5 py-0.5 rounded border border-violet-500/30">
+                                                Follower
+                                            </span>
+                                        )}
+                                        <span className="text-xs font-mono text-slate-500 bg-slate-800 px-2 py-0.5 rounded leading-none">ID: {log.manychat_id}</span>
                                         <QualificationBadge value={log.qualification} />
                                     </div>
-                                    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
-                                        <span>Anuncio: <strong className="text-slate-300">{log.ad_name}</strong> {log.ad_id ? `(#${log.ad_id})` : ''}</span>
-                                        {log.keyword && <span className="font-mono text-slate-600">kw:{log.keyword}</span>}
+
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-slate-500 pb-1">
+                                        <span className="flex items-center gap-1">Ad: <strong className="text-slate-300">{log.ad_name}</strong> {log.ad_id ? <span className="font-mono text-[9px]">(#{log.ad_id})</span> : ''}</span>
+                                        {log.variante && <span>Var: <strong className="text-amber-400 font-medium">{log.variante}</strong></span>}
+                                        {log.opening && <span>Open: <strong className="text-blue-400 font-medium">{log.opening}</strong></span>}
+                                        {log.fecha && <span>Fecha (MC): <strong className="text-slate-400">{log.fecha}</strong></span>}
                                     </div>
                                 </div>
 
@@ -230,7 +269,7 @@ const WebhookMonitorTab = () => {
                     POST /api/manychat-webhook
                 </code>
                 <p className="text-[10px] text-slate-600 mt-2 whitespace-pre-wrap font-mono">
-                    Body: {`{ \n  "manychat_id": "...",\n  "lead_name": "...",\n  "ad_id": N,\n  "keyword": "...",\n  "cualificacion": "true/false/null"\n}`}
+                    Body: {`{ \n  "manychat_id": "...",\n  "lead_name": "...",\n  "lead_ig": "...",\n  "follower": "true/false",\n  "ad_id": N,\n  "keyword": "...",\n  "opening": "...",\n  "variante": "...",\n  "fecha": "...",\n  "cualificacion": "true/false/null"\n}`}
                 </p>
             </div>
         </div>
