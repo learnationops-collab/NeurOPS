@@ -52,15 +52,16 @@ const WebhookMonitorTab = () => {
             setRefreshing(false);
         }
     };
-
-    setEditingId(log.id);
-    setEditForm({
-        lead_name: log.lead_name || '',
-        lead_ig: log.lead_ig || '',
-        follower: log.follower === true ? 'true' : 'false',
-        qualification: log.qualification || 'null',
-        ad_id: log.ad_id || ''
-    });
+    const startEditing = (log) => {
+        setEditingId(log.id);
+        setEditForm({
+            lead_name: log.lead_name || '',
+            lead_ig: log.lead_ig || '',
+            follower: log.follower === true ? 'true' : 'false',
+            qualification: log.qualification || 'null',
+            ad_id: log.ad_id || ''
+        });
+    };
 
     const cancelEditing = () => {
         setEditingId(null);
