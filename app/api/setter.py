@@ -36,7 +36,7 @@ def _trigger_setter_report_webhook(stat):
         from app.services.image_service import ImageService
         
         # Webhook URL provided by user
-        url = "https://discordapp.com/api/webhooks/1471390632223314072/D0H6JaX8dnGdiOmPsGoDQyqwoN5X6zw1YHdlIs6evOZYk-BbvK7Bt32KjWw_nvkjwhdz"
+        url = "https://discord.com/api/webhooks/1482070325641347288/fFK0OKoDIRngTIzh1kl81_Um8GrtFg62Z3TK4Rq0qgjQtU3jNqlOOLZ4lw1c_0qV0drX"
         
         # 1. Prepare Data for Image
         setter_name = stat.setter.username if stat.setter else "Setter"
