@@ -197,32 +197,40 @@ def update_ad_lead(lead_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@bp.route('/manychat-webhook/stats/keywords', methods=['GET'])
-def get_keyword_stats():
-    """Retorna leads totales y % cualificados agrupados por keyword."""
-    from app.models import ManychatAdLead
+@bp.route('/manychat-webhook/stats/dashboard', methods=['GET'])
+def get_ad_dashboard_stats():
+    """Retorna leads totales y % cualificados agrupados por ad_id."""
+    from app.models import ManychatAdLead, Ad
     from sqlalchemy import func
 
-    # Filtrar solo los que tienen keyword
+    # Filtrar solo los que tienen ad_id
     stats = db.session.query(
-        ManychatAdLead.keyword,
+        ManychatAdLead.ad_id,
         func.count(ManychatAdLead.id).label('total_leads'),
         func.sum(
             db.case((ManychatAdLead.qualification == 'true', 1), else_=0)
         ).label('qualified_leads')
     ).filter(
-        ManychatAdLead.keyword != None,
-        ManychatAdLead.keyword != ''
-    ).group_by(ManychatAdLead.keyword).all()
+        ManychatAdLead.ad_id != None
+    ).group_by(ManychatAdLead.ad_id).all()
+
+    # Cargar nombres de anuncios correspondientes
+    ad_ids = [s.ad_id for s in stats]
+    ads_map = {}
+    if ad_ids:
+        ads = Ad.query.filter(Ad.id.in_(ad_ids)).all()
+        ads_map = {a.id: a.name for a in ads}
 
     result = []
     for s in stats:
         total = s.total_leads
         qual = int(s.qualified_leads or 0)
         qual_percent = round((qual / total) * 100, 1) if total > 0 else 0
+        ad_name = ads_map.get(s.ad_id, f"Anuncio Desconocido (#{s.ad_id})")
 
         result.append({
-            'keyword': s.keyword,
+            'ad_id': s.ad_id,
+            'ad_name': ad_name,
             'total_leads': total,
             'qualified_leads': qual,
             'qualified_percentage': qual_percent

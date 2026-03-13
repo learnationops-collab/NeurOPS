@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Hash, RefreshCw, TrendingUp, Users } from 'lucide-react';
+import { Loader2, Megaphone, RefreshCw, TrendingUp, Users } from 'lucide-react';
 
-const KeywordDashboardTab = () => {
+const AdDashboardTab = () => {
     const [stats, setStats] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -15,10 +15,10 @@ const KeywordDashboardTab = () => {
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
         try {
-            const res = await api.get('/manychat-webhook/stats/keywords');
+            const res = await api.get('/manychat-webhook/stats/dashboard');
             setStats(res.data);
         } catch (err) {
-            console.error('Error fetching keyword stats:', err);
+            console.error('Error fetching ad stats:', err);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -33,10 +33,10 @@ const KeywordDashboardTab = () => {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-blue-500/10 rounded-xl">
-                        <Hash className="text-blue-400" size={20} />
+                        <Megaphone className="text-blue-400" size={20} />
                     </div>
                     <div>
-                        <h3 className="text-sm font-black uppercase tracking-wider text-white">Rendimiento por Keyword</h3>
+                        <h3 className="text-sm font-black uppercase tracking-wider text-white">Rendimiento por Anuncio</h3>
                         <p className="text-xs text-slate-500">Comparativa de leads entrantes y % de cualificación</p>
                     </div>
                 </div>
@@ -56,9 +56,9 @@ const KeywordDashboardTab = () => {
                 </div>
             ) : stats.length === 0 ? (
                 <div className="text-center py-12 text-slate-500">
-                    <Hash size={40} className="mx-auto mb-3 opacity-20" />
+                    <Megaphone size={40} className="mx-auto mb-3 opacity-20" />
                     <p className="font-medium text-sm">Sin datos suficientes</p>
-                    <p className="text-xs mt-1">Aún no hay leads registrados con keywords asociadas</p>
+                    <p className="text-xs mt-1">Aún no hay leads registrados asociados a un ID de Anuncio</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -81,7 +81,7 @@ const KeywordDashboardTab = () => {
                         const barWidth = `${(stat.total_leads / maxLeads) * 100}%`;
 
                         return (
-                            <div key={stat.keyword} className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 hover:bg-slate-800/60 transition-colors relative overflow-hidden group">
+                            <div key={stat.ad_id} className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 hover:bg-slate-800/60 transition-colors relative overflow-hidden group">
                                 {/* Decoración de fondo topo-izq */}
                                 <div className="absolute -top-4 -left-4 w-16 h-16 bg-blue-500/5 rounded-full blur-xl group-hover:bg-blue-500/10 transition-colors"></div>
 
@@ -89,10 +89,11 @@ const KeywordDashboardTab = () => {
                                     {/* Header de la tarjeta */}
                                     <div className="flex items-start justify-between mb-4">
                                         <div>
-                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Keyword</p>
-                                            <h4 className="text-lg font-black text-white px-2 py-0.5 bg-slate-900 rounded inline-block font-mono border border-slate-700">
-                                                {stat.keyword}
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Anuncio</p>
+                                            <h4 className="text-lg font-black text-white px-2 py-0.5 bg-slate-900 rounded font-bold border border-slate-700 leading-tight">
+                                                {stat.ad_name}
                                             </h4>
+                                            <p className="text-[10px] font-mono text-slate-500 mt-1">ID: {stat.ad_id}</p>
                                         </div>
                                         <div className="text-right">
                                             <span className="text-slate-600 text-[10px] font-bold">#{index + 1}</span>
@@ -144,4 +145,4 @@ const KeywordDashboardTab = () => {
     );
 };
 
-export default KeywordDashboardTab;
+export default AdDashboardTab;
