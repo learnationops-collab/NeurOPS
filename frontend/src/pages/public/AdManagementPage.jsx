@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { Loader2, Plus, Trash2, Pencil, Save, X, DollarSign, Megaphone, ArrowLeft, CalendarDays, TrendingUp, Search, Radio, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebhookMonitorTab from './WebhookMonitorTab';
+import KeywordDashboardTab from './KeywordDashboardTab';
 
 // ==========================================
 // Tab: Gestión de Anuncios
@@ -601,6 +602,7 @@ const AdManagementPage = () => {
     const tabs = [
         { key: 'ads', label: 'Anuncios', icon: Megaphone },
         { key: 'spend', label: 'Inversión Diaria', icon: DollarSign },
+        { key: 'keywords', label: 'Dashboard Keywords', icon: Users },
         { key: 'webhooks', label: 'Webhooks', icon: Radio },
     ];
 
@@ -646,6 +648,8 @@ const AdManagementPage = () => {
                         <AdsTab ads={ads} onRefresh={fetchAds} loading={loading} />
                     ) : activeTab === 'spend' ? (
                         <DailySpendTab ads={ads} />
+                    ) : activeTab === 'keywords' ? (
+                        <KeywordDashboardTab />
                     ) : (
                         <WebhookMonitorTab />
                     )}

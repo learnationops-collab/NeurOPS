@@ -195,3 +195,40 @@ def update_ad_lead(lead_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@bp.route('/manychat-webhook/stats/keywords', methods=['GET'])
+def get_keyword_stats():
+    """Retorna leads totales y % cualificados agrupados por keyword."""
+    from app.models import ManychatAdLead
+    from sqlalchemy import func
+
+    # Filtrar solo los que tienen keyword
+    stats = db.session.query(
+        ManychatAdLead.keyword,
+        func.count(ManychatAdLead.id).label('total_leads'),
+        func.sum(
+            db.case((ManychatAdLead.qualification == 'true', 1), else_=0)
+        ).label('qualified_leads')
+    ).filter(
+        ManychatAdLead.keyword != None,
+        ManychatAdLead.keyword != ''
+    ).group_by(ManychatAdLead.keyword).all()
+
+    result = []
+    for s in stats:
+        total = s.total_leads
+        qual = int(s.qualified_leads or 0)
+        qual_percent = round((qual / total) * 100, 1) if total > 0 else 0
+
+        result.append({
+            'keyword': s.keyword,
+            'total_leads': total,
+            'qualified_leads': qual,
+            'qualified_percentage': qual_percent
+        })
+
+    # Ordenar por volumen de leads (descendente)
+    result.sort(key=lambda x: x['total_leads'], reverse=True)
+
+    return jsonify(result), 200
