@@ -289,3 +289,66 @@ def get_ad_dashboard_stats():
     result.sort(key=lambda x: x['total_leads'], reverse=True)
 
     return jsonify(result), 200
+
+@bp.route('/manychat-webhook/migrate', methods=['POST'])
+def trigger_manychat_migration():
+    """Ejecuta el script de migración para pasar la data vieja a las tablas nuevas."""
+    from app.models import ManychatAdLead, ManychatLead, LeadAnswer
+    
+    try:
+        old_leads = ManychatAdLead.query.order_by(ManychatAdLead.created_at.asc()).all()
+        total_leads = len(old_leads)
+        
+        logger.info(f"[MIGRATION] Iniciando migración de {total_leads} registros desde ManychatAdLead")
+        
+        migrated_count = 0
+        for i, old in enumerate(old_leads):
+            # Buscar si el Lead ya se ha migrado
+            lead = ManychatLead.query.filter_by(manychat_id=str(old.manychat_id)).first()
+            
+            if not lead:
+                lead = ManychatLead(
+                    manychat_id=str(old.manychat_id),
+                    name=old.lead_name,
+                    created_at=old.created_at,
+                    updated_at=old.updated_at
+                )
+                db.session.add(lead)
+                db.session.flush() # para obtener ID
+            elif old.lead_name and not lead.name:
+                lead.name = old.lead_name
+                
+            # Buscar si la Answer de ese evento ya está
+            # No hay una FK estricta pero podemos ver si coincide el timestamp aproximado y ad_id
+            answer = LeadAnswer.query.filter_by(
+                lead_id=lead.id,
+                ad_id=old.ad_id,
+                created_at=old.created_at
+            ).first()
+            
+            if not answer:
+                answer = LeadAnswer(
+                    lead_id=lead.id,
+                    ad_id=old.ad_id,
+                    keyword=old.keyword,
+                    qualification=old.qualification,
+                    created_at=old.created_at,
+                    updated_at=old.updated_at
+                )
+                db.session.add(answer)
+                migrated_count += 1
+                
+            if i > 0 and i % 50 == 0:
+                db.session.commit()
+                
+        db.session.commit()
+        return jsonify({
+            "status": "success", 
+            "message": f"Migración completada. Procesados {total_leads}. Interacciones insertadas: {migrated_count}."
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        error_details = traceback.format_exc()
+        logger.error(f"[MIGRATION] ERROR: {str(e)}\n{error_details}")
+        return jsonify({"status": "error", "message": str(e)}), 500

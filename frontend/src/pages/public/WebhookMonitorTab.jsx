@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Radio, RefreshCw, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
+import { Loader2, Radio, RefreshCw, CheckCircle, XCircle, HelpCircle, DatabaseBackup } from 'lucide-react';
 
 const QualificationBadge = ({ value }) => {
     if (value === 'true') return (
@@ -24,6 +24,7 @@ const WebhookMonitorTab = () => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [migrating, setMigrating] = useState(false);
 
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState({
@@ -81,6 +82,22 @@ const WebhookMonitorTab = () => {
         }
     };
 
+    const handleMigration = async () => {
+        if (!window.confirm("¿Estás seguro de querer migrar la tabla antigua de Manychat a las nuevas tablas? Esto procesará todos los registros antiguos. Puede demorar varios segundos.")) return;
+        
+        try {
+            setMigrating(true);
+            const res = await api.post('/manychat-webhook/migrate');
+            alert(res.data.message);
+            fetchLogs(true);
+        } catch (err) {
+            console.error("Migration error", err);
+            alert("Error ejecutando migración: " + (err.response?.data?.message || err.message));
+        } finally {
+            setMigrating(false);
+        }
+    }
+
     // Calcular resumen
     const totalLeads = logs.length;
     const qualified = logs.filter(l => l.qualification === 'true').length;
@@ -90,7 +107,7 @@ const WebhookMonitorTab = () => {
     return (
         <div className="space-y-6">
             {/* Header con refresh */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-violet-500/10 rounded-xl">
                         <Radio className="text-violet-400" size={20} />
@@ -100,14 +117,24 @@ const WebhookMonitorTab = () => {
                         <p className="text-xs text-slate-500">Últimos leads recibidos desde ManyChat</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => fetchLogs(true)}
-                    disabled={refreshing}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all"
-                >
-                    <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-                    Actualizar
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleMigration}
+                        disabled={migrating || loading}
+                        className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-xl text-xs font-bold transition-all border border-amber-500/20"
+                    >
+                        <DatabaseBackup size={14} className={migrating ? 'animate-bounce' : ''} />
+                        {migrating ? 'Migrando...' : 'Migrar Data Antigua'}
+                    </button>
+                    <button
+                        onClick={() => fetchLogs(true)}
+                        disabled={refreshing}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all"
+                    >
+                        <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+                        Actualizar
+                    </button>
+                </div>
             </div>
 
             {/* Stats rápidos */}
