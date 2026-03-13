@@ -773,7 +773,7 @@ def _trigger_closer_report_discord(report):
         from app.services.image_service import ImageService
 
         # Mismo webhook que los setters
-        url = "https://discordapp.com/api/webhooks/1471390632223314072/D0H6JaX8dnGdiOmPsGoDQyqwoN5X6zw1YHdlIs6evOZYk-BbvK7Bt32KjWw_nvkjwhdz"
+        url = "https://discord.com/api/webhooks/1482070325641347288/fFK0OKoDIRngTIzh1kl81_Um8GrtFg62Z3TK4Rq0qgjQtU3jNqlOOLZ4lw1c_0qV0drX"
 
         closer_name = report.closer.username if report.closer else "Closer"
         date_str = report.date.strftime('%d/%m/%Y')
