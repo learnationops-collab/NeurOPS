@@ -43,10 +43,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['lead_id'], ['manychat_leads.id'], name=op.f('fk_lead_answers_lead_id_manychat_leads')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_lead_answers'))
     )
-    with op.batch_alter_table('manychat_ad_leads', schema=None) as batch_op:
-        batch_op.drop_constraint(batch_op.f('uq_manychat_ad_leads_manychat_id'), type_='unique')
-        batch_op.drop_constraint(batch_op.f('fk_manychat_ad_leads_ad_id_ads'), type_='foreignkey')
-
     # ### end Alembic commands ###
 
 
