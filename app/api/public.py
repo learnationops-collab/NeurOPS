@@ -1473,3 +1473,49 @@ def delete_public_daily_spend(spend_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+# ============================================================
+# FINANCIAL ANALYSIS (EXCEL DATA)
+# ============================================================
+
+@bp.route('/public/financial-sales', methods=['POST'])
+def receive_financial_sales():
+    """Receives sales data from Excel/Apps Script."""
+    from app.models import FinancialSale
+    data = request.get_json() or {}
+
+    # Supports both list and single object
+    items = data if isinstance(data, list) else [data]
+    
+    saved = 0
+    for item in items:
+        # Map fields from Excel: monto -> amount, setter -> setter_name
+        monto = item.get('monto')
+        setter = item.get('setter')
+        
+        if monto is None or setter is None:
+            continue
+            
+        sale = FinancialSale(
+            setter_name=str(setter),
+            amount=float(monto),
+            raw_data=item
+        )
+        db.session.add(sale)
+        saved += 1
+        
+    try:
+        db.session.commit()
+        return jsonify({"message": f"{saved} sales records saved"}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/public/financial-sales', methods=['GET'])
+def get_financial_sales():
+    """Returns all financial sales records."""
+    from app.models import FinancialSale
+    
+    sales = FinancialSale.query.order_by(FinancialSale.date.desc()).all()
+    return jsonify([s.to_dict() for s in sales]), 200

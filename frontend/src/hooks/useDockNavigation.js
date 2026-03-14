@@ -67,6 +67,7 @@ const useDockNavigation = () => {
                 { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
                 { id: 'leads', icon: Users, label: 'Leads', path: '/admin/leads' },
                 { id: 'finances', icon: TrendingUp, label: 'Finanzas', path: '/admin/finance' },
+                { id: 'financial-analysis', icon: Activity, label: 'Análisis F.', path: '/admin/financial-analysis' },
                 { id: 'team', icon: Users, label: 'Equipo', path: '/admin/team' },
                 { id: 'settings', icon: Settings, label: 'Ajustes', path: '/admin/settings' }
             ];

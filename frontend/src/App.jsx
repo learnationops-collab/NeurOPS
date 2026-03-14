@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
 import FinancePage from './pages/admin/reports/FinancePage';
+import FinancialAnalysisPage from './pages/admin/reports/FinancialAnalysisPage';
 import LoginPage from './pages/auth/LoginPage';
 import EmergencyCreatePage from './pages/auth/EmergencyCreatePage';
 import AnalysisPage from './pages/admin/reports/AnalysisPage';
@@ -110,6 +111,16 @@ function App() {
                 <ProtectedRoute roles={['admin', 'operator']}>
                   <MainLayout>
                     <FinancePage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/financial-analysis"
+              element={
+                <ProtectedRoute roles={['admin', 'operator']}>
+                  <MainLayout>
+                    <FinancialAnalysisPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

@@ -10,6 +10,7 @@ from .closer_report import CloserDailyReport
 from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment
 from .integration import Integration
 from .public_registration import PublicRegistration
+from .financial import FinancialSale
 
 # Export all for easy access via from app.models import ...
 __all__ = [
@@ -21,5 +22,5 @@ __all__ = [
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdDailySpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment',
-    'Integration', 'PublicRegistration'
+    'Integration', 'PublicRegistration', 'FinancialSale'
 ]
