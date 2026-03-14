@@ -1490,16 +1490,27 @@ def receive_financial_sales():
     
     saved = 0
     for item in items:
-        # Map fields from Excel: monto -> amount, setter -> setter_name
         monto = item.get('monto')
         setter = item.get('setter')
         
         if monto is None or setter is None:
             continue
-            
+
+        # Try to get date from item
+        sale_date = datetime.utcnow()
+        fecha_str = item.get('fecha')
+        if fecha_str:
+            try:
+                # Handle ISO format strings like '2024-03-01T00:00:00.000Z'
+                from dateutil import parser
+                sale_date = parser.parse(fecha_str)
+            except:
+                pass
+
         sale = FinancialSale(
             setter_name=str(setter),
             amount=float(monto),
+            date=sale_date,
             raw_data=item
         )
         db.session.add(sale)
