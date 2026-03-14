@@ -4,6 +4,7 @@ import { Loader2, Megaphone, RefreshCw, TrendingUp, Users } from 'lucide-react';
 
 const AdDashboardTab = () => {
     const [stats, setStats] = useState([]);
+    const [segmentationStats, setSegmentationStats] = useState({ variantes: [], openings: [] });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -15,8 +16,12 @@ const AdDashboardTab = () => {
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
         try {
-            const res = await api.get('/manychat-webhook/stats/dashboard');
-            setStats(res.data);
+            const [adsRes, segRes] = await Promise.all([
+                api.get('/manychat-webhook/stats/dashboard'),
+                api.get('/manychat-webhook/stats/segmentation')
+            ]);
+            setStats(adsRes.data);
+            setSegmentationStats(segRes.data);
         } catch (err) {
             console.error('Error fetching ad stats:', err);
         } finally {
@@ -26,9 +31,60 @@ const AdDashboardTab = () => {
     };
 
     const maxLeads = Math.max(...stats.map(s => s.total_leads), 1);
+    
+    // Función auxiliar para renderizar tarjetas pequeñas de segmentación
+    const renderSegmentationCard = (stat, maxSegLeads) => {
+        let qualColor = "text-slate-400";
+        let qualBg = "bg-slate-500/10";
+        if (stat.qualified_percentage >= 50) {
+            qualColor = "text-emerald-400";
+            qualBg = "bg-emerald-500/10";
+        } else if (stat.qualified_percentage >= 20) {
+            qualColor = "text-yellow-400";
+            qualBg = "bg-yellow-500/10";
+        } else if (stat.total_leads > 0 && stat.qualified_percentage < 20) {
+            qualColor = "text-red-400";
+            qualBg = "bg-red-500/10";
+        }
+
+        const barWidth = `${(stat.total_leads / maxSegLeads) * 100}%`;
+
+        return (
+            <div key={stat.name} className="bg-slate-800/20 border border-slate-700/30 rounded-xl p-4 hover:bg-slate-800/40 transition-colors">
+                <div className="flex justify-between items-start mb-3">
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider truncate pr-2" title={stat.name}>
+                        {stat.name}
+                    </h4>
+                    <span className="bg-slate-900/50 px-2 py-0.5 rounded text-xs font-black text-slate-300">
+                        {stat.total_leads} <span className="text-[9px] text-slate-500 uppercase">Leads</span>
+                    </span>
+                </div>
+                
+                <div className="flex items-center gap-3 mb-3">
+                    <div className={`flex-1 rounded-lg p-2 border ${qualBg.replace('10', '20').replace('bg-', 'border-')}`}>
+                        <div className="flex items-center justify-between">
+                            <p className={`text-[9px] font-black uppercase tracking-wider ${qualColor}`}>Cualificación</p>
+                            <TrendingUp size={10} className={qualColor} />
+                        </div>
+                        <div className="flex items-baseline gap-1 mt-0.5">
+                            <p className={`text-lg font-black leading-none ${qualColor}`}>{stat.qualified_percentage}%</p>
+                            <span className="text-[9px] text-slate-500 font-bold">({stat.qualified_leads})</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500/80 rounded-full" style={{ width: barWidth }} />
+                </div>
+            </div>
+        );
+    };
+
+    const maxVarianteLeads = Math.max(...(segmentationStats.variantes || []).map(s => s.total_leads), 1);
+    const maxOpeningLeads = Math.max(...(segmentationStats.openings || []).map(s => s.total_leads), 1);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -54,14 +110,56 @@ const AdDashboardTab = () => {
                 <div className="flex items-center justify-center py-12">
                     <Loader2 className="animate-spin text-blue-500" size={28} />
                 </div>
-            ) : stats.length === 0 ? (
-                <div className="text-center py-12 text-slate-500">
-                    <Megaphone size={40} className="mx-auto mb-3 opacity-20" />
-                    <p className="font-medium text-sm">Sin datos suficientes</p>
-                    <p className="text-xs mt-1">Aún no hay leads registrados asociados a un ID de Anuncio</p>
-                </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-8">
+                    {/* Sección Segmentación */}
+                    {((segmentationStats.variantes && segmentationStats.variantes.length > 0) || 
+                      (segmentationStats.openings && segmentationStats.openings.length > 0)) && (
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-2 border-b border-slate-800/50 pb-2">
+                                <Users className="text-amber-400" size={18} />
+                                <h3 className="text-sm font-black uppercase tracking-wider text-slate-300">Rendimiento por Fragmentos (Segmentación)</h3>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Variantes */}
+                                {segmentationStats.variantes && segmentationStats.variantes.length > 0 && (
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Variantes</h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {segmentationStats.variantes.map(stat => renderSegmentationCard(stat, maxVarianteLeads))}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* Openings */}
+                                {segmentationStats.openings && segmentationStats.openings.length > 0 && (
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Openings</h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {segmentationStats.openings.map(stat => renderSegmentationCard(stat, maxOpeningLeads))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Separador */}
+                    {(stats.length > 0) && (
+                         <div className="flex items-center gap-2 border-b border-slate-800/50 pb-2 pt-2">
+                             <Megaphone className="text-blue-400" size={18} />
+                             <h3 className="text-sm font-black uppercase tracking-wider text-slate-300">Rendimiento por Anuncio (Keyword)</h3>
+                         </div>
+                    )}
+
+                    {stats.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500">
+                            <Megaphone size={40} className="mx-auto mb-3 opacity-20" />
+                            <p className="font-medium text-sm">Sin datos de anuncios</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {stats.map((stat, index) => {
                         // Determinar color de cualificación basado en el %
                         let qualColor = "text-slate-400";
@@ -139,6 +237,8 @@ const AdDashboardTab = () => {
                             </div>
                         );
                     })}
+                </div>
+            )}
                 </div>
             )}
         </div>

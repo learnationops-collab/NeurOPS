@@ -246,6 +246,64 @@ def update_ad_lead(answer_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@bp.route('/manychat-webhook/stats/segmentation', methods=['GET'])
+def get_ad_segmentation_stats():
+    """Retorna leads agrupados por variante y por opening."""
+    from app.models import LeadAnswer
+    from sqlalchemy import func, not_
+
+    # Filtros base: excluir Nulos/Vacíos y valores basura del webhook cuf_
+    base_filters = [
+        LeadAnswer.variante != None,
+        LeadAnswer.variante != '',
+        LeadAnswer.opening != None,
+        LeadAnswer.opening != '',
+        # Excluir explícitamente valores de webhook no interpretados
+        not_(LeadAnswer.variante.like('%cuf_%')),
+        not_(LeadAnswer.opening.like('%cuf_%'))
+    ]
+
+    # Agrupar por Variante
+    stats_variante = db.session.query(
+        LeadAnswer.variante,
+        func.count(LeadAnswer.id).label('total_leads'),
+        func.sum(
+            db.case((LeadAnswer.qualification == 'true', 1), else_=0)
+        ).label('qualified_leads')
+    ).filter(*base_filters).group_by(LeadAnswer.variante).all()
+
+    # Agrupar por Opening
+    stats_opening = db.session.query(
+        LeadAnswer.opening,
+        func.count(LeadAnswer.id).label('total_leads'),
+        func.sum(
+            db.case((LeadAnswer.qualification == 'true', 1), else_=0)
+        ).label('qualified_leads')
+    ).filter(*base_filters).group_by(LeadAnswer.opening).all()
+
+    def format_stats(stats_list, key_name):
+        res = []
+        for s in stats_list:
+            total = s.total_leads
+            qual = int(s.qualified_leads or 0)
+            qual_percent = round((qual / total) * 100, 1) if total > 0 else 0
+            val = getattr(s, key_name)
+            if not val or '{{' in val: continue # Extra safety
+            res.append({
+                'name': val,
+                'total_leads': total,
+                'qualified_leads': qual,
+                'qualified_percentage': qual_percent
+            })
+        res.sort(key=lambda x: x['total_leads'], reverse=True)
+        return res
+
+    return jsonify({
+        'variantes': format_stats(stats_variante, 'variante'),
+        'openings': format_stats(stats_opening, 'opening')
+    }), 200
+
+
 @bp.route('/manychat-webhook/stats/dashboard', methods=['GET'])
 def get_ad_dashboard_stats():
     """Retorna leads totales y % cualificados agrupados por ad_id."""
