@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
-import { Loader2, Megaphone, RefreshCw, TrendingUp, Users } from 'lucide-react';
+import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
+import AdDetailModal from '../../components/modals/AdDetailModal';
 
 const AdDashboardTab = () => {
     const [stats, setStats] = useState([]);
     const [segmentationStats, setSegmentationStats] = useState({ variantes: [], openings: [] });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [selectedAdId, setSelectedAdId] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         fetchStats();
@@ -47,7 +48,7 @@ const AdDashboardTab = () => {
             qualBg = "bg-red-500/10";
         }
 
-        const barWidth = `${(stat.total_leads / maxSegLeads) * 100}%`;
+        const barWidth = `${stat.qualified_percentage}%`; // Cambiado a % de cualificación
 
         return (
             <div key={stat.name} className="bg-slate-800/20 border border-slate-700/30 rounded-xl p-4 hover:bg-slate-800/40 transition-colors">
@@ -73,8 +74,14 @@ const AdDashboardTab = () => {
                     </div>
                 </div>
 
-                <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500/80 rounded-full" style={{ width: barWidth }} />
+                <div className="space-y-1">
+                    <div className="flex justify-between text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                        <span>Cualificación</span>
+                        <span>{stat.qualified_percentage}% / 100%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${qualColor.replace('text-', 'bg-')}/80`} style={{ width: barWidth }} />
+                    </div>
                 </div>
             </div>
         );
@@ -175,26 +182,36 @@ const AdDashboardTab = () => {
                             qualBg = "bg-red-500/10";
                         }
 
-                        // Ancho de la barra de progreso relativo al máximo volumen de leads global
-                        const barWidth = `${(stat.total_leads / maxLeads) * 100}%`;
+                        // Ancho de la barra de progreso relativo al 100% de cualificación
+                        const barWidth = `${stat.qualified_percentage}%`;
 
                         return (
-                            <div key={stat.ad_id} className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 hover:bg-slate-800/60 transition-colors relative overflow-hidden group">
+                            <div 
+                                key={stat.ad_id} 
+                                onClick={() => {
+                                    setSelectedAdId(stat.ad_id);
+                                    setIsModalOpen(true);
+                                }}
+                                className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 hover:bg-slate-800/60 hover:border-blue-500/30 transition-all relative overflow-hidden group cursor-pointer"
+                            >
                                 {/* Decoración de fondo topo-izq */}
                                 <div className="absolute -top-4 -left-4 w-16 h-16 bg-blue-500/5 rounded-full blur-xl group-hover:bg-blue-500/10 transition-colors"></div>
 
                                 <div className="relative">
                                     {/* Header de la tarjeta */}
                                     <div className="flex items-start justify-between mb-4">
-                                        <div>
+                                        <div className="flex-1 min-w-0">
                                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Anuncio</p>
-                                            <h4 className="text-lg font-black text-white px-2 py-0.5 bg-slate-900 rounded font-bold border border-slate-700 leading-tight">
+                                            <h4 className="text-base font-black text-white px-2 py-0.5 bg-slate-900 rounded font-bold border border-slate-700 leading-tight truncate">
                                                 {stat.ad_name}
                                             </h4>
                                             <p className="text-[10px] font-mono text-slate-500 mt-1">ID: {stat.ad_id}</p>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-right flex flex-col items-end gap-1">
                                             <span className="text-slate-600 text-[10px] font-bold">#{index + 1}</span>
+                                            <div className="p-1.5 bg-slate-900/50 rounded-lg text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Activity size={12} />
+                                            </div>
                                         </div>
                                     </div>
 
@@ -214,21 +231,39 @@ const AdDashboardTab = () => {
                                                 <p className={`text-[9px] font-black uppercase tracking-wider ${qualColor}`}>% Cualificados</p>
                                             </div>
                                             <div className="flex items-baseline gap-1">
-                                                <p className={`text-2xl font-black leading-none ${qualColor}`}>{stat.qualified_percentage}%</p>
-                                                <span className="text-[10px] text-slate-500 font-bold">({stat.qualified_leads})</span>
+                                                <p className="text-2xl font-black leading-none">{stat.qualified_percentage}%</p>
+                                                <span className="text-[10px] opacity-70 font-bold">({stat.qualified_leads})</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Barra de progreso visual (Volumen comparativo) */}
-                                    <div className="space-y-1.5">
-                                        <div className="flex justify-between text-[9px] font-bold text-slate-500">
-                                            <span>Volumen Relativo</span>
-                                            <span>{stat.total_leads} / {maxLeads} MAX</span>
+                                    {/* Métricas Financieras (Si hay spend) */}
+                                    <div className="grid grid-cols-2 gap-3 mb-5 pt-3 border-t border-slate-700/30">
+                                        <div className="flex flex-col">
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">CPL</p>
+                                            <p className="text-sm font-black text-white flex items-center gap-1">
+                                                <DollarSign size={12} className="text-amber-500" />
+                                                {stat.cpl || '—'}
+                                            </p>
                                         </div>
-                                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                                        <div className="flex flex-col text-right">
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">CPQL</p>
+                                            <p className="text-sm font-black text-white flex items-center justify-end gap-1">
+                                                <DollarSign size={12} className="text-violet-500" />
+                                                {stat.cpql || '—'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Barra de progreso visual (Cualificación vs 100%) */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                            <span>Rendimiento</span>
+                                            <span>{stat.qualified_percentage}% / 100%</span>
+                                        </div>
+                                        <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-700/30">
                                             <div
-                                                className="h-full bg-blue-500 rounded-full"
+                                                className={`h-full rounded-full transition-all duration-500 ${qualColor.replace('text-', 'bg-')}/80`}
                                                 style={{ width: barWidth }}
                                             />
                                         </div>
@@ -241,6 +276,13 @@ const AdDashboardTab = () => {
             )}
                 </div>
             )}
+
+            {/* Modal de Detalle */}
+            <AdDetailModal 
+                isOpen={isModalOpen} 
+                adId={selectedAdId} 
+                onClose={() => setIsModalOpen(false)} 
+            />
         </div>
     );
 };

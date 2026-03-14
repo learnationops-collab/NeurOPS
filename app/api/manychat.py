@@ -309,11 +309,11 @@ def get_ad_segmentation_stats():
 
 @bp.route('/manychat-webhook/stats/dashboard', methods=['GET'])
 def get_ad_dashboard_stats():
-    """Retorna leads totales y % cualificados agrupados por ad_id."""
+    """Retorna leads totales, % cualificados y métricas financieras agrupadas por ad_id."""
     from app.models import LeadAnswer, Ad
     from sqlalchemy import func
 
-    # Filtrar solo los que tienen ad_id
+    # Query principal: Leads
     stats = db.session.query(
         LeadAnswer.ad_id,
         func.count(LeadAnswer.id).label('total_leads'),
@@ -324,32 +324,123 @@ def get_ad_dashboard_stats():
         LeadAnswer.ad_id != None
     ).group_by(LeadAnswer.ad_id).all()
 
-    # Cargar nombres de anuncios correspondientes
+    # Cargar datos de anuncios
     ad_ids = [s.ad_id for s in stats]
     ads_map = {}
     if ad_ids:
         ads = Ad.query.filter(Ad.id.in_(ad_ids)).all()
-        ads_map = {a.id: a.name for a in ads}
+        ads_map = {a.id: a for a in ads}
 
     result = []
     for s in stats:
         total = s.total_leads
         qual = int(s.qualified_leads or 0)
         qual_percent = round((qual / total) * 100, 1) if total > 0 else 0
-        ad_name = ads_map.get(s.ad_id, f"Anuncio Desconocido (#{s.ad_id})")
+        
+        ad = ads_map.get(s.ad_id)
+        ad_name = ad.name if ad else f"Anuncio Desconocido (#{s.ad_id})"
+        spend = ad.total_spend if ad else 0
+        
+        cpl = round(spend / total, 2) if total > 0 else 0
+        cpql = round(spend / qual, 2) if qual > 0 else 0
 
         result.append({
             'ad_id': s.ad_id,
             'ad_name': ad_name,
             'total_leads': total,
             'qualified_leads': qual,
-            'qualified_percentage': qual_percent
+            'qualified_percentage': qual_percent,
+            'spend': spend,
+            'cpl': cpl,
+            'cpql': cpql
         })
 
     # Ordenar por volumen de leads (descendente)
     result.sort(key=lambda x: x['total_leads'], reverse=True)
 
     return jsonify(result), 200
+
+@bp.route('/manychat-webhook/ad-details/<int:ad_id>', methods=['GET'])
+def get_ad_details(ad_id):
+    """Retorna detalles completos de un anuncio: histórico de leads, evolución y finanzas."""
+    from app.models import LeadAnswer, ManychatLead, Ad
+    from sqlalchemy import func, cast, Date
+    from datetime import datetime, timedelta
+
+    ad = Ad.query.get(ad_id)
+    if not ad:
+        # Si el ad_id no existe en la tabla ads pero sí en lead_answers
+        ad_name = f"Anuncio ID: {ad_id}"
+        total_spend = 0
+    else:
+        ad_name = ad.name
+        total_spend = ad.total_spend or 0
+
+    # 1. Stats generales
+    leads_query = LeadAnswer.query.filter_by(ad_id=ad_id)
+    total_leads = leads_query.count()
+    qualified_leads = leads_query.filter_by(qualification='true').count()
+    qual_percent = round((qualified_leads / total_leads * 100), 1) if total_leads > 0 else 0
+    
+    cpl = round(total_spend / total_leads, 2) if total_leads > 0 else 0
+    cpql = round(total_spend / qualified_leads, 2) if qualified_leads > 0 else 0
+
+    # 2. Historial de personas (últimos 20)
+    recent_leads = db.session.query(
+        ManychatLead.name,
+        ManychatLead.ig,
+        LeadAnswer.qualification,
+        LeadAnswer.created_at
+    ).join(LeadAnswer, LeadAnswer.lead_id == ManychatLead.id)\
+     .filter(LeadAnswer.ad_id == ad_id)\
+     .order_by(LeadAnswer.created_at.desc())\
+     .limit(20).all()
+
+    leads_list = [{
+        'name': l.name,
+        'ig': l.ig,
+        'qualification': l.qualification,
+        'date': l.created_at.isoformat()
+    } for l in recent_leads]
+
+    # 3. Evolución (Últimos 30 días)
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    evolution_stats = db.session.query(
+        func.date(LeadAnswer.created_at).label('date'),
+        func.count(LeadAnswer.id).label('count')
+    ).filter(
+        LeadAnswer.ad_id == ad_id,
+        LeadAnswer.created_at >= thirty_days_ago
+    ).group_by(func.date(LeadAnswer.created_at))\
+     .order_by(func.date(LeadAnswer.created_at).asc()).all()
+
+    # Formatear evolución para Recharts (JSON)
+    # Rellenar huecos con 0 si es necesario (opcional en frontend pero mejor aquí)
+    evolution_map = {str(s.date): s.count for s in evolution_stats}
+    chart_data = []
+    
+    curr = thirty_days_ago
+    end = datetime.utcnow()
+    while curr <= end:
+        ds = curr.strftime('%Y-%m-%d')
+        chart_data.append({
+            'date': ds,
+            'leads': evolution_map.get(ds, 0)
+        })
+        curr += timedelta(days=1)
+
+    return jsonify({
+        'ad_id': ad_id,
+        'name': ad_name,
+        'spend': total_spend,
+        'total_leads': total_leads,
+        'qualified_leads': qualified_leads,
+        'qualified_percentage': qual_percent,
+        'cpl': cpl,
+        'cpql': cpql,
+        'recent_leads': leads_list,
+        'evolution': chart_data
+    }), 200
 
 
 @bp.route('/manychat-webhook/migrate', methods=['POST'])
