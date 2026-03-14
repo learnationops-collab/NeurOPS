@@ -82,6 +82,7 @@ function App() {
             <Route path="/reporte-closer" element={<PublicCloserReportPage />} />
             <Route path="/estadisticas-closers" element={<PublicCloserStatsPage />} />
             <Route path="/gestion-anuncios" element={<AdManagementPage />} />
+            <Route path="/sales-board" element={<FinancialAnalysisPage />} />
 
 
             {/* Protected Admin Routes */}
