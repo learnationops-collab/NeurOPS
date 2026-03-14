@@ -98,6 +98,24 @@ const WebhookMonitorTab = () => {
         }
     }
 
+    const [cleaning, setCleaning] = useState(false);
+    
+    const handleCleanup = async () => {
+        if (!window.confirm("¿Limpiar todos los registros que contienen 'cuf_' en su Variante u Opening?")) return;
+        
+        try {
+            setCleaning(true);
+            const res = await api.post('/manychat-webhook/cleanup-cuf');
+            alert(res.data.message);
+            fetchLogs(true);
+        } catch (err) {
+            console.error("Cleanup error", err);
+            alert("Error ejecutando limpieza: " + (err.response?.data?.message || err.message));
+        } finally {
+            setCleaning(false);
+        }
+    }
+
     // Calcular resumen
     const totalLeads = logs.length;
     const qualified = logs.filter(l => l.qualification === 'true').length;
@@ -118,6 +136,14 @@ const WebhookMonitorTab = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleCleanup}
+                        disabled={cleaning || loading}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl text-xs font-bold transition-all border border-red-500/20"
+                    >
+                        <XCircle size={14} className={cleaning ? 'animate-spin' : ''} />
+                        {cleaning ? 'Limpiando...' : 'Limpiar CUF'}
+                    </button>
                     <button
                         onClick={handleMigration}
                         disabled={migrating || loading}
