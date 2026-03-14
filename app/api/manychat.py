@@ -236,7 +236,7 @@ def update_ad_lead(answer_id):
     if 'lead_ig' in data: answer.lead.ig = data.get('lead_ig')
     if 'follower' in data:
         f_raw = data.get('follower')
-        answer.lead.follower = True if str(f_raw).lower() in ('true', '1') else False
+        answer.lead.follower = True if str(f_raw).lower() in ('true', '1') or f_raw is True else False
 
     try:
         db.session.commit()
@@ -351,102 +351,6 @@ def get_ad_dashboard_stats():
 
     return jsonify(result), 200
 
-@bp.route('/manychat-webhook/migrate', methods=['POST'])
-def trigger_manychat_migration():
-    """Ejecuta el script de migración para pasar la data vieja a las tablas nuevas."""
-    from app.models import ManychatAdLead, ManychatLead, LeadAnswer
-    
-    try:
-        old_leads = ManychatAdLead.query.order_by(ManychatAdLead.created_at.asc()).all()
-        total_leads = len(old_leads)
-        
-        logger.info(f"[MIGRATION] Iniciando migración de {total_leads} registros desde ManychatAdLead")
-        
-        migrated_count = 0
-        for i, old in enumerate(old_leads):
-            # Buscar si el Lead ya se ha migrado
-            lead = ManychatLead.query.filter_by(manychat_id=str(old.manychat_id)).first()
-            
-            if not lead:
-                lead = ManychatLead(
-                    manychat_id=str(old.manychat_id),
-                    name=old.lead_name,
-                    created_at=old.created_at,
-                    updated_at=old.updated_at
-                )
-                db.session.add(lead)
-                db.session.flush() # para obtener ID
-            elif old.lead_name and not lead.name:
-                lead.name = old.lead_name
-                
-            # Buscar si la Answer de ese evento ya está
-            # No hay una FK estricta pero podemos ver si coincide el timestamp aproximado y ad_id
-            answer = LeadAnswer.query.filter_by(
-                lead_id=lead.id,
-                ad_id=old.ad_id,
-                created_at=old.created_at
-            ).first()
-            
-            if not answer:
-                answer = LeadAnswer(
-                    lead_id=lead.id,
-                    ad_id=old.ad_id,
-                    keyword=old.keyword,
-                    qualification=old.qualification,
-                    created_at=old.created_at,
-                    updated_at=old.updated_at
-                )
-                db.session.add(answer)
-                migrated_count += 1
-                
-            if i > 0 and i % 50 == 0:
-                db.session.commit()
-                
-        db.session.commit()
-        return jsonify({
-@bp.route('/manychat-webhook/stats/dashboard', methods=['GET'])
-def get_ad_dashboard_stats():
-    """Retorna leads totales y % cualificados agrupados por ad_id."""
-    from app.models import LeadAnswer, Ad
-    from sqlalchemy import func
-
-    # Filtrar solo los que tienen ad_id
-    stats = db.session.query(
-        LeadAnswer.ad_id,
-        func.count(LeadAnswer.id).label('total_leads'),
-        func.sum(
-            db.case((LeadAnswer.qualification == 'true', 1), else_=0)
-        ).label('qualified_leads')
-    ).filter(
-        LeadAnswer.ad_id != None
-    ).group_by(LeadAnswer.ad_id).all()
-
-    # Cargar nombres de anuncios correspondientes
-    ad_ids = [s.ad_id for s in stats]
-    ads_map = {}
-    if ad_ids:
-        ads = Ad.query.filter(Ad.id.in_(ad_ids)).all()
-        ads_map = {a.id: a.name for a in ads}
-
-    result = []
-    for s in stats:
-        total = s.total_leads
-        qual = int(s.qualified_leads or 0)
-        qual_percent = round((qual / total) * 100, 1) if total > 0 else 0
-        ad_name = ads_map.get(s.ad_id, f"Anuncio Desconocido (#{s.ad_id})")
-
-        result.append({
-            'ad_id': s.ad_id,
-            'ad_name': ad_name,
-            'total_leads': total,
-            'qualified_leads': qual,
-            'qualified_percentage': qual_percent
-        })
-
-    # Ordenar por volumen de leads (descendente)
-    result.sort(key=lambda x: x['total_leads'], reverse=True)
-
-    return jsonify(result), 200
 
 @bp.route('/manychat-webhook/migrate', methods=['POST'])
 def trigger_manychat_migration():
