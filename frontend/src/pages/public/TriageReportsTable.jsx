@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { Loader2, Calendar, User as UserIcon, Trash2, Edit2, Check, X } from 'lucide-react';
 
-const TriageReportsTable = ({ triages }) => {
+const TriageReportsTable = () => {
+
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState(null);

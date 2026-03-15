@@ -1536,20 +1536,6 @@ def get_financial_sales():
 # TRIAGE DAILY REPORT
 # ============================================================
 
-@bp.route('/public/active-triages', methods=['GET'])
-def get_active_triages():
-    """Retorna lista de triages activos (ID y nombre)."""
-    try:
-        from app.models import ROLE_TRIAGE
-        triages = User.query.filter_by(role=ROLE_TRIAGE, is_active=True).all()
-        return jsonify([
-            {"id": t.id, "name": t.username}
-            for t in triages
-        ]), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 @bp.route('/public/triage-report', methods=['POST'])
 def submit_public_triage_report():
     """Recibe y guarda el reporte diario de un triage."""
@@ -1557,11 +1543,11 @@ def submit_public_triage_report():
 
     data = request.get_json() or {}
 
-    triage_id = data.get('triage_id')
+    triage_name = data.get('triage_name')
     report_date_str = data.get('date')
 
-    if not triage_id or not report_date_str:
-        return jsonify({"message": "ID del triage y fecha son obligatorios"}), 400
+    if not triage_name or not report_date_str:
+        return jsonify({"message": "Nombre del triage y fecha son obligatorios"}), 400
 
     try:
         report_date = datetime.strptime(report_date_str, '%Y-%m-%d').date()
@@ -1569,7 +1555,7 @@ def submit_public_triage_report():
         return jsonify({"message": "Formato de fecha inválido"}), 400
 
     # Buscar reporte existente o crear nuevo
-    report = TriageDailyReport.query.filter_by(triage_id=triage_id, date=report_date).first()
+    report = TriageDailyReport.query.filter_by(triage_name=triage_name, date=report_date).first()
 
     # Helper para parsear enteros del payload
     def get_int(key):
@@ -1588,12 +1574,12 @@ def submit_public_triage_report():
         for key, val in field_values.items():
             setattr(report, key, val)
     else:
-        report = TriageDailyReport(triage_id=triage_id, date=report_date, **field_values)
+        report = TriageDailyReport(triage_name=triage_name, date=report_date, **field_values)
         db.session.add(report)
 
     try:
         db.session.commit()
-        return jsonify({"message": "Reporte de triage guardado exitosamente"}), 201
+        return jsonify({"message": f"Reporte de {triage_name} guardado exitosamente"}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -1607,7 +1593,7 @@ def get_public_triage_stats():
 
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
-    triage_id = request.args.get('triage_id')
+    triage_name = request.args.get('triage_name')
     agg_type = request.args.get('agg_type', 'sum')
 
     query = db.session.query(
@@ -1624,8 +1610,8 @@ def get_public_triage_stats():
         query = query.filter(TriageDailyReport.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
     if end_date_str:
         query = query.filter(TriageDailyReport.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
-    if triage_id:
-        query = query.filter(TriageDailyReport.triage_id == triage_id)
+    if triage_name:
+        query = query.filter(TriageDailyReport.triage_name == triage_name)
 
     stats = query.one()
     days_count = stats.days_count or 1
@@ -1654,7 +1640,7 @@ def get_public_triage_reports():
     """Retorna lista de reportes de triage con filtros."""
     from app.models import TriageDailyReport
 
-    triage_id = request.args.get('triage_id')
+    triage_name = request.args.get('triage_name')
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     page = int(request.args.get('page', 1))
@@ -1662,8 +1648,8 @@ def get_public_triage_reports():
 
     query = TriageDailyReport.query
 
-    if triage_id:
-        query = query.filter(TriageDailyReport.triage_id == triage_id)
+    if triage_name:
+        query = query.filter(TriageDailyReport.triage_name == triage_name)
     if start_date_str:
         query = query.filter(TriageDailyReport.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
     if end_date_str:
@@ -1675,8 +1661,7 @@ def get_public_triage_reports():
         "reports": [{
             "id": r.id,
             "date": r.date.isoformat(),
-            "triage_id": r.triage_id,
-            "triage_name": r.triage.username if r.triage else "Unknown",
+            "triage_name": r.triage_name,
             "agendas_nuevas": r.agendas_nuevas,
             "agendas_confirmadas": r.agendas_confirmadas,
             "asistencias": r.asistencias,

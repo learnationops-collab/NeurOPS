@@ -6,7 +6,7 @@ class TriageDailyReport(db.Model):
     __tablename__ = 'triage_daily_reports'
 
     id = db.Column(db.Integer, primary_key=True)
-    triage_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    triage_name = db.Column(db.String(100), nullable=False, default='Kerwin')
     date = db.Column(db.Date, nullable=False)
 
     agendas_nuevas = db.Column(db.Integer, default=0)
@@ -16,5 +16,5 @@ class TriageDailyReport(db.Model):
     reprogramandos = db.Column(db.Integer, default=0)
     no_shows = db.Column(db.Integer, default=0)
 
-    triage = db.relationship('User', foreign_keys=[triage_id])
-    __table_args__ = (db.UniqueConstraint('triage_id', 'date', name='_triage_report_date_uc'),)
+    __table_args__ = (db.UniqueConstraint('triage_name', 'date', name='_triage_report_date_uc'),)
+

@@ -9,10 +9,10 @@ import TriageReportsTable from './TriageReportsTable';
 const PublicTriageStatsPage = () => {
     const [activeTab, setActiveTab] = useState('general'); // 'general', 'history'
     const [stats, setStats] = useState(null);
+
     const [loading, setLoading] = useState(true);
-    const [triages, setTriages] = useState([]);
     const [filters, setFilters] = useState({
-        triage_id: '',
+        triage_name: '',
         start_date: '',
         end_date: '',
         agg_type: 'sum',
@@ -44,17 +44,6 @@ const PublicTriageStatsPage = () => {
         setFilters(prev => ({ ...prev, start_date: start, end_date: end }));
     }, [filters.time_preset, filters.custom_days]);
 
-    // Fetch triages
-    useEffect(() => {
-        const fetchTriages = async () => {
-            try {
-                const res = await api.get('/public/active-triages');
-                setTriages(res.data);
-            } catch (e) { console.error(e); }
-        };
-        fetchTriages();
-    }, []);
-
     // Fetch stats
     useEffect(() => {
         if (activeTab === 'history') return;
@@ -65,7 +54,7 @@ const PublicTriageStatsPage = () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
-            if (filters.triage_id) params.append('triage_id', filters.triage_id);
+            if (filters.triage_name) params.append('triage_name', filters.triage_name);
             if (filters.start_date) params.append('start_date', filters.start_date);
             if (filters.end_date) params.append('end_date', filters.end_date);
             params.append('agg_type', filters.agg_type);
@@ -78,6 +67,7 @@ const PublicTriageStatsPage = () => {
             setLoading(false);
         }
     };
+
 
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
@@ -175,13 +165,14 @@ const PublicTriageStatsPage = () => {
                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Triage / Equipo</label>
                         <select
                             className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 transition-all cursor-pointer min-w-[200px]"
-                            value={filters.triage_id}
-                            onChange={e => setFilters({ ...filters, triage_id: e.target.value })}
+                            value={filters.triage_name}
+                            onChange={e => setFilters({ ...filters, triage_name: e.target.value })}
                         >
                             <option value="">Todo el Equipo ({filters.agg_type === 'sum' ? 'Suma' : 'Promedio'})</option>
-                            {triages.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            <option value="Kerwin">Kerwin</option>
                         </select>
                     </div>
+
 
                     <div className="flex flex-col gap-2">
                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
@@ -308,7 +299,8 @@ const PublicTriageStatsPage = () => {
 
                         {activeTab === 'history' && (
                             <div className="animate-in fade-in duration-500">
-                                <TriageReportsTable triages={triages} />
+                                <TriageReportsTable />
+
                             </div>
                         )}
                     </>

@@ -27,12 +27,11 @@ const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly
 };
 
 const PublicTriageReportPage = () => {
-    const [triages, setTriages] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     const initialFormData = {
-        triage_id: '',
+        triage_name: 'Kerwin',
         date: new Date().toISOString().split('T')[0],
         agendas_nuevas: '',
         agendas_confirmadas: '',
@@ -44,34 +43,12 @@ const PublicTriageReportPage = () => {
 
     const [formData, setFormData] = useState(initialFormData);
 
-    useEffect(() => {
-        fetchTriages();
-    }, []);
-
-    const fetchTriages = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get('/public/active-triages');
-            setTriages(res.data);
-        } catch (err) {
-            console.error("Error fetching triages:", err);
-            alert("Hubo un error cargando el formulario. Reintenta.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleFieldChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value === '' ? '' : (parseInt(value) || 0) }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!formData.triage_id) {
-            alert("Por favor, selecciona quién eres.");
-            return;
-        }
 
         setSubmitting(true);
         try {
@@ -81,7 +58,7 @@ const PublicTriageReportPage = () => {
             // Reset but keep triage and date
             setFormData(prev => ({
                 ...initialFormData,
-                triage_id: prev.triage_id,
+                triage_name: prev.triage_name,
                 date: prev.date,
             }));
         } catch (err) {
@@ -93,7 +70,7 @@ const PublicTriageReportPage = () => {
 
     // Calculate fill progress
     const calculateProgress = () => {
-        const allFields = Object.keys(initialFormData).filter(k => k !== 'triage_id' && k !== 'date');
+        const allFields = Object.keys(initialFormData).filter(k => k !== 'triage_name' && k !== 'date');
         let filled = 0;
         allFields.forEach(field => {
             if (formData[field] !== '' && formData[field] !== null && formData[field] !== undefined) {
@@ -101,10 +78,11 @@ const PublicTriageReportPage = () => {
             }
         });
         const total = allFields.length + 2;
-        if (formData.triage_id) filled++;
+        if (formData.triage_name) filled++;
         if (formData.date) filled++;
         return Math.min(Math.round((filled / total) * 100), 100);
     };
+
 
     const liveMetrics = useMemo(() => {
         const confirmRate = formData.agendas_nuevas > 0 ? ((formData.agendas_confirmadas / formData.agendas_nuevas) * 100).toFixed(1) : '0.0';
@@ -157,17 +135,11 @@ const PublicTriageReportPage = () => {
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">¿Quién eres?</label>
-                                        <select
-                                            required
-                                            className="w-full px-5 py-3.5 bg-slate-800 border border-slate-700/80 rounded-2xl text-white outline-none focus:border-indigo-500 transition-all font-bold cursor-pointer"
-                                            value={formData.triage_id}
-                                            onChange={e => setFormData({ ...formData, triage_id: e.target.value })}
-                                        >
-                                            <option value="" disabled>Selecciona tu nombre</option>
-                                            {triages.map(t => (
-                                                <option key={t.id} value={t.id}>{t.name}</option>
-                                            ))}
-                                        </select>
+                                        <input
+                                            readOnly
+                                            className="w-full px-5 py-3.5 bg-slate-800/50 border border-slate-700/80 rounded-2xl text-slate-400 outline-none transition-all font-bold cursor-not-allowed"
+                                            value={formData.triage_name}
+                                        />
                                     </div>
 
                                     <div className="space-y-2">
@@ -181,6 +153,7 @@ const PublicTriageReportPage = () => {
                                         />
                                     </div>
                                 </div>
+
 
                                 {/* Metrics Section */}
                                 <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-8 shadow-xl space-y-8">
