@@ -1530,3 +1530,197 @@ def get_financial_sales():
     
     sales = FinancialSale.query.order_by(FinancialSale.date.desc()).all()
     return jsonify([s.to_dict() for s in sales]), 200
+
+
+# ============================================================
+# TRIAGE DAILY REPORT
+# ============================================================
+
+@bp.route('/public/active-triages', methods=['GET'])
+def get_active_triages():
+    """Retorna lista de triages activos (ID y nombre)."""
+    try:
+        from app.models import ROLE_TRIAGE
+        triages = User.query.filter_by(role=ROLE_TRIAGE, is_active=True).all()
+        return jsonify([
+            {"id": t.id, "name": t.username}
+            for t in triages
+        ]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/public/triage-report', methods=['POST'])
+def submit_public_triage_report():
+    """Recibe y guarda el reporte diario de un triage."""
+    from app.models import TriageDailyReport
+
+    data = request.get_json() or {}
+
+    triage_id = data.get('triage_id')
+    report_date_str = data.get('date')
+
+    if not triage_id or not report_date_str:
+        return jsonify({"message": "ID del triage y fecha son obligatorios"}), 400
+
+    try:
+        report_date = datetime.strptime(report_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({"message": "Formato de fecha inválido"}), 400
+
+    # Buscar reporte existente o crear nuevo
+    report = TriageDailyReport.query.filter_by(triage_id=triage_id, date=report_date).first()
+
+    # Helper para parsear enteros del payload
+    def get_int(key):
+        return int(data.get(key) or 0)
+
+    field_values = {
+        'agendas_nuevas': get_int('agendas_nuevas'),
+        'agendas_confirmadas': get_int('agendas_confirmadas'),
+        'asistencias': get_int('asistencias'),
+        'cancelaciones': get_int('cancelaciones'),
+        'reprogramandos': get_int('reprogramandos'),
+        'no_shows': get_int('no_shows'),
+    }
+
+    if report:
+        for key, val in field_values.items():
+            setattr(report, key, val)
+    else:
+        report = TriageDailyReport(triage_id=triage_id, date=report_date, **field_values)
+        db.session.add(report)
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Reporte de triage guardado exitosamente"}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/public/triage-stats', methods=['GET'])
+def get_public_triage_stats():
+    """Retorna estadísticas agregadas para triages."""
+    from app.models import TriageDailyReport
+    from sqlalchemy import func
+
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    triage_id = request.args.get('triage_id')
+    agg_type = request.args.get('agg_type', 'sum')
+
+    query = db.session.query(
+        func.sum(TriageDailyReport.agendas_nuevas).label('agendas_nuevas'),
+        func.sum(TriageDailyReport.agendas_confirmadas).label('agendas_confirmadas'),
+        func.sum(TriageDailyReport.asistencias).label('asistencias'),
+        func.sum(TriageDailyReport.cancelaciones).label('cancelaciones'),
+        func.sum(TriageDailyReport.reprogramandos).label('reprogramandos'),
+        func.sum(TriageDailyReport.no_shows).label('no_shows'),
+        func.count(TriageDailyReport.id).label('days_count')
+    )
+
+    if start_date_str:
+        query = query.filter(TriageDailyReport.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
+    if end_date_str:
+        query = query.filter(TriageDailyReport.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+    if triage_id:
+        query = query.filter(TriageDailyReport.triage_id == triage_id)
+
+    stats = query.one()
+    days_count = stats.days_count or 1
+
+    def process_val(v):
+        val = float(v or 0)
+        if agg_type == 'avg' and days_count > 0:
+            return round(val / days_count, 2)
+        return val
+
+    return jsonify({
+        "metadata": {"days_analyzed": days_count, "agg_type": agg_type},
+        "totals": {
+            "agendas_nuevas": process_val(stats.agendas_nuevas),
+            "agendas_confirmadas": process_val(stats.agendas_confirmadas),
+            "asistencias": process_val(stats.asistencias),
+            "cancelaciones": process_val(stats.cancelaciones),
+            "reprogramandos": process_val(stats.reprogramandos),
+            "no_shows": process_val(stats.no_shows)
+        }
+    }), 200
+
+
+@bp.route('/public/triage-reports', methods=['GET'])
+def get_public_triage_reports():
+    """Retorna lista de reportes de triage con filtros."""
+    from app.models import TriageDailyReport
+
+    triage_id = request.args.get('triage_id')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 50))
+
+    query = TriageDailyReport.query
+
+    if triage_id:
+        query = query.filter(TriageDailyReport.triage_id == triage_id)
+    if start_date_str:
+        query = query.filter(TriageDailyReport.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
+    if end_date_str:
+        query = query.filter(TriageDailyReport.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+
+    pagination = query.order_by(TriageDailyReport.date.desc()).paginate(page=page, per_page=per_page)
+
+    return jsonify({
+        "reports": [{
+            "id": r.id,
+            "date": r.date.isoformat(),
+            "triage_id": r.triage_id,
+            "triage_name": r.triage.username if r.triage else "Unknown",
+            "agendas_nuevas": r.agendas_nuevas,
+            "agendas_confirmadas": r.agendas_confirmadas,
+            "asistencias": r.asistencias,
+            "cancelaciones": r.cancelaciones,
+            "reprogramandos": r.reprogramandos,
+            "no_shows": r.no_shows
+        } for r in pagination.items],
+        "total": pagination.total,
+        "pages": pagination.pages,
+        "current_page": pagination.page
+    }), 200
+
+
+@bp.route('/public/triage-reports/<int:report_id>', methods=['PUT'])
+def update_public_triage_report(report_id):
+    """Actualiza un reporte de triage existente."""
+    from app.models import TriageDailyReport
+    report = TriageDailyReport.query.get_or_404(report_id)
+    data = request.get_json() or {}
+
+    try:
+        report.agendas_nuevas = int(data.get('agendas_nuevas') or report.agendas_nuevas)
+        report.agendas_confirmadas = int(data.get('agendas_confirmadas') or report.agendas_confirmadas)
+        report.asistencias = int(data.get('asistencias') or report.asistencias)
+        report.cancelaciones = int(data.get('cancelaciones') or report.cancelaciones)
+        report.reprogramandos = int(data.get('reprogramandos') or report.reprogramandos)
+        report.no_shows = int(data.get('no_shows') or report.no_shows)
+
+        db.session.commit()
+        return jsonify({"message": "Reporte actualizado"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+@bp.route('/public/triage-reports/<int:report_id>', methods=['DELETE'])
+def delete_public_triage_report(report_id):
+    """Elimina un reporte de triage."""
+    from app.models import TriageDailyReport
+    report = TriageDailyReport.query.get_or_404(report_id)
+    try:
+        db.session.delete(report)
+        db.session.commit()
+        return jsonify({"message": "Reporte eliminado"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400

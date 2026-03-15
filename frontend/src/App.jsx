@@ -35,6 +35,8 @@ import PublicSetterReportPage from './pages/public/PublicSetterReportPage';
 import PublicSetterStatsPage from './pages/public/PublicSetterStatsPage';
 import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
 import PublicCloserStatsPage from './pages/public/PublicCloserStatsPage';
+import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
+import PublicTriageStatsPage from './pages/public/PublicTriageStatsPage';
 import AdManagementPage from './pages/public/AdManagementPage';
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
@@ -81,6 +83,8 @@ function App() {
             <Route path="/estadisticas-setters" element={<PublicSetterStatsPage />} />
             <Route path="/reporte-closer" element={<PublicCloserReportPage />} />
             <Route path="/estadisticas-closers" element={<PublicCloserStatsPage />} />
+            <Route path="/reporte-triage" element={<PublicTriageReportPage />} />
+            <Route path="/estadisticas-triage" element={<PublicTriageStatsPage />} />
             <Route path="/gestion-anuncios" element={<AdManagementPage />} />
             <Route path="/sales-board" element={<FinancialAnalysisPage />} />
 

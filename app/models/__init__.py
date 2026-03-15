@@ -11,10 +11,12 @@ from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment
 from .integration import Integration
 from .public_registration import PublicRegistration
 from .financial import FinancialSale
+from .triage_report import TriageDailyReport
+
 
 # Export all for easy access via from app.models import ...
 __all__ = [
-    'User', 'GoogleCalendarToken', 'ROLE_ADMIN', 'ROLE_CLOSER', 'ROLE_SETTER', 'ROLE_OPERATOR',
+    'User', 'GoogleCalendarToken', 'ROLE_ADMIN', 'ROLE_CLOSER', 'ROLE_SETTER', 'ROLE_OPERATOR', 'ROLE_TRIAGE',
     'Client', 'Lead', 'ClientComment',
     'Event', 'EventGroup', 'Program', 'event_closers',
     'Appointment', 'Availability', 'WeeklyAvailability', 'SurveyQuestion', 'SurveyAnswer',
@@ -22,5 +24,6 @@ __all__ = [
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdDailySpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment',
-    'Integration', 'PublicRegistration', 'FinancialSale'
+    'Integration', 'PublicRegistration', 'FinancialSale', 'TriageDailyReport'
+
 ]
