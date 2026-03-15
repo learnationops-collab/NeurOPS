@@ -37,7 +37,9 @@ import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
 import PublicCloserStatsPage from './pages/public/PublicCloserStatsPage';
 import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
 import PublicTriageStatsPage from './pages/public/PublicTriageStatsPage';
+import PublicHubPage from './pages/public/PublicHubPage';
 import AdManagementPage from './pages/public/AdManagementPage';
+
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
 import { ThemeProvider } from './context/ThemeContext';
@@ -85,7 +87,9 @@ function App() {
             <Route path="/estadisticas-closers" element={<PublicCloserStatsPage />} />
             <Route path="/reporte-triage" element={<PublicTriageReportPage />} />
             <Route path="/estadisticas-triage" element={<PublicTriageStatsPage />} />
+            <Route path="/publico" element={<PublicHubPage />} />
             <Route path="/gestion-anuncios" element={<AdManagementPage />} />
+
             <Route path="/sales-board" element={<FinancialAnalysisPage />} />
 
 
