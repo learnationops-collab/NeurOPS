@@ -21,6 +21,9 @@ class Config:
     # Webhooks
     VENTAS_WEBHOOK = os.environ.get('VENTAS_WEBHOOK')
 
+    # Meta Pixel
+    META_PIXEL_ID = os.environ.get('META_PIXEL_ID')
+
     # Security & Sessions
     SESSION_COOKIE_NAME = 'learnation_workers_session'
     REMEMBER_COOKIE_NAME = 'learnation_workers_remember'

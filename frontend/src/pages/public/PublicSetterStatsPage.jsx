@@ -8,6 +8,7 @@ import {
     Copy, Calendar, Info, ArrowRightLeft, ListChecks, Table
 } from 'lucide-react';
 import FunnelChart from '../../components/charts/FunnelChart';
+import EvolutionChart from '../../components/charts/EvolutionChart';
 import SetterReportsTable from './SetterReportsTable';
 import SetterComparisonView from './SetterComparisonView';
 
@@ -102,6 +103,36 @@ const PublicSetterStatsPage = () => {
         </button>
     );
 
+    const div = (n, d) => (d > 0 ? Number(((n / d) * 100).toFixed(2)) : 0);
+
+    const MetricSection = ({ title, icon: Icon, children, chartData, chartVariables, colorClass = "text-indigo-500" }) => (
+        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-8 shadow-2xl relative overflow-hidden group">
+            <div className={`absolute top-0 right-0 w-64 h-64 blur-[120px] opacity-10 group-hover:opacity-20 transition-opacity bg-indigo-500`} />
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/50 pb-6 relative z-10">
+                <div className="flex items-center gap-3">
+                    <div className={`p-3 rounded-2xl bg-slate-800 border border-slate-700/50 ${colorClass}`}>
+                        <Icon size={20} />
+                    </div>
+                    <h3 className="text-xl font-black text-white italic tracking-tight uppercase">{title}</h3>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 relative z-10">
+                <div className="space-y-6">
+                    {children}
+                </div>
+                <div className="bg-slate-950/40 rounded-[2rem] p-8 border border-slate-800/50 backdrop-blur-sm">
+                    <div className="flex items-center gap-2 mb-6">
+                        <TrendingUp size={14} className="text-slate-500" />
+                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Evolución Histórica</h4>
+                    </div>
+                    <EvolutionChart data={chartData} variables={chartVariables} />
+                </div>
+            </div>
+        </div>
+    );
+
     const StatCard = ({ title, value, percentage, icon: Icon, colorClass, subtitle }) => (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
             <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-indigo-500`} />
@@ -147,11 +178,23 @@ const PublicSetterStatsPage = () => {
         if (!stats) return [];
         return [
             { name: 'Qualification', value: stats.totals.funnel_qualification, fill: '#6366f1' },
-            { name: 'Pain', value: stats.totals.funnel_pain, fill: '#818cf8' },
-            { name: 'Offer', value: stats.totals.funnel_offer, fill: '#a5b4fc' },
-            { name: 'Link', value: stats.totals.funnel_link, fill: '#c7d2fe' },
-            { name: 'Agenda', value: stats.totals.funnel_agenda, fill: '#4f46e5' }
+            { name: 'Pain', value: stats.totals.funnel_pain, fill: '#6366f1' },
+            { name: 'Offer', value: stats.totals.funnel_offer, fill: '#6366f1' },
+            { name: 'Link', value: stats.totals.funnel_link, fill: '#6366f1' },
+            { name: 'Agenda', value: stats.totals.funnel_agenda, fill: '#6366f1' }
         ];
+    }, [stats]);
+
+    const timeSeriesData = useMemo(() => {
+        if (!stats?.time_series) return [];
+        return stats.time_series.map(day => ({
+            ...day,
+            op_res_rate: div(day.op_res, day.op_sub),
+            fu_res_rate: div(day.fu_res, day.fu_sub),
+            op_to_ag: div(day.fun_agenda, day.op_res),
+            off_to_ag: div(day.fun_agenda, day.fun_offer),
+            link_to_ag: div(day.fun_agenda, day.fun_link),
+        }));
     }, [stats]);
 
     const SetterPerformanceTable = ({ data }) => (
@@ -328,77 +371,124 @@ const PublicSetterStatsPage = () => {
                                     <StatCard title="FU Response" value={`${stats.percentages.rates.follow_up_response}%`} icon={RefreshCw} colorClass="text-rose-500" />
                                 </div>
 
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                                    {/* DETALLE ABSOLUTO */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-8">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
-                                                    <ListChecks size={20} />
-                                                </div>
-                                                <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Métricas de Proceso</h3>
-                                            </div>
-                                            <div className="text-[10px] font-black text-slate-500 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
-                                                {stats.metadata.days_analyzed} DÍAS ANALIZADOS
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                                            <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 space-y-1">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">No Leads</p>
-                                                <p className="text-xl font-black text-white italic tabular-nums">{stats.totals.not_lead}</p>
-                                            </div>
-                                            <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 space-y-1">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">In-abribles</p>
-                                                <p className="text-xl font-black text-white italic tabular-nums">{stats.totals.inabribles}</p>
-                                            </div>
-                                            <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 space-y-1 border-l-indigo-500/50">
-                                                <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Leads Reales</p>
-                                                <p className="text-xl font-black text-white italic tabular-nums">{stats.totals.leads}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-4 pt-4 border-t border-slate-800">
-                                            <ProgressRow label="Clasificación → Dolor" percentage={stats.percentages.funnel_evolution.qual_to_pain} colorClass="text-indigo-400" absolute={stats.totals.funnel_pain} />
+                                {/* SECCIONES DE MÉTRICAS */}
+                                <div className="space-y-10">
+                                    {/* SECCIÓN: EMBUDO DE VENTAS */}
+                                    <MetricSection
+                                        title="Evolución del Embudo"
+                                        icon={TrendingUp}
+                                        chartData={timeSeriesData}
+                                        chartVariables={[
+                                            { key: 'fun_qual', label: 'Cualificación', color: '#6366f1' },
+                                            { key: 'fun_pain', label: 'Dolor', color: '#818cf8' },
+                                            { key: 'fun_offer', label: 'Oferta', color: '#a5b4fc' },
+                                            { key: 'fun_link', label: 'Link', color: '#c7d2fe' },
+                                            { key: 'fun_agenda', label: 'Agenda', color: '#4f46e5' }
+                                        ]}
+                                    >
+                                        <div className="space-y-6">
+                                            <ProgressRow label="Clasificación → Dolor" percentage={stats.percentages.funnel_evolution.qual_to_pain} colorClass="text-indigo-500" absolute={stats.totals.funnel_pain} />
                                             <ProgressRow label="Dolor → Oferta" percentage={stats.percentages.funnel_evolution.pain_to_offer} colorClass="text-indigo-500" absolute={stats.totals.funnel_offer} />
-                                            <ProgressRow label="Oferta → Link" percentage={stats.percentages.funnel_evolution.offer_to_link} colorClass="text-indigo-600" absolute={stats.totals.funnel_link} />
-                                            <ProgressRow label="Link → Agenda" percentage={stats.percentages.funnel_evolution.link_to_agenda} colorClass="text-indigo-700" absolute={stats.totals.funnel_agenda} />
+                                            <ProgressRow label="Oferta → Link" percentage={stats.percentages.funnel_evolution.offer_to_link} colorClass="text-indigo-500" absolute={stats.totals.funnel_link} />
+                                            <ProgressRow label="Link → Agenda" percentage={stats.percentages.funnel_evolution.link_to_agenda} colorClass="text-indigo-500" absolute={stats.totals.funnel_agenda} />
                                         </div>
+                                    </MetricSection>
 
-                                        {/* MISSING CONVERSIONS PER USER REQUEST */}
-                                        <div className="pt-6 border-t border-slate-800 space-y-4">
-                                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 italic">Conversiones a Agenda</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <div className="p-4 bg-indigo-600/10 rounded-2xl border border-indigo-600/20 text-center space-y-1">
-                                                    <p className="text-[8px] font-black text-indigo-400 uppercase tracking-tighter">Apertura → Agenda</p>
-                                                    <p className="text-xl font-black text-white italic">{stats.percentages.conversions_to_agenda.opening_to_agenda}%</p>
-                                                </div>
-                                                <div className="p-4 bg-fuchsia-600/10 rounded-2xl border border-fuchsia-600/20 text-center space-y-1">
-                                                    <p className="text-[8px] font-black text-fuchsia-400 uppercase tracking-tighter">Oferta → Agenda</p>
-                                                    <p className="text-xl font-black text-white italic">{stats.percentages.conversions_to_agenda.offer_to_agenda}%</p>
-                                                </div>
-                                                <div className="p-4 bg-teal-600/10 rounded-2xl border border-teal-600/20 text-center space-y-1">
-                                                    <p className="text-[8px] font-black text-teal-400 uppercase tracking-tighter">Link → Agenda</p>
-                                                    <p className="text-xl font-black text-white italic">{stats.percentages.conversions_to_agenda.link_to_agenda}%</p>
-                                                </div>
+                                    {/* SECCIÓN: CONVERSIONES */}
+                                    <MetricSection
+                                        title="Conversiones a Agenda"
+                                        icon={Target}
+                                        colorClass="text-emerald-500"
+                                        chartData={timeSeriesData}
+                                        chartVariables={[
+                                            { key: 'op_to_ag', label: 'Apertura → Agenda', color: '#10b981' },
+                                            { key: 'off_to_ag', label: 'Oferta → Agenda', color: '#34d399' },
+                                            { key: 'link_to_ag', label: 'Link → Agenda', color: '#6ee7b7' }
+                                        ]}
+                                    >
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <StatCard title="Apertura → Agenda" value={`${stats.percentages.conversions_to_agenda.opening_to_agenda}%`} icon={MousePointer2} colorClass="text-emerald-500" />
+                                            <StatCard title="Oferta → Agenda" value={`${stats.percentages.conversions_to_agenda.offer_to_agenda}%`} icon={Target} colorClass="text-emerald-500" />
+                                            <StatCard title="Link → Agenda" value={`${stats.percentages.conversions_to_agenda.link_to_agenda}%`} icon={Link2} colorClass="text-emerald-500" />
+                                        </div>
+                                    </MetricSection>
+
+                                    {/* SECCIÓN: APERTURA */}
+                                    <MetricSection
+                                        title="Apertura y Respuesta"
+                                        icon={MousePointer2}
+                                        colorClass="text-fuchsia-500"
+                                        chartData={timeSeriesData}
+                                        chartVariables={[
+                                            { key: 'op_sub', label: 'Aperturas', color: '#d946ef' },
+                                            { key: 'op_res', label: 'Respuestas', color: '#f0abfc' },
+                                            { key: 'op_res_rate', label: '% Respuesta', color: '#fae8ff' }
+                                        ]}
+                                    >
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Aperturas Totales</p>
+                                                <p className="text-3xl font-black text-white italic">{stats.totals.opening_submitted}</p>
+                                                <p className="text-[9px] font-bold text-fuchsia-500 uppercase tracking-tighter">({stats.percentages.rates.opening_rate}% sobre entrantes)</p>
+                                            </div>
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Respuestas</p>
+                                                <p className="text-3xl font-black text-white italic">{stats.totals.opening_responded}</p>
+                                                <p className="text-[9px] font-bold text-fuchsia-400 uppercase tracking-tighter">({stats.percentages.rates.opening_response}% tasa de respuesta)</p>
+                                            </div>
+                                            <StatCard title="Tasa Respuesta" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" />
+                                        </div>
+                                    </MetricSection>
+
+                                    {/* SECCIÓN: SEGUIMIENTOS */}
+                                    <MetricSection
+                                        title="Seguimientos (Follow-up)"
+                                        icon={RefreshCw}
+                                        colorClass="text-rose-500"
+                                        chartData={timeSeriesData}
+                                        chartVariables={[
+                                            { key: 'fu_sub', label: 'Enviados', color: '#f43f5e' },
+                                            { key: 'fu_res', label: 'Respondidos', color: '#fb7185' },
+                                            { key: 'fu_res_rate', label: '% Respuesta', color: '#fecdd3' }
+                                        ]}
+                                    >
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Enviados</p>
+                                                <p className="text-3xl font-black text-white italic">{stats.totals.follow_up_submitted}</p>
+                                            </div>
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Respondidos</p>
+                                                <p className="text-3xl font-black text-white italic">{stats.totals.follow_up_responded}</p>
+                                            </div>
+                                            <StatCard title="Tasa Respuesta" value={`${stats.percentages.rates.follow_up_response}%`} icon={RefreshCw} colorClass="text-rose-500" />
+                                        </div>
+                                    </MetricSection>
+
+                                    {/* SECCIÓN: COMPOSICIÓN */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-8 shadow-2xl overflow-hidden relative group">
+                                        <div className="absolute top-0 right-0 w-64 h-64 blur-[120px] opacity-10 bg-indigo-500" />
+                                        <div className="flex items-center gap-3 relative z-10 border-b border-slate-800 pb-6">
+                                            <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-slate-400">
+                                                <Inbox size={20} />
+                                            </div>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Composición de Base</h3>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-1">
+                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">No Leads</p>
+                                                <p className="text-2xl font-black text-white italic tabular-nums">{stats.totals.not_lead}</p>
+                                            </div>
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-1">
+                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">In-abribles</p>
+                                                <p className="text-2xl font-black text-white italic tabular-nums">{stats.totals.inabribles}</p>
+                                            </div>
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-1 border-l-indigo-500/50 bg-indigo-500/5">
+                                                <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Leads Reales</p>
+                                                <p className="text-2xl font-black text-white italic tabular-nums">{stats.totals.leads}</p>
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* GRÁFICO DE EMBUDO */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 flex flex-col items-center">
-                                        <div className="w-full flex items-center gap-3 mb-8">
-                                            <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
-                                                <TrendingUp size={20} />
-                                            </div>
-                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Visualización Embudo</h3>
-                                        </div>
-                                        <div className="w-full h-[400px]">
-                                            <FunnelChart data={funnelData} />
-                                        </div>
-                                    </div>
-
                                 </div>
 
                                 {/* TABLA DE RENDIMIENTO POR SETTER (Solo en vista equipo) */}

@@ -598,6 +598,33 @@ def get_public_setter_stats():
                 "reports_count": row.reports_count,
                 "report_rate": round((row.reports_count / total_period_days) * 100, 2) if total_period_days > 0 else 0
             })
+
+    # Time Series Data (Daily Evolution)
+    time_series_query = db.session.query(
+        SetterDailyStats.date,
+        func.sum(SetterDailyStats.inbox_entrantes).label('entrantes'),
+        func.sum(SetterDailyStats.opening_submitted).label('op_sub'),
+        func.sum(SetterDailyStats.opening_responded).label('op_res'),
+        func.sum(SetterDailyStats.follow_up_submitted).label('fu_sub'),
+        func.sum(SetterDailyStats.follow_up_responded).label('fu_res'),
+        func.sum(SetterDailyStats.funnel_agenda).label('fun_agenda')
+    )
+    for f in filters:
+        time_series_query = time_series_query.filter(f)
+    time_series_query = time_series_query.group_by(SetterDailyStats.date).order_by(SetterDailyStats.date)
+
+    time_series = []
+    for row in time_series_query.all():
+        time_series.append({
+            "date": row.date.isoformat(),
+            "entrantes": int(row.entrantes or 0),
+            "op_sub": int(row.op_sub or 0),
+            "op_res": int(row.op_res or 0),
+            "fu_sub": int(row.fu_sub or 0),
+            "fu_res": int(row.fu_res or 0),
+            "fun_agenda": int(row.fun_agenda or 0)
+        })
+    res["time_series"] = time_series
     
     return jsonify(res), 200
 @bp.route('/public/setter-reports', methods=['GET'])

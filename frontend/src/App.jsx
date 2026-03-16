@@ -39,6 +39,7 @@ import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
 import PublicTriageStatsPage from './pages/public/PublicTriageStatsPage';
 import PublicHubPage from './pages/public/PublicHubPage';
 import AdManagementPage from './pages/public/AdManagementPage';
+import PixelTracker from './components/common/PixelTracker';
 
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
@@ -72,6 +73,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <Router>
+          <PixelTracker />
           <Toaster position="top-right" />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
