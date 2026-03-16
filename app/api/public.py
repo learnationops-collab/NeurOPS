@@ -1691,7 +1691,7 @@ def _trigger_triage_report_webhook(report):
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"👤 **Triage:** `{report.triage_name}`\n"
             f"📅 **Fecha:** `{report.date.strftime('%d/%m/%Y')}`\n"
-            f"📊 **Resultados:** `{nuevas} Nuevas | {conf} Confirmadas`\n"
+            f"📊 **Resultados:** `{nuevas} En Gestión | {conf} Confirmadas`\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"@everyone"
         )

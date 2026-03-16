@@ -167,7 +167,7 @@ const PublicTriageReportPage = () => {
 
                                     <div className="grid grid-cols-2 gap-6">
                                         <MetricInput
-                                            label="Agendas Nuevas"
+                                            label="Agendas en Gestión"
                                             field="agendas_nuevas"
                                             color="indigo"
                                             value={formData.agendas_nuevas}
