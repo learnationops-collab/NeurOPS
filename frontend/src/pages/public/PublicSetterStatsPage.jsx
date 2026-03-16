@@ -134,9 +134,9 @@ const PublicSetterStatsPage = () => {
                 </div>
                 <span className={`text-xs font-black ${colorClass}`}>{percentage}%</span>
             </div>
-            <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/30">
+            <div className={`h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800 shadow-inner p-0.5`}>
                 <div
-                    className={`h-full rounded-full transition-all duration-1000 ${colorClass.replace('text-', 'bg-')}`}
+                    className={`h-full rounded-full transition-all duration-1000 ${colorClass.replace('text-', 'bg-')} shadow-[0_0_10px_rgba(99,102,241,0.3)]`}
                     style={{ width: `${percentage}%` }}
                 />
             </div>
@@ -153,6 +153,52 @@ const PublicSetterStatsPage = () => {
             { name: 'Agenda', value: stats.totals.funnel_agenda, fill: '#4f46e5' }
         ];
     }, [stats]);
+
+    const SetterPerformanceTable = ({ data }) => (
+        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl mt-10">
+            <div className="p-8 border-b border-slate-800 flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
+                    <Users size={20} />
+                </div>
+                <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Rendimiento por Setter</h3>
+            </div>
+            <table className="w-full text-left border-collapse">
+                <thead>
+                    <tr className="bg-slate-800/50">
+                        <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Setter</th>
+                        <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">Registros (Entrantes)</th>
+                        <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">% Reportado</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                    {data.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
+                            <td className="p-6 font-bold text-slate-300">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                                    <span className="text-xs uppercase font-black tracking-wider">{row.setter_name}</span>
+                                </div>
+                            </td>
+                            <td className="p-6 text-center font-black text-white text-lg italic tabular-nums">
+                                {row.entrantes}
+                            </td>
+                            <td className="p-6 text-center">
+                                <div className="flex flex-col items-center gap-2">
+                                    <span className="font-black text-indigo-400 text-lg italic tabular-nums">{row.report_rate}%</span>
+                                    <div className="w-32 h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800 p-0.5">
+                                        <div 
+                                            className="h-full bg-indigo-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(99,102,241,0.4)]" 
+                                            style={{ width: `${row.report_rate}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden">
@@ -274,9 +320,10 @@ const PublicSetterStatsPage = () => {
                         ) : stats ? (
                             <>
                                 {/* GRID PRINCIPAL */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
                                     <StatCard title="Entrantes" value={stats.totals.entrantes} icon={Inbox} colorClass="text-pink-500" />
                                     <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" />
+                                    <StatCard title="Tasa Apertura" value={`${stats.percentages.rates.opening_rate}%`} icon={MousePointer2} colorClass="text-emerald-500" />
                                     <StatCard title="Op. Response" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" />
                                     <StatCard title="FU Response" value={`${stats.percentages.rates.follow_up_response}%`} icon={RefreshCw} colorClass="text-rose-500" />
                                 </div>
@@ -353,6 +400,11 @@ const PublicSetterStatsPage = () => {
                                     </div>
 
                                 </div>
+
+                                {/* TABLA DE RENDIMIENTO POR SETTER (Solo en vista equipo) */}
+                                {!filters.setter_id && stats.setters_breakdown && stats.setters_breakdown.length > 0 && (
+                                    <SetterPerformanceTable data={stats.setters_breakdown} />
+                                )}
                             </>
                         ) : (
                             <div className="py-40 text-center text-slate-500 font-bold italic uppercase tracking-widest">Sin datos disponibles para este periodo</div>

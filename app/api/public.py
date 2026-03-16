@@ -550,6 +550,7 @@ def get_public_setter_stats():
             },
             "rates": {
                 "opening_response": div(float(stats.op_res or 0), float(stats.op_sub or 0)),
+                "opening_rate": div(float(stats.op_sub or 0), float(stats.entrantes or 0)),
                 "follow_up_response": div(float(stats.fu_res or 0), float(stats.fu_sub or 0))
             },
             "funnel_evolution": {
@@ -563,8 +564,40 @@ def get_public_setter_stats():
                 "offer_to_agenda": div(float(stats.fun_agenda or 0), float(stats.fun_offer or 0)),
                 "link_to_agenda": div(float(stats.fun_agenda or 0), float(stats.fun_link or 0))
             }
-        }
+        },
+        "setters_breakdown": []
     }
+
+    # Breakdown by setter (only if team view)
+    if not setter_id:
+        breakdown_query = db.session.query(
+            User.username.label('setter_name'),
+            func.sum(SetterDailyStats.inbox_entrantes).label('entrantes'),
+            func.count(SetterDailyStats.id).label('reports_count')
+        ).join(User, SetterDailyStats.setter_id == User.id)
+
+        if start_date_str:
+            breakdown_query = breakdown_query.filter(SetterDailyStats.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
+        if end_date_str:
+            breakdown_query = breakdown_query.filter(SetterDailyStats.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+
+        breakdown_query = breakdown_query.group_by(User.id)
+        
+        # Use days_count as a proxy for the total period if not easily calculable
+        # Or calculate more accurately
+        total_period_days = days_count
+        if start_date_str and end_date_str:
+            s_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            e_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            total_period_days = (e_date - s_date).days + 1
+        
+        for row in breakdown_query.all():
+            res["setters_breakdown"].append({
+                "setter_name": row.setter_name,
+                "entrantes": int(row.entrantes or 0),
+                "reports_count": row.reports_count,
+                "report_rate": round((row.reports_count / total_period_days) * 100, 2) if total_period_days > 0 else 0
+            })
     
     return jsonify(res), 200
 @bp.route('/public/setter-reports', methods=['GET'])

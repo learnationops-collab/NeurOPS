@@ -284,10 +284,18 @@ const SetterComparisonView = ({ setters }) => {
                                     { label: 'Entrantes', key: 'entrantes', category: 'totals' },
                                     { label: 'Leads Clasificados', key: 'leads', category: 'totals' },
                                     { label: 'No Leads', key: 'not_lead', category: 'totals' },
+                                    { label: 'In-abribles', key: 'inabribles', category: 'totals' },
                                     { label: 'Agendas Finales', key: 'funnel_agenda', category: 'totals' },
+                                    { label: 'Tasa Apertura', key: 'opening_rate', category: 'percentages.rates', isPct: true },
                                     { label: 'Tasa Respuesta Op.', key: 'opening_response', category: 'percentages.rates', isPct: true },
+                                    { label: 'Tasa Respuesta FU', key: 'follow_up_response', category: 'percentages.rates', isPct: true },
                                     { label: 'Conv. Link a Agenda', key: 'link_to_agenda', category: 'percentages.conversions_to_agenda', isPct: true },
                                     { label: 'Conv. Oferta a Agenda', key: 'offer_to_agenda', category: 'percentages.conversions_to_agenda', isPct: true },
+                                    { label: 'Conv. Apertura a Agenda', key: 'opening_to_agenda', category: 'percentages.conversions_to_agenda', isPct: true },
+                                    { label: 'Evol. Qual → Pain', key: 'qual_to_pain', category: 'percentages.funnel_evolution', isPct: true },
+                                    { label: 'Evol. Pain → Offer', key: 'pain_to_offer', category: 'percentages.funnel_evolution', isPct: true },
+                                    { label: 'Evol. Offer → Link', key: 'offer_to_link', category: 'percentages.funnel_evolution', isPct: true },
+                                    { label: 'Evol. Link → Agenda', key: 'link_to_agenda', category: 'percentages.funnel_evolution', isPct: true },
                                 ].map((row, idx) => {
                                     const valA = row.category.split('.').reduce((obj, key) => obj[key], compA.data)[row.key];
                                     const valB = row.category.split('.').reduce((obj, key) => obj[key], compB.data)[row.key];
