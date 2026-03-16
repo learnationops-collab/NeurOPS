@@ -228,7 +228,7 @@ const PublicTriageReportPage = () => {
                                 {/* Submit Button */}
                                 <button
                                     type="submit"
-                                    disabled={submitting || !formData.triage_id}
+                                    disabled={submitting || !formData.triage_name}
                                     className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-5 rounded-3xl font-black uppercase text-base tracking-[0.2em] transition-all shadow-2xl shadow-indigo-600/30 flex items-center justify-center gap-3 active:scale-[0.98]"
                                 >
                                     {submitting ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}

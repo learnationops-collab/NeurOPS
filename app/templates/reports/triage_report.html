@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root {
+            --slate-950: #020617;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-300: #cbd5e1;
+            --slate-50: #f8fafc;
+
+            --indigo-600: #4f46e5;
+            --indigo-500: #6366f1;
+            --indigo-400: #818cf8;
+
+            --emerald-600: #059669;
+            --emerald-500: #10b981;
+            --emerald-400: #34d399;
+
+            --rose-600: #e11d48;
+            --rose-500: #f43f5e;
+            --rose-400: #fb7185;
+
+            --amber-600: #d97706;
+            --amber-500: #f59e0b;
+            --amber-400: #fbbf24;
+
+            --violet-600: #7c3aed;
+            --violet-500: #8b5cf6;
+            --violet-400: #a78bfa;
+
+            --sky-600: #0284c7;
+            --sky-500: #0ea5e9;
+            --sky-400: #38bdf8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--slate-950);
+            color: var(--slate-50);
+            padding: 40px;
+            width: 1000px; /* Slimmer for Triage */
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 40px;
+            border-bottom: 2px solid var(--slate-800);
+            padding-bottom: 20px;
+        }
+
+        .header-left .logo-text {
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--indigo-500);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .triage-name {
+            font-size: 48px;
+            font-weight: 900;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #34d399);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .date-str {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--slate-400);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 32px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background-color: var(--slate-900);
+            border: 1px solid var(--slate-800);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+            padding-bottom: 16px;
+        }
+
+        .icon-box {
+            padding: 10px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 14px;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 900;
+            color: white;
+            font-style: italic;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        .metrics-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            border-radius: 20px;
+        }
+
+        .metric-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--slate-400);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .metric-text {
+            font-size: 18px;
+            font-weight: 800;
+            color: white;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--indigo-400);
+        }
+
+        .live-panel {
+            background: rgba(30, 41, 59, 0.3);
+            border-radius: 24px;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .live-stat {
+            text-align: center;
+            width: 100%;
+        }
+
+        .live-stat-label {
+            font-size: 12px;
+            font-weight: 900;
+            color: var(--slate-500);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .live-stat-val {
+            font-size: 48px;
+            font-weight: 900;
+            color: white;
+        }
+
+        .live-stat-val.emerald { color: var(--emerald-400); }
+        .live-stat-val.indigo { color: var(--indigo-400); }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--slate-600);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-pill.confirm { background: rgba(16, 185, 129, 0.1); color: var(--emerald-400); border: 1px solid rgba(16, 185, 129, 0.2); }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="logo-text">NeurOPS Triage System</div>
+            <h1 class="triage-name">{{ triage_name }}</h1>
+        </div>
+        <div class="date-str">{{ date_str }}</div>
+    </div>
+
+    <div class="main-grid">
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-box" style="color: var(--indigo-500)">📋</div>
+                <div class="card-title">Métricas de Actividad</div>
+            </div>
+            
+            <div class="metrics-list">
+                <div class="metric-row">
+                    <div class="metric-info">
+                        <span class="metric-label">Agendas Nuevas</span>
+                        <span class="metric-text">Entrantes del día</span>
+                    </div>
+                    <span class="metric-value" style="color: var(--indigo-400)">{{ agendas_nuevas }}</span>
+                </div>
+
+                <div class="metric-row">
+                    <div class="metric-info">
+                        <span class="metric-label">Confirmadas</span>
+                        <span class="metric-text">Efectivas</span>
+                    </div>
+                    <span class="metric-value" style="color: var(--emerald-400)">{{ agendas_confirmadas }}</span>
+                </div>
+
+                <div class="metric-row">
+                    <div class="metric-info">
+                        <span class="metric-label">No Contestan</span>
+                        <span class="metric-text">Sin contacto</span>
+                    </div>
+                    <span class="metric-value" style="color: var(--rose-400)">{{ no_contestan }}</span>
+                </div>
+
+                <div class="metric-row">
+                    <div class="metric-info">
+                        <span class="metric-label">Seguimientos</span>
+                        <span class="metric-text">Iniciados / Contestados</span>
+                    </div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;">
+                        <span class="metric-value" style="color: var(--sky-400)">{{ seguimientos_iniciados }}</span>
+                        <span style="color: var(--slate-600); font-weight: 900;">/</span>
+                        <span class="metric-value" style="color: var(--emerald-500); font-size: 24px;">{{ seguimientos_contestados }}</span>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="metric-row" style="padding: 12px 16px;">
+                        <div class="metric-info">
+                            <span class="metric-label">Cancelaciones</span>
+                        </div>
+                        <span class="metric-value" style="color: var(--amber-400); font-size: 24px;">{{ cancelaciones }}</span>
+                    </div>
+                    <div class="metric-row" style="padding: 12px 16px;">
+                        <div class="metric-info">
+                            <span class="metric-label">Reprogramandos</span>
+                        </div>
+                        <span class="metric-value" style="color: var(--violet-400); font-size: 24px;">{{ reprogramandos }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="live-panel">
+            <div class="live-stat">
+                <div class="live-stat-label">Tasa de Confirmación</div>
+                <div class="live-stat-val emerald">{{ confirm_rate }}%</div>
+                <div style="margin-top: 8px;"><span class="status-pill confirm">Eficiencia Alta</span></div>
+            </div>
+
+            <div class="live-stat">
+                <div class="live-stat-label">Respuesta Seg.</div>
+                <div class="live-stat-val indigo">{{ follow_up_rate }}%</div>
+            </div>
+
+            <div style="flex: 1;"></div>
+            
+            <div style="text-align: center; opacity: 0.5;">
+                <div class="metric-label">Total Gestiones</div>
+                <div class="metric-text" style="font-size: 32px; color: var(--slate-400);">{{ total_gestiones }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        NEUROPS TRIAGE SYSTEM • REPORTE GENERADO EL {{ date_str }}
+    </div>
+</body>
+
+</html>

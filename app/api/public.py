@@ -1640,10 +1640,86 @@ def submit_public_triage_report():
 
     try:
         db.session.commit()
+        # Trigger Webhook
+        _trigger_triage_report_webhook(report)
         return jsonify({"message": f"Reporte de {triage_name} guardado exitosamente"}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+def _trigger_triage_report_webhook(report):
+    """Dispara el webhook de Discord para el reporte de triage."""
+    try:
+        import requests
+        import json
+        from app.services.image_service import ImageService
+        
+        # Webhook URL (mismo que setter/closer según solicitud)
+        url = "https://discord.com/api/webhooks/1482070325641347288/fFK0OKoDIRngTIzh1kl81_Um8GrtFg62Z3TK4Rq0qgjQtU3jNqlOOLZ4lw1c_0qV0drX"
+        
+        # Calcular tasas para la imagen
+        nuevas = report.agendas_nuevas or 0
+        conf = report.agendas_confirmadas or 0
+        seg_ini = report.seguimientos_iniciados or 0
+        seg_res = report.seguimientos_contestados or 0
+        
+        conf_rate = round((conf / nuevas * 100), 1) if nuevas > 0 else 0
+        fu_rate = round((seg_res / seg_ini * 100), 1) if seg_ini > 0 else 0
+        
+        img_data = {
+            "triage_name": report.triage_name,
+            "date_str": report.date.strftime('%d/%m/%Y'),
+            "agendas_nuevas": nuevas,
+            "agendas_confirmadas": conf,
+            "no_contestan": report.no_contestan or 0,
+            "cancelaciones": report.cancelaciones or 0,
+            "reprogramandos": report.reprogramandos or 0,
+            "seguimientos_iniciados": seg_ini,
+            "seguimientos_contestados": seg_res,
+            "confirm_rate": conf_rate,
+            "follow_up_rate": fu_rate,
+            "total_gestiones": nuevas + seg_ini
+        }
+
+        # Generar Imagen
+        img_buffer = ImageService.generate_triage_report_card(img_data)
+        
+        # Metadatos Discord
+        content = (
+            f"🎯 **REPORTE DIARIO DE TRIAGE**\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 **Triage:** `{report.triage_name}`\n"
+            f"📅 **Fecha:** `{report.date.strftime('%d/%m/%Y')}`\n"
+            f"📊 **Resultados:** `{nuevas} Nuevas | {conf} Confirmadas`\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"@everyone"
+        )
+        
+        json_payload = {
+            "content": content,
+            "embeds": [{
+                "color": 65280, # Verde
+                "image": {
+                    "url": "attachment://triage_report.png"
+                },
+                "footer": {
+                    "text": "NeurOPS Triage System • " + datetime.now().strftime('%H:%M')
+                }
+            }]
+        }
+        
+        files = {
+            'file': ('triage_report.png', img_buffer, 'image/png')
+        }
+        
+        res = requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
+        print(f"[Discord Triage] Status: {res.status_code}")
+        
+    except Exception as e:
+        print(f"[Discord Triage Error] {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @bp.route('/public/triage-stats', methods=['GET'])
