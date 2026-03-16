@@ -128,11 +128,11 @@ const PublicTriageStatsPage = () => {
         return n > 0 ? ((c / n) * 100).toFixed(1) : 0;
     }, [stats]);
 
-    const showRate = useMemo(() => {
+    const followUpRate = useMemo(() => {
         if (!stats) return 0;
-        const c = stats.totals.agendas_confirmadas;
-        const a = stats.totals.asistencias;
-        return c > 0 ? ((a / c) * 100).toFixed(1) : 0;
+        const s = stats.totals.seguimientos_iniciados;
+        const c = stats.totals.seguimientos_contestados;
+        return s > 0 ? ((c / s) * 100).toFixed(1) : 0;
     }, [stats]);
 
     return (
@@ -255,10 +255,10 @@ const PublicTriageStatsPage = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     <StatCard title="Agendas Nuevas" value={fmt(stats.totals.agendas_nuevas)} icon={CalendarDays} colorClass="text-indigo-500" />
                                     <StatCard title="Agendas Confirmadas" value={fmt(stats.totals.agendas_confirmadas)} icon={CheckCircle} colorClass="text-emerald-500" />
-                                    <StatCard title="Asistencias" value={fmt(stats.totals.asistencias)} icon={Users} colorClass="text-sky-500" />
-                                    <StatCard title="No Shows" value={fmt(stats.totals.no_shows)} icon={PhoneOff} colorClass="text-rose-500" />
+                                    <StatCard title="No Contestan" value={fmt(stats.totals.no_contestan)} icon={PhoneOff} colorClass="text-rose-500" />
                                     <StatCard title="Cancelaciones" value={fmt(stats.totals.cancelaciones)} icon={XCircle} colorClass="text-amber-500" />
                                     <StatCard title="Reprogramandos" value={fmt(stats.totals.reprogramandos)} icon={RefreshCw} colorClass="text-violet-500" />
+                                    <StatCard title="Seguimientos (Cont.)" value={fmt(stats.totals.seguimientos_contestados)} icon={Users} colorClass="text-sky-500" subtitle={`De ${fmt(stats.totals.seguimientos_iniciados)} iniciados`} />
                                 </div>
 
                                 <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-8">
@@ -283,13 +283,13 @@ const PublicTriageStatsPage = () => {
                                         </div>
                                         <div className="space-y-6">
                                             <ProgressRow 
-                                                label="Show Rate (General)" 
-                                                percentage={showRate} 
+                                                label="Seguimientos Contestados" 
+                                                percentage={followUpRate} 
                                                 colorClass="text-emerald-500" 
-                                                absolute={`${fmt(stats.totals.asistencias)} / ${fmt(stats.totals.agendas_confirmadas)}`} 
+                                                absolute={`${fmt(stats.totals.seguimientos_contestados)} / ${fmt(stats.totals.seguimientos_iniciados)}`} 
                                             />
                                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
-                                                Porcentaje de prospectos confirmados que efectivamente asisten a la llamada.
+                                                Porcentaje de seguimientos iniciados que han sido contestados por el prospecto.
                                             </p>
                                         </div>
                                     </div>

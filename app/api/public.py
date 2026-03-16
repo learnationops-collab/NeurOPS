@@ -1564,10 +1564,11 @@ def submit_public_triage_report():
     field_values = {
         'agendas_nuevas': get_int('agendas_nuevas'),
         'agendas_confirmadas': get_int('agendas_confirmadas'),
-        'asistencias': get_int('asistencias'),
+        'no_contestan': get_int('no_contestan'),
         'cancelaciones': get_int('cancelaciones'),
         'reprogramandos': get_int('reprogramandos'),
-        'no_shows': get_int('no_shows'),
+        'seguimientos_iniciados': get_int('seguimientos_iniciados'),
+        'seguimientos_contestados': get_int('seguimientos_contestados'),
     }
 
     if report:
@@ -1599,10 +1600,11 @@ def get_public_triage_stats():
     query = db.session.query(
         func.sum(TriageDailyReport.agendas_nuevas).label('agendas_nuevas'),
         func.sum(TriageDailyReport.agendas_confirmadas).label('agendas_confirmadas'),
-        func.sum(TriageDailyReport.asistencias).label('asistencias'),
+        func.sum(TriageDailyReport.no_contestan).label('no_contestan'),
         func.sum(TriageDailyReport.cancelaciones).label('cancelaciones'),
         func.sum(TriageDailyReport.reprogramandos).label('reprogramandos'),
-        func.sum(TriageDailyReport.no_shows).label('no_shows'),
+        func.sum(TriageDailyReport.seguimientos_iniciados).label('seguimientos_iniciados'),
+        func.sum(TriageDailyReport.seguimientos_contestados).label('seguimientos_contestados'),
         func.count(TriageDailyReport.id).label('days_count')
     )
 
@@ -1627,10 +1629,11 @@ def get_public_triage_stats():
         "totals": {
             "agendas_nuevas": process_val(stats.agendas_nuevas),
             "agendas_confirmadas": process_val(stats.agendas_confirmadas),
-            "asistencias": process_val(stats.asistencias),
+            "no_contestan": process_val(stats.no_contestan),
             "cancelaciones": process_val(stats.cancelaciones),
             "reprogramandos": process_val(stats.reprogramandos),
-            "no_shows": process_val(stats.no_shows)
+            "seguimientos_iniciados": process_val(stats.seguimientos_iniciados),
+            "seguimientos_contestados": process_val(stats.seguimientos_contestados)
         }
     }), 200
 
@@ -1664,10 +1667,11 @@ def get_public_triage_reports():
             "triage_name": r.triage_name,
             "agendas_nuevas": r.agendas_nuevas,
             "agendas_confirmadas": r.agendas_confirmadas,
-            "asistencias": r.asistencias,
+            "no_contestan": r.no_contestan,
             "cancelaciones": r.cancelaciones,
             "reprogramandos": r.reprogramandos,
-            "no_shows": r.no_shows
+            "seguimientos_iniciados": r.seguimientos_iniciados,
+            "seguimientos_contestados": r.seguimientos_contestados
         } for r in pagination.items],
         "total": pagination.total,
         "pages": pagination.pages,
@@ -1685,10 +1689,11 @@ def update_public_triage_report(report_id):
     try:
         report.agendas_nuevas = int(data.get('agendas_nuevas') or report.agendas_nuevas)
         report.agendas_confirmadas = int(data.get('agendas_confirmadas') or report.agendas_confirmadas)
-        report.asistencias = int(data.get('asistencias') or report.asistencias)
+        report.no_contestan = int(data.get('no_contestan') or report.no_contestan)
         report.cancelaciones = int(data.get('cancelaciones') or report.cancelaciones)
         report.reprogramandos = int(data.get('reprogramandos') or report.reprogramandos)
-        report.no_shows = int(data.get('no_shows') or report.no_shows)
+        report.seguimientos_iniciados = int(data.get('seguimientos_iniciados') or report.seguimientos_iniciados)
+        report.seguimientos_contestados = int(data.get('seguimientos_contestados') or report.seguimientos_contestados)
 
         db.session.commit()
         return jsonify({"message": "Reporte actualizado"}), 200

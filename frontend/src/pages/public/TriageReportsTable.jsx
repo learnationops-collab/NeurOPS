@@ -66,10 +66,11 @@ const TriageReportsTable = () => {
                             <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Triage</th>
                             <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Nuevas</th>
                             <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Conf.</th>
-                            <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Asist.</th>
-                            <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">N.S.</th>
+                            <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">No Cont.</th>
                             <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Canc.</th>
                             <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Reprog.</th>
+                            <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Seg. Ini.</th>
+                            <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Seg. Con.</th>
                             <th className="p-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
                         </tr>
                     </thead>
@@ -91,10 +92,11 @@ const TriageReportsTable = () => {
                                 {[
                                     { key: 'agendas_nuevas', color: 'text-indigo-400' },
                                     { key: 'agendas_confirmadas', color: 'text-emerald-400' },
-                                    { key: 'asistencias', color: 'text-sky-400' },
-                                    { key: 'no_shows', color: 'text-rose-400' },
+                                    { key: 'no_contestan', color: 'text-rose-400' },
                                     { key: 'cancelaciones', color: 'text-amber-400' },
-                                    { key: 'reprogramandos', color: 'text-violet-400' }
+                                    { key: 'reprogramandos', color: 'text-violet-400' },
+                                    { key: 'seguimientos_iniciados', color: 'text-sky-400' },
+                                    { key: 'seguimientos_contestados', color: 'text-emerald-400' }
                                 ].map(field => (
                                     <td key={field.key} className="p-4 text-center">
                                         {editingId === report.id ? (

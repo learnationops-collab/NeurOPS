@@ -35,10 +35,11 @@ const PublicTriageReportPage = () => {
         date: new Date().toISOString().split('T')[0],
         agendas_nuevas: '',
         agendas_confirmadas: '',
-        asistencias: '',
+        no_contestan: '',
         cancelaciones: '',
         reprogramandos: '',
-        no_shows: '',
+        seguimientos_iniciados: '',
+        seguimientos_contestados: '',
     };
 
     const [formData, setFormData] = useState(initialFormData);
@@ -86,11 +87,11 @@ const PublicTriageReportPage = () => {
 
     const liveMetrics = useMemo(() => {
         const confirmRate = formData.agendas_nuevas > 0 ? ((formData.agendas_confirmadas / formData.agendas_nuevas) * 100).toFixed(1) : '0.0';
-        const showRate = formData.agendas_confirmadas > 0 ? ((formData.asistencias / formData.agendas_confirmadas) * 100).toFixed(1) : '0.0';
+        const followUpRate = formData.seguimientos_iniciados > 0 ? ((formData.seguimientos_contestados / formData.seguimientos_iniciados) * 100).toFixed(1) : '0.0';
         
         return {
             confirmRate,
-            showRate
+            followUpRate
         };
     }, [formData]);
 
@@ -182,18 +183,10 @@ const PublicTriageReportPage = () => {
                                             placeholder="0"
                                         />
                                         <MetricInput
-                                            label="Asistencias"
-                                            field="asistencias"
-                                            color="sky"
-                                            value={formData.asistencias}
-                                            onChange={handleFieldChange}
-                                            placeholder="0"
-                                        />
-                                        <MetricInput
-                                            label="No Shows"
-                                            field="no_shows"
+                                            label="No Contestan"
+                                            field="no_contestan"
                                             color="rose"
-                                            value={formData.no_shows}
+                                            value={formData.no_contestan}
                                             onChange={handleFieldChange}
                                             placeholder="0"
                                         />
@@ -210,6 +203,22 @@ const PublicTriageReportPage = () => {
                                             field="reprogramandos"
                                             color="violet"
                                             value={formData.reprogramandos}
+                                            onChange={handleFieldChange}
+                                            placeholder="0"
+                                        />
+                                        <MetricInput
+                                            label="Seguimientos (Iniciados)"
+                                            field="seguimientos_iniciados"
+                                            color="sky"
+                                            value={formData.seguimientos_iniciados}
+                                            onChange={handleFieldChange}
+                                            placeholder="0"
+                                        />
+                                        <MetricInput
+                                            label="Seguimientos (Contestados)"
+                                            field="seguimientos_contestados"
+                                            color="emerald"
+                                            value={formData.seguimientos_contestados}
                                             onChange={handleFieldChange}
                                             placeholder="0"
                                         />
@@ -252,11 +261,11 @@ const PublicTriageReportPage = () => {
 
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                                <span>Show Rate</span>
-                                                <span className="text-emerald-400">{liveMetrics.showRate}%</span>
+                                                <span>Seguimientos (Respuestas)</span>
+                                                <span className="text-emerald-400">{liveMetrics.followUpRate}%</span>
                                             </div>
                                             <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                                <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${Math.min(parseFloat(liveMetrics.showRate), 100)}%` }} />
+                                                <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${Math.min(parseFloat(liveMetrics.followUpRate), 100)}%` }} />
                                             </div>
                                         </div>
                                     </div>

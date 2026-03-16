@@ -11,10 +11,11 @@ class TriageDailyReport(db.Model):
 
     agendas_nuevas = db.Column(db.Integer, default=0)
     agendas_confirmadas = db.Column(db.Integer, default=0)
-    asistencias = db.Column(db.Integer, default=0)
+    no_contestan = db.Column(db.Integer, default=0)
     cancelaciones = db.Column(db.Integer, default=0)
     reprogramandos = db.Column(db.Integer, default=0)
-    no_shows = db.Column(db.Integer, default=0)
+    seguimientos_iniciados = db.Column(db.Integer, default=0)
+    seguimientos_contestados = db.Column(db.Integer, default=0)
 
     __table_args__ = (db.UniqueConstraint('triage_name', 'date', name='_triage_report_date_uc'),)
 
