@@ -118,17 +118,19 @@ const PublicSetterStatsPage = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 relative z-10">
+            <div className={`grid grid-cols-1 ${chartData ? 'lg:grid-cols-2' : ''} gap-10 relative z-10`}>
                 <div className="space-y-6">
                     {children}
                 </div>
-                <div className="bg-slate-950/40 rounded-[2rem] p-8 border border-slate-800/50 backdrop-blur-sm">
-                    <div className="flex items-center gap-2 mb-6">
-                        <TrendingUp size={14} className="text-slate-500" />
-                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Evolución Histórica</h4>
+                {chartData && chartVariables && (
+                    <div className="bg-slate-950/40 rounded-[2rem] p-8 border border-slate-800/50 backdrop-blur-sm">
+                        <div className="flex items-center gap-2 mb-6">
+                            <TrendingUp size={14} className="text-slate-500" />
+                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Evolución Histórica</h4>
+                        </div>
+                        <EvolutionChart data={chartData} variables={chartVariables} />
                     </div>
-                    <EvolutionChart data={chartData} variables={chartVariables} />
-                </div>
+                )}
             </div>
         </div>
     );

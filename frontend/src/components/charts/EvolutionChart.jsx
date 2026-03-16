@@ -8,9 +8,9 @@ const EvolutionChart = ({ data, variables }) => {
     // data format: [{ date: '2023-01-01', var1: 10, var2: 20 }, ...]
     // variables format: [{ key: 'var1', label: 'Label 1', color: '#6366f1' }, ...]
     
-    const [selectedVars, setSelectedVars] = useState(variables.map(v => v.key));
+    const [selectedVars, setSelectedVars] = useState(variables ? variables.map(v => v.key) : []);
 
-    if (!data || data.length === 0) {
+    if (!data || !variables || data.length === 0) {
         return (
             <div className="h-48 flex items-center justify-center text-slate-600 bg-slate-950/30 rounded-3xl border border-dashed border-slate-800 uppercase text-[10px] font-black tracking-widest italic">
                 Cargando historial de evolución...
