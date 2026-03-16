@@ -209,7 +209,7 @@ const PublicSetterStatsPage = () => {
                 <thead>
                     <tr className="bg-slate-800/50">
                         <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Setter</th>
-                        <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">Registros (Entrantes)</th>
+                        <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">Reportes Enviados</th>
                         <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">% Reportado</th>
                     </tr>
                 </thead>
@@ -223,7 +223,7 @@ const PublicSetterStatsPage = () => {
                                 </div>
                             </td>
                             <td className="p-6 text-center font-black text-white text-lg italic tabular-nums">
-                                {row.entrantes}
+                                {row.reports_count}
                             </td>
                             <td className="p-6 text-center">
                                 <div className="flex flex-col items-center gap-2">
@@ -377,14 +377,6 @@ const PublicSetterStatsPage = () => {
                                     <MetricSection
                                         title="Evolución del Embudo"
                                         icon={TrendingUp}
-                                        chartData={timeSeriesData}
-                                        chartVariables={[
-                                            { key: 'fun_qual', label: 'Cualificación', color: '#6366f1' },
-                                            { key: 'fun_pain', label: 'Dolor', color: '#818cf8' },
-                                            { key: 'fun_offer', label: 'Oferta', color: '#a5b4fc' },
-                                            { key: 'fun_link', label: 'Link', color: '#c7d2fe' },
-                                            { key: 'fun_agenda', label: 'Agenda', color: '#4f46e5' }
-                                        ]}
                                     >
                                         <div className="space-y-6">
                                             <ProgressRow label="Clasificación → Dolor" percentage={stats.percentages.funnel_evolution.qual_to_pain} colorClass="text-indigo-500" absolute={stats.totals.funnel_pain} />
