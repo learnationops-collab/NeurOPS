@@ -30,21 +30,24 @@ def sync_sales():
             
             added = 0
             for item in data:
-                monto = item.get('monto')
-                setter = item.get('setter')
+                # Flexible mapping for amount/monto
+                monto = item.get('monto') or item.get('amount') or item.get('value')
+                # Flexible mapping for setter name
+                setter = item.get('setter') or item.get('setter_name') or item.get('vendedor')
                 
                 if monto is None or setter is None:
+                    print(f"Skipping item due to missing fields: {item}")
                     continue
                 
                 # Parse date
                 sale_date = datetime.utcnow()
-                fecha_str = item.get('fecha')
+                fecha_str = item.get('fecha') or item.get('date')
                 if fecha_str:
                     try:
                         from dateutil import parser
-                        sale_date = parser.parse(fecha_str)
-                    except:
-                        pass
+                        sale_date = parser.parse(str(fecha_str))
+                    except Exception as e:
+                        print(f"Date parsing error for '{fecha_str}': {e}")
                 
                 sale = FinancialSale(
                     setter_name=str(setter),
