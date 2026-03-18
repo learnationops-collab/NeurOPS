@@ -1605,6 +1605,75 @@ def receive_financial_sales():
         current_app.logger.error(f"[FINANCIAL] Database commit error: {e}")
         return jsonify({"error": str(e)}), 500
 
+@bp.route('/public/financial-sales/sync', methods=['POST'])
+def sync_financial_sales_from_sheets():
+    """Fetches data from Google Sheets and saves ONLY new records."""
+    from app.models import FinancialSale
+    from flask import current_app
+    from datetime import datetime
+    import requests
+    
+    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywqgVBIZxMP6NqIVbtl0hcN3F0zkED3V-4a_1Zh5MP5l9YuYUtKX7GDzUhKX4h8JXS/exec"
+    
+    try:
+        current_app.logger.info("[FINANCIAL SYNC] Starting fetch from Google Sheets...")
+        response = requests.get(APPS_SCRIPT_URL, timeout=20)
+        if response.status_code != 200:
+            return jsonify({"error": f"Error fetching from Google Sheets: {response.status_code}"}), 502
+            
+        data = response.json()
+        
+        # Load existing records to avoid duplicates
+        existing_sales = FinancialSale.query.all()
+        existing_keys = set()
+        for s in existing_sales:
+            date_str = s.date.strftime('%Y-%m-%d') if s.date else ""
+            key = f"{s.setter_name.strip().lower()}_{float(s.amount)}_{date_str}"
+            existing_keys.add(key)
+        
+        added = 0
+        for item in data:
+            monto = item.get('monto') or item.get('amount') or item.get('value')
+            setter = item.get('setter') or item.get('setter_name') or item.get('vendedor')
+            
+            if monto is None or setter is None:
+                continue
+                
+            sale_date = datetime.utcnow()
+            fecha_str = item.get('fecha') or item.get('date')
+            if fecha_str:
+                try:
+                    from dateutil import parser
+                    sale_date = parser.parse(str(fecha_str))
+                except Exception:
+                    pass
+            
+            # Check if exists
+            date_str_check = sale_date.strftime('%Y-%m-%d')
+            key_check = f"{str(setter).strip().lower()}_{float(monto)}_{date_str_check}"
+            
+            if key_check not in existing_keys:
+                sale = FinancialSale(
+                    setter_name=str(setter),
+                    amount=float(monto),
+                    date=sale_date,
+                    raw_data=item
+                )
+                db.session.add(sale)
+                existing_keys.add(key_check) # Prevent duplicates within the same batch
+                added += 1
+                
+        db.session.commit()
+        current_app.logger.info(f"[FINANCIAL SYNC] Successfully synced and added {added} new records.")
+        return jsonify({"message": "Sincronización completa", "added": added}), 200
+        
+    except requests.exceptions.Timeout:
+         return jsonify({"error": "La conexión con Google Sheets excedió el tiempo de espera."}), 504
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"[FINANCIAL SYNC] Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @bp.route('/public/financial-sales', methods=['GET'])
 def get_financial_sales():
     """Returns all financial sales records."""

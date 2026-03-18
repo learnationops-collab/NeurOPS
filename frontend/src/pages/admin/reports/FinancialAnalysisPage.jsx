@@ -17,17 +17,32 @@ import Button from '../../../components/ui/Button';
 const FinancialAnalysisPage = () => {
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(false);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        fetchSales();
+        syncAndFetchSales();
     }, []);
 
-    const fetchSales = async () => {
+    const syncAndFetchSales = async () => {
         try {
             setLoading(true);
+            setSyncing(true);
             setError(null);
+            
+            // 1. Sync new data from sheets
+            await api.post('/public/financial-sales/sync');
+            
+        } catch (err) {
+            console.warn('Sync failed, falling back to existing DB data:', err);
+            // We don't block the UI if sync fails, we just show whatever is in the DB
+        } finally {
+            setSyncing(false);
+        }
+
+        // 2. Fetch all sales from DB
+        try {
             const response = await api.get('/public/financial-sales');
             setSales(Array.isArray(response.data) ? response.data : []);
         } catch (err) {
@@ -64,8 +79,8 @@ const FinancialAnalysisPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button onClick={fetchSales} variant="surface" size="md" icon={Activity} className="rounded-2xl border-base hover:border-primary/50">
-                        Actualizar
+                    <Button onClick={syncAndFetchSales} variant="surface" size="md" icon={Activity} className="rounded-2xl border-base hover:border-primary/50" disabled={loading}>
+                        {loading ? 'Actualizando...' : 'Actualizar'}
                     </Button>
                 </div>
             </header>
@@ -110,7 +125,9 @@ const FinancialAnalysisPage = () => {
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-4">
                         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-muted">Cargando registros...</p>
+                        <p className="text-xs font-bold uppercase tracking-widest text-muted">
+                            {syncing ? 'Sincronizando con Google Sheets...' : 'Cargando registros...'}
+                        </p>
                     </div>
                 ) : error ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
@@ -118,7 +135,7 @@ const FinancialAnalysisPage = () => {
                             <Activity size={32} />
                         </div>
                         <p className="text-sm font-bold text-white uppercase tracking-widest">{error}</p>
-                        <Button onClick={fetchSales} variant="surface" size="sm" className="mt-2 rounded-xl">
+                        <Button onClick={syncAndFetchSales} variant="surface" size="sm" className="mt-2 rounded-xl">
                             Reintentar Conexión
                         </Button>
                     </div>
