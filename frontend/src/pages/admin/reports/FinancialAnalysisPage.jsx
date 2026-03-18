@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../../services/api';
+import FinancialSaleDetailsModal from './FinancialSaleDetailsModal';
 import {
     TrendingUp,
     DollarSign,
@@ -30,6 +31,9 @@ const FinancialAnalysisPage = () => {
         amount: ''
     });
     const [resolving, setResolving] = useState(false);
+    
+    // New state for details modal
+    const [viewingSale, setViewingSale] = useState(null);
 
     useEffect(() => {
         fetchSales();
@@ -245,7 +249,7 @@ const FinancialAnalysisPage = () => {
                                                     Resolver Error
                                                 </Button>
                                             ) : (
-                                                <Button variant="ghost" size="xs" className="text-muted hover:text-white">
+                                                <Button variant="ghost" size="xs" onClick={() => setViewingSale(sale)} className="text-muted hover:text-white">
                                                     Detalles
                                                 </Button>
                                             )}
@@ -345,6 +349,12 @@ const FinancialAnalysisPage = () => {
                     </Card>
                 </div>
             )}
+
+            {/* Modal de Detalles Completos */}
+            <FinancialSaleDetailsModal 
+                sale={viewingSale} 
+                onClose={() => setViewingSale(null)} 
+            />
         </div>
     );
 };
