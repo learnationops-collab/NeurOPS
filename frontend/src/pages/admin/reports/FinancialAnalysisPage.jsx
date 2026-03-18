@@ -145,7 +145,10 @@ const FinancialAnalysisPage = () => {
                             <thead>
                                 <tr className="border-b border-base">
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Fecha</th>
+                                    <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Cliente</th>
+                                    <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Setter</th>
+                                    <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Producto</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Monto</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
                                 </tr>
@@ -162,9 +165,20 @@ const FinancialAnalysisPage = () => {
                                             </div>
                                         </td>
                                         <td className="py-4 px-4">
+                                            <span className="text-sm font-bold text-white">{sale.cliente}</span>
+                                        </td>
+                                        <td className="py-4 px-4">
+                                            <Badge variant="amber" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider border-amber-500/30">
+                                                {sale.closer}
+                                            </Badge>
+                                        </td>
+                                        <td className="py-4 px-4">
                                             <Badge variant="indigo" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider">
                                                 {sale.setter_name}
                                             </Badge>
+                                        </td>
+                                        <td className="py-4 px-4">
+                                            <span className="text-[10px] font-black text-muted uppercase tracking-widest bg-white/5 py-1 px-2 rounded-lg">{sale.producto}</span>
                                         </td>
                                         <td className="py-4 px-4">
                                             <span className="text-sm font-black text-success tracking-tighter">
@@ -180,7 +194,7 @@ const FinancialAnalysisPage = () => {
                                 ))}
                                  {filteredSales.length === 0 && !error && (
                                     <tr>
-                                        <td colSpan="4" className="py-20 text-center">
+                                        <td colSpan="7" className="py-20 text-center">
                                             <div className="flex flex-col items-center gap-3">
                                                 <Search size={24} className="text-muted opacity-20" />
                                                 <p className="text-sm font-bold text-muted uppercase tracking-widest">No se encontraron ventas</p>
