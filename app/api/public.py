@@ -1543,44 +1543,66 @@ def delete_public_daily_spend(spend_id):
 def receive_financial_sales():
     """Receives sales data from Excel/Apps Script."""
     from app.models import FinancialSale
+    from flask import current_app
+    import json
+    
     data = request.get_json() or {}
+    
+    current_app.logger.info(f"[FINANCIAL] Received data: {json.dumps(data)[:500]}...")
 
     # Supports both list and single object
     items = data if isinstance(data, list) else [data]
     
     saved = 0
+    errors = []
+    
     for item in items:
-        monto = item.get('monto')
-        setter = item.get('setter')
+        # Flexible mapping for amount/monto
+        monto = item.get('monto') or item.get('amount') or item.get('value')
+        # Flexible mapping for setter name
+        setter = item.get('setter') or item.get('setter_name') or item.get('vendedor')
         
         if monto is None or setter is None:
+            current_app.logger.warning(f"[FINANCIAL] Skipping item due to missing fields: {item}")
+            errors.append({"item": item, "error": "Missing monto/amount or setter"})
             continue
 
         # Try to get date from item
         sale_date = datetime.utcnow()
-        fecha_str = item.get('fecha')
+        fecha_str = item.get('fecha') or item.get('date')
         if fecha_str:
             try:
-                # Handle ISO format strings like '2024-03-01T00:00:00.000Z'
+                # Use dateutil if available, otherwise fallback to basic formats
                 from dateutil import parser
-                sale_date = parser.parse(fecha_str)
-            except:
-                pass
+                sale_date = parser.parse(str(fecha_str))
+            except Exception as e:
+                current_app.logger.error(f"[FINANCIAL] Date parsing error for '{fecha_str}': {e}")
+                # Keep current utcnow if parsing fails
 
-        sale = FinancialSale(
-            setter_name=str(setter),
-            amount=float(monto),
-            date=sale_date,
-            raw_data=item
-        )
-        db.session.add(sale)
-        saved += 1
+        try:
+            sale = FinancialSale(
+                setter_name=str(setter),
+                amount=float(monto),
+                date=sale_date,
+                raw_data=item
+            )
+            db.session.add(sale)
+            saved += 1
+        except Exception as e:
+            current_app.logger.error(f"[FINANCIAL] Error creating record: {e}")
+            errors.append({"item": item, "error": str(e)})
         
     try:
         db.session.commit()
-        return jsonify({"message": f"{saved} sales records saved"}), 201
+        current_app.logger.info(f"[FINANCIAL] Successfully saved {saved} records")
+        return jsonify({
+            "message": f"{saved} sales records saved",
+            "saved": saved,
+            "errors": errors
+        }), 201
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"[FINANCIAL] Database commit error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @bp.route('/public/financial-sales', methods=['GET'])

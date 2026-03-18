@@ -17,6 +17,7 @@ import Button from '../../../components/ui/Button';
 const FinancialAnalysisPage = () => {
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
@@ -26,10 +27,12 @@ const FinancialAnalysisPage = () => {
     const fetchSales = async () => {
         try {
             setLoading(true);
+            setError(null);
             const response = await api.get('/public/financial-sales');
-            setSales(response.data);
+            setSales(Array.isArray(response.data) ? response.data : []);
         } catch (err) {
             console.error('Error fetching financial sales:', err);
+            setError('No se pudo conectar con el servidor de ventas. Por favor, intenta de nuevo.');
         } finally {
             setLoading(false);
         }
@@ -109,6 +112,16 @@ const FinancialAnalysisPage = () => {
                         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                         <p className="text-xs font-bold uppercase tracking-widest text-muted">Cargando registros...</p>
                     </div>
+                ) : error ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+                        <div className="p-4 rounded-full bg-rose-500/10 text-rose-500 mb-2">
+                            <Activity size={32} />
+                        </div>
+                        <p className="text-sm font-bold text-white uppercase tracking-widest">{error}</p>
+                        <Button onClick={fetchSales} variant="surface" size="sm" className="mt-2 rounded-xl">
+                            Reintentar Conexión
+                        </Button>
+                    </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
@@ -148,10 +161,18 @@ const FinancialAnalysisPage = () => {
                                         </td>
                                     </tr>
                                 ))}
-                                {filteredSales.length === 0 && (
+                                 {filteredSales.length === 0 && !error && (
                                     <tr>
                                         <td colSpan="4" className="py-20 text-center">
-                                            <p className="text-sm font-bold text-muted uppercase tracking-widest">No se encontraron ventas</p>
+                                            <div className="flex flex-col items-center gap-3">
+                                                <Search size={24} className="text-muted opacity-20" />
+                                                <p className="text-sm font-bold text-muted uppercase tracking-widest">No se encontraron ventas</p>
+                                                {searchTerm && (
+                                                    <Button variant="ghost" size="xs" onClick={() => setSearchTerm('')} className="text-primary hover:bg-primary/5">
+                                                        Limpiar búsqueda
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 )}
