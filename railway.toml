@@ -3,6 +3,7 @@ builder = "dockerfile"
 
 [deploy]
 startCommand = "gunicorn --timeout 120 run:app"
+releaseCommand = "flask db upgrade"
 healthCheckPath = "/api/health"
 healthCheckTimeout = 100
 restartPolicyType = "on_failure"
