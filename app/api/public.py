@@ -1604,6 +1604,70 @@ def receive_financial_sales():
         db.session.rollback()
         current_app.logger.error(f"[FINANCIAL] Database commit error: {e}")
         return jsonify({"error": str(e)}), 500
+def parse_financial_data(item):
+    errors = []
+    
+    setter = str(item.get('setter') or '').strip()
+    if not setter:
+        errors.append("Falta el setter (Columna K).")
+        
+    monto = item.get('monto') or item.get('amount') or item.get('value')
+    if monto is None or str(monto).strip() == '':
+        errors.append("Falta el monto abonado.")
+        monto_val = 0.0
+    else:
+        try:
+            monto_val = float(monto)
+        except ValueError:
+            errors.append(f"Monto inválido: {monto}")
+            monto_val = 0.0
+        
+    tipo_pago = str(item.get('tipo_pago', '')).strip()
+    
+    producto = 'N/A'
+    tipo_de_pago = 'N/A'
+    
+    if "seña" in tipo_pago.lower() or "sena" in tipo_pago.lower():
+        producto = "Seña"
+        tipo_de_pago = "Seña"
+    else:
+        parts = [p.strip() for p in tipo_pago.split('-')]
+        if len(parts) >= 2:
+            code = parts[0].upper()
+            pay_type = parts[1].title()
+            
+            if code == "RR":
+                producto = "Residency Roadmap"
+            elif code == "AL":
+                producto = "Ace Learners"
+            elif code == "SI":
+                producto = "Specialist Iniciative"
+            else:
+                producto = parts[0]
+                errors.append(f"Código de producto desconocido: {code}")
+                
+            if "completo" in pay_type.lower():
+                tipo_de_pago = "Completo"
+            elif "cuota" in pay_type.lower() or "parcial" in pay_type.lower() or "primer pago" in pay_type.lower():
+                tipo_de_pago = "Cuota / Primer Pago"
+            else:
+                tipo_de_pago = pay_type
+                if not ("seña" in pay_type.lower() or "sena" in pay_type.lower()):
+                    errors.append(f"Tipo de pago desconocido: {pay_type}")
+        else:
+            if tipo_pago:
+                errors.append(f"Formato de tipo de pago inválido: {tipo_pago}")
+            else:
+                errors.append("Falta el tipo de pago.")
+
+    return {
+        "setter": setter or "Desconocido",
+        "monto": monto_val,
+        "producto": producto,
+        "tipo_de_pago": tipo_de_pago,
+        "status": 'error' if errors else 'valid',
+        "error_notes": " | ".join(errors) if errors else None
+    }
 
 @bp.route('/public/financial-sales/sync', methods=['POST'])
 def sync_financial_sales_from_sheets():
@@ -1633,10 +1697,10 @@ def sync_financial_sales_from_sheets():
         
         added = 0
         for item in data:
-            monto = item.get('monto') or item.get('amount') or item.get('value')
-            setter = item.get('setter') or item.get('setter_name') or item.get('vendedor')
+            parsed = parse_financial_data(item)
             
-            if monto is None or setter is None:
+            # Skip completely empty rows
+            if parsed['setter'] == 'Desconocido' and parsed['monto'] == 0.0 and not item.get('vendedor') and not item.get('cliente'):
                 continue
                 
             sale_date = datetime.utcnow()
@@ -1650,14 +1714,18 @@ def sync_financial_sales_from_sheets():
             
             # Check if exists
             date_str_check = sale_date.strftime('%Y-%m-%d')
-            key_check = f"{str(setter).strip().lower()}_{float(monto)}_{date_str_check}"
+            key_check = f"{parsed['setter'].strip().lower()}_{float(parsed['monto'])}_{date_str_check}"
             
             if key_check not in existing_keys:
                 sale = FinancialSale(
-                    setter_name=str(setter),
-                    amount=float(monto),
+                    setter_name=parsed['setter'],
+                    amount=parsed['monto'],
                     date=sale_date,
-                    raw_data=item
+                    raw_data=item,
+                    status=parsed['status'],
+                    error_notes=parsed['error_notes'],
+                    product=parsed['producto'],
+                    payment_type=parsed['tipo_de_pago']
                 )
                 db.session.add(sale)
                 existing_keys.add(key_check) # Prevent duplicates within the same batch
@@ -1672,6 +1740,38 @@ def sync_financial_sales_from_sheets():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"[FINANCIAL SYNC] Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/public/financial-sales/<int:sale_id>', methods=['PUT', 'OPTIONS'])
+def update_financial_sale(sale_id):
+    """Endpoint for manual error resolution of financial sales."""
+    from app.models import FinancialSale
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    data = request.json or {}
+    sale = FinancialSale.query.get(sale_id)
+    if not sale:
+        return jsonify({"error": "Venta no encontrada"}), 404
+        
+    try:
+        if 'product' in data:
+            sale.product = data['product']
+        if 'payment_type' in data:
+            sale.payment_type = data['payment_type']
+        if 'setter_name' in data:
+            sale.setter_name = data['setter_name']
+        if 'amount' in data:
+            sale.amount = float(data['amount'])
+            
+        # If successfully submitted via the UI resolver, mark as resolved
+        sale.status = 'valid'
+        sale.error_notes = None
+        
+        db.session.commit()
+        return jsonify({"message": "Venta actualizada correctamente", "sale": sale.to_dict()}), 200
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 @bp.route('/public/financial-sales', methods=['GET'])
