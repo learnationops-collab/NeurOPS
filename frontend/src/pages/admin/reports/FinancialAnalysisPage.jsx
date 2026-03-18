@@ -22,10 +22,24 @@ const FinancialAnalysisPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        syncAndFetchSales();
+        fetchSales();
     }, []);
 
-    const syncAndFetchSales = async () => {
+    const fetchSales = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get('/public/financial-sales');
+            setSales(Array.isArray(response.data) ? response.data : []);
+        } catch (err) {
+            console.error('Error fetching financial sales:', err);
+            setError('No se pudo conectar con el servidor de ventas. Por favor, intenta de nuevo.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSync = async () => {
         try {
             setLoading(true);
             setSyncing(true);
@@ -36,21 +50,12 @@ const FinancialAnalysisPage = () => {
             
         } catch (err) {
             console.warn('Sync failed, falling back to existing DB data:', err);
-            // We don't block the UI if sync fails, we just show whatever is in the DB
         } finally {
             setSyncing(false);
         }
 
         // 2. Fetch all sales from DB
-        try {
-            const response = await api.get('/public/financial-sales');
-            setSales(Array.isArray(response.data) ? response.data : []);
-        } catch (err) {
-            console.error('Error fetching financial sales:', err);
-            setError('No se pudo conectar con el servidor de ventas. Por favor, intenta de nuevo.');
-        } finally {
-            setLoading(false);
-        }
+        await fetchSales();
     };
 
     const filteredSales = sales.filter(sale => 
@@ -79,8 +84,8 @@ const FinancialAnalysisPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button onClick={syncAndFetchSales} variant="surface" size="md" icon={Activity} className="rounded-2xl border-base hover:border-primary/50" disabled={loading}>
-                        {loading ? 'Actualizando...' : 'Actualizar'}
+                    <Button onClick={handleSync} variant="surface" size="md" icon={Activity} className="rounded-2xl border-base hover:border-primary/50" disabled={loading}>
+                        {loading && syncing ? 'Sincronizando...' : 'Actualizar e Importar'}
                     </Button>
                 </div>
             </header>
@@ -135,7 +140,7 @@ const FinancialAnalysisPage = () => {
                             <Activity size={32} />
                         </div>
                         <p className="text-sm font-bold text-white uppercase tracking-widest">{error}</p>
-                        <Button onClick={syncAndFetchSales} variant="surface" size="sm" className="mt-2 rounded-xl">
+                        <Button onClick={fetchSales} variant="surface" size="sm" className="mt-2 rounded-xl">
                             Reintentar Conexión
                         </Button>
                     </div>
