@@ -198,28 +198,32 @@ const PublicTriageReportPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
                                     <div className="text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 py-2 px-4 rounded-lg text-center">HOY</div>
-                                    <DualColumnRow label="Confirmadas" field1="post_hoy_confirmadas" val1={formData.post_hoy_confirmadas} field2="post_hoy_ppc_completo" val2={formData.post_hoy_ppc_completo} onChange={handleFieldChange} color1="emerald" color2="emerald" />
-                                    <div className="grid grid-cols-3 gap-4 items-center pl-2 pr-2">
-                                       <div></div>
-                                       <div className="text-center text-[9px] text-slate-500 uppercase font-black tracking-widest">Confirmadas</div>
-                                       <div className="text-center text-[9px] text-slate-500 uppercase font-black tracking-widest">PPC Completo</div>
+                                    <div className="grid grid-cols-2 gap-4 items-center border-b border-slate-800/50 py-3 last:border-0 hover:bg-slate-800/20 transition-colors px-2 rounded-lg">
+                                        <div className="text-xs font-black uppercase tracking-widest text-slate-400 pl-2">Confirmadas</div>
+                                        <div>
+                                            <input type="number" placeholder="0" className={`w-full px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-bold text-sm text-center ${formData.post_hoy_confirmadas !== '' ? 'bg-slate-800 border-slate-600 text-white border shadow-sm' : 'bg-slate-800/40 border border-slate-700/50 text-white'}`} value={formData.post_hoy_confirmadas} onChange={e => handleFieldChange("post_hoy_confirmadas", e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 items-center border-b border-slate-800/50 py-3 last:border-0 hover:bg-slate-800/20 transition-colors px-2 rounded-lg">
+                                        <div className="text-xs font-black uppercase tracking-widest text-slate-400 pl-2">PPC Completo</div>
+                                        <div>
+                                            <input type="number" placeholder="0" className={`w-full px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-bold text-sm text-center ${formData.post_hoy_ppc_completo !== '' ? 'bg-slate-800 border-slate-600 text-white border shadow-sm' : 'bg-slate-800/40 border border-slate-700/50 text-white'}`} value={formData.post_hoy_ppc_completo} onChange={e => handleFieldChange("post_hoy_ppc_completo", e.target.value)} />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="text-xs font-black uppercase tracking-widest text-teal-400 bg-teal-500/10 py-2 px-4 rounded-lg text-center">ALL</div>
-                                    <div className="grid grid-cols-3 gap-4 items-center border-b border-slate-800/50 py-3 px-2 rounded-lg">
+                                    <div className="grid grid-cols-2 gap-4 items-center border-b border-slate-800/50 py-3 last:border-0 hover:bg-slate-800/20 transition-colors px-2 rounded-lg">
                                         <div className="text-xs font-black uppercase tracking-widest text-slate-400 pl-2">Confirmadas</div>
                                         <div>
                                             <input type="number" placeholder="0" className={`w-full px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold text-sm text-center ${formData.post_all_confirmadas !== '' ? 'bg-slate-800 border-slate-600 text-white border shadow-sm' : 'bg-slate-800/40 border border-slate-700/50 text-white'}`} value={formData.post_all_confirmadas} onChange={e => handleFieldChange("post_all_confirmadas", e.target.value)} />
                                         </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 items-center border-b border-slate-800/50 py-3 last:border-0 hover:bg-slate-800/20 transition-colors px-2 rounded-lg">
+                                        <div className="text-xs font-black uppercase tracking-widest text-slate-400 pl-2">PPC Completo</div>
                                         <div>
                                             <input type="number" placeholder="0" className={`w-full px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold text-sm text-center ${formData.post_all_ppc_completo !== '' ? 'bg-slate-800 border-slate-600 text-white border shadow-sm' : 'bg-slate-800/40 border border-slate-700/50 text-white'}`} value={formData.post_all_ppc_completo} onChange={e => handleFieldChange("post_all_ppc_completo", e.target.value)} />
                                         </div>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-4 items-center pl-2 pr-2">
-                                       <div></div>
-                                       <div className="text-center text-[9px] text-slate-500 uppercase font-black tracking-widest">Confirmadas</div>
-                                       <div className="text-center text-[9px] text-slate-500 uppercase font-black tracking-widest">PPC Completo</div>
                                     </div>
                                 </div>
                             </div>
