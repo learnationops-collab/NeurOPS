@@ -12,6 +12,7 @@ from .integration import Integration
 from .public_registration import PublicRegistration
 from .financial import FinancialSale
 from .triage_report import TriageDailyReport
+from .triage_tracker import TriageTrackerReport
 
 
 # Export all for easy access via from app.models import ...
@@ -24,6 +25,6 @@ __all__ = [
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdDailySpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment',
-    'Integration', 'PublicRegistration', 'FinancialSale', 'TriageDailyReport'
+    'Integration', 'PublicRegistration', 'FinancialSale', 'TriageDailyReport', 'TriageTrackerReport'
 
 ]

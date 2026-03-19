@@ -5,6 +5,7 @@ import {
     CheckCircle, XCircle, PhoneOff, RefreshCw, Table, List
 } from 'lucide-react';
 import TriageReportsTable from './TriageReportsTable';
+import TriageTrackerTable from '../admin/reports/TriageTrackerTable';
 
 const PublicTriageStatsPage = () => {
     const [activeTab, setActiveTab] = useState('general'); // 'general', 'history'
@@ -157,6 +158,7 @@ const PublicTriageStatsPage = () => {
                 <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
                     <TabButton id="general" label="Vista General" icon={BarChart3} />
                     <TabButton id="history" label="Historial" icon={List} />
+                    <TabButton id="tracker" label="Tracker (Nuevo)" icon={Table} />
                 </div>
 
                 {/* FILTROS */}
@@ -301,6 +303,12 @@ const PublicTriageStatsPage = () => {
                             <div className="animate-in fade-in duration-500">
                                 <TriageReportsTable />
 
+                            </div>
+                        )}
+
+                        {activeTab === 'tracker' && (
+                            <div className="animate-in fade-in duration-500">
+                                <TriageTrackerTable />
                             </div>
                         )}
                     </>

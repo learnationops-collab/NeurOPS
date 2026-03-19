@@ -108,6 +108,10 @@ def create_app(config_class=Config):
     app.register_blueprint(manychat_bp, url_prefix='/api')
     csrf.exempt(manychat_bp)
 
+    from app.api.triage import bp as triage_bp
+    app.register_blueprint(triage_bp, url_prefix='/api/triage')
+    csrf.exempt(triage_bp)
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):
