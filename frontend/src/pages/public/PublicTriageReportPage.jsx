@@ -71,7 +71,7 @@ const PublicTriageReportPage = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            await api.post('/api/triage/tracker', formData);
+            await api.post('/triage/tracker', formData);
             alert('¡Tracker enviado correctamente!');
             setFormData(prev => ({ ...initialFormData, triage_name: prev.triage_name, date: prev.date }));
         } catch (err) {
