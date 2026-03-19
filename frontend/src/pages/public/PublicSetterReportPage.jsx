@@ -243,7 +243,6 @@ const PublicSetterReportPage = () => {
             inabriblesPct: inabriblesPct.toFixed(1),
             openingToAgenda: opening.toFixed(1),
             offerToAgenda: offer.toFixed(1),
-            linkToAgenda: link.toFixed(1),
             openingResponse: openingResp.toFixed(1),
             followUpResponse: followUpResp.toFixed(1),
             qualToPain: qualToPain.toFixed(1),

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '@/lib/axios';
+import api from '../../../services/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 export default function TriageTrackerTable() {
