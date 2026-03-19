@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
+import Card, { CardHeader, CardContent } from '../../../components/ui/Card';
 
 export default function TriageTrackerTable() {
     const [reports, setReports] = useState([]);
@@ -27,9 +27,9 @@ export default function TriageTrackerTable() {
     return (
         <Card className="w-full overflow-hidden mt-8 border-gray-200 shadow-sm transition-all hover:shadow-md">
             <CardHeader className="bg-slate-50 border-b">
-                <CardTitle className="text-xl font-semibold text-slate-800">
+                <h3 className="text-xl font-semibold text-slate-800">
                     Triage Tracker (Nuevo Formato)
-                </CardTitle>
+                </h3>
                 <p className="text-sm text-slate-500">
                     Vista temporal para previsualizar los datos que ingresarán del Google Sheet.
                 </p>
