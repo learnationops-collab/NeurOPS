@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root {
+            --slate-950: #020617;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-300: #cbd5e1;
+            --slate-50: #f8fafc;
+
+            --indigo-600: #4f46e5;
+            --indigo-500: #6366f1;
+            --indigo-400: #818cf8;
+
+            --emerald-600: #059669;
+            --emerald-500: #10b981;
+            --emerald-400: #34d399;
+
+            --rose-600: #e11d48;
+            --rose-500: #f43f5e;
+            --rose-400: #fb7185;
+
+            --amber-600: #d97706;
+            --amber-500: #f59e0b;
+            --amber-400: #fbbf24;
+
+            --fuchsia-600: #c026d3;
+            --fuchsia-500: #d946ef;
+            --fuchsia-400: #e879f9;
+
+            --violet-600: #7c3aed;
+            --violet-500: #8b5cf6;
+            --violet-400: #a78bfa;
+
+            --sky-600: #0284c7;
+            --sky-500: #0ea5e9;
+            --sky-400: #38bdf8;
+            
+            --pink-600: #db2777;
+            --pink-500: #ec4899;
+            --pink-400: #f472b6;
+            
+            --cyan-600: #0891b2;
+            --cyan-500: #06b6d4;
+            --cyan-400: #22d3ee;
+            
+            --teal-600: #0d9488;
+            --teal-500: #14b8a6;
+            --teal-400: #2dd4bf;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--slate-950);
+            color: var(--slate-50);
+            padding: 50px 60px;
+            width: 1200px; /* Ancho Premium Dashboard */
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 50px;
+            border-bottom: 2px solid var(--slate-800);
+            padding-bottom: 30px;
+        }
+
+        .header-left .logo-text {
+            font-size: 16px;
+            font-weight: 900;
+            color: var(--indigo-500);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .dashboard-title {
+            font-size: 56px;
+            font-weight: 900;
+            margin: 0;
+            text-transform: uppercase;
+            font-style: italic;
+            letter-spacing: -1px;
+        }
+
+        .gradient-text-1 {
+            background: linear-gradient(to right, var(--indigo-500), var(--cyan-500));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .triage-name-tag {
+            display: inline-block;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--indigo-400);
+            padding: 8px 24px;
+            border-radius: 99px;
+            font-size: 24px;
+            font-weight: 900;
+            margin-top: 16px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .date-box {
+            text-align: right;
+        }
+
+        .date-label {
+            font-size: 12px;
+            font-weight: 900;
+            color: var(--slate-500);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .date-value {
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--slate-300);
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        /* Cards */
+        .card {
+            background-color: var(--slate-900);
+            border: 1px solid var(--slate-800);
+            border-radius: 32px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .card-title-box {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .icon-box {
+            padding: 12px;
+            border-radius: 16px;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: white;
+            font-style: italic;
+            text-transform: uppercase;
+        }
+
+        .total-agendas-box {
+            text-align: right;
+        }
+
+        .total-agendas-label {
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--slate-500);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .total-agendas-val {
+            font-size: 32px;
+            font-weight: 900;
+            font-style: italic;
+        }
+
+        /* Progress Rows */
+        .progress-list {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .progress-row-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 8px;
+        }
+
+        .progress-label-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-label {
+            font-size: 13px;
+            font-weight: 900;
+            color: var(--slate-400);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-abs {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--slate-600);
+        }
+
+        .progress-pct {
+            font-size: 16px;
+            font-weight: 900;
+        }
+
+        .progress-bar-bg {
+            height: 10px;
+            background-color: var(--slate-800);
+            border-radius: 99px;
+            overflow: hidden;
+            border: 1px solid rgba(51, 65, 85, 0.3);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 99px;
+        }
+
+        /* Funnel (Follow Up) */
+        .funnel-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 0;
+            width: 100%;
+        }
+
+        .funnel-layer {
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: relative;
+            overflow: hidden;
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        .funnel-layer.l1 { width: 100%; border: 1px solid rgba(6, 182, 212, 0.4); border-top-left-radius: 24px; border-top-right-radius: 24px; }
+        .funnel-layer.l2 { width: 90%; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .funnel-layer.l3 { width: 80%; border: 1px solid rgba(244, 63, 94, 0.4); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;}
+
+        .funnel-fill {
+            position: absolute;
+            top: 0; bottom: 0; left: 0;
+            z-index: 1;
+        }
+        .funnel-fill.l1 { background: rgba(6, 182, 212, 0.2); width: 100%; }
+        .funnel-fill.l2 { background: rgba(16, 185, 129, 0.2); }
+        .funnel-fill.l3 { background: rgba(244, 63, 94, 0.2); }
+
+        .funnel-text-left {
+            font-size: 13px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 2;
+        }
+        .funnel-text-left.l1 { color: var(--cyan-400); }
+        .funnel-text-left.l2 { color: var(--emerald-400); }
+        .funnel-text-left.l3 { color: var(--rose-400); }
+
+        .funnel-text-right {
+            font-size: 24px;
+            font-weight: 900;
+            font-style: italic;
+            color: white;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        .funnel-pct {
+            font-size: 12px;
+            font-weight: 800;
+            color: rgba(255,255,255,0.5);
+            font-style: normal;
+        }
+
+        /* Metrics Grid (Post Conf) */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            height: 100%;
+            align-items: center;
+        }
+        
+        .metric-col {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .metric-col-header {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 8px 0;
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .metric-col-header.hoy { color: var(--emerald-400); background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .metric-col-header.all { color: var(--teal-400); background: rgba(20, 184, 166, 0.1); border: 1px solid rgba(20, 184, 166, 0.2); }
+
+        .metric-box {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .metric-box-title {
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--slate-500);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .metric-box-val {
+            font-size: 32px;
+            font-weight: 900;
+            font-style: italic;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            font-size: 13px;
+            font-weight: 900;
+            color: var(--slate-600);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="logo-text">NeurOPS Triage Intelligence</div>
+            <h1 class="dashboard-title">Tracker <span class="gradient-text-1">Board</span></h1>
+            <div class="triage-name-tag">{{ triage_name }}</div>
+        </div>
+        <div class="date-box">
+            <div class="date-label">Periodo Filtrado</div>
+            <div class="date-value">{{ date_str }}</div>
+        </div>
+    </div>
+
+    <!-- ROW 1 -->
+    <div class="grid-2">
+        <!-- STARTING PROCESS -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-box">
+                    <div class="icon-box" style="background: rgba(99, 102, 241, 0.1); color: var(--indigo-500); border: 1px solid rgba(99, 102, 241, 0.2);">📞</div>
+                    <div class="card-title">Starting Process</div>
+                </div>
+                <div class="total-agendas-box">
+                    <div class="total-agendas-label">Total Agendas</div>
+                    <div class="total-agendas-val" style="color: var(--indigo-400);">{{ st_agendas }}</div>
+                </div>
+            </div>
+            
+            <div class="progress-list">
+                <!-- Confirmando -->
+                <div>
+                    <div class="progress-row-header">
+                        <div class="progress-label-box">
+                            <span class="progress-label">Confirmando</span>
+                            <span class="progress-abs">({{ st_confirmando_val }})</span>
+                        </div>
+                        <span class="progress-pct" style="color: var(--indigo-400);">{{ st_confirmando_pct }}%</span>
+                    </div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ st_confirmando_pct }}%; background: var(--indigo-400);"></div></div>
+                </div>
+                <!-- Reprogramando -->
+                <div>
+                    <div class="progress-row-header">
+                        <div class="progress-label-box">
+                            <span class="progress-label">Reprogramando</span>
+                            <span class="progress-abs">({{ st_reprogramando_val }})</span>
+                        </div>
+                        <span class="progress-pct" style="color: var(--violet-400);">{{ st_reprogramando_pct }}%</span>
+                    </div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ st_reprogramando_pct }}%; background: var(--violet-400);"></div></div>
+                </div>
+                <!-- Confirmadas -->
+                <div>
+                    <div class="progress-row-header">
+                        <div class="progress-label-box">
+                            <span class="progress-label">Confirmadas</span>
+                            <span class="progress-abs">({{ st_confirmadas_val }})</span>
+                        </div>
+                        <span class="progress-pct" style="color: var(--emerald-500);">{{ st_confirmadas_pct }}%</span>
+                    </div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ st_confirmadas_pct }}%; background: var(--emerald-500);"></div></div>
+                </div>
+                <!-- Canceladas -->
+                <div>
+                    <div class="progress-row-header">
+                        <div class="progress-label-box">
+                            <span class="progress-label">Canceladas</span>
+                            <span class="progress-abs">({{ st_canceladas_val }})</span>
+                        </div>
+                        <span class="progress-pct" style="color: var(--rose-500);">{{ st_canceladas_pct }}%</span>
+                    </div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ st_canceladas_pct }}%; background: var(--rose-500);"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALL OF THEM -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-box">
+                    <div class="icon-box" style="background: rgba(236, 72, 153, 0.1); color: var(--pink-500); border: 1px solid rgba(236, 72, 153, 0.2);">📊</div>
+                    <div class="card-title">All of Them</div>
+                </div>
+                <div class="total-agendas-box">
+                    <div class="total-agendas-label">Total Agendas</div>
+                    <div class="total-agendas-val" style="color: var(--pink-400);">{{ all_agendas }}</div>
+                </div>
+            </div>
+            
+            <div class="progress-list">
+                <!-- Confirmando -->
+                <div>
+                    <div class="progress-row-header">
+                        <div class="progress-label-box">
+                            <span class="progress-label">Confirmando</span>
+                            <span class="progress-abs">({{ all_confirmando_val }})</span>
+                        </div>
+                        <span class="progress-pct" style="color: var(--pink-400);">{{ all_confirmando_pct }}%</span>
+                    </div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ all_confirmando_pct }}%; background: var(--pink-400);"></div></div>
+                </div>
+                <!-- Reprogramando -->
+                <div>
+                    <div class="progress-row-header">
+                        <div class="progress-label-box">
+                            <span class="progress-label">Reprogramando</span>
+                            <span class="progress-abs">({{ all_reprogramando_val }})</span>
+                        </div>
+                        <span class="progress-pct" style="color: var(--fuchsia-400);">{{ all_reprogramando_pct }}%</span>
+                    </div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ all_reprogramando_pct }}%; background: var(--fuchsia-400);"></div></div>
+                </div>
+                <!-- Confirmadas -->
+                <div>
+                    <div class="progress-row-header">
+                        <div class="progress-label-box">
+                            <span class="progress-label">Confirmadas</span>
+                            <span class="progress-abs">({{ all_confirmadas_val }})</span>
+                        </div>
+                        <span class="progress-pct" style="color: var(--emerald-500);">{{ all_confirmadas_pct }}%</span>
+                    </div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ all_confirmadas_pct }}%; background: var(--emerald-500);"></div></div>
+                </div>
+                <!-- Canceladas -->
+                <div>
+                    <div class="progress-row-header">
+                        <div class="progress-label-box">
+                            <span class="progress-label">Canceladas</span>
+                            <span class="progress-abs">({{ all_canceladas_val }})</span>
+                        </div>
+                        <span class="progress-pct" style="color: var(--rose-500);">{{ all_canceladas_pct }}%</span>
+                    </div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ all_canceladas_pct }}%; background: var(--rose-500);"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROW 2 -->
+    <div class="grid-2">
+        <!-- FOLLOW UP PROCESS -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-box">
+                    <div class="icon-box" style="background: rgba(6, 182, 212, 0.1); color: var(--cyan-500); border: 1px solid rgba(6, 182, 212, 0.2);">👥</div>
+                    <div class="card-title">Follow Up Process</div>
+                </div>
+                <div class="total-agendas-box" style="background: rgba(30, 41, 59, 0.5); padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(51, 65, 85, 0.5);">
+                    <div class="total-agendas-label">Prom. Mensajes</div>
+                    <div class="total-agendas-val" style="color: var(--cyan-400); font-size: 24px;">{{ avg_mjes }} <span style="font-size: 11px; font-weight: 900; color: var(--slate-500); font-style: normal;">/ cto</span></div>
+                </div>
+            </div>
+            
+            <div class="funnel-container">
+                <!-- Level 1 -->
+                <div class="funnel-layer l1">
+                    <div class="funnel-fill l1"></div>
+                    <span class="funnel-text-left l1">Disponibles</span>
+                    <span class="funnel-text-right">{{ fu_disponibles }}</span>
+                </div>
+                <!-- Level 2 -->
+                <div class="funnel-layer l2">
+                    <div class="funnel-fill l2" style="width: {{ fu_contact_pct }}%;"></div>
+                    <span class="funnel-text-left l2">Contactadas</span>
+                    <span class="funnel-text-right">{{ fu_contactadas }} <span class="funnel-pct">({{ fu_contact_pct }}%)</span></span>
+                </div>
+                <!-- Level 3 -->
+                <div class="funnel-layer l3">
+                    <div class="funnel-fill l3" style="width: {{ fu_resp_pct }}%;"></div>
+                    <span class="funnel-text-left l3">Respuestas</span>
+                    <span class="funnel-text-right">{{ fu_respondidos }} <span class="funnel-pct">({{ fu_resp_pct }}%)</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- POST CONFIRMATION PROCESS -->
+        <div class="card">
+            <div class="card-header" style="margin-bottom: 24px;">
+                <div class="card-title-box">
+                    <div class="icon-box" style="background: rgba(16, 185, 129, 0.1); color: var(--emerald-500); border: 1px solid rgba(16, 185, 129, 0.2);">🎯</div>
+                    <div class="card-title">Post Confirmation</div>
+                </div>
+            </div>
+            
+            <div class="metrics-grid">
+                <!-- HOY -->
+                <div class="metric-col">
+                    <div class="metric-col-header hoy">HOY</div>
+                    <div class="metric-box">
+                        <div class="metric-box-title">Confirmadas</div>
+                        <div class="metric-box-val" style="color: var(--emerald-400);">{{ pop_confirmadas_hoy }}</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-box-title">PPC Completo</div>
+                        <div class="metric-box-val" style="color: var(--teal-400);">{{ pop_ppc_hoy }}</div>
+                    </div>
+                </div>
+                <!-- ALL -->
+                <div class="metric-col">
+                    <div class="metric-col-header all">ALL</div>
+                    <div class="metric-box">
+                        <div class="metric-box-title">Confirmadas</div>
+                        <div class="metric-box-val" style="color: var(--emerald-400);">{{ pop_confirmadas_all }}</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-box-title">PPC Completo</div>
+                        <div class="metric-box-val" style="color: var(--teal-400);">{{ pop_ppc_all }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        NEUROPS TRIAGE INTELLIGENCE BOARD • GENERATED AUTOMATICALLY
+    </div>
+</body>
+
+</html>

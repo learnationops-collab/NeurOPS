@@ -89,6 +89,77 @@ def submit_triage_tracker():
 
     try:
         db.session.commit()
+
+        # ---------------- DISCORD WEBHOOK ----------------
+        try:
+            from app.services.image_service import ImageService
+            import requests
+
+            def safe_pct(val, total):
+                return round((val / total) * 100, 1) if total > 0 else 0.0
+
+            st_agendas = report.starting_1st_call_agendas + report.starting_2nd_call_agendas
+            all_agendas = report.all_1st_call_agendas + report.all_2nd_call_agendas
+            
+            fu_disp = report.fu_cold_personas_disp_fu + report.fu_warm_personas_disp_fu + report.fu_hot_personas_disp_fu
+            fu_cont = report.fu_cold_personas_realizados + report.fu_warm_personas_realizados + report.fu_hot_personas_realizados
+            fu_resp = report.fu_cold_personas_respondidos + report.fu_warm_personas_respondidos + report.fu_hot_personas_respondidos
+            fu_mjes = report.fu_cold_mjes_realizados + report.fu_warm_mjes_realizados + report.fu_hot_mjes_realizados
+
+            render_data = {
+                "triage_name": report.triage_name,
+                "date_str": report.date.strftime("%d/%m/%Y"),
+                
+                "st_agendas": st_agendas,
+                "st_confirmando_val": report.starting_1st_call_confirmando + report.starting_2nd_call_confirmando,
+                "st_confirmando_pct": safe_pct(report.starting_1st_call_confirmando + report.starting_2nd_call_confirmando, st_agendas),
+                "st_reprogramando_val": report.starting_1st_call_reprogramando + report.starting_2nd_call_reprogramando,
+                "st_reprogramando_pct": safe_pct(report.starting_1st_call_reprogramando + report.starting_2nd_call_reprogramando, st_agendas),
+                "st_confirmadas_val": report.starting_1st_call_confirmadas + report.starting_2nd_call_confirmadas,
+                "st_confirmadas_pct": safe_pct(report.starting_1st_call_confirmadas + report.starting_2nd_call_confirmadas, st_agendas),
+                "st_canceladas_val": report.starting_1st_call_canceladas + report.starting_2nd_call_canceladas,
+                "st_canceladas_pct": safe_pct(report.starting_1st_call_canceladas + report.starting_2nd_call_canceladas, st_agendas),
+
+                "all_agendas": all_agendas,
+                "all_confirmando_val": report.all_1st_call_confirmando + report.all_2nd_call_confirmando,
+                "all_confirmando_pct": safe_pct(report.all_1st_call_confirmando + report.all_2nd_call_confirmando, all_agendas),
+                "all_reprogramando_val": report.all_1st_call_reprogramando + report.all_2nd_call_reprogramando,
+                "all_reprogramando_pct": safe_pct(report.all_1st_call_reprogramando + report.all_2nd_call_reprogramando, all_agendas),
+                "all_confirmadas_val": report.all_1st_call_confirmadas + report.all_2nd_call_confirmadas,
+                "all_confirmadas_pct": safe_pct(report.all_1st_call_confirmadas + report.all_2nd_call_confirmadas, all_agendas),
+                "all_canceladas_val": report.all_1st_call_canceladas + report.all_2nd_call_canceladas,
+                "all_canceladas_pct": safe_pct(report.all_1st_call_canceladas + report.all_2nd_call_canceladas, all_agendas),
+
+                "fu_disponibles": fu_disp,
+                "fu_contactadas": fu_cont,
+                "fu_respondidos": fu_resp,
+                "fu_contact_pct": safe_pct(fu_cont, fu_disp),
+                "fu_resp_pct": safe_pct(fu_resp, fu_cont),
+                "avg_mjes": round(fu_mjes / fu_cont, 1) if fu_cont > 0 else 0.0,
+
+                "pop_confirmadas_hoy": report.post_hoy_confirmadas,
+                "pop_ppc_hoy": report.post_hoy_ppc_completo,
+                "pop_confirmadas_all": report.post_all_confirmadas,
+                "pop_ppc_all": report.post_all_ppc_completo,
+            }
+
+            img_buf = ImageService.generate_triage_tracker_card(render_data)
+            
+            webhook_url = "https://discord.com/api/webhooks/1482070325641347288/fFK0OKoDIRngTIzh1kl81_Um8GrtFg62Z3TK4Rq0qgjQtU3jNqlOOLZ4lw1c_0qV0drX"
+            payload = {
+                "content": f"🎯 **NUEVO REPORTE DE TRIAGE TRACKER**\n**Triage:** {report.triage_name}\n**Fecha:** {render_data['date_str']}",
+                "username": "NeurOPS Triage AI",
+                "avatar_url": "https://i.imgur.com/4M34hi2.png"
+            }
+            files = {
+                "file": ("triage_tracker.png", img_buf, "image/png")
+            }
+            res = requests.post(webhook_url, data=payload, files=files)
+            print(f"[Discord Triage Tracker] Status: {res.status_code}")
+        except Exception as e:
+            print(f"[Discord Triage Tracker Error] {e}")
+        # -------------------------------------------------
+
         return jsonify({"message": f"Reporte Tracker de {triage_name} guardado exitosamente"}), 201
     except Exception as e:
         db.session.rollback()
