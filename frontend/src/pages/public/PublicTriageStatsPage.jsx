@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import {
     Loader2, BarChart3, Target, CalendarDays, Layers, Phone, Activity,
-    Table, Users
+    Table, Users, List
 } from 'lucide-react';
 import TriageTrackerTable from '../admin/reports/TriageTrackerTable';
+import TriageReportsTable from './TriageReportsTable';
 
 const PublicTriageStatsPage = () => {
-    const [activeTab, setActiveTab] = useState('general'); // 'general', 'tracker'
+    const [activeTab, setActiveTab] = useState('general'); // 'general', 'tracker', 'history'
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -42,7 +43,7 @@ const PublicTriageStatsPage = () => {
     }, [filters.time_preset, filters.custom_days]);
 
     useEffect(() => {
-        if (activeTab === 'tracker') return;
+        if (activeTab === 'tracker' || activeTab === 'history') return;
         fetchStats();
     }, [filters, activeTab]);
 
@@ -144,6 +145,7 @@ const PublicTriageStatsPage = () => {
                 <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
                     <TabButton id="general" label="Dashboard" icon={BarChart3} />
                     <TabButton id="tracker" label="Tracker History" icon={Table} />
+                    <TabButton id="history" label="Historial de Reportes" icon={List} />
                 </div>
 
                 {/* FILTROS */}
@@ -317,6 +319,12 @@ const PublicTriageStatsPage = () => {
                         {activeTab === 'tracker' && (
                             <div className="animate-in fade-in duration-500">
                                 <TriageTrackerTable />
+                            </div>
+                        )}
+
+                        {activeTab === 'history' && (
+                            <div className="animate-in fade-in duration-500">
+                                <TriageReportsTable />
                             </div>
                         )}
                     </>
