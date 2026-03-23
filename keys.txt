@@ -1,0 +1,1 @@
+["fecha", "vendedor", "cliente", "telefono", "tipo_pago", "monto", "setter"]
