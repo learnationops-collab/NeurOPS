@@ -54,7 +54,7 @@ const PublicTriageStatsPage = () => {
             if (filters.start_date) params.append('start_date', filters.start_date);
             if (filters.end_date) params.append('end_date', filters.end_date);
 
-            const res = await api.get(`/api/triage/tracker/stats?${params.toString()}`);
+            const res = await api.get(`/triage/tracker/stats?${params.toString()}`);
             setStats(res.data);
         } catch (err) {
             console.error("Error fetching triage tracker stats:", err);

@@ -64,7 +64,7 @@ export default function TriageTrackerTable() {
             if (filters.start_date) params.append('start_date', filters.start_date);
             if (filters.end_date) params.append('end_date', filters.end_date);
 
-            const res = await api.get(`/api/triage/tracker?${params.toString()}`);
+            const res = await api.get(`/triage/tracker?${params.toString()}`);
             setReports(res.data.reports || []);
             setTotalPages(res.data.pages || 1);
         } catch (error) {
@@ -88,7 +88,7 @@ export default function TriageTrackerTable() {
                 ...editForm,
                 date: editForm.date.substring(0, 10) // Ensure format for backend match
             };
-            await api.post('/api/triage/tracker', payload);
+            await api.post('/triage/tracker', payload);
             setEditingId(null);
             fetchData();
         } catch (err) {
@@ -101,7 +101,7 @@ export default function TriageTrackerTable() {
     const handleDelete = async (id) => {
         if (!window.confirm("¿Seguro que quieres borrar este reporte del Tracker?")) return;
         try {
-            await api.delete(`/api/triage/tracker/${id}`);
+            await api.delete(`/triage/tracker/${id}`);
             fetchData();
         } catch (err) {
             alert("Error al borrar");
