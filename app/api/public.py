@@ -1283,7 +1283,7 @@ def delete_public_closer_report(report_id):
 @bp.route('/public/ads', methods=['GET'])
 def get_public_ads():
     """Lista todos los anuncios con spend acumulado y leads."""
-    from app.models import Ad, AdDailySpend, ManychatAdLead
+    from app.models import Ad, AdPeriodSpend, ManychatAdLead
     from sqlalchemy import func
 
     ads = Ad.query.order_by(Ad.created_at.desc()).all()
@@ -1298,8 +1298,8 @@ def get_public_ads():
 
     result = []
     for a in ads:
-        total_spend = db.session.query(func.coalesce(func.sum(AdDailySpend.spend), 0)).filter(
-            AdDailySpend.ad_id == a.id
+        total_spend = db.session.query(func.coalesce(func.sum(AdPeriodSpend.spend), 0)).filter(
+            AdPeriodSpend.ad_id == a.id
         ).scalar()
 
         ls = lead_map.get(a.id, {'total': 0, 'qualified': 0})
