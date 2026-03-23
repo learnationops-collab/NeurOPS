@@ -282,10 +282,11 @@ const AdsTab = ({ ads, onRefresh, loading }) => {
 };
 
 // ==========================================
-// Tab: Inversión Diaria
+// Tab: Inversión por Período
 // ==========================================
-const DailySpendTab = ({ ads }) => {
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+const PeriodSpendTab = ({ ads }) => {
+    const [selectedStartDate, setSelectedStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedEndDate, setSelectedEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [spendValues, setSpendValues] = useState({});
     const [history, setHistory] = useState([]);
     const [saving, setSaving] = useState(false);
@@ -293,26 +294,28 @@ const DailySpendTab = ({ ads }) => {
 
     const activeAds = useMemo(() => ads.filter(a => a.status === 'active'), [ads]);
 
-    // Cargar datos existentes para la fecha seleccionada
+    // Cargar datos existentes para las fechas seleccionadas
     useEffect(() => {
-        loadDayData();
-    }, [selectedDate]);
+        loadPeriodData();
+    }, [selectedStartDate, selectedEndDate]);
 
     // Cargar historial reciente
     useEffect(() => {
         loadHistory();
     }, []);
 
-    const loadDayData = async () => {
+    const loadPeriodData = async () => {
         try {
-            const res = await api.get('/public/ads/daily-spend', { params: { date: selectedDate } });
+            const res = await api.get('/public/ads/period-spend', { 
+                params: { start_date: selectedStartDate, end_date: selectedEndDate } 
+            });
             const vals = {};
             res.data.forEach(s => {
                 vals[s.ad_id] = { spend: s.spend, entrantes: s.entrantes || 0, agendas: s.agendas || 0, notes: s.notes || '' };
             });
             setSpendValues(vals);
         } catch (err) {
-            console.error('Error loading day data:', err);
+            console.error('Error loading period data:', err);
         }
     };
 
@@ -323,7 +326,7 @@ const DailySpendTab = ({ ads }) => {
             const end = new Date();
             const start = new Date();
             start.setDate(start.getDate() - 30);
-            const res = await api.get('/public/ads/daily-spend', {
+            const res = await api.get('/public/ads/period-spend', {
                 params: {
                     start_date: start.toISOString().split('T')[0],
                     end_date: end.toISOString().split('T')[0]
@@ -345,6 +348,12 @@ const DailySpendTab = ({ ads }) => {
     };
 
     const handleSaveAll = async () => {
+        // Validar que la fecha de inicio no sea mayor a la de fin
+        if (selectedStartDate > selectedEndDate) {
+            alert('La fecha de inicio no puede ser posterior a la de fin');
+            return;
+        }
+
         const entries = activeAds
             .filter(ad => {
                 const val = spendValues[ad.id]?.spend;
@@ -352,7 +361,8 @@ const DailySpendTab = ({ ads }) => {
             })
             .map(ad => ({
                 ad_id: ad.id,
-                date: selectedDate,
+                start_date: selectedStartDate,
+                end_date: selectedEndDate,
                 spend: parseFloat(spendValues[ad.id]?.spend || 0),
                 entrantes: parseInt(spendValues[ad.id]?.entrantes || 0),
                 agendas: parseInt(spendValues[ad.id]?.agendas || 0),
@@ -366,7 +376,7 @@ const DailySpendTab = ({ ads }) => {
 
         setSaving(true);
         try {
-            await api.post('/public/ads/daily-spend', { entries });
+            await api.post('/public/ads/period-spend', { entries });
             alert(`${entries.length} registro(s) guardados correctamente`);
             loadHistory();
         } catch (err) {
@@ -379,50 +389,60 @@ const DailySpendTab = ({ ads }) => {
     const handleDeleteSpend = async (id) => {
         if (!confirm('¿Eliminar este registro de gasto?')) return;
         try {
-            await api.delete(`/public/ads/daily-spend/${id}`);
+            await api.delete(`/public/ads/period-spend/${id}`);
             loadHistory();
-            loadDayData();
+            loadPeriodData();
         } catch (err) {
             alert('Error al eliminar registro');
         }
     };
 
-    // Calcular total del día
-    const dayTotal = useMemo(() => {
+    // Calcular total del periodo
+    const periodTotal = useMemo(() => {
         return activeAds.reduce((sum, ad) => {
             const val = parseFloat(spendValues[ad.id]?.spend || 0);
             return sum + (isNaN(val) ? 0 : val);
         }, 0);
     }, [spendValues, activeAds]);
 
-    // Agrupar historial por fecha
+    // Agrupar historial por periodo
     const historyByDate = useMemo(() => {
         const grouped = {};
         history.forEach(s => {
-            if (!grouped[s.date]) grouped[s.date] = { entries: [], total: 0 };
-            grouped[s.date].entries.push(s);
-            grouped[s.date].total += s.spend;
+            const key = `${s.start_date}|${s.end_date}`;
+            if (!grouped[key]) grouped[key] = { entries: [], total: 0, start: s.start_date, end: s.end_date };
+            grouped[key].entries.push(s);
+            grouped[key].total += s.spend;
         });
-        return Object.entries(grouped).sort(([a], [b]) => b.localeCompare(a));
+        return Object.entries(grouped).sort((a, b) => b[1].start.localeCompare(a[1].start));
     }, [history]);
 
     return (
         <div className="space-y-8">
-            {/* Selector de fecha + Resumen */}
+            {/* Selector de periodo + Resumen */}
             <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between">
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha de Inversión</label>
-                        <input
-                            type="date"
-                            className="px-5 py-3 bg-slate-900 border border-slate-700/50 rounded-xl text-white outline-none focus:border-amber-500 transition-all font-bold"
-                            value={selectedDate}
-                            onChange={e => setSelectedDate(e.target.value)}
-                        />
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Período de Inversión</label>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="date"
+                                className="px-5 py-3 w-40 bg-slate-900 border border-slate-700/50 rounded-xl text-white outline-none focus:border-amber-500 transition-all font-bold"
+                                value={selectedStartDate}
+                                onChange={e => setSelectedStartDate(e.target.value)}
+                            />
+                            <span className="text-slate-500 font-bold">-</span>
+                            <input
+                                type="date"
+                                className="px-5 py-3 w-40 bg-slate-900 border border-slate-700/50 rounded-xl text-white outline-none focus:border-amber-500 transition-all font-bold"
+                                value={selectedEndDate}
+                                onChange={e => setSelectedEndDate(e.target.value)}
+                            />
+                        </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total del Día</p>
-                        <p className="text-3xl font-black text-amber-400">${dayTotal.toFixed(2)}</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total del Período</p>
+                        <p className="text-3xl font-black text-amber-400">${periodTotal.toFixed(2)}</p>
                     </div>
                 </div>
             </div>
@@ -516,7 +536,7 @@ const DailySpendTab = ({ ads }) => {
                             className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-black uppercase text-sm tracking-[0.15em] transition-all shadow-xl shadow-amber-600/20 flex items-center justify-center gap-3 active:scale-[0.98]"
                         >
                             {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
-                            {saving ? 'Guardando...' : 'Guardar Inversión del Día'}
+                            {saving ? 'Guardando...' : 'Guardar Inversión del Período'}
                         </button>
                     </div>
                 </div>
@@ -539,13 +559,16 @@ const DailySpendTab = ({ ads }) => {
                     <p className="text-center text-slate-500 py-8 text-sm">Sin registros de inversión aún</p>
                 ) : (
                     <div className="space-y-4">
-                        {historyByDate.map(([date, group]) => (
-                            <div key={date} className="bg-slate-900/50 border border-slate-800/50 rounded-2xl overflow-hidden">
+                        {historyByDate.map(([key, group]) => (
+                            <div key={key} className="bg-slate-900/50 border border-slate-800/50 rounded-2xl overflow-hidden">
                                 <div className="flex items-center justify-between px-5 py-3 bg-slate-800/30">
                                     <div className="flex items-center gap-2">
                                         <CalendarDays size={14} className="text-slate-500" />
                                         <span className="text-sm font-bold text-slate-300">
-                                            {new Date(date + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                            {new Date(group.start + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                            {group.start !== group.end && (
+                                                <> al {new Date(group.end + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>
+                                            )}
                                         </span>
                                     </div>
                                     <span className="text-sm font-black text-amber-400">${group.total.toFixed(2)}</span>
@@ -601,7 +624,7 @@ const AdManagementPage = () => {
 
     const tabs = [
         { key: 'ads', label: 'Anuncios', icon: Megaphone },
-        { key: 'spend', label: 'Inversión Diaria', icon: DollarSign },
+        { key: 'spend', label: 'Inversión (Períodos)', icon: DollarSign },
         { key: 'ads_dashboard', label: 'Rendimiento por Anuncio', icon: Users },
         { key: 'webhooks', label: 'Webhooks', icon: Radio },
     ];
@@ -647,7 +670,7 @@ const AdManagementPage = () => {
                     {activeTab === 'ads' ? (
                         <AdsTab ads={ads} onRefresh={fetchAds} loading={loading} />
                     ) : activeTab === 'spend' ? (
-                        <DailySpendTab ads={ads} />
+                        <PeriodSpendTab ads={ads} />
                     ) : activeTab === 'ads_dashboard' ? (
                         <AdDashboardTab />
                     ) : (

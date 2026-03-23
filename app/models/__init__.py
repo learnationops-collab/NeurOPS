@@ -4,7 +4,7 @@ from .client import Client, Lead, ClientComment
 from .funnel import Event, EventGroup, Program, event_closers
 from .booking import Appointment, Availability, WeeklyAvailability, SurveyQuestion, SurveyAnswer
 from .payment import Enrollment, PaymentMethod, Payment
-from .marketing import Campaign, AdSet, Ad, MarketingBudget, AdDailySpend, ManychatAdLead, ManychatLead, LeadAnswer
+from .marketing import Campaign, AdSet, Ad, MarketingBudget, AdPeriodSpend, ManychatAdLead, ManychatLead, LeadAnswer
 from .report import SetterDailyStats, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Expense, RecurringExpense
 from .closer_report import CloserDailyReport
 from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment
@@ -14,7 +14,6 @@ from .financial import FinancialSale
 from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
 
-
 # Export all for easy access via from app.models import ...
 __all__ = [
     'User', 'GoogleCalendarToken', 'ROLE_ADMIN', 'ROLE_CLOSER', 'ROLE_SETTER', 'ROLE_OPERATOR', 'ROLE_TRIAGE',
@@ -22,7 +21,7 @@ __all__ = [
     'Event', 'EventGroup', 'Program', 'event_closers',
     'Appointment', 'Availability', 'WeeklyAvailability', 'SurveyQuestion', 'SurveyAnswer',
     'Enrollment', 'PaymentMethod', 'Payment',
-    'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdDailySpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer',
+    'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdPeriodSpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment',
     'Integration', 'PublicRegistration', 'FinancialSale', 'TriageDailyReport', 'TriageTrackerReport'

@@ -1424,13 +1424,13 @@ def update_public_ad(ad_id):
 
 @bp.route('/public/ads/<int:ad_id>', methods=['DELETE'])
 def delete_public_ad(ad_id):
-    """Elimina un anuncio y sus registros de gasto diario."""
-    from app.models import Ad, AdDailySpend
+    """Elimina un anuncio y sus registros de gasto periodico."""
+    from app.models import Ad, AdPeriodSpend
 
     ad = Ad.query.get_or_404(ad_id)
     try:
-        # Eliminar gastos diarios asociados
-        AdDailySpend.query.filter_by(ad_id=ad.id).delete()
+        # Eliminar gastos asociados
+        AdPeriodSpend.query.filter_by(ad_id=ad.id).delete()
         db.session.delete(ad)
         db.session.commit()
         return jsonify({"message": "Anuncio eliminado"}), 200
@@ -1441,34 +1441,30 @@ def delete_public_ad(ad_id):
 
 # --- Daily Spend ---
 
-@bp.route('/public/ads/daily-spend', methods=['GET'])
-def get_public_daily_spend():
-    """Lista registros de gasto diario filtrados por fecha."""
-    from app.models import AdDailySpend, Ad
+@bp.route('/public/ads/period-spend', methods=['GET'])
+def get_public_period_spend():
+    """Lista registros de gasto periódico filtrados por fecha de inicio y fin."""
+    from app.models import AdPeriodSpend, Ad
 
-    date_str = request.args.get('date')
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
 
-    query = AdDailySpend.query
+    query = AdPeriodSpend.query
 
-    if date_str:
-        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        query = query.filter(AdDailySpend.date == target_date)
-    else:
-        if start_date_str:
-            query = query.filter(AdDailySpend.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
-        if end_date_str:
-            query = query.filter(AdDailySpend.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+    if start_date_str:
+        query = query.filter(AdPeriodSpend.start_date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
+    if end_date_str:
+        query = query.filter(AdPeriodSpend.end_date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
 
-    spends = query.order_by(AdDailySpend.date.desc()).all()
+    spends = query.order_by(AdPeriodSpend.start_date.desc()).all()
 
     return jsonify([{
         'id': s.id,
         'ad_id': s.ad_id,
         'ad_name': s.ad.name if s.ad else 'Unknown',
         'ad_keyword': s.ad.keyword if s.ad else '',
-        'date': s.date.isoformat(),
+        'start_date': s.start_date.isoformat(),
+        'end_date': s.end_date.isoformat(),
         'spend': s.spend,
         'entrantes': s.entrantes or 0,
         'agendas': s.agendas or 0,
@@ -1476,10 +1472,10 @@ def get_public_daily_spend():
     } for s in spends]), 200
 
 
-@bp.route('/public/ads/daily-spend', methods=['POST'])
-def save_public_daily_spend():
-    """Guarda o actualiza gasto diario de un anuncio (upsert por ad_id + date)."""
-    from app.models import AdDailySpend
+@bp.route('/public/ads/period-spend', methods=['POST'])
+def save_public_period_spend():
+    """Guarda o actualiza gasto de un anuncio por periodo (upsert por ad_id + start_date + end_date)."""
+    from app.models import AdPeriodSpend
 
     data = request.get_json() or {}
 
@@ -1489,26 +1485,28 @@ def save_public_daily_spend():
     saved = 0
     for entry in entries:
         ad_id = entry.get('ad_id')
-        date_str = entry.get('date')
+        start_date_str = entry.get('start_date')
+        end_date_str = entry.get('end_date')
         spend = float(entry.get('spend', 0))
         entrantes = int(entry.get('entrantes', 0) or 0)
         agendas = int(entry.get('agendas', 0) or 0)
         notes = entry.get('notes', '')
 
-        if not ad_id or not date_str:
+        if not ad_id or not start_date_str or not end_date_str:
             continue
 
-        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        start_tgt = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_tgt = datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
         # Upsert: buscar existente o crear nuevo
-        record = AdDailySpend.query.filter_by(ad_id=ad_id, date=target_date).first()
+        record = AdPeriodSpend.query.filter_by(ad_id=ad_id, start_date=start_tgt, end_date=end_tgt).first()
         if record:
             record.spend = spend
             record.entrantes = entrantes
             record.agendas = agendas
             record.notes = notes
         else:
-            record = AdDailySpend(ad_id=ad_id, date=target_date, spend=spend, entrantes=entrantes, agendas=agendas, notes=notes)
+            record = AdPeriodSpend(ad_id=ad_id, start_date=start_tgt, end_date=end_tgt, spend=spend, entrantes=entrantes, agendas=agendas, notes=notes)
             db.session.add(record)
         saved += 1
 
@@ -1520,12 +1518,12 @@ def save_public_daily_spend():
         return jsonify({"error": str(e)}), 500
 
 
-@bp.route('/public/ads/daily-spend/<int:spend_id>', methods=['DELETE'])
-def delete_public_daily_spend(spend_id):
-    """Elimina un registro de gasto diario."""
-    from app.models import AdDailySpend
+@bp.route('/public/ads/period-spend/<int:spend_id>', methods=['DELETE'])
+def delete_public_period_spend(spend_id):
+    """Elimina un registro de gasto por periodo."""
+    from app.models import AdPeriodSpend
 
-    record = AdDailySpend.query.get_or_404(spend_id)
+    record = AdPeriodSpend.query.get_or_404(spend_id)
     try:
         db.session.delete(record)
         db.session.commit()

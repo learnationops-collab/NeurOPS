@@ -53,21 +53,22 @@ class MarketingBudget(db.Model):
     source = db.Column(db.String(50))
 
 
-class AdDailySpend(db.Model):
-    __tablename__ = 'ad_daily_spends'
+class AdPeriodSpend(db.Model):
+    __tablename__ = 'ad_period_spends'
     id = db.Column(db.Integer, primary_key=True)
     ad_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=False)
-    date = db.Column(db.Date, nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
     spend = db.Column(db.Float, default=0.0)
     entrantes = db.Column(db.Integer, default=0)
     agendas = db.Column(db.Integer, default=0)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Evitar duplicados de gasto por anuncio por día
-    __table_args__ = (db.UniqueConstraint('ad_id', 'date', name='uq_ad_daily_spend'),)
+    # Evitar duplicados de gasto por anuncio en el mismo rango de fechas
+    __table_args__ = (db.UniqueConstraint('ad_id', 'start_date', 'end_date', name='uq_ad_period_spend'),)
 
-    ad = db.relationship('Ad', backref=db.backref('daily_spends', lazy='dynamic'))
+    ad = db.relationship('Ad', backref=db.backref('period_spends', lazy='dynamic'))
 
 
 class ManychatAdLead(db.Model):
