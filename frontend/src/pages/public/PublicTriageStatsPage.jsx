@@ -198,118 +198,264 @@ const PublicTriageStatsPage = () => {
                         {stats && activeTab === 'general' && (
                             <div className="space-y-8 animate-in fade-in duration-500 mt-8">
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    {/* Pre Call / Starting Process */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6 hover:shadow-indigo-500/10 transition-shadow">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
-                                                    <Phone size={20} />
-                                                </div>
-                                                <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Starting Process</h3>
+                                {/* ----------------- PRE CALL ----------------- */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl flex flex-col xl:flex-row gap-8 hover:shadow-indigo-500/10 transition-shadow">
+                                    {/* Left: Table */}
+                                    <div className="flex-1 space-y-6 overflow-hidden">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
+                                                <Phone size={20} />
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Agendas</p>
-                                                <p className="text-2xl font-black text-indigo-400 italic">{fmt(stAgendas)}</p>
-                                            </div>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Pre Call</h3>
                                         </div>
-                                        <div className="space-y-4">
-                                            <ProgressRow label="Confirmando" percentage={safeCalc(stConfirmando, stAgendas)} absolute={fmt(stConfirmando)} colorClass="text-indigo-400" />
-                                            <ProgressRow label="Reprogramando" percentage={safeCalc(stReprogramando, stAgendas)} absolute={fmt(stReprogramando)} colorClass="text-violet-400" />
-                                            <ProgressRow label="Confirmadas" percentage={safeCalc(stConfirmadas, stAgendas)} absolute={fmt(stConfirmadas)} colorClass="text-emerald-500" />
-                                            <ProgressRow label="Canceladas" percentage={safeCalc(stCanceladas, stAgendas)} absolute={fmt(stCanceladas)} colorClass="text-rose-500" />
+
+                                        <div className="overflow-x-auto w-full">
+                                            <table className="w-full min-w-max text-left border-collapse">
+                                                <thead>
+                                                    <tr className="border-b border-slate-800">
+                                                        <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Variable</th>
+                                                        <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-indigo-400 text-center bg-indigo-500/10 rounded-t-xl mx-1">Diario</th>
+                                                        <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-pink-400 text-center bg-pink-500/10 rounded-t-xl mx-1">General</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-800/50">
+                                                    <tr className="hover:bg-slate-800/20 transition-colors">
+                                                        <td className="py-4 px-4 text-xs font-black uppercase tracking-widest text-slate-300">Agendas</td>
+                                                        <td className="py-4 px-4 text-lg font-black italic text-center text-indigo-400 bg-indigo-500/5">{fmt(stAgendas)}</td>
+                                                        <td className="py-4 px-4 text-lg font-black italic text-center text-pink-400 bg-pink-500/5">{fmt(allAgendas)}</td>
+                                                    </tr>
+                                                    <tr className="hover:bg-slate-800/20 transition-colors">
+                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Confirmando</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-slate-200">{fmt(stConfirmando)}</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-slate-200">{fmt(allConfirmando)}</td>
+                                                    </tr>
+                                                    <tr className="hover:bg-slate-800/20 transition-colors">
+                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Reprogramando</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-slate-200">{fmt(stReprogramando)}</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-slate-200">{fmt(allReprogramando)}</td>
+                                                    </tr>
+                                                    <tr className="hover:bg-slate-800/20 transition-colors">
+                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-emerald-400">Confirmadas</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-emerald-400">{fmt(stConfirmadas)}</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-emerald-400">{fmt(allConfirmadas)}</td>
+                                                    </tr>
+                                                    <tr className="hover:bg-slate-800/20 transition-colors">
+                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-rose-400">Canceladas</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-rose-400">{fmt(stCanceladas)}</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-rose-400">{fmt(allCanceladas)}</td>
+                                                    </tr>
+                                                    <tr className="hover:bg-slate-800/20 transition-colors">
+                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-amber-400">Incierto</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-amber-400">{fmt(stAgendas - (stConfirmando + stReprogramando + stConfirmadas + stCanceladas))}</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-amber-400">{fmt(allAgendas - (allConfirmando + allReprogramando + allConfirmadas + allCanceladas))}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
 
-                                    {/* All of Them */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6 hover:shadow-pink-500/10 transition-shadow">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-3 rounded-2xl bg-pink-500/10 border border-pink-500/20 text-pink-500">
-                                                    <Activity size={20} />
+                                    {/* Right: Pie Charts */}
+                                    <div className="w-full xl:w-[400px] flex flex-col md:flex-row xl:flex-col justify-center gap-6 border-t xl:border-t-0 xl:border-l border-slate-800/50 pt-6 xl:pt-0 xl:pl-6">
+                                        {/* Pure CSS Pie Chart - Diario */}
+                                        <div className="bg-slate-800/30 rounded-2xl p-4 border border-slate-800 flex-1">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-center text-slate-500 mb-4">Porcentajes Diario</h4>
+                                            {stAgendas > 0 ? (
+                                                <div className="flex items-center gap-6 justify-center">
+                                                    <div className="w-24 h-24 rounded-full flex-shrink-0 shadow-lg" style={{
+                                                        background: `conic-gradient(
+                                                            #6366f1 0% ${safeCalc(stConfirmando, stAgendas)}%, 
+                                                            #a855f7 ${safeCalc(stConfirmando, stAgendas)}% ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas))}%, 
+                                                            #10b981 ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas))}% ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas)) + parseFloat(safeCalc(stConfirmadas, stAgendas))}%, 
+                                                            #f43f5e ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas)) + parseFloat(safeCalc(stConfirmadas, stAgendas))}% ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas)) + parseFloat(safeCalc(stConfirmadas, stAgendas)) + parseFloat(safeCalc(stCanceladas, stAgendas))}%,
+                                                            #fbbf24 ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas)) + parseFloat(safeCalc(stConfirmadas, stAgendas)) + parseFloat(safeCalc(stCanceladas, stAgendas))}% 100%
+                                                        )`
+                                                    }}></div>
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Conf {safeCalc(stConfirmando, stAgendas)}%</span></div>
+                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Repr {safeCalc(stReprogramando, stAgendas)}%</span></div>
+                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Confdas {safeCalc(stConfirmadas, stAgendas)}%</span></div>
+                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-rose-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Canc {safeCalc(stCanceladas, stAgendas)}%</span></div>
+                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-400"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Inc {safeCalc(stAgendas - (stConfirmando + stReprogramando + stConfirmadas + stCanceladas), stAgendas)}%</span></div>
+                                                    </div>
                                                 </div>
-                                                <h3 className="text-xl font-black text-white italic tracking-tight uppercase">All of Them</h3>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Agendas</p>
-                                                <p className="text-2xl font-black text-pink-400 italic">{fmt(allAgendas)}</p>
-                                            </div>
+                                            ) : (
+                                                <div className="text-center text-xs text-slate-600 font-bold py-8">Sin agendas</div>
+                                            )}
                                         </div>
-                                        <div className="space-y-4">
-                                            <ProgressRow label="Confirmando" percentage={safeCalc(allConfirmando, allAgendas)} absolute={fmt(allConfirmando)} colorClass="text-pink-400" />
-                                            <ProgressRow label="Reprogramando" percentage={safeCalc(allReprogramando, allAgendas)} absolute={fmt(allReprogramando)} colorClass="text-fuchsia-400" />
-                                            <ProgressRow label="Confirmadas" percentage={safeCalc(allConfirmadas, allAgendas)} absolute={fmt(allConfirmadas)} colorClass="text-emerald-500" />
-                                            <ProgressRow label="Canceladas" percentage={safeCalc(allCanceladas, allAgendas)} absolute={fmt(allCanceladas)} colorClass="text-rose-500" />
+
+                                        {/* Pure CSS Pie Chart - General */}
+                                        <div className="bg-slate-800/30 rounded-2xl p-4 border border-slate-800 flex-1">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-center text-slate-500 mb-4">Porcentajes General</h4>
+                                            {allAgendas > 0 ? (
+                                                <div className="flex items-center gap-6 justify-center">
+                                                    <div className="w-24 h-24 rounded-full flex-shrink-0 shadow-lg" style={{
+                                                        background: `conic-gradient(
+                                                            #6366f1 0% ${safeCalc(allConfirmando, allAgendas)}%, 
+                                                            #a855f7 ${safeCalc(allConfirmando, allAgendas)}% ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas))}%, 
+                                                            #10b981 ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas))}% ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas)) + parseFloat(safeCalc(allConfirmadas, allAgendas))}%, 
+                                                            #f43f5e ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas)) + parseFloat(safeCalc(allConfirmadas, allAgendas))}% ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas)) + parseFloat(safeCalc(allConfirmadas, allAgendas)) + parseFloat(safeCalc(allCanceladas, allAgendas))}%,
+                                                            #fbbf24 ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas)) + parseFloat(safeCalc(allConfirmadas, allAgendas)) + parseFloat(safeCalc(allCanceladas, allAgendas))}% 100%
+                                                        )`
+                                                    }}></div>
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Conf {safeCalc(allConfirmando, allAgendas)}%</span></div>
+                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Repr {safeCalc(allReprogramando, allAgendas)}%</span></div>
+                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Confdas {safeCalc(allConfirmadas, allAgendas)}%</span></div>
+                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-rose-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Canc {safeCalc(allCanceladas, allAgendas)}%</span></div>
+                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-400"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Inc {safeCalc(allAgendas - (allConfirmando + allReprogramando + allConfirmadas + allCanceladas), allAgendas)}%</span></div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center text-xs text-slate-600 font-bold py-8">Sin agendas</div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Follow Up Process & Post Confirmation */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    
-                                    {/* Follow Up Process Funnel */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6 hover:shadow-cyan-500/10 transition-shadow">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-500">
-                                                    <Users size={20} />
+
+                                {/* ----------------- POST CALL ----------------- */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6 hover:shadow-emerald-500/10 transition-shadow">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+                                            <Target size={20} />
+                                        </div>
+                                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Post Call</h3>
+                                    </div>
+
+                                    <div className="bg-slate-800/20 rounded-2xl border border-slate-800 p-4 overflow-x-auto">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 min-w-[600px] md:min-w-0">
+                                            <div className="space-y-4">
+                                                <div className="text-center text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 py-2 rounded-xl">HOY</div>
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Confirmadas</div>
+                                                        <div className="text-2xl font-black italic text-emerald-400 mt-2">{fmt(popConfirmadasHoy)}</div>
+                                                    </div>
+                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">PPC Compl.</div>
+                                                        <div className="text-2xl font-black italic text-teal-400 mt-2">{fmt(popPpcHoy)}</div>
+                                                    </div>
+                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-emerald-500/30 text-center flex flex-col justify-center shadow-lg shadow-emerald-500/10">
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">% Efectividad</div>
+                                                        <div className="text-xl font-black italic text-emerald-400 mt-2">{safeCalc(popPpcHoy, popConfirmadasHoy)}%</div>
+                                                    </div>
                                                 </div>
-                                                <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Follow Up Process</h3>
                                             </div>
-                                            <div className="text-right bg-slate-800/50 p-2 rounded-xl border border-slate-700/50">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Prom. Mensajes</p>
-                                                <p className="text-xl mt-1 font-black text-cyan-400 italic">{avgMessages} <span className="text-[10px] text-slate-500 not-italic">/ cto</span></p>
+
+                                            <div className="space-y-4">
+                                                <div className="text-center text-[10px] font-black uppercase tracking-widest text-teal-400 bg-teal-500/10 border border-teal-500/20 py-2 rounded-xl">ALL</div>
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Confirmadas</div>
+                                                        <div className="text-2xl font-black italic text-emerald-400 mt-2">{fmt(popConfirmadasAll)}</div>
+                                                    </div>
+                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">PPC Compl.</div>
+                                                        <div className="text-2xl font-black italic text-teal-400 mt-2">{fmt(popPpcAll)}</div>
+                                                    </div>
+                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-teal-500/30 text-center flex flex-col justify-center shadow-lg shadow-teal-500/10">
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">% Efectividad</div>
+                                                        <div className="text-xl font-black italic text-teal-400 mt-2">{safeCalc(popPpcAll, popConfirmadasAll)}%</div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* ----------------- FOLLOW UP PROCESS ----------------- */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6 hover:shadow-cyan-500/10 transition-shadow">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-500">
+                                                <Users size={20} />
+                                            </div>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Follow Up Process</h3>
+                                        </div>
+                                        <div className="text-right bg-slate-800/50 p-2 rounded-xl border border-slate-700/50">
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Promedio Global Mensajes</p>
+                                            <p className="text-xl mt-1 font-black text-cyan-400 italic">{avgMessages} <span className="text-[10px] text-slate-500 not-italic uppercase">/ cto</span></p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
                                         
-                                        {/* Pure Funnel Layout */}
-                                        <div className="space-y-2 relative py-4 flex flex-col items-center">
-                                            {/* Nivel 1 */}
-                                            <div className="h-14 bg-slate-800/80 border border-cyan-500/40 rounded-t-2xl flex items-center justify-between px-6 relative overflow-hidden group w-full max-w-sm">
-                                                <div className="absolute inset-y-0 left-0 bg-cyan-500/20 transition-all duration-1000" style={{width: `100%`}}></div>
-                                                <span className="text-[11px] font-black uppercase tracking-widest text-cyan-400 relative z-10">Disponibles</span>
-                                                <span className="text-xl font-black italic shadow-black/50 text-white relative z-10">{fmt(fuDisponibles)}</span>
+                                        {/* COLD FUNNEL */}
+                                        <div className="bg-slate-800/20 border border-slate-800 rounded-2xl p-4 md:p-6 flex flex-col hover:border-cyan-500/30 transition-colors shadow-lg shadow-black/20">
+                                            <div className="text-center mb-6">
+                                                <h4 className="text-sm font-black uppercase tracking-[0.2em] text-cyan-400">Cold Leads</h4>
+                                                <p className="text-[9px] font-black uppercase text-slate-500 mt-1.5">Mjes: {fmt(stats?.fu_cold_mjes_realizados)} / Cto: {fmt(stats?.fu_cold_personas_realizados)}</p>
                                             </div>
-                                            {/* Nivel 2 */}
-                                            <div className="h-14 bg-slate-800/80 border border-emerald-500/40 rounded-sm flex items-center justify-between px-6 relative overflow-hidden group w-[90%] max-w-[320px]">
-                                                <div className="absolute inset-y-0 left-0 bg-emerald-500/20 transition-all duration-1000" style={{width: `${safeCalc(fuContactadas, fuDisponibles)}%`}}></div>
-                                                <span className="text-[11px] font-black uppercase tracking-widest text-emerald-400 relative z-10">Contactadas</span>
-                                                <span className="text-xl font-black italic shadow-black/50 text-white relative z-10">{fmt(fuContactadas)} <span className="text-[10px] font-bold text-emerald-500/70 not-italic ml-1 hidden sm:inline-block">({safeCalc(fuContactadas, fuDisponibles)}%)</span></span>
-                                            </div>
-                                            {/* Nivel 3 */}
-                                            <div className="h-14 bg-slate-800/80 border border-rose-500/40 rounded-b-2xl flex items-center justify-between px-6 relative overflow-hidden group w-[80%] max-w-[280px]">
-                                                <div className="absolute inset-y-0 left-0 bg-rose-500/20 transition-all duration-1000" style={{width: `${safeCalc(fuRespondidos, fuContactadas)}%`}}></div>
-                                                <span className="text-[11px] font-black uppercase tracking-widest text-rose-400 relative z-10">Respuestas</span>
-                                                <span className="text-xl font-black italic shadow-black/50 text-white relative z-10">{fmt(fuRespondidos)} <span className="text-[10px] font-bold text-rose-500/70 not-italic ml-1 hidden sm:inline-block">({safeCalc(fuRespondidos, fuContactadas)}%)</span></span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Post Confirmation Process */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6 flex flex-col hover:shadow-emerald-500/10 transition-shadow">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
-                                                    <Target size={20} />
+                                            <div className="space-y-2 relative py-2 flex flex-col items-center flex-1">
+                                                <div className="h-14 bg-slate-800 border border-cyan-500/30 rounded-t-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-full">
+                                                    <div className="absolute inset-y-0 left-0 bg-cyan-500/10" style={{width: `100%`}}></div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-cyan-500/70 relative z-10 w-auto">Disp.</span>
+                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_cold_personas_disp_fu)}</span>
                                                 </div>
-                                                <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Post Confirmation</h3>
+                                                <div className="h-14 bg-slate-800 border border-emerald-500/30 rounded-sm flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[90%]">
+                                                    <div className="absolute inset-y-0 left-0 bg-emerald-500/10" style={{width: `${safeCalc(stats?.fu_cold_personas_realizados, stats?.fu_cold_personas_disp_fu)}%`}}></div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500/70 relative z-10 w-auto">Conctadas</span>
+                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_cold_personas_realizados)}</span>
+                                                </div>
+                                                <div className="h-14 bg-slate-800 border border-rose-500/30 rounded-b-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[80%]">
+                                                    <div className="absolute inset-y-0 left-0 bg-rose-500/10" style={{width: `${safeCalc(stats?.fu_cold_personas_respondidos, stats?.fu_cold_personas_realizados)}%`}}></div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-500/70 relative z-10 w-auto">Respuestas</span>
+                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_cold_personas_respondidos)} <span className="text-[9px] text-rose-400/80 not-italic ml-1 hidden lg:inline-block">({safeCalc(stats?.fu_cold_personas_respondidos, stats?.fu_cold_personas_realizados)}%)</span></span>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-6 flex-1 items-center">
-                                            <div className="space-y-4">
-                                                <div className="text-center text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 py-2 rounded-xl">HOY</div>
-                                                <MetricCard title="Confirmadas" value={fmt(popConfirmadasHoy)} colorClass="text-emerald-400" />
-                                                <MetricCard title="PPC Completo" value={fmt(popPpcHoy)} colorClass="text-teal-400" />
+                                        {/* WARM FUNNEL */}
+                                        <div className="bg-slate-800/20 border border-slate-800 rounded-2xl p-4 md:p-6 flex flex-col hover:border-orange-500/30 transition-colors shadow-lg shadow-black/20">
+                                            <div className="text-center mb-6">
+                                                <h4 className="text-sm font-black uppercase tracking-[0.2em] text-orange-400">Warm Leads</h4>
+                                                <p className="text-[9px] font-black uppercase text-slate-500 mt-1.5">Mjes: {fmt(stats?.fu_warm_mjes_realizados)} / Cto: {fmt(stats?.fu_warm_personas_realizados)}</p>
                                             </div>
-                                            <div className="space-y-4">
-                                                <div className="text-center text-xs font-black uppercase tracking-widest text-teal-400 bg-teal-500/10 border border-teal-500/20 py-2 rounded-xl">ALL</div>
-                                                <MetricCard title="Confirmadas" value={fmt(popConfirmadasAll)} colorClass="text-emerald-400" />
-                                                <MetricCard title="PPC Completo" value={fmt(popPpcAll)} colorClass="text-teal-400" />
+                                            <div className="space-y-2 relative py-2 flex flex-col items-center flex-1">
+                                                <div className="h-14 bg-slate-800 border border-orange-500/30 rounded-t-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-full">
+                                                    <div className="absolute inset-y-0 left-0 bg-orange-500/10" style={{width: `100%`}}></div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-orange-500/70 relative z-10 w-auto">Disp.</span>
+                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_warm_personas_disp_fu)}</span>
+                                                </div>
+                                                <div className="h-14 bg-slate-800 border border-emerald-500/30 rounded-sm flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[90%]">
+                                                    <div className="absolute inset-y-0 left-0 bg-emerald-500/10" style={{width: `${safeCalc(stats?.fu_warm_personas_realizados, stats?.fu_warm_personas_disp_fu)}%`}}></div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500/70 relative z-10 w-auto">Conctadas</span>
+                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_warm_personas_realizados)}</span>
+                                                </div>
+                                                <div className="h-14 bg-slate-800 border border-rose-500/30 rounded-b-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[80%]">
+                                                    <div className="absolute inset-y-0 left-0 bg-rose-500/10" style={{width: `${safeCalc(stats?.fu_warm_personas_respondidos, stats?.fu_warm_personas_realizados)}%`}}></div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-500/70 relative z-10 w-auto">Respuestas</span>
+                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_warm_personas_respondidos)} <span className="text-[9px] text-rose-400/80 not-italic ml-1 hidden lg:inline-block">({safeCalc(stats?.fu_warm_personas_respondidos, stats?.fu_warm_personas_realizados)}%)</span></span>
+                                                </div>
                                             </div>
                                         </div>
+
+                                        {/* HOT FUNNEL */}
+                                        <div className="bg-slate-800/20 border border-slate-800 rounded-2xl p-4 md:p-6 flex flex-col hover:border-red-500/30 transition-colors shadow-lg shadow-black/20">
+                                            <div className="text-center mb-6">
+                                                <h4 className="text-sm font-black uppercase tracking-[0.2em] text-red-500">Hot Leads</h4>
+                                                <p className="text-[9px] font-black uppercase text-slate-500 mt-1.5">Mjes: {fmt(stats?.fu_hot_mjes_realizados)} / Cto: {fmt(stats?.fu_hot_personas_realizados)}</p>
+                                            </div>
+                                            <div className="space-y-2 relative py-2 flex flex-col items-center flex-1">
+                                                <div className="h-14 bg-slate-800 border border-red-500/30 rounded-t-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-full">
+                                                    <div className="absolute inset-y-0 left-0 bg-red-500/10" style={{width: `100%`}}></div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-red-500/70 relative z-10 w-auto">Disp.</span>
+                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_hot_personas_disp_fu)}</span>
+                                                </div>
+                                                <div className="h-14 bg-slate-800 border border-emerald-500/30 rounded-sm flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[90%]">
+                                                    <div className="absolute inset-y-0 left-0 bg-emerald-500/10" style={{width: `${safeCalc(stats?.fu_hot_personas_realizados, stats?.fu_hot_personas_disp_fu)}%`}}></div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500/70 relative z-10 w-auto">Conctadas</span>
+                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_hot_personas_realizados)}</span>
+                                                </div>
+                                                <div className="h-14 bg-slate-800 border border-rose-500/30 rounded-b-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[80%]">
+                                                    <div className="absolute inset-y-0 left-0 bg-rose-500/10" style={{width: `${safeCalc(stats?.fu_hot_personas_respondidos, stats?.fu_hot_personas_realizados)}%`}}></div>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-500/70 relative z-10 w-auto">Respuestas</span>
+                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_hot_personas_respondidos)} <span className="text-[9px] text-rose-400/80 not-italic ml-1 hidden lg:inline-block">({safeCalc(stats?.fu_hot_personas_respondidos, stats?.fu_hot_personas_realizados)}%)</span></span>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                     </div>
-
                                 </div>
                             </div>
                         )}
