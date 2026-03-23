@@ -2,96 +2,16 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import {
     Search, Trash2, Edit3, Loader2, Calendar,
-    ChevronLeft, ChevronRight, X, Save, Activity
+    ChevronLeft, ChevronRight, X, Save
 } from 'lucide-react';
-
-const EditTriageReportModal = ({ report, onClose, onSave }) => {
-    const [form, setForm] = useState({ ...report });
-    const [saving, setSaving] = useState(false);
-
-    const handleChange = (field, value) => {
-        setForm(prev => ({ ...prev, [field]: value === '' ? '' : Number(value) }));
-    };
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await api.put(`/public/triage-reports/${report.id}`, form);
-            onSave();
-        } catch (err) {
-            alert("Error al guardar el reporte");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const InputRow = ({ label, field }) => (
-        <div className="flex items-center justify-between py-2 border-b border-slate-800/50 last:border-0 hover:bg-slate-800/20 px-2 rounded-lg transition-colors">
-            <label className="text-xs font-bold text-slate-300">{label}</label>
-            <input
-                type="number"
-                value={form[field]}
-                onChange={e => handleChange(field, e.target.value)}
-                className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-center font-black text-indigo-400 focus:border-indigo-500 outline-none"
-            />
-        </div>
-    );
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-                <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-800/20">
-                    <div>
-                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Editar Reporte Triage</h3>
-                        <p className="text-sm font-bold text-indigo-400">{report.triage_name} - {report.date}</p>
-                    </div>
-                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors">
-                        <X size={20} />
-                    </button>
-                </div>
-
-                <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-8">
-                    <div className="bg-slate-800/40 p-5 rounded-2xl border border-slate-700/50">
-                        <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-400 uppercase mb-4 pb-2 border-b border-slate-700"><Activity size={14} /> Gestión de Agendas</h4>
-                        <div className="space-y-1">
-                            <InputRow label="Agendas Nuevas" field="agendas_nuevas" />
-                            <InputRow label="Confirmadas" field="agendas_confirmadas" />
-                            <InputRow label="No Contestan" field="no_contestan" />
-                            <InputRow label="Cancelaciones" field="cancelaciones" />
-                            <InputRow label="Reprogramandos" field="reprogramandos" />
-                        </div>
-                    </div>
-
-                    <div className="bg-blue-900/10 p-5 rounded-2xl border border-blue-900/30">
-                        <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-blue-400 uppercase mb-4 pb-2 border-b border-blue-900/50"><Activity size={14} /> Seguimientos</h4>
-                        <div className="space-y-1">
-                            <InputRow label="Seguimientos Iniciados" field="seguimientos_iniciados" />
-                            <InputRow label="Seguimientos Contestados" field="seguimientos_contestados" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-6 border-t border-slate-800 bg-slate-900 flex justify-end gap-3 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-                    <button onClick={onClose} className="px-6 py-3 font-bold text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition-colors" disabled={saving}>
-                        Cancelar
-                    </button>
-                    <button onClick={handleSave} disabled={saving} className={`px-8 py-3 font-black text-sm rounded-xl transition-all flex items-center gap-2 ${saving ? 'bg-indigo-600/50 text-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20'}`}>
-                        {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                        GUARDAR CAMBIOS
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 const TriageReportsTable = () => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [editingReport, setEditingReport] = useState(null);
 
+    // Filters
     const [filters, setFilters] = useState({
         triage_name: '',
         start_date: '',
@@ -100,6 +20,7 @@ const TriageReportsTable = () => {
         custom_days: 30
     });
 
+    // Helper to calculate dates based on preset
     useEffect(() => {
         if (filters.time_preset === 'custom') return;
         const now = new Date();
@@ -123,6 +44,11 @@ const TriageReportsTable = () => {
         setPage(1);
     }, [filters.time_preset, filters.custom_days]);
 
+    // Editing State
+    const [editingId, setEditingId] = useState(null);
+    const [editForm, setEditForm] = useState(null);
+    const [saving, setSaving] = useState(false);
+
     useEffect(() => {
         fetchReports();
     }, [page, filters.triage_name, filters.start_date, filters.end_date]);
@@ -140,7 +66,7 @@ const TriageReportsTable = () => {
             setReports(res.data.reports || []);
             setTotalPages(res.data.pages || 1);
         } catch (err) {
-            console.error(err);
+            console.error("Error fetching reports:", err);
         } finally {
             setLoading(false);
         }
@@ -156,16 +82,26 @@ const TriageReportsTable = () => {
         }
     };
 
+    const startEdit = (report) => {
+        setEditingId(report.id);
+        setEditForm({ ...report });
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await api.put(`/public/triage-reports/${editingId}`, editForm);
+            setEditingId(null);
+            fetchReports();
+        } catch (err) {
+            alert("Error al guardar el reporte");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500 relative">
-            {editingReport && (
-                <EditTriageReportModal
-                    report={editingReport}
-                    onClose={() => setEditingReport(null)}
-                    onSave={() => { setEditingReport(null); fetchReports(); }}
-                />
-            )}
-
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-[2rem] flex flex-wrap items-end gap-6">
                 <div className="flex flex-col gap-2">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Triage</label>
@@ -283,23 +219,50 @@ const TriageReportsTable = () => {
                                     </td>
                                     <td className="p-4 text-xs font-bold text-white uppercase italic">{r.triage_name}</td>
                                     
-                                    <td className="p-4 border-l border-slate-800 text-xs font-black text-indigo-400 tabular-nums text-center">{r.agendas_nuevas || 0}</td>
-                                    <td className="p-4 text-xs font-black text-emerald-400 tabular-nums text-center">{r.agendas_confirmadas || 0}</td>
-                                    <td className="p-4 text-xs font-black text-rose-400 tabular-nums text-center">{r.no_contestan || 0}</td>
-                                    <td className="p-4 text-xs font-black text-amber-400 tabular-nums text-center">{r.cancelaciones || 0}</td>
-                                    <td className="p-4 border-r border-slate-800 text-xs font-black text-violet-400 tabular-nums text-center">{r.reprogramandos || 0}</td>
-                                    
-                                    <td className="p-4 text-xs font-black text-sky-400 tabular-nums text-center">{r.seguimientos_iniciados || 0}</td>
-                                    <td className="p-4 border-r border-slate-800 text-xs font-black text-emerald-400 tabular-nums text-center">{r.seguimientos_contestados || 0}</td>
+                                    {[
+                                        { f: 'agendas_nuevas', color: 'text-indigo-400', isLeft: true },
+                                        { f: 'agendas_confirmadas', color: 'text-emerald-400', isLeft: false },
+                                        { f: 'no_contestan', color: 'text-rose-400', isLeft: false },
+                                        { f: 'cancelaciones', color: 'text-amber-400', isLeft: false },
+                                        { f: 'reprogramandos', color: 'text-violet-400', isLeft: false, isRight: true },
+                                        { f: 'seguimientos_iniciados', color: 'text-sky-400', isLeft: false },
+                                        { f: 'seguimientos_contestados', color: 'text-emerald-400', isLeft: false, isRight: true }
+                                    ].map(col => (
+                                        <td key={col.f} className={`p-4 text-center ${col.isLeft ? 'border-l border-slate-800' : ''} ${col.isRight ? 'border-r border-slate-800' : ''}`}>
+                                            {editingId === r.id ? (
+                                                <input
+                                                    type="number"
+                                                    value={editForm[col.f]}
+                                                    onChange={e => setEditForm({ ...editForm, [col.f]: parseInt(e.target.value) || 0 })}
+                                                    className="w-14 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-black text-indigo-400 focus:border-indigo-500 outline-none"
+                                                />
+                                            ) : (
+                                                <span className={`text-xs font-black tabular-nums ${col.color}`}>{r[col.f]}</span>
+                                            )}
+                                        </td>
+                                    ))}
                                     
                                     <td className="p-4 text-right">
                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => setEditingReport(r)} className="p-2 bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer" title="Editar Reporte">
-                                                <Edit3 size={14} />
-                                            </button>
-                                            <button onClick={() => handleDelete(r.id)} className="p-2 bg-rose-600/20 text-rose-400 border border-rose-600/30 rounded-lg hover:bg-rose-600 hover:text-white transition-colors cursor-pointer" title="Eliminar Permanente">
-                                                <Trash2 size={14} />
-                                            </button>
+                                            {editingId === r.id ? (
+                                                <>
+                                                    <button onClick={handleSave} disabled={saving} className="p-2 bg-emerald-600/20 text-emerald-400 rounded-lg hover:bg-emerald-600/40">
+                                                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                                    </button>
+                                                    <button onClick={() => setEditingId(null)} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600">
+                                                        <X size={14} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button onClick={() => startEdit(r)} className="p-2 bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer" title="Editar Reporte">
+                                                        <Edit3 size={14} />
+                                                    </button>
+                                                    <button onClick={() => handleDelete(r.id)} className="p-2 bg-rose-600/20 text-rose-400 border border-rose-600/30 rounded-lg hover:bg-rose-600 hover:text-white transition-colors cursor-pointer" title="Eliminar Permanente">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
