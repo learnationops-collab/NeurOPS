@@ -251,6 +251,10 @@ def get_ad_segmentation_stats():
     """Retorna leads agrupados por variante y por opening."""
     from app.models import LeadAnswer
     from sqlalchemy import func, not_
+    from datetime import datetime
+
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
 
     # Filtros base: excluir Nulos/Vacíos y valores basura del webhook cuf_
     base_filters_variante = [
@@ -265,6 +269,22 @@ def get_ad_segmentation_stats():
         LeadAnswer.opening != '',
         not_(LeadAnswer.opening.like('%cuf_%'))
     ]
+
+    if start_date:
+        try:
+            st = datetime.strptime(start_date, '%Y-%m-%d')
+            base_filters_variante.append(LeadAnswer.created_at >= st)
+            base_filters_opening.append(LeadAnswer.created_at >= st)
+        except ValueError:
+            pass
+            
+    if end_date:
+        try:
+            ed = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            base_filters_variante.append(LeadAnswer.created_at <= ed)
+            base_filters_opening.append(LeadAnswer.created_at <= ed)
+        except ValueError:
+            pass
 
     # Agrupar por Variante
     stats_variante = db.session.query(
@@ -312,6 +332,26 @@ def get_ad_dashboard_stats():
     """Retorna leads totales, % cualificados y métricas financieras agrupadas por ad_id."""
     from app.models import LeadAnswer, Ad
     from sqlalchemy import func
+    from datetime import datetime
+
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    filters = [LeadAnswer.ad_id != None]
+
+    if start_date:
+        try:
+            st = datetime.strptime(start_date, '%Y-%m-%d')
+            filters.append(LeadAnswer.created_at >= st)
+        except ValueError:
+            pass
+            
+    if end_date:
+        try:
+            ed = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            filters.append(LeadAnswer.created_at <= ed)
+        except ValueError:
+            pass
 
     # Query principal: Leads
     stats = db.session.query(
@@ -320,9 +360,7 @@ def get_ad_dashboard_stats():
         func.sum(
             db.case((LeadAnswer.qualification == 'true', 1), else_=0)
         ).label('qualified_leads')
-    ).filter(
-        LeadAnswer.ad_id != None
-    ).group_by(LeadAnswer.ad_id).all()
+    ).filter(*filters).group_by(LeadAnswer.ad_id).all()
 
     # Cargar datos de anuncios
     ad_ids = [s.ad_id for s in stats]

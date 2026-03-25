@@ -10,18 +10,26 @@ const AdDashboardTab = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedAdId, setSelectedAdId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    
+    // Filtros de fecha, por defecto vacío (todo el tiempo)
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     useEffect(() => {
         fetchStats();
-    }, []);
+    }, [startDate, endDate]);
 
     const fetchStats = async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
         try {
+            const params = {};
+            if (startDate) params.start_date = startDate;
+            if (endDate) params.end_date = endDate;
+
             const [adsRes, segRes] = await Promise.all([
-                api.get('/manychat-webhook/stats/dashboard'),
-                api.get('/manychat-webhook/stats/segmentation')
+                api.get('/manychat-webhook/stats/dashboard', { params }),
+                api.get('/manychat-webhook/stats/segmentation', { params })
             ]);
             setStats(adsRes.data);
             setSegmentationStats(segRes.data);
@@ -95,7 +103,7 @@ const AdDashboardTab = () => {
     return (
         <div className="space-y-8">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-blue-500/10 rounded-xl">
                         <Megaphone className="text-blue-400" size={20} />
@@ -105,14 +113,30 @@ const AdDashboardTab = () => {
                         <p className="text-xs text-slate-500">Comparativa de leads entrantes y % de cualificación</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => fetchStats(true)}
-                    disabled={refreshing}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all"
-                >
-                    <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-                    Actualizar
-                </button>
+                
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <input
+                        type="date"
+                        className="px-3 py-2 bg-slate-800 border border-slate-700/50 rounded-lg text-white text-xs outline-none focus:border-blue-500 transition-all font-bold"
+                        value={startDate}
+                        onChange={e => setStartDate(e.target.value)}
+                    />
+                    <span className="text-slate-500 font-bold text-xs">-</span>
+                    <input
+                        type="date"
+                        className="px-3 py-2 bg-slate-800 border border-slate-700/50 rounded-lg text-white text-xs outline-none focus:border-blue-500 transition-all font-bold"
+                        value={endDate}
+                        onChange={e => setEndDate(e.target.value)}
+                    />
+                    <button
+                        onClick={() => fetchStats(true)}
+                        disabled={refreshing}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all ml-1"
+                    >
+                        <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+                        Actualizar
+                    </button>
+                </div>
             </div>
 
             {loading ? (
