@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headset } from 'lucide-react';
+import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headphones } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 // Componente reutilizable para inputs numéricos
@@ -478,7 +478,7 @@ const PublicCloserReportPage = () => {
                                     currentOpen={openSection}
                                     setOpen={setOpenSection}
                                     title="Llamadas"
-                                    icon={Headset}
+                                    icon={Headphones}
                                     isComplete={llamadasComplete}
                                     colorClass="text-fuchsia-500"
                                     borderColorClass="border-t-fuchsia-600"
