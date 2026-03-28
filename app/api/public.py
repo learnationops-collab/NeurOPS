@@ -769,6 +769,9 @@ def submit_public_closer_report():
         # Generales
         'slots': get_int('slots'),
         'offers_made': get_int('offers_made'),
+        # Llamadas
+        'decision_makers': get_int('decision_makers'),
+        'rescheduled_calls': get_int('rescheduled_calls'),
         # Primera Llamada
         'first_call_scheduled': get_int('first_call_scheduled'),
         'first_call_attended': get_int('first_call_attended'),
@@ -803,6 +806,9 @@ def submit_public_closer_report():
         'follow_ups_hot_replied': get_int('follow_ups_hot_replied'),
         'follow_ups_cold_sent': get_int('follow_ups_cold_sent'),
         'follow_ups_cold_replied': get_int('follow_ups_cold_replied'),
+        # Reflexión
+        'reflection_victory': data.get('reflection_victory'),
+        'reflection_opportunity': data.get('reflection_opportunity'),
     }
 
     if report:
@@ -925,13 +931,16 @@ def _trigger_closer_report_discord(report):
         # Discord Text & Metadata
         resumen_str = f"{total_attended} Asistencias | {total_sales} Ventas (${total_cash:,.0f})"
         
+        has_ref = report.reflection_victory or report.reflection_opportunity
+        ref_text = f"\n💡 **Reflexión:**\n- **Victoria:** {report.reflection_victory}\n- **Opotunidad:** {report.reflection_opportunity}" if has_ref else ""
+        
         content = (
             f"💰 **REPORTE DIARIO DE CLOSER**\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"👤 **Closer:** `{closer_name}`\n"
             f"📅 **Fecha:** `{date_str}`\n"
             f"📊 **Resumen:** `{resumen_str}`\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━{ref_text}\n"
             f"@everyone"
         )
         
@@ -976,9 +985,11 @@ def get_public_closer_stats():
     days_count_query = db.session.query(func.count(CloserDailyReport.id))
 
     query = db.session.query(
-        # Generales
+        # Generales & Llamadas
         func.sum(CloserDailyReport.slots).label('slots'),
         func.sum(CloserDailyReport.offers_made).label('offers_made'),
+        func.sum(CloserDailyReport.decision_makers).label('decision_makers'),
+        func.sum(CloserDailyReport.rescheduled_calls).label('rescheduled_calls'),
         # Primera llamada
         func.sum(CloserDailyReport.first_call_scheduled).label('fc_scheduled'),
         func.sum(CloserDailyReport.first_call_attended).label('fc_attended'),
@@ -1059,6 +1070,8 @@ def get_public_closer_stats():
         "general": {
             "slots": val(stats.slots),
             "offers_made": val(stats.offers_made),
+            "decision_makers": val(stats.decision_makers),
+            "rescheduled_calls": val(stats.rescheduled_calls),
         },
         "agendas": {
             "first_call": {
@@ -1160,6 +1173,10 @@ def get_public_closer_reports():
             "closer_name": r.closer.username if r.closer else "Unknown",
             "slots": r.slots,
             "offers_made": r.offers_made,
+            "decision_makers": r.decision_makers,
+            "rescheduled_calls": r.rescheduled_calls,
+            "reflection_victory": r.reflection_victory,
+            "reflection_opportunity": r.reflection_opportunity,
             "first_call_scheduled": r.first_call_scheduled,
             "first_call_attended": r.first_call_attended,
             "first_call_no_show": r.first_call_no_show,

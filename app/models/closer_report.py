@@ -13,6 +13,10 @@ class CloserDailyReport(db.Model):
     slots = db.Column(db.Integer, default=0)
     offers_made = db.Column(db.Integer, default=0)
 
+    # --- LLAMADAS ---
+    decision_makers = db.Column(db.Integer, default=0)
+    rescheduled_calls = db.Column(db.Integer, default=0)
+
     # --- AGENDAS: Primera Llamada ---
     first_call_scheduled = db.Column(db.Integer, default=0)
     first_call_attended = db.Column(db.Integer, default=0)
@@ -52,6 +56,10 @@ class CloserDailyReport(db.Model):
     follow_ups_hot_replied = db.Column(db.Integer, default=0)
     follow_ups_cold_sent = db.Column(db.Integer, default=0)
     follow_ups_cold_replied = db.Column(db.Integer, default=0)
+
+    # --- REFLEXIÓN ---
+    reflection_victory = db.Column(db.Text, nullable=True)
+    reflection_opportunity = db.Column(db.Text, nullable=True)
 
     closer = db.relationship('User', foreign_keys=[closer_id], overlaps="closer_daily_reports_rel")
     __table_args__ = (db.UniqueConstraint('closer_id', 'date', name='_closer_report_date_uc'),)

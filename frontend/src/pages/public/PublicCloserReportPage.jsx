@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap } from 'lucide-react';
+import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headset } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 // Componente reutilizable para inputs numéricos
@@ -73,6 +73,10 @@ const PublicCloserReportPage = () => {
         slots: '',
         offers_made: '',
 
+        // Llamadas
+        decision_makers: '',
+        rescheduled_calls: '',
+
         // Primera llamada
         first_call_scheduled: '',
         first_call_attended: '',
@@ -112,6 +116,10 @@ const PublicCloserReportPage = () => {
         follow_ups_hot_replied: '',
         follow_ups_cold_sent: '',
         follow_ups_cold_replied: '',
+
+        // Reflexión
+        reflection_victory: '',
+        reflection_opportunity: '',
     };
 
     const [formData, setFormData] = useState(initialFormData);
@@ -135,9 +143,13 @@ const PublicCloserReportPage = () => {
     };
 
     const handleFieldChange = (field, value) => {
+        const textFields = ['reflection_victory', 'reflection_opportunity'];
         // Campos monetarios aceptan decimales
         const moneyFields = ['pif_cash_collected', 'pif_in_call_cash', 'split_cash_collected', 'split_in_call_cash', 'deposit_cash_collected', 'deposit_in_call_cash'];
-        if (moneyFields.includes(field)) {
+        
+        if (textFields.includes(field)) {
+            setFormData(prev => ({ ...prev, [field]: value }));
+        } else if (moneyFields.includes(field)) {
             setFormData(prev => ({ ...prev, [field]: value === '' ? '' : value }));
         } else {
             setFormData(prev => ({ ...prev, [field]: value === '' ? '' : (parseInt(value) || 0) }));
@@ -201,30 +213,40 @@ const PublicCloserReportPage = () => {
         });
     };
 
-    const generalFields = ['slots', 'offers_made'];
+    const generalFields = ['slots'];
+    const llamadasFields = ['offers_made', 'decision_makers', 'rescheduled_calls'];
     const agendaFields = [
         'first_call_scheduled', 'first_call_attended', 'first_call_no_show', 'first_call_rescheduled', 'first_call_canceled',
         'second_call_scheduled', 'second_call_attended', 'second_call_no_show', 'second_call_rescheduled', 'second_call_canceled'
     ];
     const followUpsFields = ['follow_ups_hot_sent', 'follow_ups_hot_replied', 'follow_ups_cold_sent', 'follow_ups_cold_replied'];
     const salesFields = ['pif_count', 'pif_cash_collected', 'pif_in_call_count', 'pif_in_call_cash', 'split_count', 'split_cash_collected', 'split_in_call_count', 'split_in_call_cash', 'deposit_count', 'deposit_cash_collected', 'deposit_in_call_count', 'deposit_in_call_cash'];
+    const reflectionFields = ['reflection_victory', 'reflection_opportunity'];
 
+    const llamadasComplete = isSectionComplete(llamadasFields);
     const agendaComplete = isSectionComplete([...generalFields, ...agendaFields]);
     const followUpsComplete = isSectionComplete(followUpsFields);
     const salesComplete = isSectionComplete(salesFields);
+    const reflectionComplete = isSectionComplete(reflectionFields);
 
     // Auto-colapsar logica (solo una vez por sección)
-    const autoAdvancedRef = useRef({ agendas: false, seguimientos: false });
+    const autoAdvancedRef = useRef({ agendas: false, llamadas: false, seguimientos: false, ventas: false });
 
     useEffect(() => {
         if (openSection === 'agendas' && agendaComplete && !autoAdvancedRef.current.agendas) {
             autoAdvancedRef.current.agendas = true;
+            setOpenSection('llamadas');
+        } else if (openSection === 'llamadas' && llamadasComplete && !autoAdvancedRef.current.llamadas) {
+            autoAdvancedRef.current.llamadas = true;
             setOpenSection('seguimientos');
         } else if (openSection === 'seguimientos' && followUpsComplete && !autoAdvancedRef.current.seguimientos) {
             autoAdvancedRef.current.seguimientos = true;
             setOpenSection('ventas');
+        } else if (openSection === 'ventas' && salesComplete && !autoAdvancedRef.current.ventas) {
+            autoAdvancedRef.current.ventas = true;
+            setOpenSection('reflexion');
         }
-    }, [agendaComplete, followUpsComplete, openSection]);
+    }, [agendaComplete, llamadasComplete, followUpsComplete, salesComplete, openSection]);
 
     // Métricas computadas en tiempo real para el sidebar
     const liveMetrics = useMemo(() => {
@@ -363,20 +385,12 @@ const PublicCloserReportPage = () => {
                                     borderColorClass="border-t-emerald-600"
                                 >
                                     {/* Campos generales */}
-                                    <div className="grid grid-cols-2 gap-4 mb-6 mt-2">
+                                    <div className="grid grid-cols-1 gap-4 mb-6 mt-2">
                                         <MetricInput
                                             label="Slots Disponibles"
                                             field="slots"
                                             color="emerald"
                                             value={formData.slots}
-                                            onChange={handleFieldChange}
-                                            isLightMode={agendaComplete}
-                                        />
-                                        <MetricInput
-                                            label="Ofertas Hechas"
-                                            field="offers_made"
-                                            color="emerald"
-                                            value={formData.offers_made}
                                             onChange={handleFieldChange}
                                             isLightMode={agendaComplete}
                                         />
@@ -455,6 +469,54 @@ const PublicCloserReportPage = () => {
                                                 </p>
                                             </div>
                                         </div>
+                                    </div>
+                                </CollapsibleSection>
+
+                                {/* Llamadas */}
+                                <CollapsibleSection
+                                    id="llamadas"
+                                    currentOpen={openSection}
+                                    setOpen={setOpenSection}
+                                    title="Llamadas"
+                                    icon={Headset}
+                                    isComplete={llamadasComplete}
+                                    colorClass="text-fuchsia-500"
+                                    borderColorClass="border-t-fuchsia-600"
+                                >
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 mb-4">
+                                        <MetricInput
+                                            label="Asistencias"
+                                            field=""
+                                            color="fuchsia"
+                                            value={(parseInt(formData.first_call_attended) || 0) + (parseInt(formData.second_call_attended) || 0)}
+                                            onChange={() => {}}
+                                            isLightMode={llamadasComplete}
+                                            readOnly={true}
+                                        />
+                                        <MetricInput
+                                            label="Presentaciones"
+                                            field="offers_made"
+                                            color="fuchsia"
+                                            value={formData.offers_made}
+                                            onChange={handleFieldChange}
+                                            isLightMode={llamadasComplete}
+                                        />
+                                        <MetricInput
+                                            label="Decisores"
+                                            field="decision_makers"
+                                            color="fuchsia"
+                                            value={formData.decision_makers}
+                                            onChange={handleFieldChange}
+                                            isLightMode={llamadasComplete}
+                                        />
+                                        <MetricInput
+                                            label="Reagendados"
+                                            field="rescheduled_calls"
+                                            color="fuchsia"
+                                            value={formData.rescheduled_calls}
+                                            onChange={handleFieldChange}
+                                            isLightMode={llamadasComplete}
+                                        />
                                     </div>
                                 </CollapsibleSection>
 
@@ -633,6 +695,41 @@ const PublicCloserReportPage = () => {
                                     </div>
                                 </CollapsibleSection>
 
+                                {/* Reflexión */}
+                                <CollapsibleSection
+                                    id="reflexion"
+                                    currentOpen={openSection}
+                                    setOpen={setOpenSection}
+                                    title="Reflexión"
+                                    icon={Brain}
+                                    isComplete={reflectionComplete}
+                                    colorClass="text-indigo-500"
+                                    borderColorClass="border-t-indigo-600"
+                                >
+                                    <div className="flex flex-col gap-4 mt-2 mb-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Victoria del Día</label>
+                                            <textarea
+                                                required
+                                                className={`w-full px-5 py-3.5 bg-slate-800/50 border ${reflectionComplete ? 'border-indigo-500/50' : 'border-slate-700/80'} rounded-2xl text-white outline-none focus:border-indigo-500 transition-all text-sm resize-none h-24`}
+                                                placeholder="Ej: Logré rebatir la objeción de precio con el lead X..."
+                                                value={formData.reflection_victory}
+                                                onChange={(e) => handleFieldChange("reflection_victory", e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Oportunidad de Mejora</label>
+                                            <textarea
+                                                required
+                                                className={`w-full px-5 py-3.5 bg-slate-800/50 border ${reflectionComplete ? 'border-indigo-500/50' : 'border-slate-700/80'} rounded-2xl text-white outline-none focus:border-indigo-500 transition-all text-sm resize-none h-24`}
+                                                placeholder="Ej: Necesito mejorar mi escucha activa antes de la oferta..."
+                                                value={formData.reflection_opportunity}
+                                                onChange={(e) => handleFieldChange("reflection_opportunity", e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </CollapsibleSection>
+
                                 {/* Botón de envío */}
                                 <div className="pt-4">
                                     <button
@@ -767,7 +864,7 @@ const PublicCloserReportPage = () => {
                                             { label: 'Slots', value: liveMetrics.slots, color: 'violet', maxWidth: 100 },
                                             { label: 'Agendas', value: liveMetrics.totalScheduled, color: 'emerald', maxWidth: liveMetrics.slots > 0 ? (liveMetrics.totalScheduled / liveMetrics.slots) * 100 : 0 },
                                             { label: 'Asistencias', value: liveMetrics.totalAttended, color: 'sky', maxWidth: liveMetrics.slots > 0 ? (liveMetrics.totalAttended / liveMetrics.slots) * 100 : 0 },
-                                            { label: 'Ofertas', value: liveMetrics.offers, color: 'fuchsia', maxWidth: liveMetrics.slots > 0 ? (liveMetrics.offers / liveMetrics.slots) * 100 : 0 },
+                                            { label: 'Presentac.', value: liveMetrics.offers, color: 'fuchsia', maxWidth: liveMetrics.slots > 0 ? (liveMetrics.offers / liveMetrics.slots) * 100 : 0 },
                                             { label: 'Ventas', value: liveMetrics.totalSales, color: 'amber', maxWidth: liveMetrics.slots > 0 ? (liveMetrics.totalSales / liveMetrics.slots) * 100 : 0 },
                                         ].map(step => (
                                             <div key={step.label} className="flex items-center gap-3">
