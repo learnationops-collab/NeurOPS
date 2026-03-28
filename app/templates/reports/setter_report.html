@@ -47,6 +47,16 @@
             color: var(--slate-50);
             padding: 40px;
             width: 1200px;
+            min-height: 100vh;
+        }
+
+        /* Ocultar scrollbars que pueden aparecer en el renderer html2image */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        html {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
         .header {
@@ -443,11 +453,11 @@
                         <div class="live-stat-val pink">{{ inbox.leads }}</div>
                     </div>
                     <div class="live-stat">
-                        <div class="live-stat-label">% No Ld</div>
+                        <div class="live-stat-label">% No Lead</div>
                         <div class="live-stat-val">{{ inbox.no_lead_pct }}%</div>
                     </div>
                     <div class="live-stat">
-                        <div class="live-stat-label">% Inab.</div>
+                        <div class="live-stat-label">% Inabribles</div>
                         <div class="live-stat-val">{{ inbox.inabribles_pct }}%</div>
                     </div>
                 </div>
@@ -463,17 +473,23 @@
             <div class="card-body">
                 <div class="metrics-grid">
                     <div class="metric-input">
-                        <div class="metric-label">Op. Submitted</div>
+                        <div class="metric-label">Enviados</div>
                         <div class="metric-value">{{ opening.submitted }}</div>
                     </div>
                     <div class="metric-input">
-                        <div class="metric-label">Op. Responded</div>
+                        <div class="metric-label">Respondidos</div>
                         <div class="metric-value">{{ opening.responded }}</div>
                     </div>
                 </div>
-                <div class="live-panel center-stat">
-                    <div class="live-stat-label">Tasa de Respuesta</div>
-                    <div class="live-stat-val fuchsia">{{ opening.response_pct }}%</div>
+                <div class="live-panel center-stat" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px;">
+                    <div style="text-align: center; border-right: 1px solid rgba(51, 65, 85, 0.5); padding-right: 10px;">
+                        <div class="live-stat-label" style="font-size: 11px; margin-bottom: 8px;">% Apertura (Leads)</div>
+                        <div class="live-stat-val fuchsia" style="font-size: 36px;">{{ opening.apertura_leads_pct }}%</div>
+                    </div>
+                    <div style="text-align: center; padding-left: 10px;">
+                        <div class="live-stat-label" style="font-size: 11px; margin-bottom: 8px;">% Respuesta</div>
+                        <div class="live-stat-val fuchsia" style="font-size: 36px;">{{ opening.response_pct }}%</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -509,20 +525,24 @@
                 </div>
                 <div class="live-panel funnel-live">
                     <div class="funnel-pcts">
+                        <div style="grid-column: span 4; margin-bottom: 16px; text-align: center;">
+                            <div class="live-stat-label" style="font-size: 11px; margin-bottom: 4px;">% Conversión (Agendas / Leads)</div>
+                            <div class="live-stat-val" style="color: var(--teal-400); font-size: 36px;">{{ funnel.conversion_leads_pct }}%</div>
+                        </div>
                         <div>
-                            <div class="live-stat-label">Qual→Pain</div>
+                            <div class="live-stat-label">Qual a Pain</div>
                             <div class="live-stat-val">{{ funnel.qual_to_pain }}%</div>
                         </div>
                         <div>
-                            <div class="live-stat-label">Pain→Off</div>
+                            <div class="live-stat-label">Pain a Offer</div>
                             <div class="live-stat-val">{{ funnel.pain_to_offer }}%</div>
                         </div>
                         <div>
-                            <div class="live-stat-label">Off→Link</div>
+                            <div class="live-stat-label">Offer a Link</div>
                             <div class="live-stat-val">{{ funnel.offer_to_link }}%</div>
                         </div>
                         <div>
-                            <div class="live-stat-label">Link→Agnd</div>
+                            <div class="live-stat-label">Link a Agenda</div>
                             <div class="live-stat-val">{{ funnel.link_to_agenda }}%</div>
                         </div>
                     </div>
@@ -558,11 +578,11 @@
             <div class="card-body">
                 <div class="metrics-grid">
                     <div class="metric-input">
-                        <div class="metric-label">Submitted</div>
+                        <div class="metric-label">Enviados</div>
                         <div class="metric-value">{{ follow_up.submitted }}</div>
                     </div>
                     <div class="metric-input">
-                        <div class="metric-label">Responded</div>
+                        <div class="metric-label">Respondidos</div>
                         <div class="metric-value">{{ follow_up.responded }}</div>
                     </div>
                 </div>

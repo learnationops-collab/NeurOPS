@@ -95,7 +95,8 @@ def _trigger_setter_report_webhook(stat):
             "opening": {
                 "submitted": opened,
                 "responded": op_resp,
-                "response_pct": safe_percent(op_resp, opened)
+                "response_pct": safe_percent(op_resp, opened),
+                "apertura_leads_pct": safe_percent(opened, stat.inbox_leads or 0)
             },
             
             # FUNNEL
@@ -108,7 +109,8 @@ def _trigger_setter_report_webhook(stat):
                 "qual_to_pain": safe_percent(pain, qual),
                 "pain_to_offer": safe_percent(offer, pain),
                 "offer_to_link": safe_percent(link, offer),
-                "link_to_agenda": safe_percent(agenda, link)
+                "link_to_agenda": safe_percent(agenda, link),
+                "conversion_leads_pct": safe_percent(agenda, stat.inbox_leads or 0)
             },
             
             # FOLLOW UPS
