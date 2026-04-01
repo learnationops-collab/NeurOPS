@@ -788,3 +788,151 @@ class CloserService:
             'outcomes': outcomes,
             'type_stats': type_stats
         }
+
+    @staticmethod
+    def get_comprehensive_stats(closer_id=None, start_date=None, end_date=None, agg_type='sum'):
+        """Retorna estadísticas agregadas de closers con soporte de suma/promedio."""
+        from app.models import CloserDailyReport, Appointment
+        from sqlalchemy import func, or_
+        from datetime import datetime, timedelta
+
+        # 1. Base Query for Daily Reports
+        query = db.session.query(
+            func.sum(CloserDailyReport.slots).label('slots'),
+            func.sum(CloserDailyReport.offers_made).label('offers_made'),
+            func.sum(CloserDailyReport.decision_makers).label('decision_makers'),
+            func.sum(CloserDailyReport.rescheduled_calls).label('rescheduled_calls'),
+            func.sum(CloserDailyReport.first_call_scheduled).label('fc_scheduled'),
+            func.sum(CloserDailyReport.first_call_attended).label('fc_attended'),
+            func.sum(CloserDailyReport.first_call_no_show).label('fc_no_show'),
+            func.sum(CloserDailyReport.first_call_rescheduled).label('fc_rescheduled'),
+            func.sum(CloserDailyReport.first_call_canceled).label('fc_canceled'),
+            func.sum(CloserDailyReport.second_call_scheduled).label('sc_scheduled'),
+            func.sum(CloserDailyReport.second_call_attended).label('sc_attended'),
+            func.sum(CloserDailyReport.second_call_no_show).label('sc_no_show'),
+            func.sum(CloserDailyReport.second_call_rescheduled).label('sc_rescheduled'),
+            func.sum(CloserDailyReport.second_call_canceled).label('sc_canceled'),
+            func.sum(CloserDailyReport.pif_count).label('pif_count'),
+            func.sum(CloserDailyReport.pif_cash_collected).label('pif_cash'),
+            func.sum(CloserDailyReport.pif_in_call_count).label('pif_ic_count'),
+            func.sum(CloserDailyReport.pif_in_call_cash).label('pif_ic_cash'),
+            func.sum(CloserDailyReport.split_count).label('split_count'),
+            func.sum(CloserDailyReport.split_cash_collected).label('split_cash'),
+            func.sum(CloserDailyReport.split_in_call_count).label('split_ic_count'),
+            func.sum(CloserDailyReport.split_in_call_cash).label('split_ic_cash'),
+            func.sum(CloserDailyReport.deposit_count).label('deposit_count'),
+            func.sum(CloserDailyReport.deposit_cash_collected).label('deposit_cash'),
+            func.sum(CloserDailyReport.deposit_in_call_count).label('deposit_ic_count'),
+            func.sum(CloserDailyReport.deposit_in_call_cash).label('deposit_ic_cash'),
+            func.sum(CloserDailyReport.follow_ups_sent).label('fu_sent'),
+            func.sum(CloserDailyReport.follow_ups_replied).label('fu_replied'),
+            func.sum(CloserDailyReport.follow_ups_hot_sent).label('fu_hot_sent'),
+            func.sum(CloserDailyReport.follow_ups_hot_replied).label('fu_hot_replied'),
+            func.sum(CloserDailyReport.follow_ups_cold_sent).label('fu_cold_sent'),
+            func.sum(CloserDailyReport.follow_ups_cold_replied).label('fu_cold_replied')
+        )
+
+        filters = []
+        if start_date:
+            filters.append(CloserDailyReport.date >= (datetime.strptime(start_date, '%Y-%m-%d').date() if isinstance(start_date, str) else start_date))
+        if end_date:
+            filters.append(CloserDailyReport.date <= (datetime.strptime(end_date, '%Y-%m-%d').date() if isinstance(end_date, str) else end_date))
+        if closer_id:
+            filters.append(CloserDailyReport.closer_id == closer_id)
+
+        for f in filters:
+            query = query.filter(f)
+
+        stats = query.one()
+        
+        # Days count for averages
+        days_query = db.session.query(func.count(CloserDailyReport.id))
+        for f in filters:
+            days_query = days_query.filter(f)
+        days_count = days_query.scalar() or 1
+
+        # 2. Legacy Operational Stats (from Appointment model)
+        # Reusing parts of get_agenda_stats logic
+        base_appt_filter = []
+        if closer_id: base_appt_filter.append(Appointment.closer_id == closer_id)
+        if start_date: base_appt_filter.append(Appointment.start_time >= datetime.strptime(start_date, '%Y-%m-%d') if isinstance(start_date, str) else datetime.combine(start_date, datetime.min.time()))
+        if end_date:
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d') if isinstance(end_date, str) else datetime.combine(end_date, datetime.min.time())
+            base_appt_filter.append(Appointment.start_time < (end_dt + timedelta(days=1)))
+
+        pending_count = Appointment.query.filter(*base_appt_filter, or_(Appointment.result == None, Appointment.result == '')).count()
+        outcomes_q = db.session.query(Appointment.result, func.count(Appointment.id)).filter(*base_appt_filter, Appointment.result != None, Appointment.result != '').group_by(Appointment.result).all()
+        outcomes = {r[0]: r[1] for r in outcomes_q}
+
+        # Format helpers
+        def val(v):
+            n = float(v or 0)
+            return round(n / days_count, 2) if agg_type == 'avg' else n
+
+        def div(n, d):
+            return round((n / d) * 100, 1) if d and d > 0 else 0
+
+        # Totals
+        total_scheduled = val(stats.fc_scheduled) + val(stats.sc_scheduled)
+        total_attended = val(stats.fc_attended) + val(stats.sc_attended)
+        total_no_show = val(stats.fc_no_show) + val(stats.sc_no_show)
+        total_rescheduled = val(stats.fc_rescheduled) + val(stats.sc_rescheduled)
+        total_canceled = val(stats.fc_canceled) + val(stats.sc_canceled)
+
+        total_sales = val(stats.pif_count) + val(stats.split_count) + val(stats.deposit_count)
+        total_cash = val(stats.pif_cash) + val(stats.split_cash) + val(stats.deposit_cash)
+        total_ic_sales = val(stats.pif_ic_count) + val(stats.split_ic_count) + val(stats.deposit_ic_count)
+        total_ic_cash = val(stats.pif_ic_cash) + val(stats.split_ic_cash) + val(stats.deposit_ic_cash)
+
+        return {
+            "metadata": {
+                "days_analyzed": days_count,
+                "agg_type": agg_type
+            },
+            "operational": {
+                "pending": pending_count,
+                "outcomes": outcomes
+            },
+            "general": {
+                "slots": val(stats.slots),
+                "offers_made": val(stats.offers_made),
+                "decision_makers": val(stats.decision_makers),
+                "rescheduled_calls": val(stats.rescheduled_calls),
+            },
+            "agendas": {
+                "first_call": {
+                    "scheduled": val(stats.fc_scheduled), "attended": val(stats.fc_attended),
+                    "no_show": val(stats.fc_no_show), "rescheduled": val(stats.fc_rescheduled), "canceled": val(stats.fc_canceled),
+                },
+                "second_call": {
+                    "scheduled": val(stats.sc_scheduled), "attended": val(stats.sc_attended),
+                    "no_show": val(stats.sc_no_show), "rescheduled": val(stats.sc_rescheduled), "canceled": val(stats.sc_canceled),
+                },
+                "totals": {
+                    "scheduled": total_scheduled, "attended": total_attended,
+                    "no_show": total_no_show, "rescheduled": total_rescheduled, "canceled": total_canceled,
+                }
+            },
+            "sales": {
+                "pif": {"count": val(stats.pif_count), "cash": val(stats.pif_cash), "in_call_count": val(stats.pif_ic_count), "in_call_cash": val(stats.pif_ic_cash)},
+                "split": {"count": val(stats.split_count), "cash": val(stats.split_cash), "in_call_count": val(stats.split_ic_count), "in_call_cash": val(stats.split_ic_cash)},
+                "deposit": {"count": val(stats.deposit_count), "cash": val(stats.deposit_cash), "in_call_count": val(stats.deposit_ic_count), "in_call_cash": val(stats.deposit_ic_cash)},
+                "totals": {"count": total_sales, "cash": total_cash, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}
+            },
+            "follow_ups": {
+                "sent": val(stats.fu_sent), "replied": val(stats.fu_replied),
+                "hot_sent": val(stats.fu_hot_sent), "hot_replied": val(stats.fu_hot_replied),
+                "cold_sent": val(stats.fu_cold_sent), "cold_replied": val(stats.fu_cold_replied)
+            },
+            "percentages": {
+                "show_rate": div(total_attended, total_scheduled),
+                "no_show_rate": div(total_no_show, total_scheduled),
+                "cancel_rate": div(total_canceled, total_scheduled),
+                "close_rate": div(total_sales, total_attended),
+                "offer_to_sale": div(total_sales, float(stats.offers_made or 0)),
+                "respond_rate": div(val(stats.fu_replied), val(stats.fu_sent)),
+                "pitch_rate": div(val(stats.offers_made), total_attended),
+                "decision_maker_rate": div(val(stats.decision_makers), total_attended),
+                "rescheduled_rate": div(val(stats.rescheduled_calls), total_attended)
+            }
+        }

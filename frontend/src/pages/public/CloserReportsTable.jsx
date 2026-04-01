@@ -113,37 +113,61 @@ const EditCloserReportModal = ({ report, onClose, onSave }) => {
                         </div>
                     </div>
 
-                    {/* VENTAS PIF / SPLIT / SEÑAS */}
-                    <div className="bg-amber-900/10 p-5 rounded-2xl border border-amber-900/30">
-                        <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-amber-500 uppercase mb-4 pb-2 border-b border-amber-900/50"><Flag size={14} /> Ventas (PIF / Split / Señas)</h4>
+                    <div className="grid grid-cols-1 gap-6">
+                        {/* VENTAS PIF / SPLIT / SEÑAS */}
+                        <div className="bg-amber-900/10 p-5 rounded-2xl border border-amber-900/30">
+                            <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-amber-500 uppercase mb-4 pb-2 border-b border-amber-900/50"><Flag size={14} /> Ventas (PIF / Split / Señas)</h4>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-1">
-                                <p className="text-xs font-black text-amber-500 mb-2">PIF (Pay In Full)</p>
-                                <InputRow label="Cantidad Total" field="pif_count" />
-                                <InputRow label="Cash Total" field="pif_cash_collected" isFloat />
-                                <InputRow label="Cant. En Llamada" field="pif_in_call_count" />
-                                <InputRow label="Cash En Llamada" field="pif_in_call_cash" isFloat />
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-1">
+                                    <p className="text-xs font-black text-amber-500 mb-2">PIF (Pay In Full)</p>
+                                    <InputRow label="Cantidad Total" field="pif_count" />
+                                    <InputRow label="Cash Total" field="pif_cash_collected" isFloat />
+                                    <InputRow label="Cant. En Llamada" field="pif_in_call_count" />
+                                    <InputRow label="Cash En Llamada" field="pif_in_call_cash" isFloat />
+                                </div>
+
+                                <div className="space-y-1 border-t md:border-t-0 md:border-l border-amber-900/30 pt-4 md:pt-0 md:pl-6">
+                                    <p className="text-xs font-black text-amber-500 mb-2">Split Pay</p>
+                                    <InputRow label="Cantidad Total" field="split_count" />
+                                    <InputRow label="Cash Total" field="split_cash_collected" isFloat />
+                                    <InputRow label="Cant. En Llamada" field="split_in_call_count" />
+                                    <InputRow label="Cash En Llamada" field="split_in_call_cash" isFloat />
+                                </div>
+
+                                <div className="space-y-1 border-t md:border-t-0 md:border-l border-amber-900/30 pt-4 md:pt-0 md:pl-6">
+                                    <p className="text-xs font-black text-amber-500 mb-2">Señas</p>
+                                    <InputRow label="Cantidad Total" field="deposit_count" />
+                                    <InputRow label="Cash Total" field="deposit_cash_collected" isFloat />
+                                    <InputRow label="Cant. En Llamada" field="deposit_in_call_count" />
+                                    <InputRow label="Cash En Llamada" field="deposit_in_call_cash" isFloat />
+                                </div>
                             </div>
+                        </div>
 
-                            <div className="space-y-1 border-t md:border-t-0 md:border-l border-amber-900/30 pt-4 md:pt-0 md:pl-6">
-                                <p className="text-xs font-black text-amber-500 mb-2">Split Pay</p>
-                                <InputRow label="Cantidad Total" field="split_count" />
-                                <InputRow label="Cash Total" field="split_cash_collected" isFloat />
-                                <InputRow label="Cant. En Llamada" field="split_in_call_count" />
-                                <InputRow label="Cash En Llamada" field="split_in_call_cash" isFloat />
-                            </div>
-
-                            <div className="space-y-1 border-t md:border-t-0 md:border-l border-amber-900/30 pt-4 md:pt-0 md:pl-6">
-                                <p className="text-xs font-black text-amber-500 mb-2">Señas</p>
-                                <InputRow label="Cantidad Total" field="deposit_count" />
-                                <InputRow label="Cash Total" field="deposit_cash_collected" isFloat />
-                                <InputRow label="Cant. En Llamada" field="deposit_in_call_count" />
-                                <InputRow label="Cash En Llamada" field="deposit_in_call_cash" isFloat />
+                        {/* REFLEXIÓN CUALITATIVA */}
+                        <div className="bg-violet-900/10 p-5 rounded-2xl border border-violet-900/30">
+                            <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-violet-400 uppercase mb-4 pb-2 border-b border-violet-900/50">Reflexión Cualitativa</h4>
+                            <div className="space-y-4">
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-xs font-bold text-violet-300">Victoria del Día</label>
+                                    <textarea
+                                        value={form.reflection_victory || ''}
+                                        onChange={e => setForm({ ...form, reflection_victory: e.target.value })}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 min-h-[80px] focus:border-violet-500 outline-none"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-xs font-bold text-violet-300">Oportunidad de Mejora</label>
+                                    <textarea
+                                        value={form.reflection_opportunity || ''}
+                                        onChange={e => setForm({ ...form, reflection_opportunity: e.target.value })}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 min-h-[80px] focus:border-violet-500 outline-none"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
-
                 </div>
 
                 {/* Footer */}

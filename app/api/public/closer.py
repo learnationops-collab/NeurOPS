@@ -227,6 +227,10 @@ def _trigger_closer_report_discord(report):
                 "cold_response_pct": safe_percent(report.follow_ups_cold_replied or 0, report.follow_ups_cold_sent or 0),
                 "total_sent": report.follow_ups_sent or 0,
                 "total_replied": report.follow_ups_replied or 0,
+            },
+            "reflections": {
+                "victory": report.reflection_victory or "Sin especificar",
+                "opportunity": report.reflection_opportunity or "Sin especificar"
             }
         }
 
@@ -237,7 +241,7 @@ def _trigger_closer_report_discord(report):
         resumen_str = f"{total_attended} Asistencias | {total_sales} Ventas (${total_cash:,.0f})"
         
         has_ref = report.reflection_victory or report.reflection_opportunity
-        ref_text = f"\n💡 **Reflexión:**\n- **Victoria:** {report.reflection_victory}\n- **Opotunidad:** {report.reflection_opportunity}" if has_ref else ""
+        ref_text = f"\n💡 **Reflexión:**\n- **Victoria:** {report.reflection_victory}\n- **Oportunidad:** {report.reflection_opportunity}" if has_ref else ""
         
         content = (
             f"💰 **REPORTE DIARIO DE CLOSER**\n"
@@ -278,172 +282,19 @@ def _trigger_closer_report_discord(report):
 @bp.route('/public/closer-stats', methods=['GET'])
 def get_public_closer_stats():
     """Retorna estadísticas agregadas de closers con soporte de suma/promedio."""
-    from app.models import CloserDailyReport
-    from sqlalchemy import func
+    from app.services.closer_service import CloserService
 
-    start_date_str = request.args.get('start_date')
-    end_date_str = request.args.get('end_date')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
     closer_id = request.args.get('closer_id')
     agg_type = request.args.get('agg_type', 'sum')
 
-    # Contar días para promedios
-    days_count_query = db.session.query(func.count(CloserDailyReport.id))
-
-    query = db.session.query(
-        # Generales & Llamadas
-        func.sum(CloserDailyReport.slots).label('slots'),
-        func.sum(CloserDailyReport.offers_made).label('offers_made'),
-        func.sum(CloserDailyReport.decision_makers).label('decision_makers'),
-        func.sum(CloserDailyReport.rescheduled_calls).label('rescheduled_calls'),
-        # Primera llamada
-        func.sum(CloserDailyReport.first_call_scheduled).label('fc_scheduled'),
-        func.sum(CloserDailyReport.first_call_attended).label('fc_attended'),
-        func.sum(CloserDailyReport.first_call_no_show).label('fc_no_show'),
-        func.sum(CloserDailyReport.first_call_rescheduled).label('fc_rescheduled'),
-        func.sum(CloserDailyReport.first_call_canceled).label('fc_canceled'),
-        # Segunda llamada
-        func.sum(CloserDailyReport.second_call_scheduled).label('sc_scheduled'),
-        func.sum(CloserDailyReport.second_call_attended).label('sc_attended'),
-        func.sum(CloserDailyReport.second_call_no_show).label('sc_no_show'),
-        func.sum(CloserDailyReport.second_call_rescheduled).label('sc_rescheduled'),
-        func.sum(CloserDailyReport.second_call_canceled).label('sc_canceled'),
-        # Ventas PIF
-        func.sum(CloserDailyReport.pif_count).label('pif_count'),
-        func.sum(CloserDailyReport.pif_cash_collected).label('pif_cash'),
-        func.sum(CloserDailyReport.pif_in_call_count).label('pif_ic_count'),
-        func.sum(CloserDailyReport.pif_in_call_cash).label('pif_ic_cash'),
-        # Ventas Split
-        func.sum(CloserDailyReport.split_count).label('split_count'),
-        func.sum(CloserDailyReport.split_cash_collected).label('split_cash'),
-        func.sum(CloserDailyReport.split_in_call_count).label('split_ic_count'),
-        func.sum(CloserDailyReport.split_in_call_cash).label('split_ic_cash'),
-        # Ventas Señas
-        func.sum(CloserDailyReport.deposit_count).label('deposit_count'),
-        func.sum(CloserDailyReport.deposit_cash_collected).label('deposit_cash'),
-        func.sum(CloserDailyReport.deposit_in_call_count).label('deposit_ic_count'),
-        func.sum(CloserDailyReport.deposit_in_call_cash).label('deposit_ic_cash'),
-        # Seguimientos
-        func.sum(CloserDailyReport.follow_ups_sent).label('fu_sent'),
-        func.sum(CloserDailyReport.follow_ups_replied).label('fu_replied'),
-        func.sum(CloserDailyReport.follow_ups_hot_sent).label('fu_hot_sent'),
-        func.sum(CloserDailyReport.follow_ups_hot_replied).label('fu_hot_replied'),
-        func.sum(CloserDailyReport.follow_ups_cold_sent).label('fu_cold_sent'),
-        func.sum(CloserDailyReport.follow_ups_cold_replied).label('fu_cold_replied')
+    res = CloserService.get_comprehensive_stats(
+        closer_id=closer_id,
+        start_date=start_date,
+        end_date=end_date,
+        agg_type=agg_type
     )
-
-    filters = []
-    if start_date_str:
-        filters.append(CloserDailyReport.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
-    if end_date_str:
-        filters.append(CloserDailyReport.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
-    if closer_id:
-        filters.append(CloserDailyReport.closer_id == closer_id)
-
-    for f in filters:
-        query = query.filter(f)
-        days_count_query = days_count_query.filter(f)
-
-    stats = query.one()
-    days_count = days_count_query.scalar() or 1
-
-    def val(v):
-        n = float(v or 0)
-        if agg_type == 'avg':
-            return round(n / days_count, 2)
-        return n
-
-    def div(n, d):
-        return round((n / d) * 100, 1) if d and d > 0 else 0
-
-    # Totales
-    total_scheduled = val(stats.fc_scheduled) + val(stats.sc_scheduled)
-    total_attended = val(stats.fc_attended) + val(stats.sc_attended)
-    total_no_show = val(stats.fc_no_show) + val(stats.sc_no_show)
-    total_rescheduled = val(stats.fc_rescheduled) + val(stats.sc_rescheduled)
-    total_canceled = val(stats.fc_canceled) + val(stats.sc_canceled)
-
-    total_sales = val(stats.pif_count) + val(stats.split_count) + val(stats.deposit_count)
-    total_cash = val(stats.pif_cash) + val(stats.split_cash) + val(stats.deposit_cash)
-    total_ic_sales = val(stats.pif_ic_count) + val(stats.split_ic_count) + val(stats.deposit_ic_count)
-    total_ic_cash = val(stats.pif_ic_cash) + val(stats.split_ic_cash) + val(stats.deposit_ic_cash)
-
-    res = {
-        "metadata": {
-            "days_analyzed": days_count,
-            "agg_type": agg_type
-        },
-        "general": {
-            "slots": val(stats.slots),
-            "offers_made": val(stats.offers_made),
-            "decision_makers": val(stats.decision_makers),
-            "rescheduled_calls": val(stats.rescheduled_calls),
-        },
-        "agendas": {
-            "first_call": {
-                "scheduled": val(stats.fc_scheduled),
-                "attended": val(stats.fc_attended),
-                "no_show": val(stats.fc_no_show),
-                "rescheduled": val(stats.fc_rescheduled),
-                "canceled": val(stats.fc_canceled),
-            },
-            "second_call": {
-                "scheduled": val(stats.sc_scheduled),
-                "attended": val(stats.sc_attended),
-                "no_show": val(stats.sc_no_show),
-                "rescheduled": val(stats.sc_rescheduled),
-                "canceled": val(stats.sc_canceled),
-            },
-            "totals": {
-                "scheduled": total_scheduled,
-                "attended": total_attended,
-                "no_show": total_no_show,
-                "rescheduled": total_rescheduled,
-                "canceled": total_canceled,
-            }
-        },
-        "sales": {
-            "pif": {
-                "count": val(stats.pif_count),
-                "cash": val(stats.pif_cash),
-                "in_call_count": val(stats.pif_ic_count),
-                "in_call_cash": val(stats.pif_ic_cash),
-            },
-            "split": {
-                "count": val(stats.split_count),
-                "cash": val(stats.split_cash),
-                "in_call_count": val(stats.split_ic_count),
-                "in_call_cash": val(stats.split_ic_cash),
-            },
-            "deposit": {
-                "count": val(stats.deposit_count),
-                "cash": val(stats.deposit_cash),
-                "in_call_count": val(stats.deposit_ic_count),
-                "in_call_cash": val(stats.deposit_ic_cash),
-            },
-            "totals": {
-                "count": total_sales,
-                "cash": total_cash,
-                "in_call_count": total_ic_sales,
-                "in_call_cash": total_ic_cash,
-            }
-        },
-        "follow_ups": {
-            "sent": val(stats.fu_sent),
-            "replied": val(stats.fu_replied),
-            "hot_sent": val(stats.fu_hot_sent),
-            "hot_replied": val(stats.fu_hot_replied),
-            "cold_sent": val(stats.fu_cold_sent),
-            "cold_replied": val(stats.fu_cold_replied)
-        },
-        "percentages": {
-            "show_rate": div(total_attended, total_scheduled),
-            "no_show_rate": div(total_no_show, total_scheduled),
-            "cancel_rate": div(total_canceled, total_scheduled),
-            "close_rate": div(total_sales, total_attended) if total_attended else 0,
-            "offer_to_sale": div(total_sales, float(stats.offers_made or 0)),
-            "respond_rate": div(val(stats.fu_replied), val(stats.fu_sent))
-        }
-    }
 
     return jsonify(res), 200
 
@@ -578,6 +429,9 @@ def update_public_closer_report(report_id):
         stat.follow_ups_cold_sent = get_int('follow_ups_cold_sent', stat.follow_ups_cold_sent)
         stat.follow_ups_cold_replied = get_int('follow_ups_cold_replied', stat.follow_ups_cold_replied)
         
+        stat.reflection_victory = data.get('reflection_victory', stat.reflection_victory)
+        stat.reflection_opportunity = data.get('reflection_opportunity', stat.reflection_opportunity)
+
         db.session.commit()
         return jsonify({"message": "Reporte actualizado"}), 200
     except Exception as e:

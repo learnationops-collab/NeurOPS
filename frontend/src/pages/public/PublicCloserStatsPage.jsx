@@ -411,6 +411,66 @@ const PublicCloserStatsPage = () => {
                                         </div>
                                     </div>
                                 </div>
+                                
+                                {/* NUEVA SECCIÓN: LLAMADAS Y CONVERSIONES (Espejo del Reporte) */}
+                                <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
+                                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-3 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-500">
+                                                <Target size={20} />
+                                            </div>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Llamadas y Conversiones</h3>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                            <StatCard 
+                                                title="Asistencias" 
+                                                value={fmt(stats.agendas.totals.attended)} 
+                                                icon={CheckCircle} 
+                                                colorClass="text-sky-500" 
+                                            />
+                                            <StatCard 
+                                                title="Presentaciones" 
+                                                value={fmt(stats.general.offers_made)} 
+                                                icon={Layers} 
+                                                colorClass="text-fuchsia-500" 
+                                            />
+                                            <StatCard 
+                                                title="Decisores" 
+                                                value={fmt(stats.general.decision_makers)} 
+                                                icon={Users} 
+                                                colorClass="text-indigo-500" 
+                                            />
+                                            <StatCard 
+                                                title="Reagendados" 
+                                                value={fmt(stats.general.rescheduled_calls)} 
+                                                icon={RefreshCw} 
+                                                colorClass="text-amber-500" 
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-800">
+                                            <ProgressRow 
+                                                label="Pitch Rate (Pres. / Asist.)" 
+                                                percentage={stats.percentages.pitch_rate} 
+                                                colorClass="text-fuchsia-500" 
+                                                absolute={`${fmt(stats.general.offers_made)} / ${fmt(stats.agendas.totals.attended)}`} 
+                                            />
+                                            <ProgressRow 
+                                                label="Decision Maker Rate" 
+                                                percentage={stats.percentages.decision_maker_rate} 
+                                                colorClass="text-indigo-500" 
+                                                absolute={`${fmt(stats.general.decision_makers)} / ${fmt(stats.agendas.totals.attended)}`} 
+                                            />
+                                            <ProgressRow 
+                                                label="Reschedule Rate" 
+                                                percentage={stats.percentages.rescheduled_rate} 
+                                                colorClass="text-amber-500" 
+                                                absolute={`${fmt(stats.general.rescheduled_calls)} / ${fmt(stats.agendas.totals.attended)}`} 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 

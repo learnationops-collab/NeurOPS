@@ -275,7 +275,7 @@ class ImageService:
                     break
 
         hti = Html2Image(
-            size=(1200, 2100), # Increased height to accommodate the new Llamadas card
+            size=(1200, 2600), # Increased height to accommodate reflections
             custom_flags=custom_flags,
             browser_executable=browser_executable
         ) 
