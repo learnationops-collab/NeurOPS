@@ -60,9 +60,14 @@ const PublicSetterReportPage = () => {
         funnel_link: '',
         funnel_agenda: '',
 
-        // FOLLOW UPS
-        follow_up_submitted: '',
-        follow_up_responded: '',
+        qualification_fu: '',
+        pain_fu: '',
+        offer_fu: '',
+        agenda_fu: '',
+        qualification_fur: '',
+        pain_fur: '',
+        offer_fur: '',
+        agenda_fur: '',
 
         answers: []
     });
@@ -145,8 +150,14 @@ const PublicSetterReportPage = () => {
                 funnel_offer: '',
                 funnel_link: '',
                 funnel_agenda: '',
-                follow_up_submitted: '',
-                follow_up_responded: '',
+                qualification_fu: '',
+                pain_fu: '',
+                offer_fu: '',
+                agenda_fu: '',
+                qualification_fur: '',
+                pain_fur: '',
+                offer_fur: '',
+                agenda_fur: '',
                 answers: prev.answers.map(a => ({ ...a, answer: '' }))
             }));
 
@@ -162,8 +173,8 @@ const PublicSetterReportPage = () => {
         const fieldsToCheck = [
             'setter_id', 'date', 'inbox_entrantes', 'not_lead', 'inbox_inabribles',
             'opening_submitted', 'opening_responded', 'funnel_qualification',
-            'funnel_pain', 'funnel_offer', 'funnel_link', 'funnel_agenda',
-            'follow_up_submitted', 'follow_up_responded'
+            'qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu',
+            'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'
         ];
 
         let filledFields = 0;
@@ -213,22 +224,18 @@ const PublicSetterReportPage = () => {
         const fo = parseInt(formData.funnel_offer) || 0;
         const fl = parseInt(formData.funnel_link) || 0;
         const fa = parseInt(formData.funnel_agenda) || 0;
-        const fs = parseInt(formData.follow_up_submitted) || 0;
-        const fr = parseInt(formData.follow_up_responded) || 0;
+        const qfu = parseInt(formData.qualification_fu) || 0;
+        const qfur = parseInt(formData.qualification_fur) || 0;
+        const pfu = parseInt(formData.pain_fu) || 0;
+        const pfur = parseInt(formData.pain_fur) || 0;
+        const ofu = parseInt(formData.offer_fu) || 0;
+        const ofur = parseInt(formData.offer_fur) || 0;
+        const afu = parseInt(formData.agenda_fu) || 0;
+        const afur = parseInt(formData.agenda_fur) || 0;
 
-        const fq = parseInt(formData.funnel_qualification) || 0;
-        const fp = parseInt(formData.funnel_pain) || 0;
-
-        const qualToPain = fq > 0 ? (fp / fq) * 100 : 0;
-        const painToOffer = fp > 0 ? (fo / fp) * 100 : 0;
-        const offerToLink = fo > 0 ? (fl / fo) * 100 : 0;
-        const linkToAgenda = fl > 0 ? (fa / fl) * 100 : 0;
-
-        const opening = os > 0 ? (fa / os) * 100 : 0;
-        const offer = fo > 0 ? (fa / fo) * 100 : 0;
-        const link = fl > 0 ? (fa / fl) * 100 : 0;
-        const openingResp = os > 0 ? (or / os) * 100 : 0;
-        const followUpResp = fs > 0 ? (fr / fs) * 100 : 0;
+        const totalFU = qfu + pfu + ofu + afu;
+        const totalFUR = qfur + pfur + ofur + afur;
+        const followUpResp = totalFU > 0 ? (totalFUR / totalFU) * 100 : 0;
 
         const funnelData = [
             { name: 'Qualification', value: fq, fill: '#6366f1' },
@@ -399,17 +406,32 @@ const PublicSetterReportPage = () => {
                                 </div>
                             </div>
 
-                            {/* BLOCK 4: FOLLOW UPS */}
-                            <div className={`${isSectionComplete(['follow_up_submitted', 'follow_up_responded']) ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl p-6 border-t-4 border-t-rose-600 transition-colors duration-500`}>
-                                <SectionHeader icon={RefreshCw} title="FOLLOW UPs" colorClass="text-rose-500" isLightMode={isSectionComplete(['follow_up_submitted', 'follow_up_responded'])} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <MetricInput label="Submitted" field="follow_up_submitted" color="rose" value={formData.follow_up_submitted} onChange={handleFieldChange} isLightMode={isSectionComplete(['follow_up_submitted', 'follow_up_responded'])} />
-                                        <MetricInput label="Responded" field="follow_up_responded" color="rose" value={formData.follow_up_responded} onChange={handleFieldChange} isLightMode={isSectionComplete(['follow_up_submitted', 'follow_up_responded'])} />
+                            {/* BLOCK 4: FOLLOW UPS (FUNNEL) */}
+                            <div className={`${isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur']) ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl p-6 border-t-4 border-t-rose-600 transition-colors duration-500`}>
+                                <SectionHeader icon={RefreshCw} title="FOLLOW UPs (Funnel)" colorClass="text-rose-500" isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    <div className="md:col-span-2 grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div className="space-y-4">
+                                            <MetricInput label="Qual FU" field="qualification_fu" color="rose" value={formData.qualification_fu} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
+                                            <MetricInput label="Qual FUR" field="qualification_fur" color="rose" value={formData.qualification_fur} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <MetricInput label="Pain FU" field="pain_fu" color="rose" value={formData.pain_fu} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
+                                            <MetricInput label="Pain FUR" field="pain_fur" color="rose" value={formData.pain_fur} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <MetricInput label="Offer FU" field="offer_fu" color="rose" value={formData.offer_fu} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
+                                            <MetricInput label="Offer FUR" field="offer_fur" color="rose" value={formData.offer_fur} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <MetricInput label="Agenda FU" field="agenda_fu" color="rose" value={formData.agenda_fu} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
+                                            <MetricInput label="Agenda FUR" field="agenda_fur" color="rose" value={formData.agenda_fur} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
+                                        </div>
                                     </div>
-                                    <div className={`${isSectionComplete(['follow_up_submitted', 'follow_up_responded']) ? 'bg-white/60 text-slate-800' : 'bg-slate-800/30 text-white'} rounded-2xl p-6 flex flex-col justify-center items-center transition-colors duration-500`}>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tasa de Respuesta</p>
+                                    <div className={`${isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur']) ? 'bg-white/60 text-slate-800' : 'bg-slate-800/30 text-white'} rounded-2xl p-6 flex flex-col justify-center items-center transition-colors duration-500 text-center`}>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tasa de Respuesta Total</p>
                                         <p className="text-5xl font-black text-rose-500">{liveMetrics.followUpResponse}%</p>
+                                        <p className="text-[10px] mt-4 font-bold text-slate-400">Total: {parseInt(formData.qualification_fur || 0) + parseInt(formData.pain_fur || 0) + parseInt(formData.offer_fur || 0) + parseInt(formData.agenda_fur || 0)} / {parseInt(formData.qualification_fu || 0) + parseInt(formData.pain_fu || 0) + parseInt(formData.offer_fu || 0) + parseInt(formData.agenda_fu || 0)}</p>
                                     </div>
                                 </div>
                             </div>

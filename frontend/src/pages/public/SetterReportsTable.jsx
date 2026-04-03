@@ -188,11 +188,10 @@ const SetterReportsTable = ({ setters }) => {
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Leads</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Op. Sub</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Op. Res</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Qual</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Pain</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Offer</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Link</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Agenda</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Qual FU/R</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Pain FU/R</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Offer FU/R</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Agenda FU/R</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
                             </tr>
                         </thead>
@@ -223,18 +222,35 @@ const SetterReportsTable = ({ setters }) => {
                                         { f: 'fun_pain', label: 'P' },
                                         { f: 'fun_offer', label: 'O' },
                                         { f: 'fun_link', label: 'Lk' },
-                                        { f: 'fun_agenda', label: 'A' }
+                                        { f: 'fun_agenda', label: 'A' },
+                                        { f: 'qualification_fu', fur: 'qualification_fur', label: 'QFU' },
+                                        { f: 'pain_fu', fur: 'pain_fur', label: 'PFU' },
+                                        { f: 'offer_fu', fur: 'offer_fur', label: 'OFU' },
+                                        { f: 'agenda_fu', fur: 'agenda_fur', label: 'AFU' }
                                     ].map(col => (
                                         <td key={col.f} className="p-4 text-center">
                                             {editingId === r.id ? (
-                                                <input
-                                                    type="number"
-                                                    value={editForm[col.f]}
-                                                    onChange={e => setEditForm({ ...editForm, [col.f]: parseInt(e.target.value) || 0 })}
-                                                    className="w-14 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-black text-indigo-400 focus:border-indigo-500 outline-none"
-                                                />
+                                                <div className="flex flex-col gap-1 items-center">
+                                                    <input
+                                                        type="number"
+                                                        value={editForm[col.f]}
+                                                        onChange={e => setEditForm({ ...editForm, [col.f]: parseInt(e.target.value) || 0 })}
+                                                        className="w-12 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-center font-black text-indigo-400 focus:border-indigo-500 outline-none"
+                                                    />
+                                                    {col.fur && (
+                                                        <input
+                                                            type="number"
+                                                            value={editForm[col.fur]}
+                                                            onChange={e => setEditForm({ ...editForm, [col.fur]: parseInt(e.target.value) || 0 })}
+                                                            className="w-12 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-center font-black text-rose-400 focus:border-rose-500 outline-none"
+                                                        />
+                                                    )}
+                                                </div>
                                             ) : (
-                                                <span className="text-xs font-black text-white tabular-nums">{r[col.f]}</span>
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-xs font-black text-white tabular-nums">{r[col.f]}</span>
+                                                    {col.fur && <span className="text-[10px] font-bold text-slate-500 tabular-nums border-t border-slate-800 w-full mt-1 pt-1">{r[col.fur]}</span>}
+                                                </div>
                                             )}
                                         </td>
                                     ))}

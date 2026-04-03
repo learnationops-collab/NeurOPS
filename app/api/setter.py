@@ -73,8 +73,14 @@ def _trigger_setter_report_webhook(stat):
         offer = stat.funnel_offer or 0
         link = stat.funnel_link or 0
         agenda = stat.funnel_agenda or 0
-        fu_sub = stat.follow_up_submitted or 0
-        fu_resp = stat.follow_up_responded or 0
+        fu_qual = stat.qualification_fu or 0
+        fur_qual = stat.qualification_fur or 0
+        fu_pain = stat.pain_fu or 0
+        fur_pain = stat.pain_fur or 0
+        fu_offer = stat.offer_fu or 0
+        fur_offer = stat.offer_fur or 0
+        fu_agenda = stat.agenda_fu or 0
+        fur_agenda = stat.agenda_fur or 0
 
         # 3. Prepare Stats Structure for the new template layout
         img_data = {
@@ -115,9 +121,17 @@ def _trigger_setter_report_webhook(stat):
             
             # FOLLOW UPS
             "follow_up": {
-                "submitted": fu_sub,
-                "responded": fu_resp,
-                "response_pct": safe_percent(fu_resp, fu_sub)
+                "qualification": fu_qual,
+                "qualification_fur": fur_qual,
+                "pain": fu_pain,
+                "pain_fur": fur_pain,
+                "offer": fu_offer,
+                "offer_fur": fur_offer,
+                "agenda": fu_agenda,
+                "agenda_fur": fur_agenda,
+                "total_fu": fu_qual + fu_pain + fu_offer + fu_agenda,
+                "total_fur": fur_qual + fur_pain + fur_offer + fur_agenda,
+                "response_pct": safe_percent(fur_qual + fur_pain + fur_offer + fur_agenda, fu_qual + fu_pain + fu_offer + fu_agenda)
             },
             
             "qualitative": qualitative_callouts
@@ -211,8 +225,14 @@ def submit_daily_report():
                 "funnel_offer": stat.funnel_offer,
                 "funnel_link": stat.funnel_link,
                 "funnel_agenda": stat.funnel_agenda,
-                "follow_up_submitted": stat.follow_up_submitted,
-                "follow_up_responded": stat.follow_up_responded
+                "qualification_fu": stat.qualification_fu,
+                "pain_fu": stat.pain_fu,
+                "offer_fu": stat.offer_fu,
+                "agenda_fu": stat.agenda_fu,
+                "qualification_fur": stat.qualification_fur,
+                "pain_fur": stat.pain_fur,
+                "offer_fur": stat.offer_fur,
+                "agenda_fur": stat.agenda_fur
             },
             "funnel_stats": stage_metrics,
             "answers": answers
@@ -246,8 +266,14 @@ def submit_daily_report():
         stat.funnel_offer = int(data.get('funnel_offer') or 0)
         stat.funnel_link = int(data.get('funnel_link') or 0)
         stat.funnel_agenda = int(data.get('funnel_agenda') or 0)
-        stat.follow_up_submitted = int(data.get('follow_up_submitted') or 0)
-        stat.follow_up_responded = int(data.get('follow_up_responded') or 0)
+        stat.qualification_fu = int(data.get('qualification_fu') or 0)
+        stat.pain_fu = int(data.get('pain_fu') or 0)
+        stat.offer_fu = int(data.get('offer_fu') or 0)
+        stat.agenda_fu = int(data.get('agenda_fu') or 0)
+        stat.qualification_fur = int(data.get('qualification_fur') or 0)
+        stat.pain_fur = int(data.get('pain_fur') or 0)
+        stat.offer_fur = int(data.get('offer_fur') or 0)
+        stat.agenda_fur = int(data.get('agenda_fur') or 0)
         
     else:
         # Create new
@@ -265,8 +291,14 @@ def submit_daily_report():
             funnel_offer=int(data.get('funnel_offer') or 0),
             funnel_link=int(data.get('funnel_link') or 0),
             funnel_agenda=int(data.get('funnel_agenda') or 0),
-            follow_up_submitted=int(data.get('follow_up_submitted') or 0),
-            follow_up_responded=int(data.get('follow_up_responded') or 0)
+            qualification_fu=int(data.get('qualification_fu') or 0),
+            pain_fu=int(data.get('pain_fu') or 0),
+            offer_fu=int(data.get('offer_fu') or 0),
+            agenda_fu=int(data.get('agenda_fu') or 0),
+            qualification_fur=int(data.get('qualification_fur') or 0),
+            pain_fur=int(data.get('pain_fur') or 0),
+            offer_fur=int(data.get('offer_fur') or 0),
+            agenda_fur=int(data.get('agenda_fur') or 0)
         )
         db.session.add(stat)
     
@@ -412,7 +444,15 @@ def get_my_reports():
             "id": r.id,
             "date": r.date.isoformat(),
             "fixed_stats": {
-                "not_lead": r.not_lead
+                "not_lead": r.not_lead,
+                "qualification_fu": r.qualification_fu,
+                "pain_fu": r.pain_fu,
+                "offer_fu": r.offer_fu,
+                "agenda_fu": r.agenda_fu,
+                "qualification_fur": r.qualification_fur,
+                "pain_fur": r.pain_fur,
+                "offer_fur": r.offer_fur,
+                "agenda_fur": r.agenda_fur
             },
             "funnel_stats": stage_metrics,
             "answers": answers

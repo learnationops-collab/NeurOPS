@@ -192,7 +192,7 @@ const PublicSetterStatsPage = () => {
         return stats.time_series.map(day => ({
             ...day,
             op_res_rate: div(day.op_res, day.op_sub),
-            fu_res_rate: div(day.fu_res, day.fu_sub),
+            qual_fur_rate: div(day.fur_q, day.fu_q),
             op_to_ag: div(day.fun_agenda, day.op_res),
             off_to_ag: div(day.fun_agenda, day.fun_offer),
             link_to_ag: div(day.fun_agenda, day.fun_link),
@@ -370,7 +370,7 @@ const PublicSetterStatsPage = () => {
                                     <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" />
                                     <StatCard title="Tasa Apertura" value={`${stats.percentages.rates.opening_rate}%`} icon={MousePointer2} colorClass="text-emerald-500" />
                                     <StatCard title="Op. Response" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" />
-                                    <StatCard title="FU Response" value={`${stats.percentages.rates.follow_up_response}%`} icon={RefreshCw} colorClass="text-rose-500" />
+                                    <StatCard title="FU Response" value={`${stats.percentages.rates.qualification_fur}%`} icon={RefreshCw} colorClass="text-rose-500" subtitle="Tasa Qual FU" />
                                 </div>
 
                                 {/* SECCIONES DE MÉTRICAS */}
@@ -434,28 +434,47 @@ const PublicSetterStatsPage = () => {
                                         </div>
                                     </MetricSection>
 
-                                    {/* SECCIÓN: SEGUIMIENTOS */}
+                                    {/* SECCIÓN: SEGUIMIENTOS POR ETAPA */}
                                     <MetricSection
-                                        title="Seguimientos (Follow-up)"
+                                        title="Seguimientos por Etapa (Follow-up Funnel)"
                                         icon={RefreshCw}
                                         colorClass="text-rose-500"
                                         chartData={timeSeriesData}
                                         chartVariables={[
-                                            { key: 'fu_sub', label: 'Enviados', color: '#f43f5e' },
-                                            { key: 'fu_res', label: 'Respondidos', color: '#fb7185' },
-                                            { key: 'fu_res_rate', label: '% Respuesta', color: '#fecdd3' }
+                                            { key: 'fu_q', label: 'Seguimientos Qual', color: '#f43f5e' },
+                                            { key: 'fur_q', label: 'Respuestas Qual', color: '#fb7185' },
+                                            { key: 'qual_fur_rate', label: '% Respuesta Qual', color: '#fecdd3' }
                                         ]}
                                     >
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                             <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Enviados</p>
-                                                <p className="text-3xl font-black text-white italic">{stats.totals.follow_up_submitted}</p>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Qualification FU</p>
+                                                <div className="flex items-end justify-between">
+                                                    <p className="text-3xl font-black text-white italic">{stats.totals.qualification_fur} <span className="text-slate-600 text-sm">/ {stats.totals.qualification_fu}</span></p>
+                                                    <p className="text-lg font-black text-rose-500">{stats.percentages.rates.qualification_fur}%</p>
+                                                </div>
                                             </div>
                                             <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Respondidos</p>
-                                                <p className="text-3xl font-black text-white italic">{stats.totals.follow_up_responded}</p>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pain FU</p>
+                                                <div className="flex items-end justify-between">
+                                                    <p className="text-3xl font-black text-white italic">{stats.totals.pain_fur} <span className="text-slate-600 text-sm">/ {stats.totals.pain_fu}</span></p>
+                                                    <p className="text-lg font-black text-rose-500">{stats.percentages.rates.pain_fur}%</p>
+                                                </div>
                                             </div>
-                                            <StatCard title="Tasa Respuesta" value={`${stats.percentages.rates.follow_up_response}%`} icon={RefreshCw} colorClass="text-rose-500" />
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Offer FU</p>
+                                                <div className="flex items-end justify-between">
+                                                    <p className="text-3xl font-black text-white italic">{stats.totals.offer_fur} <span className="text-slate-600 text-sm">/ {stats.totals.offer_fu}</span></p>
+                                                    <p className="text-lg font-black text-rose-500">{stats.percentages.rates.offer_fur}%</p>
+                                                </div>
+                                            </div>
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Agenda FU</p>
+                                                <div className="flex items-end justify-between">
+                                                    <p className="text-3xl font-black text-white italic">{stats.totals.agenda_fur} <span className="text-slate-600 text-sm">/ {stats.totals.agenda_fu}</span></p>
+                                                    <p className="text-lg font-black text-rose-500">{stats.percentages.rates.agenda_fur}%</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </MetricSection>
 

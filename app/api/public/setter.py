@@ -61,8 +61,14 @@ def submit_public_setter_report():
         stat.funnel_offer = int(data.get('funnel_offer') or 0)
         stat.funnel_link = int(data.get('funnel_link') or 0)
         stat.funnel_agenda = int(data.get('funnel_agenda') or 0)
-        stat.follow_up_submitted = int(data.get('follow_up_submitted') or 0)
-        stat.follow_up_responded = int(data.get('follow_up_responded') or 0)
+        stat.qualification_fu = int(data.get('qualification_fu') or 0)
+        stat.pain_fu = int(data.get('pain_fu') or 0)
+        stat.offer_fu = int(data.get('offer_fu') or 0)
+        stat.agenda_fu = int(data.get('agenda_fu') or 0)
+        stat.qualification_fur = int(data.get('qualification_fur') or 0)
+        stat.pain_fur = int(data.get('pain_fur') or 0)
+        stat.offer_fur = int(data.get('offer_fur') or 0)
+        stat.agenda_fur = int(data.get('agenda_fur') or 0)
     else:
         stat = SetterDailyStats(
             setter_id=setter_id,
@@ -78,8 +84,14 @@ def submit_public_setter_report():
             funnel_offer=int(data.get('funnel_offer') or 0),
             funnel_link=int(data.get('funnel_link') or 0),
             funnel_agenda=int(data.get('funnel_agenda') or 0),
-            follow_up_submitted=int(data.get('follow_up_submitted') or 0),
-            follow_up_responded=int(data.get('follow_up_responded') or 0)
+            qualification_fu=int(data.get('qualification_fu') or 0),
+            pain_fu=int(data.get('pain_fu') or 0),
+            offer_fu=int(data.get('offer_fu') or 0),
+            agenda_fu=int(data.get('agenda_fu') or 0),
+            qualification_fur=int(data.get('qualification_fur') or 0),
+            pain_fur=int(data.get('pain_fur') or 0),
+            offer_fur=int(data.get('offer_fur') or 0),
+            agenda_fur=int(data.get('agenda_fur') or 0)
         )
         db.session.add(stat)
         
@@ -155,8 +167,14 @@ def get_public_setter_stats():
         func.sum(SetterDailyStats.funnel_offer).label('fun_offer'),
         func.sum(SetterDailyStats.funnel_link).label('fun_link'),
         func.sum(SetterDailyStats.funnel_agenda).label('fun_agenda'),
-        func.sum(SetterDailyStats.follow_up_submitted).label('fu_sub'),
-        func.sum(SetterDailyStats.follow_up_responded).label('fu_res')
+        func.sum(SetterDailyStats.qualification_fu).label('fu_qual'),
+        func.sum(SetterDailyStats.pain_fu).label('fu_pain_sub'),
+        func.sum(SetterDailyStats.offer_fu).label('fu_offer_sub'),
+        func.sum(SetterDailyStats.agenda_fu).label('fu_agenda_sub'),
+        func.sum(SetterDailyStats.qualification_fur).label('fur_qual'),
+        func.sum(SetterDailyStats.pain_fur).label('fur_pain'),
+        func.sum(SetterDailyStats.offer_fur).label('fur_offer'),
+        func.sum(SetterDailyStats.agenda_fur).label('fur_agenda')
     )
     
     filters = []
@@ -204,8 +222,14 @@ def get_public_setter_stats():
             "funnel_offer": process_val(stats.fun_offer),
             "funnel_link": process_val(stats.fun_link),
             "funnel_agenda": process_val(stats.fun_agenda),
-            "follow_up_submitted": process_val(stats.fu_sub),
-            "follow_up_responded": process_val(stats.fu_res)
+            "qualification_fu": process_val(stats.fu_qual),
+            "pain_fu": process_val(stats.fu_pain_sub),
+            "offer_fu": process_val(stats.fu_offer_sub),
+            "agenda_fu": process_val(stats.fu_agenda_sub),
+            "qualification_fur": process_val(stats.fur_qual),
+            "pain_fur": process_val(stats.fur_pain),
+            "offer_fur": process_val(stats.fur_offer),
+            "agenda_fur": process_val(stats.fur_agenda)
         },
         "percentages": {
             "inbox": {
@@ -216,7 +240,10 @@ def get_public_setter_stats():
             "rates": {
                 "opening_response": div(float(stats.op_res or 0), float(stats.op_sub or 0)),
                 "opening_rate": div(float(stats.op_sub or 0), float(stats.entrantes or 0)),
-                "follow_up_response": div(float(stats.fu_res or 0), float(stats.fu_sub or 0))
+                "qualification_fur": div(float(stats.fur_qual or 0), float(stats.fu_qual or 0)),
+                "pain_fur": div(float(stats.fur_pain or 0), float(stats.fu_pain_sub or 0)),
+                "offer_fur": div(float(stats.fur_offer or 0), float(stats.fu_offer_sub or 0)),
+                "agenda_fur": div(float(stats.fur_agenda or 0), float(stats.fu_agenda_sub or 0))
             },
             "funnel_evolution": {
                 "qual_to_pain": div(float(stats.fun_pain or 0), float(stats.fun_qual or 0)),
@@ -270,8 +297,8 @@ def get_public_setter_stats():
         func.sum(SetterDailyStats.inbox_entrantes).label('entrantes'),
         func.sum(SetterDailyStats.opening_submitted).label('op_sub'),
         func.sum(SetterDailyStats.opening_responded).label('op_res'),
-        func.sum(SetterDailyStats.follow_up_submitted).label('fu_sub'),
-        func.sum(SetterDailyStats.follow_up_responded).label('fu_res'),
+        func.sum(SetterDailyStats.qualification_fu).label('fu_q'),
+        func.sum(SetterDailyStats.qualification_fur).label('fur_q'),
         func.sum(SetterDailyStats.funnel_agenda).label('fun_agenda')
     )
     for f in filters:
@@ -285,8 +312,8 @@ def get_public_setter_stats():
             "entrantes": int(row.entrantes or 0),
             "op_sub": int(row.op_sub or 0),
             "op_res": int(row.op_res or 0),
-            "fu_sub": int(row.fu_sub or 0),
-            "fu_res": int(row.fu_res or 0),
+            "fu_q": int(row.fu_q or 0),
+            "fur_q": int(row.fur_q or 0),
             "fun_agenda": int(row.fun_agenda or 0)
         })
     res["time_series"] = time_series
@@ -332,8 +359,14 @@ def get_public_setter_reports():
             "fun_offer": r.funnel_offer,
             "fun_link": r.funnel_link,
             "fun_agenda": r.funnel_agenda,
-            "fu_sub": r.follow_up_submitted,
-            "fu_res": r.follow_up_responded
+            "qualification_fu": r.qualification_fu,
+            "pain_fu": r.pain_fu,
+            "offer_fu": r.offer_fu,
+            "agenda_fu": r.agenda_fu,
+            "qualification_fur": r.qualification_fur,
+            "pain_fur": r.pain_fur,
+            "offer_fur": r.offer_fur,
+            "agenda_fur": r.agenda_fur
         })
         
     return jsonify({
@@ -362,8 +395,14 @@ def update_public_setter_report(report_id):
         stat.funnel_offer = int(data.get('fun_offer') or stat.funnel_offer)
         stat.funnel_link = int(data.get('fun_link') or stat.funnel_link)
         stat.funnel_agenda = int(data.get('fun_agenda') or stat.funnel_agenda)
-        stat.follow_up_submitted = int(data.get('fu_sub') or stat.follow_up_submitted)
-        stat.follow_up_responded = int(data.get('fu_res') or stat.follow_up_responded)
+        stat.qualification_fu = int(data.get('qualification_fu') or stat.qualification_fu)
+        stat.pain_fu = int(data.get('pain_fu') or stat.pain_fu)
+        stat.offer_fu = int(data.get('offer_fu') or stat.offer_fu)
+        stat.agenda_fu = int(data.get('agenda_fu') or stat.agenda_fu)
+        stat.qualification_fur = int(data.get('qualification_fur') or stat.qualification_fur)
+        stat.pain_fur = int(data.get('pain_fur') or stat.pain_fur)
+        stat.offer_fur = int(data.get('offer_fur') or stat.offer_fur)
+        stat.agenda_fur = int(data.get('agenda_fur') or stat.agenda_fur)
         
         db.session.commit()
         return jsonify({"message": "Reporte actualizado"}), 200

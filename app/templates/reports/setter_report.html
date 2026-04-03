@@ -573,21 +573,39 @@
         <div class="card followup" style="grid-column: 2; height: fit-content;">
             <div class="card-header">
                 <div class="icon-box" style="color: var(--rose-500)">🔄</div>
-                <div class="card-title">FOLLOW UPs</div>
+                <div class="card-title">FOLLOW UPs (Funnel)</div>
             </div>
-            <div class="card-body">
-                <div class="metrics-grid">
-                    <div class="metric-input">
-                        <div class="metric-label">Enviados</div>
-                        <div class="metric-value">{{ follow_up.submitted }}</div>
-                    </div>
-                    <div class="metric-input">
-                        <div class="metric-label">Respondidos</div>
-                        <div class="metric-value">{{ follow_up.responded }}</div>
-                    </div>
-                </div>
+            <div class="card-body" style="grid-template-columns: 1fr;">
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--slate-800);">
+                            <th style="text-align: left; color: var(--slate-400); font-size: 10px; padding: 8px; text-transform: uppercase; letter-spacing: 1px;">Etapa</th>
+                            <th style="text-align: center; color: var(--slate-400); font-size: 10px; padding: 8px; text-transform: uppercase; letter-spacing: 1px;">FU</th>
+                            <th style="text-align: center; color: var(--slate-400); font-size: 10px; padding: 8px; text-transform: uppercase; letter-spacing: 1px;">FUR</th>
+                            <th style="text-align: center; color: var(--slate-400); font-size: 10px; padding: 8px; text-transform: uppercase; letter-spacing: 1px;">% RES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set stages_data = [
+                            {'name': 'Qualification', 'fu': follow_up.qualification, 'fur': follow_up.qualification_fur},
+                            {'name': 'Pain', 'fu': follow_up.pain, 'fur': follow_up.pain_fur},
+                            {'name': 'Offer', 'fu': follow_up.offer, 'fur': follow_up.offer_fur},
+                            {'name': 'Agenda', 'fu': follow_up.agenda, 'fur': follow_up.agenda_fur}
+                        ] %}
+                        {% for stage in stages_data %}
+                        <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.2);">
+                            <td style="padding: 14px 8px; font-weight: 700; font-size: 14px; color: var(--slate-200);">{{ stage.name }}</td>
+                            <td style="padding: 14px 8px; text-align: center; font-weight: 800; font-size: 18px; color: white;">{{ stage.fu }}</td>
+                            <td style="padding: 14px 8px; text-align: center; font-weight: 800; font-size: 18px; color: var(--rose-400);">{{ stage.fur }}</td>
+                            <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 14px; color: var(--slate-400);">
+                                {{ (stage.fur / stage.fu * 100)|round|int if stage.fu > 0 else 0 }}%
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
                 <div class="live-panel center-stat">
-                    <div class="live-stat-label">Tasa de Respuesta</div>
+                    <div class="live-stat-label">Tasa de Respuesta Total</div>
                     <div class="live-stat-val rose">{{ follow_up.response_pct }}%</div>
                 </div>
             </div>

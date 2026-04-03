@@ -61,8 +61,16 @@ class SetterDailyStats(db.Model):
     funnel_link = db.Column(db.Integer, default=0)
     funnel_agenda = db.Column(db.Integer, default=0)
     
-    follow_up_submitted = db.Column(db.Integer, default=0)
-    follow_up_responded = db.Column(db.Integer, default=0)
+    # Funnel de Seguimientos (FU = Follow Up, FUR = Follow Up Responded)
+    qualification_fu = db.Column(db.Integer, default=0)
+    pain_fu = db.Column(db.Integer, default=0)
+    offer_fu = db.Column(db.Integer, default=0)
+    agenda_fu = db.Column(db.Integer, default=0)
+    
+    qualification_fur = db.Column(db.Integer, default=0)
+    pain_fur = db.Column(db.Integer, default=0)
+    offer_fur = db.Column(db.Integer, default=0)
+    agenda_fur = db.Column(db.Integer, default=0)
 
     # Fixed Funnel Stages (Max 5) - Managed as Legacy/Optional
     stage_1_value = db.Column(db.Integer, default=0)
