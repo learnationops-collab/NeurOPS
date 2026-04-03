@@ -370,7 +370,7 @@ const PublicSetterStatsPage = () => {
                                     <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" />
                                     <StatCard title="Tasa Apertura" value={`${stats.percentages.rates.opening_rate}%`} icon={MousePointer2} colorClass="text-emerald-500" />
                                     <StatCard title="Op. Response" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" />
-                                    <StatCard title="FU Response" value={`${stats.percentages.rates.qualification_fur}%`} icon={RefreshCw} colorClass="text-rose-500" subtitle="Tasa Qual FU" />
+                                    <StatCard title="FU Response" value={`${stats.percentages.rates.link_fur}%`} icon={RefreshCw} colorClass="text-rose-500" subtitle="Tasa Link FU" />
                                 </div>
 
                                 {/* SECCIONES DE MÉTRICAS */}
@@ -419,18 +419,26 @@ const PublicSetterStatsPage = () => {
                                             { key: 'op_res_rate', label: '% Respuesta', color: '#fae8ff' }
                                         ]}
                                     >
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                             <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Aperturas Totales</p>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Aperturas Qual</p>
+                                                <div className="flex items-end justify-between">
+                                                    <p className="text-3xl font-black text-white italic">{stats.totals.qualification_opening_responded} <span className="text-slate-600 text-sm">/ {stats.totals.qualification_opening_submitted}</span></p>
+                                                    <p className="text-lg font-black text-fuchsia-500">{stats.percentages.rates.qualification_opening_rate}%</p>
+                                                </div>
+                                            </div>
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Aperturas Pain</p>
+                                                <div className="flex items-end justify-between">
+                                                    <p className="text-3xl font-black text-white italic">{stats.totals.pain_opening_responded} <span className="text-slate-600 text-sm">/ {stats.totals.pain_opening_submitted}</span></p>
+                                                    <p className="text-lg font-black text-fuchsia-500">{stats.percentages.rates.pain_opening_rate}%</p>
+                                                </div>
+                                            </div>
+                                            <StatCard title="Op. Response Tot" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" />
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Aperturas</p>
                                                 <p className="text-3xl font-black text-white italic">{stats.totals.opening_submitted}</p>
-                                                <p className="text-[9px] font-bold text-fuchsia-500 uppercase tracking-tighter">({stats.percentages.rates.opening_rate}% sobre entrantes)</p>
                                             </div>
-                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Respuestas</p>
-                                                <p className="text-3xl font-black text-white italic">{stats.totals.opening_responded}</p>
-                                                <p className="text-[9px] font-bold text-fuchsia-400 uppercase tracking-tighter">({stats.percentages.rates.opening_response}% tasa de respuesta)</p>
-                                            </div>
-                                            <StatCard title="Tasa Respuesta" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" />
                                         </div>
                                     </MetricSection>
 
@@ -446,33 +454,40 @@ const PublicSetterStatsPage = () => {
                                             { key: 'qual_fur_rate', label: '% Respuesta Qual', color: '#fecdd3' }
                                         ]}
                                     >
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                                             <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Qualification FU</p>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Qual FU</p>
                                                 <div className="flex items-end justify-between">
                                                     <p className="text-3xl font-black text-white italic">{stats.totals.qualification_fur} <span className="text-slate-600 text-sm">/ {stats.totals.qualification_fu}</span></p>
-                                                    <p className="text-lg font-black text-rose-500">{stats.percentages.rates.qualification_fur}%</p>
+                                                    <p className="text-base font-black text-rose-500">{stats.percentages.rates.qualification_fur}%</p>
                                                 </div>
                                             </div>
                                             <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pain FU</p>
                                                 <div className="flex items-end justify-between">
                                                     <p className="text-3xl font-black text-white italic">{stats.totals.pain_fur} <span className="text-slate-600 text-sm">/ {stats.totals.pain_fu}</span></p>
-                                                    <p className="text-lg font-black text-rose-500">{stats.percentages.rates.pain_fur}%</p>
+                                                    <p className="text-base font-black text-rose-500">{stats.percentages.rates.pain_fur}%</p>
                                                 </div>
                                             </div>
                                             <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Offer FU</p>
                                                 <div className="flex items-end justify-between">
                                                     <p className="text-3xl font-black text-white italic">{stats.totals.offer_fur} <span className="text-slate-600 text-sm">/ {stats.totals.offer_fu}</span></p>
-                                                    <p className="text-lg font-black text-rose-500">{stats.percentages.rates.offer_fur}%</p>
+                                                    <p className="text-base font-black text-rose-500">{stats.percentages.rates.offer_fur}%</p>
+                                                </div>
+                                            </div>
+                                            <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2 text-indigo-400">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Link FU</p>
+                                                <div className="flex items-end justify-between">
+                                                    <p className="text-3xl font-black italic">{stats.totals.link_fur} <span className="text-slate-600 text-sm">/ {stats.totals.link_fu}</span></p>
+                                                    <p className="text-base font-black">{stats.percentages.rates.link_fur}%</p>
                                                 </div>
                                             </div>
                                             <div className="p-6 bg-slate-950/50 rounded-3xl border border-slate-800 space-y-2">
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Agenda FU</p>
                                                 <div className="flex items-end justify-between">
                                                     <p className="text-3xl font-black text-white italic">{stats.totals.agenda_fur} <span className="text-slate-600 text-sm">/ {stats.totals.agenda_fu}</span></p>
-                                                    <p className="text-lg font-black text-rose-500">{stats.percentages.rates.agenda_fur}%</p>
+                                                    <p className="text-base font-black text-rose-500">{stats.percentages.rates.agenda_fur}%</p>
                                                 </div>
                                             </div>
                                         </div>

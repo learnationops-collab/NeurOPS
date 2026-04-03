@@ -52,8 +52,13 @@ class SetterDailyStats(db.Model):
     inbox_inabribles = db.Column(db.Integer, default=0)
     inbox_leads = db.Column(db.Integer, default=0)
     
-    opening_submitted = db.Column(db.Integer, default=0)
-    opening_responded = db.Column(db.Integer, default=0)
+    opening_submitted = db.Column(db.Integer, default=0) # Legacy
+    opening_responded = db.Column(db.Integer, default=0) # Legacy
+    
+    qualification_opening_submitted = db.Column(db.Integer, default=0)
+    qualification_opening_responded = db.Column(db.Integer, default=0)
+    pain_opening_submitted = db.Column(db.Integer, default=0)
+    pain_opening_responded = db.Column(db.Integer, default=0)
     
     funnel_qualification = db.Column(db.Integer, default=0)
     funnel_pain = db.Column(db.Integer, default=0)
@@ -65,11 +70,13 @@ class SetterDailyStats(db.Model):
     qualification_fu = db.Column(db.Integer, default=0)
     pain_fu = db.Column(db.Integer, default=0)
     offer_fu = db.Column(db.Integer, default=0)
+    link_fu = db.Column(db.Integer, default=0)
     agenda_fu = db.Column(db.Integer, default=0)
     
     qualification_fur = db.Column(db.Integer, default=0)
     pain_fur = db.Column(db.Integer, default=0)
     offer_fur = db.Column(db.Integer, default=0)
+    link_fur = db.Column(db.Integer, default=0)
     agenda_fur = db.Column(db.Integer, default=0)
 
     # Fixed Funnel Stages (Max 5) - Managed as Legacy/Optional

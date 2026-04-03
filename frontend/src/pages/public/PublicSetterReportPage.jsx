@@ -49,25 +49,21 @@ const PublicSetterReportPage = () => {
         inbox_inabribles: '',
         inbox_leads: '',
 
-        // OPENING
-        opening_submitted: '',
-        opening_responded: '',
-
-        // FUNNEL
-        funnel_qualification: '',
-        funnel_pain: '',
-        funnel_offer: '',
-        funnel_link: '',
-        funnel_agenda: '',
-
         qualification_fu: '',
         pain_fu: '',
         offer_fu: '',
+        link_fu: '',
         agenda_fu: '',
         qualification_fur: '',
         pain_fur: '',
         offer_fur: '',
+        link_fur: '',
         agenda_fur: '',
+
+        qualification_opening_submitted: '',
+        qualification_opening_responded: '',
+        pain_opening_submitted: '',
+        pain_opening_responded: '',
 
         answers: []
     });
@@ -143,21 +139,20 @@ const PublicSetterReportPage = () => {
                 not_lead: '',
                 inbox_inabribles: '',
                 inbox_leads: '',
-                opening_submitted: '',
-                opening_responded: '',
-                funnel_qualification: '',
-                funnel_pain: '',
-                funnel_offer: '',
-                funnel_link: '',
-                funnel_agenda: '',
                 qualification_fu: '',
                 pain_fu: '',
                 offer_fu: '',
+                link_fu: '',
                 agenda_fu: '',
                 qualification_fur: '',
                 pain_fur: '',
                 offer_fur: '',
+                link_fur: '',
                 agenda_fur: '',
+                qualification_opening_submitted: '',
+                qualification_opening_responded: '',
+                pain_opening_submitted: '',
+                pain_opening_responded: '',
                 answers: prev.answers.map(a => ({ ...a, answer: '' }))
             }));
 
@@ -172,9 +167,10 @@ const PublicSetterReportPage = () => {
     const calculateProgress = () => {
         const fieldsToCheck = [
             'setter_id', 'date', 'inbox_entrantes', 'not_lead', 'inbox_inabribles',
-            'opening_submitted', 'opening_responded', 'funnel_qualification',
-            'qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu',
-            'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'
+            'qualification_fu', 'pain_fu', 'offer_fu', 'link_fu', 'agenda_fu',
+            'qualification_fur', 'pain_fur', 'offer_fur', 'link_fur', 'agenda_fur',
+            'qualification_opening_submitted', 'qualification_opening_responded',
+            'pain_opening_submitted', 'pain_opening_responded'
         ];
 
         let filledFields = 0;
@@ -219,8 +215,6 @@ const PublicSetterReportPage = () => {
         const noLeadPct = ie > 0 ? (nl / ie) * 100 : 0;
         const inabriblesPct = ie > 0 ? (ina / ie) * 100 : 0;
 
-        const os = parseInt(formData.opening_submitted) || 0;
-        const or = parseInt(formData.opening_responded) || 0;
         const fq = parseInt(formData.funnel_qualification) || 0;
         const fp = parseInt(formData.funnel_pain) || 0;
         const fo = parseInt(formData.funnel_offer) || 0;
@@ -233,20 +227,24 @@ const PublicSetterReportPage = () => {
         const pfur = parseInt(formData.pain_fur) || 0;
         const ofu = parseInt(formData.offer_fu) || 0;
         const ofur = parseInt(formData.offer_fur) || 0;
+        const lfu = parseInt(formData.link_fu) || 0;
+        const lfur = parseInt(formData.link_fur) || 0;
         const afu = parseInt(formData.agenda_fu) || 0;
         const afur = parseInt(formData.agenda_fur) || 0;
 
-        const totalFU = qfu + pfu + ofu + afu;
-        const totalFUR = qfur + pfur + ofur + afur;
+        const totalFU = qfu + pfu + ofu + lfu + afu;
+        const totalFUR = qfur + pfur + ofur + lfur + afur;
 
         const qualToPain = fq > 0 ? (fp / fq) * 100 : 0;
         const painToOffer = fp > 0 ? (fo / fp) * 100 : 0;
         const offerToLink = fo > 0 ? (fl / fo) * 100 : 0;
         const linkToAgenda = fl > 0 ? (fa / fl) * 100 : 0;
 
-        const openingToAgenda = os > 0 ? (fa / os) * 100 : 0;
-        const offerToAgenda = fo > 0 ? (fa / fo) * 100 : 0;
-        const openingResp = os > 0 ? (or / os) * 100 : 0;
+        const openingResp = (parseInt(formData.qualification_opening_submitted) || 0) + (parseInt(formData.pain_opening_submitted) || 0) > 0 
+            ? ((parseInt(formData.qualification_opening_responded) || 0) + (parseInt(formData.pain_opening_responded) || 0)) / 
+              ((parseInt(formData.qualification_opening_submitted) || 0) + (parseInt(formData.pain_opening_submitted) || 0)) * 100 
+            : 0;
+            
         const followUpResp = totalFU > 0 ? (totalFUR / totalFU) * 100 : 0;
 
         const funnelData = [
@@ -260,8 +258,6 @@ const PublicSetterReportPage = () => {
         return {
             noLeadPct: noLeadPct.toFixed(1),
             inabriblesPct: inabriblesPct.toFixed(1),
-            openingToAgenda: openingToAgenda.toFixed(1),
-            offerToAgenda: offerToAgenda.toFixed(1),
             openingResponse: openingResp.toFixed(1),
             followUpResponse: followUpResp.toFixed(1),
             qualToPain: qualToPain.toFixed(1),
@@ -366,84 +362,138 @@ const PublicSetterReportPage = () => {
                                 </div>
                             </div>
 
-                            {/* BLOCK 2: OPENING */}
-                            <div className={`${isSectionComplete(['opening_submitted', 'opening_responded']) ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl p-6 border-t-4 border-t-fuchsia-600 transition-colors duration-500`}>
-                                <SectionHeader icon={MessageSquare} title="OPENING" colorClass="text-fuchsia-500" isLightMode={isSectionComplete(['opening_submitted', 'opening_responded'])} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <MetricInput label="Op. Submitted" field="opening_submitted" color="fuchsia" value={formData.opening_submitted} onChange={handleFieldChange} isLightMode={isSectionComplete(['opening_submitted', 'opening_responded'])} />
-                                        <MetricInput label="Op. Responded" field="opening_responded" color="fuchsia" value={formData.opening_responded} onChange={handleFieldChange} isLightMode={isSectionComplete(['opening_submitted', 'opening_responded'])} />
-                                    </div>
-                                    <div className={`${isSectionComplete(['opening_submitted', 'opening_responded']) ? 'bg-white/60 text-slate-800' : 'bg-slate-800/30 text-white'} rounded-2xl p-6 flex flex-col justify-center items-center transition-colors duration-500`}>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tasa de Respuesta</p>
-                                        <p className="text-5xl font-black text-fuchsia-500">{liveMetrics.openingResponse}%</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* BLOCK 3: FUNNEL */}
-                            <div className={`${isSectionComplete(['funnel_qualification', 'funnel_pain', 'funnel_offer', 'funnel_link', 'funnel_agenda']) ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl p-6 border-t-4 border-t-indigo-600 transition-colors duration-500`}>
-                                <SectionHeader icon={Filter} title="FUNNEL" colorClass="text-indigo-500" isLightMode={isSectionComplete(['funnel_qualification', 'funnel_pain', 'funnel_offer', 'funnel_link', 'funnel_agenda'])} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-4 pr-0 md:pr-4">
-                                        <MetricInput label="Qualification" field="funnel_qualification" color="indigo" value={formData.funnel_qualification} onChange={handleFieldChange} isLightMode={isSectionComplete(['funnel_qualification', 'funnel_pain', 'funnel_offer', 'funnel_link', 'funnel_agenda'])} />
-                                        <MetricInput label="Pain" field="funnel_pain" color="indigo" value={formData.funnel_pain} onChange={handleFieldChange} isLightMode={isSectionComplete(['funnel_qualification', 'funnel_pain', 'funnel_offer', 'funnel_link', 'funnel_agenda'])} />
-                                        <MetricInput label="Offer" field="funnel_offer" color="indigo" value={formData.funnel_offer} onChange={handleFieldChange} isLightMode={isSectionComplete(['funnel_qualification', 'funnel_pain', 'funnel_offer', 'funnel_link', 'funnel_agenda'])} />
-                                        <MetricInput label="Link" field="funnel_link" color="indigo" value={formData.funnel_link} onChange={handleFieldChange} isLightMode={isSectionComplete(['funnel_qualification', 'funnel_pain', 'funnel_offer', 'funnel_link', 'funnel_agenda'])} />
-                                        <MetricInput label="Agenda" field="funnel_agenda" color="indigo" value={formData.funnel_agenda} onChange={handleFieldChange} isLightMode={isSectionComplete(['funnel_qualification', 'funnel_pain', 'funnel_offer', 'funnel_link', 'funnel_agenda'])} />
-                                    </div>
-                                    <div className={`${isSectionComplete(['funnel_qualification', 'funnel_pain', 'funnel_offer', 'funnel_link', 'funnel_agenda']) ? 'bg-white/60 text-slate-800' : 'bg-slate-800/30 text-white'} rounded-2xl p-6 flex flex-col pt-8 transition-colors duration-500`}>
-                                        <div className="grid grid-cols-4 gap-2 text-center mb-6 border-b border-slate-700/50 pb-6">
-                                            <div>
-                                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Qual → Pain</p>
-                                                <p className="text-sm font-bold">{liveMetrics.qualToPain}%</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Pain → Off</p>
-                                                <p className="text-sm font-bold">{liveMetrics.painToOffer}%</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Off → Link</p>
-                                                <p className="text-sm font-bold">{liveMetrics.offerToLink}%</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Link → Agnd</p>
-                                                <p className="text-sm font-bold">{liveMetrics.linkToAgenda}%</p>
-                                            </div>
+                            {/* UNIFIED FUNNEL CONTAINER */}
+                            <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-2xl space-y-10">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-800 pb-8">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-indigo-500">
+                                            <Filter size={32} strokeWidth={2.5} />
                                         </div>
-                                        <div className="flex-1 min-h-[250px] -ml-4 flex items-center justify-center -mt-4">
-                                            <FunnelChart data={liveMetrics.funnelData} />
+                                        <div>
+                                            <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none">Embudo Unificado</h2>
+                                            <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest text-indigo-400">Leads • Seguimientos • Aperturas</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <div className="px-6 py-3 bg-slate-950/50 rounded-2xl border border-slate-800 text-center flex-1 md:flex-none">
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tasa Apertura</p>
+                                            <p className="text-xl font-black text-fuchsia-500 italic">{liveMetrics.openingResponse}%</p>
+                                        </div>
+                                        <div className="px-6 py-3 bg-slate-950/50 rounded-2xl border border-slate-800 text-center flex-1 md:flex-none">
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tasa Resp. FU</p>
+                                            <p className="text-xl font-black text-rose-500 italic">{liveMetrics.followUpResponse}%</p>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* BLOCK 4: FOLLOW UPS (FUNNEL) */}
-                            <div className={`${isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur']) ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl p-6 border-t-4 border-t-rose-600 transition-colors duration-500`}>
-                                <SectionHeader icon={RefreshCw} title="FOLLOW UPs (Funnel)" colorClass="text-rose-500" isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    <div className="md:col-span-2 grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                        <div className="space-y-4">
-                                            <MetricInput label="Qual FU" field="qualification_fu" color="rose" value={formData.qualification_fu} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
-                                            <MetricInput label="Qual FUR" field="qualification_fur" color="rose" value={formData.qualification_fur} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
-                                        </div>
-                                        <div className="space-y-4">
-                                            <MetricInput label="Pain FU" field="pain_fu" color="rose" value={formData.pain_fu} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
-                                            <MetricInput label="Pain FUR" field="pain_fur" color="rose" value={formData.pain_fur} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
-                                        </div>
-                                        <div className="space-y-4">
-                                            <MetricInput label="Offer FU" field="offer_fu" color="rose" value={formData.offer_fu} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
-                                            <MetricInput label="Offer FUR" field="offer_fur" color="rose" value={formData.offer_fur} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
-                                        </div>
-                                        <div className="space-y-4">
-                                            <MetricInput label="Agenda FU" field="agenda_fu" color="rose" value={formData.agenda_fu} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
-                                            <MetricInput label="Agenda FUR" field="agenda_fur" color="rose" value={formData.agenda_fur} onChange={handleFieldChange} isLightMode={isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur'])} />
+                                <div className="overflow-x-auto -mx-6 md:mx-0">
+                                    <table className="w-full border-separate border-spacing-y-4 px-6 md:px-0">
+                                        <thead>
+                                            <tr className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                                <th className="text-left pb-2 pl-4">Etapa</th>
+                                                <th className="text-center pb-2">Leads Reales</th>
+                                                <th className="text-center pb-2">Seguimientos (I / R)</th>
+                                                <th className="text-center pb-2">Aperturas (I / R)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {[
+                                                { label: 'Cualificación', id: 'qualification', hasOpening: true },
+                                                { label: 'Dolor', id: 'pain', hasOpening: true },
+                                                { label: 'Oferta', id: 'offer', hasOpening: false },
+                                                { label: 'Link', id: 'link', hasOpening: false },
+                                                { label: 'Agenda', id: 'agenda', hasOpening: false }
+                                            ].map((stage) => (
+                                                <tr key={stage.id} className="group">
+                                                    {/* ETAPA */}
+                                                    <td className="bg-slate-950/40 border border-slate-800/80 rounded-l-[1.5rem] p-5">
+                                                        <span className="text-xs font-black text-white uppercase italic group-hover:text-indigo-400 transition-colors">{stage.label}</span>
+                                                    </td>
+
+                                                    {/* LEADS */}
+                                                    <td className="bg-slate-950/40 border-y border-slate-800/80 p-5 px-6">
+                                                        <input
+                                                            type="number"
+                                                            placeholder="0"
+                                                            className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-2 text-center font-black text-indigo-400 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-800"
+                                                            value={formData[`funnel_${stage.id}`]}
+                                                            onChange={e => handleFieldChange(`funnel_${stage.id}`, e.target.value)}
+                                                        />
+                                                    </td>
+
+                                                    {/* SEGUIMIENTOS */}
+                                                    <td className="bg-slate-950/40 border-y border-slate-800/80 p-5 px-6">
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="number"
+                                                                placeholder="I"
+                                                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2 text-center font-black text-rose-400 focus:border-rose-500 outline-none transition-all placeholder:text-slate-800"
+                                                                value={formData[`${stage.id}_fu`]}
+                                                                onChange={e => handleFieldChange(`${stage.id}_fu`, e.target.value)}
+                                                            />
+                                                            <span className="text-slate-700 font-bold">/</span>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="R"
+                                                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2 text-center font-black text-rose-500 focus:border-rose-500 outline-none transition-all placeholder:text-slate-800"
+                                                                value={formData[`${stage.id}_fur`]}
+                                                                onChange={e => handleFieldChange(`${stage.id}_fur`, e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </td>
+
+                                                    {/* APERTURAS */}
+                                                    <td className={`bg-slate-950/40 border border-l-0 border-slate-800/80 rounded-r-[1.5rem] p-5 px-6 ${!stage.hasOpening && 'bg-slate-950/10'}`}>
+                                                        {stage.hasOpening ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="I"
+                                                                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2 text-center font-black text-fuchsia-400 focus:border-fuchsia-500 outline-none transition-all placeholder:text-slate-800"
+                                                                    value={formData[`${stage.id}_opening_submitted`]}
+                                                                    onChange={e => handleFieldChange(`${stage.id}_opening_submitted`, e.target.value)}
+                                                                />
+                                                                <span className="text-slate-700 font-bold">/</span>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="R"
+                                                                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2 text-center font-black text-fuchsia-500 focus:border-fuchsia-500 outline-none transition-all placeholder:text-slate-800"
+                                                                    value={formData[`${stage.id}_opening_responded`]}
+                                                                    onChange={e => handleFieldChange(`${stage.id}_opening_responded`, e.target.value)}
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="h-10 flex items-center justify-center">
+                                                                <div className="w-8 h-[2px] bg-slate-800 rounded-full" />
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 pt-6">
+                                    <div className="bg-slate-950/30 rounded-3xl border border-slate-800 p-8 flex flex-col justify-center">
+                                        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-8 text-center bg-slate-900/50 py-2 rounded-lg">Crecimiento del Embudo</h3>
+                                        <div className="grid grid-cols-4 gap-4 text-center">
+                                            {[
+                                                { label: 'Qual → Pain', val: liveMetrics.qualToPain },
+                                                { label: 'Pain → Off', val: liveMetrics.painToOffer },
+                                                { label: 'Off → Link', val: liveMetrics.offerToLink },
+                                                { label: 'Link → Agnd', val: liveMetrics.linkToAgenda }
+                                            ].map(m => (
+                                                <div key={m.label} className="space-y-1">
+                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-tighter truncate">{m.label}</p>
+                                                    <p className="text-base font-black text-indigo-400 italic">{m.val}%</p>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
-                                    <div className={`${isSectionComplete(['qualification_fu', 'pain_fu', 'offer_fu', 'agenda_fu', 'qualification_fur', 'pain_fur', 'offer_fur', 'agenda_fur']) ? 'bg-white/60 text-slate-800' : 'bg-slate-800/30 text-white'} rounded-2xl p-6 flex flex-col justify-center items-center transition-colors duration-500 text-center`}>
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tasa de Respuesta Total</p>
-                                        <p className="text-5xl font-black text-rose-500">{liveMetrics.followUpResponse}%</p>
-                                        <p className="text-[10px] mt-4 font-bold text-slate-400">Total: {parseInt(formData.qualification_fur || 0) + parseInt(formData.pain_fur || 0) + parseInt(formData.offer_fur || 0) + parseInt(formData.agenda_fur || 0)} / {parseInt(formData.qualification_fu || 0) + parseInt(formData.pain_fu || 0) + parseInt(formData.offer_fu || 0) + parseInt(formData.agenda_fu || 0)}</p>
+                                    <div className="bg-slate-950/30 rounded-3xl border border-slate-800 p-8 flex items-center justify-center min-h-[300px]">
+                                        <FunnelChart data={liveMetrics.funnelData} />
                                     </div>
                                 </div>
                             </div>

@@ -191,21 +191,24 @@ const SetterReportsTable = ({ setters }) => {
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Qual FU/R</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Pain FU/R</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Offer FU/R</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Link FU/R</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Agenda FU/R</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Qual Op</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Pain Op</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="12" className="py-20 text-center">
+                                    <td colSpan="14" className="py-20 text-center">
                                         <Loader2 className="animate-spin mx-auto text-indigo-500 mb-2" size={32} />
                                         <span className="text-[10px] font-black text-slate-500 uppercase">Cargando registros...</span>
                                     </td>
                                 </tr>
                             ) : reports.length === 0 ? (
                                 <tr>
-                                    <td colSpan="12" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
+                                    <td colSpan="14" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
                                 </tr>
                             ) : reports.map(r => (
                                 <tr key={r.id} className="hover:bg-slate-800/20 transition-colors group">
@@ -218,15 +221,13 @@ const SetterReportsTable = ({ setters }) => {
                                         { f: 'leads', label: 'L' },
                                         { f: 'op_sub', label: 'OS' },
                                         { f: 'op_res', label: 'OR' },
-                                        { f: 'fun_qual', label: 'Q' },
-                                        { f: 'fun_pain', label: 'P' },
-                                        { f: 'fun_offer', label: 'O' },
-                                        { f: 'fun_link', label: 'Lk' },
-                                        { f: 'fun_agenda', label: 'A' },
                                         { f: 'qualification_fu', fur: 'qualification_fur', label: 'QFU' },
                                         { f: 'pain_fu', fur: 'pain_fur', label: 'PFU' },
                                         { f: 'offer_fu', fur: 'offer_fur', label: 'OFU' },
-                                        { f: 'agenda_fu', fur: 'agenda_fur', label: 'AFU' }
+                                        { f: 'link_fu', fur: 'link_fur', label: 'LFU' },
+                                        { f: 'agenda_fu', fur: 'agenda_fur', label: 'AFU' },
+                                        { f: 'qualification_opening_submitted', fur: 'qualification_opening_responded', label: 'QOp' },
+                                        { f: 'pain_opening_submitted', fur: 'pain_opening_responded', label: 'POp' }
                                     ].map(col => (
                                         <td key={col.f} className="p-4 text-center">
                                             {editingId === r.id ? (

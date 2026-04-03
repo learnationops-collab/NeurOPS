@@ -79,8 +79,16 @@ def _trigger_setter_report_webhook(stat):
         fur_pain = stat.pain_fur or 0
         fu_offer = stat.offer_fu or 0
         fur_offer = stat.offer_fur or 0
+        fu_link = stat.link_fu or 0
+        fur_link = stat.link_fur or 0
         fu_agenda = stat.agenda_fu or 0
         fur_agenda = stat.agenda_fur or 0
+
+        # OPENINGS
+        q_op_sub = stat.qualification_opening_submitted or 0
+        q_op_res = stat.qualification_opening_responded or 0
+        p_op_sub = stat.pain_opening_submitted or 0
+        p_op_res = stat.pain_opening_responded or 0
 
         # 3. Prepare Stats Structure for the new template layout
         img_data = {
@@ -97,12 +105,11 @@ def _trigger_setter_report_webhook(stat):
                 "inabribles_pct": safe_percent(inabribles, inbox_entrantes)
             },
             
-            # OPENING
-            "opening": {
-                "submitted": opened,
-                "responded": op_resp,
-                "response_pct": safe_percent(op_resp, opened),
-                "apertura_leads_pct": safe_percent(opened, stat.inbox_leads or 0)
+            # OPENING (NEW GRANULAR)
+            "openings": {
+                "qualification": {"submitted": q_op_sub, "responded": q_op_res, "pct": safe_percent(q_op_res, q_op_sub)},
+                "pain": {"submitted": p_op_sub, "responded": p_op_res, "pct": safe_percent(p_op_res, p_op_sub)},
+                "legacy": {"submitted": opened, "responded": op_resp, "pct": safe_percent(op_resp, opened)}
             },
             
             # FUNNEL
@@ -127,11 +134,13 @@ def _trigger_setter_report_webhook(stat):
                 "pain_fur": fur_pain,
                 "offer": fu_offer,
                 "offer_fur": fur_offer,
+                "link": fu_link,
+                "link_fur": fur_link,
                 "agenda": fu_agenda,
                 "agenda_fur": fur_agenda,
-                "total_fu": fu_qual + fu_pain + fu_offer + fu_agenda,
-                "total_fur": fur_qual + fur_pain + fur_offer + fur_agenda,
-                "response_pct": safe_percent(fur_qual + fur_pain + fur_offer + fur_agenda, fu_qual + fu_pain + fu_offer + fu_agenda)
+                "total_fu": fu_qual + fu_pain + fu_offer + fu_link + fu_agenda,
+                "total_fur": fur_qual + fur_pain + fur_offer + fur_link + fur_agenda,
+                "response_pct": safe_percent(fur_qual + fur_pain + fur_offer + fur_link + fur_agenda, fu_qual + fu_pain + fu_offer + fu_link + fu_agenda)
             },
             
             "qualitative": qualitative_callouts
@@ -229,10 +238,16 @@ def submit_daily_report():
                 "pain_fu": stat.pain_fu,
                 "offer_fu": stat.offer_fu,
                 "agenda_fu": stat.agenda_fu,
+                "link_fu": stat.link_fu,
+                "link_fur": stat.link_fur,
                 "qualification_fur": stat.qualification_fur,
                 "pain_fur": stat.pain_fur,
                 "offer_fur": stat.offer_fur,
-                "agenda_fur": stat.agenda_fur
+                "agenda_fur": stat.agenda_fur,
+                "qualification_opening_submitted": stat.qualification_opening_submitted,
+                "qualification_opening_responded": stat.qualification_opening_responded,
+                "pain_opening_submitted": stat.pain_opening_submitted,
+                "pain_opening_responded": stat.pain_opening_responded
             },
             "funnel_stats": stage_metrics,
             "answers": answers
@@ -269,11 +284,17 @@ def submit_daily_report():
         stat.qualification_fu = int(data.get('qualification_fu') or 0)
         stat.pain_fu = int(data.get('pain_fu') or 0)
         stat.offer_fu = int(data.get('offer_fu') or 0)
+        stat.link_fu = int(data.get('link_fu') or 0)
         stat.agenda_fu = int(data.get('agenda_fu') or 0)
         stat.qualification_fur = int(data.get('qualification_fur') or 0)
         stat.pain_fur = int(data.get('pain_fur') or 0)
         stat.offer_fur = int(data.get('offer_fur') or 0)
+        stat.link_fur = int(data.get('link_fur') or 0)
         stat.agenda_fur = int(data.get('agenda_fur') or 0)
+        stat.qualification_opening_submitted = int(data.get('qualification_opening_submitted') or 0)
+        stat.qualification_opening_responded = int(data.get('qualification_opening_responded') or 0)
+        stat.pain_opening_submitted = int(data.get('pain_opening_submitted') or 0)
+        stat.pain_opening_responded = int(data.get('pain_opening_responded') or 0)
         
     else:
         # Create new
@@ -294,11 +315,17 @@ def submit_daily_report():
             qualification_fu=int(data.get('qualification_fu') or 0),
             pain_fu=int(data.get('pain_fu') or 0),
             offer_fu=int(data.get('offer_fu') or 0),
+            link_fu=int(data.get('link_fu') or 0),
             agenda_fu=int(data.get('agenda_fu') or 0),
             qualification_fur=int(data.get('qualification_fur') or 0),
             pain_fur=int(data.get('pain_fur') or 0),
             offer_fur=int(data.get('offer_fur') or 0),
-            agenda_fur=int(data.get('agenda_fur') or 0)
+            link_fur=int(data.get('link_fur') or 0),
+            agenda_fur=int(data.get('agenda_fur') or 0),
+            qualification_opening_submitted=int(data.get('qualification_opening_submitted') or 0),
+            qualification_opening_responded=int(data.get('qualification_opening_responded') or 0),
+            pain_opening_submitted=int(data.get('pain_opening_submitted') or 0),
+            pain_opening_responded=int(data.get('pain_opening_responded') or 0)
         )
         db.session.add(stat)
     
@@ -449,10 +476,16 @@ def get_my_reports():
                 "pain_fu": r.pain_fu,
                 "offer_fu": r.offer_fu,
                 "agenda_fu": r.agenda_fu,
+                "link_fu": r.link_fu,
+                "link_fur": r.link_fur,
                 "qualification_fur": r.qualification_fur,
                 "pain_fur": r.pain_fur,
                 "offer_fur": r.offer_fur,
-                "agenda_fur": r.agenda_fur
+                "agenda_fur": r.agenda_fur,
+                "qualification_opening_submitted": r.qualification_opening_submitted,
+                "qualification_opening_responded": r.qualification_opening_responded,
+                "pain_opening_submitted": r.pain_opening_submitted,
+                "pain_opening_responded": r.pain_opening_responded
             },
             "funnel_stats": stage_metrics,
             "answers": answers

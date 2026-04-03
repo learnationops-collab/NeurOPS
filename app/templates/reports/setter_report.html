@@ -419,218 +419,173 @@
 <body>
     <div class="header">
         <div class="header-left">
-            <div class="logo-text">NeurOPS Performance System</div>
+            <div class="logo-text">NeurOPS High Performance System</div>
             <h1 class="setter-name">{{ setter_name }}</h1>
         </div>
         <div class="date-str">{{ date_str }}</div>
     </div>
 
-    <div class="cards-grid">
-        <!-- 1. INBOX -->
-        <div class="card inbox">
-            <div class="card-header">
-                <div class="icon-box" style="color: var(--pink-500)">📥</div>
-                <div class="card-title">INBOX</div>
+    <!-- INBOX SUMMARY -->
+    <div class="card inbox" style="margin-bottom: 32px;">
+        <div class="card-header" style="margin-bottom: 20px; border: none; padding: 0;">
+            <div class="icon-box" style="color: var(--pink-500)">📥</div>
+            <div class="card-title">INBOX SUMMARY</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; align-items: center;">
+            <div class="live-stat">
+                <div class="live-stat-label">Entrantes</div>
+                <div class="live-stat-val">{{ inbox.entrantes }}</div>
             </div>
-            <div class="card-body">
-                <div class="metrics-grid">
-                    <div class="metric-input">
-                        <div class="metric-label">Entrantes</div>
-                        <div class="metric-value">{{ inbox.entrantes }}</div>
-                    </div>
-                    <div class="metric-input">
-                        <div class="metric-label">No Lead</div>
-                        <div class="metric-value">{{ inbox.not_lead }}</div>
-                    </div>
-                    <div class="metric-input">
-                        <div class="metric-label">In-abribles</div>
-                        <div class="metric-value">{{ inbox.inabribles }}</div>
-                    </div>
-                </div>
-                <div class="live-panel inbox-live">
-                    <div class="live-stat">
-                        <div class="live-stat-label">Leads</div>
-                        <div class="live-stat-val pink">{{ inbox.leads }}</div>
-                    </div>
-                    <div class="live-stat">
-                        <div class="live-stat-label">% No Lead</div>
-                        <div class="live-stat-val">{{ inbox.no_lead_pct }}%</div>
-                    </div>
-                    <div class="live-stat">
-                        <div class="live-stat-label">% Inabribles</div>
-                        <div class="live-stat-val">{{ inbox.inabribles_pct }}%</div>
-                    </div>
-                </div>
+            <div class="live-stat">
+                <div class="live-stat-label">No Lead</div>
+                <div class="live-stat-val pink">{{ inbox.not_lead }}</div>
+                <div class="live-stat-label" style="font-size: 8px;">{{ inbox.no_lead_pct }}%</div>
+            </div>
+            <div class="live-stat">
+                <div class="live-stat-label">In-abribles</div>
+                <div class="live-stat-val">{{ inbox.inabribles }}</div>
+            </div>
+            <div class="live-stat" style="background: rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 10px; border: 1px solid rgba(99, 102, 241, 0.2);">
+                <div class="live-stat-label" style="color: var(--indigo-500)">Leads Reales</div>
+                <div class="live-stat-val" style="color: var(--indigo-500)">{{ inbox.leads }}</div>
             </div>
         </div>
-
-        <!-- 2. OPENING -->
-        <div class="card opening">
-            <div class="card-header">
-                <div class="icon-box" style="color: var(--fuchsia-500)">💬</div>
-                <div class="card-title">OPENING</div>
-            </div>
-            <div class="card-body">
-                <div class="metrics-grid">
-                    <div class="metric-input">
-                        <div class="metric-label">Enviados</div>
-                        <div class="metric-value">{{ opening.submitted }}</div>
-                    </div>
-                    <div class="metric-input">
-                        <div class="metric-label">Respondidos</div>
-                        <div class="metric-value">{{ opening.responded }}</div>
-                    </div>
-                </div>
-                <div class="live-panel center-stat" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px;">
-                    <div style="text-align: center; border-right: 1px solid rgba(51, 65, 85, 0.5); padding-right: 10px;">
-                        <div class="live-stat-label" style="font-size: 11px; margin-bottom: 8px;">% Apertura (Leads)</div>
-                        <div class="live-stat-val fuchsia" style="font-size: 36px;">{{ opening.apertura_leads_pct }}%</div>
-                    </div>
-                    <div style="text-align: center; padding-left: 10px;">
-                        <div class="live-stat-label" style="font-size: 11px; margin-bottom: 8px;">% Respuesta</div>
-                        <div class="live-stat-val fuchsia" style="font-size: 36px;">{{ opening.response_pct }}%</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. FUNNEL -->
-        <div class="card funnel" style="grid-column: 1;">
-            <div class="card-header">
-                <div class="icon-box" style="color: var(--indigo-500)">⏬</div>
-                <div class="card-title">FUNNEL</div>
-            </div>
-            <div class="card-body" style="grid-template-columns: auto 1fr;">
-                <div class="metrics-grid" style="display:flex; flex-direction:column;">
-                    <div class="metric-input">
-                        <div class="metric-label">Qualification</div>
-                        <div class="metric-value">{{ funnel.qualification }}</div>
-                    </div>
-                    <div class="metric-input">
-                        <div class="metric-label">Pain</div>
-                        <div class="metric-value">{{ funnel.pain }}</div>
-                    </div>
-                    <div class="metric-input">
-                        <div class="metric-label">Offer</div>
-                        <div class="metric-value">{{ funnel.offer }}</div>
-                    </div>
-                    <div class="metric-input">
-                        <div class="metric-label">Link</div>
-                        <div class="metric-value">{{ funnel.link }}</div>
-                    </div>
-                    <div class="metric-input">
-                        <div class="metric-label">Agenda</div>
-                        <div class="metric-value">{{ funnel.agenda }}</div>
-                    </div>
-                </div>
-                <div class="live-panel funnel-live">
-                    <div class="funnel-pcts">
-                        <div style="grid-column: span 4; margin-bottom: 16px; text-align: center;">
-                            <div class="live-stat-label" style="font-size: 11px; margin-bottom: 4px;">% Conversión (Agendas / Leads)</div>
-                            <div class="live-stat-val" style="color: var(--teal-400); font-size: 36px;">{{ funnel.conversion_leads_pct }}%</div>
-                        </div>
-                        <div>
-                            <div class="live-stat-label">Qual a Pain</div>
-                            <div class="live-stat-val">{{ funnel.qual_to_pain }}%</div>
-                        </div>
-                        <div>
-                            <div class="live-stat-label">Pain a Offer</div>
-                            <div class="live-stat-val">{{ funnel.pain_to_offer }}%</div>
-                        </div>
-                        <div>
-                            <div class="live-stat-label">Offer a Link</div>
-                            <div class="live-stat-val">{{ funnel.offer_to_link }}%</div>
-                        </div>
-                        <div>
-                            <div class="live-stat-label">Link a Agenda</div>
-                            <div class="live-stat-val">{{ funnel.link_to_agenda }}%</div>
-                        </div>
-                    </div>
-                    <div class="funnel-graphic">
-                        <div class="css-funnel">
-                            <!-- Let's calculate CSS funnel bar widths based on max = qualification -->
-                            {% set fw_max = funnel.qualification if funnel.qualification > 0 else 1 %}
-                            <div class="css-funnel-bar" style="width: 100%;">{{ funnel.qualification }}</div>
-                            <div class="css-funnel-bar"
-                                style="width: {{ (funnel.pain / fw_max * 100) if fw_max > 0 else 0 }}%; min-width: 30px;">
-                                {{ funnel.pain }}</div>
-                            <div class="css-funnel-bar"
-                                style="width: {{ (funnel.offer / fw_max * 100) if fw_max > 0 else 0 }}%; min-width: 30px;">
-                                {{ funnel.offer }}</div>
-                            <div class="css-funnel-bar"
-                                style="width: {{ (funnel.link / fw_max * 100) if fw_max > 0 else 0 }}%; min-width: 30px;">
-                                {{ funnel.link }}</div>
-                            <div class="css-funnel-bar"
-                                style="width: {{ (funnel.agenda / fw_max * 100) if fw_max > 0 else 0 }}%; min-width: 30px; background: #2dd4bf;">
-                                {{ funnel.agenda }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 4. FOLLOW UPS -->
-        <div class="card followup" style="grid-column: 2; height: fit-content;">
-            <div class="card-header">
-                <div class="icon-box" style="color: var(--rose-500)">🔄</div>
-                <div class="card-title">FOLLOW UPs (Funnel)</div>
-            </div>
-            <div class="card-body" style="grid-template-columns: 1fr;">
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                    <thead>
-                        <tr style="border-bottom: 1px solid var(--slate-800);">
-                            <th style="text-align: left; color: var(--slate-400); font-size: 10px; padding: 8px; text-transform: uppercase; letter-spacing: 1px;">Etapa</th>
-                            <th style="text-align: center; color: var(--slate-400); font-size: 10px; padding: 8px; text-transform: uppercase; letter-spacing: 1px;">FU</th>
-                            <th style="text-align: center; color: var(--slate-400); font-size: 10px; padding: 8px; text-transform: uppercase; letter-spacing: 1px;">FUR</th>
-                            <th style="text-align: center; color: var(--slate-400); font-size: 10px; padding: 8px; text-transform: uppercase; letter-spacing: 1px;">% RES</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% set stages_data = [
-                            {'name': 'Qualification', 'fu': follow_up.qualification, 'fur': follow_up.qualification_fur},
-                            {'name': 'Pain', 'fu': follow_up.pain, 'fur': follow_up.pain_fur},
-                            {'name': 'Offer', 'fu': follow_up.offer, 'fur': follow_up.offer_fur},
-                            {'name': 'Agenda', 'fu': follow_up.agenda, 'fur': follow_up.agenda_fur}
-                        ] %}
-                        {% for stage in stages_data %}
-                        <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.2);">
-                            <td style="padding: 14px 8px; font-weight: 700; font-size: 14px; color: var(--slate-200);">{{ stage.name }}</td>
-                            <td style="padding: 14px 8px; text-align: center; font-weight: 800; font-size: 18px; color: white;">{{ stage.fu }}</td>
-                            <td style="padding: 14px 8px; text-align: center; font-weight: 800; font-size: 18px; color: var(--rose-400);">{{ stage.fur }}</td>
-                            <td style="padding: 14px 8px; text-align: center; font-weight: 700; font-size: 14px; color: var(--slate-400);">
-                                {{ (stage.fur / stage.fu * 100)|round|int if stage.fu > 0 else 0 }}%
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                <div class="live-panel center-stat">
-                    <div class="live-stat-label">Tasa de Respuesta Total</div>
-                    <div class="live-stat-val rose">{{ follow_up.response_pct }}%</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 5. QUALITATIVE -->
-        {% if qualitative %}
-        <div class="qualitative-section">
-            <div class="card-header border-none" style="margin-bottom:16px;">
-                <div class="icon-box" style="color: var(--teal-400)">⭐</div>
-                <div class="card-title qualitative">VICTORIAS Y FEEDBACK DEL DÍA</div>
-            </div>
-
-            <div class="qa-list">
-                {% for item in qualitative %}
-                <div class="qa-item">
-                    <div class="qa-q">{{ item.question }}</div>
-                    <div class="qa-a">"{{ item.answer }}"</div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
     </div>
+
+    <!-- UNIFIED FUNNEL TABLE -->
+    <div class="card funnel" style="margin-bottom: 32px; border-top-color: var(--indigo-600);">
+        <div class="card-header">
+            <div class="icon-box" style="color: var(--indigo-500)">⏬</div>
+            <div class="card-title">EMBUDO UNIFICADO (Leads • Seguimientos • Aperturas)</div>
+        </div>
+
+        <table style="width: 100%; border-collapse: separate; border-spacing: 0 12px;">
+            <thead>
+                <tr>
+                    <th style="text-align: left; color: var(--slate-500); font-size: 10px; padding: 0 20px; text-transform: uppercase; letter-spacing: 2px;">Etapa</th>
+                    <th style="text-align: center; color: var(--slate-500); font-size: 10px; padding: 0 20px; text-transform: uppercase; letter-spacing: 2px;">Leads Reales</th>
+                    <th style="text-align: center; color: var(--slate-500); font-size: 10px; padding: 0 20px; text-transform: uppercase; letter-spacing: 2px;">Seguimientos (I / R)</th>
+                    <th style="text-align: center; color: var(--slate-500); font-size: 10px; padding: 0 20px; text-transform: uppercase; letter-spacing: 2px;">Aperturas (I / R)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- QUALIFICATION -->
+                <tr style="background: rgba(30, 41, 59, 0.4);">
+                    <td style="padding: 20px; border-radius: 16px 0 0 16px; border: 1px solid var(--slate-800); border-right: none;">
+                        <div style="font-weight: 900; color: white; font-style: italic; text-transform: uppercase; font-size: 14px;">Cualificación</div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
+                        <div style="font-size: 24px; font-weight: 900; color: var(--indigo-400);">{{ funnel.qualification }}</div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
+                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ follow_up.qualification }} <span style="color: var(--rose-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--rose-400);">{{ follow_up.qualification_fur }}</span></div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border: 1px solid var(--slate-800); border-left: none; border-radius: 0 16px 16px 0;">
+                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ openings.qualification.submitted }} <span style="color: var(--fuchsia-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--fuchsia-400);">{{ openings.qualification.responded }}</span></div>
+                    </td>
+                </tr>
+
+                <!-- PAIN -->
+                <tr style="background: rgba(30, 41, 59, 0.4);">
+                    <td style="padding: 20px; border-radius: 16px 0 0 16px; border: 1px solid var(--slate-800); border-right: none;">
+                        <div style="font-weight: 900; color: white; font-style: italic; text-transform: uppercase; font-size: 14px;">Dolor</div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
+                        <div style="font-size: 24px; font-weight: 900; color: var(--indigo-400);">{{ funnel.pain }}</div>
+                        <div style="font-size: 10px; color: var(--slate-500); font-weight: 800;">{{ funnel.qual_to_pain }}% CV</div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
+                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ follow_up.pain }} <span style="color: var(--rose-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--rose-400);">{{ follow_up.pain_fur }}</span></div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border: 1px solid var(--slate-800); border-left: none; border-radius: 0 16px 16px 0;">
+                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ openings.pain.submitted }} <span style="color: var(--fuchsia-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--fuchsia-400);">{{ openings.pain.responded }}</span></div>
+                    </td>
+                </tr>
+
+                <!-- OFFER -->
+                <tr style="background: rgba(30, 41, 59, 0.4);">
+                    <td style="padding: 20px; border-radius: 16px 0 0 16px; border: 1px solid var(--slate-800); border-right: none;">
+                        <div style="font-weight: 900; color: white; font-style: italic; text-transform: uppercase; font-size: 14px;">Oferta</div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
+                        <div style="font-size: 24px; font-weight: 900; color: var(--indigo-400);">{{ funnel.offer }}</div>
+                        <div style="font-size: 10px; color: var(--slate-500); font-weight: 800;">{{ funnel.pain_to_offer }}% CV</div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
+                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ follow_up.offer }} <span style="color: var(--rose-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--rose-400);">{{ follow_up.offer_fur }}</span></div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border: 1px solid var(--slate-800); border-left: none; border-radius: 0 16px 16px 0; background: rgba(0,0,0,0.2);">
+                        <div style="height: 2px; width: 30px; background: var(--slate-800); margin: 0 auto;"></div>
+                    </td>
+                </tr>
+
+                <!-- LINK -->
+                <tr style="background: rgba(30, 41, 59, 0.4);">
+                    <td style="padding: 20px; border-radius: 16px 0 0 16px; border: 1px solid var(--slate-800); border-right: none;">
+                        <div style="font-weight: 900; color: white; font-style: italic; text-transform: uppercase; font-size: 14px;">Link</div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
+                        <div style="font-size: 24px; font-weight: 900; color: var(--indigo-400);">{{ funnel.link }}</div>
+                        <div style="font-size: 10px; color: var(--slate-500); font-weight: 800;">{{ funnel.offer_to_link }}% CV</div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
+                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ follow_up.link }} <span style="color: var(--rose-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--rose-400);">{{ follow_up.link_fur }}</span></div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border: 1px solid var(--slate-800); border-left: none; border-radius: 0 16px 16px 0; background: rgba(0,0,0,0.2);">
+                        <div style="height: 2px; width: 30px; background: var(--slate-800); margin: 0 auto;"></div>
+                    </td>
+                </tr>
+
+                <!-- AGENDA -->
+                <tr style="background: rgba(16, 185, 129, 0.05);">
+                    <td style="padding: 20px; border-radius: 16px 0 0 16px; border: 1px solid var(--teal-600); border-right: none;">
+                        <div style="font-weight: 900; color: var(--teal-400); font-style: italic; text-transform: uppercase; font-size: 14px;">Agenda</div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--teal-600); border-bottom: 1px solid var(--teal-600);">
+                        <div style="font-size: 24px; font-weight: 900; color: var(--teal-400);">{{ funnel.agenda }}</div>
+                        <div style="font-size: 10px; color: var(--teal-500); font-weight: 800;">{{ funnel.link_to_agenda }}% CV</div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--teal-600); border-bottom: 1px solid var(--teal-600);">
+                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ follow_up.agenda }} <span style="color: var(--rose-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--rose-400);">{{ follow_up.agenda_fur }}</span></div>
+                    </td>
+                    <td style="padding: 20px; text-align: center; border: 1px solid var(--teal-600); border-left: none; border-radius: 0 16px 16px 0; background: rgba(0,0,0,0.2);">
+                        <div style="height: 2px; width: 30px; background: var(--slate-800); margin: 0 auto;"></div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- RATES SUMMARY -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px;">
+            <div class="live-panel center-stat">
+                <div class="live-stat-label">Tasa de Respuesta FU Total</div>
+                <div class="live-stat-val rose">{{ follow_up.response_pct }}%</div>
+            </div>
+            <div class="live-panel center-stat">
+                <div class="live-stat-label">Conversión Agenda / Leads</div>
+                <div class="live-stat-val" style="color: var(--teal-400)">{{ funnel.conversion_leads_pct }}%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUALITATIVE -->
+    {% if qualitative %}
+    <div class="qualitative-section">
+        <div class="card-header border-none" style="margin-bottom:16px;">
+            <div class="icon-box" style="color: var(--teal-400)">⭐</div>
+            <div class="card-title qualitative">VICTORIAS Y FEEDBACK DEL DÍA</div>
+        </div>
+
+        <div class="qa-list">
+            {% for item in qualitative %}
+            <div class="qa-item">
+                <div class="qa-q">{{ item.question }}</div>
+                <div class="qa-a">"{{ item.answer }}"</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <div class="footer">
         NEUROPS PERFORMANCE SYSTEM • REPORTE GENERADO EL {{ date_str }}
