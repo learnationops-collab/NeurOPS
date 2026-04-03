@@ -209,7 +209,7 @@ class ImageService:
                     break
 
         hti = Html2Image(
-            size=(1200, 1500), 
+            size=(1200, 1800), 
             custom_flags=custom_flags,
             browser_executable=browser_executable
         ) 

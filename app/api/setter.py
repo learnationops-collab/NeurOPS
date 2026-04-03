@@ -90,6 +90,39 @@ def _trigger_setter_report_webhook(stat):
         p_op_sub = stat.pain_opening_submitted or 0
         p_op_res = stat.pain_opening_responded or 0
 
+        # 2b. Calculate 7-day Averages
+        last_reports = SetterDailyStats.query.filter(
+            SetterDailyStats.setter_id == stat.setter_id,
+            SetterDailyStats.date <= stat.date
+        ).order_by(SetterDailyStats.date.desc()).limit(7).all()
+        
+        avg_metrics = {
+            "entrantes": 0,
+            "openings": 0,
+            "agendas": 0,
+            "conversion": 0
+        }
+        
+        if last_reports:
+            r_count = len(last_reports)
+            t_entrantes = sum(r.inbox_entrantes or 0 for r in last_reports)
+            # Sum granular openings if available, else legacy
+            t_openings = sum(
+                ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)) 
+                if ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)) > 0 
+                else (r.opening_submitted or 0) 
+                for r in last_reports
+            )
+            t_agendas = sum(r.funnel_agenda or 0 for r in last_reports)
+            t_net_leads = sum(r.inbox_leads or 0 for r in last_reports)
+            
+            avg_metrics = {
+                "entrantes": round(t_entrantes / r_count, 1),
+                "openings": round(t_openings / r_count, 1),
+                "agendas": round(t_agendas / r_count, 1),
+                "conversion": safe_percent(t_agendas, t_net_leads)
+            }
+
         # 3. Prepare Stats Structure for the new template layout
         img_data = {
             "setter_name": setter_name,
@@ -143,6 +176,7 @@ def _trigger_setter_report_webhook(stat):
                 "response_pct": safe_percent(fur_qual + fur_pain + fur_offer + fur_link + fur_agenda, fu_qual + fu_pain + fu_offer + fu_link + fu_agenda)
             },
             
+            "averages": avg_metrics,
             "qualitative": qualitative_callouts
         }
 
