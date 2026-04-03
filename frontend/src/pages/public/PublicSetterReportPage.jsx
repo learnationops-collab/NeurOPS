@@ -221,9 +221,12 @@ const PublicSetterReportPage = () => {
 
         const os = parseInt(formData.opening_submitted) || 0;
         const or = parseInt(formData.opening_responded) || 0;
+        const fq = parseInt(formData.funnel_qualification) || 0;
+        const fp = parseInt(formData.funnel_pain) || 0;
         const fo = parseInt(formData.funnel_offer) || 0;
         const fl = parseInt(formData.funnel_link) || 0;
         const fa = parseInt(formData.funnel_agenda) || 0;
+
         const qfu = parseInt(formData.qualification_fu) || 0;
         const qfur = parseInt(formData.qualification_fur) || 0;
         const pfu = parseInt(formData.pain_fu) || 0;
@@ -235,6 +238,15 @@ const PublicSetterReportPage = () => {
 
         const totalFU = qfu + pfu + ofu + afu;
         const totalFUR = qfur + pfur + ofur + afur;
+
+        const qualToPain = fq > 0 ? (fp / fq) * 100 : 0;
+        const painToOffer = fp > 0 ? (fo / fp) * 100 : 0;
+        const offerToLink = fo > 0 ? (fl / fo) * 100 : 0;
+        const linkToAgenda = fl > 0 ? (fa / fl) * 100 : 0;
+
+        const openingToAgenda = os > 0 ? (fa / os) * 100 : 0;
+        const offerToAgenda = fo > 0 ? (fa / fo) * 100 : 0;
+        const openingResp = os > 0 ? (or / os) * 100 : 0;
         const followUpResp = totalFU > 0 ? (totalFUR / totalFU) * 100 : 0;
 
         const funnelData = [
@@ -248,8 +260,8 @@ const PublicSetterReportPage = () => {
         return {
             noLeadPct: noLeadPct.toFixed(1),
             inabriblesPct: inabriblesPct.toFixed(1),
-            openingToAgenda: opening.toFixed(1),
-            offerToAgenda: offer.toFixed(1),
+            openingToAgenda: openingToAgenda.toFixed(1),
+            offerToAgenda: offerToAgenda.toFixed(1),
             openingResponse: openingResp.toFixed(1),
             followUpResponse: followUpResp.toFixed(1),
             qualToPain: qualToPain.toFixed(1),
