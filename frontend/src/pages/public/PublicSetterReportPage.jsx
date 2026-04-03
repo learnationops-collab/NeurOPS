@@ -3,33 +3,41 @@ import api from '../../services/api';
 import { Loader2, Send, Calendar, ListChecks, User, ArrowLeft, Inbox, MessageSquare, Filter, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import FunnelChart from '../../components/charts/FunnelChart';
-const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly = false, isLightMode = false }) => {
+const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly = false }) => {
     const isFilled = value > 0 || value !== '';
+    const colorClasses = {
+        indigo: "text-indigo-600 focus:ring-indigo-500",
+        pink: "text-rose-500 focus:ring-rose-500",
+        fuchsia: "text-fuchsia-600 focus:ring-fuchsia-500",
+        teal: "text-teal-600 focus:ring-teal-500"
+    };
+
     return (
-        <div className="space-y-2">
-            <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isLightMode ? 'text-slate-500' : 'text-slate-400'}`}>{label}</label>
+        <div className="space-y-1.5 flex-1">
+            <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-500/80">{label}</label>
             <input
                 type="number"
                 required
                 readOnly={readOnly}
-                className={`w-full px-4 py-3 rounded-2xl outline-none focus:ring-2 focus:ring-${color}-500 transition-all font-bold 
-                    ${isLightMode
-                        ? (isFilled && !readOnly ? 'bg-white border-slate-200 text-slate-900 border shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-900 border shadow-inner')
-                        : (isFilled && !readOnly ? 'bg-slate-800 border-slate-600 text-white border' : 'bg-slate-800/50 border border-slate-700/50 text-white')
-                    }`}
+                className={`w-full px-4 py-3.5 rounded-[1.25rem] outline-none border transition-all font-black text-lg
+                    ${readOnly ? 'bg-slate-100/50 border-slate-200 text-slate-400' : 
+                      isFilled ? 'bg-white border-slate-200 text-slate-900 shadow-sm' : 'bg-slate-50/50 border-slate-200/60 text-slate-900 shadow-inner'}
+                    ${colorClasses[color] || colorClasses.indigo}
+                `}
                 value={value}
                 onChange={e => onChange(field, e.target.value)}
+                placeholder="0"
             />
         </div>
     );
 };
 
-const SectionHeader = ({ icon: Icon, title, colorClass, isLightMode = false }) => (
-    <div className="flex items-center gap-3 mb-6 border-b border-slate-800/50 pb-4">
-        <div className={`p-3 ${isLightMode ? 'bg-slate-100 text-slate-700' : 'bg-slate-800/50'} rounded-2xl`}>
-            <Icon className={colorClass} size={24} />
+const SectionHeader = ({ icon: Icon, title, colorClass }) => (
+    <div className="flex items-center gap-4 mb-8">
+        <div className={`p-3.5 bg-white shadow-sm border border-slate-100 rounded-2xl`}>
+            <Icon className={colorClass} size={22} strokeWidth={2.5} />
         </div>
-        <h2 className={`text-xl font-black italic tracking-tighter uppercase ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{title}</h2>
+        <h2 className="text-2xl font-black tracking-tight text-slate-800 uppercase italic leading-none">{title}</h2>
     </div>
 );
 
@@ -268,268 +276,284 @@ const PublicSetterReportPage = () => {
         };
     }, [formData]);
 
-    return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col items-center justify-center p-4 py-12 relative overflow-hidden">
-            {/* Background Effects */}
-            <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-900/20 to-transparent pointer-events-none" />
+    const activeSetterName = setters.find(s => s.id.toString() === formData.setter_id.toString())?.name || 'Setter';
 
-            <div className="w-full max-w-4xl z-10 space-y-8">
-                {/* Header */}
-                <div className="text-center space-y-4 mb-2">
-                    <p className="text-indigo-400 font-bold tracking-widest text-xs uppercase">NeurOPS High Performance</p>
-                    <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
-                        Reporte Diario Setter
-                    </h1>
-                </div>
+    return (
+        <div className="min-h-screen bg-[#f0f4f8] text-slate-900 flex flex-col p-4 md:p-8 lg:p-12 relative overflow-hidden font-sans">
+            {/* Ambient Background Elements */}
+            <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-200/30 blur-[120px] rounded-full" />
+            <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-teal-100/40 blur-[100px] rounded-full" />
+
+            <div className="w-full max-w-6xl mx-auto z-10 space-y-10">
+                {/* Dashboard Header */}
+                <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="space-y-1">
+                        <p className="text-teal-600 font-black tracking-[0.2em] text-[10px] uppercase ml-1">NeurOPS High Performance</p>
+                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                            Setter Dashboard <span className="text-slate-300 font-light">/</span> <span className="text-indigo-600 italic">Report</span>
+                        </h1>
+                        <p className="text-slate-500 font-medium text-lg">Welcome back, <span className="text-slate-800 font-bold">{activeSetterName}</span> 👋</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 bg-white/60 backdrop-blur-md border border-white/40 p-4 rounded-[2rem] shadow-sm">
+                        <div className="flex items-center gap-3 px-4 border-r border-slate-200">
+                            <Calendar className="text-indigo-500" size={20} />
+                            <input
+                                type="date"
+                                className="bg-transparent border-none outline-none font-bold text-slate-700 cursor-pointer"
+                                value={formData.date}
+                                onChange={e => setFormData({ ...formData, date: e.target.value })}
+                            />
+                        </div>
+                        <div className="px-4">
+                            <select
+                                className="bg-transparent border-none outline-none font-bold text-slate-700 cursor-pointer appearance-none"
+                                value={formData.setter_id}
+                                onChange={e => setFormData({ ...formData, setter_id: e.target.value })}
+                            >
+                                <option value="" disabled>Seleccionar Perfil</option>
+                                {setters.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </header>
 
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center py-32 space-y-4">
-                        <Loader2 className="animate-spin text-indigo-500" size={48} />
-                        <p className="text-slate-500 font-medium animate-pulse">Cargando módulos de reporte...</p>
+                    <div className="flex flex-col items-center justify-center py-40 space-y-4">
+                        <Loader2 className="animate-spin text-indigo-600" size={56} strokeWidth={1.5} />
+                        <p className="text-slate-400 font-bold tracking-widest uppercase text-xs animate-pulse">Initializing Interface...</p>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} className="space-y-8">
-
-                        {/* PROGRESS BAR */}
-                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4 sticky top-4 z-50">
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs font-black uppercase text-slate-400 tracking-widest">Progreso del Reporte</span>
-                                <span className="text-sm font-black text-indigo-400">{calculateProgress()}%</span>
-                            </div>
-                            <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                                <div className="bg-gradient-to-r from-indigo-500 to-fuchsia-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${calculateProgress()}%` }}></div>
-                            </div>
-                        </div>
-
-
-                        {/* 1. IDENTIFICACIÓN */}
-                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">¿Quién eres?</label>
-                                <select
-                                    required
-                                    className="w-full px-6 py-4 bg-slate-800 border border-slate-700/80 rounded-2xl text-white outline-none focus:border-indigo-500 transition-all font-bold cursor-pointer"
-                                    value={formData.setter_id}
-                                    onChange={e => setFormData({ ...formData, setter_id: e.target.value })}
-                                >
-                                    <option value="" disabled>Selecciona tu nombre</option>
-                                    {setters.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha del Informe</label>
-                                <input
-                                    type="date"
-                                    required
-                                    className="w-full px-6 py-4 bg-slate-800 border border-slate-700/80 rounded-2xl text-white outline-none focus:border-indigo-500 transition-all font-bold"
-                                    value={formData.date}
-                                    onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                />
-                            </div>
-                        </div>
-
-                        {/* 4 GRID BLOCKS */}
-                        <div className="space-y-8">
-
-                            {/* BLOCK 1: INBOX */}
-                            <div className={`${isSectionComplete(['inbox_entrantes', 'not_lead', 'inbox_inabribles']) ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl p-6 border-t-4 border-t-pink-600 transition-colors duration-500`}>
-                                <SectionHeader icon={Inbox} title="INBOX" colorClass="text-pink-500" isLightMode={isSectionComplete(['inbox_entrantes', 'not_lead', 'inbox_inabribles'])} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <MetricInput label="Entrantes" field="inbox_entrantes" color="pink" value={formData.inbox_entrantes} onChange={handleFieldChange} isLightMode={isSectionComplete(['inbox_entrantes', 'not_lead', 'inbox_inabribles'])} />
-                                        <MetricInput label="No Lead" field="not_lead" color="pink" value={formData.not_lead} onChange={handleFieldChange} isLightMode={isSectionComplete(['inbox_entrantes', 'not_lead', 'inbox_inabribles'])} />
-                                        <MetricInput label="In-abribles" field="inbox_inabribles" color="pink" value={formData.inbox_inabribles} onChange={handleFieldChange} isLightMode={isSectionComplete(['inbox_entrantes', 'not_lead', 'inbox_inabribles'])} />
-                                    </div>
-                                    <div className={`${isSectionComplete(['inbox_entrantes', 'not_lead', 'inbox_inabribles']) ? 'bg-white/60 text-slate-800' : 'bg-slate-800/30 text-white'} rounded-2xl p-6 flex flex-col justify-center transition-colors duration-500`}>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div className="text-center">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Leads (Auto)</p>
-                                                <p className="text-3xl font-black text-pink-500">{formData.inbox_leads}</p>
-                                            </div>
-                                            <div className="text-center border-l border-slate-700/50 pl-4">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">% No Lead</p>
-                                                <p className="text-3xl font-black">{liveMetrics.noLeadPct}%</p>
-                                            </div>
-                                            <div className="text-center border-l border-slate-700/50 pl-4">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">% Inabribles</p>
-                                                <p className="text-3xl font-black">{liveMetrics.inabriblesPct}%</p>
-                                            </div>
+                    <form onSubmit={handleSubmit} className="space-y-10">
+                        {/* HIGH LEVEL METRICS ROW */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            {[
+                                { label: 'Entrantes', value: formData.inbox_entrantes || '0', icon: Inbox, color: 'text-rose-500', bg: 'bg-rose-50' },
+                                { label: 'Agendas', value: formData.funnel_agenda || '0', icon: Calendar, color: 'text-teal-600', bg: 'bg-teal-50' },
+                                { label: 'Tasa Apertura', value: `${liveMetrics.openingResponse}%`, icon: MessageSquare, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' },
+                                { label: 'Tasa Respuesta FU', value: `${liveMetrics.followUpResponse}%`, icon: RefreshCw, color: 'text-indigo-600', bg: 'bg-indigo-50' }
+                            ].map((card, i) => (
+                                <div key={i} className="bg-white/80 backdrop-blur-lg border border-white/60 p-6 rounded-[2.5rem] shadow-sm hover:shadow-md transition-all group">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className={`p-2.5 ${card.bg} rounded-2xl group-hover:scale-110 transition-transform`}>
+                                            <card.icon className={card.color} size={20} strokeWidth={2.5} />
                                         </div>
                                     </div>
+                                    <p className="text-3xl font-black text-slate-900 tracking-tight">{card.value}</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{card.label}</p>
                                 </div>
-                            </div>
+                            ))}
+                        </div>
 
-                            {/* UNIFIED FUNNEL CONTAINER */}
-                            <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-2xl space-y-10">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-800 pb-8">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-indigo-500">
-                                            <Filter size={32} strokeWidth={2.5} />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none">Embudo Unificado</h2>
-                                            <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest text-indigo-400">Leads • Seguimientos • Aperturas</p>
-                                        </div>
+                        {/* MAIN DASHBOARD CONTENT GRID */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                            
+                            {/* LEFT COLUMN: UNIFIED FUNNEL (The "Standings" equivalent) */}
+                            <div className="lg:col-span-8 space-y-10">
+                                {/* INBOX REFINEMENT */}
+                                <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 shadow-sm">
+                                    <SectionHeader icon={Inbox} title="Inbox Analysis" colorClass="text-rose-500" />
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                                        <MetricInput label="Entrantes" field="inbox_entrantes" color="pink" value={formData.inbox_entrantes} onChange={handleFieldChange} />
+                                        <MetricInput label="No Lead" field="not_lead" color="pink" value={formData.not_lead} onChange={handleFieldChange} />
+                                        <MetricInput label="In-abribles" field="inbox_inabribles" color="pink" value={formData.inbox_inabribles} onChange={handleFieldChange} />
                                     </div>
-
-                                    <div className="flex gap-4">
-                                        <div className="px-6 py-3 bg-slate-950/50 rounded-2xl border border-slate-800 text-center flex-1 md:flex-none">
-                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tasa Apertura</p>
-                                            <p className="text-xl font-black text-fuchsia-500 italic">{liveMetrics.openingResponse}%</p>
+                                    
+                                    <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-between">
+                                        <div className="flex gap-8">
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Leads Netos</p>
+                                                <p className="text-2xl font-black text-rose-500 italic">{formData.inbox_leads}</p>
+                                            </div>
+                                            <div className="border-l border-slate-200 pl-8">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">% Lead Ratio</p>
+                                                <p className="text-2xl font-black text-slate-800 italic">{100 - liveMetrics.noLeadPct}%</p>
+                                            </div>
                                         </div>
-                                        <div className="px-6 py-3 bg-slate-950/50 rounded-2xl border border-slate-800 text-center flex-1 md:flex-none">
-                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tasa Resp. FU</p>
-                                            <p className="text-xl font-black text-rose-500 italic">{liveMetrics.followUpResponse}%</p>
+                                        <div className="h-2 w-32 bg-slate-100 rounded-full overflow-hidden">
+                                            <div className="h-full bg-rose-500" style={{ width: `${100 - liveMetrics.noLeadPct}%` }} />
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="overflow-x-auto -mx-6 md:mx-0">
-                                    <table className="w-full border-separate border-spacing-y-4 px-6 md:px-0">
-                                        <thead>
-                                            <tr className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                                                <th className="text-left pb-2 pl-4">Etapa</th>
-                                                <th className="text-center pb-2">Leads Reales</th>
-                                                <th className="text-center pb-2">Seguimientos (I / R)</th>
-                                                <th className="text-center pb-2">Aperturas (I / R)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {[
-                                                { label: 'Cualificación', id: 'qualification', hasOpening: true },
-                                                { label: 'Dolor', id: 'pain', hasOpening: true },
-                                                { label: 'Oferta', id: 'offer', hasOpening: false },
-                                                { label: 'Link', id: 'link', hasOpening: false },
-                                                { label: 'Agenda', id: 'agenda', hasOpening: false }
-                                            ].map((stage) => (
-                                                <tr key={stage.id} className="group">
-                                                    {/* ETAPA */}
-                                                    <td className="bg-slate-950/40 border border-slate-800/80 rounded-l-[1.5rem] p-5">
-                                                        <span className="text-xs font-black text-white uppercase italic group-hover:text-indigo-400 transition-colors">{stage.label}</span>
-                                                    </td>
-
-                                                    {/* LEADS */}
-                                                    <td className="bg-slate-950/40 border-y border-slate-800/80 p-5 px-6">
-                                                        <input
-                                                            type="number"
-                                                            placeholder="0"
-                                                            className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-2 text-center font-black text-indigo-400 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-800"
-                                                            value={formData[`funnel_${stage.id}`]}
-                                                            onChange={e => handleFieldChange(`funnel_${stage.id}`, e.target.value)}
-                                                        />
-                                                    </td>
-
-                                                    {/* SEGUIMIENTOS */}
-                                                    <td className="bg-slate-950/40 border-y border-slate-800/80 p-5 px-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <input
-                                                                type="number"
-                                                                placeholder="I"
-                                                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2 text-center font-black text-rose-400 focus:border-rose-500 outline-none transition-all placeholder:text-slate-800"
-                                                                value={formData[`${stage.id}_fu`]}
-                                                                onChange={e => handleFieldChange(`${stage.id}_fu`, e.target.value)}
-                                                            />
-                                                            <span className="text-slate-700 font-bold">/</span>
-                                                            <input
-                                                                type="number"
-                                                                placeholder="R"
-                                                                className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2 text-center font-black text-rose-500 focus:border-rose-500 outline-none transition-all placeholder:text-slate-800"
-                                                                value={formData[`${stage.id}_fur`]}
-                                                                onChange={e => handleFieldChange(`${stage.id}_fur`, e.target.value)}
-                                                            />
-                                                        </div>
-                                                    </td>
-
-                                                    {/* APERTURAS */}
-                                                    <td className={`bg-slate-950/40 border border-l-0 border-slate-800/80 rounded-r-[1.5rem] p-5 px-6 ${!stage.hasOpening && 'bg-slate-950/10'}`}>
-                                                        {stage.hasOpening ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <input
-                                                                    type="number"
-                                                                    placeholder="I"
-                                                                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2 text-center font-black text-fuchsia-400 focus:border-fuchsia-500 outline-none transition-all placeholder:text-slate-800"
-                                                                    value={formData[`${stage.id}_opening_submitted`]}
-                                                                    onChange={e => handleFieldChange(`${stage.id}_opening_submitted`, e.target.value)}
-                                                                />
-                                                                <span className="text-slate-700 font-bold">/</span>
-                                                                <input
-                                                                    type="number"
-                                                                    placeholder="R"
-                                                                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3 py-2 text-center font-black text-fuchsia-500 focus:border-fuchsia-500 outline-none transition-all placeholder:text-slate-800"
-                                                                    value={formData[`${stage.id}_opening_responded`]}
-                                                                    onChange={e => handleFieldChange(`${stage.id}_opening_responded`, e.target.value)}
-                                                                />
-                                                            </div>
-                                                        ) : (
-                                                            <div className="h-10 flex items-center justify-center">
-                                                                <div className="w-8 h-[2px] bg-slate-800 rounded-full" />
-                                                            </div>
-                                                        )}
-                                                    </td>
+                                {/* UNIFIED FUNNEL TABLE */}
+                                <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 shadow-sm overflow-hidden">
+                                    <SectionHeader icon={Filter} title="Unified Funnel Standings" colorClass="text-indigo-600" />
+                                    
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full border-separate border-spacing-y-2">
+                                            <thead>
+                                                <tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
+                                                    <th className="text-left pb-4 pl-4 w-[25%]">Stage</th>
+                                                    <th className="text-center pb-4">Leads</th>
+                                                    <th className="text-center pb-4">FU (I/R)</th>
+                                                    <th className="text-center pb-4">Open (I/R)</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 pt-6">
-                                    <div className="bg-slate-950/30 rounded-3xl border border-slate-800 p-8 flex flex-col justify-center">
-                                        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-8 text-center bg-slate-900/50 py-2 rounded-lg">Crecimiento del Embudo</h3>
-                                        <div className="grid grid-cols-4 gap-4 text-center">
-                                            {[
-                                                { label: 'Qual → Pain', val: liveMetrics.qualToPain },
-                                                { label: 'Pain → Off', val: liveMetrics.painToOffer },
-                                                { label: 'Off → Link', val: liveMetrics.offerToLink },
-                                                { label: 'Link → Agnd', val: liveMetrics.linkToAgenda }
-                                            ].map(m => (
-                                                <div key={m.label} className="space-y-1">
-                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-tighter truncate">{m.label}</p>
-                                                    <p className="text-base font-black text-indigo-400 italic">{m.val}%</p>
-                                                </div>
-                                            ))}
-                                        </div>
+                                            </thead>
+                                            <tbody>
+                                                {[
+                                                    { label: 'Cualificación', id: 'qualification', hasOpening: true },
+                                                    { label: 'Dolor', id: 'pain', hasOpening: true },
+                                                    { label: 'Oferta', id: 'offer', hasOpening: false },
+                                                    { label: 'Link', id: 'link', hasOpening: false },
+                                                    { label: 'Agenda', id: 'agenda', hasOpening: false }
+                                                ].map((stage, idx) => (
+                                                    <tr key={stage.id} className="group hover:bg-white/50 transition-colors rounded-2xl">
+                                                        <td className="p-4 bg-slate-50/50 rounded-l-2xl border-y border-l border-slate-100">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-black font-mono">{idx + 1}</span>
+                                                                <span className="text-sm font-black text-slate-800 uppercase italic">{stage.label}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-4 border-y border-slate-100 text-center">
+                                                            <input
+                                                                type="number"
+                                                                className="w-16 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-center font-black text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                                                                value={formData[`funnel_${stage.id}`]}
+                                                                onChange={e => handleFieldChange(`funnel_${stage.id}`, e.target.value)}
+                                                                placeholder="0"
+                                                            />
+                                                        </td>
+                                                        <td className="p-4 border-y border-slate-100 text-center">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    className="w-14 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-center font-black text-rose-500 outline-none shadow-sm"
+                                                                    value={formData[`${stage.id}_fu`]}
+                                                                    onChange={e => handleFieldChange(`${stage.id}_fu`, e.target.value)}
+                                                                    placeholder="I"
+                                                                />
+                                                                <span className="text-slate-300">/</span>
+                                                                <input
+                                                                    type="number"
+                                                                    className="w-14 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-center font-black text-rose-600 outline-none shadow-sm"
+                                                                    value={formData[`${stage.id}_fur`]}
+                                                                    onChange={e => handleFieldChange(`${stage.id}_fur`, e.target.value)}
+                                                                    placeholder="R"
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-4 border-y border-r border-slate-100 rounded-r-2xl text-center">
+                                                            {stage.hasOpening ? (
+                                                                <div className="flex items-center justify-center gap-2">
+                                                                    <input
+                                                                        type="number"
+                                                                        className="w-14 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-center font-black text-fuchsia-500 outline-none shadow-sm"
+                                                                        value={formData[`${stage.id}_opening_submitted`]}
+                                                                        onChange={e => handleFieldChange(`${stage.id}_opening_submitted`, e.target.value)}
+                                                                        placeholder="I"
+                                                                    />
+                                                                    <span className="text-slate-300">/</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        className="w-14 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-center font-black text-fuchsia-600 outline-none shadow-sm"
+                                                                        value={formData[`${stage.id}_opening_responded`]}
+                                                                        onChange={e => handleFieldChange(`${stage.id}_opening_responded`, e.target.value)}
+                                                                        placeholder="R"
+                                                                    />
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-slate-200 font-black">—</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div className="bg-slate-950/30 rounded-3xl border border-slate-800 p-8 flex items-center justify-center min-h-[300px]">
+                                </div>
+                            </div>
+
+                            {/* RIGHT COLUMN: VISUALS & QUALITATIVE */}
+                            <div className="lg:col-span-4 space-y-10">
+                                {/* FUNNEL CHART PREVIEW */}
+                                <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center justify-center">
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2 w-full text-center">Conversion Graphics</h3>
+                                    <div className="w-full aspect-square max-h-[300px]">
                                         <FunnelChart data={liveMetrics.funnelData} />
                                     </div>
+                                    <div className="mt-6 grid grid-cols-2 gap-4 w-full">
+                                        <div className="bg-slate-50/80 p-4 rounded-3xl text-center border border-slate-100">
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mb-1">Qual to Pain</p>
+                                            <p className="text-xl font-black text-indigo-600">{liveMetrics.qualToPain}%</p>
+                                        </div>
+                                        <div className="bg-slate-50/80 p-4 rounded-3xl text-center border border-slate-100">
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mb-1">Link to Agnd</p>
+                                            <p className="text-xl font-black text-teal-600">{liveMetrics.linkToAgenda}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* DON'T FORGET PANEL */}
+                                <div className="bg-teal-600 text-white rounded-[2.5rem] p-8 shadow-lg shadow-teal-600/20 relative overflow-hidden group">
+                                    <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-white/10 rounded-full group-hover:scale-110 transition-transform duration-700" />
+                                    <h4 className="text-2xl font-black italic uppercase leading-tight mb-2">Setup report<br />for next day</h4>
+                                    <p className="text-teal-100 text-xs font-medium mb-6">Completing your data helps us scale your results faster.</p>
+                                    <div className="bg-white/20 backdrop-blur-md rounded-full py-3 px-6 text-center font-black text-[10px] uppercase tracking-widest border border-white/20">
+                                        Performance Focused
+                                    </div>
+                                </div>
+
+                                {/* SUBMIT PROGRESS CARD */}
+                                <div className="bg-white/90 backdrop-blur-xl border border-white rounded-[2.5rem] p-8 shadow-sm">
+                                    <div className="flex justify-between items-end mb-4">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1 italic">Submit Status</p>
+                                            <p className="text-4xl font-black text-slate-900">{calculateProgress()}%</p>
+                                        </div>
+                                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                                            <Send className="text-indigo-600" size={20} strokeWidth={2.5} />
+                                        </div>
+                                    </div>
+                                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-8">
+                                        <div className="h-full bg-indigo-600 transition-all duration-700 shadow-[0_0_12px_rgba(79,70,229,0.4)]" style={{ width: `${calculateProgress()}%` }} />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={submitting || !formData.setter_id}
+                                        className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white py-5 rounded-[1.5rem] font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                                    >
+                                        {submitting ? <Loader2 className="animate-spin" size={18} /> : null}
+                                        {submitting ? 'Sending Data...' : 'Submit Report'}
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* QUALITATIVE DATA */}
-                        <div className={`${isSectionComplete(questions.map(q => q.id.toString()), true) ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl p-6 md:p-8 border-t-4 border-t-teal-600 transition-colors duration-500`}>
-                            <SectionHeader icon={ListChecks} title="Victorias y Feedback del Día" colorClass="text-teal-400" isLightMode={isSectionComplete(questions.map(q => q.id.toString()), true)} />
-                            <div className="space-y-6">
+                        {/* BOTTOM SECTION: QUALITATIVE FEEDBACK */}
+                        <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 md:p-12 shadow-sm border-t-8 border-t-teal-600">
+                            <SectionHeader icon={ListChecks} title="Victorias y Feedback del Día" colorClass="text-teal-600" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                 {questions.map(q => {
                                     const ansVal = formData.answers.find(a => a.question_id === q.id)?.answer || '';
                                     const isFilled = ansVal.trim() !== '';
-                                    const isLightMode = isSectionComplete(questions.map(qa => qa.id.toString()), true);
                                     return (
-                                        <div key={q.id} className="space-y-2">
-                                            <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isLightMode ? 'text-slate-500' : 'text-slate-400'}`}>{q.text}</label>
+                                        <div key={q.id} className="space-y-3 group">
+                                            <label className={`text-[11px] font-black uppercase tracking-widest ml-1 transition-colors ${isFilled ? 'text-teal-600' : 'text-slate-400'}`}>
+                                                {q.text}
+                                            </label>
                                             {q.type === 'long_text' ? (
                                                 <textarea
-                                                    className={`w-full px-6 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium min-h-[100px] border
-                                                        ${isLightMode
-                                                            ? (isFilled ? 'bg-white border-slate-200 text-slate-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-900 shadow-inner')
-                                                            : (isFilled ? 'bg-slate-800 border-slate-600 text-white' : 'bg-slate-800/50 border-slate-700/50 text-white')
-                                                        }`}
+                                                    className={`w-full px-6 py-5 rounded-[1.75rem] outline-none transition-all font-medium min-h-[140px] border leading-relaxed
+                                                        ${isFilled ? 'bg-white border-teal-100 text-slate-800 shadow-sm' : 'bg-slate-50/50 border-slate-200/60 text-slate-500 shadow-inner'}
+                                                        focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5
+                                                    `}
                                                     value={ansVal}
                                                     onChange={e => handleAnswerChange(q.id, e.target.value)}
+                                                    placeholder="Escribe aquí tu respuesta..."
                                                 />
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    className={`w-full px-6 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold border
-                                                        ${isLightMode
-                                                            ? (isFilled ? 'bg-white border-slate-200 text-slate-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-900 shadow-inner')
-                                                            : (isFilled ? 'bg-slate-800 border-slate-600 text-white' : 'bg-slate-800/50 border-slate-700/50 text-white')
-                                                        }`}
+                                                    className={`w-full px-6 py-5 rounded-[1.75rem] outline-none transition-all font-bold border
+                                                        ${isFilled ? 'bg-white border-teal-100 text-slate-800 shadow-sm' : 'bg-slate-50/50 border-slate-200/60 text-slate-500 shadow-inner'}
+                                                        focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5
+                                                    `}
                                                     value={ansVal}
                                                     onChange={e => handleAnswerChange(q.id, e.target.value)}
+                                                    placeholder="Respuesta corta..."
                                                 />
                                             )}
                                         </div>
@@ -537,26 +561,19 @@ const PublicSetterReportPage = () => {
                                 })}
                             </div>
                         </div>
-
-
-                        <div className="pt-4">
-                            <button
-                                type="submit"
-                                disabled={submitting || !formData.setter_id}
-                                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-6 rounded-3xl font-black uppercase text-base tracking-[0.2em] transition-all shadow-2xl shadow-indigo-600/30 flex items-center justify-center gap-3 active:scale-[0.98]"
-                            >
-                                {submitting ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}
-                                {submitting ? 'Procesando Envío...' : 'ENVIAR REPORTE AL SISTEMA'}
-                            </button>
-                        </div>
                     </form>
                 )}
 
-                <div className="text-center pt-8">
-                    <Link to="/login" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-300 font-medium text-sm transition-colors group">
-                        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Volver al Inicio de Sesión
-                    </Link>
-                </div>
+                <footer className="flex flex-col md:flex-row justify-between items-center py-10 text-slate-400 font-medium text-xs gap-4 border-t border-slate-200/60">
+                    <div className="flex items-center gap-6">
+                        <Link to="/login" className="hover:text-indigo-600 transition-colors uppercase tracking-[0.1em] font-black">Admin Access</Link>
+                        <span className="text-slate-200">|</span>
+                        <p>© 2026 NeurOPS PERFORMANCE SYSTEM</p>
+                    </div>
+                    <div className="flex items-center gap-2 italic uppercase font-black text-slate-300">
+                        Design Focused • Scalable Results
+                    </div>
+                </footer>
             </div>
         </div>
     );

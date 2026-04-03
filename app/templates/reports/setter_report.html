@@ -5,34 +5,18 @@
     <meta charset="UTF-8">
     <style>
         :root {
-            --slate-950: #020617;
-            --slate-900: #0f172a;
-            --slate-800: #1e293b;
-            --slate-700: #334155;
-            --slate-600: #475569;
-            --slate-500: #64748b;
-            --slate-400: #94a3b8;
-            --slate-300: #cbd5e1;
-            --slate-50: #f8fafc;
-
-            --pink-600: #db2777;
-            --pink-500: #ec4899;
-            --pink-400: #f472b6;
-
-            --fuchsia-600: #c026d3;
-            --fuchsia-500: #d946ef;
-            --fuchsia-400: #e879f9;
-
-            --indigo-600: #4f46e5;
-            --indigo-500: #6366f1;
-
-            --rose-600: #e11d48;
-            --rose-500: #f43f5e;
-            --rose-400: #fb7185;
-
-            --teal-600: #0d9488;
-            --teal-500: #14b8a6;
-            --teal-400: #2dd4bf;
+            --bg-main: #f0f4f8;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --border-color: rgba(255, 255, 255, 0.5);
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --text-light: #94a3b8;
+            
+            --indigo: #6366f1;
+            --teal: #0d9488;
+            --rose: #f43f5e;
+            --fuchsia: #d946ef;
+            --slate: #475569;
         }
 
         * {
@@ -43,20 +27,27 @@
         }
 
         body {
-            background-color: var(--slate-950);
-            color: var(--slate-50);
-            padding: 40px;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 50px;
             width: 1200px;
             min-height: 100vh;
+            position: relative;
+            overflow: hidden;
         }
 
-        /* Ocultar scrollbars que pueden aparecer en el renderer html2image */
-        ::-webkit-scrollbar {
-            display: none;
+        /* Ambient Orbs */
+        .orb {
+            position: absolute;
+            z-index: -1;
+            border-radius: 50%;
+            filter: blur(100px);
         }
-        html {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        .orb-1 { top: -100px; right: -100px; width: 500px; height: 500px; background: rgba(99, 102, 241, 0.15); }
+        .orb-2 { bottom: -50px; left: -50px; width: 400px; height: 400px; background: rgba(13, 148, 136, 0.15); }
+
+        .dashboard-container {
+            width: 100%;
         }
 
         .header {
@@ -64,531 +55,505 @@
             justify-content: space-between;
             align-items: flex-end;
             margin-bottom: 40px;
-            border-bottom: 2px solid var(--slate-800);
-            padding-bottom: 20px;
         }
 
-        .header-left .logo-text {
-            font-size: 14px;
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .logo-text {
+            font-size: 11px;
             font-weight: 900;
-            color: var(--indigo-500);
-            letter-spacing: 2px;
+            color: var(--teal);
+            letter-spacing: 3px;
             text-transform: uppercase;
-            margin-bottom: 8px;
+        }
+
+        .setter-dashboard-title {
+            font-size: 44px;
+            font-weight: 900;
+            color: var(--text-main);
+            letter-spacing: -1.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .setter-name {
-            font-size: 48px;
-            font-weight: 900;
-            margin: 0;
-            background: linear-gradient(to right, #f472b6, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--indigo);
+            font-style: italic;
         }
 
         .date-str {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 800;
-            color: var(--slate-400);
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.4);
+            padding: 10px 24px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
-        /* Card grid */
-        .cards-grid {
+        /* Stats Grid */
+        .stats-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 36px;
+            padding: 24px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .stat-val {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            font-weight: 900;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
             gap: 32px;
             margin-bottom: 32px;
         }
 
-        .card {
-            background-color: var(--slate-900);
-            border: 1px solid var(--slate-800);
-            border-radius: 24px;
-            padding: 24px;
-            border-top-style: solid;
-            border-top-width: 4px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            display: flex;
-            flex-direction: column;
+        .dashboard-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 40px;
+            padding: 32px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
-        .card.inbox {
-            border-top-color: var(--pink-600);
-        }
-
-        .card.opening {
-            border-top-color: var(--fuchsia-600);
-        }
-
-        .card.funnel {
-            border-top-color: var(--indigo-600);
-        }
-
-        .card.followup {
-            border-top-color: var(--rose-600);
-        }
-
-        .card.qualitative {
-            border-top-color: var(--teal-600);
-        }
-
-        .card-header {
+        .panel-header {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 24px;
-            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
-            padding-bottom: 16px;
-        }
-
-        .icon-box {
-            padding: 10px;
-            background: rgba(30, 41, 59, 0.5);
-            border-radius: 14px;
-            font-size: 20px;
-            line-height: 1;
-        }
-
-        .card-title {
-            font-size: 20px;
-            font-weight: 900;
-            color: white;
-            font-style: italic;
-            letter-spacing: -0.5px;
-        }
-
-        /* Specific colors */
-        .inbox .card-title {
-            color: var(--pink-500);
-        }
-
-        .opening .card-title {
-            color: var(--fuchsia-500);
-        }
-
-        .funnel .card-title {
-            color: var(--indigo-500);
-        }
-
-        .followup .card-title {
-            color: var(--rose-500);
-        }
-
-        .qualitative .card-title {
-            color: var(--teal-400);
-        }
-
-        .card-body {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            flex: 1;
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
             gap: 16px;
-            align-content: start;
+            margin-bottom: 32px;
         }
 
-        .metric-input {
-            margin-bottom: 8px;
-        }
-
-        .metric-label {
-            font-size: 11px;
-            font-weight: 900;
-            color: var(--slate-400);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-            display: block;
-        }
-
-        .metric-value {
-            width: 100%;
-            padding: 12px 16px;
-            background: rgba(30, 41, 59, 0.5);
-            border: 1px solid rgba(51, 65, 85, 0.5);
+        .panel-icon {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border: 1px solid #f1f5f9;
             border-radius: 16px;
-            color: white;
-            font-weight: 700;
-            font-size: 18px;
-            line-height: 1;
-        }
-
-        .inbox .metric-value {
-            background: var(--slate-800);
-            border-color: var(--slate-600);
-        }
-
-        .opening .metric-value {
-            background: var(--slate-800);
-            border-color: var(--slate-600);
-        }
-
-        .funnel .metric-value {
-            background: var(--slate-800);
-            border-color: var(--slate-600);
-        }
-
-        .followup .metric-value {
-            background: var(--slate-800);
-            border-color: var(--slate-600);
-        }
-
-        .live-panel {
-            background: rgba(30, 41, 59, 0.3);
-            border-radius: 16px;
-            padding: 24px;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            font-size: 22px;
         }
 
-        /* Live Panel variations */
-        /* Inbox live panel has 3 columns */
-        .live-panel.inbox-live {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-            padding: 20px 10px;
+        .panel-title {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--text-main);
+            text-transform: uppercase;
+            font-style: italic;
         }
 
-        .live-stat {
+        /* Standings Table */
+        .standings-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+
+        .standings-table th {
             text-align: center;
-            border-left: 1px solid rgba(51, 65, 85, 0.5);
-            padding-left: 8px;
+            font-size: 9px;
+            font-weight: 900;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding-bottom: 12px;
+            font-style: italic;
         }
 
-        .live-stat:first-child {
-            border-left: none;
-            padding-left: 0;
-        }
+        .standings-table th:first-child { text-align: left; padding-left: 16px; }
 
-        .live-stat-label {
+        .row-idx {
+            width: 24px;
+            height: 24px;
+            background: #eff6ff;
+            color: #2563eb;
             font-size: 10px;
             font-weight: 900;
-            color: var(--slate-500);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
-        }
-
-        .live-stat-val {
-            font-size: 28px;
-            font-weight: 900;
-            color: white;
-        }
-
-        .live-stat-val.pink {
-            color: var(--pink-400);
-        }
-
-        /* Opening/Followups are big center stats */
-        .live-panel.center-stat {
-            align-items: center;
-        }
-
-        .live-panel.center-stat .live-stat-label {
-            margin-bottom: 8px;
-        }
-
-        .live-panel.center-stat .live-stat-val {
-            font-size: 48px;
-        }
-
-        .live-stat-val.fuchsia {
-            color: var(--fuchsia-400);
-        }
-
-        .live-stat-val.rose {
-            color: var(--rose-400);
-        }
-
-        /* Funnel chart and top percentages */
-        .live-panel.funnel-live {
-            justify-content: flex-start;
-            padding: 16px;
-        }
-
-        .funnel-pcts {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            text-align: center;
-            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
-            padding-bottom: 16px;
-            margin-bottom: 16px;
-        }
-
-        .funnel-pcts .live-stat-label {
-            font-size: 9px;
-            margin-bottom: 4px;
-        }
-
-        .funnel-pcts .live-stat-val {
-            font-size: 14px;
-            color: white;
-        }
-
-        .funnel-graphic {
-            flex: 1;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        /* A simple CSS funnel graphic since we can't render Recharts here without JS waiting */
-        .css-funnel {
-            width: 100%;
-            height: 180px;
+        .stage-table-row td {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 20px 16px;
+            text-align: center;
+            border-top: 1px solid #f1f5f9;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .stage-table-row td:first-child {
+            border-left: 1px solid #f1f5f9;
+            border-radius: 16px 0 0 16px;
+            text-align: left;
+        }
+
+        .stage-table-row td:last-child {
+            border-right: 1px solid #f1f5f9;
+            border-radius: 0 16px 16px 0;
+        }
+
+        .stage-name {
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--text-main);
+            text-transform: uppercase;
+            font-style: italic;
+        }
+
+        .stage-val-main {
+            font-size: 20px;
+            font-weight: 900;
+        }
+
+        .val-indigo { color: var(--indigo); }
+        .val-rose { color: var(--rose); }
+        .val-fuchsia { color: var(--fuchsia); }
+
+        .sep { color: #cbd5e1; margin: 0 4px; font-weight: 500; }
+
+        /* Graphics Panel */
+        .graphics-panel {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            align-items: center;
-        }
-
-        .css-funnel-bar {
-            background: linear-gradient(90deg, #4f46e5 0%, #818cf8 100%);
-            height: 32px;
-            border-radius: 4px;
-            color: white;
-            font-size: 12px;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Qualitative */
-        .qualitative-section {
-            grid-column: span 2;
-            background-color: var(--slate-900);
-            border: 1px solid var(--slate-800);
-            border-radius: 24px;
-            padding: 32px;
-            border-top: 4px solid var(--teal-600);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-        }
-
-        .qa-list {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
             gap: 24px;
         }
 
-        .qa-item {
-            margin-bottom: 16px;
+        .conversion-card {
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            border-radius: 24px;
+            padding: 24px;
+            text-align: center;
         }
 
-        .qa-q {
-            font-size: 12px;
+        .conv-label {
+            font-size: 9px;
             font-weight: 900;
-            color: var(--slate-400);
+            color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 8px;
-            margin-left: 4px;
         }
 
-        .qa-a {
-            background: var(--slate-800);
-            border: 1px solid var(--slate-600);
-            border-radius: 16px;
-            padding: 16px 20px;
-            font-size: 15px;
-            font-weight: 500;
+        .conv-val {
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--indigo);
+        }
+
+        .promo-block {
+            background: var(--teal);
+            border-radius: 30px;
+            padding: 30px;
             color: white;
-            line-height: 1.5;
-            min-height: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .promo-title { font-size: 24px; font-weight: 900; margin-bottom: 12px; font-style: italic; line-height: 1.1; }
+        .promo-text { font-size: 12px; opacity: 0.8; margin-bottom: 0; }
+
+        /* Feedback Section */
+        .feedback-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 40px;
+            padding: 40px;
+            border-top: 8px solid var(--teal);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+        }
+
+        .qa-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+        }
+
+        .qa-card {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .qa-label {
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--teal);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .qa-content {
+            background: white;
+            border: 1px solid #f1f5f9;
+            border-radius: 24px;
+            padding: 24px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-main);
+            min-height: 100px;
+            font-weight: 500;
         }
 
         .footer {
-            text-align: center;
-            margin-top: 40px;
-            font-size: 12px;
-            font-weight: 800;
-            color: var(--slate-600);
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-light);
+            font-size: 11px;
+            font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 4px;
+            letter-spacing: 2px;
         }
     </style>
 </head>
 
 <body>
-    <div class="header">
-        <div class="header-left">
-            <div class="logo-text">NeurOPS High Performance System</div>
-            <h1 class="setter-name">{{ setter_name }}</h1>
-        </div>
-        <div class="date-str">{{ date_str }}</div>
-    </div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
 
-    <!-- INBOX SUMMARY -->
-    <div class="card inbox" style="margin-bottom: 32px;">
-        <div class="card-header" style="margin-bottom: 20px; border: none; padding: 0;">
-            <div class="icon-box" style="color: var(--pink-500)">📥</div>
-            <div class="card-title">INBOX SUMMARY</div>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; align-items: center;">
-            <div class="live-stat">
-                <div class="live-stat-label">Entrantes</div>
-                <div class="live-stat-val">{{ inbox.entrantes }}</div>
+    <div class="dashboard-container">
+        <header class="header">
+            <div class="header-left">
+                <div class="logo-text">NeurOPS High Performance</div>
+                <h1 class="setter-dashboard-title">
+                    Dashboard <span style="font-weight: 100; color: #cbd5e1;">/</span> <span class="setter-name">{{ setter_name }}</span>
+                </h1>
             </div>
-            <div class="live-stat">
-                <div class="live-stat-label">No Lead</div>
-                <div class="live-stat-val pink">{{ inbox.not_lead }}</div>
-                <div class="live-stat-label" style="font-size: 8px;">{{ inbox.no_lead_pct }}%</div>
+            <div class="date-str">{{ date_str }}</div>
+        </header>
+
+        <!-- TOP STATS -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #fef2f2; color: #ef4444;">📥</div>
+                <div class="stat-val">{{ inbox.entrantes }}</div>
+                <div class="stat-label">Entrantes</div>
             </div>
-            <div class="live-stat">
-                <div class="live-stat-label">In-abribles</div>
-                <div class="live-stat-val">{{ inbox.inabribles }}</div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #f0fdf4; color: #10b981;">🗓️</div>
+                <div class="stat-val">{{ funnel.agenda }}</div>
+                <div class="stat-label">Agendas</div>
             </div>
-            <div class="live-stat" style="background: rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 10px; border: 1px solid rgba(99, 102, 241, 0.2);">
-                <div class="live-stat-label" style="color: var(--indigo-500)">Leads Reales</div>
-                <div class="live-stat-val" style="color: var(--indigo-500)">{{ inbox.leads }}</div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #fdf4ff; color: #d946ef;">✉️</div>
+                <div class="stat-val">{{ openings.legacy.pct }}%</div>
+                <div class="stat-label">Tasa Apertura</div>
             </div>
-        </div>
-    </div>
-
-    <!-- UNIFIED FUNNEL TABLE -->
-    <div class="card funnel" style="margin-bottom: 32px; border-top-color: var(--indigo-600);">
-        <div class="card-header">
-            <div class="icon-box" style="color: var(--indigo-500)">⏬</div>
-            <div class="card-title">EMBUDO UNIFICADO (Leads • Seguimientos • Aperturas)</div>
-        </div>
-
-        <table style="width: 100%; border-collapse: separate; border-spacing: 0 12px;">
-            <thead>
-                <tr>
-                    <th style="text-align: left; color: var(--slate-500); font-size: 10px; padding: 0 20px; text-transform: uppercase; letter-spacing: 2px;">Etapa</th>
-                    <th style="text-align: center; color: var(--slate-500); font-size: 10px; padding: 0 20px; text-transform: uppercase; letter-spacing: 2px;">Leads Reales</th>
-                    <th style="text-align: center; color: var(--slate-500); font-size: 10px; padding: 0 20px; text-transform: uppercase; letter-spacing: 2px;">Seguimientos (I / R)</th>
-                    <th style="text-align: center; color: var(--slate-500); font-size: 10px; padding: 0 20px; text-transform: uppercase; letter-spacing: 2px;">Aperturas (I / R)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- QUALIFICATION -->
-                <tr style="background: rgba(30, 41, 59, 0.4);">
-                    <td style="padding: 20px; border-radius: 16px 0 0 16px; border: 1px solid var(--slate-800); border-right: none;">
-                        <div style="font-weight: 900; color: white; font-style: italic; text-transform: uppercase; font-size: 14px;">Cualificación</div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
-                        <div style="font-size: 24px; font-weight: 900; color: var(--indigo-400);">{{ funnel.qualification }}</div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
-                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ follow_up.qualification }} <span style="color: var(--rose-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--rose-400);">{{ follow_up.qualification_fur }}</span></div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border: 1px solid var(--slate-800); border-left: none; border-radius: 0 16px 16px 0;">
-                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ openings.qualification.submitted }} <span style="color: var(--fuchsia-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--fuchsia-400);">{{ openings.qualification.responded }}</span></div>
-                    </td>
-                </tr>
-
-                <!-- PAIN -->
-                <tr style="background: rgba(30, 41, 59, 0.4);">
-                    <td style="padding: 20px; border-radius: 16px 0 0 16px; border: 1px solid var(--slate-800); border-right: none;">
-                        <div style="font-weight: 900; color: white; font-style: italic; text-transform: uppercase; font-size: 14px;">Dolor</div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
-                        <div style="font-size: 24px; font-weight: 900; color: var(--indigo-400);">{{ funnel.pain }}</div>
-                        <div style="font-size: 10px; color: var(--slate-500); font-weight: 800;">{{ funnel.qual_to_pain }}% CV</div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
-                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ follow_up.pain }} <span style="color: var(--rose-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--rose-400);">{{ follow_up.pain_fur }}</span></div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border: 1px solid var(--slate-800); border-left: none; border-radius: 0 16px 16px 0;">
-                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ openings.pain.submitted }} <span style="color: var(--fuchsia-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--fuchsia-400);">{{ openings.pain.responded }}</span></div>
-                    </td>
-                </tr>
-
-                <!-- OFFER -->
-                <tr style="background: rgba(30, 41, 59, 0.4);">
-                    <td style="padding: 20px; border-radius: 16px 0 0 16px; border: 1px solid var(--slate-800); border-right: none;">
-                        <div style="font-weight: 900; color: white; font-style: italic; text-transform: uppercase; font-size: 14px;">Oferta</div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
-                        <div style="font-size: 24px; font-weight: 900; color: var(--indigo-400);">{{ funnel.offer }}</div>
-                        <div style="font-size: 10px; color: var(--slate-500); font-weight: 800;">{{ funnel.pain_to_offer }}% CV</div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
-                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ follow_up.offer }} <span style="color: var(--rose-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--rose-400);">{{ follow_up.offer_fur }}</span></div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border: 1px solid var(--slate-800); border-left: none; border-radius: 0 16px 16px 0; background: rgba(0,0,0,0.2);">
-                        <div style="height: 2px; width: 30px; background: var(--slate-800); margin: 0 auto;"></div>
-                    </td>
-                </tr>
-
-                <!-- LINK -->
-                <tr style="background: rgba(30, 41, 59, 0.4);">
-                    <td style="padding: 20px; border-radius: 16px 0 0 16px; border: 1px solid var(--slate-800); border-right: none;">
-                        <div style="font-weight: 900; color: white; font-style: italic; text-transform: uppercase; font-size: 14px;">Link</div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
-                        <div style="font-size: 24px; font-weight: 900; color: var(--indigo-400);">{{ funnel.link }}</div>
-                        <div style="font-size: 10px; color: var(--slate-500); font-weight: 800;">{{ funnel.offer_to_link }}% CV</div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--slate-800); border-bottom: 1px solid var(--slate-800);">
-                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ follow_up.link }} <span style="color: var(--rose-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--rose-400);">{{ follow_up.link_fur }}</span></div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border: 1px solid var(--slate-800); border-left: none; border-radius: 0 16px 16px 0; background: rgba(0,0,0,0.2);">
-                        <div style="height: 2px; width: 30px; background: var(--slate-800); margin: 0 auto;"></div>
-                    </td>
-                </tr>
-
-                <!-- AGENDA -->
-                <tr style="background: rgba(16, 185, 129, 0.05);">
-                    <td style="padding: 20px; border-radius: 16px 0 0 16px; border: 1px solid var(--teal-600); border-right: none;">
-                        <div style="font-weight: 900; color: var(--teal-400); font-style: italic; text-transform: uppercase; font-size: 14px;">Agenda</div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--teal-600); border-bottom: 1px solid var(--teal-600);">
-                        <div style="font-size: 24px; font-weight: 900; color: var(--teal-400);">{{ funnel.agenda }}</div>
-                        <div style="font-size: 10px; color: var(--teal-500); font-weight: 800;">{{ funnel.link_to_agenda }}% CV</div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border-top: 1px solid var(--teal-600); border-bottom: 1px solid var(--teal-600);">
-                        <div style="font-size: 20px; font-weight: 800; color: white;">{{ follow_up.agenda }} <span style="color: var(--rose-500); font-size: 14px; margin: 0 4px;">/</span> <span style="color: var(--rose-400);">{{ follow_up.agenda_fur }}</span></div>
-                    </td>
-                    <td style="padding: 20px; text-align: center; border: 1px solid var(--teal-600); border-left: none; border-radius: 0 16px 16px 0; background: rgba(0,0,0,0.2);">
-                        <div style="height: 2px; width: 30px; background: var(--slate-800); margin: 0 auto;"></div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <!-- RATES SUMMARY -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px;">
-            <div class="live-panel center-stat">
-                <div class="live-stat-label">Tasa de Respuesta FU Total</div>
-                <div class="live-stat-val rose">{{ follow_up.response_pct }}%</div>
-            </div>
-            <div class="live-panel center-stat">
-                <div class="live-stat-label">Conversión Agenda / Leads</div>
-                <div class="live-stat-val" style="color: var(--teal-400)">{{ funnel.conversion_leads_pct }}%</div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #eef2ff; color: #6366f1;">🔄</div>
+                <div class="stat-val">{{ follow_up.response_pct }}%</div>
+                <div class="stat-label">Tasa Respuesta FU</div>
             </div>
         </div>
-    </div>
 
-    <!-- QUALITATIVE -->
-    {% if qualitative %}
-    <div class="qualitative-section">
-        <div class="card-header border-none" style="margin-bottom:16px;">
-            <div class="icon-box" style="color: var(--teal-400)">⭐</div>
-            <div class="card-title qualitative">VICTORIAS Y FEEDBACK DEL DÍA</div>
-        </div>
-
-        <div class="qa-list">
-            {% for item in qualitative %}
-            <div class="qa-item">
-                <div class="qa-q">{{ item.question }}</div>
-                <div class="qa-a">"{{ item.answer }}"</div>
+        <div class="main-grid">
+            <!-- FUNNEL TABLE PANEL -->
+            <div class="dashboard-panel">
+                <div class="panel-header">
+                    <div class="panel-icon">📊</div>
+                    <div class="panel-title">Unified Funnel Standings</div>
+                </div>
+                
+                <table class="standings-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 30%">Stage</th>
+                            <th style="width: 20%">Leads</th>
+                            <th style="width: 25%">FU (I/R)</th>
+                            <th style="width: 25%">Open (I/R)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- QUALIFICATION -->
+                        <tr class="stage-table-row">
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="row-idx">1</div>
+                                    <div class="stage-name">CUALIFICACIÓN</div>
+                                </div>
+                            </td>
+                            <td><div class="stage-val-main val-indigo">{{ funnel.qualification }}</div></td>
+                            <td>
+                                <div class="stage-val-main val-rose">
+                                    {{ follow_up.qualification }}<span class="sep">/</span>{{ follow_up.qualification_fur }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="stage-val-main val-fuchsia">
+                                    {{ openings.qualification.submitted }}<span class="sep">/</span>{{ openings.qualification.responded }}
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- PAIN -->
+                        <tr class="stage-table-row">
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="row-idx">2</div>
+                                    <div class="stage-name">DOLOR</div>
+                                </div>
+                            </td>
+                            <td><div class="stage-val-main val-indigo">{{ funnel.pain }}</div></td>
+                            <td>
+                                <div class="stage-val-main val-rose">
+                                    {{ follow_up.pain }}<span class="sep">/</span>{{ follow_up.pain_fur }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="stage-val-main val-fuchsia">
+                                    {{ openings.pain.submitted }}<span class="sep">/</span>{{ openings.pain.responded }}
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- OFFER -->
+                        <tr class="stage-table-row">
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="row-idx">3</div>
+                                    <div class="stage-name">OFERTA</div>
+                                </div>
+                            </td>
+                            <td><div class="stage-val-main val-indigo">{{ funnel.offer }}</div></td>
+                            <td>
+                                <div class="stage-val-main val-rose">
+                                    {{ follow_up.offer }}<span class="sep">/</span>{{ follow_up.offer_fur }}
+                                </div>
+                            </td>
+                            <td><div style="font-weight: 800; color: #e2e8f0">—</div></td>
+                        </tr>
+                        <!-- LINK -->
+                        <tr class="stage-table-row">
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="row-idx">4</div>
+                                    <div class="stage-name">LINK</div>
+                                </div>
+                            </td>
+                            <td><div class="stage-val-main val-indigo">{{ funnel.link }}</div></td>
+                            <td>
+                                <div class="stage-val-main val-rose">
+                                    {{ follow_up.link }}<span class="sep">/</span>{{ follow_up.link_fur }}
+                                </div>
+                            </td>
+                            <td><div style="font-weight: 800; color: #e2e8f0">—</div></td>
+                        </tr>
+                        <!-- AGENDA -->
+                        <tr class="stage-table-row" style="opacity: 1;">
+                            <td style="background: #f0fdfa; border-color: #ccfbf1;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="row-idx" style="background: #ccfbf1; color: #0f766e;">5</div>
+                                    <div class="stage-name" style="color: #0f766e;">AGENDA</div>
+                                </div>
+                            </td>
+                            <td style="background: #f0fdfa; border-color: #ccfbf1;"><div class="stage-val-main" style="color: #0f766e;">{{ funnel.agenda }}</div></td>
+                            <td style="background: #f0fdfa; border-color: #ccfbf1;">
+                                <div class="stage-val-main val-rose">
+                                    {{ follow_up.agenda }}<span class="sep">/</span>{{ follow_up.agenda_fur }}
+                                </div>
+                            </td>
+                            <td style="background: #f0fdfa; border-color: #ccfbf1;"><div style="font-weight: 800; color: #94a3b8">—</div></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
 
-    <div class="footer">
-        NEUROPS PERFORMANCE SYSTEM • REPORTE GENERADO EL {{ date_str }}
+            <!-- SIDE PANELS -->
+            <div class="graphics-panel">
+                <div class="dashboard-panel" style="padding: 24px;">
+                    <div class="panel-header" style="margin-bottom: 24px;">
+                        <div class="panel-icon" style="font-size: 16px; width: 32px; height: 32px;">📈</div>
+                        <div class="panel-title" style="font-size: 14px;">Conversion Metrics</div>
+                    </div>
+                    <div class="graphics-list" style="display: grid; gap: 16px;">
+                        <div class="conversion-card">
+                            <div class="conv-label">Qual to Pain Ratio</div>
+                            <div class="conv-val">{{ funnel.qual_to_pain }}%</div>
+                        </div>
+                        <div class="conversion-card">
+                            <div class="conv-label">Conversion Leads/Agenda</div>
+                            <div class="conv-val" style="color: var(--teal);">{{ funnel.conversion_leads_pct }}%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="promo-block">
+                    <div style="font-size: 40px; margin-bottom: 20px;">🚀</div>
+                    <h4 class="promo-title">Focus on your<br />next agenda</h4>
+                    <p class="promo-text">Consistent data tracking leads to optimized results.</p>
+                </div>
+            </div>
+        </div>
+
+        {% if qualitative %}
+        <div class="feedback-section">
+            <div class="panel-header">
+                <div class="panel-icon">⭐</div>
+                <div class="panel-title">Victorias y Feedback del Día</div>
+            </div>
+            <div class="qa-grid">
+                {% for item in qualitative %}
+                <div class="qa-card">
+                    <div class="qa-label">{{ item.question }}</div>
+                    <div class="qa-content">"{{ item.answer }}"</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <footer class="footer">
+            <div>NEUROPS PERFORMANCE SYSTEM • 2026</div>
+            <div style="font-style: italic; opacity: 0.5;">Design Focused • Scalable Results</div>
+        </footer>
     </div>
 </body>
 
