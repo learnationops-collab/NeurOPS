@@ -197,57 +197,61 @@ def get_triage_tracker():
 
 @bp.route('/tracker/stats', methods=['GET'])
 def get_triage_tracker_stats():
-    """Retorna las estadisticas agregadas (suma) de todos los reportes filtrados."""
+    """Retorna las estadisticas agregadas (suma o promedio) de todos los reportes filtrados."""
     from app.models.triage_tracker import TriageTrackerReport
 
     triage_name = request.args.get('triage_name')
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
+    agg_type = request.args.get('agg_type', 'sum')
+    
+    # Selecciona funcion de agregacion (suma por defecto)
+    agg_func = func.avg if agg_type == 'avg' else func.sum
 
     query = db.session.query(
-        func.sum(TriageTrackerReport.starting_1st_call_agendas).label('starting_1st_call_agendas'),
-        func.sum(TriageTrackerReport.starting_1st_call_confirmando).label('starting_1st_call_confirmando'),
-        func.sum(TriageTrackerReport.starting_1st_call_reprogramando).label('starting_1st_call_reprogramando'),
-        func.sum(TriageTrackerReport.starting_1st_call_confirmadas).label('starting_1st_call_confirmadas'),
-        func.sum(TriageTrackerReport.starting_1st_call_canceladas).label('starting_1st_call_canceladas'),
+        agg_func(TriageTrackerReport.starting_1st_call_agendas).label('starting_1st_call_agendas'),
+        agg_func(TriageTrackerReport.starting_1st_call_confirmando).label('starting_1st_call_confirmando'),
+        agg_func(TriageTrackerReport.starting_1st_call_reprogramando).label('starting_1st_call_reprogramando'),
+        agg_func(TriageTrackerReport.starting_1st_call_confirmadas).label('starting_1st_call_confirmadas'),
+        agg_func(TriageTrackerReport.starting_1st_call_canceladas).label('starting_1st_call_canceladas'),
 
-        func.sum(TriageTrackerReport.starting_2nd_call_agendas).label('starting_2nd_call_agendas'),
-        func.sum(TriageTrackerReport.starting_2nd_call_confirmando).label('starting_2nd_call_confirmando'),
-        func.sum(TriageTrackerReport.starting_2nd_call_reprogramando).label('starting_2nd_call_reprogramando'),
-        func.sum(TriageTrackerReport.starting_2nd_call_confirmadas).label('starting_2nd_call_confirmadas'),
-        func.sum(TriageTrackerReport.starting_2nd_call_canceladas).label('starting_2nd_call_canceladas'),
+        agg_func(TriageTrackerReport.starting_2nd_call_agendas).label('starting_2nd_call_agendas'),
+        agg_func(TriageTrackerReport.starting_2nd_call_confirmando).label('starting_2nd_call_confirmando'),
+        agg_func(TriageTrackerReport.starting_2nd_call_reprogramando).label('starting_2nd_call_reprogramando'),
+        agg_func(TriageTrackerReport.starting_2nd_call_confirmadas).label('starting_2nd_call_confirmadas'),
+        agg_func(TriageTrackerReport.starting_2nd_call_canceladas).label('starting_2nd_call_canceladas'),
 
-        func.sum(TriageTrackerReport.all_1st_call_agendas).label('all_1st_call_agendas'),
-        func.sum(TriageTrackerReport.all_1st_call_confirmando).label('all_1st_call_confirmando'),
-        func.sum(TriageTrackerReport.all_1st_call_reprogramando).label('all_1st_call_reprogramando'),
-        func.sum(TriageTrackerReport.all_1st_call_confirmadas).label('all_1st_call_confirmadas'),
-        func.sum(TriageTrackerReport.all_1st_call_canceladas).label('all_1st_call_canceladas'),
+        agg_func(TriageTrackerReport.all_1st_call_agendas).label('all_1st_call_agendas'),
+        agg_func(TriageTrackerReport.all_1st_call_confirmando).label('all_1st_call_confirmando'),
+        agg_func(TriageTrackerReport.all_1st_call_reprogramando).label('all_1st_call_reprogramando'),
+        agg_func(TriageTrackerReport.all_1st_call_confirmadas).label('all_1st_call_confirmadas'),
+        agg_func(TriageTrackerReport.all_1st_call_canceladas).label('all_1st_call_canceladas'),
 
-        func.sum(TriageTrackerReport.all_2nd_call_agendas).label('all_2nd_call_agendas'),
-        func.sum(TriageTrackerReport.all_2nd_call_confirmando).label('all_2nd_call_confirmando'),
-        func.sum(TriageTrackerReport.all_2nd_call_reprogramando).label('all_2nd_call_reprogramando'),
-        func.sum(TriageTrackerReport.all_2nd_call_confirmadas).label('all_2nd_call_confirmadas'),
-        func.sum(TriageTrackerReport.all_2nd_call_canceladas).label('all_2nd_call_canceladas'),
+        agg_func(TriageTrackerReport.all_2nd_call_agendas).label('all_2nd_call_agendas'),
+        agg_func(TriageTrackerReport.all_2nd_call_confirmando).label('all_2nd_call_confirmando'),
+        agg_func(TriageTrackerReport.all_2nd_call_reprogramando).label('all_2nd_call_reprogramando'),
+        agg_func(TriageTrackerReport.all_2nd_call_confirmadas).label('all_2nd_call_confirmadas'),
+        agg_func(TriageTrackerReport.all_2nd_call_canceladas).label('all_2nd_call_canceladas'),
 
-        func.sum(TriageTrackerReport.post_hoy_confirmadas).label('post_hoy_confirmadas'),
-        func.sum(TriageTrackerReport.post_hoy_ppc_completo).label('post_hoy_ppc_completo'),
-        func.sum(TriageTrackerReport.post_all_confirmadas).label('post_all_confirmadas'),
-        func.sum(TriageTrackerReport.post_all_ppc_completo).label('post_all_ppc_completo'),
+        agg_func(TriageTrackerReport.post_hoy_confirmadas).label('post_hoy_confirmadas'),
+        agg_func(TriageTrackerReport.post_hoy_ppc_completo).label('post_hoy_ppc_completo'),
+        agg_func(TriageTrackerReport.post_all_confirmadas).label('post_all_confirmadas'),
+        agg_func(TriageTrackerReport.post_all_ppc_completo).label('post_all_ppc_completo'),
 
-        func.sum(TriageTrackerReport.fu_cold_personas_disp_fu).label('fu_cold_personas_disp_fu'),
-        func.sum(TriageTrackerReport.fu_cold_mjes_realizados).label('fu_cold_mjes_realizados'),
-        func.sum(TriageTrackerReport.fu_cold_personas_realizados).label('fu_cold_personas_realizados'),
-        func.sum(TriageTrackerReport.fu_cold_personas_respondidos).label('fu_cold_personas_respondidos'),
+        agg_func(TriageTrackerReport.fu_cold_personas_disp_fu).label('fu_cold_personas_disp_fu'),
+        agg_func(TriageTrackerReport.fu_cold_mjes_realizados).label('fu_cold_mjes_realizados'),
+        agg_func(TriageTrackerReport.fu_cold_personas_realizados).label('fu_cold_personas_realizados'),
+        agg_func(TriageTrackerReport.fu_cold_personas_respondidos).label('fu_cold_personas_respondidos'),
 
-        func.sum(TriageTrackerReport.fu_warm_personas_disp_fu).label('fu_warm_personas_disp_fu'),
-        func.sum(TriageTrackerReport.fu_warm_mjes_realizados).label('fu_warm_mjes_realizados'),
-        func.sum(TriageTrackerReport.fu_warm_personas_realizados).label('fu_warm_personas_realizados'),
-        func.sum(TriageTrackerReport.fu_warm_personas_respondidos).label('fu_warm_personas_respondidos'),
+        agg_func(TriageTrackerReport.fu_warm_personas_disp_fu).label('fu_warm_personas_disp_fu'),
+        agg_func(TriageTrackerReport.fu_warm_mjes_realizados).label('fu_warm_mjes_realizados'),
+        agg_func(TriageTrackerReport.fu_warm_personas_realizados).label('fu_warm_personas_realizados'),
+        agg_func(TriageTrackerReport.fu_warm_personas_respondidos).label('fu_warm_personas_respondidos'),
 
-        func.sum(TriageTrackerReport.fu_hot_personas_disp_fu).label('fu_hot_personas_disp_fu'),
-        func.sum(TriageTrackerReport.fu_hot_mjes_realizados).label('fu_hot_mjes_realizados'),
-        func.sum(TriageTrackerReport.fu_hot_personas_realizados).label('fu_hot_personas_realizados'),
-        func.sum(TriageTrackerReport.fu_hot_personas_respondidos).label('fu_hot_personas_respondidos')
+        agg_func(TriageTrackerReport.fu_hot_personas_disp_fu).label('fu_hot_personas_disp_fu'),
+        agg_func(TriageTrackerReport.fu_hot_mjes_realizados).label('fu_hot_mjes_realizados'),
+        agg_func(TriageTrackerReport.fu_hot_personas_realizados).label('fu_hot_personas_realizados'),
+        agg_func(TriageTrackerReport.fu_hot_personas_respondidos).label('fu_hot_personas_respondidos')
     )
 
     if triage_name:

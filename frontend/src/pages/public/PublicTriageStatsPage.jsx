@@ -15,6 +15,7 @@ const PublicTriageStatsPage = () => {
         triage_name: '',
         start_date: '',
         end_date: '',
+        agg_type: 'sum',
         time_preset: 'last_days',
         custom_days: 7
     });
@@ -53,6 +54,7 @@ const PublicTriageStatsPage = () => {
             if (filters.triage_name) params.append('triage_name', filters.triage_name);
             if (filters.start_date) params.append('start_date', filters.start_date);
             if (filters.end_date) params.append('end_date', filters.end_date);
+            params.append('agg_type', filters.agg_type);
 
             const res = await api.get(`/triage/tracker/stats?${params.toString()}`);
             setStats(res.data);
@@ -64,7 +66,11 @@ const PublicTriageStatsPage = () => {
     };
 
     const safeCalc = (val, total) => (total > 0 ? ((val / total) * 100).toFixed(1) : "0.0");
-    const fmt = n => (n || 0).toLocaleString();
+    const fmt = n => {
+        if (n === null || n === undefined) return "0";
+        if (filters.agg_type === 'avg') return Number(n).toFixed(1);
+        return Math.round(n).toLocaleString();
+    };
 
     // Aggregations
     const s1Agendas = stats?.starting_1st_call_agendas || 0;
@@ -101,15 +107,15 @@ const PublicTriageStatsPage = () => {
     );
 
     const ProgressRow = ({ label, percentage, absolute, colorClass }) => (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
             <div className="flex justify-between items-end">
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
-                    {absolute !== undefined && <span className="text-[10px] font-bold text-slate-600">({absolute})</span>}
+                <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">{label}</span>
+                    {absolute !== undefined && <span className="text-[12px] font-black text-white italic">{fmt(absolute)}</span>}
                 </div>
-                <span className={`text-xs font-black ${colorClass}`}>{percentage}%</span>
+                <span className={`text-[10px] font-black ${colorClass}`}>{percentage}%</span>
             </div>
-            <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/30">
+            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700/30">
                 <div className={`h-full rounded-full transition-all duration-1000 ${colorClass.replace('text-', 'bg-')}`} style={{ width: `${Math.min(percentage, 100)}%` }} />
             </div>
         </div>
@@ -123,7 +129,7 @@ const PublicTriageStatsPage = () => {
     );
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden">
+        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden font-inter">
             <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-900/10 to-transparent pointer-events-none" />
 
             <div className="max-w-7xl mx-auto z-10 relative space-y-8">
@@ -140,10 +146,29 @@ const PublicTriageStatsPage = () => {
                     </div>
                 </div>
 
-                {/* TABS */}
-                <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
-                    <TabButton id="general" label="Dashboard" icon={BarChart3} />
-                    <TabButton id="tracker" label="Tracker History" icon={Table} />
+                {/* TABS & AGGREGATION */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
+                        <TabButton id="general" label="Dashboard" icon={BarChart3} />
+                        <TabButton id="tracker" label="Tracker History" icon={Table} />
+                    </div>
+
+                    {activeTab === 'general' && (
+                        <div className="flex items-center gap-2 bg-slate-900/80 p-1 rounded-2xl border border-slate-800 self-end md:self-auto">
+                            <button
+                                onClick={() => setFilters({ ...filters, agg_type: 'sum' })}
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filters.agg_type === 'sum' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                Sumatoria
+                            </button>
+                            <button
+                                onClick={() => setFilters({ ...filters, agg_type: 'avg' })}
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filters.agg_type === 'avg' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                Promedio
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* FILTROS */}
@@ -198,7 +223,7 @@ const PublicTriageStatsPage = () => {
                         {stats && activeTab === 'general' && (
                             <div className="space-y-8 animate-in fade-in duration-500 mt-8">
                                 
-                                {/* ----------------- PRE CALL ----------------- */}
+                                {/* ----------------- PRE CONFIRMACIÓN ----------------- */}
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl flex flex-col xl:flex-row gap-8 hover:shadow-indigo-500/10 transition-shadow">
                                     {/* Left: Table */}
                                     <div className="flex-1 space-y-6 overflow-hidden">
@@ -206,7 +231,7 @@ const PublicTriageStatsPage = () => {
                                             <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
                                                 <Phone size={20} />
                                             </div>
-                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Pre Call</h3>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Pre Confirmación</h3>
                                         </div>
 
                                         <div className="overflow-x-auto w-full">
@@ -254,46 +279,64 @@ const PublicTriageStatsPage = () => {
                                         </div>
                                     </div>
                                     {/* Right: Grouped Containers */}
-                                    <div className="w-full xl:w-[450px] flex flex-col gap-6 border-t xl:border-t-0 xl:border-l border-slate-800/50 pt-6 xl:pt-0 xl:pl-6 leading-none">
+                                    <div className="w-full xl:w-[480px] flex flex-col gap-6 pt-6 xl:pt-0 xl:pl-6 border-t xl:border-t-0 xl:border-l border-slate-800/50">
                                         
                                         {/* Container: En proceso */}
                                         <div className="bg-slate-800/30 rounded-[2rem] p-6 border border-slate-800/50 space-y-6">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-3 border-b border-slate-800/50 pb-4">
                                                 <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-500">
                                                     <Activity size={16} strokeWidth={3} />
                                                 </div>
                                                 <h4 className="text-xs font-black uppercase tracking-widest text-white italic">En proceso</h4>
                                             </div>
 
-                                            <div className="space-y-6">
-                                                <div className="grid grid-cols-2 gap-6">
-                                                    <ProgressRow label="Conf. Diar" percentage={safeCalc(stConfirmando, stAgendas)} colorClass="text-indigo-400" />
-                                                    <ProgressRow label="Conf. Gen" percentage={safeCalc(allConfirmando, allAgendas)} colorClass="text-indigo-500" />
+                                            <div className="grid grid-cols-2 gap-8 relative">
+                                                <div className="absolute inset-y-0 left-1/2 w-px bg-slate-800" />
+                                                
+                                                <div className="space-y-6">
+                                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest text-center">Diario</p>
+                                                    <div className="space-y-4">
+                                                        <ProgressRow label="Confirmando" absolute={stConfirmando} percentage={safeCalc(stConfirmando, stAgendas)} colorClass="text-indigo-400" />
+                                                        <ProgressRow label="Reprogramando" absolute={stReprogramando} percentage={safeCalc(stReprogramando, stAgendas)} colorClass="text-fuchsia-400" />
+                                                    </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-6">
-                                                    <ProgressRow label="Repr. Diar" percentage={safeCalc(stReprogramando, stAgendas)} colorClass="text-fuchsia-400" />
-                                                    <ProgressRow label="Repr. Gen" percentage={safeCalc(allReprogramando, allAgendas)} colorClass="text-fuchsia-500" />
+
+                                                <div className="space-y-6">
+                                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest text-center">General</p>
+                                                    <div className="space-y-4">
+                                                        <ProgressRow label="Confirmando" absolute={allConfirmando} percentage={safeCalc(allConfirmando, allAgendas)} colorClass="text-indigo-500" />
+                                                        <ProgressRow label="Reprogramando" absolute={allReprogramando} percentage={safeCalc(allReprogramando, allAgendas)} colorClass="text-fuchsia-500" />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Container: Completos */}
                                         <div className="bg-slate-800/30 rounded-[2rem] p-6 border border-slate-800/50 space-y-6 border-t-4 border-t-emerald-500/30">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-3 border-b border-slate-800/50 pb-4">
                                                 <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
                                                     <ListChecks size={16} strokeWidth={3} />
                                                 </div>
                                                 <h4 className="text-xs font-black uppercase tracking-widest text-white italic">Completos</h4>
                                             </div>
 
-                                            <div className="space-y-6">
-                                                <div className="grid grid-cols-2 gap-6">
-                                                    <ProgressRow label="Confdas Diar" percentage={safeCalc(stConfirmadas, stAgendas)} colorClass="text-emerald-400" />
-                                                    <ProgressRow label="Confdas Gen" percentage={safeCalc(allConfirmadas, allAgendas)} colorClass="text-emerald-500" />
+                                            <div className="grid grid-cols-2 gap-8 relative">
+                                                <div className="absolute inset-y-0 left-1/2 w-px bg-slate-800" />
+
+                                                <div className="space-y-6">
+                                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest text-center">Diario</p>
+                                                    <div className="space-y-4">
+                                                        <ProgressRow label="Confirmadas" absolute={stConfirmadas} percentage={safeCalc(stConfirmadas, stAgendas)} colorClass="text-emerald-400" />
+                                                        <ProgressRow label="Reprogramadas" absolute={stReprogramando} percentage={safeCalc(stReprogramando, stAgendas)} colorClass="text-indigo-400" />
+                                                    </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-6">
-                                                    <ProgressRow label="Repr. Diar" percentage={safeCalc(stReprogramando, stAgendas)} colorClass="text-indigo-400" />
-                                                    <ProgressRow label="Repr. Gen" percentage={safeCalc(allReprogramando, allAgendas)} colorClass="text-indigo-500" />
+
+                                                <div className="space-y-6">
+                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center">General</p>
+                                                    <div className="space-y-4">
+                                                        <ProgressRow label="Confirmadas" absolute={allConfirmadas} percentage={safeCalc(allConfirmadas, allAgendas)} colorClass="text-emerald-500" />
+                                                        <ProgressRow label="Reprogramadas" absolute={allReprogramando} percentage={safeCalc(allReprogramando, allAgendas)} colorClass="text-indigo-500" />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
