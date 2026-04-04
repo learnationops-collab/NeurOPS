@@ -183,7 +183,7 @@ const PublicTriageReportPage = () => {
                             
                             {/* starting Process Cards */}
                             <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 shadow-sm">
-                                <SectionHeader icon={Phone} title="Starting Process" colorClass="text-indigo-600" />
+                                <SectionHeader icon={Phone} title="DÍA DE HOY" colorClass="text-indigo-600" />
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                     {/* 1st Call */}
@@ -222,7 +222,7 @@ const PublicTriageReportPage = () => {
 
                             {/* All Of Them Cards */}
                             <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 shadow-sm">
-                                <SectionHeader icon={Layers} title="All of Them" colorClass="text-fuchsia-600" />
+                                <SectionHeader icon={Layers} title="RESTANTES" colorClass="text-fuchsia-600" />
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                     {/* 1st Call Hist. */}
@@ -317,7 +317,7 @@ const PublicTriageReportPage = () => {
 
                     {/* BOTTOM SECTION: Post Confirmation Process */}
                     <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 md:p-12 shadow-sm border-t-8 border-t-teal-600">
-                        <SectionHeader icon={Target} title="Post Confirmation Process" colorClass="text-teal-600" />
+                        <SectionHeader icon={Target} title="RECORDATORIOS" colorClass="text-teal-600" />
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                             {/* HOY Column */}

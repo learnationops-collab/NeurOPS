@@ -231,7 +231,7 @@ const PublicTriageStatsPage = () => {
                                             <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
                                                 <Phone size={20} />
                                             </div>
-                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Pre Confirmación</h3>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">DÍA DE HOY</h3>
                                         </div>
 
                                         <div className="overflow-x-auto w-full">
@@ -239,8 +239,8 @@ const PublicTriageStatsPage = () => {
                                                 <thead>
                                                     <tr className="border-b border-slate-800">
                                                         <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Variable</th>
-                                                        <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-indigo-400 text-center bg-indigo-500/10 rounded-t-xl mx-1">Diario</th>
-                                                        <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-pink-400 text-center bg-pink-500/10 rounded-t-xl mx-1">General</th>
+                                                        <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-indigo-400 text-center bg-indigo-500/10 rounded-t-xl mx-1">Hoy</th>
+                                                        <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-pink-400 text-center bg-pink-500/10 rounded-t-xl mx-1">Restantes</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-800/50">
@@ -294,7 +294,7 @@ const PublicTriageStatsPage = () => {
                                                 <div className="absolute inset-y-0 left-1/2 w-px bg-slate-800" />
                                                 
                                                 <div className="space-y-6">
-                                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest text-center">Diario</p>
+                                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest text-center">Hoy</p>
                                                     <div className="space-y-4">
                                                         <ProgressRow label="Confirmando" absolute={stConfirmando} percentage={safeCalc(stConfirmando, stAgendas)} colorClass="text-indigo-400" />
                                                         <ProgressRow label="Reprogramando" absolute={stReprogramando} percentage={safeCalc(stReprogramando, stAgendas)} colorClass="text-fuchsia-400" />
@@ -302,7 +302,7 @@ const PublicTriageStatsPage = () => {
                                                 </div>
 
                                                 <div className="space-y-6">
-                                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest text-center">General</p>
+                                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest text-center">Generales</p>
                                                     <div className="space-y-4">
                                                         <ProgressRow label="Confirmando" absolute={allConfirmando} percentage={safeCalc(allConfirmando, allAgendas)} colorClass="text-indigo-500" />
                                                         <ProgressRow label="Reprogramando" absolute={allReprogramando} percentage={safeCalc(allReprogramando, allAgendas)} colorClass="text-fuchsia-500" />
@@ -324,7 +324,7 @@ const PublicTriageStatsPage = () => {
                                                 <div className="absolute inset-y-0 left-1/2 w-px bg-slate-800" />
 
                                                 <div className="space-y-6">
-                                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest text-center">Diario</p>
+                                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest text-center">Hoy</p>
                                                     <div className="space-y-4">
                                                         <ProgressRow label="Confirmadas" absolute={stConfirmadas} percentage={safeCalc(stConfirmadas, stAgendas)} colorClass="text-emerald-400" />
                                                         <ProgressRow label="Reprogramadas" absolute={stReprogramando} percentage={safeCalc(stReprogramando, stAgendas)} colorClass="text-indigo-400" />
@@ -332,7 +332,7 @@ const PublicTriageStatsPage = () => {
                                                 </div>
 
                                                 <div className="space-y-6">
-                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center">General</p>
+                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center">Generales</p>
                                                     <div className="space-y-4">
                                                         <ProgressRow label="Confirmadas" absolute={allConfirmadas} percentage={safeCalc(allConfirmadas, allAgendas)} colorClass="text-emerald-500" />
                                                         <ProgressRow label="Reprogramadas" absolute={allReprogramando} percentage={safeCalc(allReprogramando, allAgendas)} colorClass="text-indigo-500" />
@@ -350,7 +350,7 @@ const PublicTriageStatsPage = () => {
                                         <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
                                             <Target size={20} />
                                         </div>
-                                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Post confirmación</h3>
+                                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">RECORDATORIOS</h3>
                                     </div>
 
                                     <div className="bg-slate-800/20 rounded-2xl border border-slate-800 p-4 overflow-x-auto">
@@ -374,7 +374,7 @@ const PublicTriageStatsPage = () => {
                                             </div>
 
                                             <div className="space-y-4">
-                                                <div className="text-center text-[10px] font-black uppercase tracking-widest text-teal-400 bg-teal-500/10 border border-teal-500/20 py-2 rounded-xl">ALL</div>
+                                                <div className="text-center text-[10px] font-black uppercase tracking-widest text-teal-400 bg-teal-500/10 border border-teal-500/20 py-2 rounded-xl">RESTANTES</div>
                                                 <div className="grid grid-cols-3 gap-3">
                                                     <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
                                                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Totales</div>
