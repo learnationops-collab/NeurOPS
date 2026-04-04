@@ -253,73 +253,61 @@ const PublicTriageStatsPage = () => {
                                             </table>
                                         </div>
                                     </div>
-
-                                    {/* Right: Pie Charts */}
-                                    <div className="w-full xl:w-[400px] flex flex-col md:flex-row xl:flex-col justify-center gap-6 border-t xl:border-t-0 xl:border-l border-slate-800/50 pt-6 xl:pt-0 xl:pl-6">
-                                        {/* Pure CSS Pie Chart - Diario */}
-                                        <div className="bg-slate-800/30 rounded-2xl p-4 border border-slate-800 flex-1">
-                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-center text-slate-500 mb-4">Porcentajes Diario</h4>
-                                            {stAgendas > 0 ? (
-                                                <div className="flex items-center gap-6 justify-center">
-                                                    <div className="w-24 h-24 rounded-full flex-shrink-0 shadow-lg" style={{
-                                                        background: `conic-gradient(
-                                                            #6366f1 0% ${safeCalc(stConfirmando, stAgendas)}%, 
-                                                            #a855f7 ${safeCalc(stConfirmando, stAgendas)}% ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas))}%, 
-                                                            #10b981 ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas))}% ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas)) + parseFloat(safeCalc(stConfirmadas, stAgendas))}%, 
-                                                            #f43f5e ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas)) + parseFloat(safeCalc(stConfirmadas, stAgendas))}% ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas)) + parseFloat(safeCalc(stConfirmadas, stAgendas)) + parseFloat(safeCalc(stCanceladas, stAgendas))}%,
-                                                            #fbbf24 ${parseFloat(safeCalc(stConfirmando, stAgendas)) + parseFloat(safeCalc(stReprogramando, stAgendas)) + parseFloat(safeCalc(stConfirmadas, stAgendas)) + parseFloat(safeCalc(stCanceladas, stAgendas))}% 100%
-                                                        )`
-                                                    }}></div>
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Conf {safeCalc(stConfirmando, stAgendas)}%</span></div>
-                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Repr {safeCalc(stReprogramando, stAgendas)}%</span></div>
-                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Confdas {safeCalc(stConfirmadas, stAgendas)}%</span></div>
-                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-rose-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Canc {safeCalc(stCanceladas, stAgendas)}%</span></div>
-                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-400"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Inc {safeCalc(stAgendas - (stConfirmando + stReprogramando + stConfirmadas + stCanceladas), stAgendas)}%</span></div>
-                                                    </div>
+                                    {/* Right: Grouped Containers */}
+                                    <div className="w-full xl:w-[450px] flex flex-col gap-6 border-t xl:border-t-0 xl:border-l border-slate-800/50 pt-6 xl:pt-0 xl:pl-6 leading-none">
+                                        
+                                        {/* Container: En proceso */}
+                                        <div className="bg-slate-800/30 rounded-[2rem] p-6 border border-slate-800/50 space-y-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-500">
+                                                    <Activity size={16} strokeWidth={3} />
                                                 </div>
-                                            ) : (
-                                                <div className="text-center text-xs text-slate-600 font-bold py-8">Sin agendas</div>
-                                            )}
+                                                <h4 className="text-xs font-black uppercase tracking-widest text-white italic">En proceso</h4>
+                                            </div>
+
+                                            <div className="space-y-6">
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <ProgressRow label="Conf. Diar" percentage={safeCalc(stConfirmando, stAgendas)} colorClass="text-indigo-400" />
+                                                    <ProgressRow label="Conf. Gen" percentage={safeCalc(allConfirmando, allAgendas)} colorClass="text-indigo-500" />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <ProgressRow label="Repr. Diar" percentage={safeCalc(stReprogramando, stAgendas)} colorClass="text-fuchsia-400" />
+                                                    <ProgressRow label="Repr. Gen" percentage={safeCalc(allReprogramando, allAgendas)} colorClass="text-fuchsia-500" />
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        {/* Pure CSS Pie Chart - General */}
-                                        <div className="bg-slate-800/30 rounded-2xl p-4 border border-slate-800 flex-1">
-                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-center text-slate-500 mb-4">Porcentajes General</h4>
-                                            {allAgendas > 0 ? (
-                                                <div className="flex items-center gap-6 justify-center">
-                                                    <div className="w-24 h-24 rounded-full flex-shrink-0 shadow-lg" style={{
-                                                        background: `conic-gradient(
-                                                            #6366f1 0% ${safeCalc(allConfirmando, allAgendas)}%, 
-                                                            #a855f7 ${safeCalc(allConfirmando, allAgendas)}% ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas))}%, 
-                                                            #10b981 ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas))}% ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas)) + parseFloat(safeCalc(allConfirmadas, allAgendas))}%, 
-                                                            #f43f5e ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas)) + parseFloat(safeCalc(allConfirmadas, allAgendas))}% ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas)) + parseFloat(safeCalc(allConfirmadas, allAgendas)) + parseFloat(safeCalc(allCanceladas, allAgendas))}%,
-                                                            #fbbf24 ${parseFloat(safeCalc(allConfirmando, allAgendas)) + parseFloat(safeCalc(allReprogramando, allAgendas)) + parseFloat(safeCalc(allConfirmadas, allAgendas)) + parseFloat(safeCalc(allCanceladas, allAgendas))}% 100%
-                                                        )`
-                                                    }}></div>
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Conf {safeCalc(allConfirmando, allAgendas)}%</span></div>
-                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Repr {safeCalc(allReprogramando, allAgendas)}%</span></div>
-                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Confdas {safeCalc(allConfirmadas, allAgendas)}%</span></div>
-                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-rose-500"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Canc {safeCalc(allCanceladas, allAgendas)}%</span></div>
-                                                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-400"></div><span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">Inc {safeCalc(allAgendas - (allConfirmando + allReprogramando + allConfirmadas + allCanceladas), allAgendas)}%</span></div>
-                                                    </div>
+                                        {/* Container: Completos */}
+                                        <div className="bg-slate-800/30 rounded-[2rem] p-6 border border-slate-800/50 space-y-6 border-t-4 border-t-emerald-500/30">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
+                                                    <ListChecks size={16} strokeWidth={3} />
                                                 </div>
-                                            ) : (
-                                                <div className="text-center text-xs text-slate-600 font-bold py-8">Sin agendas</div>
-                                            )}
+                                                <h4 className="text-xs font-black uppercase tracking-widest text-white italic">Completos</h4>
+                                            </div>
+
+                                            <div className="space-y-6">
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <ProgressRow label="Confdas Diar" percentage={safeCalc(stConfirmadas, stAgendas)} colorClass="text-emerald-400" />
+                                                    <ProgressRow label="Confdas Gen" percentage={safeCalc(allConfirmadas, allAgendas)} colorClass="text-emerald-500" />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <ProgressRow label="Repr. Diar" percentage={safeCalc(stReprogramando, stAgendas)} colorClass="text-indigo-400" />
+                                                    <ProgressRow label="Repr. Gen" percentage={safeCalc(allReprogramando, allAgendas)} colorClass="text-indigo-500" />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
 
-                                {/* ----------------- POST CALL ----------------- */}
+                                {/* ----------------- POST CONFIRMACIÓN ----------------- */}
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6 hover:shadow-emerald-500/10 transition-shadow">
                                     <div className="flex items-center gap-3">
                                         <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
                                             <Target size={20} />
                                         </div>
-                                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Post Call</h3>
+                                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Post confirmación</h3>
                                     </div>
 
                                     <div className="bg-slate-800/20 rounded-2xl border border-slate-800 p-4 overflow-x-auto">
@@ -328,11 +316,11 @@ const PublicTriageStatsPage = () => {
                                                 <div className="text-center text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 py-2 rounded-xl">HOY</div>
                                                 <div className="grid grid-cols-3 gap-3">
                                                     <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Confirmadas</div>
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Totales</div>
                                                         <div className="text-2xl font-black italic text-emerald-400 mt-2">{fmt(popConfirmadasHoy)}</div>
                                                     </div>
                                                     <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">PPC Compl.</div>
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Completados</div>
                                                         <div className="text-2xl font-black italic text-teal-400 mt-2">{fmt(popPpcHoy)}</div>
                                                     </div>
                                                     <div className="bg-slate-800/50 p-4 rounded-xl border border-emerald-500/30 text-center flex flex-col justify-center shadow-lg shadow-emerald-500/10">
@@ -346,11 +334,11 @@ const PublicTriageStatsPage = () => {
                                                 <div className="text-center text-[10px] font-black uppercase tracking-widest text-teal-400 bg-teal-500/10 border border-teal-500/20 py-2 rounded-xl">ALL</div>
                                                 <div className="grid grid-cols-3 gap-3">
                                                     <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Confirmadas</div>
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Totales</div>
                                                         <div className="text-2xl font-black italic text-emerald-400 mt-2">{fmt(popConfirmadasAll)}</div>
                                                     </div>
                                                     <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">PPC Compl.</div>
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Completados</div>
                                                         <div className="text-2xl font-black italic text-teal-400 mt-2">{fmt(popPpcAll)}</div>
                                                     </div>
                                                     <div className="bg-slate-800/50 p-4 rounded-xl border border-teal-500/30 text-center flex flex-col justify-center shadow-lg shadow-teal-500/10">
