@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import {
     Loader2, BarChart3, Target, Layers, Phone, Activity,
-    Table, Users
+    Table, Users, ListChecks
 } from 'lucide-react';
 import TriageTrackerTable from '../admin/reports/TriageTrackerTable';
 
