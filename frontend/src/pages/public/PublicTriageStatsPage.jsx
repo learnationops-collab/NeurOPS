@@ -111,89 +111,85 @@ const PublicTriageStatsPage = () => {
     const allCompletosTotal = allConfirmadas + allCanceladas + allInciertas;
 
     const TabButton = ({ id, label, icon: Icon }) => (
-        <button onClick={() => setActiveTab(id)} className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:bg-slate-800'}`}>
+        <button 
+            onClick={() => setActiveTab(id)} 
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all 
+                ${activeTab === id 
+                    ? 'bg-white text-indigo-600 shadow-md border border-slate-100 scale-105' 
+                    : 'text-slate-500 hover:bg-white/50 hover:text-slate-700'}`}
+        >
             <Icon size={14} /> {label}
         </button>
     );
 
-    const ProgressRow = ({ label, percentage, absolute, colorClass }) => (
+    const ProgressRow = ({ label, absolute, percentage, colorClass }) => (
         <div className="space-y-1.5">
-            <div className="flex justify-between items-end">
-                <div className="flex flex-col">
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">{label}</span>
-                    {absolute !== undefined && <span className="text-[12px] font-black text-white italic">{fmt(absolute)}</span>}
-                </div>
-                <span className={`text-[10px] font-black ${colorClass}`}>{percentage}%</span>
+            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                <span className="text-slate-500">{label}</span>
+                <span className={`font-bold ${colorClass}`}>{fmt(absolute)} ({percentage}%)</span>
             </div>
-            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700/30">
-                <div className={`h-full rounded-full transition-all duration-1000 ${colorClass.replace('text-', 'bg-')}`} style={{ width: `${Math.min(percentage, 100)}%` }} />
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50 shadow-inner">
+                <div 
+                    className={`h-full transition-all duration-1000 ease-out rounded-full ${colorClass.replace('text-', 'bg-')}`}
+                    style={{ width: `${Math.min(percentage, 100)}%` }}
+                />
             </div>
         </div>
     );
 
-    const MetricCard = ({ title, value, colorClass }) => (
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 text-center">
-            <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">{title}</h4>
-            <div className={`text-2xl font-black italic tracking-tighter ${colorClass}`}>{value}</div>
+    const ReportSectionHeader = ({ icon: Icon, title, colorClass }) => (
+        <div className="flex items-center gap-4 mb-6">
+            <div className={`p-3 bg-white shadow-sm border border-slate-100 rounded-2xl`}>
+                <Icon className={colorClass} size={20} strokeWidth={2.5} />
+            </div>
+            <h2 className="text-xl font-black tracking-tight text-slate-800 uppercase italic leading-none">{title}</h2>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden font-inter">
-            <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-900/10 to-transparent pointer-events-none" />
+        <div className="min-h-screen bg-[#f0f4f8] text-slate-900 flex flex-col p-4 md:p-8 lg:p-12 relative overflow-hidden font-sans">
+            {/* Ambient Background Elements */}
+            <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-200/30 blur-[120px] rounded-full" />
+            <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-teal-100/40 blur-[100px] rounded-full" />
 
-            <div className="max-w-7xl mx-auto z-10 relative space-y-8">
-                {/* Header */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-slate-800/50">
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                            <Layers className="text-indigo-500" size={24} />
-                            <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
-                                Tracker <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-cyan-500">Board</span>
-                            </h1>
-                        </div>
-                        <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]">NeurOPS Triage Performance Analytics</p>
-                    </div>
-                </div>
-
-                {/* TABS & AGGREGATION */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
-                        <TabButton id="general" label="Dashboard" icon={BarChart3} />
-                        <TabButton id="tracker" label="Tracker History" icon={Table} />
+            <div className="w-full max-w-7xl mx-auto z-10 space-y-10">
+                {/* Dashboard Header */}
+                <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="space-y-1">
+                        <p className="text-cyan-600 font-black tracking-[0.2em] text-[10px] uppercase ml-1">NeurOPS Triage System</p>
+                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                            Triage Stats <span className="text-slate-300 font-light">/</span> <span className="text-indigo-600 italic">Dashboard</span>
+                        </h1>
+                        <p className="text-slate-500 font-medium text-sm">Performance Analysis Board 🚀</p>
                     </div>
 
-                    {activeTab === 'general' && (
-                        <div className="flex items-center gap-2 bg-slate-900/80 p-1 rounded-2xl border border-slate-800 self-end md:self-auto">
-                            <button
-                                onClick={() => setFilters({ ...filters, agg_type: 'sum' })}
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filters.agg_type === 'sum' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                Sumatoria
-                            </button>
-                            <button
-                                onClick={() => setFilters({ ...filters, agg_type: 'avg' })}
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filters.agg_type === 'avg' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                Promedio
-                            </button>
-                        </div>
-                    )}
-                </div>
+                    <div className="flex bg-slate-200/50 p-1.5 rounded-[1.5rem] border border-slate-200/60 shadow-inner">
+                        <TabButton id="general" label="Estadísticas" icon={BarChart3} />
+                        <TabButton id="tracker" label="Reportes" icon={Table} />
+                    </div>
+                </header>
 
-                {/* FILTROS */}
-                <div className="flex flex-wrap items-center gap-6 bg-slate-900/80 p-6 rounded-[2rem] border border-slate-800 shadow-2xl">
+                {/* FILTROS INTEGRADOS */}
+                <div className="bg-white/80 backdrop-blur-md border border-white p-6 md:p-8 rounded-[2.5rem] shadow-xl flex flex-wrap items-end gap-6">
                     <div className="flex flex-col gap-2">
-                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Triage / Equipo</label>
-                        <select className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 min-w-[200px]" value={filters.triage_name} onChange={e => setFilters({ ...filters, triage_name: e.target.value })}>
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Triage / Equipo</label>
+                        <select 
+                            className="bg-white border border-slate-200 text-sm font-bold rounded-[1.25rem] px-5 py-3.5 text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm min-w-[220px] appearance-none" 
+                            value={filters.triage_name} 
+                            onChange={e => setFilters({ ...filters, triage_name: e.target.value })}
+                        >
                             <option value="">Todo el Equipo</option>
                             <option value="Kerwin">Kerwin</option>
                         </select>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
-                        <select className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 min-w-[150px]" value={filters.time_preset} onChange={e => setFilters({ ...filters, time_preset: e.target.value })}>
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
+                        <select 
+                            className="bg-white border border-slate-200 text-sm font-bold rounded-[1.25rem] px-5 py-3.5 text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm min-w-[180px] appearance-none" 
+                            value={filters.time_preset} 
+                            onChange={e => setFilters({ ...filters, time_preset: e.target.value })}
+                        >
                             <option value="yesterday">Ayer</option>
                             <option value="last_days">Últimos X días</option>
                             <option value="all_time">Todo el tiempo</option>
@@ -203,152 +199,155 @@ const PublicTriageStatsPage = () => {
 
                     {filters.time_preset === 'last_days' && (
                         <div className="flex flex-col gap-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Días</label>
-                            <input type="number" className="w-16 bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 text-center" value={filters.custom_days} onChange={e => setFilters({ ...filters, custom_days: parseInt(e.target.value) || 0 })} />
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Días</label>
+                            <input 
+                                type="number" 
+                                className="w-24 bg-white border border-slate-200 text-sm font-bold rounded-[1.25rem] px-5 py-3.5 text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 text-center shadow-sm" 
+                                value={filters.custom_days} 
+                                onChange={e => setFilters({ ...filters, custom_days: parseInt(e.target.value) || 0 })} 
+                            />
                         </div>
                     )}
 
                     {filters.time_preset === 'custom' && (
                         <>
                             <div className="flex flex-col gap-2">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Desde</label>
-                                <input type="date" className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500" value={filters.start_date} onChange={e => setFilters({ ...filters, start_date: e.target.value })} />
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Desde</label>
+                                <input type="date" className="bg-white border border-slate-200 text-sm font-bold rounded-[1.25rem] px-5 py-3.5 text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" value={filters.start_date} onChange={e => setFilters({ ...filters, start_date: e.target.value })} />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Hasta</label>
-                                <input type="date" className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500" value={filters.end_date} onChange={e => setFilters({ ...filters, end_date: e.target.value })} />
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Hasta</label>
+                                <input type="date" className="bg-white border border-slate-200 text-sm font-bold rounded-[1.25rem] px-5 py-3.5 text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" value={filters.end_date} onChange={e => setFilters({ ...filters, end_date: e.target.value })} />
                             </div>
                         </>
                     )}
+
+                    <div className="flex bg-slate-100 p-1.5 rounded-[1.25rem] border border-slate-200 shadow-inner ml-auto">
+                        <button
+                            onClick={() => setFilters({ ...filters, agg_type: 'sum' })}
+                            className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filters.agg_type === 'sum' ? 'bg-white text-indigo-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Sumatoria
+                        </button>
+                        <button
+                            onClick={() => setFilters({ ...filters, agg_type: 'avg' })}
+                            className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filters.agg_type === 'avg' ? 'bg-white text-indigo-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Promedio
+                        </button>
+                    </div>
                 </div>
 
                 {/* CONTENIDO PRINCIPAL */}
                 {loading && !stats && activeTab === 'general' ? (
-                    <div className="flex flex-col items-center justify-center py-40 space-y-4">
+                    <div className="flex flex-col items-center justify-center py-40 gap-4">
                         <Loader2 className="animate-spin text-indigo-500" size={48} />
-                        <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Calculando Dashboard...</p>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Sincronizando Métricas...</p>
                     </div>
                 ) : (
                     <>
                         {stats && activeTab === 'general' && (
-                            <div className="space-y-8 animate-in fade-in duration-500 mt-8">
+                            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
                                 
-                                {/* ----------------- PRE CONFIRMACIÓN ----------------- */}
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl flex flex-col xl:flex-row gap-8 hover:shadow-indigo-500/10 transition-shadow">
-                                    {/* Left: Table */}
-                                    <div className="flex-1 space-y-6 overflow-hidden">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
-                                                <Phone size={20} />
-                                            </div>
-                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">DÍA DE HOY</h3>
-                                        </div>
-
+                                {/* ----------------- SECCIÓN DÍA DE HOY (2 COLUMNAS) ----------------- */}
+                                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+                                    
+                                    {/* COLUMNA 1: TABLA PRINCIPAL (Dia de Hoy) */}
+                                    <div className="xl:col-span-7 bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-10 shadow-xl shadow-slate-200/50 space-y-8">
+                                        <ReportSectionHeader icon={Phone} title="DÍA DE HOY" colorClass="text-indigo-600" />
+                                        
                                         <div className="overflow-x-auto w-full">
-                                            <table className="w-full min-w-max text-left border-collapse">
+                                            <table className="w-full min-w-max text-left border-separate border-spacing-y-2">
                                                 <thead>
-                                                    <tr className="border-b border-slate-800">
-                                                        <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Variable</th>
-                                                        <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-indigo-400 text-center bg-indigo-500/10 rounded-t-xl mx-1">Hoy</th>
-                                                        <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-pink-400 text-center bg-pink-500/10 rounded-t-xl mx-1">Restantes</th>
+                                                    <tr className="text-slate-400">
+                                                        <th className="pb-4 px-4 text-[10px] font-black uppercase tracking-widest">Variable</th>
+                                                        <th className="pb-4 px-4 text-[10px] font-black uppercase tracking-widest text-center text-indigo-600/80">Hoy</th>
+                                                        <th className="pb-4 px-4 text-[10px] font-black uppercase tracking-widest text-center text-pink-600/80">Restantes</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className="divide-y divide-slate-800/50">
-                                                    <tr className="hover:bg-slate-800/20 transition-colors">
-                                                        <td className="py-4 px-4 text-xs font-black uppercase tracking-widest text-slate-300">Agendas</td>
-                                                        <td className="py-4 px-4 text-lg font-black italic text-center text-indigo-400 bg-indigo-500/5">{fmt(stAgendas)}</td>
-                                                        <td className="py-4 px-4 text-lg font-black italic text-center text-pink-400 bg-pink-500/5">{fmt(allAgendas)}</td>
+                                                <tbody>
+                                                    <tr className="bg-slate-50/50 rounded-2xl overflow-hidden shadow-sm group">
+                                                        <td className="py-5 px-6 text-xs font-black uppercase tracking-widest text-slate-800 rounded-l-2xl border-y border-l border-slate-100">Agendas</td>
+                                                        <td className="py-5 px-6 text-xl font-black italic text-center text-indigo-600 border-y border-slate-100">{fmt(stAgendas)}</td>
+                                                        <td className="py-5 px-6 text-xl font-black italic text-center text-pink-600 rounded-r-2xl border-y border-r border-slate-100">{fmt(allAgendas)}</td>
                                                     </tr>
-                                                    <tr className="hover:bg-slate-800/20 transition-colors">
-                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Confirmando</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-slate-200">{fmt(stConfirmando)}</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-slate-200">{fmt(allConfirmando)}</td>
+                                                    <tr className="hover:bg-slate-50/40 transition-colors">
+                                                        <td className="py-4 px-6 text-[11px] font-bold uppercase tracking-widest text-slate-500">Confirmando</td>
+                                                        <td className="py-4 px-6 text-base font-bold text-center text-slate-700">{fmt(stConfirmando)}</td>
+                                                        <td className="py-4 px-6 text-base font-bold text-center text-slate-700">{fmt(allConfirmando)}</td>
                                                     </tr>
-                                                    <tr className="hover:bg-slate-800/20 transition-colors">
-                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Reprogramando</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-slate-200">{fmt(stReprogramando)}</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-slate-200">{fmt(allReprogramando)}</td>
+                                                    <tr className="hover:bg-slate-50/40 transition-colors">
+                                                        <td className="py-4 px-6 text-[11px] font-bold uppercase tracking-widest text-slate-500">Reprogramando</td>
+                                                        <td className="py-4 px-6 text-base font-bold text-center text-slate-700">{fmt(stReprogramando)}</td>
+                                                        <td className="py-4 px-6 text-base font-bold text-center text-slate-700">{fmt(allReprogramando)}</td>
                                                     </tr>
-                                                    <tr className="hover:bg-slate-800/20 transition-colors">
-                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-emerald-400">Confirmadas</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-emerald-400">{fmt(stConfirmadas)}</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-emerald-400">{fmt(allConfirmadas)}</td>
+                                                    <tr className="hover:bg-slate-50/40 transition-colors">
+                                                        <td className="py-4 px-6 text-[11px] font-bold uppercase tracking-widest text-emerald-600">Confirmadas</td>
+                                                        <td className="py-4 px-6 text-base font-bold text-center text-emerald-600">{fmt(stConfirmadas)}</td>
+                                                        <td className="py-4 px-6 text-base font-bold text-center text-emerald-600">{fmt(allConfirmadas)}</td>
                                                     </tr>
-                                                    <tr className="hover:bg-slate-800/20 transition-colors">
-                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-rose-400">Canceladas</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-rose-400">{fmt(stCanceladas)}</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-rose-400">{fmt(allCanceladas)}</td>
+                                                    <tr className="hover:bg-slate-50/40 transition-colors">
+                                                        <td className="py-4 px-6 text-[11px] font-bold uppercase tracking-widest text-rose-600">Canceladas</td>
+                                                        <td className="py-4 px-6 text-base font-bold text-center text-rose-600">{fmt(stCanceladas)}</td>
+                                                        <td className="py-4 px-6 text-base font-bold text-center text-rose-600">{fmt(allCanceladas)}</td>
                                                     </tr>
-                                                    <tr className="hover:bg-slate-800/20 transition-colors">
-                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-amber-400">Inciertas</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-amber-400">{fmt(stInciertas)}</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-amber-400">{fmt(allInciertas)}</td>
+                                                    <tr className="hover:bg-slate-50/40 transition-colors border-t border-slate-100">
+                                                        <td className="py-4 px-6 text-[11px] font-bold uppercase tracking-widest text-amber-600">Inciertas</td>
+                                                        <td className="py-4 px-6 text-base font-bold text-center text-amber-600">{fmt(stInciertas)}</td>
+                                                        <td className="py-4 px-6 text-base font-bold text-center text-amber-600">{fmt(allInciertas)}</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
                                         </div>
                                     </div>
-                                    {/* Right: Grouped Containers */}
-                                    <div className="w-full xl:w-[480px] flex flex-col gap-6 pt-6 xl:pt-0 xl:pl-6 border-t xl:border-t-0 xl:border-l border-slate-800/50">
+
+                                    {/* COLUMNA 2: COMPARATIVA DE PROCESOS (En proceso + Completos) */}
+                                    <div className="xl:col-span-5 bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-10 shadow-xl shadow-slate-200/50 space-y-10 flex flex-col justify-between h-full">
                                         
-                                        {/* Container: En proceso */}
-                                        <div className="bg-slate-800/30 rounded-[2rem] p-6 border border-slate-800/50 space-y-6">
-                                            <div className="flex items-center gap-3 border-b border-slate-800/50 pb-4">
-                                                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-500">
-                                                    <Activity size={16} strokeWidth={3} />
+                                        {/* Bloque: En proceso */}
+                                        <div className="space-y-6">
+                                            <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
+                                                <div className="p-2.5 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-600">
+                                                    <Activity size={18} strokeWidth={3} />
                                                 </div>
-                                                <h4 className="text-xs font-black uppercase tracking-widest text-white italic">En proceso</h4>
+                                                <h4 className="text-sm font-black uppercase tracking-widest text-slate-800 italic">En Proceso</h4>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-8 relative">
-                                                <div className="absolute inset-y-0 left-1/2 w-px bg-slate-800" />
-                                                
-                                                <div className="space-y-6">
-                                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest text-center">Hoy</p>
-                                                    <div className="space-y-4">
-                                                        <ProgressRow label="Confirmando" absolute={stConfirmando} percentage={safeCalc(stConfirmando, stProcessTotal)} colorClass="text-indigo-400" />
-                                                        <ProgressRow label="Reprogramando" absolute={stReprogramando} percentage={safeCalc(stReprogramando, stProcessTotal)} colorClass="text-fuchsia-400" />
-                                                    </div>
+                                            <div className="grid grid-cols-2 gap-8">
+                                                <div className="space-y-5">
+                                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2">Hoy</p>
+                                                    <ProgressRow label="Confirmando" absolute={stConfirmando} percentage={safeCalc(stConfirmando, stProcessTotal)} colorClass="text-indigo-600" />
+                                                    <ProgressRow label="Reprog." absolute={stReprogramando} percentage={safeCalc(stReprogramando, stProcessTotal)} colorClass="text-fuchsia-600" />
                                                 </div>
-
-                                                <div className="space-y-6">
-                                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest text-center">Generales</p>
-                                                    <div className="space-y-4">
-                                                        <ProgressRow label="Confirmando" absolute={allConfirmando} percentage={safeCalc(allConfirmando, allProcessTotal)} colorClass="text-indigo-500" />
-                                                        <ProgressRow label="Reprogramando" absolute={allReprogramando} percentage={safeCalc(allReprogramando, allProcessTotal)} colorClass="text-fuchsia-500" />
-                                                    </div>
+                                                <div className="space-y-5 border-l border-slate-50 pl-8">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Gen.</p>
+                                                    <ProgressRow label="Confirmando" absolute={allConfirmando} percentage={safeCalc(allConfirmando, allProcessTotal)} colorClass="text-indigo-500" />
+                                                    <ProgressRow label="Reprog." absolute={allReprogramando} percentage={safeCalc(allReprogramando, allProcessTotal)} colorClass="text-fuchsia-500" />
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Container: Completos */}
-                                        <div className="bg-slate-800/30 rounded-[2rem] p-6 border border-slate-800/50 space-y-6 border-t-4 border-t-emerald-500/30">
-                                            <div className="flex items-center gap-3 border-b border-slate-800/50 pb-4">
-                                                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
-                                                    <ListChecks size={16} strokeWidth={3} />
+                                        {/* Bloque: Completos */}
+                                        <div className="space-y-6 pt-4 border-t border-slate-50">
+                                            <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
+                                                <div className="p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600">
+                                                    <ListChecks size={18} strokeWidth={3} />
                                                 </div>
-                                                <h4 className="text-xs font-black uppercase tracking-widest text-white italic">Completos</h4>
+                                                <h4 className="text-sm font-black uppercase tracking-widest text-slate-800 italic">Completos</h4>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-8 relative">
-                                                <div className="absolute inset-y-0 left-1/2 w-px bg-slate-800" />
-
-                                                <div className="space-y-6">
-                                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest text-center">Hoy</p>
-                                                    <div className="space-y-4">
-                                                        <ProgressRow label="Confirmadas" absolute={stConfirmadas} percentage={safeCalc(stConfirmadas, stCompletosTotal)} colorClass="text-emerald-400" />
-                                                        <ProgressRow label="Canceladas" absolute={stCanceladas} percentage={safeCalc(stCanceladas, stCompletosTotal)} colorClass="text-rose-400" />
-                                                        <ProgressRow label="Inciertas" absolute={stInciertas} percentage={safeCalc(stInciertas, stCompletosTotal)} colorClass="text-amber-400" />
-                                                    </div>
+                                            <div className="grid grid-cols-2 gap-8">
+                                                <div className="space-y-5">
+                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-2">Hoy</p>
+                                                    <ProgressRow label="Confirmadas" absolute={stConfirmadas} percentage={safeCalc(stConfirmadas, stCompletosTotal)} colorClass="text-emerald-600" />
+                                                    <ProgressRow label="Canceladas" absolute={stCanceladas} percentage={safeCalc(stCanceladas, stCompletosTotal)} colorClass="text-rose-600" />
+                                                    <ProgressRow label="Inciertas" absolute={stInciertas} percentage={safeCalc(stInciertas, stCompletosTotal)} colorClass="text-amber-600" />
                                                 </div>
-
-                                                <div className="space-y-6">
-                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center">Generales</p>
-                                                    <div className="space-y-4">
-                                                        <ProgressRow label="Confirmadas" absolute={allConfirmadas} percentage={safeCalc(allConfirmadas, allCompletosTotal)} colorClass="text-emerald-500" />
-                                                        <ProgressRow label="Canceladas" absolute={allCanceladas} percentage={safeCalc(allCanceladas, allCompletosTotal)} colorClass="text-rose-500" />
-                                                        <ProgressRow label="Inciertas" absolute={allInciertas} percentage={safeCalc(allInciertas, allCompletosTotal)} colorClass="text-amber-500" />
-                                                    </div>
+                                                <div className="space-y-5 border-l border-slate-50 pl-8">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Gen.</p>
+                                                    <ProgressRow label="Confirmadas" absolute={allConfirmadas} percentage={safeCalc(allConfirmadas, allCompletosTotal)} colorClass="text-emerald-500" />
+                                                    <ProgressRow label="Canceladas" absolute={allCanceladas} percentage={safeCalc(allCanceladas, allCompletosTotal)} colorClass="text-rose-500" />
+                                                    <ProgressRow label="Inciertas" absolute={allInciertas} percentage={safeCalc(allInciertas, allCompletosTotal)} colorClass="text-amber-500" />
                                                 </div>
                                             </div>
                                         </div>
@@ -356,164 +355,145 @@ const PublicTriageStatsPage = () => {
                                 </div>
 
 
-                                {/* ----------------- POST CONFIRMACIÓN ----------------- */}
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6 hover:shadow-emerald-500/10 transition-shadow">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
-                                            <Target size={20} />
-                                        </div>
-                                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">RECORDATORIOS</h3>
-                                    </div>
+                                {/* ----------------- RECORDATORIOS (Premium Card) ----------------- */}
+                                <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-10 shadow-xl shadow-slate-200/50 space-y-8">
+                                    <ReportSectionHeader icon={Target} title="RECORDATORIOS" colorClass="text-emerald-600" />
 
-                                    <div className="bg-slate-800/20 rounded-2xl border border-slate-800 p-4 overflow-x-auto">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 min-w-[600px] md:min-w-0">
-                                            <div className="space-y-4">
-                                                <div className="text-center text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 py-2 rounded-xl">HOY</div>
-                                                <div className="grid grid-cols-3 gap-3">
-                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Totales</div>
-                                                        <div className="text-2xl font-black italic text-emerald-400 mt-2">{fmt(popConfirmadasHoy)}</div>
-                                                    </div>
-                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Completados</div>
-                                                        <div className="text-2xl font-black italic text-teal-400 mt-2">{fmt(popPpcHoy)}</div>
-                                                    </div>
-                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-emerald-500/30 text-center flex flex-col justify-center shadow-lg shadow-emerald-500/10">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">% Efectividad</div>
-                                                        <div className="text-xl font-black italic text-emerald-400 mt-2">{safeCalc(popPpcHoy, popConfirmadasHoy)}%</div>
-                                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                        <div className="space-y-5">
+                                            <div className="text-center text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 border border-emerald-100 py-3 rounded-2xl">HOY</div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <div className="bg-slate-50 border border-slate-100 p-5 rounded-[1.5rem] text-center">
+                                                    <div className="text-[9px] font-black uppercase text-slate-400 mb-2">Totales</div>
+                                                    <div className="text-3xl font-black italic text-slate-800">{fmt(popConfirmadasHoy)}</div>
+                                                </div>
+                                                <div className="bg-slate-50 border border-slate-100 p-5 rounded-[1.5rem] text-center">
+                                                    <div className="text-[9px] font-black uppercase text-slate-400 mb-2">PPC COMPL</div>
+                                                    <div className="text-3xl font-black italic text-slate-800">{fmt(popPpcHoy)}</div>
+                                                </div>
+                                                <div className="bg-emerald-600 p-5 rounded-[1.5rem] text-center shadow-lg shadow-emerald-200">
+                                                    <div className="text-[9px] font-black uppercase text-emerald-100 mb-2">% EFECT.</div>
+                                                    <div className="text-2xl font-black italic text-white">{safeCalc(popPpcHoy, popConfirmadasHoy)}%</div>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            <div className="space-y-4">
-                                                <div className="text-center text-[10px] font-black uppercase tracking-widest text-teal-400 bg-teal-500/10 border border-teal-500/20 py-2 rounded-xl">RESTANTES</div>
-                                                <div className="grid grid-cols-3 gap-3">
-                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Totales</div>
-                                                        <div className="text-2xl font-black italic text-emerald-400 mt-2">{fmt(popConfirmadasAll)}</div>
-                                                    </div>
-                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center flex flex-col justify-center">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Completados</div>
-                                                        <div className="text-2xl font-black italic text-teal-400 mt-2">{fmt(popPpcAll)}</div>
-                                                    </div>
-                                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-teal-500/30 text-center flex flex-col justify-center shadow-lg shadow-teal-500/10">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">% Efectividad</div>
-                                                        <div className="text-xl font-black italic text-teal-400 mt-2">{safeCalc(popPpcAll, popConfirmadasAll)}%</div>
-                                                    </div>
+                                        <div className="space-y-5">
+                                            <div className="text-center text-[10px] font-black uppercase tracking-widest text-teal-600 bg-teal-50 border border-teal-100 py-3 rounded-2xl">RESTANTES</div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <div className="bg-slate-50 border border-slate-100 p-5 rounded-[1.5rem] text-center">
+                                                    <div className="text-[9px] font-black uppercase text-slate-400 mb-2">Totales</div>
+                                                    <div className="text-3xl font-black italic text-slate-800">{fmt(popConfirmadasAll)}</div>
+                                                </div>
+                                                <div className="bg-slate-50 border border-slate-100 p-5 rounded-[1.5rem] text-center">
+                                                    <div className="text-[9px] font-black uppercase text-slate-400 mb-2">PPC COMPL</div>
+                                                    <div className="text-3xl font-black italic text-slate-800">{fmt(popPpcAll)}</div>
+                                                </div>
+                                                <div className="bg-teal-600 p-5 rounded-[1.5rem] text-center shadow-lg shadow-teal-200">
+                                                    <div className="text-[9px] font-black uppercase text-teal-100 mb-2">% EFECT.</div>
+                                                    <div className="text-2xl font-black italic text-white">{safeCalc(popPpcAll, popConfirmadasAll)}%</div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* ----------------- FOLLOW UP PROCESS ----------------- */}
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6 hover:shadow-cyan-500/10 transition-shadow">
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                {/* ----------------- FOLLOW UP PROCESS (Clean Grid) ----------------- */}
+                                <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-10 shadow-xl shadow-slate-200/50 space-y-8">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-50 pb-6">
                                         <div className="flex items-center gap-3">
-                                            <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-500">
-                                                <Users size={20} />
+                                            <div className="p-3 bg-cyan-50 border border-cyan-100 rounded-2xl text-cyan-600">
+                                                <Users size={20} strokeWidth={2.5} />
                                             </div>
-                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Follow Up Process</h3>
+                                            <h2 className="text-2xl font-black tracking-tight text-slate-800 uppercase italic">Follow Up Stats</h2>
                                         </div>
-                                        <div className="text-right bg-slate-800/50 p-2 rounded-xl border border-slate-700/50">
-                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Promedio Global Mensajes</p>
-                                            <p className="text-xl mt-1 font-black text-cyan-400 italic">{avgMessages} <span className="text-[10px] text-slate-500 not-italic uppercase">/ cto</span></p>
+                                        <div className="bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200 pr-4">Global Message Avg</p>
+                                            <p className="text-2xl font-black text-cyan-600 italic leading-none">{avgMessages} <span className="text-[10px] text-slate-400 not-italic uppercase">msg/cto</span></p>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-                                        
-                                        {/* COLD FUNNEL */}
-                                        <div className="bg-slate-800/20 border border-slate-800 rounded-2xl p-4 md:p-6 flex flex-col hover:border-cyan-500/30 transition-colors shadow-lg shadow-black/20">
-                                            <div className="text-center mb-6">
-                                                <h4 className="text-sm font-black uppercase tracking-[0.2em] text-cyan-400">Cold Leads</h4>
-                                                <p className="text-[9px] font-black uppercase text-slate-500 mt-1.5">Mjes: {fmt(stats?.fu_cold_mjes_realizados)} / Cto: {fmt(stats?.fu_cold_personas_realizados)}</p>
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                        {/* Funnel: Cold */}
+                                        <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100 space-y-8">
+                                            <div className="text-center">
+                                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-cyan-600">Cold Pipeline</h4>
+                                                <p className="text-[9px] font-black uppercase text-slate-400 mt-2">Majes: {fmt(stats?.fu_cold_mjes_realizados)} • Cto: {fmt(stats?.fu_cold_personas_realizados)}</p>
                                             </div>
-                                            <div className="space-y-2 relative py-2 flex flex-col items-center flex-1">
-                                                <div className="h-14 bg-slate-800 border border-cyan-500/30 rounded-t-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-full">
-                                                    <div className="absolute inset-y-0 left-0 bg-cyan-500/10" style={{width: `100%`}}></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-cyan-500/70 relative z-10 w-auto">Disp.</span>
-                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_cold_personas_disp_fu)}</span>
+                                            <div className="space-y-3 px-4">
+                                                <div className="bg-white border border-slate-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibles</span>
+                                                    <span className="text-xl font-black text-slate-800 italic">{fmt(stats?.fu_cold_personas_disp_fu)}</span>
                                                 </div>
-                                                <div className="h-14 bg-slate-800 border border-emerald-500/30 rounded-sm flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[90%]">
-                                                    <div className="absolute inset-y-0 left-0 bg-emerald-500/10" style={{width: `${safeCalc(stats?.fu_cold_personas_realizados, stats?.fu_cold_personas_disp_fu)}%`}}></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500/70 relative z-10 w-auto">Conctadas</span>
-                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_cold_personas_realizados)}</span>
+                                                <div className="bg-white border border-emerald-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                                                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Contactadas</span>
+                                                    <span className="text-xl font-black text-slate-800 italic">{fmt(stats?.fu_cold_personas_realizados)}</span>
                                                 </div>
-                                                <div className="h-14 bg-slate-800 border border-rose-500/30 rounded-b-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[80%]">
-                                                    <div className="absolute inset-y-0 left-0 bg-rose-500/10" style={{width: `${safeCalc(stats?.fu_cold_personas_respondidos, stats?.fu_cold_personas_realizados)}%`}}></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-500/70 relative z-10 w-auto">Respuestas</span>
-                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_cold_personas_respondidos)} <span className="text-[9px] text-rose-400/80 not-italic ml-1 hidden lg:inline-block">({safeCalc(stats?.fu_cold_personas_respondidos, stats?.fu_cold_personas_realizados)}%)</span></span>
+                                                <div className="bg-emerald-600 p-4 rounded-xl flex justify-between items-center shadow-lg shadow-emerald-100">
+                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Respondidas</span>
+                                                    <span className="text-xl font-black text-white italic">{fmt(stats?.fu_cold_personas_respondidos)} <span className="text-[10px] not-italic opacity-80">({safeCalc(stats?.fu_cold_personas_respondidos, stats?.fu_cold_personas_realizados)}%)</span></span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* WARM FUNNEL */}
-                                        <div className="bg-slate-800/20 border border-slate-800 rounded-2xl p-4 md:p-6 flex flex-col hover:border-orange-500/30 transition-colors shadow-lg shadow-black/20">
-                                            <div className="text-center mb-6">
-                                                <h4 className="text-sm font-black uppercase tracking-[0.2em] text-orange-400">Warm Leads</h4>
-                                                <p className="text-[9px] font-black uppercase text-slate-500 mt-1.5">Mjes: {fmt(stats?.fu_warm_mjes_realizados)} / Cto: {fmt(stats?.fu_warm_personas_realizados)}</p>
+                                        {/* Funnel: Warm */}
+                                        <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100 space-y-8">
+                                            <div className="text-center">
+                                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-orange-600">Warm Pipeline</h4>
+                                                <p className="text-[9px] font-black uppercase text-slate-400 mt-2">Majes: {fmt(stats?.fu_warm_mjes_realizados)} • Cto: {fmt(stats?.fu_warm_personas_realizados)}</p>
                                             </div>
-                                            <div className="space-y-2 relative py-2 flex flex-col items-center flex-1">
-                                                <div className="h-14 bg-slate-800 border border-orange-500/30 rounded-t-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-full">
-                                                    <div className="absolute inset-y-0 left-0 bg-orange-500/10" style={{width: `100%`}}></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-orange-500/70 relative z-10 w-auto">Disp.</span>
-                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_warm_personas_disp_fu)}</span>
+                                            <div className="space-y-3 px-4">
+                                                <div className="bg-white border border-slate-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibles</span>
+                                                    <span className="text-xl font-black text-slate-800 italic">{fmt(stats?.fu_warm_personas_disp_fu)}</span>
                                                 </div>
-                                                <div className="h-14 bg-slate-800 border border-emerald-500/30 rounded-sm flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[90%]">
-                                                    <div className="absolute inset-y-0 left-0 bg-emerald-500/10" style={{width: `${safeCalc(stats?.fu_warm_personas_realizados, stats?.fu_warm_personas_disp_fu)}%`}}></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500/70 relative z-10 w-auto">Conctadas</span>
-                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_warm_personas_realizados)}</span>
+                                                <div className="bg-white border border-emerald-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                                                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Contactadas</span>
+                                                    <span className="text-xl font-black text-slate-800 italic">{fmt(stats?.fu_warm_personas_realizados)}</span>
                                                 </div>
-                                                <div className="h-14 bg-slate-800 border border-rose-500/30 rounded-b-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[80%]">
-                                                    <div className="absolute inset-y-0 left-0 bg-rose-500/10" style={{width: `${safeCalc(stats?.fu_warm_personas_respondidos, stats?.fu_warm_personas_realizados)}%`}}></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-500/70 relative z-10 w-auto">Respuestas</span>
-                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_warm_personas_respondidos)} <span className="text-[9px] text-rose-400/80 not-italic ml-1 hidden lg:inline-block">({safeCalc(stats?.fu_warm_personas_respondidos, stats?.fu_warm_personas_realizados)}%)</span></span>
+                                                <div className="bg-orange-600 p-4 rounded-xl flex justify-between items-center shadow-lg shadow-orange-100">
+                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Respondidas</span>
+                                                    <span className="text-xl font-black text-white italic">{fmt(stats?.fu_warm_personas_respondidos)} <span className="text-[10px] not-italic opacity-80">({safeCalc(stats?.fu_warm_personas_respondidos, stats?.fu_warm_personas_realizados)}%)</span></span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* HOT FUNNEL */}
-                                        <div className="bg-slate-800/20 border border-slate-800 rounded-2xl p-4 md:p-6 flex flex-col hover:border-red-500/30 transition-colors shadow-lg shadow-black/20">
-                                            <div className="text-center mb-6">
-                                                <h4 className="text-sm font-black uppercase tracking-[0.2em] text-red-500">Hot Leads</h4>
-                                                <p className="text-[9px] font-black uppercase text-slate-500 mt-1.5">Mjes: {fmt(stats?.fu_hot_mjes_realizados)} / Cto: {fmt(stats?.fu_hot_personas_realizados)}</p>
+                                        {/* Funnel: Hot */}
+                                        <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100 space-y-8">
+                                            <div className="text-center">
+                                                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-rose-600">Hot Pipeline</h4>
+                                                <p className="text-[9px] font-black uppercase text-slate-400 mt-2">Majes: {fmt(stats?.fu_hot_mjes_realizados)} • Cto: {fmt(stats?.fu_hot_personas_realizados)}</p>
                                             </div>
-                                            <div className="space-y-2 relative py-2 flex flex-col items-center flex-1">
-                                                <div className="h-14 bg-slate-800 border border-red-500/30 rounded-t-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-full">
-                                                    <div className="absolute inset-y-0 left-0 bg-red-500/10" style={{width: `100%`}}></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-red-500/70 relative z-10 w-auto">Disp.</span>
-                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_hot_personas_disp_fu)}</span>
+                                            <div className="space-y-3 px-4">
+                                                <div className="bg-white border border-slate-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibles</span>
+                                                    <span className="text-xl font-black text-slate-800 italic">{fmt(stats?.fu_hot_personas_disp_fu)}</span>
                                                 </div>
-                                                <div className="h-14 bg-slate-800 border border-emerald-500/30 rounded-sm flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[90%]">
-                                                    <div className="absolute inset-y-0 left-0 bg-emerald-500/10" style={{width: `${safeCalc(stats?.fu_hot_personas_realizados, stats?.fu_hot_personas_disp_fu)}%`}}></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500/70 relative z-10 w-auto">Conctadas</span>
-                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_hot_personas_realizados)}</span>
+                                                <div className="bg-white border border-emerald-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                                                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Contactadas</span>
+                                                    <span className="text-xl font-black text-slate-800 italic">{fmt(stats?.fu_hot_personas_realizados)}</span>
                                                 </div>
-                                                <div className="h-14 bg-slate-800 border border-rose-500/30 rounded-b-xl flex items-center justify-between px-3 md:px-5 relative overflow-hidden group w-[80%]">
-                                                    <div className="absolute inset-y-0 left-0 bg-rose-500/10" style={{width: `${safeCalc(stats?.fu_hot_personas_respondidos, stats?.fu_hot_personas_realizados)}%`}}></div>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-500/70 relative z-10 w-auto">Respuestas</span>
-                                                    <span className="text-lg md:text-xl font-black italic text-white relative z-10">{fmt(stats?.fu_hot_personas_respondidos)} <span className="text-[9px] text-rose-400/80 not-italic ml-1 hidden lg:inline-block">({safeCalc(stats?.fu_hot_personas_respondidos, stats?.fu_hot_personas_realizados)}%)</span></span>
+                                                <div className="bg-rose-600 p-4 rounded-xl flex justify-between items-center shadow-lg shadow-rose-100">
+                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Respondidas</span>
+                                                    <span className="text-xl font-black text-white italic">{fmt(stats?.fu_hot_personas_respondidos)} <span className="text-[10px] not-italic opacity-80">({safeCalc(stats?.fu_hot_personas_respondidos, stats?.fu_hot_personas_realizados)}%)</span></span>
                                                 </div>
                                             </div>
                                         </div>
-
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {activeTab === 'tracker' && (
-                            <div className="animate-in fade-in duration-500 mt-8">
+                            <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-xl animate-in fade-in duration-700 mt-8">
                                 <TriageTrackerTable />
                             </div>
                         )}
                     </>
                 )}
 
-                <div className="text-center pt-20 pb-10">
-                    <p className="text-[9px] text-slate-600 font-black tracking-[0.4em] uppercase">NeurOPS Triage Intelligence Board • © 2026 • AI Powered Dashboard</p>
-                </div>
+                <footer className="text-center pt-20 pb-10">
+                    <p className="text-[10px] text-slate-400 font-black tracking-[0.4em] uppercase">NeurOPS Triage Intelligence • Executive Dashboard • © 2026</p>
+                </footer>
             </div>
         </div>
     );
