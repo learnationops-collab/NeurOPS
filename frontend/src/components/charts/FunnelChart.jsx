@@ -17,8 +17,8 @@ const FunnelChart = ({ data }) => {
             <ResponsiveContainer width="100%" height="100%">
                 <RechartsFunnelChart>
                     <Tooltip
-                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc' }}
-                        itemStyle={{ color: '#f8fafc' }}
+                        contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderColor: '#e2e8f0', borderRadius: '12px', color: '#1e293b' }}
+                        itemStyle={{ color: '#1e293b' }}
                         formatter={(value, name) => [value, name]}
                     />
                     <Funnel
@@ -26,7 +26,7 @@ const FunnelChart = ({ data }) => {
                         data={data}
                         isAnimationActive
                     >
-                        <LabelList position="right" fill="#94a3b8" stroke="none" dataKey="name" />
+                        <LabelList position="right" fill="#64748b" stroke="none" dataKey="name" fontSize={10} fontWeight="900" />
                         <LabelList position="center" fill="#ffffff" stroke="none" dataKey="value" fontSize={14} fontWeight="bold" />
                         {data.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.fill} stroke="none" />

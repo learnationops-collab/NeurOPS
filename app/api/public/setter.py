@@ -179,16 +179,24 @@ def get_public_setter_stats():
         func.sum(SetterDailyStats.funnel_offer).label('fun_offer'),
         func.sum(SetterDailyStats.funnel_link).label('fun_link'),
         func.sum(SetterDailyStats.funnel_agenda).label('fun_agenda'),
-        func.sum(SetterDailyStats.qualification_fu).label('fu_qual'),
-        func.sum(SetterDailyStats.pain_fu).label('fu_pain_sub'),
-        func.sum(SetterDailyStats.offer_fu).label('fu_offer_sub'),
-        func.sum(SetterDailyStats.agenda_fur).label('fur_agenda'),
-        func.sum(SetterDailyStats.link_fu).label('fu_link_sub'),
-        func.sum(SetterDailyStats.link_fur).label('fur_link'),
-        func.sum(SetterDailyStats.qualification_opening_submitted).label('q_op_sub'),
-        func.sum(SetterDailyStats.qualification_opening_responded).label('q_op_res'),
-        func.sum(SetterDailyStats.pain_opening_submitted).label('p_op_sub'),
-        func.sum(SetterDailyStats.pain_opening_responded).label('p_op_res')
+        
+        # Follow Ups Sub/Res
+        func.sum(SetterDailyStats.qualification_fu).label('fu_q_s'),
+        func.sum(SetterDailyStats.qualification_fur).label('fu_q_r'),
+        func.sum(SetterDailyStats.pain_fu).label('fu_p_s'),
+        func.sum(SetterDailyStats.pain_fur).label('fu_p_r'),
+        func.sum(SetterDailyStats.offer_fu).label('fu_o_s'),
+        func.sum(SetterDailyStats.offer_fur).label('fu_o_r'),
+        func.sum(SetterDailyStats.link_fu).label('fu_l_s'),
+        func.sum(SetterDailyStats.link_fur).label('fu_l_r'),
+        func.sum(SetterDailyStats.agenda_fu).label('fu_a_s'),
+        func.sum(SetterDailyStats.agenda_fur).label('fu_a_r'),
+        
+        # Openings Sub/Res
+        func.sum(SetterDailyStats.qualification_opening_submitted).label('q_op_s'),
+        func.sum(SetterDailyStats.qualification_opening_responded).label('q_op_r'),
+        func.sum(SetterDailyStats.pain_opening_submitted).label('p_op_s'),
+        func.sum(SetterDailyStats.pain_opening_responded).label('p_op_r')
     )
     
     filters = []
@@ -236,20 +244,22 @@ def get_public_setter_stats():
             "funnel_offer": process_val(stats.fun_offer),
             "funnel_link": process_val(stats.fun_link),
             "funnel_agenda": process_val(stats.fun_agenda),
-            "qualification_fu": process_val(stats.fu_qual),
-            "pain_fu": process_val(stats.fu_pain_sub),
-            "offer_fu": process_val(stats.fu_offer_sub),
-            "agenda_fu": process_val(stats.fu_agenda_sub),
-            "link_fu": process_val(stats.fu_link_sub),
-            "qualification_fur": process_val(stats.fur_qual),
-            "pain_fur": process_val(stats.fur_pain),
-            "offer_fur": process_val(stats.fur_offer),
-            "link_fur": process_val(stats.fur_link),
-            "agenda_fur": process_val(stats.fur_agenda),
-            "qualification_opening_submitted": process_val(stats.q_op_sub),
-            "qualification_opening_responded": process_val(stats.q_op_res),
-            "pain_opening_submitted": process_val(stats.p_op_sub),
-            "pain_opening_responded": process_val(stats.p_op_res)
+            
+            "qualification_fu": process_val(stats.fu_q_s),
+            "qualification_fur": process_val(stats.fu_q_r),
+            "pain_fu": process_val(stats.fu_p_s),
+            "pain_fur": process_val(stats.fu_p_r),
+            "offer_fu": process_val(stats.fu_o_s),
+            "offer_fur": process_val(stats.fu_o_r),
+            "link_fu": process_val(stats.fu_l_s),
+            "link_fur": process_val(stats.fu_l_r),
+            "agenda_fu": process_val(stats.fu_a_s),
+            "agenda_fur": process_val(stats.fu_a_r),
+            
+            "qualification_opening_submitted": process_val(stats.q_op_s),
+            "qualification_opening_responded": process_val(stats.q_op_r),
+            "pain_opening_submitted": process_val(stats.p_op_s),
+            "pain_opening_responded": process_val(stats.p_op_r)
         },
         "percentages": {
             "inbox": {
@@ -260,13 +270,13 @@ def get_public_setter_stats():
             "rates": {
                 "opening_response": div(float(stats.op_res or 0), float(stats.op_sub or 0)),
                 "opening_rate": div(float(stats.op_sub or 0), float(stats.entrantes or 0)),
-                "qualification_fur": div(float(stats.fur_qual or 0), float(stats.fu_qual or 0)),
-                "pain_fur": div(float(stats.fur_pain or 0), float(stats.fu_pain_sub or 0)),
-                "offer_fur": div(float(stats.fur_offer or 0), float(stats.fu_offer_sub or 0)),
-                "link_fur": div(float(stats.fur_link or 0), float(stats.fu_link_sub or 0)),
-                "agenda_fur": div(float(stats.fur_agenda or 0), float(stats.fu_agenda_sub or 0)),
-                "qualification_opening_rate": div(float(stats.q_op_res or 0), float(stats.q_op_sub or 0)),
-                "pain_opening_rate": div(float(stats.p_op_res or 0), float(stats.p_op_sub or 0))
+                "qualification_fur": div(float(stats.fu_q_r or 0), float(stats.fu_q_s or 0)),
+                "pain_fur": div(float(stats.fu_p_r or 0), float(stats.fu_p_s or 0)),
+                "offer_fur": div(float(stats.fu_o_r or 0), float(stats.fu_o_s or 0)),
+                "link_fur": div(float(stats.fu_l_r or 0), float(stats.fu_l_s or 0)),
+                "agenda_fur": div(float(stats.fu_a_r or 0), float(stats.fu_a_s or 0)),
+                "qualification_opening_rate": div(float(stats.q_op_r or 0), float(stats.q_op_s or 0)),
+                "pain_opening_rate": div(float(stats.p_op_r or 0), float(stats.p_op_s or 0))
             },
             "funnel_evolution": {
                 "qual_to_pain": div(float(stats.fun_pain or 0), float(stats.fun_qual or 0)),
