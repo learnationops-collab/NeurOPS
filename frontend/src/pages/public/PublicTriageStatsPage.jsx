@@ -100,6 +100,16 @@ const PublicTriageStatsPage = () => {
     const popConfirmadasAll = stats?.post_all_confirmadas || 0;
     const popPpcAll = stats?.post_all_ppc_completo || 0;
 
+    // Independent bases for percentages
+    const stProcessTotal = stConfirmando + stReprogramando;
+    const allProcessTotal = allConfirmando + allReprogramando;
+    
+    const stInciertas = stAgendas - (stConfirmando + stReprogramando + stConfirmadas + stCanceladas);
+    const allInciertas = allAgendas - (allConfirmando + allReprogramando + allConfirmadas + allCanceladas);
+    
+    const stCompletosTotal = stConfirmadas + stCanceladas + stInciertas;
+    const allCompletosTotal = allConfirmadas + allCanceladas + allInciertas;
+
     const TabButton = ({ id, label, icon: Icon }) => (
         <button onClick={() => setActiveTab(id)} className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 hover:bg-slate-800'}`}>
             <Icon size={14} /> {label}
@@ -270,9 +280,9 @@ const PublicTriageStatsPage = () => {
                                                         <td className="py-3 px-4 text-base font-bold text-center text-rose-400">{fmt(allCanceladas)}</td>
                                                     </tr>
                                                     <tr className="hover:bg-slate-800/20 transition-colors">
-                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-amber-400">Incierto</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-amber-400">{fmt(stAgendas - (stConfirmando + stReprogramando + stConfirmadas + stCanceladas))}</td>
-                                                        <td className="py-3 px-4 text-base font-bold text-center text-amber-400">{fmt(allAgendas - (allConfirmando + allReprogramando + allConfirmadas + allCanceladas))}</td>
+                                                        <td className="py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-amber-400">Inciertas</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-amber-400">{fmt(stInciertas)}</td>
+                                                        <td className="py-3 px-4 text-base font-bold text-center text-amber-400">{fmt(allInciertas)}</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
@@ -296,16 +306,16 @@ const PublicTriageStatsPage = () => {
                                                 <div className="space-y-6">
                                                     <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest text-center">Hoy</p>
                                                     <div className="space-y-4">
-                                                        <ProgressRow label="Confirmando" absolute={stConfirmando} percentage={safeCalc(stConfirmando, stAgendas)} colorClass="text-indigo-400" />
-                                                        <ProgressRow label="Reprogramando" absolute={stReprogramando} percentage={safeCalc(stReprogramando, stAgendas)} colorClass="text-fuchsia-400" />
+                                                        <ProgressRow label="Confirmando" absolute={stConfirmando} percentage={safeCalc(stConfirmando, stProcessTotal)} colorClass="text-indigo-400" />
+                                                        <ProgressRow label="Reprogramando" absolute={stReprogramando} percentage={safeCalc(stReprogramando, stProcessTotal)} colorClass="text-fuchsia-400" />
                                                     </div>
                                                 </div>
 
                                                 <div className="space-y-6">
                                                     <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest text-center">Generales</p>
                                                     <div className="space-y-4">
-                                                        <ProgressRow label="Confirmando" absolute={allConfirmando} percentage={safeCalc(allConfirmando, allAgendas)} colorClass="text-indigo-500" />
-                                                        <ProgressRow label="Reprogramando" absolute={allReprogramando} percentage={safeCalc(allReprogramando, allAgendas)} colorClass="text-fuchsia-500" />
+                                                        <ProgressRow label="Confirmando" absolute={allConfirmando} percentage={safeCalc(allConfirmando, allProcessTotal)} colorClass="text-indigo-500" />
+                                                        <ProgressRow label="Reprogramando" absolute={allReprogramando} percentage={safeCalc(allReprogramando, allProcessTotal)} colorClass="text-fuchsia-500" />
                                                     </div>
                                                 </div>
                                             </div>
@@ -326,16 +336,18 @@ const PublicTriageStatsPage = () => {
                                                 <div className="space-y-6">
                                                     <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest text-center">Hoy</p>
                                                     <div className="space-y-4">
-                                                        <ProgressRow label="Confirmadas" absolute={stConfirmadas} percentage={safeCalc(stConfirmadas, stAgendas)} colorClass="text-emerald-400" />
-                                                        <ProgressRow label="Reprogramadas" absolute={stReprogramando} percentage={safeCalc(stReprogramando, stAgendas)} colorClass="text-indigo-400" />
+                                                        <ProgressRow label="Confirmadas" absolute={stConfirmadas} percentage={safeCalc(stConfirmadas, stCompletosTotal)} colorClass="text-emerald-400" />
+                                                        <ProgressRow label="Canceladas" absolute={stCanceladas} percentage={safeCalc(stCanceladas, stCompletosTotal)} colorClass="text-rose-400" />
+                                                        <ProgressRow label="Inciertas" absolute={stInciertas} percentage={safeCalc(stInciertas, stCompletosTotal)} colorClass="text-amber-400" />
                                                     </div>
                                                 </div>
 
                                                 <div className="space-y-6">
                                                     <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center">Generales</p>
                                                     <div className="space-y-4">
-                                                        <ProgressRow label="Confirmadas" absolute={allConfirmadas} percentage={safeCalc(allConfirmadas, allAgendas)} colorClass="text-emerald-500" />
-                                                        <ProgressRow label="Reprogramadas" absolute={allReprogramando} percentage={safeCalc(allReprogramando, allAgendas)} colorClass="text-indigo-500" />
+                                                        <ProgressRow label="Confirmadas" absolute={allConfirmadas} percentage={safeCalc(allConfirmadas, allCompletosTotal)} colorClass="text-emerald-500" />
+                                                        <ProgressRow label="Canceladas" absolute={allCanceladas} percentage={safeCalc(allCanceladas, allCompletosTotal)} colorClass="text-rose-500" />
+                                                        <ProgressRow label="Inciertas" absolute={allInciertas} percentage={safeCalc(allInciertas, allCompletosTotal)} colorClass="text-amber-500" />
                                                     </div>
                                                 </div>
                                             </div>

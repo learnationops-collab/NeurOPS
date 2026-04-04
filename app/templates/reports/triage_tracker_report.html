@@ -399,6 +399,19 @@
                             <div class="progress-fill" style="width: {{ st_canceladas_pct }}%; background: var(--rose);"></div>
                         </div>
                     </div>
+                    <!-- Inciertas -->
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="progress-label">Inciertas</span>
+                            <div class="progress-meta">
+                                <span class="abs-val">({{ st_inciertas_val }})</span>
+                                <span>{{ st_inciertas_pct }}%</span>
+                            </div>
+                        </div>
+                        <div class="progress-bg">
+                            <div class="progress-fill" style="width: {{ st_inciertas_pct }}%; background: #cbd5e1;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -465,6 +478,19 @@
                         </div>
                         <div class="progress-bg">
                             <div class="progress-fill" style="width: {{ all_canceladas_pct }}%; background: var(--rose);"></div>
+                        </div>
+                    </div>
+                    <!-- Inciertas -->
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="progress-label">Inciertas</span>
+                            <div class="progress-meta">
+                                <span class="abs-val">({{ all_inciertas_val }})</span>
+                                <span>{{ all_inciertas_pct }}%</span>
+                            </div>
+                        </div>
+                        <div class="progress-bg">
+                            <div class="progress-fill" style="width: {{ all_inciertas_pct }}%; background: #cbd5e1;"></div>
                         </div>
                     </div>
                 </div>

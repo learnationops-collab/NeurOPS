@@ -106,29 +106,51 @@ def submit_triage_tracker():
             fu_resp = report.fu_cold_personas_respondidos + report.fu_warm_personas_respondidos + report.fu_hot_personas_respondidos
             fu_mjes = report.fu_cold_mjes_realizados + report.fu_warm_mjes_realizados + report.fu_hot_mjes_realizados
 
+            st_confirmando = report.starting_1st_call_confirmando + report.starting_2nd_call_confirmando
+            st_reprogramando = report.starting_1st_call_reprogramando + report.starting_2nd_call_reprogramando
+            st_confirmadas = report.starting_1st_call_confirmadas + report.starting_2nd_call_confirmadas
+            st_canceladas = report.starting_1st_call_canceladas + report.starting_2nd_call_canceladas
+            st_inciertas = st_agendas - (st_confirmando + st_reprogramando + st_confirmadas + st_canceladas)
+            
+            st_process_base = st_confirmando + st_reprogramando
+            st_completos_base = st_confirmadas + st_canceladas + st_inciertas
+
+            all_confirmando = report.all_1st_call_confirmando + report.all_2nd_call_confirmando
+            all_reprogramando = report.all_1st_call_reprogramando + report.all_2nd_call_reprogramando
+            all_confirmadas = report.all_1st_call_confirmadas + report.all_2nd_call_confirmadas
+            all_canceladas = report.all_1st_call_canceladas + report.all_2nd_call_canceladas
+            all_inciertas = all_agendas - (all_confirmando + all_reprogramando + all_confirmadas + all_canceladas)
+            
+            all_process_base = all_confirmando + all_reprogramando
+            all_completos_base = all_confirmadas + all_canceladas + all_inciertas
+
             render_data = {
                 "triage_name": report.triage_name,
                 "date_str": report.date.strftime("%d/%m/%Y"),
                 
                 "st_agendas": st_agendas,
-                "st_confirmando_val": report.starting_1st_call_confirmando + report.starting_2nd_call_confirmando,
-                "st_confirmando_pct": safe_pct(report.starting_1st_call_confirmando + report.starting_2nd_call_confirmando, st_agendas),
-                "st_reprogramando_val": report.starting_1st_call_reprogramando + report.starting_2nd_call_reprogramando,
-                "st_reprogramando_pct": safe_pct(report.starting_1st_call_reprogramando + report.starting_2nd_call_reprogramando, st_agendas),
-                "st_confirmadas_val": report.starting_1st_call_confirmadas + report.starting_2nd_call_confirmadas,
-                "st_confirmadas_pct": safe_pct(report.starting_1st_call_confirmadas + report.starting_2nd_call_confirmadas, st_agendas),
-                "st_canceladas_val": report.starting_1st_call_canceladas + report.starting_2nd_call_canceladas,
-                "st_canceladas_pct": safe_pct(report.starting_1st_call_canceladas + report.starting_2nd_call_canceladas, st_agendas),
+                "st_confirmando_val": st_confirmando,
+                "st_confirmando_pct": safe_pct(st_confirmando, st_process_base),
+                "st_reprogramando_val": st_reprogramando,
+                "st_reprogramando_pct": safe_pct(st_reprogramando, st_process_base),
+                "st_confirmadas_val": st_confirmadas,
+                "st_confirmadas_pct": safe_pct(st_confirmadas, st_completos_base),
+                "st_canceladas_val": st_canceladas,
+                "st_canceladas_pct": safe_pct(st_canceladas, st_completos_base),
+                "st_inciertas_val": st_inciertas,
+                "st_inciertas_pct": safe_pct(st_inciertas, st_completos_base),
 
                 "all_agendas": all_agendas,
-                "all_confirmando_val": report.all_1st_call_confirmando + report.all_2nd_call_confirmando,
-                "all_confirmando_pct": safe_pct(report.all_1st_call_confirmando + report.all_2nd_call_confirmando, all_agendas),
-                "all_reprogramando_val": report.all_1st_call_reprogramando + report.all_2nd_call_reprogramando,
-                "all_reprogramando_pct": safe_pct(report.all_1st_call_reprogramando + report.all_2nd_call_reprogramando, all_agendas),
-                "all_confirmadas_val": report.all_1st_call_confirmadas + report.all_2nd_call_confirmadas,
-                "all_confirmadas_pct": safe_pct(report.all_1st_call_confirmadas + report.all_2nd_call_confirmadas, all_agendas),
-                "all_canceladas_val": report.all_1st_call_canceladas + report.all_2nd_call_canceladas,
-                "all_canceladas_pct": safe_pct(report.all_1st_call_canceladas + report.all_2nd_call_canceladas, all_agendas),
+                "all_confirmando_val": all_confirmando,
+                "all_confirmando_pct": safe_pct(all_confirmando, all_process_base),
+                "all_reprogramando_val": all_reprogramando,
+                "all_reprogramando_pct": safe_pct(all_reprogramando, all_process_base),
+                "all_confirmadas_val": all_confirmadas,
+                "all_confirmadas_pct": safe_pct(all_confirmadas, all_completos_base),
+                "all_canceladas_val": all_canceladas,
+                "all_canceladas_pct": safe_pct(all_canceladas, all_completos_base),
+                "all_inciertas_val": all_inciertas,
+                "all_inciertas_pct": safe_pct(all_inciertas, all_completos_base),
 
                 "fu_disponibles": fu_disp,
                 "fu_contactadas": fu_cont,
