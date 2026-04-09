@@ -488,45 +488,11 @@ def sync_financial_sales_from_sheets():
             
         data = response.json()
         
-        # Load existing records to avoid duplicates and handle updates
-        existing_sales = FinancialSale.query.order_by(FinancialSale.id.asc()).all()
-        existing_map = {}
-        duplicates_removed = 0
-        updated = 0
+        # Como solicitaste, la BD se borrará y reconstruirá completamente en cada llamado.
+        # Esto nos asegura que el Sheets siempre es la única fuente de la verdad.
+        db.session.query(FinancialSale).delete()
+        
         added = 0
-        
-        for s in existing_sales:
-            date_str = s.date.strftime('%Y-%m-%d') if s.date else ""
-            raw = s.raw_data or {}
-            cliente = (raw.get('cliente') or raw.get('nombre') or 'desconocido').strip().lower()
-            monto = float(s.amount)
-            
-            key = f"{cliente}_{monto}_{date_str}"
-            
-            if key in existing_map:
-                # Duplicate found from the changing key previously. Keep the one with most data.
-                prev = existing_map[key]
-                prev_has_ig = bool(prev.instagram and prev.instagram != 'N/A' and prev.instagram.strip())
-                s_has_ig = bool(s.instagram and s.instagram != 'N/A' and s.instagram.strip())
-                prev_has_setter = prev.setter_name != 'Desconocido'
-                s_has_setter = s.setter_name != 'Desconocido'
-                
-                # Merge logic
-                if (s_has_ig and not prev_has_ig) or (s_has_setter and not prev_has_setter and not prev_has_ig):
-                    if s.setter_name == 'Desconocido' and prev_has_setter:
-                        s.setter_name = prev.setter_name
-                    db.session.delete(prev)
-                    existing_map[key] = s
-                else:
-                    if prev.setter_name == 'Desconocido' and s_has_setter:
-                        prev.setter_name = s.setter_name
-                    if not prev_has_ig and s_has_ig:
-                        prev.instagram = s.instagram
-                    db.session.delete(s)
-                duplicates_removed += 1
-            else:
-                existing_map[key] = s
-        
         for item in data:
             parsed = parse_financial_data(item)
             
@@ -543,53 +509,26 @@ def sync_financial_sales_from_sheets():
                 except Exception:
                     pass
             
-            # Stable key check using client + amount + date
-            date_str_check = sale_date.strftime('%Y-%m-%d')
-            cliente = (item.get('cliente') or item.get('nombre') or 'desconocido').strip().lower()
-            key_check = f"{cliente}_{float(parsed['monto'])}_{date_str_check}"
-            
-            if key_check in existing_map:
-                # Existing record found, gracefully UPDATE it instead of duplicating
-                sale = existing_map[key_check]
-                was_updated = False
-                
-                if parsed['setter'] != 'Desconocido' and sale.setter_name == 'Desconocido':
-                    sale.setter_name = parsed['setter']
-                    was_updated = True
-                    
-                if parsed['instagram'] and parsed['instagram'] != 'N/A' and parsed['instagram'].strip():
-                    if sale.instagram != parsed['instagram']:
-                        sale.instagram = parsed['instagram']
-                        was_updated = True
-                        
-                if was_updated:
-                    # Sync the raw data state
-                    sale.raw_data = item
-                    updated += 1
-            else:
-                # Brand new record
-                sale = FinancialSale(
-                    setter_name=parsed['setter'],
-                    amount=parsed['monto'],
-                    date=sale_date,
-                    raw_data=item,
-                    status=parsed['status'],
-                    error_notes=parsed['error_notes'],
-                    product=parsed['producto'],
-                    payment_type=parsed['tipo_de_pago'],
-                    instagram=parsed['instagram']
-                )
-                db.session.add(sale)
-                existing_map[key_check] = sale 
-                added += 1
+            # Creamos todos los registros como nuevos
+            sale = FinancialSale(
+                setter_name=parsed['setter'],
+                amount=parsed['monto'],
+                date=sale_date,
+                raw_data=item,
+                status=parsed['status'],
+                error_notes=parsed['error_notes'],
+                product=parsed['producto'],
+                payment_type=parsed['tipo_de_pago'],
+                instagram=parsed['instagram']
+            )
+            db.session.add(sale)
+            added += 1
                 
         db.session.commit()
-        current_app.logger.info(f"[FINANCIAL SYNC] Added: {added}, Updated: {updated}, Duplicates Cleaned: {duplicates_removed}")
+        current_app.logger.info(f"[FINANCIAL SYNC] Reconstrucción completa: Se recrearon {added} registros desde cero.")
         return jsonify({
-            "message": "Sincronización completa", 
-            "added": added,
-            "updated": updated,
-            "duplicates_removed": duplicates_removed
+            "message": "Base de datos reconstruida con éxito", 
+            "added": added
         }), 200
         
     except requests.exceptions.Timeout:
