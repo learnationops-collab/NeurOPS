@@ -82,14 +82,29 @@ def receive_manychat_ad_lead():
             if lead_name: lead.name = lead_name
             if lead_ig: lead.ig = lead_ig
             lead.follower = follower
+            # Actualizamos last_stage si viene en el payload
+            raw_last_stage = data.get('last_stage')
+            if raw_last_stage is not None:
+                try:
+                    lead.last_stage = int(raw_last_stage)
+                except (ValueError, TypeError):
+                    pass
             logger.info(f"[WEBHOOK] ManychatLead actualizado: {manychat_id}")
         else:
             # Lo creamos
+            raw_last_stage = data.get('last_stage')
+            parsed_last_stage = None
+            if raw_last_stage is not None:
+                try:
+                    parsed_last_stage = int(raw_last_stage)
+                except (ValueError, TypeError):
+                    pass
             lead = ManychatLead(
                 manychat_id=str(manychat_id),
                 name=lead_name,
                 ig=lead_ig,
-                follower=follower
+                follower=follower,
+                last_stage=parsed_last_stage
             )
             db.session.add(lead)
             db.session.flush() # Para obtener lead.id antes del commit
@@ -179,6 +194,7 @@ def get_webhook_log():
         'lead_name': ans.lead.name,
         'lead_ig': ans.lead.ig,
         'follower': ans.lead.follower,
+        'last_stage': ans.lead.last_stage,
         'ad_id': ans.ad_id,
         'ad_name': ads_map[ans.ad_id].name if ans.ad_id and ans.ad_id in ads_map else '—',
         'keyword': ans.keyword,

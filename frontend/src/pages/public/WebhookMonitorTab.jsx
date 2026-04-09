@@ -289,6 +289,11 @@ const WebhookMonitorTab = () => {
                                         {log.variante && <span>Var: <strong className="text-amber-400 font-medium">{log.variante}</strong></span>}
                                         {log.opening && <span>Open: <strong className="text-blue-400 font-medium">{log.opening}</strong></span>}
                                         {log.fecha && <span>Fecha (MC): <strong className="text-slate-400">{log.fecha}</strong></span>}
+                                        {log.last_stage != null && (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400 font-mono font-bold text-[9px]">
+                                                Stage {log.last_stage}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 

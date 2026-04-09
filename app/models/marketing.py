@@ -93,6 +93,7 @@ class ManychatLead(db.Model):
     name = db.Column(db.String(150))
     ig = db.Column(db.String(100))
     follower = db.Column(db.Boolean, default=False)
+    last_stage = db.Column(db.Integer, nullable=True)  # Última etapa numérica del funnel (ManyChat)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
