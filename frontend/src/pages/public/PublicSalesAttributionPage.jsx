@@ -71,6 +71,8 @@ const PublicSalesAttributionPage = () => {
         setLoading(true);
         setError(null);
         try {
+            await api.post('/public/financial-sales/sync');
+            
             const res = await api.get('/public/reports/sales-attribution', {
                 params: { start_date: startDate, end_date: endDate }
             });

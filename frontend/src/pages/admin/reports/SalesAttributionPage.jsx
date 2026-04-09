@@ -82,6 +82,9 @@ const SalesAttributionPage = () => {
         setReport(null);
 
         try {
+            // Sincronizar tabla de ventas primero para asegurar datos frescos
+            await api.post('/public/financial-sales/sync');
+
             const res = await api.get('/public/reports/sales-attribution', {
                 params: { start_date: startDate, end_date: endDate }
             });
@@ -187,7 +190,7 @@ const SalesAttributionPage = () => {
                 <div className="flex flex-col items-center justify-center py-24 gap-4">
                     <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                     <p className="text-xs font-black uppercase tracking-widest text-muted">
-                        Cruzando registros de ventas con webhooks...
+                        Sincronizando ventas y cruzando registros...
                     </p>
                 </div>
             )}
