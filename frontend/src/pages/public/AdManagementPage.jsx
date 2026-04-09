@@ -1,280 +1,420 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Plus, Trash2, Pencil, Save, X, DollarSign, Megaphone, ArrowLeft, CalendarDays, TrendingUp, Search, Radio, Users } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Save, X, DollarSign, Megaphone, ArrowLeft, CalendarDays, TrendingUp, Search, Radio, Users, Folder, Layers, ChevronDown, ChevronRight, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebhookMonitorTab from './WebhookMonitorTab';
 import AdDashboardTab from './AdDashboardTab';
 
 // ==========================================
-// Tab: Gestión de Anuncios
+// Componentes Auxiliares
 // ==========================================
-const AdsTab = ({ ads, onRefresh, loading }) => {
-    const [showForm, setShowForm] = useState(false);
-    const [editingId, setEditingId] = useState(null);
-    const [formData, setFormData] = useState({ name: '', keyword: '' });
+const StatusBadge = ({ status, onClick }) => (
+    <button onClick={onClick} className="group shrink-0" type="button">
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all
+            ${status === 'active'
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 shadow-[0_0_10px_rgba(52,211,153,0.1)]'
+                : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 shadow-[0_0_10px_rgba(251,191,36,0.1)]'
+            }`}
+        >
+            <span className={`w-1.5 h-1.5 rounded-full ${status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            {status === 'active' ? 'Activo' : 'Pausado'}
+        </span>
+    </button>
+);
+
+// ==========================================
+// Tab: Gestión de Anuncios (Árbol)
+// ==========================================
+const AdsTab = ({ campaigns, ads, onRefresh, loading }) => {
+    // Expand states
+    const [expandedCamps, setExpandedCamps] = useState({});
+    const [expandedSets, setExpandedSets] = useState({});
+
+    // Create forms
+    const [showCampForm, setShowCampForm] = useState(false);
+    const [campForm, setCampForm] = useState({ name: '' });
+    const [loadingCreate, setLoadingCreate] = useState(false);
+
+    const [createSetForCamp, setCreateSetForCamp] = useState(null);
+    const [setForm, setSetForm] = useState({ name: '' });
+
+    const [createAdForSet, setCreateAdForSet] = useState(null);
+    const [adForm, setAdForm] = useState({ name: '', keyword: '' });
+
+    // Editing states
+    const [editingNode, setEditingNode] = useState(null); // { type: 'camp'|'set'|'ad', id: 1 }
     const [editData, setEditData] = useState({ name: '', keyword: '', status: '' });
-    const [submitting, setSubmitting] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredAds = useMemo(() => {
-        if (!searchTerm) return ads;
-        const lower = searchTerm.toLowerCase();
-        return ads.filter(a =>
-            a.name.toLowerCase().includes(lower) ||
-            (a.keyword || '').toLowerCase().includes(lower)
-        );
-    }, [ads, searchTerm]);
+    const toggleCamp = (id) => setExpandedCamps(prev => ({ ...prev, [id]: !prev[id] }));
+    const toggleSet = (id) => setExpandedSets(prev => ({ ...prev, [id]: !prev[id] }));
 
-    const handleCreate = async (e) => {
+    // ========================================================
+    // CREATE Methods
+    // ========================================================
+    const handleCreateCamp = async (e) => {
         e.preventDefault();
-        if (!formData.name.trim() || !formData.keyword.trim()) return;
-        setSubmitting(true);
+        if (!campForm.name.trim()) return;
+        setLoadingCreate(true);
         try {
-            await api.post('/public/ads', formData);
-            setFormData({ name: '', keyword: '' });
-            setShowForm(false);
+            await api.post('/public/campaigns', campForm);
+            setCampForm({ name: '' });
+            setShowCampForm(false);
             onRefresh();
-        } catch (err) {
-            alert(err.response?.data?.message || 'Error al crear anuncio');
-        } finally {
-            setSubmitting(false);
-        }
+        } catch (err) { alert('Error al crear campaña'); } finally { setLoadingCreate(false); }
     };
 
-    const handleUpdate = async (id) => {
-        setSubmitting(true);
+    const handleCreateSet = async (e) => {
+        e.preventDefault();
+        if (!setForm.name.trim()) return;
+        setLoadingCreate(true);
         try {
-            await api.put(`/public/ads/${id}`, editData);
-            setEditingId(null);
+            await api.post('/public/adsets', { name: setForm.name, campaign_id: createSetForCamp });
+            setSetForm({ name: '' });
+            setExpandedCamps(prev => ({ ...prev, [createSetForCamp]: true })); // open parent
+            setCreateSetForCamp(null);
             onRefresh();
-        } catch (err) {
-            alert(err.response?.data?.error || 'Error al actualizar');
-        } finally {
-            setSubmitting(false);
-        }
+        } catch (err) { alert('Error al crear conjunto'); } finally { setLoadingCreate(false); }
     };
 
-    const handleDelete = async (id, name) => {
-        if (!confirm(`¿Eliminar el anuncio "${name}"? Esto también borrará todo su historial de gasto.`)) return;
+    const handleCreateAd = async (e) => {
+        e.preventDefault();
+        if (!adForm.name.trim() || !adForm.keyword.trim()) return;
+        setLoadingCreate(true);
         try {
-            await api.delete(`/public/ads/${id}`);
+            await api.post('/public/ads', { ...adForm, ad_set_id: createAdForSet });
+            setAdForm({ name: '', keyword: '' });
+            setExpandedSets(prev => ({ ...prev, [createAdForSet]: true })); // open parent
+            setCreateAdForSet(null);
             onRefresh();
-        } catch (err) {
-            alert(err.response?.data?.error || 'Error al eliminar');
-        }
+        } catch (err) { alert('Error al crear anuncio'); } finally { setLoadingCreate(false); }
     };
 
-    const handleToggleStatus = async (ad) => {
-        const newStatus = ad.status === 'active' ? 'paused' : 'active';
+    // ========================================================
+    // UPDATE / DELETE Methods
+    // ========================================================
+    const handleToggleStatus = async (type, item) => {
+        const url = type === 'camp' ? `/public/campaigns/${item.id}` 
+                  : type === 'set' ? `/public/adsets/${item.id}` 
+                  : `/public/ads/${item.id}`;
         try {
-            await api.put(`/public/ads/${ad.id}`, { status: newStatus });
+            await api.put(url, { status: item.status === 'active' ? 'paused' : 'active' });
             onRefresh();
-        } catch (err) {
-            alert('Error al cambiar estado');
-        }
+        } catch (err) { alert('Error al actualizar estado'); }
     };
 
-    const startEdit = (ad) => {
-        setEditingId(ad.id);
-        setEditData({ name: ad.name, keyword: ad.keyword, status: ad.status });
+    const startEdit = (type, item) => {
+        setEditingNode({ type, id: item.id });
+        setEditData({ name: item.name, status: item.status, keyword: item.keyword || '' });
+    };
+
+    const handleUpdate = async () => {
+        const { type, id } = editingNode;
+        const url = type === 'camp' ? `/public/campaigns/${id}` 
+                  : type === 'set' ? `/public/adsets/${id}` 
+                  : `/public/ads/${id}`;
+        
+        try {
+            await api.put(url, editData);
+            setEditingNode(null);
+            onRefresh();
+        } catch (err) { alert('Error al actualizar'); }
+    };
+
+    const handleDelete = async (type, item) => {
+        if (!confirm(`¿Eliminar ${type === 'camp' ? 'campaña' : type === 'set' ? 'conjunto' : 'anuncio'} "${item.name}"? Se borrarán sus dependencias y gastos.`)) return;
+        const url = type === 'camp' ? `/public/campaigns/${item.id}` 
+                  : type === 'set' ? `/public/adsets/${item.id}` 
+                  : `/public/ads/${item.id}`;
+        try {
+            await api.delete(url);
+            onRefresh();
+        } catch (err) { alert('Error al eliminar'); }
+    };
+
+    // ========================================================
+    // HELPERS FOR RENDER
+    // ========================================================
+    // Find ads for a specific adSet
+    const adsForSet = (setId) => ads.filter(a => a.ad_set_id === setId);
+
+    // Sum metrics for an adSet
+    const getSetMetrics = (setId) => {
+        const myAds = adsForSet(setId);
+        return myAds.reduce((acc, ad) => ({
+            total_spend: acc.total_spend + (ad.total_spend || 0),
+            total_leads: acc.total_leads + (ad.total_leads || 0),
+            qualified_leads: acc.qualified_leads + (ad.qualified_leads || 0)
+        }), { total_spend: 0, total_leads: 0, qualified_leads: 0 });
+    };
+
+    // Sum metrics for a campaign
+    const getCampMetrics = (camp) => {
+        return (camp.ad_sets || []).reduce((acc, set) => {
+            const m = getSetMetrics(set.id);
+            return {
+                total_spend: acc.total_spend + m.total_spend,
+                total_leads: acc.total_leads + m.total_leads,
+                qualified_leads: acc.qualified_leads + m.qualified_leads
+            };
+        }, { total_spend: 0, total_leads: 0, qualified_leads: 0 });
     };
 
     return (
         <div className="space-y-6">
-            {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                <div className="relative flex-1 w-full sm:max-w-xs">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input
-                        type="text"
-                        placeholder="Buscar anuncios..."
-                        className="w-full pl-9 pr-4 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white text-sm outline-none focus:border-emerald-500 transition-all"
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
+            {/* Header / Actions */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-black italic tracking-tighter uppercase text-white">Administrador de Estructura</h2>
+                    <p className="text-sm text-slate-400 font-medium">Organiza tus presupuestos en Campañas &gt; Conjuntos &gt; Anuncios</p>
                 </div>
                 <button
-                    onClick={() => setShowForm(!showForm)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm transition-all active:scale-95"
+                    onClick={() => setShowCampForm(!showCampForm)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm transition-all shadow-[0_0_20px_rgba(52,211,153,0.2)] active:scale-95"
                 >
-                    <Plus size={18} /> Nuevo Anuncio
+                    <Plus size={18} /> Nueva Campaña
                 </button>
             </div>
 
-            {/* Formulario de creación */}
-            {showForm && (
-                <form onSubmit={handleCreate} className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4 animate-in slide-in-from-top-2">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre del Anuncio</label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="Ej: Video Testimonial Principal"
-                                className="w-full px-4 py-3 bg-slate-900 border border-slate-700/50 rounded-xl text-white outline-none focus:border-emerald-500 transition-all font-medium"
-                                value={formData.name}
-                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Keyword</label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="Ej: video_testimonial_01"
-                                className="w-full px-4 py-3 bg-slate-900 border border-slate-700/50 rounded-xl text-white outline-none focus:border-emerald-500 transition-all font-medium"
-                                value={formData.keyword}
-                                onChange={e => setFormData({ ...formData, keyword: e.target.value })}
-                            />
-                        </div>
+            {/* Campaign Form */}
+            {showCampForm && (
+                <form onSubmit={handleCreateCamp} className="bg-slate-800/80 border border-emerald-500/30 rounded-2xl p-5 space-y-4 animate-in fade-in slide-in-from-top-4 shadow-xl">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest ml-1">Nombre de la Campaña</label>
+                        <input
+                            type="text" autoFocus required placeholder="Ej: Black Friday 2026"
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none focus:border-emerald-500 transition-all font-bold"
+                            value={campForm.name} onChange={e => setCampForm({ name: e.target.value })}
+                        />
                     </div>
                     <div className="flex gap-3 justify-end">
-                        <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-slate-400 hover:text-white transition-colors text-sm font-medium">Cancelar</button>
-                        <button type="submit" disabled={submitting} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all">
-                            {submitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Crear
+                        <button type="button" onClick={() => setShowCampForm(false)} className="px-4 py-2 text-slate-400 hover:text-white transition-colors text-sm font-medium">Cancelar</button>
+                        <button type="submit" disabled={loadingCreate} className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm transition-all flex items-center gap-2">
+                            {loadingCreate ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Guardar Campaña
                         </button>
                     </div>
                 </form>
             )}
 
-            {/* Tabla de anuncios */}
+            {/* Arbol de Campañas */}
             {loading ? (
-                <div className="flex items-center justify-center py-16">
-                    <Loader2 className="animate-spin text-emerald-500" size={32} />
-                </div>
-            ) : filteredAds.length === 0 ? (
-                <div className="text-center py-16 text-slate-500">
-                    <Megaphone size={48} className="mx-auto mb-4 opacity-30" />
-                    <p className="font-medium">{searchTerm ? 'Sin resultados' : 'No hay anuncios creados'}</p>
-                    <p className="text-sm mt-1">{searchTerm ? 'Intenta con otro término' : 'Crea tu primer anuncio para comenzar'}</p>
+                <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-emerald-500" size={32} /></div>
+            ) : campaigns.length === 0 ? (
+                <div className="text-center py-20 bg-slate-800/30 rounded-3xl border border-slate-800/50">
+                    <Folder size={64} className="mx-auto mb-4 text-emerald-500/20" />
+                    <p className="text-xl font-black text-white italic tracking-tighter uppercase">Sin Campañas</p>
+                    <p className="text-slate-400 text-sm">Crea tu primera campaña para comenzar a ordenar tus anuncios.</p>
                 </div>
             ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-800">
-                                <th className="text-left py-3 px-3">ID</th>
-                                <th className="text-left py-3 px-3">Nombre</th>
-                                <th className="text-left py-3 px-3">Keyword</th>
-                                <th className="text-left py-3 px-3">Estado</th>
-                                <th className="text-right py-3 px-3">Gasto</th>
-                                <th className="text-right py-3 px-3">Leads</th>
-                                <th className="text-right py-3 px-3">Cual.</th>
-                                <th className="text-right py-3 px-3">CPL</th>
-                                <th className="text-right py-3 px-3">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredAds.map(ad => (
-                                <tr key={ad.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                                    {editingId === ad.id ? (
-                                        <>
-                                            <td className="py-3 px-4 text-slate-500 font-mono text-xs">#{ad.id}</td>
-                                            <td className="py-3 px-4">
-                                                <input
-                                                    type="text"
-                                                    className="w-full px-3 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm outline-none focus:border-emerald-500"
-                                                    value={editData.name}
-                                                    onChange={e => setEditData({ ...editData, name: e.target.value })}
-                                                />
-                                            </td>
-                                            <td className="py-3 px-4">
-                                                <input
-                                                    type="text"
-                                                    className="w-full px-3 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm font-mono outline-none focus:border-emerald-500"
-                                                    value={editData.keyword}
-                                                    onChange={e => setEditData({ ...editData, keyword: e.target.value })}
-                                                />
-                                            </td>
-                                            <td className="py-3 px-4">
-                                                <select
-                                                    className="px-3 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm outline-none"
-                                                    value={editData.status}
-                                                    onChange={e => setEditData({ ...editData, status: e.target.value })}
-                                                >
-                                                    <option value="active">Activo</option>
-                                                    <option value="paused">Pausado</option>
-                                                </select>
-                                            </td>
-                                            <td className="py-3 px-3 text-right text-slate-400">${ad.total_spend.toFixed(2)}</td>
-                                            <td className="py-3 px-3 text-right text-slate-400">{ad.total_leads || 0}</td>
-                                            <td className="py-3 px-3 text-right text-slate-400">{ad.qualified_leads || 0}</td>
-                                            <td className="py-3 px-3 text-right text-slate-400">${(ad.cost_per_lead || 0).toFixed(2)}</td>
-                                            <td className="py-3 px-3 text-right">
-                                                <div className="flex gap-1 justify-end">
-                                                    <button onClick={() => handleUpdate(ad.id)} disabled={submitting} className="p-1.5 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors">
-                                                        <Save size={16} />
-                                                    </button>
-                                                    <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:bg-slate-700 rounded-lg transition-colors">
-                                                        <X size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <td className="py-3 px-4 text-slate-500 font-mono text-xs">#{ad.id}</td>
-                                            <td className="py-3 px-4 text-white font-medium">{ad.name}</td>
-                                            <td className="py-3 px-4">
-                                                <span className="px-2.5 py-1 bg-slate-800 rounded-lg text-xs font-mono text-emerald-400">{ad.keyword}</span>
-                                            </td>
-                                            <td className="py-3 px-4">
-                                                <button onClick={() => handleToggleStatus(ad)} className="group">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all
-                                                        ${ad.status === 'active'
-                                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
-                                                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20'
-                                                        }`}
-                                                    >
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${ad.status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                                                        {ad.status === 'active' ? 'Activo' : 'Pausado'}
-                                                    </span>
-                                                </button>
-                                            </td>
-                                            <td className="py-3 px-3 text-right font-bold text-white">${ad.total_spend.toFixed(2)}</td>
-                                            <td className="py-3 px-3 text-right">
-                                                <span className={`font-bold ${(ad.total_leads || 0) > 0 ? 'text-violet-400' : 'text-slate-600'}`}>{ad.total_leads || 0}</span>
-                                            </td>
-                                            <td className="py-3 px-3 text-right">
-                                                <span className={`font-bold ${(ad.qualified_leads || 0) > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>{ad.qualified_leads || 0}</span>
-                                            </td>
-                                            <td className="py-3 px-3 text-right">
-                                                <span className={`font-bold ${(ad.cost_per_lead || 0) > 0 ? 'text-amber-400' : 'text-slate-600'}`}>${(ad.cost_per_lead || 0).toFixed(2)}</span>
-                                            </td>
-                                            <td className="py-3 px-3 text-right">
-                                                <div className="flex gap-1 justify-end">
-                                                    <button onClick={() => startEdit(ad)} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors" title="Editar">
-                                                        <Pencil size={14} />
-                                                    </button>
-                                                    <button onClick={() => handleDelete(ad.id, ad.name)} className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Eliminar">
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </>
-                                    )}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                <div className="space-y-4">
+                    {campaigns.map(camp => {
+                        const mCamp = getCampMetrics(camp);
+                        const isExpanded = expandedCamps[camp.id];
+                        const isEditing = editingNode?.type === 'camp' && editingNode?.id === camp.id;
 
-            {/* Resumen */}
-            {ads.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
-                    <div className="bg-slate-800/40 rounded-xl p-4 text-center">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Anuncios</p>
-                        <p className="text-2xl font-black text-white">{ads.length}</p>
-                    </div>
-                    <div className="bg-slate-800/40 rounded-xl p-4 text-center">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Activos</p>
-                        <p className="text-2xl font-black text-emerald-400">{ads.filter(a => a.status === 'active').length}</p>
-                    </div>
-                    <div className="bg-slate-800/40 rounded-xl p-4 text-center col-span-2 sm:col-span-1">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Inversión Total</p>
-                        <p className="text-2xl font-black text-amber-400">${ads.reduce((sum, a) => sum + a.total_spend, 0).toFixed(2)}</p>
-                    </div>
+                        return (
+                            <div key={camp.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg transition-all">
+                                {/* CAMPAIGN HEADER */}
+                                <div 
+                                    className={`flex items-center justify-between p-4 px-5 cursor-pointer transition-colors ${isExpanded ? 'bg-slate-800/80 border-b border-slate-800' : 'hover:bg-slate-800/40'}`}
+                                    onClick={(e) => { 
+                                        if (e.target.closest('button') || e.target.closest('input')) return;
+                                        toggleCamp(camp.id); 
+                                    }}
+                                >
+                                    <div className="flex items-center gap-4 flex-1">
+                                        <div className={`p-2 rounded-xl ${isExpanded ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
+                                            {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                                        </div>
+                                        <Folder size={24} className={isExpanded ? 'text-emerald-400' : 'text-slate-500'} />
+                                        
+                                        {isEditing ? (
+                                            <input type="text" autoFocus className="px-3 py-1.5 bg-slate-950 border border-emerald-500/50 rounded-lg text-white font-black" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} />
+                                        ) : (
+                                            <div>
+                                                <h3 className="text-lg font-black text-white tracking-tight">{camp.name}</h3>
+                                                <div className="flex items-center gap-3 text-xs text-slate-500 font-mono mt-0.5">
+                                                    <span>Conjuntos: {(camp.ad_sets||[]).length}</span>
+                                                    <span>•</span>
+                                                    <span>Gasto: ${mCamp.total_spend.toFixed(2)}</span>
+                                                    <span>•</span>
+                                                    <span>Leads: {mCamp.total_leads}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {isEditing ? (
+                                            <>
+                                                <button onClick={handleUpdate} className="p-2 text-emerald-400 hover:bg-emerald-500/20 rounded-lg"><Save size={16} /></button>
+                                                <button onClick={() => setEditingNode(null)} className="p-2 text-slate-400 hover:bg-slate-700 rounded-lg"><X size={16} /></button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <StatusBadge status={camp.status} onClick={() => handleToggleStatus('camp', camp)} />
+                                                <button onClick={() => setCreateSetForCamp(camp.id)} className="ml-2 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">
+                                                    + Conjunto
+                                                </button>
+                                                <div className="w-px h-6 bg-slate-800 mx-1" />
+                                                <button onClick={() => startEdit('camp', camp)} className="p-1.5 text-slate-500 hover:text-white transition-colors"><Pencil size={14} /></button>
+                                                <button onClick={() => handleDelete('camp', camp)} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* CREATE AD SET FORM */}
+                                {createSetForCamp === camp.id && (
+                                    <form onSubmit={handleCreateSet} className="bg-slate-800/40 p-4 border-b border-slate-800 flex items-center justify-between animate-in fade-in pl-14">
+                                        <div className="flex items-center gap-3 flex-1">
+                                            <Layers size={18} className="text-emerald-500" />
+                                            <input type="text" autoFocus required placeholder="Nombre del nuevo Conjunto..." className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm" value={setForm.name} onChange={e => setSetForm({name: e.target.value})} />
+                                        </div>
+                                        <div className="flex gap-2 ml-4">
+                                            <button type="button" onClick={() => setCreateSetForCamp(null)} className="px-3 py-2 text-slate-400 text-sm">Cancelar</button>
+                                            <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold flex items-center gap-2"><Save size={14} /> Guardar</button>
+                                        </div>
+                                    </form>
+                                )}
+
+                                {/* AD SETS LIST */}
+                                {isExpanded && (
+                                    <div className="bg-slate-900/50 pb-2">
+                                        {(!camp.ad_sets || camp.ad_sets.length === 0) ? (
+                                            <div className="py-6 px-14 text-slate-500 text-sm font-medium border-t border-slate-800/50">No hay conjuntos de anuncios en esta campaña.</div>
+                                        ) : (
+                                            camp.ad_sets.map(set => {
+                                                const mSet = getSetMetrics(set.id);
+                                                const isSetExpanded = expandedSets[set.id];
+                                                const isSetEditing = editingNode?.type === 'set' && editingNode?.id === set.id;
+                                                const setAds = adsForSet(set.id);
+
+                                                return (
+                                                    <div key={set.id} className="border-t border-slate-800/50">
+                                                        <div 
+                                                            className="flex items-center justify-between p-3 pl-12 pr-5 hover:bg-slate-800/30 cursor-pointer transition-colors"
+                                                            onClick={(e) => { 
+                                                                if (e.target.closest('button') || e.target.closest('input')) return;
+                                                                toggleSet(set.id); 
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center gap-3 flex-1">
+                                                                <div className={`p-1.5 rounded-lg ${isSetExpanded ? 'text-emerald-400' : 'text-slate-600'}`}>
+                                                                    {isSetExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                                                </div>
+                                                                <Layers size={18} className={isSetExpanded ? 'text-emerald-400' : 'text-slate-500'} />
+                                                                {isSetEditing ? (
+                                                                    <input type="text" autoFocus className="px-2 py-1 bg-slate-950 border border-emerald-500/50 rounded text-white text-sm font-bold" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} />
+                                                                ) : (
+                                                                    <div className="flex items-center gap-4">
+                                                                        <span className="text-white font-bold text-sm tracking-wide">{set.name}</span>
+                                                                        <span className="text-xs text-slate-500 font-mono bg-slate-950 px-2 py-0.5 border border-slate-800 rounded">
+                                                                            ${mSet.total_spend.toFixed(2)} | {mSet.total_leads} leads
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                {isSetEditing ? (
+                                                                    <>
+                                                                        <button onClick={handleUpdate} className="p-1.5 text-emerald-400 hover:bg-emerald-500/20 rounded"><Save size={14} /></button>
+                                                                        <button onClick={() => setEditingNode(null)} className="p-1.5 text-slate-400 hover:bg-slate-700 rounded"><X size={14} /></button>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <StatusBadge status={set.status} onClick={() => handleToggleStatus('set', set)} />
+                                                                        <button onClick={() => setCreateAdForSet(set.id)} className="ml-2 text-[10px] font-black uppercase px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700">
+                                                                            + Anuncio
+                                                                        </button>
+                                                                        <div className="w-px h-4 bg-slate-800 mx-1" />
+                                                                        <button onClick={() => startEdit('set', set)} className="p-1 text-slate-600 hover:text-white transition-colors"><Pencil size={12} /></button>
+                                                                        <button onClick={() => handleDelete('set', set)} className="p-1 text-slate-600 hover:text-red-400 transition-colors"><Trash2 size={12} /></button>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* CREATE AD FORM */}
+                                                        {createAdForSet === set.id && (
+                                                            <form onSubmit={handleCreateAd} className="bg-slate-950/50 p-3 flex flex-wrap items-center gap-3 pl-[4.5rem] border-y border-slate-800/80">
+                                                                <Megaphone size={16} className="text-emerald-500" />
+                                                                <input type="text" required placeholder="Nombre del Anuncio..." className="w-48 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-xs" value={adForm.name} onChange={e => setAdForm({...adForm, name: e.target.value})} />
+                                                                <input type="text" required placeholder="Keyword Exacta (Manychat)" className="w-48 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-emerald-400 font-mono text-xs" value={adForm.keyword} onChange={e => setAdForm({...adForm, keyword: e.target.value})} />
+                                                                <div className="flex gap-1 ml-auto">
+                                                                    <button type="button" onClick={() => setCreateAdForSet(null)} className="px-2 py-1.5 text-slate-400 text-xs">Cancelar</button>
+                                                                    <button type="submit" className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold"><Save size={12} className="inline mr-1" />Guardar</button>
+                                                                </div>
+                                                            </form>
+                                                        )}
+
+                                                        {/* ADS LIST (Nivel 3) */}
+                                                        {isSetExpanded && (
+                                                            <div className="bg-slate-950 py-2 pl-[4.5rem] pr-5">
+                                                                {setAds.length === 0 ? (
+                                                                    <div className="py-2 text-xs text-slate-600 font-medium">No hay anuncios individuales creados.</div>
+                                                                ) : (
+                                                                    <table className="w-full text-xs">
+                                                                        <thead>
+                                                                            <tr className="border-b border-slate-800 text-left text-[9px] font-black uppercase text-slate-600 tracking-widest">
+                                                                                <th className="pb-2">Icon</th>
+                                                                                <th className="pb-2">Anuncio</th>
+                                                                                <th className="pb-2">Keyword</th>
+                                                                                <th className="pb-2">Estado</th>
+                                                                                <th className="pb-2 text-right">Gasto</th>
+                                                                                <th className="pb-2 text-right">Leads</th>
+                                                                                <th className="pb-2 text-right">CPL</th>
+                                                                                <th className="pb-2 text-right"></th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody className="divide-y divide-slate-800/50">
+                                                                            {setAds.map(ad => {
+                                                                                const isAdEd = editingNode?.type === 'ad' && editingNode?.id === ad.id;
+                                                                                return (
+                                                                                    <tr key={ad.id} className="hover:bg-slate-900/80 transition-colors">
+                                                                                        <td className="py-2.5 text-slate-700"><Megaphone size={14} /></td>
+                                                                                        <td className="py-2.5">
+                                                                                            {isAdEd ? <input type="text" className="w-full bg-slate-900 border border-emerald-500/50 px-2 py-1 rounded text-white" value={editData.name} onChange={e=>setEditData({...editData, name:e.target.value})} />
+                                                                                                    : <span className="text-white font-medium">{ad.name}</span>}
+                                                                                        </td>
+                                                                                        <td className="py-2.5">
+                                                                                            {isAdEd ? <input type="text" className="w-full bg-slate-900 border border-emerald-500/50 px-2 py-1 rounded text-emerald-400 font-mono" value={editData.keyword} onChange={e=>setEditData({...editData, keyword:e.target.value})} />
+                                                                                                    : <span className="bg-slate-900 border border-slate-800 text-emerald-400 font-mono px-2 py-0.5 rounded text-[10px]"><Tag size={8} className="inline mr-1 opacity-50"/>{ad.keyword}</span>}
+                                                                                        </td>
+                                                                                        <td className="py-2.5">
+                                                                                            {isAdEd ? null : <StatusBadge status={ad.status} onClick={() => handleToggleStatus('ad', ad)} />}
+                                                                                        </td>
+                                                                                        <td className="py-2.5 text-right font-bold text-slate-300">${(ad.total_spend||0).toFixed(2)}</td>
+                                                                                        <td className="py-2.5 text-right text-slate-400">{ad.total_leads||0}</td>
+                                                                                        <td className="py-2.5 text-right font-mono text-amber-500/80">${(ad.cost_per_lead||0).toFixed(2)}</td>
+                                                                                        <td className="py-2.5 text-right">
+                                                                                            {isAdEd ? (
+                                                                                                <div className="flex justify-end gap-1">
+                                                                                                    <button onClick={handleUpdate} className="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded"><Save size={14} /></button>
+                                                                                                    <button onClick={() => setEditingNode(null)} className="p-1 text-slate-400 hover:bg-slate-800 rounded"><X size={14} /></button>
+                                                                                                </div>
+                                                                                            ) : (
+                                                                                                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{opacity: 1}}>
+                                                                                                    <button onClick={() => startEdit('ad', ad)} className="p-1 text-slate-600 hover:text-white rounded"><Pencil size={12} /></button>
+                                                                                                    <button onClick={() => handleDelete('ad', ad)} className="p-1 text-slate-600 hover:text-red-400 rounded"><Trash2 size={12} /></button>
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                )
+                                                                            })}
+                                                                        </tbody>
+                                                                    </table>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
                 </div>
             )}
         </div>
@@ -284,7 +424,7 @@ const AdsTab = ({ ads, onRefresh, loading }) => {
 // ==========================================
 // Tab: Inversión por Período
 // ==========================================
-const PeriodSpendTab = ({ ads }) => {
+const PeriodSpendTab = ({ ads, campaigns }) => {
     const [selectedStartDate, setSelectedStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedEndDate, setSelectedEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [spendValues, setSpendValues] = useState({});
@@ -292,152 +432,125 @@ const PeriodSpendTab = ({ ads }) => {
     const [saving, setSaving] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
 
-    const activeAds = useMemo(() => ads.filter(a => a.status === 'active'), [ads]);
+    // Agrupar los anuncios activos por Campaña -> Conjunto
+    const hierarchicalAds = useMemo(() => {
+        const activeAds = ads.filter(a => a.status === 'active');
+        if (activeAds.length === 0) return [];
+        
+        // Use campaigns array to build rich structure, but fallback gracefully
+        const tree = [];
+        
+        // 1. Map campaigns
+        campaigns.forEach(camp => {
+            const campOut = { id: camp.id, name: camp.name, sets: [] };
+            (camp.ad_sets || []).forEach(set => {
+                const adsInSet = activeAds.filter(a => a.ad_set_id === set.id);
+                if (adsInSet.length > 0) {
+                    campOut.sets.push({ id: set.id, name: set.name, ads: adsInSet });
+                }
+            });
+            if (campOut.sets.length > 0) tree.push(campOut);
+        });
+        
+        // 2. Catch completely orphaned ads (legacy)
+        const matchedAdIds = new Set();
+        tree.forEach(c => c.sets.forEach(s => s.ads.forEach(a => matchedAdIds.add(a.id))));
+        const orphaned = activeAds.filter(a => !matchedAdIds.has(a.id));
+        if (orphaned.length > 0) {
+            tree.push({ id: 'orphan', name: 'Otros (Sin Campaña/Conjunto)', sets: [{ id: 'orphan_set', name: 'General', ads: orphaned }] });
+        }
+        
+        return tree;
+    }, [ads, campaigns]);
 
-    // Cargar datos existentes para las fechas seleccionadas
-    useEffect(() => {
-        loadPeriodData();
-    }, [selectedStartDate, selectedEndDate]);
-
-    // Cargar historial reciente
-    useEffect(() => {
-        loadHistory();
-    }, []);
+    useEffect(() => { loadPeriodData(); }, [selectedStartDate, selectedEndDate]);
+    useEffect(() => { loadHistory(); }, []);
 
     const loadPeriodData = async () => {
         try {
-            const res = await api.get('/public/ads/period-spend', { 
-                params: { start_date: selectedStartDate, end_date: selectedEndDate } 
-            });
+            const res = await api.get('/public/ads/period-spend', { params: { start_date: selectedStartDate, end_date: selectedEndDate } });
             const vals = {};
             res.data.forEach(s => {
                 vals[s.ad_id] = { spend: s.spend, entrantes: s.entrantes || 0, agendas: s.agendas || 0, notes: s.notes || '' };
             });
             setSpendValues(vals);
-        } catch (err) {
-            console.error('Error loading period data:', err);
-        }
+        } catch (err) {}
     };
 
     const loadHistory = async () => {
         setLoadingHistory(true);
         try {
-            // Últimos 30 días
-            const end = new Date();
-            const start = new Date();
-            start.setDate(start.getDate() - 30);
-            const res = await api.get('/public/ads/period-spend', {
-                params: {
-                    start_date: start.toISOString().split('T')[0],
-                    end_date: end.toISOString().split('T')[0]
-                }
-            });
+            const end = new Date(); const start = new Date(); start.setDate(start.getDate() - 30);
+            const res = await api.get('/public/ads/period-spend', { params: { start_date: start.toISOString().split('T')[0], end_date: end.toISOString().split('T')[0] } });
             setHistory(res.data);
-        } catch (err) {
-            console.error('Error loading history:', err);
-        } finally {
-            setLoadingHistory(false);
-        }
+        } catch (err) {} finally { setLoadingHistory(false); }
     };
 
     const handleSpendChange = (adId, value) => {
-        setSpendValues(prev => ({
-            ...prev,
-            [adId]: { ...(prev[adId] || {}), spend: value }
-        }));
+        setSpendValues(prev => ({ ...prev, [adId]: { ...(prev[adId] || {}), spend: value } }));
     };
 
     const handleSaveAll = async () => {
-        // Validar que la fecha de inicio no sea mayor a la de fin
-        if (selectedStartDate > selectedEndDate) {
-            alert('La fecha de inicio no puede ser posterior a la de fin');
-            return;
-        }
+        if (selectedStartDate > selectedEndDate) return alert('Fecha inválida');
 
-        const entries = activeAds
+        // Extract all active ads flat just for saving
+        const flatAds = hierarchicalAds.flatMap(c => c.sets.flatMap(s => s.ads));
+        const entries = flatAds
             .filter(ad => {
                 const val = spendValues[ad.id]?.spend;
                 return val !== undefined && val !== '' && parseFloat(val) >= 0;
             })
             .map(ad => ({
-                ad_id: ad.id,
-                start_date: selectedStartDate,
-                end_date: selectedEndDate,
+                ad_id: ad.id, start_date: selectedStartDate, end_date: selectedEndDate,
                 spend: parseFloat(spendValues[ad.id]?.spend || 0),
                 entrantes: parseInt(spendValues[ad.id]?.entrantes || 0),
                 agendas: parseInt(spendValues[ad.id]?.agendas || 0),
                 notes: spendValues[ad.id]?.notes || ''
             }));
 
-        if (entries.length === 0) {
-            alert('Ingresa al menos un valor de inversión');
-            return;
-        }
+        if (entries.length === 0) return alert('Ingresa al menos un valor');
 
         setSaving(true);
         try {
             await api.post('/public/ads/period-spend', { entries });
             alert(`${entries.length} registro(s) guardados correctamente`);
             loadHistory();
-        } catch (err) {
-            alert(err.response?.data?.error || 'Error al guardar');
-        } finally {
-            setSaving(false);
-        }
+        } catch (err) { alert(err.response?.data?.error || 'Error al guardar'); } finally { setSaving(false); }
     };
 
     const handleDeleteSpend = async (id) => {
-        if (!confirm('¿Eliminar este registro de gasto?')) return;
-        try {
-            await api.delete(`/public/ads/period-spend/${id}`);
-            loadHistory();
-            loadPeriodData();
-        } catch (err) {
-            alert('Error al eliminar registro');
-        }
+        if (!confirm('¿Eliminar registro?')) return;
+        try { await api.delete(`/public/ads/period-spend/${id}`); loadHistory(); loadPeriodData(); } catch (err) {}
     };
 
-    // Calcular total del periodo
     const periodTotal = useMemo(() => {
-        return activeAds.reduce((sum, ad) => {
+        return hierarchicalAds.flatMap(c => c.sets.flatMap(s => s.ads)).reduce((sum, ad) => {
             const val = parseFloat(spendValues[ad.id]?.spend || 0);
             return sum + (isNaN(val) ? 0 : val);
         }, 0);
-    }, [spendValues, activeAds]);
+    }, [spendValues, hierarchicalAds]);
 
-    // Agrupar historial por periodo
     const historyByDate = useMemo(() => {
         const grouped = {};
         history.forEach(s => {
             const key = `${s.start_date}|${s.end_date}`;
             if (!grouped[key]) grouped[key] = { entries: [], total: 0, start: s.start_date, end: s.end_date };
-            grouped[key].entries.push(s);
-            grouped[key].total += s.spend;
+            grouped[key].entries.push(s); grouped[key].total += s.spend;
         });
         return Object.entries(grouped).sort((a, b) => b[1].start.localeCompare(a[1].start));
     }, [history]);
 
     return (
         <div className="space-y-8">
-            {/* Selector de periodo + Resumen */}
+            {/* Cabecera */}
             <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between">
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Período de Inversión</label>
                         <div className="flex items-center gap-2">
-                            <input
-                                type="date"
-                                className="px-5 py-3 w-40 bg-slate-900 border border-slate-700/50 rounded-xl text-white outline-none focus:border-amber-500 transition-all font-bold"
-                                value={selectedStartDate}
-                                onChange={e => setSelectedStartDate(e.target.value)}
-                            />
+                            <input type="date" className="px-5 py-3 w-40 bg-slate-900 border border-slate-700/50 rounded-xl text-white font-bold" value={selectedStartDate} onChange={e => setSelectedStartDate(e.target.value)} />
                             <span className="text-slate-500 font-bold">-</span>
-                            <input
-                                type="date"
-                                className="px-5 py-3 w-40 bg-slate-900 border border-slate-700/50 rounded-xl text-white outline-none focus:border-amber-500 transition-all font-bold"
-                                value={selectedEndDate}
-                                onChange={e => setSelectedEndDate(e.target.value)}
-                            />
+                            <input type="date" className="px-5 py-3 w-40 bg-slate-900 border border-slate-700/50 rounded-xl text-white font-bold" value={selectedEndDate} onChange={e => setSelectedEndDate(e.target.value)} />
                         </div>
                     </div>
                     <div className="text-right">
@@ -447,96 +560,70 @@ const PeriodSpendTab = ({ ads }) => {
                 </div>
             </div>
 
-            {/* Formulario de inversión por anuncio */}
-            {activeAds.length === 0 ? (
+            {/* Arbol de inputs de inversión */}
+            {hierarchicalAds.length === 0 ? (
                 <div className="text-center py-12 text-slate-500">
                     <DollarSign size={48} className="mx-auto mb-4 opacity-30" />
                     <p className="font-medium">No hay anuncios activos</p>
-                    <p className="text-sm mt-1">Crea anuncios en la pestaña "Anuncios" y actívalos</p>
                 </div>
             ) : (
-                <div className="space-y-3">
-                    {activeAds.map(ad => {
-                        const val = spendValues[ad.id]?.spend ?? '';
-                        const isFilled = val !== '' && parseFloat(val) > 0;
-                        return (
-                            <div key={ad.id} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300
-                                ${isFilled
-                                    ? 'bg-slate-200 border-slate-300 shadow-md'
-                                    : 'bg-slate-900 border-slate-800'
-                                }`}
-                            >
-                                <div className="flex-1 min-w-0">
-                                    <p className={`font-bold text-sm truncate ${isFilled ? 'text-slate-800' : 'text-white'}`}>{ad.name}</p>
-                                    <p className={`text-xs font-mono ${isFilled ? 'text-slate-500' : 'text-emerald-400/70'}`}>{ad.keyword}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className={`text-lg font-black ${isFilled ? 'text-slate-600' : 'text-slate-500'}`}>$</span>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder="0.00"
-                                        className={`w-28 px-3 py-2.5 rounded-xl outline-none font-bold text-right transition-all
-                                            ${isFilled
-                                                ? 'bg-white border border-slate-300 text-slate-900 shadow-sm'
-                                                : 'bg-slate-800/50 border border-slate-700/50 text-white focus:border-amber-500'
-                                            }`}
-                                        value={val}
-                                        onChange={e => handleSpendChange(ad.id, e.target.value)}
-                                    />
-                                </div>
-                                {/* Entrantes y Agendas opcionales */}
-                                <div className="flex items-center gap-2">
-                                    <div className="text-center">
-                                        <p className={`text-[8px] font-black uppercase tracking-wider mb-0.5 ${isFilled ? 'text-slate-500' : 'text-slate-600'}`}>Entr.</p>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            placeholder="0"
-                                            className={`w-16 px-2 py-2 rounded-lg outline-none font-bold text-center text-xs transition-all
-                                                ${isFilled
-                                                    ? 'bg-white border border-slate-300 text-slate-900 shadow-sm'
-                                                    : 'bg-slate-800/50 border border-slate-700/50 text-white focus:border-blue-500'
-                                                }`}
-                                            value={spendValues[ad.id]?.entrantes ?? ''}
-                                            onChange={e => setSpendValues(prev => ({
-                                                ...prev,
-                                                [ad.id]: { ...(prev[ad.id] || {}), entrantes: e.target.value }
-                                            }))}
-                                        />
-                                    </div>
-                                    <div className="text-center">
-                                        <p className={`text-[8px] font-black uppercase tracking-wider mb-0.5 ${isFilled ? 'text-slate-500' : 'text-slate-600'}`}>Agnd.</p>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            placeholder="0"
-                                            className={`w-16 px-2 py-2 rounded-lg outline-none font-bold text-center text-xs transition-all
-                                                ${isFilled
-                                                    ? 'bg-white border border-slate-300 text-slate-900 shadow-sm'
-                                                    : 'bg-slate-800/50 border border-slate-700/50 text-white focus:border-blue-500'
-                                                }`}
-                                            value={spendValues[ad.id]?.agendas ?? ''}
-                                            onChange={e => setSpendValues(prev => ({
-                                                ...prev,
-                                                [ad.id]: { ...(prev[ad.id] || {}), agendas: e.target.value }
-                                            }))}
-                                        />
-                                    </div>
-                                </div>
+                <div className="space-y-6">
+                    {hierarchicalAds.map(camp => (
+                        <div key={camp.id} className="bg-slate-900/50 border border-slate-800 shadow-lg rounded-2xl overflow-hidden p-4">
+                            <div className="flex items-center gap-2 text-white font-bold mb-4 border-b border-slate-800 pb-2">
+                                <Folder size={18} className="text-emerald-500" /> {camp.name}
                             </div>
-                        );
-                    })}
+                            <div className="space-y-5 pl-2">
+                                {camp.sets.map(set => (
+                                    <div key={set.id}>
+                                        <div className="flex items-center gap-2 text-sm text-slate-300 font-medium mb-2 pl-2">
+                                            <Layers size={14} className="text-slate-500" /> {set.name}
+                                        </div>
+                                        <div className="space-y-2 pl-6">
+                                            {set.ads.map(ad => {
+                                                const val = spendValues[ad.id]?.spend ?? '';
+                                                const isFilled = val !== '' && parseFloat(val) >= 0;
+                                                return (
+                                                    <div key={ad.id} className={`flex flex-wrap items-center gap-4 p-3 rounded-xl border transition-all duration-300
+                                                        ${isFilled ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-950 border-slate-800'}`}
+                                                    >
+                                                        <div className="flex-1 min-w-[200px]">
+                                                            <p className={`font-bold text-sm truncate ${isFilled ? 'text-slate-800' : 'text-white'}`}>{ad.name}</p>
+                                                            <p className={`text-xs font-mono flex items-center gap-1 ${isFilled ? 'text-slate-500' : 'text-emerald-400/70'}`}>
+                                                                <Tag size={10} /> {ad.keyword}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 shadow-sm rounded-lg">
+                                                            <span className={`text-sm font-black ${isFilled ? 'text-slate-500' : 'text-slate-600'}`}>$</span>
+                                                            <input type="number" step="0.01" min="0" placeholder="0.00" 
+                                                                   className={`w-24 px-2 py-1.5 rounded-md outline-none font-bold text-right transition-all ${isFilled ? 'bg-white border border-slate-300 text-slate-900' : 'bg-slate-900 border border-slate-700 text-white focus:border-amber-500'}`}
+                                                                   value={val} onChange={e => handleSpendChange(ad.id, e.target.value)} />
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <div className="text-center">
+                                                                <p className={`text-[8px] font-black uppercase tracking-wider mb-0.5 ${isFilled ? 'text-slate-500' : 'text-slate-600'}`}>Entr.</p>
+                                                                <input type="number" min="0" placeholder="0" className={`w-12 px-1 py-1 rounded outline-none font-bold text-center text-xs transition-all ${isFilled ? 'bg-white border border-slate-300 text-slate-900' : 'bg-slate-900 border border-slate-700 text-white'}`}
+                                                                       value={spendValues[ad.id]?.entrantes ?? ''} onChange={e => setSpendValues(prev => ({...prev, [ad.id]: {...(prev[ad.id]||{}), entrantes: e.target.value}}))} />
+                                                            </div>
+                                                            <div className="text-center">
+                                                                <p className={`text-[8px] font-black uppercase tracking-wider mb-0.5 ${isFilled ? 'text-slate-500' : 'text-slate-600'}`}>Agnd.</p>
+                                                                <input type="number" min="0" placeholder="0" className={`w-12 px-1 py-1 rounded outline-none font-bold text-center text-xs transition-all ${isFilled ? 'bg-white border border-slate-300 text-slate-900' : 'bg-slate-900 border border-slate-700 text-white'}`}
+                                                                       value={spendValues[ad.id]?.agendas ?? ''} onChange={e => setSpendValues(prev => ({...prev, [ad.id]: {...(prev[ad.id]||{}), agendas: e.target.value}}))} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
 
                     <div className="pt-4">
-                        <button
-                            onClick={handleSaveAll}
-                            disabled={saving}
-                            className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-black uppercase text-sm tracking-[0.15em] transition-all shadow-xl shadow-amber-600/20 flex items-center justify-center gap-3 active:scale-[0.98]"
-                        >
-                            {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
-                            {saving ? 'Guardando...' : 'Guardar Inversión del Período'}
+                        <button onClick={handleSaveAll} disabled={saving} className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white py-4 rounded-2xl font-black uppercase text-sm tracking-[0.15em] transition-all shadow-xl shadow-amber-600/20 flex items-center justify-center gap-3">
+                            {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />} {saving ? 'Guardando...' : 'Guardar Inversión del Período'}
                         </button>
                     </div>
                 </div>
@@ -544,17 +631,13 @@ const PeriodSpendTab = ({ ads }) => {
 
             {/* Historial */}
             <div className="space-y-4">
-                <div className="flex items-center gap-3 border-b border-slate-800/50 pb-4">
-                    <div className="p-3 bg-slate-800/50 rounded-2xl">
-                        <TrendingUp className="text-amber-400" size={24} />
-                    </div>
+               {/* Keep standard history list */}
+               <div className="flex items-center gap-3 border-b border-slate-800/50 pb-4 mt-8">
+                    <div className="p-3 bg-slate-800/50 rounded-2xl"><TrendingUp className="text-amber-400" size={24} /></div>
                     <h2 className="text-xl font-black italic tracking-tighter uppercase text-white">Historial de Inversión</h2>
                 </div>
-
                 {loadingHistory ? (
-                    <div className="flex items-center justify-center py-8">
-                        <Loader2 className="animate-spin text-amber-500" size={24} />
-                    </div>
+                    <div className="flex items-center justify-center py-8"><Loader2 className="animate-spin text-amber-500" size={24} /></div>
                 ) : historyByDate.length === 0 ? (
                     <p className="text-center text-slate-500 py-8 text-sm">Sin registros de inversión aún</p>
                 ) : (
@@ -566,9 +649,7 @@ const PeriodSpendTab = ({ ads }) => {
                                         <CalendarDays size={14} className="text-slate-500" />
                                         <span className="text-sm font-bold text-slate-300">
                                             {new Date(group.start + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-                                            {group.start !== group.end && (
-                                                <> al {new Date(group.end + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>
-                                            )}
+                                            {group.start !== group.end && <> al {new Date(group.end + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>}
                                         </span>
                                     </div>
                                     <span className="text-sm font-black text-amber-400">${group.total.toFixed(2)}</span>
@@ -582,9 +663,7 @@ const PeriodSpendTab = ({ ads }) => {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <span className="text-sm font-bold text-white">${entry.spend.toFixed(2)}</span>
-                                                <button onClick={() => handleDeleteSpend(entry.id)} className="p-1 text-slate-600 hover:text-red-400 transition-colors">
-                                                    <Trash2 size={12} />
-                                                </button>
+                                                <button onClick={() => handleDeleteSpend(entry.id)} className="p-1 text-slate-600 hover:text-red-400"><Trash2 size={12} /></button>
                                             </div>
                                         </div>
                                     ))}
@@ -603,27 +682,32 @@ const PeriodSpendTab = ({ ads }) => {
 // ==========================================
 const AdManagementPage = () => {
     const [activeTab, setActiveTab] = useState('ads');
+    const [campaigns, setCampaigns] = useState([]);
     const [ads, setAds] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchAds();
+        fetchAll();
     }, []);
 
-    const fetchAds = async () => {
+    const fetchAll = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/public/ads');
-            setAds(res.data);
+            const [campRes, adsRes] = await Promise.all([
+                api.get('/public/campaigns'),
+                api.get('/public/ads')
+            ]);
+            setCampaigns(campRes.data);
+            setAds(adsRes.data);
         } catch (err) {
-            console.error('Error fetching ads:', err);
+            console.error('Error fetching data:', err);
         } finally {
             setLoading(false);
         }
     };
 
     const tabs = [
-        { key: 'ads', label: 'Anuncios', icon: Megaphone },
+        { key: 'ads', label: 'Estructura', icon: Layers },
         { key: 'spend', label: 'Inversión (Períodos)', icon: DollarSign },
         { key: 'ads_dashboard', label: 'Rendimiento por Anuncio', icon: Users },
         { key: 'webhooks', label: 'Webhooks', icon: Radio },
@@ -631,20 +715,19 @@ const AdManagementPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col items-center p-4 py-12 relative overflow-hidden">
-            {/* Efecto de fondo */}
             <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-emerald-900/15 to-transparent pointer-events-none" />
 
-            <div className="w-full max-w-4xl z-10 space-y-8">
+            <div className="w-full max-w-5xl z-10 space-y-8">
                 {/* Header */}
                 <div className="text-center space-y-4 mb-2">
                     <p className="text-emerald-400 font-bold tracking-widest text-xs uppercase">NeurOPS High Performance</p>
                     <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
-                        Gestión de Anuncios
+                        Gestor de Marketing
                     </h1>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 bg-slate-900 border border-slate-800 rounded-2xl p-1.5">
+                <div className="flex flex-wrap gap-2 bg-slate-900 border border-slate-800 rounded-2xl p-1.5 shadow-2xl">
                     {tabs.map(tab => {
                         const Icon = tab.icon;
                         const isActive = activeTab === tab.key;
@@ -652,7 +735,7 @@ const AdManagementPage = () => {
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all
+                                className={`flex-1 min-w-[200px] flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all
                                     ${isActive
                                         ? 'bg-slate-800 text-white shadow-lg'
                                         : 'text-slate-500 hover:text-slate-300'
@@ -666,11 +749,11 @@ const AdManagementPage = () => {
                 </div>
 
                 {/* Contenido activo */}
-                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl">
+                <div className="bg-slate-950 border border-slate-800/80 rounded-3xl p-4 md:p-8 shadow-2xl overflow-hidden ring-1 ring-white/5">
                     {activeTab === 'ads' ? (
-                        <AdsTab ads={ads} onRefresh={fetchAds} loading={loading} />
+                        <AdsTab campaigns={campaigns} ads={ads} onRefresh={fetchAll} loading={loading} />
                     ) : activeTab === 'spend' ? (
-                        <PeriodSpendTab ads={ads} />
+                        <PeriodSpendTab ads={ads} campaigns={campaigns} />
                     ) : activeTab === 'ads_dashboard' ? (
                         <AdDashboardTab />
                     ) : (

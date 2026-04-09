@@ -11,11 +11,12 @@ import requests
 
 @bp.route('/public/ads', methods=['GET'])
 def get_public_ads():
-    """Lista todos los anuncios con spend acumulado y leads."""
-    from app.models import Ad, AdPeriodSpend, ManychatAdLead
+    """Lista todos los anuncios con spend acumulado y leads, y sus relaciones de campaña."""
+    from app.models import Ad, AdPeriodSpend, ManychatAdLead, AdSet, Campaign
     from sqlalchemy import func
 
-    ads = Ad.query.order_by(Ad.created_at.desc()).all()
+    # Join para traer AdSet y Campaign fácilmente
+    ads = db.session.query(Ad, AdSet, Campaign).outerjoin(AdSet, Ad.ad_set_id == AdSet.id).outerjoin(Campaign, AdSet.campaign_id == Campaign.id).order_by(Ad.created_at.desc()).all()
 
     # Pre-cargar stats de leads por ad_id
     lead_stats = db.session.query(
@@ -26,7 +27,7 @@ def get_public_ads():
     lead_map = {s.ad_id: {'total': s.total_leads, 'qualified': int(s.qualified_leads or 0)} for s in lead_stats}
 
     result = []
-    for a in ads:
+    for a, ad_set, campaign in ads:
         total_spend = db.session.query(func.coalesce(func.sum(AdPeriodSpend.spend), 0)).filter(
             AdPeriodSpend.ad_id == a.id
         ).scalar()
@@ -36,6 +37,10 @@ def get_public_ads():
 
         result.append({
             'id': a.id,
+            'ad_set_id': a.ad_set_id,
+            'campaign_id': ad_set.campaign_id if ad_set else None,
+            'ad_set_name': ad_set.name if ad_set else 'Sin Conjunto',
+            'campaign_name': campaign.name if campaign else 'Sin Campaña',
             'name': a.name,
             'keyword': a.keyword,
             'status': a.status,
@@ -51,7 +56,7 @@ def get_public_ads():
 
 @bp.route('/public/ads', methods=['POST'])
 def create_public_ad():
-    """Crea un anuncio rápido (auto-genera Campaign y AdSet si no existen)."""
+    """Crea un anuncio. Opcionalmente recibe ad_set_id."""
     import logging
     logger = logging.getLogger(__name__)
 
@@ -61,8 +66,7 @@ def create_public_ad():
     data = request.get_json() or {}
     name = data.get('name', '').strip()
     keyword = data.get('keyword', '').strip()
-
-    logger.info(f"[ADS] Inicio crear anuncio: name='{name}', keyword='{keyword}'")
+    ad_set_id = data.get('ad_set_id')
 
     if not name:
         return jsonify({"message": "El nombre del anuncio es obligatorio"}), 400
@@ -70,48 +74,33 @@ def create_public_ad():
         return jsonify({"message": "La keyword es obligatoria"}), 400
 
     try:
-        # Paso 1: Buscar o crear campaña genérica
-        logger.info("[ADS] Paso 1: Buscando campaña 'Anuncios Rápidos'...")
-        campaign = Campaign.query.filter_by(name='Anuncios Rápidos').first()
-        if campaign:
-            logger.info(f"[ADS] Campaña encontrada: id={campaign.id}")
-        else:
-            logger.info("[ADS] Campaña no encontrada, creando nueva...")
-            campaign = Campaign(
-                name='Anuncios Rápidos',
-                status='active',
-                type='quick',
-                external_id='CAM-QUICK-ADS'
-            )
-            db.session.add(campaign)
-            db.session.flush()
-            logger.info(f"[ADS] Campaña creada: id={campaign.id}")
+        # Si NO viene ad_set_id, usar/crear la genérica (comportamiento legacy)
+        if not ad_set_id:
+            campaign = Campaign.query.filter_by(name='Anuncios Rápidos').first()
+            if not campaign:
+                campaign = Campaign(name='Anuncios Rápidos', status='active', type='quick', external_id='CAM-QUICK-ADS')
+                db.session.add(campaign)
+                db.session.flush()
 
-        # Paso 2: Buscar o crear ad_set genérico
-        logger.info(f"[ADS] Paso 2: Buscando AdSet 'Grupo General' para campaign_id={campaign.id}...")
-        ad_set = AdSet.query.filter_by(campaign_id=campaign.id, name='Grupo General').first()
-        if ad_set:
-            logger.info(f"[ADS] AdSet encontrado: id={ad_set.id}")
+            ad_set = AdSet.query.filter_by(campaign_id=campaign.id, name='Grupo General').first()
+            if not ad_set:
+                ad_set = AdSet(name='Grupo General', campaign_id=campaign.id, status='active', external_id=f'SET-QUICK-{campaign.id}')
+                db.session.add(ad_set)
+                db.session.flush()
+                
+            ad_set_id = ad_set.id
         else:
-            logger.info("[ADS] AdSet no encontrado, creando nuevo...")
-            ad_set = AdSet(
-                name='Grupo General',
-                campaign_id=campaign.id,
-                status='active',
-                external_id=f'SET-QUICK-{campaign.id}'
-            )
-            db.session.add(ad_set)
-            db.session.flush()
-            logger.info(f"[ADS] AdSet creado: id={ad_set.id}")
+            # Validar que exista el conjunto
+            ad_set = AdSet.query.get(ad_set_id)
+            if not ad_set:
+                return jsonify({"message": "El Conjunto de Anuncios especificado no existe."}), 404
 
-        # Paso 3: Crear anuncio
-        logger.info(f"[ADS] Paso 3: Creando anuncio name='{name}', keyword='{keyword}', ad_set_id={ad_set.id}...")
         import uuid
         unique_ext_id = f"ADS-{keyword}-{uuid.uuid4().hex[:6]}"
 
         ad = Ad(
             name=name,
-            ad_set_id=ad_set.id,
+            ad_set_id=ad_set_id,
             keyword=keyword,
             status='active',
             total_spend=0.0,
@@ -119,15 +108,11 @@ def create_public_ad():
         )
         db.session.add(ad)
         db.session.commit()
-        logger.info(f"[ADS] Anuncio creado exitosamente: id={ad.id}, external_id='{ad.external_id}'")
 
         return jsonify({"message": "Anuncio creado", "id": ad.id, "keyword": ad.keyword}), 201
 
     except Exception as e:
         db.session.rollback()
-        error_details = traceback.format_exc()
-        logger.error(f"[ADS] ERROR al crear anuncio: {str(e)}")
-        logger.error(f"[ADS] Traceback completo:\n{error_details}")
         return jsonify({"message": f"Error al crear anuncio: {str(e)}"}), 500
 
 
@@ -166,6 +151,116 @@ def delete_public_ad(ad_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+# ============================================================
+# CAMPAIGNS & AD SETS CRUD
+# ============================================================
+
+@bp.route('/public/campaigns', methods=['GET'])
+def get_public_campaigns():
+    """Obtiene el árbol completo de Campañas > AdSets > Ads para armar la UI jerárquica."""
+    from app.models import Campaign, AdSet, Ad
+    
+    # Podríamos usar las relaciones anidadas o construir el árbol de forma manual
+    campaigns = Campaign.query.all()
+    
+    # Para optimizar, vamos a traernos al JSON todos los datos para evitar lazy loading
+    result = []
+    for c in campaigns:
+        c_dict = {
+            'id': c.id,
+            'name': c.name,
+            'status': c.status,
+            'ad_sets': []
+        }
+        for s in c.ad_sets:
+            s_dict = {
+                'id': s.id,
+                'name': s.name,
+                'status': s.status,
+                'campaign_id': c.id
+            }
+            # Se omite ads_detail en el árbol para no duplicar data, el frontend re-agrupa usando los `get_public_ads` flat, o se los pasamos:
+            # Pasa que `get_public_ads` cruza las ventas/spend, así que es mejor armar jerarquía cruzando frontend
+            c_dict['ad_sets'].append(s_dict)
+        result.append(c_dict)
+        
+    return jsonify(result), 200
+
+
+@bp.route('/public/campaigns', methods=['POST'])
+def create_public_campaign():
+    from app.models import Campaign
+    try:
+        data = request.json
+        name = data.get('name', '').strip()
+        if not name: return jsonify({"error": "Nombre es requerido"}), 400
+        
+        import uuid
+        external_id = data.get('external_id', f'CAM-{uuid.uuid4().hex[:8]}')
+        
+        c = Campaign(name=name, status='active', external_id=external_id)
+        db.session.add(c)
+        db.session.commit()
+        return jsonify({"id": c.id, "name": c.name}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/public/campaigns/<int:campaign_id>', methods=['PUT', 'DELETE'])
+def manage_public_campaign(campaign_id):
+    from app.models import Campaign
+    c = Campaign.query.get_or_404(campaign_id)
+    
+    if request.method == 'DELETE':
+        db.session.delete(c)
+        db.session.commit()
+        return jsonify({"message": "Campaña y sus dependientes eliminados"}), 200
+        
+    data = request.json
+    if 'name' in data: c.name = data['name']
+    if 'status' in data: c.status = data['status']
+    db.session.commit()
+    return jsonify({"message": "Campaña actualizada"}), 200
+
+@bp.route('/public/adsets', methods=['POST'])
+def create_public_adset():
+    from app.models import AdSet, Campaign
+    try:
+        data = request.json
+        name = data.get('name', '').strip()
+        campaign_id = data.get('campaign_id')
+        
+        if not name or not campaign_id:
+            return jsonify({"error": "Nombre y campaign_id son requeridos"}), 400
+            
+        import uuid
+        external_id = f'SET-{uuid.uuid4().hex[:8]}'
+        
+        s = AdSet(name=name, campaign_id=campaign_id, status='active', external_id=external_id)
+        db.session.add(s)
+        db.session.commit()
+        return jsonify({"id": s.id, "name": s.name}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/public/adsets/<int:adset_id>', methods=['PUT', 'DELETE'])
+def manage_public_adset(adset_id):
+    from app.models import AdSet
+    s = AdSet.query.get_or_404(adset_id)
+    
+    if request.method == 'DELETE':
+        db.session.delete(s)
+        db.session.commit()
+        return jsonify({"message": "Conjunto y sus anuncios eliminados"}), 200
+        
+    data = request.json
+    if 'name' in data: s.name = data['name']
+    if 'status' in data: s.status = data['status']
+    db.session.commit()
+    return jsonify({"message": "Conjunto actualizado"}), 200
 
 
 # --- Daily Spend ---
