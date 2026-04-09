@@ -478,8 +478,7 @@ def sync_financial_sales_from_sheets():
     from flask import current_app
     from datetime import datetime
     import requests
-    
-    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywqgVBIZxMP6NqIVbtl0hcN3F0zkED3V-4a_1Zh5MP5l9YuYUtKX7GDzUhKX4h8JXS/exec"
+    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5NqjyWReV6Vz9BJLE1BjTJMov5gKx_H7GK-sPhGY_jiqNHjMXQlXkDReKvf5lrdGw/exec"
     
     try:
         current_app.logger.info("[FINANCIAL SYNC] Starting fetch from Google Sheets...")
@@ -633,7 +632,7 @@ def sync_financial_agendas_from_sheets():
     
     # Using the same URL for now, assuming the script might return different data or a specific sheet
     # In a real scenario, this might be a different URL or have a ?type=agendas param
-    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywqgVBIZxMP6NqIVbtl0hcN3F0zkED3V-4a_1Zh5MP5l9YuYUtKX7GDzUhKX4h8JXS/exec?type=agendas"
+    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5NqjyWReV6Vz9BJLE1BjTJMov5gKx_H7GK-sPhGY_jiqNHjMXQlXkDReKvf5lrdGw/exec?type=agendas"
     
     try:
         response = requests.get(APPS_SCRIPT_URL, timeout=20)
