@@ -199,6 +199,7 @@ const FinancialAnalysisPage = () => {
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Cliente</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Setter</th>
+                                    <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Instagram</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Producto</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Monto</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
@@ -235,6 +236,21 @@ const FinancialAnalysisPage = () => {
                                                 {sale.setter_name}
                                             </Badge>
                                         </td>
+                                        <td className="py-4 px-4 text-center">
+                                            {sale.instagram && sale.instagram !== 'N/A' ? (
+                                                <a 
+                                                    href={`https://instagram.com/${sale.instagram.replace('@', '')}`} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs font-bold text-primary hover:underline flex items-center justify-center gap-1"
+                                                >
+                                                    <Activity size={10} />
+                                                    {sale.instagram.startsWith('@') ? sale.instagram : `@${sale.instagram}`}
+                                                </a>
+                                            ) : (
+                                                <span className="text-xs text-muted">No IG</span>
+                                            )}
+                                        </td>
                                         <td className="py-4 px-4">
                                             <span className="text-[10px] font-black text-muted uppercase tracking-widest bg-white/5 py-1 px-2 rounded-lg">{sale.producto}</span>
                                         </td>
@@ -254,6 +270,7 @@ const FinancialAnalysisPage = () => {
                                                 </Button>
                                             )}
                                         </td>
+
                                     </tr>
                                 ))}
                                  {filteredSales.length === 0 && !error && (

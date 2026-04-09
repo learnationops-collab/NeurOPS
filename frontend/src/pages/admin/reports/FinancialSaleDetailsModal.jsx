@@ -80,6 +80,24 @@ const FinancialSaleDetailsModal = ({ sale, onClose }) => {
                                         <p className="text-sm font-medium text-white break-all">{getRawValue('mail') || getRawValue('email') || 'No especificado'}</p>
                                     </div>
                                 </div>
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 rounded-lg bg-white/5 text-muted"><Activity size={16} /></div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Instagram</p>
+                                        {sale.instagram && sale.instagram !== 'N/A' ? (
+                                            <a 
+                                                href={`https://instagram.com/${sale.instagram.replace('@', '')}`} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-sm font-medium text-primary hover:underline"
+                                            >
+                                                {sale.instagram.startsWith('@') ? sale.instagram : `@${sale.instagram}`}
+                                            </a>
+                                        ) : (
+                                            <p className="text-sm font-medium text-white">No especificado</p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

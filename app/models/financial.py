@@ -12,6 +12,7 @@ class FinancialSale(db.Model):
     error_notes = db.Column(db.Text, nullable=True)
     product = db.Column(db.String(100), nullable=True)
     payment_type = db.Column(db.String(100), nullable=True)
+    instagram = db.Column(db.String(100), nullable=True) # Nueva columna de instagram
 
     def to_dict(self):
         raw = self.raw_data or {}
@@ -27,7 +28,35 @@ class FinancialSale(db.Model):
             "closer": raw.get('vendedor') or raw.get('closer') or 'Sin asignar',
             "producto": db_product,
             "payment_type": self.payment_type or 'N/A',
+            "instagram": self.instagram or raw.get('instagram') or 'N/A',
             "status": self.status,
             "error_notes": self.error_notes,
             "raw_data": raw
         }
+
+class FinancialAgenda(db.Model):
+    __tablename__ = 'financial_agendas'
+    id = db.Column(db.Integer, primary_key=True)
+    setter_name = db.Column(db.String(100), nullable=False)
+    client_name = db.Column(db.String(150), nullable=True)
+    closer_name = db.Column(db.String(100), nullable=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    instagram = db.Column(db.String(100), nullable=True)
+    status = db.Column(db.String(50), default='valid', nullable=False)
+    error_notes = db.Column(db.Text, nullable=True)
+    raw_data = db.Column(db.JSON, nullable=True)
+
+    def to_dict(self):
+        raw = self.raw_data or {}
+        return {
+            "id": self.id,
+            "setter_name": self.setter_name,
+            "client_name": self.client_name or raw.get('cliente') or raw.get('nombre') or 'Desconocido',
+            "closer_name": self.closer_name or raw.get('vendedor') or raw.get('closer') or 'Sin asignar',
+            "date": self.date.isoformat() if self.date else None,
+            "instagram": self.instagram or raw.get('instagram') or 'N/A',
+            "status": self.status,
+            "error_notes": self.error_notes,
+            "raw_data": raw
+        }
+

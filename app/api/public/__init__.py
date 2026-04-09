@@ -466,6 +466,7 @@ def parse_financial_data(item):
         "monto": monto_val,
         "producto": producto,
         "tipo_de_pago": tipo_de_pago,
+        "instagram": str(item.get('instagram') or item.get('ig') or '').strip(),
         "status": 'error' if errors else 'valid',
         "error_notes": " | ".join(errors) if errors else None
     }
@@ -526,7 +527,8 @@ def sync_financial_sales_from_sheets():
                     status=parsed['status'],
                     error_notes=parsed['error_notes'],
                     product=parsed['producto'],
-                    payment_type=parsed['tipo_de_pago']
+                    payment_type=parsed['tipo_de_pago'],
+                    instagram=parsed['instagram']
                 )
                 db.session.add(sale)
                 existing_keys.add(key_check) # Prevent duplicates within the same batch
@@ -582,6 +584,111 @@ def get_financial_sales():
     
     sales = FinancialSale.query.order_by(FinancialSale.date.desc()).all()
     return jsonify([s.to_dict() for s in sales]), 200
+
+# --- Financial Agendas Sync (Similar to Sales) ---
+
+@bp.route('/public/financial-agendas', methods=['POST'])
+def receive_financial_agendas():
+    """Receives agenda data from Excel/Apps Script."""
+    from app.models import FinancialAgenda
+    from flask import current_app
+    import json
+    
+    data = request.get_json() or {}
+    items = data if isinstance(data, list) else [data]
+    
+    saved = 0
+    for item in items:
+        setter = item.get('setter') or item.get('setter_name') or item.get('vendedor')
+        if not setter: continue
+
+        dt_str = item.get('fecha') or item.get('date')
+        agenda_date = datetime.utcnow()
+        if dt_str:
+            try:
+                from dateutil import parser
+                agenda_date = parser.parse(str(dt_str))
+            except: pass
+
+        agenda = FinancialAgenda(
+            setter_name=str(setter),
+            client_name=item.get('cliente') or item.get('nombre'),
+            closer_name=item.get('vendedor') or item.get('closer'),
+            date=agenda_date,
+            instagram=item.get('instagram') or item.get('ig'),
+            raw_data=item
+        )
+        db.session.add(agenda)
+        saved += 1
+        
+    db.session.commit()
+    return jsonify({"message": f"{saved} agenda records saved", "saved": saved}), 201
+
+@bp.route('/public/financial-agendas/sync', methods=['POST'])
+def sync_financial_agendas_from_sheets():
+    """Fetches agendas from Google Sheets and saves new records."""
+    from app.models import FinancialAgenda
+    from flask import current_app
+    import requests
+    
+    # Using the same URL for now, assuming the script might return different data or a specific sheet
+    # In a real scenario, this might be a different URL or have a ?type=agendas param
+    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywqgVBIZxMP6NqIVbtl0hcN3F0zkED3V-4a_1Zh5MP5l9YuYUtKX7GDzUhKX4h8JXS/exec?type=agendas"
+    
+    try:
+        response = requests.get(APPS_SCRIPT_URL, timeout=20)
+        if response.status_code != 200:
+            return jsonify({"error": "Error fetching from Sheets"}), 502
+            
+        data = response.json()
+        existing_agendas = FinancialAgenda.query.all()
+        existing_keys = set()
+        for a in existing_agendas:
+            date_str = a.date.strftime('%Y-%m-%d') if a.date else ""
+            key = f"{a.setter_name.strip().lower()}_{a.client_name.strip().lower() if a.client_name else ''}_{date_str}"
+            existing_keys.add(key)
+            
+        added = 0
+        for item in data:
+            setter = item.get('setter') or item.get('setter_name') or item.get('vendedor')
+            client = item.get('cliente') or item.get('nombre')
+            if not setter: continue
+            
+            dt_str = item.get('fecha') or item.get('date')
+            agenda_date = datetime.utcnow()
+            if dt_str:
+                try:
+                    from dateutil import parser
+                    agenda_date = parser.parse(str(dt_str))
+                except: pass
+                
+            date_str_check = agenda_date.strftime('%Y-%m-%d')
+            key_check = f"{str(setter).strip().lower()}_{str(client).strip().lower() if client else ''}_{date_str_check}"
+            
+            if key_check not in existing_keys:
+                agenda = FinancialAgenda(
+                    setter_name=str(setter),
+                    client_name=str(client) if client else 'Desconocido',
+                    closer_name=item.get('vendedor') or item.get('closer'),
+                    date=agenda_date,
+                    instagram=item.get('instagram') or item.get('ig'),
+                    raw_data=item
+                )
+                db.session.add(agenda)
+                existing_keys.add(key_check)
+                added += 1
+                
+        db.session.commit()
+        return jsonify({"message": "Sincronización de agendas completa", "added": added}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/public/financial-agendas', methods=['GET'])
+def get_financial_agendas():
+    from app.models import FinancialAgenda
+    agendas = FinancialAgenda.query.order_by(FinancialAgenda.date.desc()).all()
+    return jsonify([a.to_dict() for a in agendas]), 200
 
 
 from . import triage

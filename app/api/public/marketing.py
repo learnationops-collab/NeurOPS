@@ -262,3 +262,131 @@ def delete_public_period_spend(spend_id):
         return jsonify({"error": str(e)}), 400
 
 
+# ============================================================
+# REPORTE DE ATRIBUCIÓN: Ventas → Anuncios por Instagram
+# ============================================================
+
+@bp.route('/public/reports/sales-attribution', methods=['GET'])
+def get_sales_attribution_report():
+    """
+    Genera un reporte que cruza ventas externas (FinancialSale) con
+    registros de webhooks de anuncios (ManychatLead/LeadAnswer) usando
+    el campo 'instagram' como llave de unión.
+
+    Para cada venta, busca el LeadAnswer más reciente ANTERIOR a la fecha 
+    de la venta. Si no existe ninguno, el origen queda como 'indeterminado'.
+
+    Parámetros GET:
+        - start_date (str): Fecha inicio YYYY-MM-DD
+        - end_date   (str): Fecha fin YYYY-MM-DD
+    """
+    from app.models import FinancialSale, ManychatLead, LeadAnswer, Ad
+    from datetime import datetime
+
+    start_str = request.args.get('start_date')
+    end_str = request.args.get('end_date')
+
+    if not start_str or not end_str:
+        return jsonify({"error": "Se requieren start_date y end_date"}), 400
+
+    try:
+        start_dt = datetime.strptime(start_str, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+    except ValueError:
+        return jsonify({"error": "Formato de fecha inválido, usar YYYY-MM-DD"}), 400
+
+    # 1. Obtener ventas del periodo que tengan instagram definido
+    sales = FinancialSale.query.filter(
+        FinancialSale.date >= start_dt,
+        FinancialSale.date <= end_dt
+    ).order_by(FinancialSale.date.asc()).all()
+
+    # 2. Pre-cargar mapa de anuncios para evitar N+1 queries
+    all_ads = Ad.query.all()
+    ads_map = {a.id: a for a in all_ads}
+
+    report_rows = []
+
+    for sale in sales:
+        row = {
+            "sale_id": sale.id,
+            "fecha_venta": sale.date.isoformat() if sale.date else None,
+            "cliente": (sale.raw_data or {}).get('cliente') or (sale.raw_data or {}).get('nombre') or 'Desconocido',
+            "setter": sale.setter_name,
+            "closer": (sale.raw_data or {}).get('vendedor') or (sale.raw_data or {}).get('closer') or 'Sin asignar',
+            "producto": sale.product or 'N/A',
+            "monto": sale.amount,
+            "instagram": sale.instagram,
+            # Datos de atribución (se rellena abajo)
+            "ad_id": None,
+            "ad_name": None,
+            "ad_keyword": None,
+            "fecha_primer_contacto": None,
+            "dias_hasta_venta": None,
+            "atribucion": "indeterminado"
+        }
+
+        # 3. Buscar match por instagram (normalizado, sin @)
+        if sale.instagram and sale.instagram.strip() and sale.instagram != 'N/A':
+            ig_normalizado = sale.instagram.strip().lstrip('@').lower()
+
+            # Buscar el ManychatLead cuyo campo 'ig' coincida (case-insensitive, sin @)
+            # SQLite/Postgres: usamos ilike o similar
+            matched_lead = ManychatLead.query.filter(
+                db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_normalizado
+            ).first()
+
+            if matched_lead:
+                # 4. Buscar el LeadAnswer más reciente ANTERIOR a la fecha de la venta
+                closest_answer = LeadAnswer.query.filter(
+                    LeadAnswer.lead_id == matched_lead.id,
+                    LeadAnswer.ad_id != None,
+                    LeadAnswer.created_at <= sale.date
+                ).order_by(LeadAnswer.created_at.desc()).first()
+
+                if closest_answer:
+                    ad = ads_map.get(closest_answer.ad_id)
+                    delta = sale.date - closest_answer.created_at
+
+                    row["ad_id"] = closest_answer.ad_id
+                    row["ad_name"] = ad.name if ad else f"Anuncio #{closest_answer.ad_id}"
+                    row["ad_keyword"] = ad.keyword if ad else closest_answer.keyword
+                    row["fecha_primer_contacto"] = closest_answer.created_at.isoformat()
+                    row["dias_hasta_venta"] = delta.days
+                    row["atribucion"] = "encontrado"
+
+        report_rows.append(row)
+
+    # 5. Calcular métricas de resumen
+    total_ventas = len(report_rows)
+    atribuidas = sum(1 for r in report_rows if r["atribucion"] == "encontrado")
+    sin_instagram = sum(1 for r in report_rows if not r["instagram"] or r["instagram"] == 'N/A')
+    indeterminadas = total_ventas - atribuidas
+
+    # Agrupar monto por anuncio
+    revenue_by_ad = {}
+    for r in report_rows:
+        if r["atribucion"] == "encontrado" and r["ad_id"]:
+            key = r["ad_id"]
+            if key not in revenue_by_ad:
+                revenue_by_ad[key] = {
+                    "ad_id": r["ad_id"],
+                    "ad_name": r["ad_name"],
+                    "ad_keyword": r["ad_keyword"],
+                    "ventas": 0,
+                    "monto_total": 0
+                }
+            revenue_by_ad[key]["ventas"] += 1
+            revenue_by_ad[key]["monto_total"] += r["monto"]
+
+    return jsonify({
+        "summary": {
+            "total_ventas": total_ventas,
+            "atribuidas": atribuidas,
+            "indeterminadas": indeterminadas,
+            "sin_instagram": sin_instagram,
+            "porcentaje_atribucion": round((atribuidas / total_ventas * 100), 1) if total_ventas > 0 else 0
+        },
+        "revenue_by_ad": sorted(revenue_by_ad.values(), key=lambda x: x["monto_total"], reverse=True),
+        "rows": report_rows
+    }), 200

@@ -12,7 +12,8 @@ import {
     Zap,
     Ghost,
     Activity,
-    CalendarDays
+    CalendarDays,
+    Target
 } from 'lucide-react';
 
 /**
@@ -67,7 +68,9 @@ const useDockNavigation = () => {
                 { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
                 { id: 'leads', icon: Users, label: 'Leads', path: '/admin/leads' },
                 { id: 'finances', icon: TrendingUp, label: 'Finanzas', path: '/admin/finance' },
-                { id: 'financial-analysis', icon: Activity, label: 'Análisis F.', path: '/admin/financial-analysis' },
+                { id: 'financial-analysis', icon: Activity, label: 'Tablero Ventas', path: '/sales-board' },
+                { id: 'financial-agendas', icon: CalendarDays, label: 'Tablero Agendas', path: '/agendas-board' },
+                { id: 'attribution', icon: Target, label: 'Atribución', path: '/atribucion-ventas' },
                 { id: 'team', icon: Users, label: 'Equipo', path: '/admin/team' },
                 { id: 'settings', icon: Settings, label: 'Ajustes', path: '/admin/settings' }
             ];
