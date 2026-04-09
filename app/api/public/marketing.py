@@ -127,6 +127,7 @@ def update_public_ad(ad_id):
     if 'name' in data: ad.name = data['name']
     if 'keyword' in data: ad.keyword = data['keyword']
     if 'status' in data: ad.status = data['status']
+    if 'ad_set_id' in data: ad.ad_set_id = data['ad_set_id']
 
     try:
         db.session.commit()
@@ -259,6 +260,7 @@ def manage_public_adset(adset_id):
     data = request.json
     if 'name' in data: s.name = data['name']
     if 'status' in data: s.status = data['status']
+    if 'campaign_id' in data: s.campaign_id = data['campaign_id']
     db.session.commit()
     return jsonify({"message": "Conjunto actualizado"}), 200
 
