@@ -30,6 +30,8 @@ class Lead(db.Model):
     ad_source = db.Column(db.String(255), nullable=True)
     tags = db.Column(db.JSON, default=[])
     notes = db.Column(db.Text, nullable=True)
+    funnel_step = db.Column(db.String(255), nullable=True)  # Paso del funnel (ManyChat)
+    last_stage = db.Column(db.Integer, nullable=True)       # Última etapa numérica (ManyChat)
 
     stage = db.relationship('PipelineStage', backref='leads')
 

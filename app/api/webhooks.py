@@ -64,7 +64,13 @@ def receive_manychat_lead():
                 lead.notes = data.get('coment')
             elif 'notes' in data:
                 lead.notes = data.get('notes')
-            
+
+            # Actualizar funnel_step y last_stage si vienen en el payload
+            if 'funnel_step' in data:
+                lead.funnel_step = data.get('funnel_step')
+            if 'last_stage' in data:
+                lead.last_stage = int(data['last_stage'])
+
             status_code = 200
             action = "updated"
         else:
@@ -106,6 +112,10 @@ def receive_manychat_lead():
                 if kw_tag not in initial_tags:
                     initial_tags.append(kw_tag)
 
+            # Obtener last_stage como int si viene en el payload
+            raw_last_stage = data.get('last_stage')
+            parsed_last_stage = int(raw_last_stage) if raw_last_stage is not None else None
+
             lead = Lead(
                 manychat_id=manychat_id,
                 name=name,
@@ -114,7 +124,9 @@ def receive_manychat_lead():
                 stage_id=stage_id,
                 ad_source=initial_ad_source,
                 tags=initial_tags,
-                notes=data.get('coment') or data.get('notes') # Mapeamos 'coment' a notes
+                notes=data.get('coment') or data.get('notes'), # Mapeamos 'coment' a notes
+                funnel_step=data.get('funnel_step'),
+                last_stage=parsed_last_stage
             )
             db.session.add(lead)
             status_code = 201
