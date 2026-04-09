@@ -94,7 +94,8 @@ const PublicHubPage = () => {
       colorClass: "text-rose-400",
       gradientClass: "bg-rose-500",
       links: [
-        { label: "Sales Board", to: "/sales-board", primary: true }
+        { label: "Sales Board", to: "/sales-board", primary: true },
+        { label: "Atribución", to: "/atribucion-publica", primary: false }
       ]
     },
     {

@@ -41,6 +41,7 @@ import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
 import PublicTriageStatsPage from './pages/public/PublicTriageStatsPage';
 import PublicHubPage from './pages/public/PublicHubPage';
 import AdManagementPage from './pages/public/AdManagementPage';
+import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPage';
 import PixelTracker from './components/common/PixelTracker';
 
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
@@ -93,6 +94,7 @@ function App() {
             <Route path="/estadisticas-triage" element={<PublicTriageStatsPage />} />
             <Route path="/publico" element={<PublicHubPage />} />
             <Route path="/gestion-anuncios" element={<AdManagementPage />} />
+            <Route path="/atribucion-publica" element={<PublicSalesAttributionPage />} />
 
             <Route path="/sales-board" element={<FinancialAnalysisPage />} />
             <Route path="/agendas-board" element={<FinancialAgendasPage />} />
