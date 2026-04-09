@@ -56,19 +56,20 @@ class MarketingBudget(db.Model):
 class AdPeriodSpend(db.Model):
     __tablename__ = 'ad_period_spends'
     id = db.Column(db.Integer, primary_key=True)
-    ad_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=False)
+    ad_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=True) # Ahora es opcional
+    campaign_id = db.Column(db.Integer, db.ForeignKey('campaigns.id'), nullable=True)
+    ad_set_id = db.Column(db.Integer, db.ForeignKey('ad_sets.id'), nullable=True)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
     spend = db.Column(db.Float, default=0.0)
-    entrantes = db.Column(db.Integer, default=0)
-    agendas = db.Column(db.Integer, default=0)
+    entrantes = db.Column(db.Integer, default=0) # Legacy
+    agendas = db.Column(db.Integer, default=0) # Legacy
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Evitar duplicados de gasto por anuncio en el mismo rango de fechas
-    __table_args__ = (db.UniqueConstraint('ad_id', 'start_date', 'end_date', name='uq_ad_period_spend'),)
-
     ad = db.relationship('Ad', backref=db.backref('period_spends', lazy='dynamic'))
+    campaign = db.relationship('Campaign', backref=db.backref('period_spends', lazy='dynamic'))
+    ad_set = db.relationship('AdSet', backref=db.backref('period_spends', lazy='dynamic'))
 
 
 class ManychatAdLead(db.Model):

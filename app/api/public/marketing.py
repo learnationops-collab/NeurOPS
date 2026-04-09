@@ -268,7 +268,7 @@ def manage_public_adset(adset_id):
 @bp.route('/public/ads/period-spend', methods=['GET'])
 def get_public_period_spend():
     """Lista registros de gasto periódico filtrados por fecha de inicio y fin."""
-    from app.models import AdPeriodSpend, Ad
+    from app.models import AdPeriodSpend, Ad, AdSet, Campaign
 
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
@@ -285,20 +285,22 @@ def get_public_period_spend():
     return jsonify([{
         'id': s.id,
         'ad_id': s.ad_id,
-        'ad_name': s.ad.name if s.ad else 'Unknown',
-        'ad_keyword': s.ad.keyword if s.ad else '',
+        'ad_set_id': s.ad_set_id,
+        'campaign_id': s.campaign_id,
+        'ad_name': s.ad.name if hasattr(s, 'ad') and s.ad else 'Sin Anuncio',
+        'ad_keyword': s.ad.keyword if hasattr(s, 'ad') and s.ad else '',
+        'ad_set_name': s.ad_set.name if hasattr(s, 'ad_set') and s.ad_set else '',
+        'campaign_name': s.campaign.name if hasattr(s, 'campaign') and s.campaign else '',
         'start_date': s.start_date.isoformat(),
         'end_date': s.end_date.isoformat(),
         'spend': s.spend,
-        'entrantes': s.entrantes or 0,
-        'agendas': s.agendas or 0,
         'notes': s.notes,
     } for s in spends]), 200
 
 
 @bp.route('/public/ads/period-spend', methods=['POST'])
 def save_public_period_spend():
-    """Guarda o actualiza gasto de un anuncio por periodo (upsert por ad_id + start_date + end_date)."""
+    """Guarda o actualiza gasto por periodo para un conjunto de anuncios."""
     from app.models import AdPeriodSpend
 
     data = request.get_json() or {}
@@ -309,28 +311,39 @@ def save_public_period_spend():
     saved = 0
     for entry in entries:
         ad_id = entry.get('ad_id')
+        ad_set_id = entry.get('ad_set_id')
+        campaign_id = entry.get('campaign_id')
         start_date_str = entry.get('start_date')
         end_date_str = entry.get('end_date')
         spend = float(entry.get('spend', 0))
-        entrantes = int(entry.get('entrantes', 0) or 0)
-        agendas = int(entry.get('agendas', 0) or 0)
         notes = entry.get('notes', '')
 
-        if not ad_id or not start_date_str or not end_date_str:
+        if not start_date_str or not end_date_str:
+            continue
+        if not (ad_id or ad_set_id or campaign_id):
             continue
 
         start_tgt = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_tgt = datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
-        # Upsert: buscar existente o crear nuevo
-        record = AdPeriodSpend.query.filter_by(ad_id=ad_id, start_date=start_tgt, end_date=end_tgt).first()
+        # Upsert logic based on priority (ad_set > campaign > ad) to avoid dupes
+        record = None
+        if ad_set_id:
+            record = AdPeriodSpend.query.filter_by(ad_set_id=ad_set_id, start_date=start_tgt, end_date=end_tgt).first()
+        elif campaign_id:
+            record = AdPeriodSpend.query.filter_by(campaign_id=campaign_id, start_date=start_tgt, end_date=end_tgt).first()
+        elif ad_id:
+            record = AdPeriodSpend.query.filter_by(ad_id=ad_id, start_date=start_tgt, end_date=end_tgt).first()
+
         if record:
             record.spend = spend
-            record.entrantes = entrantes
-            record.agendas = agendas
             record.notes = notes
+            # Actualizamos ids por si mutaron (raro en upsert)
+            record.ad_set_id = ad_set_id or record.ad_set_id
+            record.campaign_id = campaign_id or record.campaign_id
+            record.ad_id = ad_id or record.ad_id
         else:
-            record = AdPeriodSpend(ad_id=ad_id, start_date=start_tgt, end_date=end_tgt, spend=spend, entrantes=entrantes, agendas=agendas, notes=notes)
+            record = AdPeriodSpend(ad_id=ad_id, ad_set_id=ad_set_id, campaign_id=campaign_id, start_date=start_tgt, end_date=end_tgt, spend=spend, notes=notes)
             db.session.add(record)
         saved += 1
 
