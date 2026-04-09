@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import {
     TrendingUp,
@@ -15,7 +15,9 @@ import {
     Layers,
     Clock,
     ArrowLeft,
-    Sparkles
+    Sparkles,
+    Plus,
+    X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -62,6 +64,51 @@ const PublicSalesAttributionPage = () => {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterAtribucion, setFilterAtribucion] = useState('all');
+
+    // States for Manual Attribution
+    const [adsList, setAdsList] = useState([]);
+    const [manualModalOpen, setManualModalOpen] = useState(false);
+    const [selectedSale, setSelectedSale] = useState(null);
+    const [manualIg, setManualIg] = useState('');
+    const [manualAdId, setManualAdId] = useState('');
+    const [submittingManual, setSubmittingManual] = useState(false);
+
+    useEffect(() => {
+        const fetchAds = async () => {
+            try {
+                const res = await api.get('/public/ads');
+                setAdsList(res.data);
+            } catch (err) {
+                console.error("Error fetching ads", err);
+            }
+        };
+        fetchAds();
+    }, []);
+
+    const openManualModal = (row) => {
+        setSelectedSale(row);
+        setManualIg(row.instagram && row.instagram !== 'N/A' ? row.instagram.replace('@', '') : '');
+        setManualAdId('');
+        setManualModalOpen(true);
+    };
+
+    const handleManualAttribution = async () => {
+        if (!manualIg || !manualAdId) return;
+        setSubmittingManual(true);
+        try {
+            await api.post('/public/marketing/manual-attribution', {
+                sale_id: selectedSale.sale_id,
+                ad_id: parseInt(manualAdId),
+                instagram: manualIg
+            });
+            setManualModalOpen(false);
+            await handleGenerateReport();
+        } catch (err) {
+            alert('Error al forzar atribución: ' + (err.response?.data?.error || err.message));
+        } finally {
+            setSubmittingManual(false);
+        }
+    };
 
     const handleGenerateReport = async () => {
         if (!startDate || !endDate) {
@@ -320,7 +367,15 @@ const PublicSalesAttributionPage = () => {
                                                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{row.ad_keyword}</span>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-[10px] font-black text-slate-200 uppercase tracking-[0.2em] italic">Indeterminado</span>
+                                                        <div className="flex flex-col items-start gap-2">
+                                                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] italic">Sin Traza</span>
+                                                            <button 
+                                                                onClick={() => openManualModal(row)}
+                                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm"
+                                                            >
+                                                                <Plus size={10} /> Forzar Atribución
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </td>
                                                 <td className="py-4 bg-white border-y border-r border-slate-50 rounded-r-3xl text-right pr-6">
@@ -365,6 +420,84 @@ const PublicSalesAttributionPage = () => {
                     <Link to="/publico" className="text-[10px] font-black uppercase tracking-widest hover:text-indigo-600 transition-colors">Volver al Portal de Operaciones</Link>
                 </footer>
             </div>
+
+            {/* Modal de Atribución Manual */}
+            {manualModalOpen && selectedSale && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] shadow-xl w-full max-w-lg overflow-hidden flex flex-col">
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                                    <Target size={18} />
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-slate-800 uppercase italic tracking-tighter">Atribución Manual</h3>
+                                    <p className="text-[10px] text-slate-400 uppercase font-bold">Venta de {selectedSale.cliente}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setManualModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-2">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <Instagram size={12} className="text-indigo-500" />
+                                    Instagram del Cliente
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">@</span>
+                                    <input
+                                        type="text"
+                                        value={manualIg}
+                                        onChange={(e) => setManualIg(e.target.value.replace('@', ''))}
+                                        placeholder="usuario_ig"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold"
+                                    />
+                                </div>
+                                <p className="text-[9px] text-slate-400 font-medium">Es fundamental para cruzarlo orgánicamente desde ahora.</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <BarChart3 size={12} className="text-indigo-500" />
+                                    Anuncio de Origen
+                                </label>
+                                <select
+                                    value={manualAdId}
+                                    onChange={(e) => setManualAdId(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-700"
+                                >
+                                    <option value="">-- Seleccionar Anuncio --</option>
+                                    {adsList.map(ad => (
+                                        <option key={ad.id} value={ad.id}>
+                                            {ad.name} {ad.keyword ? `(${ad.keyword})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3">
+                            <button 
+                                onClick={() => setManualModalOpen(false)}
+                                className="flex-1 py-3 font-black text-xs text-slate-500 uppercase tracking-widest hover:bg-slate-200/50 rounded-xl transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleManualAttribution}
+                                disabled={submittingManual || !manualIg || !manualAdId}
+                                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+                            >
+                                {submittingManual ? <Activity size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                Forzar Origen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

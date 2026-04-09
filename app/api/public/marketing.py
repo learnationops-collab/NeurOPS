@@ -390,3 +390,81 @@ def get_sales_attribution_report():
         "revenue_by_ad": sorted(revenue_by_ad.values(), key=lambda x: x["monto_total"], reverse=True),
         "rows": report_rows
     }), 200
+
+@bp.route('/public/marketing/manual-attribution', methods=['POST'])
+def force_manual_attribution():
+    """
+    Fuerza la atribución de una venta inyectando un usuario y una interacción virtual.
+    """
+    from app.models import FinancialSale, ManychatLead, LeadAnswer
+    from datetime import timedelta
+    import uuid
+
+    data = request.json or {}
+    sale_id = data.get('sale_id')
+    ad_id = data.get('ad_id')
+    instagram_input = data.get('instagram')
+
+    if not sale_id or not ad_id or not instagram_input:
+        return jsonify({"error": "Faltan parámetros requeridos (sale_id, ad_id, instagram)"}), 400
+
+    sale = FinancialSale.query.get(sale_id)
+    if not sale:
+        return jsonify({"error": "No se encontró la venta"}), 404
+
+    # 1. Normalizar IG y guardarlo en la venta si es diferente/nuevo
+    ig_normalizado = instagram_input.strip().lstrip('@').lower()
+    sale.instagram = f"@{ig_normalizado}"
+    
+    # 2. Buscar o crear ManychatLead
+    matched_lead = ManychatLead.query.filter(
+        db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_normalizado
+    ).first()
+
+    if not matched_lead:
+        # Generar un ID único basado en la venta para evitar colisiones
+        cliente_nombre = (sale.raw_data or {}).get('cliente') or (sale.raw_data or {}).get('nombre') or 'Desconocido'
+        matched_lead = ManychatLead(
+            manychat_id=f"manual_{sale.id}_{uuid.uuid4().hex[:6]}",
+            name=cliente_nombre,
+            ig=f"@{ig_normalizado}",
+            follower=False
+        )
+        db.session.add(matched_lead)
+        db.session.flush()
+
+    # 3. Crear LeadAnswer (interacción de webhook falsa) un minuto antes de la venta
+    # Para asegurar que la próxima vez que el reporte corra, la empareje orgánicamente.
+    fake_time = sale.date - timedelta(minutes=1) if sale.date else db.func.now()
+    
+    answer = LeadAnswer(
+        lead_id=matched_lead.id,
+        ad_id=ad_id,
+        keyword="manual_attribution",
+        qualification="true", # asumimos calificado ya que compró
+        created_at=fake_time,
+        updated_at=fake_time
+    )
+    
+    # Modificamos la hora de creación insertada en la base de datos (pues db.func.now sobreescribe el default en SQLAlchemy pero podemos forzar)
+    # Algunas DBS respetan asignarlo directo al modelo si no hay trigger de BD
+    db.session.add(answer)
+    
+    try:
+        db.session.commit()
+        
+        # Opcional: forzar timestamps post-commit por si SQLAlchemy los sobreescribe
+        answer.created_at = fake_time
+        answer.updated_at = fake_time
+        db.session.commit()
+
+        return jsonify({
+            "message": "Atribución forzada con éxito.",
+            "sale_id": sale.id,
+            "lead_id": matched_lead.id
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
