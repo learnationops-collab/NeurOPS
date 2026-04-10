@@ -4,7 +4,7 @@ import MainLayout from './components/MainLayout';
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard';
 import FinancePage from './pages/admin/reports/FinancePage';
 import FinancialAnalysisPage from './pages/admin/reports/FinancialAnalysisPage';
-import FinancialAgendasPage from './pages/admin/reports/FinancialAgendasPage';
+import PublicCallsBoardPage from './pages/public/PublicCallsBoardPage';
 import SalesAttributionPage from './pages/admin/reports/SalesAttributionPage';
 import LoginPage from './pages/auth/LoginPage';
 import EmergencyCreatePage from './pages/auth/EmergencyCreatePage';
@@ -97,7 +97,7 @@ function App() {
             <Route path="/atribucion-publica" element={<PublicSalesAttributionPage />} />
 
             <Route path="/sales-board" element={<FinancialAnalysisPage />} />
-            <Route path="/agendas-board" element={<FinancialAgendasPage />} />
+            <Route path="/calls-board" element={<PublicCallsBoardPage />} />
             <Route path="/atribucion-ventas" element={<SalesAttributionPage />} />
 
             {/* Protected Admin Routes */}

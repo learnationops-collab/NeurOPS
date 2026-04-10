@@ -592,10 +592,11 @@ def receive_financial_agendas():
     
     saved = 0
     for item in items:
-        setter = item.get('setter') or item.get('setter_name') or item.get('vendedor')
+        # Based on new layout: "nombre" is usually the setter, "lead" is client, etc.
+        setter = item.get('nombre') or item.get('setter') or item.get('setter_name') or item.get('vendedor')
         if not setter: continue
 
-        dt_str = item.get('fecha') or item.get('date')
+        dt_str = item.get('fecha') or item.get('date') or item.get('registro')
         agenda_date = datetime.utcnow()
         if dt_str:
             try:
@@ -604,11 +605,11 @@ def receive_financial_agendas():
             except: pass
 
         agenda = FinancialAgenda(
-            setter_name=str(setter),
-            client_name=item.get('cliente') or item.get('nombre'),
-            closer_name=item.get('vendedor') or item.get('closer'),
+            setter_name=str(setter).strip(),
+            client_name=item.get('lead') or item.get('cliente') or item.get('nombre') or 'Desconocido',
+            closer_name=item.get('closer') or item.get('vendedor') or 'Sin asignar',
             date=agenda_date,
-            instagram=item.get('instagram') or item.get('ig'),
+            instagram=item.get('instagram') or item.get('ig') or 'N/A',
             raw_data=item
         )
         db.session.add(agenda)
@@ -619,35 +620,37 @@ def receive_financial_agendas():
 
 @bp.route('/public/financial-agendas/sync', methods=['POST'])
 def sync_financial_agendas_from_sheets():
-    """Fetches agendas from Google Sheets and saves new records."""
+    """Fetches agendas from Google Sheets and recreates all records."""
     from app.models import FinancialAgenda
     from flask import current_app
     import requests
     
-    # Using the same URL for now, assuming the script might return different data or a specific sheet
-    # In a real scenario, this might be a different URL or have a ?type=agendas param
-    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5NqjyWReV6Vz9BJLE1BjTJMov5gKx_H7GK-sPhGY_jiqNHjMXQlXkDReKvf5lrdGw/exec?type=agendas"
+    # URL for Agendas_DB Apps Script
+    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCT3EB1adpGzzIGmy6LqObTr9Fw9jCHzllWiVAoMb7TQZKu_maj4iP1LaMJF6Oi18/exec"
     
     try:
+        current_app.logger.info("[FINANCIAL AGENDAS SYNC] Starting fetch from Google Sheets...")
         response = requests.get(APPS_SCRIPT_URL, timeout=20)
         if response.status_code != 200:
-            return jsonify({"error": "Error fetching from Sheets"}), 502
+            return jsonify({"error": f"Error fetching from Sheets: {response.status_code}"}), 502
             
         data = response.json()
-        existing_agendas = FinancialAgenda.query.all()
-        existing_keys = set()
-        for a in existing_agendas:
-            date_str = a.date.strftime('%Y-%m-%d') if a.date else ""
-            key = f"{a.setter_name.strip().lower()}_{a.client_name.strip().lower() if a.client_name else ''}_{date_str}"
-            existing_keys.add(key)
-            
+        
+        # Eliminar toda la base y reconstruir para que Sheets sea Single Source of Truth
+        db.session.query(FinancialAgenda).delete()
+        
         added = 0
         for item in data:
-            setter = item.get('setter') or item.get('setter_name') or item.get('vendedor')
-            client = item.get('cliente') or item.get('nombre')
-            if not setter: continue
+            setter = item.get('nombre') or item.get('setter') or item.get('setter_name')
+            client = item.get('lead') or item.get('cliente')
+            closer = item.get('closer') or item.get('vendedor')
+            instagram = item.get('instagram') or item.get('ig')
             
-            dt_str = item.get('fecha') or item.get('date')
+            # Skip if no valid setter name is found
+            if not setter or str(setter).strip() == '':
+                continue
+            
+            dt_str = item.get('fecha') or item.get('date') or item.get('registro')
             agenda_date = datetime.utcnow()
             if dt_str:
                 try:
@@ -655,30 +658,31 @@ def sync_financial_agendas_from_sheets():
                     agenda_date = parser.parse(str(dt_str))
                 except: pass
                 
-            date_str_check = agenda_date.strftime('%Y-%m-%d')
-            key_check = f"{str(setter).strip().lower()}_{str(client).strip().lower() if client else ''}_{date_str_check}"
-            
-            if key_check not in existing_keys:
-                agenda = FinancialAgenda(
-                    setter_name=str(setter),
-                    client_name=str(client) if client else 'Desconocido',
-                    closer_name=item.get('vendedor') or item.get('closer'),
-                    date=agenda_date,
-                    instagram=item.get('instagram') or item.get('ig'),
-                    raw_data=item
-                )
-                db.session.add(agenda)
-                existing_keys.add(key_check)
-                added += 1
+            agenda = FinancialAgenda(
+                setter_name=str(setter).strip(),
+                client_name=str(client).strip() if client else 'Desconocido',
+                closer_name=str(closer).strip() if closer else 'Sin asignar',
+                date=agenda_date,
+                instagram=str(instagram).strip() if instagram else 'N/A',
+                raw_data=item
+            )
+            db.session.add(agenda)
+            added += 1
                 
         db.session.commit()
+        current_app.logger.info(f"[FINANCIAL AGENDAS SYNC] Reconstrucción completa: Se recrearon {added} registros desde cero.")
         return jsonify({"message": "Sincronización de agendas completa", "added": added}), 200
+        
+    except requests.exceptions.Timeout:
+         return jsonify({"error": "La conexión con Google Sheets excedió el tiempo de espera."}), 504
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"[FINANCIAL AGENDAS SYNC] Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @bp.route('/public/financial-agendas', methods=['GET'])
 def get_financial_agendas():
+    """Returns all financial agendas records."""
     from app.models import FinancialAgenda
     agendas = FinancialAgenda.query.order_by(FinancialAgenda.date.desc()).all()
     return jsonify([a.to_dict() for a in agendas]), 200
