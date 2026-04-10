@@ -36,43 +36,29 @@ const useDockNavigation = () => {
     const pages = useMemo(() => {
         const isCloser = user?.role === 'closer';
         const isSetter = user?.role === 'setter';
+        const isTriage = user?.role === 'triage';
 
         if (isCloser) {
             return [
-                { id: 'board', icon: LayoutDashboard, label: 'Board', path: '/closer/dashboard' },
-                { id: 'leads', icon: Users, label: 'Leads', path: '/closer/leads' },
-                { id: 'stats', icon: BarChart3, label: 'Stats', path: '/closer/stats' },
-                { id: 'settings', icon: Settings, label: 'Ajustes', path: '/closer/settings' }
+                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/closer/report' }
             ];
         } else if (isSetter) {
             return [
-                { id: 'agendas', icon: CalendarDays, label: 'Agendas', path: '/setter/agendas' },
-                { id: 'board', icon: LayoutDashboard, label: 'Board', path: '/setter/dashboard' },
-                { id: 'stats', icon: BarChart3, label: 'Stats', path: '/setter/stats' }
+                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/setter/report' }
+            ];
+        } else if (isTriage) {
+            return [
+                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/triage/report' }
             ];
         } else if (user?.role === 'operator') {
-            return [
-                { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/ops/dashboard' },
-                { id: 'database', icon: Zap, label: 'Base de Datos', path: '/ops/database' },
-                { id: 'settings', icon: Settings, label: 'Ajustes Técnicos', path: '/ops/settings' }
-            ];
+            return []; // Operadores temporalmente sin rutas en Dock hasta definir
         } else if (user?.role === 'sales_admin') {
-            return [
-                { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/sales-admin/dashboard' },
-                { id: 'agendas', icon: CalendarDays, label: 'Agendas', path: '/sales-admin/agendas' },
-                { id: 'team', icon: Users, label: 'Equipo', path: '/sales-admin/team' },
-                { id: 'settings', icon: Settings, label: 'Ajustes', path: '/sales-admin/settings' }
-            ];
+            return [];
         } else if (user?.role === 'admin') {
             return [
-                { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
-                { id: 'leads', icon: Users, label: 'Leads', path: '/admin/leads' },
-                { id: 'finances', icon: TrendingUp, label: 'Finanzas', path: '/admin/finance' },
-                { id: 'financial-analysis', icon: Activity, label: 'Tablero Ventas', path: '/sales-board' },
-                { id: 'financial-agendas', icon: CalendarDays, label: 'Tablero Agendas', path: '/agendas-board' },
-                { id: 'attribution', icon: Target, label: 'Atribución', path: '/atribucion-ventas' },
-                { id: 'team', icon: Users, label: 'Equipo', path: '/admin/team' },
-                { id: 'settings', icon: Settings, label: 'Ajustes', path: '/admin/settings' }
+                { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
+                { id: 'marketing', icon: Target, label: 'Marketing', path: '/admin/marketing' },
+                { id: 'sheets', icon: CalendarDays, label: 'Importaciones Sheets', path: '/admin/sheets' }
             ];
         }
 

@@ -44,6 +44,10 @@ import AdManagementPage from './pages/public/AdManagementPage';
 import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPage';
 import PixelTracker from './components/common/PixelTracker';
 
+import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
+import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
+import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
+
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
 import { ThemeProvider } from './context/ThemeContext';
@@ -61,11 +65,12 @@ const ProtectedRoute = ({ children, roles = [] }) => {
 
   if (roles.length > 0 && !roles.includes(user.role)) {
     // Redirigir a su dashboard correspondiente si intenta entrar a ruta ajena
-    if (user.role === 'admin') return <Navigate to="/admin/dashboard" />;
-    if (user.role === 'operator') return <Navigate to="/ops/dashboard" />;
-    if (user.role === 'setter') return <Navigate to="/setter/agendas" />;
-    if (user.role === 'sales_admin') return <Navigate to="/sales-admin/dashboard" />;
-    return <Navigate to="/closer/dashboard" />;
+    if (user.role === 'admin') return <Navigate to="/admin/ventas" />;
+    if (user.role === 'operator') return <Navigate to="/" />; // Pendiente
+    if (user.role === 'setter') return <Navigate to="/setter/report" />;
+    if (user.role === 'closer') return <Navigate to="/closer/report" />;
+    if (user.role === 'triage') return <Navigate to="/triage/report" />;
+    return <Navigate to="/" />;
   }
 
   return children;
@@ -81,62 +86,18 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/emergency-create" element={<EmergencyCreatePage />} />
-            {/* Unified Booking Route (Slug handles both general and personal) */}
             <Route path="/book/:setter_id/:event_slug" element={<BookingPage />} />
             <Route path="/book/:event_slug" element={<BookingPage />} />
             <Route path="/backup" element={<BackupPage />} />
             <Route path="/restore" element={<RestorePage />} />
-            <Route path="/reporte-setter" element={<PublicSetterReportPage />} />
-            <Route path="/estadisticas-setters" element={<PublicSetterStatsPage />} />
-            <Route path="/reporte-closer" element={<PublicCloserReportPage />} />
-            <Route path="/estadisticas-closers" element={<PublicCloserStatsPage />} />
-            <Route path="/reporte-triage" element={<PublicTriageReportPage />} />
-            <Route path="/estadisticas-triage" element={<PublicTriageStatsPage />} />
-            <Route path="/publico" element={<PublicHubPage />} />
-            <Route path="/gestion-anuncios" element={<AdManagementPage />} />
-            <Route path="/atribucion-publica" element={<PublicSalesAttributionPage />} />
 
-            <Route path="/sales-board" element={<FinancialAnalysisPage />} />
-            <Route path="/calls-board" element={<PublicCallsBoardPage />} />
-            <Route path="/atribucion-ventas" element={<SalesAttributionPage />} />
-
-            {/* Protected Admin Routes */}
+            {/* Protected Admin Routes: Hubs */}
             <Route
-              path="/admin/dashboard"
+              path="/admin/ventas"
               element={
                 <ProtectedRoute roles={['admin']}>
                   <MainLayout>
-                    <AdminDashboard />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/leads"
-              element={
-                <ProtectedRoute roles={['admin', 'operator']}>
-                  <MainLayout>
-                    <AdminLeadsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/finance"
-              element={
-                <ProtectedRoute roles={['admin', 'operator']}>
-                  <MainLayout>
-                    <FinancePage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/financial-analysis"
-              element={
-                <ProtectedRoute roles={['admin', 'operator']}>
-                  <MainLayout>
-                    <FinancialAnalysisPage />
+                    <AdminSalesHubPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -144,236 +105,61 @@ function App() {
             <Route
               path="/admin/marketing"
               element={
-                <ProtectedRoute roles={['admin', 'operator']}>
+                <ProtectedRoute roles={['admin']}>
                   <MainLayout>
-                    <MarketingPage />
+                    <AdminMarketingHubPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/admin/sales"
-              element={
-                <ProtectedRoute roles={['admin', 'operator']}>
-                  <MainLayout>
-                    <AnalysisPage defaultTab="closers" />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/fulfillment"
-              element={
-                <ProtectedRoute roles={['admin', 'operator']}>
-                  <MainLayout>
-                    <ConstructionPage title="Fulfillment" />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/team"
+              path="/admin/sheets"
               element={
                 <ProtectedRoute roles={['admin']}>
                   <MainLayout>
-                    <TeamManagementPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/style-guide"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <StyleGuidePage />
+                    <AdminSheetsHubPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
             />
 
+            {/* Protected Role-Specific Routes */}
             <Route
-              path="/admin/settings"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <MainLayout>
-                    <SettingsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Protected Closer Routes */}
-            <Route
-              path="/closer/dashboard"
-              element={
-                <ProtectedRoute roles={['closer']}>
-                  <MainLayout>
-                    <CloserDashboard />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/closer/stats"
-              element={
-                <ProtectedRoute roles={['closer']}>
-                  <MainLayout>
-                    <StatisticsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/closer/settings"
-              element={
-                <ProtectedRoute roles={['closer']}>
-                  <MainLayout>
-                    <CloserSettingsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/closer/leads"
-              element={
-                <ProtectedRoute roles={['closer']}>
-                  <MainLayout>
-                    <CloserLeadsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/closer/sales/new"
-              element={
-                <ProtectedRoute roles={['closer']}>
-                  <MainLayout>
-                    <CloserNewSalePage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/closer/appointments/new"
-              element={
-                <ProtectedRoute roles={['closer']}>
-                  <MainLayout>
-                    <CloserNewAppointmentPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Protected Setter Routes */}
-            <Route
-              path="/setter/agendas"
+              path="/setter/report"
               element={
                 <ProtectedRoute roles={['setter']}>
                   <MainLayout>
-                    <SetterAgendasPage />
+                    <PublicSetterReportPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/setter/dashboard"
+              path="/closer/report"
               element={
-                <ProtectedRoute roles={['setter']}>
+                <ProtectedRoute roles={['closer']}>
                   <MainLayout>
-                    <SetterDashboard />
+                    <PublicCloserReportPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/setter/stats"
+              path="/triage/report"
               element={
-                <ProtectedRoute roles={['setter']}>
+                <ProtectedRoute roles={['triage']}>
                   <MainLayout>
-                    <SetterStatisticsPage />
+                    <PublicTriageReportPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
             />
 
-            {/* Protected Operations Routes */}
-            <Route
-              path="/ops/dashboard"
-              element={
-                <ProtectedRoute roles={['operator']}>
-                  <MainLayout>
-                    <OperationsDashboard />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/ops/database"
-              element={
-                <ProtectedRoute roles={['operator']}>
-                  <MainLayout>
-                    <DatabasePage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/ops/settings"
-              element={
-                <ProtectedRoute roles={['operator']}>
-                  <MainLayout>
-                    <OperationsSettingsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Protected Sales Admin Routes */}
-            <Route
-              path="/sales-admin/dashboard"
-              element={
-                <ProtectedRoute roles={['sales_admin']}>
-                  <MainLayout>
-                    <SalesAdminDashboard />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sales-admin/agendas"
-              element={
-                <ProtectedRoute roles={['sales_admin']}>
-                  <MainLayout>
-                    <SalesAgendasPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sales-admin/team"
-              element={
-                <ProtectedRoute roles={['sales_admin']}>
-                  <MainLayout>
-                    <TeamManagementPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sales-admin/settings"
-              element={
-                <ProtectedRoute roles={['sales_admin']}>
-                  <MainLayout>
-                    <SalesSettingsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* Hub Público Remanente */}
+            <Route path="/publico" element={<PublicHubPage />} />
 
             {/* Fallback */}
-            <Route path="/" element={<Navigate to="/login" />} />
+            <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
         </Router>
       </AuthProvider>

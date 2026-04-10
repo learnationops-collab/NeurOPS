@@ -27,6 +27,7 @@ Este archivo define las reglas generales de programación para el proyecto. El o
 - **KISS (Keep It Simple, Stupid)**: Evita la sobreingeniería. Si una función simple basta, úsala.
 - **DRY (Don't Repeat Yourself)**: Si copias y pegas código 3 veces, crea una función o componente.
 - **Responsabilidad Única**: Cada función o clase debe hacer UNA sola cosa bien.
+- **Límite de Longitud**: Ningún archivo debe sobrepasar las 500 líneas de código. Si un archivo alcanza este límite, debe ser subdividido en componentes más pequeños o crear un nuevo archivo para delegar responsabilidades logicás/gráficas (ej: mover la tabla o modales a un hijo en react).
 
 ## 3. Manejo de Errores
 
