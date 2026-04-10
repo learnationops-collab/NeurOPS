@@ -29,6 +29,8 @@ const LoginPage = () => {
         navigate('/triage/report');
       } else if (user.role === 'closer') {
         navigate('/closer/report');
+      } else if (user.role === 'operator') {
+        navigate('/ops/dashboard');
       } else {
         navigate('/publico');
       }

@@ -5,16 +5,19 @@ import {
     Terminal,
     Shield,
     HardDrive,
-    Activity
+    Activity,
+    Users
 } from 'lucide-react';
 import DatabasePage from '../../admin/database/DatabasePage';
 import OperationsPage from '../../admin/database/OperationsPage';
+import TeamManagementPage from '../../admin/team/TeamManagementPage';
 import Card from '../../../components/ui/Card';
 
 const OperationsSettingsPage = () => {
-    const [activeSection, setActiveSection] = useState('database');
+    const [activeSection, setActiveSection] = useState('team');
 
     const sections = [
+        { id: 'team', label: 'Gestión de Equipo', icon: Users },
         { id: 'database', label: 'Base de Datos', icon: Database },
         { id: 'operations', label: 'Operaciones Críticas', icon: Activity },
         { id: 'infra', label: 'Infraestructura', icon: HardDrive },
@@ -48,6 +51,12 @@ const OperationsSettingsPage = () => {
 
                 {/* Content Area */}
                 <div className="lg:col-span-3">
+                    {activeSection === 'team' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                            <TeamManagementPage />
+                        </div>
+                    )}
+
                     {activeSection === 'database' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                             <DatabasePage />

@@ -51,7 +51,9 @@ const useDockNavigation = () => {
                 { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/triage/report' }
             ];
         } else if (user?.role === 'operator') {
-            return []; // Operadores temporalmente sin rutas en Dock hasta definir
+            return [
+                { id: 'settings', icon: Settings, label: 'Control Técnico', path: '/ops/dashboard' }
+            ];
         } else if (user?.role === 'sales_admin') {
             return [];
         } else if (user?.role === 'admin') {

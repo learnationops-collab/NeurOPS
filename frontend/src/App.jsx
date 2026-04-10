@@ -66,7 +66,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
   if (roles.length > 0 && !roles.includes(user.role)) {
     // Redirigir a su dashboard correspondiente si intenta entrar a ruta ajena
     if (user.role === 'admin') return <Navigate to="/admin/ventas" />;
-    if (user.role === 'operator') return <Navigate to="/" />; // Pendiente
+    if (user.role === 'operator') return <Navigate to="/ops/dashboard" />;
     if (user.role === 'setter') return <Navigate to="/setter/report" />;
     if (user.role === 'closer') return <Navigate to="/closer/report" />;
     if (user.role === 'triage') return <Navigate to="/triage/report" />;
@@ -92,6 +92,16 @@ function App() {
             <Route path="/restore" element={<RestorePage />} />
 
             {/* Protected Admin Routes: Hubs */}
+            <Route
+              path="/ops/dashboard"
+              element={
+                <ProtectedRoute roles={['operator', 'admin']}>
+                  <MainLayout>
+                    <OperationsSettingsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/admin/ventas"
               element={
