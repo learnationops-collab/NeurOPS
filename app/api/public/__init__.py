@@ -625,8 +625,8 @@ def sync_financial_agendas_from_sheets():
     from flask import current_app
     import requests
     
-    # URL for Agendas_DB Apps Script
-    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCT3EB1adpGzzIGmy6LqObTr9Fw9jCHzllWiVAoMb7TQZKu_maj4iP1LaMJF6Oi18/exec"
+    # URL for Llamadas_DB Apps Script
+    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyZTReAkIdvwionCjalkmVHJt5SGg-lqIrntkYTE3SIOqTcG6uv_DkTF1KSzh1UnhAO/exec"
     
     try:
         current_app.logger.info("[FINANCIAL AGENDAS SYNC] Starting fetch from Google Sheets...")
