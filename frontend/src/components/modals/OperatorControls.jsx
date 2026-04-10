@@ -61,17 +61,15 @@ const OperatorControls = ({ isOpen, onClose }) => {
             if (token) localStorage.setItem('auth_token', token);
 
             // Redirigir según el rol del usuario simulado
-            let redirectPath = '/';
+            let redirectPath = '/publico';
             if (targetUser.role === 'admin') {
-                redirectPath = '/admin/dashboard';
-            } else if (targetUser.role === 'operator') {
-                redirectPath = '/ops/dashboard';
-            } else if (targetUser.role === 'sales_admin') {
-                redirectPath = '/sales-admin/dashboard';
-            } else if (targetUser.role === 'closer') {
-                redirectPath = '/closer/dashboard';
+                redirectPath = '/admin/ventas';
             } else if (targetUser.role === 'setter') {
-                redirectPath = '/setter/dashboard';
+                redirectPath = '/setter/report';
+            } else if (targetUser.role === 'triage') {
+                redirectPath = '/triage/report';
+            } else if (targetUser.role === 'closer') {
+                redirectPath = '/closer/report';
             }
 
             window.location.href = redirectPath;
@@ -92,11 +90,11 @@ const OperatorControls = ({ isOpen, onClose }) => {
             if (token) localStorage.setItem('auth_token', token);
 
             // Redirigir al dashboard original
-            let redirectPath = '/admin/dashboard';
-            if (originalUser.role === 'operator') redirectPath = '/ops/dashboard';
-            if (originalUser.role === 'sales_admin') redirectPath = '/sales-admin/dashboard';
-            if (originalUser.role === 'closer') redirectPath = '/closer/dashboard';
-            if (originalUser.role === 'setter') redirectPath = '/setter/dashboard';
+            let redirectPath = '/publico';
+            if (originalUser.role === 'admin') redirectPath = '/admin/ventas';
+            if (originalUser.role === 'setter') redirectPath = '/setter/report';
+            if (originalUser.role === 'triage') redirectPath = '/triage/report';
+            if (originalUser.role === 'closer') redirectPath = '/closer/report';
 
             window.location.href = redirectPath;
         } catch (err) {

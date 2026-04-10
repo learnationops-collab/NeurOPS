@@ -121,12 +121,11 @@ const TeamManagementPage = () => {
             localStorage.setItem('user', JSON.stringify(impersonatedUser));
             if (token) localStorage.setItem('auth_token', token);
 
-            let path = '/';
-            if (impersonatedUser.role === 'admin') path = '/admin/dashboard';
-            else if (impersonatedUser.role === 'operator') path = '/ops/dashboard';
-            else if (impersonatedUser.role === 'sales_admin') path = '/sales-admin/dashboard';
-            else if (impersonatedUser.role === 'closer') path = '/closer/dashboard';
-            else if (impersonatedUser.role === 'setter') path = '/setter/dashboard';
+            let path = '/publico';
+            if (impersonatedUser.role === 'admin') path = '/admin/ventas';
+            else if (impersonatedUser.role === 'setter') path = '/setter/report';
+            else if (impersonatedUser.role === 'triage') path = '/triage/report';
+            else if (impersonatedUser.role === 'closer') path = '/closer/report';
 
             window.location.href = path;
         } catch (err) {
