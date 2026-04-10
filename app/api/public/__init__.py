@@ -641,8 +641,13 @@ def sync_financial_agendas_from_sheets():
         
         added = 0
         for item in data:
-            setter = item.get('nombre') or item.get('setter') or item.get('setter_name')
-            client = item.get('lead') or item.get('cliente')
+            # According to real payload from AppScript:
+            # 'nombre' = Client Name
+            # 'zona_geografica' = Setter (e.g. "Rafael")
+            # 'closer' = closer/type of meeting
+            
+            setter = item.get('zona_geografica') or item.get('setter') or item.get('setter_name')
+            client = item.get('nombre') or item.get('cliente') or item.get('lead')
             closer = item.get('closer') or item.get('vendedor')
             instagram = item.get('instagram') or item.get('ig')
             
@@ -655,7 +660,9 @@ def sync_financial_agendas_from_sheets():
             if dt_str:
                 try:
                     from dateutil import parser
-                    agenda_date = parser.parse(str(dt_str))
+                    # Parse and remove tzinfo to avoid SQLite timezone errors in SQLAlchemy
+                    parsed_date = parser.parse(str(dt_str))
+                    agenda_date = parsed_date.replace(tzinfo=None)
                 except: pass
                 
             agenda = FinancialAgenda(
