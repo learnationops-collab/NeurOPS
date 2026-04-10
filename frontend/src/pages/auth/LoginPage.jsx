@@ -21,12 +21,16 @@ const LoginPage = () => {
     try {
       const user = await login(username, password);
 
-      if (user.role === 'admin' || user.role === 'operator') {
-        navigate('/admin/dashboard');
+      if (user.role === 'admin') {
+        navigate('/admin/ventas');
       } else if (user.role === 'setter') {
-        navigate('/setter/dashboard');
+        navigate('/setter/report');
+      } else if (user.role === 'triage') {
+        navigate('/triage/report');
+      } else if (user.role === 'closer') {
+        navigate('/closer/report');
       } else {
-        navigate('/closer/dashboard');
+        navigate('/publico');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Usuario o contraseña incorrectos');
