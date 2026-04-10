@@ -10,7 +10,7 @@ from .closer_report import CloserDailyReport
 from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment
 from .integration import Integration
 from .public_registration import PublicRegistration
-from .financial import FinancialSale
+from .financial import FinancialSale, FinancialAgenda
 from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
 
@@ -24,6 +24,6 @@ __all__ = [
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdPeriodSpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment',
-    'Integration', 'PublicRegistration', 'FinancialSale', 'TriageDailyReport', 'TriageTrackerReport'
+    'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'TriageDailyReport', 'TriageTrackerReport'
 
 ]
