@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Users, TrendingUp, DollarSign, Calendar, Instagram, Loader2 } from 'lucide-react';
+import { X, Users, TrendingUp, DollarSign, Calendar, Instagram, Loader2, CalendarDays } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
