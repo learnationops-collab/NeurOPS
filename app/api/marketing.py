@@ -206,3 +206,118 @@ def delete_ad(id):
     db.session.delete(ad_record)
     db.session.commit()
     return jsonify({"message": "Ad deleted"}), 200
+
+
+# --- Rendimiento por Anuncio ---
+
+@bp.route('/ads/performance', methods=['GET'])
+@login_required
+def get_ad_performance():
+    """
+    Cruza leads, agendas y ventas por anuncio para calcular métricas de rendimiento.
+    - Leads: via LeadAnswer asociado al anuncio.
+    - Agendas: cruzando instagram del lead con FinancialAgenda.instagram.
+    - Ventas: cruzando instagram del lead con FinancialSale.instagram.
+    """
+    from app.models import LeadAnswer, ManychatLead, FinancialAgenda, FinancialSale
+    from sqlalchemy import func
+
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    # Filtro de fechas opcional
+    date_filters = [LeadAnswer.ad_id != None]
+    if start_date:
+        try:
+            from datetime import datetime
+            st = datetime.strptime(start_date, '%Y-%m-%d')
+            date_filters.append(LeadAnswer.created_at >= st)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            from datetime import datetime
+            ed = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            date_filters.append(LeadAnswer.created_at <= ed)
+        except ValueError:
+            pass
+
+    # Agrupamos leads por anuncio
+    lead_stats = db.session.query(
+        LeadAnswer.ad_id,
+        func.count(LeadAnswer.id).label('total_leads')
+    ).filter(*date_filters).group_by(LeadAnswer.ad_id).all()
+
+    if not lead_stats:
+        return jsonify([]), 200
+
+    # Cargamos todos los anuncios involucrados
+    ad_ids = [s.ad_id for s in lead_stats]
+    ads_map = {a.id: a for a in Ad.query.filter(Ad.id.in_(ad_ids)).all()}
+
+    # Pre-carga todos los IG de leads por anuncio en una sola query
+    ig_by_ad = db.session.query(
+        LeadAnswer.ad_id,
+        ManychatLead.ig
+    ).join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id)\
+     .filter(
+         LeadAnswer.ad_id.in_(ad_ids),
+         ManychatLead.ig != None,
+         ManychatLead.ig != ''
+     ).all()
+
+    # Construimos diccionario ad_id -> set de igs (normalizados sin @)
+    igs_per_ad: dict[int, set] = {}
+    for row in ig_by_ad:
+        ig_clean = row.ig.strip().lstrip('@').lower()
+        if ig_clean:
+            igs_per_ad.setdefault(row.ad_id, set()).add(ig_clean)
+
+    # Cargamos todas las agendas y ventas de una sola vez para hacer el cruce en memoria
+    all_agendas = FinancialAgenda.query.with_entities(FinancialAgenda.instagram).all()
+    all_sales = FinancialSale.query.with_entities(FinancialSale.instagram).all()
+
+    # Normalizamos los instagram de agendas y ventas como conjuntos
+    agenda_igs = set()
+    for a in all_agendas:
+        if a.instagram and a.instagram != 'N/A':
+            agenda_igs.add(a.instagram.strip().lstrip('@').lower())
+
+    sale_igs = set()
+    for s in all_sales:
+        if s.instagram and s.instagram != 'N/A':
+            sale_igs.add(s.instagram.strip().lstrip('@').lower())
+
+    result = []
+    for stat in lead_stats:
+        ad_id = stat.ad_id
+        total_leads = stat.total_leads
+        ad = ads_map.get(ad_id)
+        ad_name = ad.name if ad else f"Anuncio #{ad_id}"
+        spend = float(ad.total_spend or 0) if ad else 0.0
+
+        # Cruzamos los IGs del anuncio con agendas y ventas
+        ad_igs = igs_per_ad.get(ad_id, set())
+        agendas_count = len(ad_igs & agenda_igs)
+        ventas_count = len(ad_igs & sale_igs)
+
+        # Costos unitarios
+        cpl = round(spend / total_leads, 2) if total_leads > 0 else 0
+        cpa = round(spend / agendas_count, 2) if agendas_count > 0 else 0
+        cpv = round(spend / ventas_count, 2) if ventas_count > 0 else 0
+
+        result.append({
+            'ad_id': ad_id,
+            'ad_name': ad_name,
+            'spend': spend,
+            'leads': total_leads,
+            'cpl': cpl,
+            'agendas': agendas_count,
+            'cpa': cpa,
+            'ventas': ventas_count,
+            'cpv': cpv
+        })
+
+    # Ordenar descendente por cantidad de leads
+    result.sort(key=lambda x: x['leads'], reverse=True)
+    return jsonify(result), 200

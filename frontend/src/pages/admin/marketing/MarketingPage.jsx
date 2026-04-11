@@ -5,17 +5,18 @@ import {
     Layers,
     Image,
     Search,
-    ChevronLeft,
-    ChevronRight,
     TrendingUp,
-    Calendar,
     Activity,
     Plus,
     X,
     Trash2,
     Edit2,
     Save,
-    AlertCircle
+    BarChart2,
+    DollarSign,
+    Users,
+    Calendar,
+    ShoppingBag
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -40,26 +41,53 @@ const MarketingPage = () => {
     const [campaignsList, setCampaignsList] = useState([]);
     const [adSetsList, setAdSetsList] = useState([]);
 
+    // Estado de rendimiento
+    const [performanceData, setPerformanceData] = useState([]);
+    const [perfLoading, setPerfLoading] = useState(false);
+    const [perfStartDate, setPerfStartDate] = useState('');
+    const [perfEndDate, setPerfEndDate] = useState('');
+
     const tabs = [
         { id: 'campaigns', label: 'Campañas', icon: Megaphone, endpoint: '/marketing/campaigns' },
         { id: 'ad-sets', label: 'AdSets', icon: Layers, endpoint: '/marketing/ad-sets' },
         { id: 'ads', label: 'Ads', icon: Image, endpoint: '/marketing/ads' },
+        { id: 'performance', label: 'Rendimiento', icon: BarChart2, endpoint: null },
     ];
 
     useEffect(() => {
-        fetchData();
+        if (activeTab !== 'performance') {
+            fetchData();
+        } else {
+            fetchPerformance();
+        }
     }, [activeTab]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const tab = tabs.find(t => t.id === activeTab);
+            if (!tab?.endpoint) return;
             const res = await api.get(tab.endpoint);
             setData(res.data);
         } catch (err) {
             console.error("Error fetching marketing data:", err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchPerformance = async (startDate = perfStartDate, endDate = perfEndDate) => {
+        try {
+            setPerfLoading(true);
+            const params = {};
+            if (startDate) params.start_date = startDate;
+            if (endDate) params.end_date = endDate;
+            const res = await api.get('/marketing/ads/performance', { params });
+            setPerformanceData(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error("Error fetching ad performance:", err);
+        } finally {
+            setPerfLoading(false);
         }
     };
 
@@ -239,6 +267,14 @@ const MarketingPage = () => {
         );
     };
 
+    // Totales para la tab de rendimiento
+    const perfTotals = performanceData.reduce((acc, row) => ({
+        leads: acc.leads + row.leads,
+        agendas: acc.agendas + row.agendas,
+        ventas: acc.ventas + row.ventas,
+        spend: acc.spend + row.spend
+    }), { leads: 0, agendas: 0, ventas: 0, spend: 0 });
+
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
@@ -246,35 +282,37 @@ const MarketingPage = () => {
                     <h1 className="text-3xl font-black text-white italic tracking-tighter">Marketing Intelligence</h1>
                     <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Gestión de pauta y rendimiento publicitario</p>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        icon={Megaphone}
-                        className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
-                        onClick={() => handleOpenModal(null, 'campaigns')}
-                    >
-                        Nueva Campaña
-                    </Button>
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        icon={Layers}
-                        className="bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20"
-                        onClick={() => handleOpenModal(null, 'ad-sets')}
-                    >
-                        Nuevo AdSet
-                    </Button>
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        icon={Plus}
-                        className="bg-primary hover:bg-primary-hover shadow-primary/20"
-                        onClick={() => handleOpenModal(null, 'ads')}
-                    >
-                        Nuevo Anuncio
-                    </Button>
-                </div>
+                {activeTab !== 'performance' && (
+                    <div className="flex flex-wrap gap-3">
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            icon={Megaphone}
+                            className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
+                            onClick={() => handleOpenModal(null, 'campaigns')}
+                        >
+                            Nueva Campaña
+                        </Button>
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            icon={Layers}
+                            className="bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20"
+                            onClick={() => handleOpenModal(null, 'ad-sets')}
+                        >
+                            Nuevo AdSet
+                        </Button>
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            icon={Plus}
+                            className="bg-primary hover:bg-primary-hover shadow-primary/20"
+                            onClick={() => handleOpenModal(null, 'ads')}
+                        >
+                            Nuevo Anuncio
+                        </Button>
+                    </div>
+                )}
             </header>
 
             <div className="flex gap-2 p-1 bg-surface border border-base rounded-2xl">
@@ -282,7 +320,11 @@ const MarketingPage = () => {
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-3 px-8 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted hover:text-white'}`}
+                        className={`flex items-center gap-3 px-8 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                            activeTab === tab.id 
+                                ? tab.id === 'performance' ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'bg-primary text-white shadow-lg shadow-primary/20'
+                                : 'text-muted hover:text-white'
+                        }`}
                     >
                         <tab.icon size={14} />
                         {tab.label}
@@ -290,76 +332,235 @@ const MarketingPage = () => {
                 ))}
             </div>
 
-            <div className="relative group">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors" size={20} />
-                <input
-                    className="w-full bg-surface border border-base rounded-3xl pl-14 pr-6 py-5 text-white text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/40"
-                    placeholder={`Buscar en ${tabs.find(t => t.id === activeTab)?.label || 'Marketing'}...`}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-            </div>
+            {/* Vista Rendimiento por Anuncio */}
+            {activeTab === 'performance' && (
+                <>
+                    {/* Filtros de fecha */}
+                    <div className="flex flex-wrap items-end gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1 block">Desde</label>
+                            <input
+                                type="date"
+                                className="bg-surface border border-base rounded-2xl py-3 px-5 text-white text-sm outline-none focus:ring-2 focus:ring-violet-500/20 font-bold"
+                                value={perfStartDate}
+                                onChange={e => setPerfStartDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1 block">Hasta</label>
+                            <input
+                                type="date"
+                                className="bg-surface border border-base rounded-2xl py-3 px-5 text-white text-sm outline-none focus:ring-2 focus:ring-violet-500/20 font-bold"
+                                value={perfEndDate}
+                                onChange={e => setPerfEndDate(e.target.value)}
+                            />
+                        </div>
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            icon={BarChart2}
+                            className="bg-violet-600 hover:bg-violet-700 shadow-violet-500/20 self-end"
+                            onClick={() => fetchPerformance(perfStartDate, perfEndDate)}
+                        >
+                            Actualizar
+                        </Button>
+                    </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card variant="glass" className="p-6 border-l-4 border-l-primary">
-                    <div className="flex items-center justify-between mb-2">
-                        <TrendingUp className="text-primary" size={20} />
-                        <Badge variant="success">+12.5%</Badge>
+                    {/* KPIs de rendimiento */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                        <Card variant="glass" className="p-5 border-l-4 border-l-violet-500">
+                            <div className="flex items-center gap-3 mb-2">
+                                <Users className="text-violet-400" size={18} />
+                                <p className="text-[10px] font-black text-muted uppercase tracking-widest">Total Leads</p>
+                            </div>
+                            <h3 className="text-3xl font-black text-white">{perfTotals.leads.toLocaleString()}</h3>
+                        </Card>
+                        <Card variant="glass" className="p-5 border-l-4 border-l-sky-500">
+                            <div className="flex items-center gap-3 mb-2">
+                                <Calendar className="text-sky-400" size={18} />
+                                <p className="text-[10px] font-black text-muted uppercase tracking-widest">Total Agendas</p>
+                            </div>
+                            <h3 className="text-3xl font-black text-white">{perfTotals.agendas.toLocaleString()}</h3>
+                        </Card>
+                        <Card variant="glass" className="p-5 border-l-4 border-l-emerald-500">
+                            <div className="flex items-center gap-3 mb-2">
+                                <ShoppingBag className="text-emerald-400" size={18} />
+                                <p className="text-[10px] font-black text-muted uppercase tracking-widest">Total Ventas</p>
+                            </div>
+                            <h3 className="text-3xl font-black text-white">{perfTotals.ventas.toLocaleString()}</h3>
+                        </Card>
+                        <Card variant="glass" className="p-5 border-l-4 border-l-amber-500">
+                            <div className="flex items-center gap-3 mb-2">
+                                <DollarSign className="text-amber-400" size={18} />
+                                <p className="text-[10px] font-black text-muted uppercase tracking-widest">Inversión Total</p>
+                            </div>
+                            <h3 className="text-3xl font-black text-white">${perfTotals.spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h3>
+                        </Card>
                     </div>
-                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Inversión Total</p>
-                    <h3 className="text-2xl font-black text-white">$12,450.00</h3>
-                </Card>
-                <Card variant="glass" className="p-6 border-l-4 border-l-secondary">
-                    <div className="flex items-center justify-between mb-2">
-                        <Megaphone className="text-secondary" size={20} />
-                        <Badge variant="neutral">{data.filter(i => i.status === 'active').length} Activos</Badge>
-                    </div>
-                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">{tabs.find(t => t.id === activeTab)?.label || 'Registros'}</p>
-                    <h3 className="text-2xl font-black text-white">{Array.isArray(data) ? data.length : 0} Totales</h3>
-                </Card>
-                <Card variant="glass" className="p-6 border-l-4 border-l-accent">
-                    <div className="flex items-center justify-between mb-2">
-                        <Activity className="text-accent" size={20} />
-                        <Badge variant="indigo">2.4% CTR</Badge>
-                    </div>
-                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Rendimiento Promedio</p>
-                    <h3 className="text-2xl font-black text-white">ROI 3.2x</h3>
-                </Card>
-            </div>
 
-            <Card variant="surface" padding="p-0 overflow-hidden" className="border-base">
-                {loading ? (
-                    <div className="p-32 flex flex-col items-center gap-4">
-                        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                        <p className="text-[10px] font-black text-muted uppercase tracking-widest">Consultando NeurOPS...</p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto min-h-[400px]">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-base bg-base/50">
-                                    {renderHeader()}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-base">
-                                {data.length > 0 ? (
-                                    data.filter(item => item.name.toLowerCase().includes(search.toLowerCase())).map(item => (
-                                        <tr key={item.id} className="hover:bg-primary/5 transition-all group cursor-default">
-                                            {renderRow(item)}
+                    {/* Tabla de rendimiento */}
+                    <Card variant="surface" padding="p-0 overflow-hidden" className="border-base">
+                        {perfLoading ? (
+                            <div className="p-32 flex flex-col items-center gap-4">
+                                <div className="w-12 h-12 border-4 border-violet-500/20 border-t-violet-500 rounded-full animate-spin" />
+                                <p className="text-[10px] font-black text-muted uppercase tracking-widest">Calculando rendimiento...</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto min-h-[300px]">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-base bg-base/50">
+                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest">Anuncio</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Inversión</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">Leads</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">CPL</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">Agendas</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">CP Agenda</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">Ventas</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">CP Venta</th>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="6" className="p-20 text-center">
-                                            <p className="text-[10px] font-black text-muted uppercase tracking-widest italic opacity-50">No hay registros disponibles en esta sección</p>
-                                        </td>
+                                    </thead>
+                                    <tbody className="divide-y divide-base">
+                                        {performanceData.length > 0 ? (
+                                            performanceData.map(row => (
+                                                <tr key={row.ad_id} className="hover:bg-violet-500/5 transition-all group">
+                                                    <td className="px-6 py-5">
+                                                        <p className="font-bold text-white text-sm">{row.ad_name}</p>
+                                                        <p className="text-[10px] text-muted font-bold uppercase">#ADS-{row.ad_id}</p>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-right">
+                                                        <span className="font-black text-amber-400">
+                                                            ${row.spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className="font-black text-violet-300 text-lg">{row.leads}</span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className={`font-black text-sm ${
+                                                            row.cpl === 0 ? 'text-muted' :
+                                                            row.cpl < 20 ? 'text-emerald-400' :
+                                                            row.cpl < 50 ? 'text-amber-400' : 'text-rose-400'
+                                                        }`}>
+                                                            {row.cpl > 0 ? `$${row.cpl}` : '—'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className="font-black text-sky-300 text-lg">{row.agendas}</span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className={`font-black text-sm ${
+                                                            row.cpa === 0 ? 'text-muted' :
+                                                            row.cpa < 100 ? 'text-emerald-400' :
+                                                            row.cpa < 300 ? 'text-amber-400' : 'text-rose-400'
+                                                        }`}>
+                                                            {row.cpa > 0 ? `$${row.cpa}` : '—'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className="font-black text-emerald-300 text-lg">{row.ventas}</span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className={`font-black text-sm ${
+                                                            row.cpv === 0 ? 'text-muted' :
+                                                            row.cpv < 500 ? 'text-emerald-400' :
+                                                            row.cpv < 1500 ? 'text-amber-400' : 'text-rose-400'
+                                                        }`}>
+                                                            {row.cpv > 0 ? `$${row.cpv}` : '—'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="8" className="p-20 text-center">
+                                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest italic opacity-50">No hay datos de rendimiento disponibles</p>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+                </>
+            )}
+
+            {/* Vista CRUD normal (Campañas, AdSets, Ads) */}
+            {activeTab !== 'performance' && (
+                <>
+
+                <div className="relative group">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors" size={20} />
+                    <input
+                        className="w-full bg-surface border border-base rounded-3xl pl-14 pr-6 py-5 text-white text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold placeholder:text-muted/40"
+                        placeholder={`Buscar en ${tabs.find(t => t.id === activeTab)?.label || 'Marketing'}...`}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <Card variant="glass" className="p-6 border-l-4 border-l-primary">
+                        <div className="flex items-center justify-between mb-2">
+                            <TrendingUp className="text-primary" size={20} />
+                            <Badge variant="success">Activos</Badge>
+                        </div>
+                        <p className="text-[10px] font-black text-muted uppercase tracking-widest">Inversión Total</p>
+                        <h3 className="text-2xl font-black text-white">$0.00</h3>
+                    </Card>
+                    <Card variant="glass" className="p-6 border-l-4 border-l-secondary">
+                        <div className="flex items-center justify-between mb-2">
+                            <Megaphone className="text-secondary" size={20} />
+                            <Badge variant="neutral">{data.filter(i => i.status === 'active').length} Activos</Badge>
+                        </div>
+                        <p className="text-[10px] font-black text-muted uppercase tracking-widest">{tabs.find(t => t.id === activeTab)?.label || 'Registros'}</p>
+                        <h3 className="text-2xl font-black text-white">{Array.isArray(data) ? data.length : 0} Totales</h3>
+                    </Card>
+                    <Card variant="glass" className="p-6 border-l-4 border-l-accent">
+                        <div className="flex items-center justify-between mb-2">
+                            <Activity className="text-accent" size={20} />
+                            <Badge variant="indigo">En curso</Badge>
+                        </div>
+                        <p className="text-[10px] font-black text-muted uppercase tracking-widest">Rendimiento Promedio</p>
+                        <h3 className="text-2xl font-black text-white">—</h3>
+                    </Card>
+                </div>
+
+                <Card variant="surface" padding="p-0 overflow-hidden" className="border-base">
+                    {loading ? (
+                        <div className="p-32 flex flex-col items-center gap-4">
+                            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                            <p className="text-[10px] font-black text-muted uppercase tracking-widest">Consultando NeurOPS...</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto min-h-[400px]">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-base bg-base/50">
+                                        {renderHeader()}
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </Card>
+                                </thead>
+                                <tbody className="divide-y divide-base">
+                                    {data.length > 0 ? (
+                                        data.filter(item => item.name.toLowerCase().includes(search.toLowerCase())).map(item => (
+                                            <tr key={item.id} className="hover:bg-primary/5 transition-all group cursor-default">
+                                                {renderRow(item)}
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="6" className="p-20 text-center">
+                                                <p className="text-[10px] font-black text-muted uppercase tracking-widest italic opacity-50">No hay registros disponibles en esta sección</p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Card>
+            </>
 
             <AnimatePresence>
                 {isModalOpen && (
