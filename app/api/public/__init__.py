@@ -626,7 +626,7 @@ def sync_financial_agendas_from_sheets():
     import requests
     
     # URL for Llamadas_DB Apps Script
-    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyZTReAkIdvwionCjalkmVHJt5SGg-lqIrntkYTE3SIOqTcG6uv_DkTF1KSzh1UnhAO/exec"
+    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8KksLWlGEwIuRFLsxPqvX2BX1nxH-UtnKFGqZOF8YVUgti30gzUlTkO-Jpi3_txsb/exec"
     
     try:
         current_app.logger.info("[FINANCIAL AGENDAS SYNC] Starting fetch from Google Sheets...")
@@ -646,7 +646,7 @@ def sync_financial_agendas_from_sheets():
             # 'zona_geografica' = Setter (e.g. "Rafael")
             # 'closer' = closer/type of meeting
             
-            setter = item.get('zona_geografica') or item.get('setter') or item.get('setter_name')
+            setter = item.get('setter') or item.get('zona_geografica') or item.get('setter_name')
             client = item.get('nombre') or item.get('cliente') or item.get('lead')
             closer = item.get('closer') or item.get('vendedor')
             instagram = item.get('instagram') or item.get('ig')
@@ -655,7 +655,7 @@ def sync_financial_agendas_from_sheets():
             if not setter or str(setter).strip() == '':
                 continue
             
-            dt_str = item.get('fecha') or item.get('date') or item.get('registro')
+            dt_str = item.get('marca_temporal') or item.get('fecha') or item.get('date') or item.get('registro')
             agenda_date = datetime.utcnow()
             if dt_str:
                 try:
