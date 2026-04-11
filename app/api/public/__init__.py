@@ -466,7 +466,7 @@ def parse_financial_data(item):
         "monto": monto_val,
         "producto": producto,
         "tipo_de_pago": tipo_de_pago,
-        "instagram": str(item.get('instagram') or item.get('ig') or '').strip(),
+        "instagram": str(item.get('instagram') or item.get('ig') or '').strip().lstrip('@').lower() or 'N/A',
         "status": 'error' if errors else 'valid',
         "error_notes": " | ".join(errors) if errors else None
     }
@@ -641,15 +641,16 @@ def sync_financial_agendas_from_sheets():
         
         added = 0
         for item in data:
-            # According to real payload from AppScript:
-            # 'nombre' = Client Name
-            # 'zona_geografica' = Setter (e.g. "Rafael")
-            # 'closer' = closer/type of meeting
+
+            # Mapeo preciso según la estructura del script del usuario
+            # marca_temporal (row[0]), nombre (row[2]), instagram (row[10]), setter (row[11])
+            setter = item.get('setter') or item.get('setter_name')
+            client = item.get('nombre') or item.get('cliente')
+            closer = item.get('closer') or item.get('vendedor') or item.get('examen') or 'Sin asignar'
             
-            setter = item.get('setter') or item.get('zona_geografica') or item.get('setter_name')
-            client = item.get('nombre') or item.get('cliente') or item.get('lead')
-            closer = item.get('closer') or item.get('vendedor')
-            instagram = item.get('instagram') or item.get('ig')
+            # Normalización inmediata del Instagram para asegurar matching en el dashboard
+            ig_raw = item.get('instagram') or item.get('ig')
+            instagram = str(ig_raw).strip().lstrip('@').lower() if ig_raw else 'N/A'
             
             # Skip if no valid setter name is found
             if not setter or str(setter).strip() == '':
