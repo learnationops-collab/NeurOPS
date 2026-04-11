@@ -70,6 +70,8 @@ const OperatorControls = ({ isOpen, onClose }) => {
                 redirectPath = '/triage/report';
             } else if (targetUser.role === 'closer') {
                 redirectPath = '/closer/report';
+            } else if (targetUser.role === 'operator') {
+                redirectPath = '/ops/dashboard';
             }
 
             window.location.href = redirectPath;
@@ -92,6 +94,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
             // Redirigir al dashboard original
             let redirectPath = '/publico';
             if (originalUser.role === 'admin') redirectPath = '/admin/ventas';
+            if (originalUser.role === 'operator') redirectPath = '/ops/dashboard';
             if (originalUser.role === 'setter') redirectPath = '/setter/report';
             if (originalUser.role === 'triage') redirectPath = '/triage/report';
             if (originalUser.role === 'closer') redirectPath = '/closer/report';

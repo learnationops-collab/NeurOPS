@@ -123,6 +123,7 @@ const TeamManagementPage = () => {
 
             let path = '/publico';
             if (impersonatedUser.role === 'admin') path = '/admin/ventas';
+            else if (impersonatedUser.role === 'operator') path = '/ops/dashboard';
             else if (impersonatedUser.role === 'setter') path = '/setter/report';
             else if (impersonatedUser.role === 'triage') path = '/triage/report';
             else if (impersonatedUser.role === 'closer') path = '/closer/report';
