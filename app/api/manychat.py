@@ -343,75 +343,170 @@ def get_ad_segmentation_stats():
     }), 200
 
 
+
 @bp.route('/manychat-webhook/stats/dashboard', methods=['GET'])
 def get_ad_dashboard_stats():
-    """Retorna leads totales, % cualificados y métricas financieras agrupadas por ad_id."""
-    from app.models import LeadAnswer, Ad
+    """Retorna leads totales, % cualificados y métricas financieras (Agendas, Ventas, Costos) agrupadas por ad_id."""
+    from app.models import LeadAnswer, Ad, AdSet, Campaign, AdPeriodSpend, ManychatLead, FinancialAgenda, FinancialSale
     from sqlalchemy import func
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
+    period = request.args.get('period', 'last_month')
+    now = datetime.utcnow()
+    
+    if period == 'yesterday':
+        start_dt = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        end_dt = (now - timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=999999)
+    elif period == 'last_week':
+        start_dt = (now - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
+        end_dt = now
+    else: # last_month as default
+        start_dt = (now - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+        end_dt = now
 
-    filters = [LeadAnswer.ad_id != None]
+    # Helper para normalizar IG
+    def normalize_ig(ig_str):
+        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
+            return None
+        return ig_str.strip().lstrip('@').lower()
 
-    if start_date:
-        try:
-            st = datetime.strptime(start_date, '%Y-%m-%d')
-            filters.append(LeadAnswer.created_at >= st)
-        except ValueError:
-            pass
-            
-    if end_date:
-        try:
-            ed = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
-            filters.append(LeadAnswer.created_at <= ed)
-        except ValueError:
-            pass
-
-    # Query principal: Leads
+    # 1. LEADS DEL PERIODO
     stats = db.session.query(
         LeadAnswer.ad_id,
         func.count(LeadAnswer.id).label('total_leads'),
-        func.sum(
-            db.case((LeadAnswer.qualification == 'true', 1), else_=0)
-        ).label('qualified_leads')
-    ).filter(*filters).group_by(LeadAnswer.ad_id).all()
+        func.sum(db.case((LeadAnswer.qualification == 'true', 1), else_=0)).label('qualified_leads')
+    ).filter(
+        LeadAnswer.ad_id != None,
+        LeadAnswer.created_at >= start_dt,
+        LeadAnswer.created_at <= end_dt
+    ).group_by(LeadAnswer.ad_id).all()
 
-    # Cargar datos de anuncios
+    if not stats:
+        return jsonify([]), 200
+
     ad_ids = [s.ad_id for s in stats]
-    ads_map = {}
-    if ad_ids:
-        ads = Ad.query.filter(Ad.id.in_(ad_ids)).all()
-        ads_map = {a.id: a for a in ads}
+    ads = Ad.query.filter(Ad.id.in_(ad_ids)).all()
+    ads_map = {a.id: a for a in ads}
+    
+    # 2. RESOLVER INVERSIÓN (AdPeriodSpend + fallback total_spend)
+    # Gasto directo por Ad en este periodo
+    period_spends = AdPeriodSpend.query.filter(
+        AdPeriodSpend.start_date <= end_dt.date(),
+        AdPeriodSpend.end_date >= start_dt.date()
+    ).all()
 
+    spend_by_ad = {}
+    adset_spend_map = {}
+    campaign_spend_map = {}
+    
+    for ps in period_spends:
+        if ps.ad_id: spend_by_ad[ps.ad_id] = spend_by_ad.get(ps.ad_id, 0) + ps.spend
+        if ps.ad_set_id: adset_spend_map[ps.ad_set_id] = adset_spend_map.get(ps.ad_set_id, 0) + ps.spend
+        if ps.campaign_id: campaign_spend_map[ps.campaign_id] = campaign_spend_map.get(ps.campaign_id, 0) + ps.spend
+
+    # Mapeos de jerarquía
+    adset_ids = [a.ad_set_id for a in ads]
+    adsets = AdSet.query.filter(AdSet.id.in_(adset_ids)).all()
+    adset_map = {a.id: a for a in adsets}
+    
+    campaign_ids = [s.campaign_id for s in adsets]
+    campaigns = Campaign.query.filter(Campaign.id.in_(campaign_ids)).all()
+    campaign_map_by_id = {c.id: c for c in campaigns}
+
+    # Count ads for prorrateo
+    ads_per_adset = {}
+    for a in Ad.query.filter(Ad.ad_set_id.in_(adset_ids)).all():
+        ads_per_adset[a.ad_set_id] = ads_per_adset.get(a.ad_set_id, 0) + 1
+        
+    ads_per_campaign = {}
+    for a_set in AdSet.query.filter(AdSet.campaign_id.in_(campaign_ids)).all():
+        count = ads_per_adset.get(a_set.id, 0)
+        ads_per_campaign[a_set.campaign_id] = ads_per_campaign.get(a_set.campaign_id, 0) + count
+
+    def resolve_spend(ad_id: int) -> float:
+        if spend_by_ad.get(ad_id, 0) > 0: return spend_by_ad[ad_id]
+        
+        ad = ads_map.get(ad_id)
+        if not ad: return 0.0
+        
+        # Fallback AdSet
+        s_id = ad.ad_set_id
+        if s_id and adset_spend_map.get(s_id, 0) > 0:
+            return round(adset_spend_map[s_id] / ads_per_adset.get(s_id, 1), 2)
+            
+        # Fallback Campaign
+        ad_set = adset_map.get(s_id)
+        if ad_set and campaign_spend_map.get(ad_set.campaign_id, 0) > 0:
+            return round(campaign_spend_map[ad_set.campaign_id] / ads_per_campaign.get(ad_set.campaign_id, 1), 2)
+            
+        # Fallback histórico total_spend
+        return float(ad.total_spend or 0.0)
+
+    # 3. AGENDAS & VENTAS (Atribución IG)
+    ig_by_ad_rows = db.session.query(
+        LeadAnswer.ad_id,
+        ManychatLead.ig
+    ).join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id)\
+     .filter(LeadAnswer.ad_id.in_(ad_ids), ManychatLead.ig != None).all()
+
+    igs_per_ad = {}
+    for row in ig_by_ad_rows:
+        ig_c = normalize_ig(row.ig)
+        if ig_c: igs_per_ad.setdefault(row.ad_id, set()).add(ig_c)
+
+    # Agendas
+    agendas_all = FinancialAgenda.query.filter(FinancialAgenda.date >= start_dt, FinancialAgenda.date <= end_dt).all()
+    agenda_igs = set()
+    for ag in agendas_all:
+        ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
+        ig_c = normalize_ig(ig_val)
+        if ig_c: agenda_igs.add(ig_c)
+
+    # Ventas
+    sales_in_period = FinancialSale.query.filter(FinancialSale.date >= start_dt, FinancialSale.date <= end_dt).all()
+    ventas_por_ad = {}
+    for sale in sales_in_period:
+        ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
+        ig_n = normalize_ig(ig_val)
+        if not ig_n: continue
+        
+        matched_lead = ManychatLead.query.filter(func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_n).first()
+        if not matched_lead: continue
+        
+        closest = LeadAnswer.query.filter(LeadAnswer.lead_id == matched_lead.id, LeadAnswer.ad_id.in_(ad_ids), LeadAnswer.created_at <= sale.date)\
+                 .order_by(LeadAnswer.created_at.desc()).first()
+        if closest: ventas_por_ad[closest.ad_id] = ventas_por_ad.get(closest.ad_id, 0) + 1
+
+    # 4. RESULTADO
     result = []
     for s in stats:
+        ad_id = s.ad_id
         total = s.total_leads
         qual = int(s.qualified_leads or 0)
-        qual_percent = round((qual / total) * 100, 1) if total > 0 else 0
         
-        ad = ads_map.get(s.ad_id)
-        ad_name = ad.name if ad else f"Anuncio Desconocido (#{s.ad_id})"
-        spend = ad.total_spend if ad else 0
+        ad = ads_map.get(ad_id)
+        ad_name = ad.name if ad else f"ID: {ad_id}"
         
-        cpl = round(spend / total, 2) if total > 0 else 0
-        cpql = round(spend / qual, 2) if qual > 0 else 0
+        spend = resolve_spend(ad_id)
+        ad_igs = igs_per_ad.get(ad_id, set())
+        ag_count = len(ad_igs & agenda_igs)
+        v_count = ventas_por_ad.get(ad_id, 0)
 
         result.append({
-            'ad_id': s.ad_id,
+            'ad_id': ad_id,
             'ad_name': ad_name,
             'total_leads': total,
             'qualified_leads': qual,
-            'qualified_percentage': qual_percent,
+            'qualified_percentage': round((qual / total) * 100, 1) if total > 0 else 0,
             'spend': spend,
-            'cpl': cpl,
-            'cpql': cpql
+            'agendas': ag_count,
+            'ventas': v_count,
+            'cpl': round(spend / total, 2) if total > 0 else 0,
+            'cpa': round(spend / ag_count, 2) if ag_count > 0 else 0,
+            'cpv': round(spend / v_count, 2) if v_count > 0 else 0
         })
 
-    # Ordenar por volumen de leads (descendente)
     result.sort(key=lambda x: x['total_leads'], reverse=True)
-
     return jsonify(result), 200
 
 @bp.route('/manychat-webhook/ad-details/<int:ad_id>', methods=['GET'])
