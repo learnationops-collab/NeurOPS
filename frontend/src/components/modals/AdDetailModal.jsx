@@ -239,7 +239,8 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                 </div>
                             </div>
                         </div>
-                    )}
+                    </div>
+                )}
                     
                     {/* Footer */}
                     <div className="p-4 border-t border-slate-800 flex justify-end bg-slate-900/50">
