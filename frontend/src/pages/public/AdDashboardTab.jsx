@@ -4,8 +4,9 @@ import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity,
 import AdDetailModal from '../../components/modals/AdDetailModal';
 
 
+
 const AdDashboardTab = () => {
-    const [stats, setStats] = useState([]);
+    const [stats, setStats] = useState({ ad_stats: [], setter_stats: [] });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedAdId, setSelectedAdId] = useState(null);
@@ -24,6 +25,7 @@ const AdDashboardTab = () => {
         try {
             const params = { period };
             const adsRes = await api.get('/manychat-webhook/stats/dashboard', { params });
+            // The backend now returns { ad_stats: [], setter_stats: [] }
             setStats(adsRes.data);
         } catch (err) {
             console.error('Error fetching ad stats:', err);
@@ -79,20 +81,40 @@ const AdDashboardTab = () => {
                 </div>
             </div>
 
+
+            {/* Rendimiento por Fuente (Setter) */}
+            {!loading && stats.setter_stats && stats.setter_stats.length > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 px-1">
+                        <Users className="text-slate-400" size={16} />
+                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Rendimiento por Fuente (Setter)</h4>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                        {stats.setter_stats.map(setter => (
+                            <div key={setter.name} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center group hover:border-emerald-500/50 transition-all shadow-lg">
+                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover:text-emerald-400 transition-colors">{setter.name}</p>
+                                <p className="text-2xl font-black text-white">{setter.agendas}</p>
+                                <p className="text-[8px] font-bold text-slate-600 uppercase mt-1">Agendas</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {loading ? (
                 <div className="flex items-center justify-center py-12">
                     <Loader2 className="animate-spin text-blue-500" size={28} />
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {stats.length === 0 ? (
+                    {stats.ad_stats.length === 0 ? (
                         <div className="text-center py-20 bg-slate-900/20 rounded-3xl border border-dashed border-slate-800">
                             <Megaphone size={40} className="mx-auto mb-3 opacity-20" />
                             <p className="font-bold text-slate-500 uppercase tracking-widest text-sm">Sin datos para este periodo</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {stats.map((stat, index) => {
+                            {stats.ad_stats.map((stat, index) => {
                                 let qualColor = "text-slate-400";
                                 let qualBg = "bg-slate-500/10";
                                 if (stat.qualified_percentage >= 50) {
@@ -157,6 +179,17 @@ const AdDashboardTab = () => {
                                                         <p className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">Agendas</p>
                                                     </div>
                                                     <p className="text-xl font-black text-white leading-none">{stat.agendas || 0}</p>
+                                                    {/* Setter Breakdown */}
+                                                    {stat.setter_breakdown && Object.keys(stat.setter_breakdown).length > 0 && (
+                                                        <div className="mt-2 pt-2 border-t border-slate-800/50 space-y-1">
+                                                            {Object.entries(stat.setter_breakdown).map(([setter, count]) => (
+                                                                <div key={setter} className="flex items-center justify-between text-[9px] font-bold text-slate-400">
+                                                                    <span className="truncate pr-2">{setter}:</span>
+                                                                    <span className="text-emerald-400 font-black">{count}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <div className="bg-slate-950/40 rounded-xl p-3 border border-slate-800/30">

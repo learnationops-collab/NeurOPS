@@ -166,12 +166,31 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                     </div>
                                 </div>
 
-                                {/* Recent Leads List */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2">
-                                        <Users className="text-slate-400" size={16} />
-                                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Últimas Personas Registradas</h4>
-                                    </div>
+                                {/* Setter Breakdown & Recent Leads */}
+                                <div className="space-y-6">
+                                    {/* Setter Breakdown */}
+                                    {details.setter_breakdown && Object.keys(details.setter_breakdown).length > 0 && (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2">
+                                                <Users className="text-slate-400" size={16} />
+                                                <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Agendas por Setter</h4>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {Object.entries(details.setter_breakdown).map(([setter, count]) => (
+                                                    <div key={setter} className="bg-slate-800/20 border border-slate-800/50 p-3 rounded-xl flex items-center justify-between">
+                                                        <span className="text-xs font-bold text-slate-300">{setter}</span>
+                                                        <span className="text-emerald-400 font-black">{count}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <Users className="text-slate-400" size={16} />
+                                            <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Últimas Personas Registradas</h4>
+                                        </div>
                                     <div className="bg-slate-800/30 border border-slate-800 rounded-2xl overflow-hidden">
                                         <div className="max-h-64 overflow-y-auto custom-scrollbar">
                                             {details.recent_leads.length === 0 ? (

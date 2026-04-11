@@ -168,6 +168,16 @@ const AdsTab = ({ campaigns, ads, onRefresh, loading }) => {
         return (
             <Modal title={title} onClose={() => setModal(null)}>
                 <form onSubmit={handleSubmit} className="space-y-5">
+                    {isAd && modal.id && (
+                        <div className="space-y-1.5 opacity-80">
+                            <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider ml-1">Ad ID (Para Webhook)</label>
+                            <div className="w-full px-4 py-3 bg-slate-950 border border-emerald-500/20 rounded-xl text-emerald-400 font-black font-mono text-sm shadow-inner group flex items-center justify-between">
+                                #{modal.id}
+                                <span className="text-[9px] text-slate-500 uppercase">Usar este ID en ManyChat</span>
+                            </div>
+                        </div>
+                    )}
+
                     {!isMove && (
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Nombre</label>

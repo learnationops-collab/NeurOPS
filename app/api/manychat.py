@@ -454,13 +454,16 @@ def get_ad_dashboard_stats():
         ig_c = normalize_ig(row.ig)
         if ig_c: igs_per_ad.setdefault(row.ad_id, set()).add(ig_c)
 
+
     # Agendas
     agendas_all = FinancialAgenda.query.filter(FinancialAgenda.date >= start_dt, FinancialAgenda.date <= end_dt).all()
-    agenda_igs = set()
+    agenda_igs_map = {} # IG -> setter_name
     for ag in agendas_all:
         ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
         ig_c = normalize_ig(ig_val)
-        if ig_c: agenda_igs.add(ig_c)
+        if ig_c:
+            # Si hay varios registros del mismo IG, guardamos una lista o el último setter
+            agenda_igs_map.setdefault(ig_c, []).append(ag.setter_name)
 
     # Ventas
     sales_in_period = FinancialSale.query.filter(FinancialSale.date >= start_dt, FinancialSale.date <= end_dt).all()
@@ -489,7 +492,17 @@ def get_ad_dashboard_stats():
         
         spend = resolve_spend(ad_id)
         ad_igs = igs_per_ad.get(ad_id, set())
-        ag_count = len(ad_igs & agenda_igs)
+        
+        # Breakdown de Agendas por Setter
+        ag_count = 0
+        setter_breakdown = {}
+        for ig in ad_igs:
+            if ig in agenda_igs_map:
+                setters = agenda_igs_map[ig]
+                ag_count += len(setters)
+                for sname in setters:
+                    setter_breakdown[sname] = setter_breakdown.get(sname, 0) + 1
+        
         v_count = ventas_por_ad.get(ad_id, 0)
 
         result.append({
@@ -500,14 +513,29 @@ def get_ad_dashboard_stats():
             'qualified_percentage': round((qual / total) * 100, 1) if total > 0 else 0,
             'spend': spend,
             'agendas': ag_count,
+            'setter_breakdown': setter_breakdown,
             'ventas': v_count,
             'cpl': round(spend / total, 2) if total > 0 else 0,
             'cpa': round(spend / ag_count, 2) if ag_count > 0 else 0,
             'cpv': round(spend / v_count, 2) if v_count > 0 else 0
         })
 
+
+    # Global Setter Stats
+    global_setters = {}
+    for ag in agendas_all:
+        sname = ag.setter_name or 'Otro'
+        global_setters[sname] = global_setters.get(sname, 0) + 1
+    
+    setter_stats = sorted([
+        {'name': k, 'agendas': v} for k, v in global_setters.items()
+    ], key=lambda x: x['agendas'], reverse=True)
+
     result.sort(key=lambda x: x['total_leads'], reverse=True)
-    return jsonify(result), 200
+    return jsonify({
+        'ad_stats': result,
+        'setter_stats': setter_stats
+    }), 200
 
 @bp.route('/manychat-webhook/ad-details/<int:ad_id>', methods=['GET'])
 def get_ad_details(ad_id):
@@ -595,13 +623,17 @@ def get_ad_details(ad_id):
         ig_c = normalize_ig(row.ig)
         if ig_c: ad_igs.add(ig_c)
 
+
     # Agendas atribuidas
     all_agendas = FinancialAgenda.query.all()
     ag_count = 0
+    setter_breakdown = {}
     for ag in all_agendas:
         ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
         if normalize_ig(ig_val) in ad_igs:
             ag_count += 1
+            sname = ag.setter_name or 'Otro'
+            setter_breakdown[sname] = setter_breakdown.get(sname, 0) + 1
 
     # Ventas atribuidas
     all_sales = FinancialSale.query.all()
@@ -626,6 +658,7 @@ def get_ad_details(ad_id):
         'qualified_leads': qualified_leads,
         'qualified_percentage': qual_percent,
         'agendas': ag_count,
+        'setter_breakdown': setter_breakdown,
         'ventas': v_count,
         'cpl': cpl,
         'cpql': cpql,
