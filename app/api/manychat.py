@@ -578,6 +578,46 @@ def get_ad_details(ad_id):
         })
         curr += timedelta(days=1)
 
+
+    # 4. Agendas y Ventas (Atribución histórica completa)
+    from app.models import FinancialAgenda, FinancialSale
+    
+    def normalize_ig(ig_str):
+        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
+            return None
+        return ig_str.strip().lstrip('@').lower()
+
+    # IGs vinculados a este anuncio
+    ad_igs = set()
+    all_lead_igs = db.session.query(ManychatLead.ig).join(LeadAnswer, LeadAnswer.lead_id == ManychatLead.id)\
+                   .filter(LeadAnswer.ad_id == ad_id, ManychatLead.ig != None).all()
+    for row in all_lead_igs:
+        ig_c = normalize_ig(row.ig)
+        if ig_c: ad_igs.add(ig_c)
+
+    # Agendas atribuidas
+    all_agendas = FinancialAgenda.query.all()
+    ag_count = 0
+    for ag in all_agendas:
+        ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
+        if normalize_ig(ig_val) in ad_igs:
+            ag_count += 1
+
+    # Ventas atribuidas
+    all_sales = FinancialSale.query.all()
+    v_count = 0
+    for sale in all_sales:
+        ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
+        ig_n = normalize_ig(ig_val)
+        if not ig_n: continue
+        
+        # Verificar si este IG tiene un lead en este anuncio previo a la venta
+        matched_lead = ManychatLead.query.filter(func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_n).first()
+        if matched_lead:
+            has_lead = LeadAnswer.query.filter(LeadAnswer.lead_id == matched_lead.id, LeadAnswer.ad_id == ad_id, LeadAnswer.created_at <= sale.date).first()
+            if has_lead:
+                v_count += 1
+
     return jsonify({
         'ad_id': ad_id,
         'name': ad_name,
@@ -585,8 +625,12 @@ def get_ad_details(ad_id):
         'total_leads': total_leads,
         'qualified_leads': qualified_leads,
         'qualified_percentage': qual_percent,
+        'agendas': ag_count,
+        'ventas': v_count,
         'cpl': cpl,
         'cpql': cpql,
+        'cpa': round(total_spend / ag_count, 2) if ag_count > 0 else 0,
+        'cpv': round(total_spend / v_count, 2) if v_count > 0 else 0,
         'recent_leads': leads_list,
         'evolution': chart_data
     }), 200
