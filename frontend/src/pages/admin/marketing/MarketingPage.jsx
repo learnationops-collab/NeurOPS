@@ -44,8 +44,7 @@ const MarketingPage = () => {
     // Estado de rendimiento
     const [performanceData, setPerformanceData] = useState([]);
     const [perfLoading, setPerfLoading] = useState(false);
-    const [perfStartDate, setPerfStartDate] = useState('');
-    const [perfEndDate, setPerfEndDate] = useState('');
+    const [perfPeriod, setPerfPeriod] = useState('last_month'); // last_month | last_week | yesterday
 
     const tabs = [
         { id: 'campaigns', label: 'Campañas', icon: Megaphone, endpoint: '/marketing/campaigns' },
@@ -76,13 +75,10 @@ const MarketingPage = () => {
         }
     };
 
-    const fetchPerformance = async (startDate = perfStartDate, endDate = perfEndDate) => {
+    const fetchPerformance = async (period = perfPeriod) => {
         try {
             setPerfLoading(true);
-            const params = {};
-            if (startDate) params.start_date = startDate;
-            if (endDate) params.end_date = endDate;
-            const res = await api.get('/marketing/ads/performance', { params });
+            const res = await api.get('/marketing/ads/performance', { params: { period } });
             setPerformanceData(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error("Error fetching ad performance:", err);
@@ -335,35 +331,28 @@ const MarketingPage = () => {
             {/* Vista Rendimiento por Anuncio */}
             {activeTab === 'performance' && (
                 <>
-                    {/* Filtros de fecha */}
-                    <div className="flex flex-wrap items-end gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1 block">Desde</label>
-                            <input
-                                type="date"
-                                className="bg-surface border border-base rounded-2xl py-3 px-5 text-white text-sm outline-none focus:ring-2 focus:ring-violet-500/20 font-bold"
-                                value={perfStartDate}
-                                onChange={e => setPerfStartDate(e.target.value)}
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1 block">Hasta</label>
-                            <input
-                                type="date"
-                                className="bg-surface border border-base rounded-2xl py-3 px-5 text-white text-sm outline-none focus:ring-2 focus:ring-violet-500/20 font-bold"
-                                value={perfEndDate}
-                                onChange={e => setPerfEndDate(e.target.value)}
-                            />
-                        </div>
-                        <Button
-                            variant="primary"
-                            size="sm"
-                            icon={BarChart2}
-                            className="bg-violet-600 hover:bg-violet-700 shadow-violet-500/20 self-end"
-                            onClick={() => fetchPerformance(perfStartDate, perfEndDate)}
-                        >
-                            Actualizar
-                        </Button>
+                    {/* Selector de periodo */}
+                    <div className="flex items-center gap-3">
+                        {[
+                            { id: 'last_month', label: 'Último Mes' },
+                            { id: 'last_week',  label: 'Última Semana' },
+                            { id: 'yesterday',  label: 'Ayer' },
+                        ].map(opt => (
+                            <button
+                                key={opt.id}
+                                onClick={() => {
+                                    setPerfPeriod(opt.id);
+                                    fetchPerformance(opt.id);
+                                }}
+                                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                    perfPeriod === opt.id
+                                        ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-500/20'
+                                        : 'bg-surface border-base text-muted hover:text-white hover:border-violet-500/50'
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
                     </div>
 
                     {/* KPIs de rendimiento */}
@@ -426,7 +415,7 @@ const MarketingPage = () => {
                                                 <tr key={row.ad_id} className="hover:bg-violet-500/5 transition-all group">
                                                     <td className="px-6 py-5">
                                                         <p className="font-bold text-white text-sm">{row.ad_name}</p>
-                                                        <p className="text-[10px] text-muted font-bold uppercase">#ADS-{row.ad_id}</p>
+                                                        <p className="text-[10px] text-muted font-bold uppercase">{row.adset_name || '—'} · {row.campaign_name || '—'}</p>
                                                     </td>
                                                     <td className="px-6 py-5 text-right">
                                                         <span className="font-black text-amber-400">

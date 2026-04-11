@@ -214,101 +214,248 @@ def delete_ad(id):
 @login_required
 def get_ad_performance():
     """
-    Cruza leads, agendas y ventas por anuncio para calcular métricas de rendimiento.
-    - Leads: via LeadAnswer asociado al anuncio.
-    - Agendas: cruzando instagram del lead con FinancialAgenda.instagram.
-    - Ventas: cruzando instagram del lead con FinancialSale.instagram.
+    Retorna métricas de rendimiento por anuncio para el periodo solicitado.
+
+    Inversión: Suma de AdPeriodSpend filtrado por el periodo.
+      - Primero busca registros a nivel ad_id.
+      - Si no hay, usa los de ad_set_id prorrateados entre los ads del conjunto.
+      - Si tampoco, usa los de campaign_id prorrateados.
+
+    Leads: LeadAnswer agrupados por ad_id en el periodo.
+
+    Agendas: FinancialAgenda cuyo instagram coincide con algún ManychatLead
+      que interactuó con ese anuncio (via LeadAnswer).
+
+    Ventas: FinancialSale atribuidas al anuncio usando la lógica de atribución
+      correcta — para cada venta con instagram, se busca el LeadAnswer más
+      reciente ANTERIOR a la fecha de la venta, y ese anuncio se lleva el crédito.
     """
-    from app.models import LeadAnswer, ManychatLead, FinancialAgenda, FinancialSale
+    from app.models import (
+        LeadAnswer, ManychatLead, FinancialAgenda, FinancialSale,
+        AdSet, Campaign, AdPeriodSpend
+    )
     from sqlalchemy import func
+    from datetime import datetime, timedelta, date
 
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
+    period = request.args.get('period', 'last_month')  # last_month | last_week | yesterday
 
-    # Filtro de fechas opcional
-    date_filters = [LeadAnswer.ad_id != None]
-    if start_date:
-        try:
-            from datetime import datetime
-            st = datetime.strptime(start_date, '%Y-%m-%d')
-            date_filters.append(LeadAnswer.created_at >= st)
-        except ValueError:
-            pass
-    if end_date:
-        try:
-            from datetime import datetime
-            ed = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
-            date_filters.append(LeadAnswer.created_at <= ed)
-        except ValueError:
-            pass
+    today = date.today()
+    if period == 'yesterday':
+        start_dt = datetime.combine(today - timedelta(days=1), datetime.min.time())
+        end_dt   = datetime.combine(today - timedelta(days=1), datetime.max.time())
+    elif period == 'last_week':
+        start_dt = datetime.combine(today - timedelta(days=7), datetime.min.time())
+        end_dt   = datetime.combine(today, datetime.max.time())
+    else:  # last_month (default)
+        start_dt = datetime.combine(today - timedelta(days=30), datetime.min.time())
+        end_dt   = datetime.combine(today, datetime.max.time())
 
-    # Agrupamos leads por anuncio
+    start_date_only = start_dt.date()
+    end_date_only   = end_dt.date()
+
+    # -------------------------------------------------------------------------
+    # 1. LEADS por anuncio en el periodo
+    # -------------------------------------------------------------------------
     lead_stats = db.session.query(
         LeadAnswer.ad_id,
         func.count(LeadAnswer.id).label('total_leads')
-    ).filter(*date_filters).group_by(LeadAnswer.ad_id).all()
+    ).filter(
+        LeadAnswer.ad_id != None,
+        LeadAnswer.created_at >= start_dt,
+        LeadAnswer.created_at <= end_dt
+    ).group_by(LeadAnswer.ad_id).all()
 
     if not lead_stats:
         return jsonify([]), 200
 
-    # Cargamos todos los anuncios involucrados
     ad_ids = [s.ad_id for s in lead_stats]
-    ads_map = {a.id: a for a in Ad.query.filter(Ad.id.in_(ad_ids)).all()}
 
-    # Pre-carga todos los IG de leads por anuncio en una sola query
-    ig_by_ad = db.session.query(
+    # Mapa de anuncios con su AdSet y Campaign
+    ads_raw = db.session.query(Ad, AdSet, Campaign)\
+        .outerjoin(AdSet, Ad.ad_set_id == AdSet.id)\
+        .outerjoin(Campaign, AdSet.campaign_id == Campaign.id)\
+        .filter(Ad.id.in_(ad_ids)).all()
+
+    ads_map     = {a.id: a   for a, _, _ in ads_raw}
+    adset_map   = {a.id: s   for a, s, _ in ads_raw}
+    campaign_map = {a.id: c  for a, _, c in ads_raw}
+
+    # -------------------------------------------------------------------------
+    # 2. INVERSIÓN por anuncio en el periodo (AdPeriodSpend)
+    #    Prioridad: ad_id > ad_set_id prorrateado > campaign_id prorrateado
+    # -------------------------------------------------------------------------
+    # a) Gasto directo por ad_id
+    ad_spends_direct = db.session.query(
+        AdPeriodSpend.ad_id,
+        func.sum(AdPeriodSpend.spend).label('total')
+    ).filter(
+        AdPeriodSpend.ad_id.in_(ad_ids),
+        AdPeriodSpend.start_date >= start_date_only,
+        AdPeriodSpend.end_date   <= end_date_only
+    ).group_by(AdPeriodSpend.ad_id).all()
+    spend_by_ad = {r.ad_id: float(r.total or 0) for r in ad_spends_direct}
+
+    # b) Gasto por ad_set (para los que no tienen directo)
+    adset_ids = list({adset_map[aid].id for aid in ad_ids if adset_map.get(aid)})
+    if adset_ids:
+        adset_spends = db.session.query(
+            AdPeriodSpend.ad_set_id,
+            func.sum(AdPeriodSpend.spend).label('total')
+        ).filter(
+            AdPeriodSpend.ad_set_id.in_(adset_ids),
+            AdPeriodSpend.start_date >= start_date_only,
+            AdPeriodSpend.end_date   <= end_date_only
+        ).group_by(AdPeriodSpend.ad_set_id).all()
+        adset_spend_map = {r.ad_set_id: float(r.total or 0) for r in adset_spends}
+
+        # Contamos cuántos ads por adset están en nuestra lista
+        ads_per_adset: dict[int, int] = {}
+        for aid in ad_ids:
+            s = adset_map.get(aid)
+            if s:
+                ads_per_adset[s.id] = ads_per_adset.get(s.id, 0) + 1
+    else:
+        adset_spend_map = {}
+        ads_per_adset = {}
+
+    # c) Gasto por campaign (para los que no tienen ni directo ni adset)
+    campaign_ids = list({campaign_map[aid].id for aid in ad_ids if campaign_map.get(aid)})
+    if campaign_ids:
+        campaign_spends = db.session.query(
+            AdPeriodSpend.campaign_id,
+            func.sum(AdPeriodSpend.spend).label('total')
+        ).filter(
+            AdPeriodSpend.campaign_id.in_(campaign_ids),
+            AdPeriodSpend.start_date >= start_date_only,
+            AdPeriodSpend.end_date   <= end_date_only
+        ).group_by(AdPeriodSpend.campaign_id).all()
+        campaign_spend_map = {r.campaign_id: float(r.total or 0) for r in campaign_spends}
+
+        ads_per_campaign: dict[int, int] = {}
+        for aid in ad_ids:
+            c = campaign_map.get(aid)
+            if c:
+                ads_per_campaign[c.id] = ads_per_campaign.get(c.id, 0) + 1
+    else:
+        campaign_spend_map = {}
+        ads_per_campaign = {}
+
+    def resolve_spend(ad_id: int) -> float:
+        """Determina la inversión del anuncio con fallback a adset y campaign."""
+        # Directo
+        if spend_by_ad.get(ad_id, 0) > 0:
+            return spend_by_ad[ad_id]
+        # Via AdSet prorrateado
+        s = adset_map.get(ad_id)
+        if s and adset_spend_map.get(s.id, 0) > 0:
+            count = ads_per_adset.get(s.id, 1)
+            return round(adset_spend_map[s.id] / count, 2)
+        # Via Campaign prorrateado
+        c = campaign_map.get(ad_id)
+        if c and campaign_spend_map.get(c.id, 0) > 0:
+            count = ads_per_campaign.get(c.id, 1)
+            return round(campaign_spend_map[c.id] / count, 2)
+        # Fallback a total_spend histórico del anuncio
+        ad = ads_map.get(ad_id)
+        return float(ad.total_spend or 0) if ad else 0.0
+
+    # -------------------------------------------------------------------------
+    # 3. AGENDAS — cruzar IGs del anuncio con FinancialAgenda.instagram
+    # -------------------------------------------------------------------------
+    ig_by_ad_rows = db.session.query(
         LeadAnswer.ad_id,
         ManychatLead.ig
     ).join(ManychatLead, ManychatLead.id == LeadAnswer.lead_id)\
      .filter(
          LeadAnswer.ad_id.in_(ad_ids),
+         LeadAnswer.created_at >= start_dt,
+         LeadAnswer.created_at <= end_dt,
          ManychatLead.ig != None,
          ManychatLead.ig != ''
      ).all()
 
-    # Construimos diccionario ad_id -> set de igs (normalizados sin @)
     igs_per_ad: dict[int, set] = {}
-    for row in ig_by_ad:
+    for row in ig_by_ad_rows:
         ig_clean = row.ig.strip().lstrip('@').lower()
         if ig_clean:
             igs_per_ad.setdefault(row.ad_id, set()).add(ig_clean)
 
-    # Cargamos todas las agendas y ventas de una sola vez para hacer el cruce en memoria
-    all_agendas = FinancialAgenda.query.with_entities(FinancialAgenda.instagram).all()
-    all_sales = FinancialSale.query.with_entities(FinancialSale.instagram).all()
+    # Cargamos todas las agendas del periodo
+    agendas_all = FinancialAgenda.query.filter(
+        FinancialAgenda.date >= start_dt,
+        FinancialAgenda.date <= end_dt
+    ).with_entities(FinancialAgenda.instagram).all()
 
-    # Normalizamos los instagram de agendas y ventas como conjuntos
-    agenda_igs = set()
-    for a in all_agendas:
+    agenda_igs: set = set()
+    for a in agendas_all:
         if a.instagram and a.instagram != 'N/A':
             agenda_igs.add(a.instagram.strip().lstrip('@').lower())
 
-    sale_igs = set()
-    for s in all_sales:
-        if s.instagram and s.instagram != 'N/A':
-            sale_igs.add(s.instagram.strip().lstrip('@').lower())
+    # -------------------------------------------------------------------------
+    # 4. VENTAS — atribución por modelo correcto:
+    #    Para cada FinancialSale con instagram, busca el ManychatLead,
+    #    luego el LeadAnswer más reciente ANTERIOR a la fecha de venta.
+    #    El anuncio de ese LeadAnswer se lleva el crédito.
+    # -------------------------------------------------------------------------
+    sales_in_period = FinancialSale.query.filter(
+        FinancialSale.date >= start_dt,
+        FinancialSale.date <= end_dt
+    ).all()
 
+    ventas_por_ad: dict[int, int] = {}
+    for sale in sales_in_period:
+        if not sale.instagram or sale.instagram.strip() in ('', 'N/A'):
+            continue
+
+        ig_norm = sale.instagram.strip().lstrip('@').lower()
+
+        # Buscar el ManychatLead cuyo ig coincida
+        matched_lead = ManychatLead.query.filter(
+            db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
+        ).first()
+
+        if not matched_lead:
+            continue
+
+        # Buscar el LeadAnswer más reciente ANTES de la venta
+        closest = LeadAnswer.query.filter(
+            LeadAnswer.lead_id == matched_lead.id,
+            LeadAnswer.ad_id.in_(ad_ids),
+            LeadAnswer.created_at <= sale.date
+        ).order_by(LeadAnswer.created_at.desc()).first()
+
+        if closest and closest.ad_id:
+            ventas_por_ad[closest.ad_id] = ventas_por_ad.get(closest.ad_id, 0) + 1
+
+    # -------------------------------------------------------------------------
+    # 5. CONSTRUCCIÓN DEL RESULTADO
+    # -------------------------------------------------------------------------
     result = []
     for stat in lead_stats:
         ad_id = stat.ad_id
         total_leads = stat.total_leads
         ad = ads_map.get(ad_id)
-        ad_name = ad.name if ad else f"Anuncio #{ad_id}"
-        spend = float(ad.total_spend or 0) if ad else 0.0
+        adset = adset_map.get(ad_id)
+        campaign = campaign_map.get(ad_id)
 
-        # Cruzamos los IGs del anuncio con agendas y ventas
+        ad_name = ad.name if ad else f"Anuncio #{ad_id}"
+        adset_name = adset.name if adset else '—'
+        campaign_name = campaign.name if campaign else '—'
+
+        spend = resolve_spend(ad_id)
         ad_igs = igs_per_ad.get(ad_id, set())
         agendas_count = len(ad_igs & agenda_igs)
-        ventas_count = len(ad_igs & sale_igs)
+        ventas_count = ventas_por_ad.get(ad_id, 0)
 
-        # Costos unitarios
-        cpl = round(spend / total_leads, 2) if total_leads > 0 else 0
-        cpa = round(spend / agendas_count, 2) if agendas_count > 0 else 0
-        cpv = round(spend / ventas_count, 2) if ventas_count > 0 else 0
+        cpl = round(spend / total_leads, 2) if total_leads > 0 and spend > 0 else 0
+        cpa = round(spend / agendas_count, 2) if agendas_count > 0 and spend > 0 else 0
+        cpv = round(spend / ventas_count, 2) if ventas_count > 0 and spend > 0 else 0
 
         result.append({
             'ad_id': ad_id,
             'ad_name': ad_name,
+            'adset_name': adset_name,
+            'campaign_name': campaign_name,
             'spend': spend,
             'leads': total_leads,
             'cpl': cpl,
@@ -318,6 +465,5 @@ def get_ad_performance():
             'cpv': cpv
         })
 
-    # Ordenar descendente por cantidad de leads
     result.sort(key=lambda x: x['leads'], reverse=True)
     return jsonify(result), 200
