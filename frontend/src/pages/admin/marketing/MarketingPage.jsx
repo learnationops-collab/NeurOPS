@@ -561,6 +561,7 @@ const MarketingPage = () => {
                     )}
                 </Card>
             </>
+            )}
 
             <AnimatePresence>
                 {isModalOpen && (
