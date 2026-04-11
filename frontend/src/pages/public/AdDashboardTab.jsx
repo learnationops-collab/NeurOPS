@@ -193,23 +193,11 @@ const AdDashboardTab = () => {
                                     </div>
                                 );
                             })}
-                        </div>
+
                     )}
                 </div>
             )}
 
-            <AdDetailModal 
-                isOpen={isModalOpen} 
-                adId={selectedAdId} 
-                onClose={() => setIsModalOpen(false)} 
-            />
-        </div>
-    );
-};
-                </div>
-            )}
-
-            {/* Modal de Detalle */}
             <AdDetailModal 
                 isOpen={isModalOpen} 
                 adId={selectedAdId} 
