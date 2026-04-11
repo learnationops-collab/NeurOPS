@@ -107,6 +107,7 @@ const EmergencyCreatePage = () => {
                                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                             >
                                 <option value="admin">Administrador</option>
+                                <option value="operator">Operador Técnico</option>
                                 <option value="closer">Closer</option>
                                 <option value="lead">Lead</option>
                                 <option value="agenda">Agenda</option>
