@@ -59,7 +59,7 @@ const MarketingPage = () => {
         } else {
             fetchPerformance();
         }
-    }, [activeTab]);
+    }, [activeTab, perfPeriod]);
 
     const fetchData = async () => {
         try {

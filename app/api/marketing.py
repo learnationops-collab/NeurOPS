@@ -340,22 +340,31 @@ def get_ad_performance():
         campaign_spend_map = {}
         ads_per_campaign = {}
 
+
+    def normalize_ig(ig_str):
+        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
+            return None
+        return ig_str.strip().lstrip('@').lower()
+
     def resolve_spend(ad_id: int) -> float:
-        """Determina la inversión del anuncio con fallback a adset y campaign."""
-        # Directo
+        """Determina la inversión del anuncio con fallback a adset, campaign y total_spend."""
+        # 1. Directo por Periodo
         if spend_by_ad.get(ad_id, 0) > 0:
             return spend_by_ad[ad_id]
-        # Via AdSet prorrateado
+        
+        # 2. Via AdSet prorrateado
         s = adset_map.get(ad_id)
         if s and adset_spend_map.get(s.id, 0) > 0:
             count = ads_per_adset.get(s.id, 1)
             return round(adset_spend_map[s.id] / count, 2)
-        # Via Campaign prorrateado
+            
+        # 3. Via Campaign prorrateado
         c = campaign_map.get(ad_id)
         if c and campaign_spend_map.get(c.id, 0) > 0:
             count = ads_per_campaign.get(c.id, 1)
             return round(campaign_spend_map[c.id] / count, 2)
-        # Fallback a total_spend histórico del anuncio
+            
+        # 4. Fallback a total_spend histórico (el campo "declarado" en la tabla de anuncios)
         ad = ads_map.get(ad_id)
         return float(ad.total_spend or 0) if ad else 0.0
 
@@ -376,7 +385,7 @@ def get_ad_performance():
 
     igs_per_ad: dict[int, set] = {}
     for row in ig_by_ad_rows:
-        ig_clean = row.ig.strip().lstrip('@').lower()
+        ig_clean = normalize_ig(row.ig)
         if ig_clean:
             igs_per_ad.setdefault(row.ad_id, set()).add(ig_clean)
 
@@ -384,18 +393,17 @@ def get_ad_performance():
     agendas_all = FinancialAgenda.query.filter(
         FinancialAgenda.date >= start_dt,
         FinancialAgenda.date <= end_dt
-    ).with_entities(FinancialAgenda.instagram).all()
+    ).with_entities(FinancialAgenda.instagram, FinancialAgenda.raw_data).all()
 
     agenda_igs: set = set()
     for a in agendas_all:
-        if a.instagram and a.instagram != 'N/A':
-            agenda_igs.add(a.instagram.strip().lstrip('@').lower())
+        ig_val = a.instagram or (a.raw_data or {}).get('instagram') or (a.raw_data or {}).get('ig')
+        ig_clean = normalize_ig(ig_val)
+        if ig_clean:
+            agenda_igs.add(ig_clean)
 
     # -------------------------------------------------------------------------
-    # 4. VENTAS — atribución por modelo correcto:
-    #    Para cada FinancialSale con instagram, busca el ManychatLead,
-    #    luego el LeadAnswer más reciente ANTERIOR a la fecha de venta.
-    #    El anuncio de ese LeadAnswer se lleva el crédito.
+    # 4. VENTAS — atribución por modelo correcto
     # -------------------------------------------------------------------------
     sales_in_period = FinancialSale.query.filter(
         FinancialSale.date >= start_dt,
@@ -404,10 +412,11 @@ def get_ad_performance():
 
     ventas_por_ad: dict[int, int] = {}
     for sale in sales_in_period:
-        if not sale.instagram or sale.instagram.strip() in ('', 'N/A'):
+        ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
+        ig_norm = normalize_ig(ig_val)
+        
+        if not ig_norm:
             continue
-
-        ig_norm = sale.instagram.strip().lstrip('@').lower()
 
         # Buscar el ManychatLead cuyo ig coincida
         matched_lead = ManychatLead.query.filter(
@@ -417,7 +426,7 @@ def get_ad_performance():
         if not matched_lead:
             continue
 
-        # Buscar el LeadAnswer más reciente ANTES de la venta
+        # Buscar el LeadAnswer más reciente ANTES de la venta (sin límite de fecha inicial para encontrar el origen aunque sea antiguo)
         closest = LeadAnswer.query.filter(
             LeadAnswer.lead_id == matched_lead.id,
             LeadAnswer.ad_id.in_(ad_ids),
