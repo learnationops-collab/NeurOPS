@@ -74,6 +74,7 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                     ) : (
                         <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                             
+
                             {/* Stats Grid */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <StatCard 
@@ -90,14 +91,38 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                     color="emerald"
                                 />
                                 <StatCard 
-                                    label="Costo por Lead (CPL)" 
-                                    value={`$${details.cpl}`} 
+                                    label="Agendas" 
+                                    value={details.agendas || 0} 
+                                    icon={<Calendar className="text-cyan-400" size={14} />}
+                                    color="cyan"
+                                />
+                                <StatCard 
+                                    label="Ventas" 
+                                    value={details.ventas || 0} 
                                     icon={<DollarSign className="text-amber-400" size={14} />}
                                     color="amber"
                                 />
                                 <StatCard 
-                                    label="Costo p/ Cualif. (CPQL)" 
-                                    value={`$${details.cpql}`} 
+                                    label="CPL" 
+                                    value={`$${details.cpl}`} 
+                                    icon={<DollarSign className="text-slate-400" size={14} />}
+                                    color="slate"
+                                />
+                                <StatCard 
+                                    label="CPA" 
+                                    value={`$${details.cpa || 0}`} 
+                                    icon={<DollarSign className="text-cyan-400" size={14} />}
+                                    color="cyan"
+                                />
+                                <StatCard 
+                                    label="CPV" 
+                                    value={`$${details.cpv || 0}`} 
+                                    icon={<DollarSign className="text-amber-400" size={14} />}
+                                    color="amber"
+                                />
+                                <StatCard 
+                                    label="Inversión" 
+                                    value={`$${details.spend || 0}`} 
                                     icon={<DollarSign className="text-violet-400" size={14} />}
                                     color="violet"
                                 />
