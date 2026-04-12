@@ -558,14 +558,16 @@ def receive_financial_agendas():
         saved += 1
         
     db.session.commit()
-    return jsonify({"message": f"{saved} agenda records saved", "saved"@bp.route('/public/financial-agendas/sync', methods=['POST'])
+    return jsonify({"message": f"{saved} agenda records saved", "saved": saved}), 201
+
+@bp.route('/public/financial-agendas/sync', methods=['POST'])
 def sync_financial_agendas_from_sheets():
     """Fetches agendas from Google Sheets and recreates all records using the new service."""
     from app.services.sheets_service import SheetsService
     result = SheetsService.sync_from_sheets("Agendas_DB")
     if result["status"] == "success":
         return jsonify({"message": "Sincronización de agendas completa", "added": result["count"]}), 200
-    return jsonify({"error": result["message"]}), 500({"error": str(e)}), 500
+    return jsonify({"error": result["message"]}), 500
 
 @bp.route('/public/financial-agendas', methods=['GET'])
 def get_financial_agendas():
