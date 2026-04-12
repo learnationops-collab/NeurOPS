@@ -215,7 +215,8 @@ const FinancePage = () => {
                         Setters
                     </button>
                 </div>
-            </header>
+            </div>
+        </header>
 
             <ExpensesManagerModal
                 isOpen={isExpensesModalOpen}
