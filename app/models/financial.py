@@ -4,59 +4,66 @@ from app import db
 class FinancialSale(db.Model):
     __tablename__ = 'financial_sales'
     id = db.Column(db.Integer, primary_key=True)
-    setter_name = db.Column(db.String(100), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+    email_vendedor = db.Column(db.String(150), nullable=True)
+    nombre_cliente = db.Column(db.String(150), nullable=True)
+    telefono = db.Column(db.String(50), nullable=True)
+    mail_cliente = db.Column(db.String(150), nullable=True)
+    tipo_pago = db.Column(db.String(100), nullable=True)
+    monto = db.Column(db.Float, nullable=True)
+    segundo_pago = db.Column(db.String(100), nullable=True)
+    metodo_pago = db.Column(db.String(100), nullable=True)
+    examen = db.Column(db.String(100), nullable=True)
+    instagram = db.Column(db.String(100), nullable=True)
+    setter = db.Column(db.String(100), nullable=True)
+    # Metadatos
     raw_data = db.Column(db.JSON, nullable=True)
-    status = db.Column(db.String(50), default='valid', nullable=False)
-    error_notes = db.Column(db.Text, nullable=True)
-    product = db.Column(db.String(100), nullable=True)
-    payment_type = db.Column(db.String(100), nullable=True)
-    instagram = db.Column(db.String(100), nullable=True) # Nueva columna de instagram
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
-        raw = self.raw_data or {}
-        # Safely fallback to parsing from raw_data for older records before the migration
-        db_product = self.product or raw.get('tipo_pago') or raw.get('producto') or 'N/A'
-        
         return {
             "id": self.id,
-            "setter_name": self.setter_name,
-            "amount": self.amount,
-            "date": self.date.isoformat() if self.date else None,
-            "cliente": raw.get('cliente') or raw.get('nombre') or 'Desconocido',
-            "closer": raw.get('vendedor') or raw.get('closer') or 'Sin asignar',
-            "producto": db_product,
-            "payment_type": self.payment_type or 'N/A',
-            "instagram": self.instagram or raw.get('instagram') or 'N/A',
-            "status": self.status,
-            "error_notes": self.error_notes,
-            "raw_data": raw
+            "email_vendedor": self.email_vendedor,
+            "nombre_cliente": self.nombre_cliente,
+            "telefono": self.telefono,
+            "mail_cliente": self.mail_cliente,
+            "tipo_pago": self.tipo_pago,
+            "monto": self.monto,
+            "segundo_pago": self.segundo_pago,
+            "metodo_pago": self.metodo_pago,
+            "examen": self.examen,
+            "instagram": self.instagram,
+            "setter": self.setter,
+            "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
 class FinancialAgenda(db.Model):
     __tablename__ = 'financial_agendas'
     id = db.Column(db.Integer, primary_key=True)
-    setter_name = db.Column(db.String(100), nullable=False)
-    client_name = db.Column(db.String(150), nullable=True)
-    closer_name = db.Column(db.String(100), nullable=True)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+    nombre = db.Column(db.String(150), nullable=True)
+    registro = db.Column(db.String(100), nullable=True) # ID o fecha de registro en Sheets
+    fecha_meet = db.Column(db.String(100), nullable=True) 
+    whatsapp = db.Column(db.String(50), nullable=True)
+    zona_geografica = db.Column(db.String(100), nullable=True)
+    closer = db.Column(db.String(100), nullable=True)
+    lead = db.Column(db.String(100), nullable=True) # Tipo de lead o fuente
+    mail = db.Column(db.String(150), nullable=True)
     instagram = db.Column(db.String(100), nullable=True)
-    status = db.Column(db.String(50), default='valid', nullable=False)
-    error_notes = db.Column(db.Text, nullable=True)
+    # Metadatos
     raw_data = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
-        raw = self.raw_data or {}
         return {
             "id": self.id,
-            "setter_name": self.setter_name,
-            "client_name": self.client_name or raw.get('cliente') or raw.get('nombre') or 'Desconocido',
-            "closer_name": self.closer_name or raw.get('vendedor') or raw.get('closer') or 'Sin asignar',
-            "date": self.date.isoformat() if self.date else None,
-            "instagram": self.instagram or raw.get('instagram') or 'N/A',
-            "status": self.status,
-            "error_notes": self.error_notes,
-            "raw_data": raw
+            "nombre": self.nombre,
+            "registro": self.registro,
+            "fecha_meet": self.fecha_meet,
+            "whatsapp": self.whatsapp,
+            "zona_geografica": self.zona_geografica,
+            "closer": self.closer,
+            "lead": self.lead,
+            "mail": self.mail,
+            "instagram": self.instagram,
+            "created_at": self.created_at.isoformat() if self.created_at else None
         }
 

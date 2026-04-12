@@ -473,70 +473,12 @@ def parse_financial_data(item):
 
 @bp.route('/public/financial-sales/sync', methods=['POST'])
 def sync_financial_sales_from_sheets():
-    """Fetches data from Google Sheets and saves ONLY new records."""
-    from app.models import FinancialSale
-    from flask import current_app
-    from datetime import datetime
-    import requests
-    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5NqjyWReV6Vz9BJLE1BjTJMov5gKx_H7GK-sPhGY_jiqNHjMXQlXkDReKvf5lrdGw/exec"
-    
-    try:
-        current_app.logger.info("[FINANCIAL SYNC] Starting fetch from Google Sheets...")
-        response = requests.get(APPS_SCRIPT_URL, timeout=20)
-        if response.status_code != 200:
-            return jsonify({"error": f"Error fetching from Google Sheets: {response.status_code}"}), 502
-            
-        data = response.json()
-        
-        # Como solicitaste, la BD se borrará y reconstruirá completamente en cada llamado.
-        # Esto nos asegura que el Sheets siempre es la única fuente de la verdad.
-        db.session.query(FinancialSale).delete()
-        
-        added = 0
-        for item in data:
-            parsed = parse_financial_data(item)
-            
-            # Skip completely empty rows
-            if parsed['setter'] == 'Desconocido' and parsed['monto'] == 0.0 and not item.get('vendedor') and not item.get('cliente'):
-                continue
-                
-            sale_date = datetime.utcnow()
-            fecha_str = item.get('fecha') or item.get('date')
-            if fecha_str:
-                try:
-                    from dateutil import parser
-                    sale_date = parser.parse(str(fecha_str))
-                except Exception:
-                    pass
-            
-            # Creamos todos los registros como nuevos
-            sale = FinancialSale(
-                setter_name=parsed['setter'],
-                amount=parsed['monto'],
-                date=sale_date,
-                raw_data=item,
-                status=parsed['status'],
-                error_notes=parsed['error_notes'],
-                product=parsed['producto'],
-                payment_type=parsed['tipo_de_pago'],
-                instagram=parsed['instagram']
-            )
-            db.session.add(sale)
-            added += 1
-                
-        db.session.commit()
-        current_app.logger.info(f"[FINANCIAL SYNC] Reconstrucción completa: Se recrearon {added} registros desde cero.")
-        return jsonify({
-            "message": "Base de datos reconstruida con éxito", 
-            "added": added
-        }), 200
-        
-    except requests.exceptions.Timeout:
-         return jsonify({"error": "La conexión con Google Sheets excedió el tiempo de espera."}), 504
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"[FINANCIAL SYNC] Error: {e}")
-        return jsonify({"error": str(e)}), 500
+    """Fetches data from Google Sheets and recreates all records using the new service."""
+    from app.services.sheets_service import SheetsService
+    result = SheetsService.sync_from_sheets("Ventas_DB")
+    if result["status"] == "success":
+        return jsonify({"message": "Base de datos reconstruida con éxito", "added": result["count"]}), 200
+    return jsonify({"error": result["message"]}), 500
 
 @bp.route('/public/financial-sales/<int:sale_id>', methods=['PUT', 'OPTIONS'])
 def update_financial_sale(sale_id):
@@ -616,77 +558,14 @@ def receive_financial_agendas():
         saved += 1
         
     db.session.commit()
-    return jsonify({"message": f"{saved} agenda records saved", "saved": saved}), 201
-
-@bp.route('/public/financial-agendas/sync', methods=['POST'])
+    return jsonify({"message": f"{saved} agenda records saved", "saved"@bp.route('/public/financial-agendas/sync', methods=['POST'])
 def sync_financial_agendas_from_sheets():
-    """Fetches agendas from Google Sheets and recreates all records."""
-    from app.models import FinancialAgenda
-    from flask import current_app
-    import requests
-    
-    # URL for Llamadas_DB Apps Script
-    APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8KksLWlGEwIuRFLsxPqvX2BX1nxH-UtnKFGqZOF8YVUgti30gzUlTkO-Jpi3_txsb/exec"
-    
-    try:
-        current_app.logger.info("[FINANCIAL AGENDAS SYNC] Starting fetch from Google Sheets...")
-        response = requests.get(APPS_SCRIPT_URL, timeout=20)
-        if response.status_code != 200:
-            return jsonify({"error": f"Error fetching from Sheets: {response.status_code}"}), 502
-            
-        data = response.json()
-        
-        # Eliminar toda la base y reconstruir para que Sheets sea Single Source of Truth
-        db.session.query(FinancialAgenda).delete()
-        
-        added = 0
-        for item in data:
-
-            # Mapeo preciso según la estructura del script del usuario
-            # marca_temporal (row[0]), nombre (row[2]), instagram (row[10]), setter (row[11])
-            setter = item.get('setter') or item.get('setter_name')
-            client = item.get('nombre') or item.get('cliente')
-            closer = item.get('closer') or item.get('vendedor') or item.get('examen') or 'Sin asignar'
-            
-            # Normalización inmediata del Instagram para asegurar matching en el dashboard
-            ig_raw = item.get('instagram') or item.get('ig')
-            instagram = str(ig_raw).strip().lstrip('@').lower() if ig_raw else 'N/A'
-            
-            # Skip if no valid setter name is found
-            if not setter or str(setter).strip() == '':
-                continue
-            
-            dt_str = item.get('marca_temporal') or item.get('fecha') or item.get('date') or item.get('registro')
-            agenda_date = datetime.utcnow()
-            if dt_str:
-                try:
-                    from dateutil import parser
-                    # Parse and remove tzinfo to avoid SQLite timezone errors in SQLAlchemy
-                    parsed_date = parser.parse(str(dt_str))
-                    agenda_date = parsed_date.replace(tzinfo=None)
-                except: pass
-                
-            agenda = FinancialAgenda(
-                setter_name=str(setter).strip(),
-                client_name=str(client).strip() if client else 'Desconocido',
-                closer_name=str(closer).strip() if closer else 'Sin asignar',
-                date=agenda_date,
-                instagram=str(instagram).strip() if instagram else 'N/A',
-                raw_data=item
-            )
-            db.session.add(agenda)
-            added += 1
-                
-        db.session.commit()
-        current_app.logger.info(f"[FINANCIAL AGENDAS SYNC] Reconstrucción completa: Se recrearon {added} registros desde cero.")
-        return jsonify({"message": "Sincronización de agendas completa", "added": added}), 200
-        
-    except requests.exceptions.Timeout:
-         return jsonify({"error": "La conexión con Google Sheets excedió el tiempo de espera."}), 504
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"[FINANCIAL AGENDAS SYNC] Error: {e}")
-        return jsonify({"error": str(e)}), 500
+    """Fetches agendas from Google Sheets and recreates all records using the new service."""
+    from app.services.sheets_service import SheetsService
+    result = SheetsService.sync_from_sheets("Agendas_DB")
+    if result["status"] == "success":
+        return jsonify({"message": "Sincronización de agendas completa", "added": result["count"]}), 200
+    return jsonify({"error": result["message"]}), 500({"error": str(e)}), 500
 
 @bp.route('/public/financial-agendas', methods=['GET'])
 def get_financial_agendas():

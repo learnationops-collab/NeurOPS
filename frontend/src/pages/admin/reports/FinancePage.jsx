@@ -165,7 +165,28 @@ const FinancePage = () => {
                     <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Gestión y Análisis Financiero</p>
                 </div>
 
-                <div id="finance-tabs" className="flex bg-slate-900/40 p-1.5 rounded-[2rem] border border-slate-800">
+                <div className="flex items-center gap-4">
+                    <Button 
+                        onClick={async () => {
+                            try {
+                                setLoading(true);
+                                await api.get('/sheets/sync', { params: { tabla: 'Ventas_DB' } });
+                                await fetchAll();
+                            } catch (err) {
+                                console.error(err);
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}
+                        variant="surface" 
+                        size="md" 
+                        icon={Activity} 
+                        className="rounded-2xl border-base hover:border-primary/50" 
+                        disabled={loading}
+                    >
+                        {loading ? 'Sincronizando...' : 'Sincronizar Ventas'}
+                    </Button>
+                    <div id="finance-tabs" className="flex bg-slate-900/40 p-1.5 rounded-[2rem] border border-slate-800">
                     <button
                         onClick={() => setActiveTab('general')}
                         className={`px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'general'

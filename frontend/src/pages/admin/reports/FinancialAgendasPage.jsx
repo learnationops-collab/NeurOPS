@@ -44,7 +44,7 @@ const FinancialAgendasPage = () => {
             setLoading(true);
             setSyncing(true);
             setError(null);
-            await api.post('/public/financial-agendas/sync');
+            await api.get('/sheets/sync', { params: { tabla: 'Agendas_DB' } });
         } catch (err) {
             console.warn('Sync failed:', err);
         } finally {
@@ -54,8 +54,8 @@ const FinancialAgendasPage = () => {
     };
 
     const filteredAgendas = agendas.filter(agenda => 
-        agenda.setter_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        agenda.client_name.toLowerCase().includes(searchTerm.toLowerCase())
+        (agenda.lead || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (agenda.nombre || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -138,21 +138,21 @@ const FinancialAgendasPage = () => {
                                             <div className="flex items-center gap-2">
                                                 <CalendarIcon size={14} className="text-muted" />
                                                 <span className="text-sm font-bold text-base">
-                                                    {new Date(agenda.date).toLocaleDateString()}
+                                                    {agenda.fecha_meet}
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="py-4 px-4">
-                                            <span className="text-sm font-bold text-white">{agenda.client_name}</span>
+                                            <span className="text-sm font-bold text-white">{agenda.nombre}</span>
                                         </td>
                                         <td className="py-4 px-4">
                                             <Badge variant="amber" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider border-amber-500/30">
-                                                {agenda.closer_name}
+                                                {agenda.closer}
                                             </Badge>
                                         </td>
                                         <td className="py-4 px-4">
                                             <Badge variant="indigo" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider">
-                                                {agenda.setter_name}
+                                                {agenda.lead}
                                             </Badge>
                                         </td>
                                         <td className="py-4 px-4 text-center">
@@ -171,8 +171,8 @@ const FinancialAgendasPage = () => {
                                             )}
                                         </td>
                                         <td className="py-4 px-4 text-right">
-                                            <Badge variant={agenda.status === 'valid' ? 'success' : 'rose'} className="rounded-lg">
-                                                {agenda.status === 'valid' ? 'Sincronizado' : 'Error'}
+                                            <Badge variant="success" className="rounded-lg">
+                                                Sincronizado
                                             </Badge>
                                         </td>
                                     </tr>
