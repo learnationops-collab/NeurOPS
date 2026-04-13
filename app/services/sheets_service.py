@@ -69,21 +69,28 @@ class SheetsService:
     def _rebuild_agendas(data_list):
         try:
             db.session.query(FinancialAgenda).delete()
-            for item in data_list:
-                agenda = FinancialAgenda(
-                    nombre=SheetsService._get_val(item, 'nombre'),
-                    registro=str(SheetsService._get_val(item, 'registro') or ''),
-                    fecha_meet=str(SheetsService._get_val(item, 'fecha_meet') or ''),
-                    whatsapp=SheetsService._get_val(item, 'whatsapp'),
-                    zona_geografica=SheetsService._get_val(item, 'zona_geografica'),
-                    closer=SheetsService._get_val(item, 'closer'),
-                    lead=SheetsService._get_val(item, 'lead'),
-                    mail=SheetsService._get_val(item, 'mail'),
-                    instagram=SheetsService._get_val(item, 'instagram'),
-                    date=SheetsService._parse_date(SheetsService._get_val(item, 'fecha_meet') or SheetsService._get_val(item, 'registro')),
-                    raw_data=item
-                )
-                db.session.add(agenda)
+            for idx, item in enumerate(data_list):
+                try:
+                    agenda = FinancialAgenda(
+                        nombre=SheetsService._to_str(SheetsService._get_val(item, 'nombre')),
+                        registro=SheetsService._to_str(SheetsService._get_val(item, 'registro')),
+                        fecha_meet=SheetsService._to_str(SheetsService._get_val(item, 'fecha_meet')),
+                        whatsapp=SheetsService._to_str(SheetsService._get_val(item, 'whatsapp')),
+                        zona_geografica=SheetsService._to_str(SheetsService._get_val(item, 'zona_geografica')),
+                        closer=SheetsService._to_str(SheetsService._get_val(item, 'closer')),
+                        lead=SheetsService._to_str(SheetsService._get_val(item, 'lead')),
+                        mail=SheetsService._to_str(SheetsService._get_val(item, 'mail')),
+                        instagram=SheetsService._to_str(SheetsService._get_val(item, 'instagram')),
+                        date=SheetsService._parse_date(
+                            SheetsService._get_val(item, 'fecha_meet') or
+                            SheetsService._get_val(item, 'registro')
+                        ),
+                        raw_data=item
+                    )
+                    db.session.add(agenda)
+                except Exception as row_err:
+                    logger.error(f"[SHEETS SYNC] Error en fila agenda {idx}: {row_err} - Data: {item}")
+                    continue
             db.session.commit()
             logger.info(f"[SHEETS SYNC] Llamadas_DB reconstruida con {len(data_list)} registros.")
         except Exception as e:
@@ -94,23 +101,33 @@ class SheetsService:
     def _rebuild_sales(data_list):
         try:
             db.session.query(FinancialSale).delete()
-            for item in data_list:
-                sale = FinancialSale(
-                    email_vendedor=SheetsService._get_val(item, 'email_vendedor'),
-                    nombre_cliente=SheetsService._get_val(item, 'nombre_cliente'),
-                    telefono=SheetsService._get_val(item, 'telefono'),
-                    mail_cliente=SheetsService._get_val(item, 'mail_cliente'),
-                    tipo_pago=SheetsService._get_val(item, 'tipo_pago'),
-                    monto=SheetsService._parse_float(SheetsService._get_val(item, 'monto')),
-                    segundo_pago=SheetsService._get_val(item, 'segundo_pago'),
-                    metodo_pago=SheetsService._get_val(item, 'metodo_pago'),
-                    examen=SheetsService._get_val(item, 'examen'),
-                    instagram=SheetsService._get_val(item, 'instagram'),
-                    setter=SheetsService._get_val(item, 'setter'),
-                    date=SheetsService._parse_date(SheetsService._get_val(item, 'fecha_venta') or SheetsService._get_val(item, 'date') or SheetsService._get_val(item, 'fecha') or SheetsService._get_val(item, 'marca_temporal')),
-                    raw_data=item
-                )
-                db.session.add(sale)
+            for idx, item in enumerate(data_list):
+                try:
+                    # Sanitizar todos los campos a string antes de insertarlos
+                    sale = FinancialSale(
+                        email_vendedor=SheetsService._to_str(SheetsService._get_val(item, 'email_vendedor')),
+                        nombre_cliente=SheetsService._to_str(SheetsService._get_val(item, 'nombre_cliente')),
+                        telefono=SheetsService._to_str(SheetsService._get_val(item, 'telefono')),
+                        mail_cliente=SheetsService._to_str(SheetsService._get_val(item, 'mail_cliente')),
+                        tipo_pago=SheetsService._to_str(SheetsService._get_val(item, 'tipo_pago')),
+                        monto=SheetsService._parse_float(SheetsService._get_val(item, 'monto')),
+                        segundo_pago=SheetsService._to_str(SheetsService._get_val(item, 'segundo_pago')),
+                        metodo_pago=SheetsService._to_str(SheetsService._get_val(item, 'metodo_pago')),
+                        examen=SheetsService._to_str(SheetsService._get_val(item, 'examen')),
+                        instagram=SheetsService._to_str(SheetsService._get_val(item, 'instagram')),
+                        setter=SheetsService._to_str(SheetsService._get_val(item, 'setter')),
+                        date=SheetsService._parse_date(
+                            SheetsService._get_val(item, 'fecha_venta') or
+                            SheetsService._get_val(item, 'date') or
+                            SheetsService._get_val(item, 'fecha') or
+                            SheetsService._get_val(item, 'marca_temporal')
+                        ),
+                        raw_data=item
+                    )
+                    db.session.add(sale)
+                except Exception as row_err:
+                    logger.error(f"[SHEETS SYNC] Error en fila {idx}: {row_err} - Data: {item}")
+                    continue
             db.session.commit()
             logger.info(f"[SHEETS SYNC] Ventas_DB reconstruida con {len(data_list)} registros.")
         except Exception as e:
@@ -126,6 +143,13 @@ class SheetsService:
             if k.lower() == key_lower:
                 return item[k]
         return None
+
+    @staticmethod
+    def _to_str(val):
+        """Convierte cualquier valor a string para evitar errores de tipo en PostgreSQL."""
+        if val is None: return None
+        s = str(val).strip()
+        return s if s else None
 
     @staticmethod
     def _parse_date(val):

@@ -72,17 +72,20 @@ const FinancialAnalysisPage = () => {
         await fetchSales();
     };
 
-    const filteredSales = sales.filter(sale => 
-        sale.setter_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredSales = sales.filter(sale => {
+        const setter = (sale.setter || '').toLowerCase();
+        const cliente = (sale.nombre_cliente || '').toLowerCase();
+        const term = searchTerm.toLowerCase();
+        return setter.includes(term) || cliente.includes(term);
+    });
 
     const openResolveModal = (sale) => {
         setResolvingSale(sale);
         setResolveFormData({
-            product: sale.producto === 'N/A' || sale.producto === 'Desconocido' ? '' : sale.producto,
-            payment_type: sale.payment_type === 'N/A' || sale.payment_type === 'Desconocido' ? '' : sale.payment_type,
-            setter_name: sale.setter_name === 'Desconocido' ? '' : sale.setter_name,
-            amount: sale.amount || ''
+            product: sale.tipo_pago || '',
+            payment_type: sale.metodo_pago || '',
+            setter_name: sale.setter || '',
+            amount: sale.monto || ''
         });
     };
 
@@ -107,7 +110,7 @@ const FinancialAnalysisPage = () => {
         }
     };
 
-    const totalAmount = sales.reduce((sum, sale) => sum + sale.amount, 0);
+    const totalAmount = sales.reduce((sum, sale) => sum + (sale.monto || 0), 0);
     const averageSale = sales.length > 0 ? totalAmount / sales.length : 0;
 
     return (
@@ -224,16 +227,16 @@ const FinancialAnalysisPage = () => {
                                             </div>
                                         </td>
                                         <td className="py-4 px-4">
-                                            <span className="text-sm font-bold text-white">{sale.cliente}</span>
+                                            <span className="text-sm font-bold text-white">{sale.nombre_cliente || 'Desconocido'}</span>
                                         </td>
                                         <td className="py-4 px-4">
                                             <Badge variant="amber" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider border-amber-500/30">
-                                                {sale.closer}
+                                                {sale.email_vendedor || 'Sin closer'}
                                             </Badge>
                                         </td>
                                         <td className="py-4 px-4">
                                             <Badge variant="indigo" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider">
-                                                {sale.setter_name}
+                                                {sale.setter || 'N/A'}
                                             </Badge>
                                         </td>
                                         <td className="py-4 px-4 text-center">
@@ -252,11 +255,11 @@ const FinancialAnalysisPage = () => {
                                             )}
                                         </td>
                                         <td className="py-4 px-4">
-                                            <span className="text-[10px] font-black text-muted uppercase tracking-widest bg-white/5 py-1 px-2 rounded-lg">{sale.producto}</span>
+                                            <span className="text-[10px] font-black text-muted uppercase tracking-widest bg-white/5 py-1 px-2 rounded-lg">{sale.tipo_pago || 'N/A'}</span>
                                         </td>
                                         <td className="py-4 px-4">
                                             <span className="text-sm font-black text-success tracking-tighter">
-                                                ${sale.amount.toLocaleString()}
+                                                ${(sale.monto || 0).toLocaleString()}
                                             </span>
                                         </td>
                                         <td className="py-4 px-4 text-right">

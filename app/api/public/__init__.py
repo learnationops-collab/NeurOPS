@@ -505,9 +505,6 @@ def update_financial_sale(sale_id):
         if 'amount' in data:
             sale.monto = float(data['amount'])
             
-        # If successfully submitted via the UI resolver, mark as resolved
-        sale.status = 'valid'
-        sale.error_notes = None
         
         db.session.commit()
         return jsonify({"message": "Venta actualizada correctamente", "sale": sale.to_dict()}), 200
