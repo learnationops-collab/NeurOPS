@@ -18,13 +18,16 @@ def sync_sheets():
     if not tabla:
         return jsonify({"status": "error", "message": "Parámetro 'tabla' es requerido"}), 400
     
-    if tabla not in ('Agendas_DB', 'Ventas_DB'):
+    if tabla not in ('Llamadas_DB', 'Ventas_DB'):
         return jsonify({"status": "error", "message": "Tabla no válida"}), 400
 
     result = SheetsService.sync_from_sheets(tabla)
     if result["status"] == "success":
+        logger.info(f"[SHEETS] Sync successful for {tabla}")
         return jsonify(result), 200
     else:
+        logger.error(f"[SHEETS] Sync failed for {tabla}: {result.get('message')}")
+        # Return 500 but include the message for the frontend to show
         return jsonify(result), 500
 
 @bp.route('/push', methods=['POST'])

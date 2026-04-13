@@ -30,7 +30,7 @@ class SheetsService:
                 logger.error(f"[SHEETS SYNC] Formato de respuesta no es lista: {data}")
                 return {"status": "error", "message": "Formato de datos inválido en la respuesta"}
 
-            if tabla == "Agendas_DB":
+            if tabla == "Llamadas_DB":
                 SheetsService._rebuild_agendas(data)
             elif tabla == "Ventas_DB":
                 SheetsService._rebuild_sales(data)
@@ -68,28 +68,24 @@ class SheetsService:
     @staticmethod
     def _rebuild_agendas(data_list):
         try:
-            # Borrar todo
             db.session.query(FinancialAgenda).delete()
-            
             for item in data_list:
-                # Mapeo flexible de campos (Sheets a DB)
                 agenda = FinancialAgenda(
-                    nombre=item.get('nombre'),
-                    registro=str(item.get('registro', '')),
-                    fecha_meet=str(item.get('fecha_meet', '')),
-                    whatsapp=item.get('whatsapp'),
-                    zona_geografica=item.get('zona_geografica'),
-                    closer=item.get('closer'),
-                    lead=item.get('lead'),
-                    mail=item.get('mail'),
-                    instagram=item.get('instagram'),
-                    date=SheetsService._parse_date(item.get('fecha_meet') or item.get('registro')),
+                    nombre=SheetsService._get_val(item, 'nombre'),
+                    registro=str(SheetsService._get_val(item, 'registro') or ''),
+                    fecha_meet=str(SheetsService._get_val(item, 'fecha_meet') or ''),
+                    whatsapp=SheetsService._get_val(item, 'whatsapp'),
+                    zona_geografica=SheetsService._get_val(item, 'zona_geografica'),
+                    closer=SheetsService._get_val(item, 'closer'),
+                    lead=SheetsService._get_val(item, 'lead'),
+                    mail=SheetsService._get_val(item, 'mail'),
+                    instagram=SheetsService._get_val(item, 'instagram'),
+                    date=SheetsService._parse_date(SheetsService._get_val(item, 'fecha_meet') or SheetsService._get_val(item, 'registro')),
                     raw_data=item
                 )
                 db.session.add(agenda)
-            
             db.session.commit()
-            logger.info(f"[SHEETS SYNC] Agendas_DB reconstruida con {len(data_list)} registros.")
+            logger.info(f"[SHEETS SYNC] Llamadas_DB reconstruida con {len(data_list)} registros.")
         except Exception as e:
             db.session.rollback()
             raise e
@@ -97,33 +93,39 @@ class SheetsService:
     @staticmethod
     def _rebuild_sales(data_list):
         try:
-            # Borrar todo
             db.session.query(FinancialSale).delete()
-            
             for item in data_list:
-                # Mapeo flexible de campos (Sheets a DB)
                 sale = FinancialSale(
-                    email_vendedor=item.get('email_vendedor'),
-                    nombre_cliente=item.get('nombre_cliente'),
-                    telefono=item.get('telefono'),
-                    mail_cliente=item.get('mail_cliente'),
-                    tipo_pago=item.get('tipo_pago'),
-                    monto=SheetsService._parse_float(item.get('monto')),
-                    segundo_pago=item.get('segundo_pago'),
-                    metodo_pago=item.get('metodo_pago'),
-                    examen=item.get('examen'),
-                    instagram=item.get('instagram'),
-                    setter=item.get('setter'),
-                    date=SheetsService._parse_date(item.get('fecha_venta') or item.get('date') or item.get('fecha')),
+                    email_vendedor=SheetsService._get_val(item, 'email_vendedor'),
+                    nombre_cliente=SheetsService._get_val(item, 'nombre_cliente'),
+                    telefono=SheetsService._get_val(item, 'telefono'),
+                    mail_cliente=SheetsService._get_val(item, 'mail_cliente'),
+                    tipo_pago=SheetsService._get_val(item, 'tipo_pago'),
+                    monto=SheetsService._parse_float(SheetsService._get_val(item, 'monto')),
+                    segundo_pago=SheetsService._get_val(item, 'segundo_pago'),
+                    metodo_pago=SheetsService._get_val(item, 'metodo_pago'),
+                    examen=SheetsService._get_val(item, 'examen'),
+                    instagram=SheetsService._get_val(item, 'instagram'),
+                    setter=SheetsService._get_val(item, 'setter'),
+                    date=SheetsService._parse_date(SheetsService._get_val(item, 'fecha_venta') or SheetsService._get_val(item, 'date') or SheetsService._get_val(item, 'fecha') or SheetsService._get_val(item, 'marca_temporal')),
                     raw_data=item
                 )
                 db.session.add(sale)
-            
             db.session.commit()
             logger.info(f"[SHEETS SYNC] Ventas_DB reconstruida con {len(data_list)} registros.")
         except Exception as e:
             db.session.rollback()
             raise e
+
+    @staticmethod
+    def _get_val(item, key):
+        if not item or not isinstance(item, dict): return None
+        if key in item: return item[key]
+        key_lower = key.lower()
+        for k in item.keys():
+            if k.lower() == key_lower:
+                return item[k]
+        return None
 
     @staticmethod
     def _parse_date(val):

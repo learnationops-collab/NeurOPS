@@ -44,7 +44,7 @@ const FinancialAgendasPage = () => {
             setLoading(true);
             setSyncing(true);
             setError(null);
-            await api.get('/sheets/sync', { params: { tabla: 'Agendas_DB' } });
+            await api.get('/sheets/sync', { params: { tabla: 'Llamadas_DB' } });
         } catch (err) {
             console.warn('Sync failed:', err);
         } finally {
