@@ -1,0 +1,6 @@
+- [x] Corregir lógica de agrupación de setters en `app/api/manychat.py`
+    - [x] Cambiar `ag.nombre` por `ag.lead` en agendas
+    - [x] Agregar conteo de ventas por `sale.setter`
+    - [x] Unificar métricas en `setter_stats`
+- [x] Mejorar UI en `frontend/src/pages/public/AdDashboardTab.jsx`
+- [ ] Verificar funcionamiento en el dashboard

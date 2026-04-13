@@ -457,13 +457,14 @@ def get_ad_dashboard_stats():
 
     # Agendas
     agendas_all = FinancialAgenda.query.filter(FinancialAgenda.date >= start_dt, FinancialAgenda.date <= end_dt).all()
-    agenda_igs_map = {} # IG -> setter_name
+    agenda_igs_map = {} # IG -> source/setter (lead field)
     for ag in agendas_all:
         ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
         ig_c = normalize_ig(ig_val)
         if ig_c:
-            # Si hay varios registros del mismo IG, guardamos una lista o el último setter
-            agenda_igs_map.setdefault(ig_c, []).append(ag.nombre)
+            # Usar 'lead' como la fuente/setter
+            source = ag.lead or 'S/F'
+            agenda_igs_map.setdefault(ig_c, []).append(source)
 
     # Ventas
     sales_in_period = FinancialSale.query.filter(FinancialSale.date >= start_dt, FinancialSale.date <= end_dt).all()
@@ -521,15 +522,27 @@ def get_ad_dashboard_stats():
         })
 
 
-    # Global Setter Stats
+    # Global Setter Stats (Agendas + Ventas)
     global_setters = {}
+    
+    # Agendas por Setter/Fuente
     for ag in agendas_all:
-        sname = ag.nombre or 'Otro'
-        global_setters[sname] = global_setters.get(sname, 0) + 1
+        sname = ag.lead or 'S/F'
+        if sname not in global_setters:
+            global_setters[sname] = {'agendas': 0, 'ventas': 0}
+        global_setters[sname]['agendas'] += 1
+        
+    # Ventas por Setter
+    for sale in sales_in_period:
+        sname = sale.setter or 'S/S'
+        if sname not in global_setters:
+            global_setters[sname] = {'agendas': 0, 'ventas': 0}
+        global_setters[sname]['ventas'] += 1
     
     setter_stats = sorted([
-        {'name': k, 'agendas': v} for k, v in global_setters.items()
-    ], key=lambda x: x['agendas'], reverse=True)
+        {'name': k, 'agendas': v['agendas'], 'ventas': v['ventas']} 
+        for k, v in global_setters.items()
+    ], key=lambda x: (x['ventas'], x['agendas']), reverse=True)
 
     result.sort(key=lambda x: x['total_leads'], reverse=True)
     return jsonify({

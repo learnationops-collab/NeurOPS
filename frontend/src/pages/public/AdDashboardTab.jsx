@@ -92,9 +92,18 @@ const AdDashboardTab = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                         {stats.setter_stats.map(setter => (
                             <div key={setter.name} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center group hover:border-emerald-500/50 transition-all shadow-lg">
-                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover:text-emerald-400 transition-colors">{setter.name}</p>
-                                <p className="text-2xl font-black text-white">{setter.agendas}</p>
-                                <p className="text-[8px] font-bold text-slate-600 uppercase mt-1">Agendas</p>
+                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 group-hover:text-emerald-400 transition-colors">{setter.name}</p>
+                                <div className="flex items-center gap-4">
+                                    <div className="text-center">
+                                        <p className="text-xl font-black text-white">{setter.agendas}</p>
+                                        <p className="text-[7px] font-bold text-slate-500 uppercase tracking-tighter">Agendas</p>
+                                    </div>
+                                    <div className="w-px h-6 bg-slate-800" />
+                                    <div className="text-center">
+                                        <p className="text-xl font-black text-amber-400">{setter.ventas || 0}</p>
+                                        <p className="text-[7px] font-bold text-slate-500 uppercase tracking-tighter">Ventas</p>
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </div>
