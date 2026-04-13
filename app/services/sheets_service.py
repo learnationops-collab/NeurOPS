@@ -137,11 +137,40 @@ class SheetsService:
 
     @staticmethod
     def _parse_float(val):
-        if val is None or val == '': return 0.0
+        """Convierte valores de Sheets a float de forma robusta."""
+        if val is None: return 0.0
+        s_val = str(val).strip()
+        if not s_val or s_val.lower() in ('n/a', 'nan', 'null', '-'): return 0.0
+        
         try:
-            if isinstance(val, str):
-                # Limpiar caracteres de moneda si existen
-                val = val.replace('$', '').replace(',', '').strip()
-            return float(val)
+            # 1. Limpieza inicial: quitar símbolo de moneda
+            s_val = s_val.replace('$', '').strip()
+            
+            # 2. Manejo de formatos internacionales (1.500,00 vs 1,500.00)
+            if ',' in s_val and '.' in s_val:
+                # Caso con ambos separadores
+                if s_val.find('.') < s_val.find(','):
+                    # Formato europeo/latam: 1.500,25 -> 1500.25
+                    s_val = s_val.replace('.', '').replace(',', '.')
+                else:
+                    # Formato standard: 1,500.25 -> 1500.25
+                    s_val = s_val.replace(',', '')
+            elif ',' in s_val:
+                # Solo coma: usualmente es el decimal en Latam, pero podría ser miles en US.
+                # Si hay más de un dígito tras la coma, la tratamos como decimal.
+                # EXCEPTO si hay exactamente 3 dígitos tras la coma y nada antes del punto? No.
+                # Regla general segura para este proyecto: coma -> punto.
+                s_val = s_val.replace(',', '.')
+            elif '.' in s_val:
+                # Solo punto: usualmente decimal. 
+                # Pero si es algo como "1.500", podría ser mil.
+                parts = s_val.split('.')
+                if len(parts) == 2 and len(parts[1]) == 3:
+                    # Es altamente probable que sea separador de miles (ej: 1.200)
+                    # si no hay decimales. Si fuera decimal sería 1.2 o 1.20.
+                    # En contexto de ventas, 1.200 es más probable que 1.2
+                    s_val = s_val.replace('.', '')
+
+            return float(s_val)
         except (ValueError, TypeError):
             return 0.0
