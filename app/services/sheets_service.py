@@ -139,11 +139,12 @@ class SheetsService:
         return None
 
     @staticmethod
-    def _to_str(val):
-        """Convierte cualquier valor a string para evitar errores de tipo en PostgreSQL."""
+    def _to_str(val, max_len=150):
+        """Convierte a string y trunca para evitar que Postgres rechace el registro si es muy largo."""
         if val is None: return None
         s = str(val).strip()
-        return s if s else None
+        if not s: return None
+        return s[:max_len]
 
     @staticmethod
     def _parse_date(val):
