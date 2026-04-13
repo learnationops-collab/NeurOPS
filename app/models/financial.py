@@ -15,10 +15,11 @@ class FinancialSale(db.Model):
     examen = db.Column(db.String(100), nullable=True)
     instagram = db.Column(db.String(100), nullable=True)
     setter = db.Column(db.String(100), nullable=True)
+    marca_temporal = db.Column(db.String(100), nullable=True)
     # Metadatos
     raw_data = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    date = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de venta oficial
+    date = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de venta oficial (basada en marca_temporal)
 
     def to_dict(self):
         return {
@@ -34,6 +35,7 @@ class FinancialSale(db.Model):
             "examen": self.examen,
             "instagram": self.instagram,
             "setter": self.setter,
+            "marca_temporal": self.marca_temporal,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "date": self.date.isoformat() if self.date else None
         }

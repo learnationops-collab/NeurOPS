@@ -72,19 +72,16 @@ class SheetsService:
             for idx, item in enumerate(data_list):
                 try:
                     agenda = FinancialAgenda(
-                        nombre=SheetsService._to_str(SheetsService._get_val(item, 'nombre')),
-                        registro=SheetsService._to_str(SheetsService._get_val(item, 'registro')),
-                        fecha_meet=SheetsService._to_str(SheetsService._get_val(item, 'fecha_meet')),
-                        whatsapp=SheetsService._to_str(SheetsService._get_val(item, 'whatsapp')),
-                        zona_geografica=SheetsService._to_str(SheetsService._get_val(item, 'zona_geografica')),
-                        closer=SheetsService._to_str(SheetsService._get_val(item, 'closer')),
-                        lead=SheetsService._to_str(SheetsService._get_val(item, 'lead')),
-                        mail=SheetsService._to_str(SheetsService._get_val(item, 'mail')),
-                        instagram=SheetsService._to_str(SheetsService._get_val(item, 'instagram')),
-                        date=SheetsService._parse_date(
-                            SheetsService._get_val(item, 'fecha_meet') or
-                            SheetsService._get_val(item, 'registro')
-                        ),
+                        nombre=SheetsService._to_str(item.get('nombre')),
+                        registro=SheetsService._to_str(item.get('registro')),
+                        fecha_meet=SheetsService._to_str(item.get('fecha_meet')),
+                        whatsapp=SheetsService._to_str(item.get('whatsapp')),
+                        zona_geografica=SheetsService._to_str(item.get('zona_geografica')),
+                        closer=SheetsService._to_str(item.get('closer')),
+                        lead=SheetsService._to_str(item.get('lead')),
+                        mail=SheetsService._to_str(item.get('mail')),
+                        instagram=SheetsService._to_str(item.get('instagram')),
+                        date=SheetsService._parse_date(item.get('fecha_meet') or item.get('registro')),
                         raw_data=item
                     )
                     db.session.add(agenda)
@@ -109,23 +106,19 @@ class SheetsService:
                 try:
                     # Sanitizar todos los campos a string antes de insertarlos
                     sale = FinancialSale(
-                        email_vendedor=SheetsService._to_str(SheetsService._get_val(item, 'email_vendedor')),
-                        nombre_cliente=SheetsService._to_str(SheetsService._get_val(item, 'nombre_cliente')),
-                        telefono=SheetsService._to_str(SheetsService._get_val(item, 'telefono')),
-                        mail_cliente=SheetsService._to_str(SheetsService._get_val(item, 'mail_cliente')),
-                        tipo_pago=SheetsService._to_str(SheetsService._get_val(item, 'tipo_pago')),
-                        monto=SheetsService._parse_float(SheetsService._get_val(item, 'monto')),
-                        segundo_pago=SheetsService._to_str(SheetsService._get_val(item, 'segundo_pago')),
-                        metodo_pago=SheetsService._to_str(SheetsService._get_val(item, 'metodo_pago')),
-                        examen=SheetsService._to_str(SheetsService._get_val(item, 'examen')),
-                        instagram=SheetsService._to_str(SheetsService._get_val(item, 'instagram')),
-                        setter=SheetsService._to_str(SheetsService._get_val(item, 'setter')),
-                        date=SheetsService._parse_date(
-                            SheetsService._get_val(item, 'fecha_venta') or
-                            SheetsService._get_val(item, 'date') or
-                            SheetsService._get_val(item, 'fecha') or
-                            SheetsService._get_val(item, 'marca_temporal')
-                        ),
+                        email_vendedor=SheetsService._to_str(item.get('email_vendedor')),
+                        nombre_cliente=SheetsService._to_str(item.get('nombre_cliente')),
+                        telefono=SheetsService._to_str(item.get('telefono')),
+                        mail_cliente=SheetsService._to_str(item.get('mail_cliente')),
+                        tipo_pago=SheetsService._to_str(item.get('tipo_pago')),
+                        monto=SheetsService._parse_float(item.get('monto')),
+                        segundo_pago=SheetsService._to_str(item.get('segundo_pago')),
+                        metodo_pago=SheetsService._to_str(item.get('metodo_pago')),
+                        examen=SheetsService._to_str(item.get('examen')),
+                        instagram=SheetsService._to_str(item.get('instagram')),
+                        setter=SheetsService._to_str(item.get('setter')),
+                        marca_temporal=SheetsService._to_str(item.get('marca_temporal')),
+                        date=SheetsService._parse_date(item.get('marca_temporal')),
                         raw_data=item
                     )
                     db.session.add(sale)
