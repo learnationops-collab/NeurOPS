@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class SheetsService:
-    BASE_URL = "https://script.google.com/macros/s/AKfycbwoEQS0LeqUPzLnv06XKP2uTZpb72YigRnc21e4xB_2WSlWZQI_8pQ3RDUaesWzP4Qj/exec"
+    BASE_URL = "https://script.google.com/macros/s/AKfycbx5Dedw8MTavNQbzgpdWLmRyFPIVeDiuaKIB-j6NsaIS1wbegR4xpHq8BXs-QR2_Fr_/exec"
 
     @staticmethod
     def sync_from_sheets(tabla):
@@ -49,9 +49,9 @@ class SheetsService:
         Escritura (POST): Envía datos y si tiene éxito, dispara un GET.
         """
         try:
-            # Google Apps Script prefiere que el payload vaya como JSON
-            # y que el parámetro 'tabla' se pase en la URL o en el body
-            response = requests.post(f"{SheetsService.BASE_URL}?tabla={tabla}", json=payload, timeout=30)
+            # El nuevo Apps Script espera { "tabla": "...", "datos": { ... } }
+            body = {"tabla": tabla, "datos": payload}
+            response = requests.post(SheetsService.BASE_URL, json=body, timeout=30)
 
             if response.status_code in (200, 201, 302):
                 # Disparar sincronización automática para refrescar localmente
