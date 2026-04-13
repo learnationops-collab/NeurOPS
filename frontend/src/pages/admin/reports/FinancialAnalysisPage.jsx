@@ -16,6 +16,7 @@ import {
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
+import toast from 'react-hot-toast';
 
 const FinancialAnalysisPage = () => {
     const [sales, setSales] = useState([]);
@@ -60,10 +61,13 @@ const FinancialAnalysisPage = () => {
             setError(null);
             
             // 1. Sync new data from sheets
-            await api.post('/public/financial-sales/sync');
+            const res = await api.post('/public/financial-sales/sync');
+            toast.success(`Sincronización exitosa: ${res.data.added || 0} registros actualizados`);
             
         } catch (err) {
-            console.warn('Sync failed, falling back to existing DB data:', err);
+            const msg = err.response?.data?.message || err.message || 'Error desconocido';
+            console.warn('Sync failed:', err);
+            toast.error(`Error de sincronización: ${msg}`, { duration: 6000 });
         } finally {
             setSyncing(false);
         }

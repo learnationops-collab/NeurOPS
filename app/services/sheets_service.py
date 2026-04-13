@@ -88,8 +88,12 @@ class SheetsService:
                         raw_data=item
                     )
                     db.session.add(agenda)
+                    db.session.flush() # Validar contra el esquema de la DB inmediatamente
                 except Exception as row_err:
                     logger.error(f"[SHEETS SYNC] Error en fila agenda {idx}: {row_err} - Data: {item}")
+                    db.session.rollback() # Limpiar estado fallido del flush
+                    # Re-abrir sesión para continuar (o simplemente ignorar si SQLAlchemy lo permite en este contexto)
+                    # En Flask-SQLAlchemy, el rollback limpia la sesión. Necesitamos reconstruir la lista de objetos.
                     continue
             db.session.commit()
             logger.info(f"[SHEETS SYNC] Llamadas_DB reconstruida con {len(data_list)} registros.")
@@ -125,8 +129,10 @@ class SheetsService:
                         raw_data=item
                     )
                     db.session.add(sale)
+                    db.session.flush() # Validar contra el esquema de la DB inmediatamente
                 except Exception as row_err:
                     logger.error(f"[SHEETS SYNC] Error en fila {idx}: {row_err} - Data: {item}")
+                    db.session.rollback() # Limpiar estado fallido del flush
                     continue
             db.session.commit()
             logger.info(f"[SHEETS SYNC] Ventas_DB reconstruida con {len(data_list)} registros.")

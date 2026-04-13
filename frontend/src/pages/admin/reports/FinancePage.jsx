@@ -17,6 +17,7 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import ExpensesManagerModal from '../../../components/modals/ExpensesManagerModal';
+import toast from 'react-hot-toast';
 
 const FinancePage = () => {
     const [activeTab, setActiveTab] = useState('general');
@@ -170,10 +171,13 @@ const FinancePage = () => {
                         onClick={async () => {
                             try {
                                 setLoading(true);
-                                await api.get('/sheets/sync', { params: { tabla: 'Ventas_DB' } });
+                                const res = await api.get('/sheets/sync', { params: { tabla: 'Ventas_DB' } });
+                                toast.success(`Ventas sincronizadas: ${res.data.count || 0} registros`);
                                 await fetchAll();
                             } catch (err) {
+                                const msg = err.response?.data?.message || err.message || 'Error desconocido';
                                 console.error(err);
+                                toast.error(`Error al sincronizar ventas: ${msg}`);
                             } finally {
                                 setLoading(false);
                             }
