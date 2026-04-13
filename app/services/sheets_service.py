@@ -69,6 +69,7 @@ class SheetsService:
     def _rebuild_agendas(data_list):
         try:
             db.session.query(FinancialAgenda).delete()
+            objects = []
             for idx, item in enumerate(data_list):
                 try:
                     agenda = FinancialAgenda(
@@ -84,16 +85,12 @@ class SheetsService:
                         date=SheetsService._parse_date(item.get('fecha_meet') or item.get('registro')),
                         raw_data=item
                     )
-                    db.session.add(agenda)
-                    db.session.flush() # Validar contra el esquema de la DB inmediatamente
+                    objects.append(agenda)
                 except Exception as row_err:
-                    logger.error(f"[SHEETS SYNC] Error en fila agenda {idx}: {row_err} - Data: {item}")
-                    db.session.rollback() # Limpiar estado fallido del flush
-                    # Re-abrir sesión para continuar (o simplemente ignorar si SQLAlchemy lo permite en este contexto)
-                    # En Flask-SQLAlchemy, el rollback limpia la sesión. Necesitamos reconstruir la lista de objetos.
-                    continue
+                    logger.warning(f"[SHEETS SYNC] Fila agenda {idx} omitida: {row_err}")
+            db.session.add_all(objects)
             db.session.commit()
-            logger.info(f"[SHEETS SYNC] Llamadas_DB reconstruida con {len(data_list)} registros.")
+            logger.info(f"[SHEETS SYNC] Llamadas_DB reconstruida: {len(objects)}/{len(data_list)} registros.")
         except Exception as e:
             db.session.rollback()
             raise e
@@ -102,9 +99,9 @@ class SheetsService:
     def _rebuild_sales(data_list):
         try:
             db.session.query(FinancialSale).delete()
+            objects = []
             for idx, item in enumerate(data_list):
                 try:
-                    # Sanitizar todos los campos a string antes de insertarlos
                     sale = FinancialSale(
                         email_vendedor=SheetsService._to_str(item.get('email_vendedor')),
                         nombre_cliente=SheetsService._to_str(item.get('nombre_cliente')),
@@ -121,14 +118,12 @@ class SheetsService:
                         date=SheetsService._parse_date(item.get('marca_temporal')),
                         raw_data=item
                     )
-                    db.session.add(sale)
-                    db.session.flush() # Validar contra el esquema de la DB inmediatamente
+                    objects.append(sale)
                 except Exception as row_err:
-                    logger.error(f"[SHEETS SYNC] Error en fila {idx}: {row_err} - Data: {item}")
-                    db.session.rollback() # Limpiar estado fallido del flush
-                    continue
+                    logger.warning(f"[SHEETS SYNC] Fila venta {idx} omitida: {row_err}")
+            db.session.add_all(objects)
             db.session.commit()
-            logger.info(f"[SHEETS SYNC] Ventas_DB reconstruida con {len(data_list)} registros.")
+            logger.info(f"[SHEETS SYNC] Ventas_DB reconstruida: {len(objects)}/{len(data_list)} registros.")
         except Exception as e:
             db.session.rollback()
             raise e
