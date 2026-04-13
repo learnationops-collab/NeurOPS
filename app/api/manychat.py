@@ -629,39 +629,65 @@ def get_ad_details(ad_id):
         return ig_str.strip().lstrip('@').lower()
 
     # IGs vinculados a este anuncio
-    ad_igs = set()
     all_lead_igs = db.session.query(ManychatLead.ig).join(LeadAnswer, LeadAnswer.lead_id == ManychatLead.id)\
                    .filter(LeadAnswer.ad_id == ad_id, ManychatLead.ig != None).all()
+    
+    ad_igs = set()
     for row in all_lead_igs:
         ig_c = normalize_ig(row.ig)
         if ig_c: ad_igs.add(ig_c)
 
-
-    # Agendas atribuidas
-    all_agendas = FinancialAgenda.query.all()
     ag_count = 0
     setter_breakdown = {}
-    for ag in all_agendas:
-        ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
-        if normalize_ig(ig_val) in ad_igs:
-            ag_count += 1
-            sname = ag.nombre or 'Otro'
-            setter_breakdown[sname] = setter_breakdown.get(sname, 0) + 1
-
-    # Ventas atribuidas
-    all_sales = FinancialSale.query.all()
     v_count = 0
-    for sale in all_sales:
-        ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
-        ig_n = normalize_ig(ig_val)
-        if not ig_n: continue
+
+    if ad_igs:
+        # Agendas atribuidas - Filtramos por Instagram en la DB si es posible, o traemos una muestra más pequeña
+        # Dado que no podemos hacer clean_ig fácilmente en SQL (depende del motor), traemos las agendas recientes o todas pero con cuidado
+        # Mejoramos el filtro: traemos solo las que tienen algún instagram parecido
+        # O simplemente traemos todas pero solo si ad_igs no es gigante. 
+        # La mejor opción es filtrar en el loop pero habiendo filtrado por IGs en la query.
         
-        # Verificar si este IG tiene un lead en este anuncio previo a la venta
-        matched_lead = ManychatLead.query.filter(func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_n).first()
-        if matched_lead:
-            has_lead = LeadAnswer.query.filter(LeadAnswer.lead_id == matched_lead.id, LeadAnswer.ad_id == ad_id, LeadAnswer.created_at <= sale.date).first()
-            if has_lead:
-                v_count += 1
+        # Agendas
+        # Como los instagrams en FinancialAgenda pueden tener @ o variaciones, traemos los que tengan algo en ad_igs
+        # Pero SQL no deja hacer normalize_ig fácilmente. Usamos una aproximación o traemos solo las agendas
+        # que coincidan con los IGs (sin @).
+        
+        # Una mejor forma es buscar por una lista de posibles valores (con y sin @)
+        search_igs = list(ad_igs) + [f"@{ig}" for ig in ad_igs]
+        
+        relevant_agendas = FinancialAgenda.query.filter(
+            (FinancialAgenda.instagram.in_(search_igs)) | 
+            (FinancialAgenda.raw_data.cast(sa.String).contains(list(ad_igs)[0] if ad_igs else '---')) # Simplificación
+        ).all()
+        
+        # Si la query in_ es muy pesada, podemos simplemente traer las de los últimos N meses
+        # Pero si el usuario quiere "histórico completo", lo mejor es optimizar la comparación
+        
+        # Volvemos a una versión más robusta pero filtrada
+        all_agendas = FinancialAgenda.query.filter(FinancialAgenda.instagram != None).all()
+        for ag in all_agendas:
+            ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
+            if normalize_ig(ig_val) in ad_igs:
+                ag_count += 1
+                # En agendas, 'lead' suele ser el campo que indica la fuente/setter
+                sname = ag.lead or 'S/F'
+                setter_breakdown[sname] = setter_breakdown.get(sname, 0) + 1
+
+        # Ventas atribuidas
+        # Optimizamos trayendo solo ventas que tengan instagram
+        all_sales = FinancialSale.query.filter(FinancialSale.instagram != None).all()
+        for sale in all_sales:
+            ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
+            ig_n = normalize_ig(ig_val)
+            if not ig_n or ig_n not in ad_igs: continue
+            
+            # Verificar si este IG tiene un lead en este anuncio previo a la venta
+            matched_lead = ManychatLead.query.filter(func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_n).first()
+            if matched_lead:
+                has_lead = LeadAnswer.query.filter(LeadAnswer.lead_id == matched_lead.id, LeadAnswer.ad_id == ad_id, LeadAnswer.created_at <= sale.date).first()
+                if has_lead:
+                    v_count += 1
 
     return jsonify({
         'ad_id': ad_id,

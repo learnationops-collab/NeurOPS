@@ -71,6 +71,17 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                             <Loader2 size={32} className="animate-spin text-blue-500" />
                             <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Obteniendo Métricas...</p>
                         </div>
+                    ) : !details ? (
+                        <div className="flex-1 flex flex-col items-center justify-center py-20 gap-3">
+                            <X size={32} className="text-red-500" />
+                            <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Error al cargar datos del anuncio</p>
+                            <button 
+                                onClick={fetchDetails}
+                                className="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                            >
+                                Reintentar
+                            </button>
+                        </div>
                     ) : (
                         <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                             
