@@ -1,4 +1,6 @@
 import requests
+from datetime import datetime
+from dateutil import parser
 from app import db
 from app.models.financial import FinancialAgenda, FinancialSale
 import logging
@@ -81,6 +83,7 @@ class SheetsService:
                     lead=item.get('lead'),
                     mail=item.get('mail'),
                     instagram=item.get('instagram'),
+                    date=SheetsService._parse_date(item.get('fecha_meet') or item.get('registro')),
                     raw_data=item
                 )
                 db.session.add(agenda)
@@ -111,6 +114,7 @@ class SheetsService:
                     examen=item.get('examen'),
                     instagram=item.get('instagram'),
                     setter=item.get('setter'),
+                    date=SheetsService._parse_date(item.get('fecha_venta') or item.get('date') or item.get('fecha')),
                     raw_data=item
                 )
                 db.session.add(sale)
@@ -120,6 +124,14 @@ class SheetsService:
         except Exception as e:
             db.session.rollback()
             raise e
+
+    @staticmethod
+    def _parse_date(val):
+        if not val: return datetime.utcnow()
+        try:
+            return parser.parse(str(val))
+        except:
+            return datetime.utcnow()
 
     @staticmethod
     def _parse_float(val):

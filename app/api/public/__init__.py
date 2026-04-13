@@ -382,9 +382,12 @@ def receive_financial_sales():
 
         try:
             sale = FinancialSale(
-                setter_name=str(setter),
-                amount=float(monto),
+                setter=str(setter),
+                monto=float(monto),
                 date=sale_date,
+                nombre_cliente=item.get('nombre_cliente') or item.get('cliente') or 'Desconocido',
+                email_vendedor=item.get('email_vendedor') or item.get('vendedor_mail'),
+                instagram=item.get('instagram') or item.get('ig') or 'N/A',
                 raw_data=item
             )
             db.session.add(sale)
@@ -494,13 +497,13 @@ def update_financial_sale(sale_id):
         
     try:
         if 'product' in data:
-            sale.product = data['product']
+            sale.tipo_pago = data['product']
         if 'payment_type' in data:
-            sale.payment_type = data['payment_type']
+            sale.metodo_pago = data['payment_type']
         if 'setter_name' in data:
-            sale.setter_name = data['setter_name']
+            sale.setter = data['setter_name']
         if 'amount' in data:
-            sale.amount = float(data['amount'])
+            sale.monto = float(data['amount'])
             
         # If successfully submitted via the UI resolver, mark as resolved
         sale.status = 'valid'
@@ -547,9 +550,10 @@ def receive_financial_agendas():
             except: pass
 
         agenda = FinancialAgenda(
-            setter_name=str(setter).strip(),
-            client_name=item.get('lead') or item.get('cliente') or item.get('nombre') or 'Desconocido',
-            closer_name=item.get('closer') or item.get('vendedor') or 'Sin asignar',
+            nombre=str(setter).strip(),
+            lead=item.get('lead') or item.get('cliente') or item.get('nombre') or 'Desconocido',
+            closer=item.get('closer') or item.get('vendedor') or 'Sin asignar',
+            fecha_meet=dt_str or str(agenda_date),
             date=agenda_date,
             instagram=item.get('instagram') or item.get('ig') or 'N/A',
             raw_data=item

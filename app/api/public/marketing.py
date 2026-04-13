@@ -420,7 +420,7 @@ def get_sales_attribution_report():
     for sale in sales:
         row = {
             "sale_id": sale.id,
-            "fecha_venta": (sale.created_at or sale.date).isoformat() if hasattr(sale, 'created_at') else None,
+            "fecha_venta": sale.date.isoformat() if sale.date else sale.created_at.isoformat(),
             "cliente": sale.nombre_cliente or 'Desconocido',
             "setter": sale.setter,
             "closer": (sale.raw_data or {}).get('vendedor') or (sale.raw_data or {}).get('closer') or 'Sin asignar',

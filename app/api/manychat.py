@@ -463,7 +463,7 @@ def get_ad_dashboard_stats():
         ig_c = normalize_ig(ig_val)
         if ig_c:
             # Si hay varios registros del mismo IG, guardamos una lista o el último setter
-            agenda_igs_map.setdefault(ig_c, []).append(ag.setter_name)
+            agenda_igs_map.setdefault(ig_c, []).append(ag.nombre)
 
     # Ventas
     sales_in_period = FinancialSale.query.filter(FinancialSale.date >= start_dt, FinancialSale.date <= end_dt).all()
@@ -524,7 +524,7 @@ def get_ad_dashboard_stats():
     # Global Setter Stats
     global_setters = {}
     for ag in agendas_all:
-        sname = ag.setter_name or 'Otro'
+        sname = ag.nombre or 'Otro'
         global_setters[sname] = global_setters.get(sname, 0) + 1
     
     setter_stats = sorted([
@@ -632,7 +632,7 @@ def get_ad_details(ad_id):
         ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
         if normalize_ig(ig_val) in ad_igs:
             ag_count += 1
-            sname = ag.setter_name or 'Otro'
+            sname = ag.nombre or 'Otro'
             setter_breakdown[sname] = setter_breakdown.get(sname, 0) + 1
 
     # Ventas atribuidas
