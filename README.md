@@ -17,7 +17,7 @@ cd NeurOPS
 
 ### 2. Crear Entorno Virtual
 
-Es recomendable usar un entorno virtual para aislar las dependencias.
+Es recomendable usar un entorno virtual para aislar las dependencias de Python.
 
 ```bash
 # Crear entorno llamado 'env'
@@ -25,10 +25,9 @@ python -m venv env
 
 # Activar entorno (Windows)
 env\Scripts\activate
-
 ```
 
-### 3. Instalar Dependencias
+### 3. Instalar Dependencias del Backend
 
 Instala las librerías necesarias listadas en `requirements.txt`:
 
@@ -36,7 +35,16 @@ Instala las librerías necesarias listadas en `requirements.txt`:
 pip install -r requirements.txt
 ```
 
-### 4. Configurar Variables de Entorno
+### 4. Instalar Dependencias del Frontend
+
+Navega a la carpeta del frontend (React/Vite) e instala sus dependencias:
+
+```bash
+cd frontend
+npm install
+```
+
+### 5. Configurar Variables de Entorno
 
 Crea un archivo `.env` en la raíz del proyecto (junto a `run.py`) con el siguiente contenido base:
 
@@ -50,59 +58,70 @@ FLASK_APP=run.py
 FLASK_ENV=development
 ```
 
-### 5. Inicializar Base de Datos y Migraciones
+### 6. Inicializar Base de Datos y Migraciones
 
-El proyecto usa Flask-Migrate (Alembic).
+El proyecto usa Flask-Migrate (Alembic) para la base de datos (SQLite en local).
 
 ```bash
-# Inicializar carpeta de migraciones (solo si no existe la carpeta 'migrations')
+# Inicializar carpeta de migraciones (solo si no existe)
 flask db init
 
-# Crear migración inicial (si es nueva DB o hay cambios en modelos)
+# Crear migración inicial (y en cada cambio de app/models.py)
 flask db migrate -m "Initial migration"
 
 # Aplicar cambios a la base de datos (crea las tablas en local.db)
 flask db upgrade
 ```
 
-### 6. Crear Usuario Administrador
+### 7. Crear Usuario Administrador
 
-Hemos incluido un script para facilitar esto. Ejecuta:
+Hemos incluido un script para facilitar esto. Ejecuta en la raíz:
 
 ```bash
 python scripts/create_admin.py
 ```
 Sigue las instrucciones en pantalla.
-*   **Usuario por defecto sugerido:** `admin`
-*   **Contraseña por defecto sugerida:** `admin123`
 
-### 7. Ejecutar el Servidor
+### 8. Ejecutar el Entorno de Desarrollo
 
-Inicia la aplicación:
+Para trabajar en local, debes levantar ambos servicios:
 
+**Backend (API Flask):**
 ```bash
+# Verifica que el entorno virtual esté activo
 python run.py
 ```
-Accede en tu navegador a: `http://localhost:5000`
+La API estará expuesta en `http://localhost:5000`
+
+**Frontend (SPA React/Vite):**
+```bash
+# En una nueva terminal
+cd frontend
+npm run dev
+```
+La interfaz estará expuesta en `http://localhost:5173`
 
 ---
 
 ## Estructura del Proyecto
 
-*   `app/`: Código fuente (Blueprints, Templates, Static).
-    *   `admin/`: Rutas y lógica de administración.
-    *   `closer/`: Rutas y lógica para closers.
-    *   `models.py`: Modelos de base de datos (SQLAlchemy).
-*   `migrations/`: Archivos de control de versiones de la BD.
-*   `instance/`: Contiene la base de datos SQLite local (`local.db`).
-*   `scripts/`: Scripts de utilidad (creación de usuarios, seeders).
+*   `app/`: Código fuente del Backend (Python/Flask)
+    *   `api/`: Blueprints de la API (JSON endpoints)
+    *   `models.py`: Definición de bases de datos
+    *   `__init__.py`: Factory de la aplicación Flask
+*   `frontend/`: Código fuente del Frontend (React/Vite)
+    *   `src/`: Componentes, Pages, Contexts
+    *   `package.json`: Dependencias de Node
+*   `migrations/`: Archivos de control de versiones de BD (Alembic)
+*   `instance/`: Base de datos local (SQLite `local.db`)
+*   `scripts/`: Scripts de utilidad.
 
-## Despliegue
+## Arquitectura y Despliegue
 
-## Arquitectura y Mantenimiento
-
-*   **Arquitectura Detallada**: Ver `arquitectura.txt` para especificaciones del stack y despliegue.
-*   **Design System & IA Rules**: Para mantener la coherencia visual y técnica, consulta `ANTIGRAVITY_RULES.md`. Este archivo contiene las guías sobre el sistema de temas y componentes UI para desarrolladores y asistentes IA.
+*   **Backend**: Python, Flask, SQLAlchemy. Funciona como un Monolito API (API RESTful JSON).
+*   **Frontend**: Single Page Application (SPA) con React, Vite, Tailwind CSS y ShadcnUI.
+*   **Producción**: En el entorno productivo, el backend Flask sirve los archivos estáticos compilados desde `frontend/dist` en la ruta `/`.
+*   **Mantenimiento**: Ver los guidelines en la memoria y archivos de reglas provistos para más información.
 
 ## Licencia
-© 2026 LeadOps Automation. Todos los derechos reservados. (Deployment trigger)
+© 2026 LeadOps Automation. Todos los derechos reservados.
