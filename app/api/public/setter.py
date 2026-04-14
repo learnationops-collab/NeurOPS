@@ -139,6 +139,9 @@ def submit_public_setter_report():
         if question_id:
             answers_json[question_id] = answer_text
             
+    if 'frequent_questions' in data:
+        answers_json['frequent_questions'] = data.get('frequent_questions')
+            
     stat.answers = answers_json
     
     try:

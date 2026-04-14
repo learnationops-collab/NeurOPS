@@ -9,7 +9,8 @@ import {
     Send,
     AlertCircle,
     CheckCircle2,
-    Loader2
+    Loader2,
+    HelpCircle
 } from 'lucide-react';
 import api from '../../../services/api';
 import Card from '../../../components/ui/Card';
@@ -30,6 +31,7 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
     const [fixedStats, setFixedStats] = useState({ not_lead: '' });
     const [funnelStats, setFunnelStats] = useState({});
     const [answers, setAnswers] = useState({});
+    const [frequentQuestions, setFrequentQuestions] = useState([{ number: '', is_good: false }]);
 
     useEffect(() => {
         if (isOpen) {
@@ -61,11 +63,19 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
                 });
                 setFunnelStats(updatedFunnel);
                 setAnswers(existingReport.answers || {});
+                
+                // Extraer frequent questions si existe
+                let freq = existingReport.answers?.frequent_questions;
+                if (!freq || typeof freq === 'string' || !Array.isArray(freq)) {
+                    freq = [{ number: '', is_good: false }];
+                }
+                setFrequentQuestions(freq);
             } else {
                 setFormData({ date: reportDate || new Date().toISOString().split('T')[0] });
                 setFixedStats({ not_lead: '' });
                 setFunnelStats(initialFunnel);
                 setAnswers({});
+                setFrequentQuestions([{ number: '', is_good: false }]);
             }
         } catch (err) {
             console.error("Error initializing report modal:", err);
@@ -91,6 +101,14 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
         setAnswers(prev => ({ ...prev, [qId]: value }));
     };
 
+    const handleFrequentQuestionChange = (index, field, value) => {
+        setFrequentQuestions(prev => {
+            const up = [...prev];
+            up[index] = { ...up[index], [field]: value };
+            return up;
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitting(true);
@@ -111,7 +129,8 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
                 date: formData.date,
                 ...fixedStats,
                 funnel_metrics: funnelMetricsList,
-                answers: answersList
+                answers: answersList,
+                frequent_questions: frequentQuestions
             });
             if (onSuccess) onSuccess();
             onClose();
@@ -232,6 +251,49 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
                                             </div>
                                         ))}
                                     </div>
+                                    
+                                    {/* Eficacia de preguntas */}
+                                    <div className="flex items-center gap-3 mb-4 mt-8">
+                                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
+                                            <HelpCircle size={18} />
+                                        </div>
+                                        <h3 className="text-xs font-black text-white uppercase tracking-widest">Eficacia de Pregunta</h3>
+                                    </div>
+                                    
+                                    <div className="space-y-4">
+                                        {frequentQuestions.map((q, idx) => (
+                                            <div key={idx} className="flex flex-col gap-4 p-4 bg-main/50 border border-base rounded-2xl">
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted">Número de Pregunta</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Ej. 1, 2 o ID"
+                                                        className="w-full px-5 py-4 bg-main border border-base text-white rounded-2xl outline-none focus:ring-2 focus:ring-amber-500/20 transition-all font-bold text-sm"
+                                                        value={q.number}
+                                                        onChange={e => handleFrequentQuestionChange(idx, 'number', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between mt-2 pt-4 border-t border-base/50">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted">¿Fue buena?</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${q.is_good ? 'text-amber-500' : 'text-muted'}`}>
+                                                            {q.is_good ? 'SÍ, EFECTIVA' : 'NO, MALA'}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleFrequentQuestionChange(idx, 'is_good', !q.is_good)}
+                                                            className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none ${q.is_good ? 'bg-amber-500' : 'bg-surface'}`}
+                                                        >
+                                                            <span
+                                                                className={`inline-block h-6 w-6 transform rounded-full bg-white transition duration-300 ease-in-out ${q.is_good ? 'translate-x-7' : 'translate-x-1'}`}
+                                                            />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
                                 </div>
                             </div>
                         </form>
