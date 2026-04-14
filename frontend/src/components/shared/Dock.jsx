@@ -141,7 +141,7 @@ const Dock = () => {
                             </button>
 
                             {/* Dropdown Menu */}
-                            <div className="absolute bottom-full right-0 mb-5 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+                            <div className="absolute bottom-full right-0 pb-5 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-300 translate-y-2 group-hover:translate-y-0">
                                 <div className="bg-[#1a1c23]/95 backdrop-blur-2xl border border-white/5 rounded-3xl p-4 shadow-2xl min-w-[220px]">
                                     <div className="px-2 py-2 border-b border-white/5 mb-3">
                                         <p className="text-[10px] font-black text-muted uppercase tracking-widest">Personal Account</p>
