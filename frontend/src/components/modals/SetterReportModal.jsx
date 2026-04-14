@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, X, Send, Calendar, ListChecks, Inbox, MessageSquare, Filter, RefreshCw } from 'lucide-react';
+import { Loader2, X, Send, Calendar, ListChecks, Inbox, MessageSquare, Filter, RefreshCw, HelpCircle } from 'lucide-react';
 import FunnelChart from '../../components/charts/FunnelChart';
 
 const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly = false, isLightMode = false }) => {
@@ -58,7 +58,8 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
         follow_up_submitted: '',
         follow_up_responded: '',
 
-        answers: []
+        answers: [],
+        frequent_questions: [{ number: '', is_good: false }]
     });
 
     // Auto-calculate Leads
@@ -105,6 +106,14 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
                 a.question_id === questionId ? { ...a, answer: value } : a
             )
         }));
+    };
+
+    const handleFrequentQuestionChange = (index, field, value) => {
+        setFormData(prev => {
+            const up = [...prev.frequent_questions];
+            up[index] = { ...up[index], [field]: value };
+            return { ...prev, frequent_questions: up };
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -377,6 +386,44 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
                                     </div>
                                 </div>
 
+                            </div>
+
+                            {/* EFICACIA DE PREGUNTAS (FRECUENTES) */}
+                            <div className="space-y-2">
+                                <div className="bg-slate-900 border border-slate-800 shadow-xl rounded-3xl p-6 transition-colors duration-500">
+                                    <SectionHeader icon={HelpCircle} title="Eficacia de Pregunta" colorClass="text-amber-500" isLightMode={false} />
+                                    <div className="space-y-4">
+                                        {formData.frequent_questions.map((q, idx) => (
+                                            <div key={idx} className="flex items-center gap-6 p-4 bg-slate-800/30 border border-slate-700/50 rounded-2xl">
+                                                <div className="flex-1 space-y-2">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400">Número de Pregunta</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Ej. 1, 2 o ID"
+                                                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 text-white rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 transition-all font-bold"
+                                                        value={q.number}
+                                                        onChange={e => handleFrequentQuestionChange(idx, 'number', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="flex-1 flex flex-col items-center justify-center space-y-3">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">¿Fue buena la pregunta?</label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleFrequentQuestionChange(idx, 'is_good', !q.is_good)}
+                                                        className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors duration-300 focus:outline-none ${q.is_good ? 'bg-amber-500' : 'bg-slate-700'}`}
+                                                    >
+                                                        <span
+                                                            className={`inline-block h-6 w-6 transform rounded-full bg-white transition duration-300 ease-in-out ${q.is_good ? 'translate-x-9' : 'translate-x-1'}`}
+                                                        />
+                                                    </button>
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${q.is_good ? 'text-amber-500' : 'text-slate-500'}`}>
+                                                        {q.is_good ? 'SÍ, EFECTIVA' : 'NO, MALA'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
 
                             {/* QUALITATIVE DATA */}

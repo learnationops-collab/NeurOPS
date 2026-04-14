@@ -395,6 +395,11 @@ def submit_daily_report():
         answer_text = str(ans.get('answer', ''))
         if question_id:
             answers_json[question_id] = answer_text
+            
+    # Include frequent questions feedback if present
+    freq_q = data.get('frequent_questions')
+    if freq_q is not None:
+        answers_json['frequent_questions'] = freq_q
     
     stat.answers = answers_json
             
