@@ -5,3 +5,4 @@
   - Se añadieron componentes interactivos (input numérico y switch con tailwind) en la UI del `PublicSetterReportPage`.
   - Se corrigió un error de usabilidad en el componente `Dock.jsx` que impedía interactuar con el botón de "Cerrar Sesión".
   - Todos los cambios de backend se adaptaron para manejar adecuadamente métricas de `frequent_questions` a través del esquema JSON.
+  - Limpieza de directorio raíz ("Clean Architecture"): organización de manuales hacia `docs/`, logs y crashes hacia `logs/`, centralización de herramientas bajo `scripts/` y eliminación de archivos residuales como keys expuestos.
