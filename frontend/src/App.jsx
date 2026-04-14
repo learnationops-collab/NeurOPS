@@ -149,7 +149,7 @@ function App() {
               element={
                 <ProtectedRoute roles={['setter']}>
                   <MainLayout>
-                    <SetterStatisticsPage />
+                    <PublicSetterStatsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

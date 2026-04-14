@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import {
     Loader2, TrendingUp, BarChart3, PieChart, Users,
@@ -6,7 +8,7 @@ import {
     Filter, Inbox, MessageSquare, RefreshCw, Layers,
     ChevronRight, ArrowRight, ArrowDownRight, ArrowUpRight,
     Copy, Calendar, Info, ArrowRightLeft, ListChecks, Table,
-    Activity, Zap, BarChart
+    Activity, Zap, BarChart, PenTool
 } from 'lucide-react';
 import FunnelChart from '../../components/charts/FunnelChart';
 import EvolutionChart from '../../components/charts/EvolutionChart';
@@ -14,6 +16,9 @@ import SetterReportsTable from './SetterReportsTable';
 import SetterComparisonView from './SetterComparisonView';
 
 const PublicSetterStatsPage = () => {
+    const auth = useAuth();
+    const user = auth?.user || { role: 'admin' };
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('general'); // 'general', 'comparison', 'reports'
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -21,7 +26,7 @@ const PublicSetterStatsPage = () => {
 
     // Filters for General & Comparison
     const [filters, setFilters] = useState({
-        setter_id: '',
+        setter_id: user.role === 'setter' && user.id ? user.id.toString() : '',
         start_date: '',
         end_date: '',
         agg_type: 'sum',
@@ -251,27 +256,42 @@ const PublicSetterStatsPage = () => {
                         <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] ml-1">NeurOPS High Performance Analytics</p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 bg-white/60 p-2 rounded-[2rem] border border-white shadow-sm backdrop-blur-sm">
-                        <TabButton id="general" label="Vista General" icon={BarChart3} />
-                        <TabButton id="comparison" label="Comparación" icon={ArrowRightLeft} />
-                        <TabButton id="reports" label="Registros" icon={Table} />
+                    <div className="flex flex-wrap items-center gap-4">
+                        {user.role === 'setter' && (
+                            <button
+                                onClick={() => navigate('/setter/report')}
+                                className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-colors"
+                            >
+                                <PenTool size={16} />
+                                Completar Reporte Diario
+                            </button>
+                        )}
+                        <div className="flex items-center gap-2 bg-white/60 p-2 rounded-[2rem] border border-white shadow-sm backdrop-blur-sm">
+                            <TabButton id="general" label="Vista General" icon={BarChart3} />
+                            {user.role !== 'setter' && (
+                                <TabButton id="comparison" label="Comparación" icon={ArrowRightLeft} />
+                            )}
+                            <TabButton id="reports" label="Registros" icon={Table} />
+                        </div>
                     </div>
                 </div>
 
                 {/* FILTERS BAR (Only for General) */}
                 {activeTab === 'general' && (
                     <div className="flex flex-wrap items-center gap-6 bg-white/80 p-6 rounded-[2rem] border border-white shadow-xl backdrop-blur-md">
-                        <div className="flex flex-col gap-2">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Setter / Equipo</label>
-                            <select
-                                className="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500 transition-all cursor-pointer min-w-[200px]"
-                                value={filters.setter_id}
-                                onChange={e => setFilters({ ...filters, setter_id: e.target.value })}
-                            >
-                                <option value="">Todo el Equipo ({filters.agg_type === 'sum' ? 'Suma' : 'Promedio'})</option>
-                                {setters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
+                        {user.role !== 'setter' && (
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Setter / Equipo</label>
+                                <select
+                                    className="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500 transition-all cursor-pointer min-w-[200px]"
+                                    value={filters.setter_id}
+                                    onChange={e => setFilters({ ...filters, setter_id: e.target.value })}
+                                >
+                                    <option value="">Todo el Equipo ({filters.agg_type === 'sum' ? 'Suma' : 'Promedio'})</option>
+                                    {setters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            </div>
+                        )}
 
                         <div className="flex flex-col gap-2">
                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Periodo</label>

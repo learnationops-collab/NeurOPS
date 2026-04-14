@@ -419,18 +419,19 @@ def get_stats_summary():
     from sqlalchemy import func
     from datetime import date, timedelta
 
-    
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     
     # 1. Fetch Fixed Stats
     query_fixed = db.session.query(
         func.sum(SetterDailyStats.not_lead).label('total_not_lead'),
-        func.sum(SetterDailyStats.stage_1_value).label('total_stage_1'),
-        func.sum(SetterDailyStats.stage_2_value).label('total_stage_2'),
-        func.sum(SetterDailyStats.stage_3_value).label('total_stage_3'),
-        func.sum(SetterDailyStats.stage_4_value).label('total_stage_4'),
-        func.sum(SetterDailyStats.stage_5_value).label('total_stage_5')
+        func.sum(SetterDailyStats.inbox_entrantes).label('total_entrantes'),
+        func.sum(SetterDailyStats.inbox_leads).label('total_leads'),
+        func.sum(SetterDailyStats.funnel_qualification).label('total_qual'),
+        func.sum(SetterDailyStats.funnel_pain).label('total_pain'),
+        func.sum(SetterDailyStats.funnel_offer).label('total_offer'),
+        func.sum(SetterDailyStats.funnel_link).label('total_link'),
+        func.sum(SetterDailyStats.funnel_agenda).label('total_agenda')
     ).filter_by(setter_id=current_user.id)
     
     if start_date_str:
@@ -443,17 +444,33 @@ def get_stats_summary():
         
     fixed_stats = query_fixed.first()
     
-    # Map back to stage_id with names
-    stages_ordered = _get_setter_stages_ordered()
     stage_data = []
     if fixed_stats:
-        vals = [fixed_stats.total_stage_1, fixed_stats.total_stage_2, fixed_stats.total_stage_3, fixed_stats.total_stage_4, fixed_stats.total_stage_5]
-        for i, s in enumerate(stages_ordered[:5]):
-            stage_data.append({
-                "id": s.id,
-                "name": s.name,
-                "value": int(vals[i] or 0)
-            })
+        vals = [
+            fixed_stats.total_qual,
+            fixed_stats.total_pain,
+            fixed_stats.total_offer,
+            fixed_stats.total_link,
+            fixed_stats.total_agenda
+        ]
+        
+        stages_ordered = _get_setter_stages_ordered()
+        if stages_ordered and len(stages_ordered) >= 5:
+            for i, s in enumerate(stages_ordered[:5]):
+                stage_data.append({
+                    "id": s.id,
+                    "name": s.name,
+                    "value": int(vals[i] or 0)
+                })
+        else:
+            # Fallback si no hay Custom Pipeline
+            default_labels = ["Cualificación", "Dolor", "Oferta", "Link", "Agenda"]
+            for i, label in enumerate(default_labels):
+                stage_data.append({
+                    "id": f"stage_{i}",
+                    "name": label,
+                    "value": int(vals[i] or 0)
+                })
     
     # Fetch pending agendas (appointments booked by this setter with no result)
     from app.models import Appointment
@@ -466,7 +483,7 @@ def get_stats_summary():
     
     return jsonify({
         "total_not_lead": int(fixed_stats.total_not_lead or 0) if fixed_stats else 0,
-        "total_leads": int(fixed_stats.total_stage_1 or 0) if fixed_stats else 0,
+        "total_leads": int(fixed_stats.total_entrantes or 0) if fixed_stats else 0,
         "stage_metrics": stage_data,
         "pending_agendas": [{
             "id": a.id,
