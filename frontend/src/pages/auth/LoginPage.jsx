@@ -24,7 +24,7 @@ const LoginPage = () => {
       if (user.role === 'admin') {
         navigate('/admin/ventas');
       } else if (user.role === 'setter') {
-        navigate('/setter/report');
+        navigate('/setter/statistics');
       } else if (user.role === 'triage') {
         navigate('/triage/report');
       } else if (user.role === 'closer') {

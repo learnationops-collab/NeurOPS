@@ -81,11 +81,11 @@ const SetterStatisticsPage = () => {
                 <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-base pb-10">
                     <div className="space-y-6">
                         <button
-                            onClick={() => window.close()}
-                            className="flex items-center gap-2 text-muted hover:text-base transition-all group"
+                            onClick={() => navigate('/setter/report')}
+                            className="flex items-center gap-2 text-primary hover:text-white transition-all group border border-primary/30 px-4 py-2 rounded-full hover:bg-primary/10 shadow-lg shadow-primary/5"
                         >
-                            <X size={18} className="group-hover:rotate-90 transition-transform duration-300" />
-                            <span className="font-black uppercase tracking-widest text-[9px]">Cerrar Panel de Estadísticas</span>
+                            <Target size={16} className="group-hover:scale-110 transition-transform duration-300" />
+                            <span className="font-black uppercase tracking-widest text-[10px]">Ir al Reporte Diario</span>
                         </button>
                         <div className="flex items-center gap-5">
                             <div className="p-4 bg-primary/10 rounded-[2rem] text-primary border border-primary/20 shadow-lg shadow-primary/5">

@@ -297,12 +297,18 @@ const PublicSetterReportPage = () => {
             <div className="w-full max-w-6xl mx-auto z-10 space-y-10">
                 {/* Dashboard Header */}
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div className="space-y-1">
-                        <p className="text-teal-600 font-black tracking-[0.2em] text-[10px] uppercase ml-1">NeurOPS High Performance</p>
-                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                            Setter Dashboard <span className="text-slate-300 font-light">/</span> <span className="text-indigo-600 italic">Report</span>
-                        </h1>
-                        <p className="text-slate-500 font-medium text-lg">Welcome back, <span className="text-slate-800 font-bold">{activeSetterName}</span> 👋</p>
+                    <div className="space-y-6 flex flex-col">
+                        <Link to="/setter/statistics" className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-500 transition-colors bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-full border border-indigo-100 w-max self-start shadow-sm">
+                            <ArrowLeft size={16} />
+                            <span className="font-black uppercase tracking-widest text-[10px]">Volver a Mis Estadísticas</span>
+                        </Link>
+                        <div className="space-y-1">
+                            <p className="text-teal-600 font-black tracking-[0.2em] text-[10px] uppercase ml-1">NeurOPS High Performance</p>
+                            <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                                Setter Dashboard <span className="text-slate-300 font-light">/</span> <span className="text-indigo-600 italic">Report</span>
+                            </h1>
+                            <p className="text-slate-500 font-medium text-lg">Welcome back, <span className="text-slate-800 font-bold">{activeSetterName}</span> 👋</p>
+                        </div>
                     </div>
                     
                     <div className="flex items-center gap-4 bg-white/60 backdrop-blur-md border border-white/40 p-4 rounded-[2rem] shadow-sm">
