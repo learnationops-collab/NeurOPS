@@ -1,5 +1,13 @@
 # Bitácora - Abril 2026
 
+- **15 de Abril de 2026**:
+  - **Métricas de Eficacia:** Se implementó el sistema de seguimiento de eficacia de preguntas, migrando de un esquema JSON flexible a columnas estructuradas en la base de datos (`q1_useful`, `q1_unuseful`, etc.).
+  - **Backend:** Se actualizaron todos los endpoints de reporte (`setter.py` y `public/setter.py`) para soportar la persistencia y agregación estadística de estas nuevas métricas.
+  - **Frontend:** Refactorización total de la sección de eficacia en `SetterReportModal` y `PublicSetterReportPage`, implementando una tabla de 2x2 para capturar datos granulares de las preguntas 1 y 2.
+  - **Dashboard:** Se integró la visualización de eficacia en `PublicSetterStatsPage` con un diseño minimalista posicionado al final del análisis de funnel, justo encima de las gráficas evolutivas.
+  - **Webhooks:** Se actualizó el generador de imágenes de Discord para incluir la nueva sección de eficacia de preguntas en el reporte premium.
+  - **Correcciones:** Se solucionó un error de pantalla blanca causado por un import faltante (`HelpCircle`) y se normalizó el cálculo de porcentajes en la UI.
+
 - **14 de Abril de 2026**:
   - Se actualizó el flujo de inicio de sesión (`App.jsx` y `LoginPage.jsx`) para que el usuario con rol de setter ingrese, por defecto, a su página de estadísticas (`/setter/statistics`).
   - Se enlazaron correctamente las vistas del reporte diario y las estadísticas del setter, añadiendo un botón en `StatisticsPage.jsx` hacia el reporte, y un botón en `PublicSetterReportPage.jsx` para retornar a las estadísticas, mejorando la navegación general.
