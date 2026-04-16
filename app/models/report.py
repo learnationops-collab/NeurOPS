@@ -86,6 +86,12 @@ class SetterDailyStats(db.Model):
     stage_4_value = db.Column(db.Integer, default=0)
     stage_5_value = db.Column(db.Integer, default=0)
     
+    # Question Efficacy Fields
+    q1_useful = db.Column(db.Integer, default=0)
+    q1_unuseful = db.Column(db.Integer, default=0)
+    q2_useful = db.Column(db.Integer, default=0)
+    q2_unuseful = db.Column(db.Integer, default=0)
+
     # Qualitative answers stored as a JSON dictionary: {question_id: answer_text}
     answers = db.Column(db.JSON, nullable=True)
     

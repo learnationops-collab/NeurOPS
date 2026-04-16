@@ -8,7 +8,7 @@ import {
     Filter, Inbox, MessageSquare, RefreshCw, Layers,
     ChevronRight, ArrowRight, ArrowDownRight, ArrowUpRight,
     Copy, Calendar, Info, ArrowRightLeft, ListChecks, Table,
-    Activity, Zap, BarChart, PenTool
+    Activity, Zap, BarChart, PenTool, HelpCircle
 } from 'lucide-react';
 import FunnelChart from '../../components/charts/FunnelChart';
 import EvolutionChart from '../../components/charts/EvolutionChart';
@@ -382,6 +382,8 @@ const PublicSetterStatsPage = () => {
                                     <StatCard title="FU Response" value={`${stats.percentages.rates.link_fur}%`} icon={RefreshCw} colorClass="text-rose-500" subtitle="Tasa Link FU" />
                                 </div>
 
+
+
                                 {/* SECCIÓN: INBOX COMPRENSIVO */}
                                 <div className="bg-white/80 border border-white rounded-[2.5rem] p-8 space-y-8 shadow-xl relative overflow-hidden group backdrop-blur-md">
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-6 relative z-10">
@@ -454,6 +456,36 @@ const PublicSetterStatsPage = () => {
                                                 </div>
                                             </div>
                                         </FunnelSubContainer>
+                                    </div>
+
+                                    {/* MINIMALIST EFFICACY SECTION */}
+                                    <div className="mt-12 pt-10 border-t border-slate-100">
+                                        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
+                                                    <Zap size={16} />
+                                                </div>
+                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Calidad de Preguntas</h4>
+                                            </div>
+                                            
+                                            <div className="flex-1 grid grid-cols-2 gap-4 w-full">
+                                                {[
+                                                    { id: 'q1', label: 'P1', metrics: stats?.percentages?.questions ? { total: stats.percentages.questions.q1_total, pct: stats.percentages.questions.q1_useful } : null },
+                                                    { id: 'q2', label: 'P2', metrics: stats?.percentages?.questions ? { total: stats.percentages.questions.q2_total, pct: stats.percentages.questions.q2_useful } : null }
+                                                ].map((q) => (
+                                                    <div key={q.id} className="flex items-center justify-between px-6 py-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 group hover:bg-white hover:shadow-sm transition-all duration-300">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-[10px] font-black text-amber-500 bg-amber-500/10 w-6 h-6 flex items-center justify-center rounded-lg">{q.label}</span>
+                                                            <span className="text-sm font-black text-slate-800 italic">{Number(q.metrics?.pct || 0).toFixed(1)}%</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter block leading-none mb-1">Total Resp</span>
+                                                            <span className="text-xs font-black text-slate-500 leading-none">{Number(q.metrics?.total || 0).toFixed(0)}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* SECCIÓN: HISTÓRICO DENTRO DE FUNNEL */}

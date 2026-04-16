@@ -75,6 +75,10 @@ def submit_public_setter_report():
         stat.qualification_opening_responded = int(data.get('qualification_opening_responded') or 0)
         stat.pain_opening_submitted = int(data.get('pain_opening_submitted') or 0)
         stat.pain_opening_responded = int(data.get('pain_opening_responded') or 0)
+        stat.q1_useful = int(data.get('q1_useful') or 0)
+        stat.q1_unuseful = int(data.get('q1_unuseful') or 0)
+        stat.q2_useful = int(data.get('q2_useful') or 0)
+        stat.q2_unuseful = int(data.get('q2_unuseful') or 0)
     else:
         stat = SetterDailyStats(
             setter_id=setter_id,
@@ -103,7 +107,11 @@ def submit_public_setter_report():
             qualification_opening_submitted=int(data.get('qualification_opening_submitted') or 0),
             qualification_opening_responded=int(data.get('qualification_opening_responded') or 0),
             pain_opening_submitted=int(data.get('pain_opening_submitted') or 0),
-            pain_opening_responded=int(data.get('pain_opening_responded') or 0)
+            pain_opening_responded=int(data.get('pain_opening_responded') or 0),
+            q1_useful=int(data.get('q1_useful') or 0),
+            q1_unuseful=int(data.get('q1_unuseful') or 0),
+            q2_useful=int(data.get('q2_useful') or 0),
+            q2_unuseful=int(data.get('q2_unuseful') or 0)
         )
         db.session.add(stat)
         
@@ -199,7 +207,13 @@ def get_public_setter_stats():
         func.sum(SetterDailyStats.qualification_opening_submitted).label('q_op_s'),
         func.sum(SetterDailyStats.qualification_opening_responded).label('q_op_r'),
         func.sum(SetterDailyStats.pain_opening_submitted).label('p_op_s'),
-        func.sum(SetterDailyStats.pain_opening_responded).label('p_op_r')
+        func.sum(SetterDailyStats.pain_opening_responded).label('p_op_r'),
+        
+        # Question Efficacy
+        func.sum(SetterDailyStats.q1_useful).label('q1_u'),
+        func.sum(SetterDailyStats.q1_unuseful).label('q1_i'),
+        func.sum(SetterDailyStats.q2_useful).label('q2_u'),
+        func.sum(SetterDailyStats.q2_unuseful).label('q2_i')
     )
     
     filters = []
@@ -262,9 +276,20 @@ def get_public_setter_stats():
             "qualification_opening_submitted": process_val(stats.q_op_s),
             "qualification_opening_responded": process_val(stats.q_op_r),
             "pain_opening_submitted": process_val(stats.p_op_s),
-            "pain_opening_responded": process_val(stats.p_op_r)
+            "pain_opening_responded": process_val(stats.p_op_r),
+            
+            "q1_useful": process_val(stats.q1_u),
+            "q1_unuseful": process_val(stats.q1_i),
+            "q2_useful": process_val(stats.q2_u),
+            "q2_unuseful": process_val(stats.q2_i)
         },
         "percentages": {
+            "questions": {
+                "q1_useful": div(float(stats.q1_u or 0), float(stats.q1_u or 0) + float(stats.q1_i or 0)),
+                "q2_useful": div(float(stats.q2_u or 0), float(stats.q2_u or 0) + float(stats.q2_i or 0)),
+                "q1_total": float(stats.q1_u or 0) + float(stats.q1_i or 0),
+                "q2_total": float(stats.q2_u or 0) + float(stats.q2_i or 0)
+            },
             "inbox": {
                 "leads": div(float(stats.leads or 0), entrantes),
                 "not_lead": div(float(stats.not_lead or 0), entrantes),
@@ -408,7 +433,11 @@ def get_public_setter_reports():
             "qualification_opening_submitted": r.qualification_opening_submitted,
             "qualification_opening_responded": r.qualification_opening_responded,
             "pain_opening_submitted": r.pain_opening_submitted,
-            "pain_opening_responded": r.pain_opening_responded
+            "pain_opening_responded": r.pain_opening_responded,
+            "q1_useful": r.q1_useful,
+            "q1_unuseful": r.q1_unuseful,
+            "q2_useful": r.q2_useful,
+            "q2_unuseful": r.q2_unuseful
         })
         
     return jsonify({
@@ -445,6 +474,10 @@ def update_public_setter_report(report_id):
         stat.pain_fur = int(data.get('pain_fur') or stat.pain_fur)
         stat.offer_fur = int(data.get('offer_fur') or stat.offer_fur)
         stat.agenda_fur = int(data.get('agenda_fur') or stat.agenda_fur)
+        stat.q1_useful = int(data.get('q1_useful') or stat.q1_useful)
+        stat.q1_unuseful = int(data.get('q1_unuseful') or stat.q1_unuseful)
+        stat.q2_useful = int(data.get('q2_useful') or stat.q2_useful)
+        stat.q2_unuseful = int(data.get('q2_unuseful') or stat.q2_unuseful)
         
         db.session.commit()
         return jsonify({"message": "Reporte actualizado"}), 200

@@ -31,7 +31,12 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
     const [fixedStats, setFixedStats] = useState({ not_lead: '' });
     const [funnelStats, setFunnelStats] = useState({});
     const [answers, setAnswers] = useState({});
-    const [frequentQuestions, setFrequentQuestions] = useState([{ number: '', is_good: false }]);
+    const [extraStats, setExtraStats] = useState({
+        q1_useful: '',
+        q1_unuseful: '',
+        q2_useful: '',
+        q2_unuseful: ''
+    });
 
     useEffect(() => {
         if (isOpen) {
@@ -64,18 +69,23 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
                 setFunnelStats(updatedFunnel);
                 setAnswers(existingReport.answers || {});
                 
-                // Extraer frequent questions si existe
-                let freq = existingReport.answers?.frequent_questions;
-                if (!freq || typeof freq === 'string' || !Array.isArray(freq)) {
-                    freq = [{ number: '', is_good: false }];
-                }
-                setFrequentQuestions(freq);
+                setExtraStats({
+                    q1_useful: existingReport.fixed_stats.q1_useful || '',
+                    q1_unuseful: existingReport.fixed_stats.q1_unuseful || '',
+                    q2_useful: existingReport.fixed_stats.q2_useful || '',
+                    q2_unuseful: existingReport.fixed_stats.q2_unuseful || ''
+                });
             } else {
                 setFormData({ date: reportDate || new Date().toISOString().split('T')[0] });
                 setFixedStats({ not_lead: '' });
                 setFunnelStats(initialFunnel);
                 setAnswers({});
-                setFrequentQuestions([{ number: '', is_good: false }]);
+                setExtraStats({
+                    q1_useful: '',
+                    q1_unuseful: '',
+                    q2_useful: '',
+                    q2_unuseful: ''
+                });
             }
         } catch (err) {
             console.error("Error initializing report modal:", err);
@@ -101,12 +111,8 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
         setAnswers(prev => ({ ...prev, [qId]: value }));
     };
 
-    const handleFrequentQuestionChange = (index, field, value) => {
-        setFrequentQuestions(prev => {
-            const up = [...prev];
-            up[index] = { ...up[index], [field]: value };
-            return up;
-        });
+    const handleExtraChange = (field, value) => {
+        setExtraStats(prev => ({ ...prev, [field]: value }));
     };
 
     const handleSubmit = async (e) => {
@@ -128,9 +134,9 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
             await api.post('/setter/daily-report', {
                 date: formData.date,
                 ...fixedStats,
+                ...extraStats,
                 funnel_metrics: funnelMetricsList,
-                answers: answersList,
-                frequent_questions: frequentQuestions
+                answers: answersList
             });
             if (onSuccess) onSuccess();
             onClose();
@@ -252,46 +258,54 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
                                         ))}
                                     </div>
                                     
-                                    {/* Eficacia de preguntas */}
+                                    {/* Eficacia de preguntas (REESTRUCTURADO) */}
                                     <div className="flex items-center gap-3 mb-4 mt-8">
                                         <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
                                             <HelpCircle size={18} />
                                         </div>
-                                        <h3 className="text-xs font-black text-white uppercase tracking-widest">Eficacia de Pregunta</h3>
+                                        <h3 className="text-xs font-black text-white uppercase tracking-widest">Eficacia de Preguntas</h3>
                                     </div>
                                     
                                     <div className="space-y-4">
-                                        {frequentQuestions.map((q, idx) => (
-                                            <div key={idx} className="flex flex-col gap-4 p-4 bg-main/50 border border-base rounded-2xl">
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted">Número de Pregunta</label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Ej. 1, 2 o ID"
-                                                        className="w-full px-5 py-4 bg-main border border-base text-white rounded-2xl outline-none focus:ring-2 focus:ring-amber-500/20 transition-all font-bold text-sm"
-                                                        value={q.number}
-                                                        onChange={e => handleFrequentQuestionChange(idx, 'number', e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="flex items-center justify-between mt-2 pt-4 border-t border-base/50">
-                                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted">¿Fue buena?</label>
-                                                    <div className="flex items-center gap-3">
-                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${q.is_good ? 'text-amber-500' : 'text-muted'}`}>
-                                                            {q.is_good ? 'SÍ, EFECTIVA' : 'NO, MALA'}
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleFrequentQuestionChange(idx, 'is_good', !q.is_good)}
-                                                            className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none ${q.is_good ? 'bg-amber-500' : 'bg-surface'}`}
-                                                        >
-                                                            <span
-                                                                className={`inline-block h-6 w-6 transform rounded-full bg-white transition duration-300 ease-in-out ${q.is_good ? 'translate-x-7' : 'translate-x-1'}`}
-                                                            />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr className="text-[8px] font-black text-muted uppercase tracking-widest">
+                                                        <th className="pb-2">Pregunta</th>
+                                                        <th className="pb-2 text-center">Servibles</th>
+                                                        <th className="pb-2 text-center">Inservibles</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-base/50">
+                                                    {[
+                                                        { label: 'Pregunta 1', keyU: 'q1_useful', keyI: 'q1_unuseful' },
+                                                        { label: 'Pregunta 2', keyU: 'q2_useful', keyI: 'q2_unuseful' }
+                                                    ].map((q) => (
+                                                        <tr key={q.label} className="group">
+                                                            <td className="py-4">
+                                                                <span className="text-[10px] font-black text-muted uppercase tracking-widest">{q.label}</span>
+                                                            </td>
+                                                            <td className="py-4 text-center">
+                                                                <input
+                                                                    type="number"
+                                                                    className="w-16 bg-main border border-base rounded-xl px-2 py-2 text-center font-black text-amber-500 text-xs focus:ring-2 focus:ring-amber-500/20 outline-none"
+                                                                    value={extraStats[q.keyU]}
+                                                                    onChange={e => handleExtraChange(q.keyU, e.target.value)}
+                                                                />
+                                                            </td>
+                                                            <td className="py-4 text-center">
+                                                                <input
+                                                                    type="number"
+                                                                    className="w-16 bg-main border border-base rounded-xl px-2 py-2 text-center font-black text-muted text-xs focus:ring-2 focus:ring-amber-500/20 outline-none"
+                                                                    value={extraStats[q.keyI]}
+                                                                    onChange={e => handleExtraChange(q.keyI, e.target.value)}
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
 
                                 </div>

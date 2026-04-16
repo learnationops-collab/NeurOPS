@@ -295,7 +295,11 @@ const SetterComparisonView = ({ setters }) => {
                                     { label: 'Evol. Qual → Pain', key: 'qual_to_pain', category: 'percentages.funnel_evolution', isPct: true },
                                     { label: 'Evol. Pain → Offer', key: 'pain_to_offer', category: 'percentages.funnel_evolution', isPct: true },
                                     { label: 'Evol. Offer → Link', key: 'offer_to_link', category: 'percentages.funnel_evolution', isPct: true },
-                                    { label: 'Evol. Link → Agenda', key: 'link_to_agenda', category: 'percentages.funnel_evolution', isPct: true },
+                                    {label: 'Evol. Link → Agenda', key: 'link_to_agenda', category: 'percentages.funnel_evolution', isPct: true },
+                                    { label: 'Eficacia Q1 (%)', key: 'q1_useful', category: 'percentages.questions', isPct: true },
+                                    { label: 'Total Q1', key: 'q1_total', category: 'percentages.questions' },
+                                    { label: 'Eficacia Q2 (%)', key: 'q2_useful', category: 'percentages.questions', isPct: true },
+                                    { label: 'Total Q2', key: 'q2_total', category: 'percentages.questions' },
                                 ].map((row, idx) => {
                                     const valA = row.category.split('.').reduce((obj, key) => obj[key], compA.data)[row.key];
                                     const valB = row.category.split('.').reduce((obj, key) => obj[key], compB.data)[row.key];

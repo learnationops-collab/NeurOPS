@@ -623,6 +623,30 @@
             </div>
         </div>
 
+        <!-- Eficacia de Preguntas -->
+        <div class="feedback-section" style="margin-bottom: 24px; border-top-color: var(--indigo); border-radius: 36px; padding: 24px;">
+            <div class="panel-header" style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                <div class="panel-icon" style="width: 40px; height: 40px; background: white; border: 1px solid #f1f5f9; border-radius: 12px; display: flex; align-items: center; justify-content: center;">💡</div>
+                <div class="panel-title" style="font-size: 18px; font-weight: 900; color: var(--text-main); text-transform: uppercase;">Eficacia de Preguntas</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                {% for q_key in ['q1', 'q2'] %}
+                <div style="background: white; border: 1px solid #f1f5f9; border-radius: 20px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 10px; font-weight: 900; color: var(--indigo); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">{{ 'Pregunta 1' if q_key == 'q1' else 'Pregunta 2' }}</div>
+                        <div style="font-size: 28px; font-weight: 900; color: var(--text-main);">{{ questions_efficacy[q_key].pct }}%</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 8px; font-weight: 800; color: var(--text-light); text-transform: uppercase; margin-bottom: 4px;">Servibles / Inservibles</div>
+                        <div style="font-size: 18px; font-weight: 900; color: var(--indigo);">
+                            {{ questions_efficacy[q_key].useful }}<span style="color: #cbd5e1; margin: 0 4px;">/</span>{{ questions_efficacy[q_key].unuseful }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
         {% if qualitative %}
         <div class="feedback-section">
             <div class="panel-header">

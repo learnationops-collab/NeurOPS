@@ -72,7 +72,10 @@ const PublicSetterReportPage = () => {
         qualification_opening_responded: '',
         pain_opening_submitted: '',
         pain_opening_responded: '',
-
+        q1_useful: '',
+        q1_unuseful: '',
+        q2_useful: '',
+        q2_unuseful: '',
         answers: [],
         frequent_questions: [{ number: '', is_good: false }]
     });
@@ -128,14 +131,6 @@ const PublicSetterReportPage = () => {
         }));
     };
 
-    const handleFrequentQuestionChange = (index, field, value) => {
-        setFormData(prev => {
-            const up = [...prev.frequent_questions];
-            up[index] = { ...up[index], [field]: value };
-            return { ...prev, frequent_questions: up };
-        });
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -170,8 +165,11 @@ const PublicSetterReportPage = () => {
                 qualification_opening_responded: '',
                 pain_opening_submitted: '',
                 pain_opening_responded: '',
-                answers: prev.answers.map(a => ({ ...a, answer: '' })),
-                frequent_questions: [{ number: '', is_good: false }]
+                q1_useful: '',
+                q1_unuseful: '',
+                q2_useful: '',
+                q2_unuseful: '',
+                answers: prev.answers.map(a => ({ ...a, answer: '' }))
             }));
 
         } catch (err) {
@@ -188,7 +186,8 @@ const PublicSetterReportPage = () => {
             'qualification_fu', 'pain_fu', 'offer_fu', 'link_fu', 'agenda_fu',
             'qualification_fur', 'pain_fur', 'offer_fur', 'link_fur', 'agenda_fur',
             'qualification_opening_submitted', 'qualification_opening_responded',
-            'pain_opening_submitted', 'pain_opening_responded'
+            'pain_opening_submitted', 'pain_opening_responded',
+            'q1_useful', 'q1_unuseful', 'q2_useful', 'q2_unuseful'
         ];
 
         let filledFields = 0;
@@ -538,41 +537,49 @@ const PublicSetterReportPage = () => {
                             </div>
                         </div>
 
-                        {/* EFICACIA DE PREGUNTAS (FRECUENTES) */}
+                        {/* EFICACIA DE PREGUNTAS (REESTRUCTURADO) */}
                         <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 md:p-12 shadow-sm border-t-8 border-t-amber-500">
-                            <SectionHeader icon={HelpCircle} title="Eficacia de Pregunta" colorClass="text-amber-500" />
-                            <div className="space-y-4">
-                                {formData.frequent_questions.map((q, idx) => (
-                                    <div key={idx} className="flex flex-col md:flex-row items-center gap-6 p-6 bg-amber-50/50 border border-amber-100 rounded-3xl">
-                                        <div className="flex-1 w-full space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-500/80">Número de Pregunta</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Ej. 1, 2 o ID"
-                                                className="w-full px-6 py-4 bg-white border border-slate-200 text-slate-900 rounded-[1.75rem] outline-none focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 transition-all font-black text-lg shadow-sm"
-                                                value={q.number}
-                                                onChange={e => handleFrequentQuestionChange(idx, 'number', e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="flex-1 w-full flex flex-col items-center justify-center space-y-4 py-4 md:py-0 border-t md:border-t-0 md:border-l border-slate-200">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500/80">¿Fue buena la pregunta?</label>
-                                            <div className="flex items-center gap-4">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleFrequentQuestionChange(idx, 'is_good', !q.is_good)}
-                                                    className={`relative inline-flex h-10 w-20 items-center rounded-full transition-colors duration-300 focus:outline-none ${q.is_good ? 'bg-amber-500' : 'bg-slate-300'}`}
-                                                >
-                                                    <span
-                                                        className={`inline-block h-8 w-8 transform rounded-full bg-white shadow-sm transition duration-300 ease-in-out ${q.is_good ? 'translate-x-11' : 'translate-x-1'}`}
+                            <SectionHeader icon={HelpCircle} title="Eficacia de Preguntas" colorClass="text-amber-500" />
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-separate border-spacing-y-4">
+                                    <thead>
+                                        <tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
+                                            <th className="text-left pl-6 pb-2">Pregunta</th>
+                                            <th className="text-center pb-2">Respuestas Servibles</th>
+                                            <th className="text-center pb-2">Respuestas Inservibles</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[
+                                            { label: 'Pregunta 1', keyU: 'q1_useful', keyI: 'q1_unuseful' },
+                                            { label: 'Pregunta 2', keyU: 'q2_useful', keyI: 'q2_unuseful' }
+                                        ].map((q) => (
+                                            <tr key={q.label} className="bg-amber-50/50 rounded-3xl overflow-hidden">
+                                                <td className="p-6 rounded-l-3xl border-y border-l border-amber-100">
+                                                    <span className="text-sm font-black text-slate-800 uppercase italic">{q.label}</span>
+                                                </td>
+                                                <td className="p-6 border-y border-amber-100 text-center">
+                                                    <input
+                                                        type="number"
+                                                        className="w-24 bg-white border border-amber-200 rounded-xl px-4 py-3 text-center font-black text-amber-600 outline-none focus:ring-4 focus:ring-amber-500/10 shadow-sm text-lg"
+                                                        value={formData[q.keyU]}
+                                                        onChange={e => handleFieldChange(q.keyU, e.target.value)}
+                                                        placeholder="0"
                                                     />
-                                                </button>
-                                                <span className={`text-[11px] font-black uppercase tracking-[0.15em] ${q.is_good ? 'text-amber-600' : 'text-slate-400'}`}>
-                                                    {q.is_good ? 'SÍ, EFECTIVA' : 'NO, MALA'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                                </td>
+                                                <td className="p-6 border-y border-r border-amber-100 rounded-r-3xl text-center">
+                                                    <input
+                                                        type="number"
+                                                        className="w-24 bg-white border border-amber-200 rounded-xl px-4 py-3 text-center font-black text-slate-500 outline-none focus:ring-4 focus:ring-amber-500/10 shadow-sm text-lg"
+                                                        value={formData[q.keyI]}
+                                                        onChange={e => handleFieldChange(q.keyI, e.target.value)}
+                                                        placeholder="0"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 

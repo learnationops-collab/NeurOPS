@@ -177,6 +177,10 @@ def _trigger_setter_report_webhook(stat):
             },
             
             "averages": avg_metrics,
+            "questions_efficacy": {
+                "q1": {"useful": stat.q1_useful or 0, "unuseful": stat.q1_unuseful or 0, "pct": safe_percent(stat.q1_useful or 0, (stat.q1_useful or 0) + (stat.q1_unuseful or 0))},
+                "q2": {"useful": stat.q2_useful or 0, "unuseful": stat.q2_unuseful or 0, "pct": safe_percent(stat.q2_useful or 0, (stat.q2_useful or 0) + (stat.q2_unuseful or 0))}
+            },
             "qualitative": qualitative_callouts
         }
 
@@ -281,7 +285,11 @@ def submit_daily_report():
                 "qualification_opening_submitted": stat.qualification_opening_submitted,
                 "qualification_opening_responded": stat.qualification_opening_responded,
                 "pain_opening_submitted": stat.pain_opening_submitted,
-                "pain_opening_responded": stat.pain_opening_responded
+                "pain_opening_responded": stat.pain_opening_responded,
+                "q1_useful": stat.q1_useful,
+                "q1_unuseful": stat.q1_unuseful,
+                "q2_useful": stat.q2_useful,
+                "q2_unuseful": stat.q2_unuseful
             },
             "funnel_stats": stage_metrics,
             "answers": answers
@@ -329,6 +337,10 @@ def submit_daily_report():
         stat.qualification_opening_responded = int(data.get('qualification_opening_responded') or 0)
         stat.pain_opening_submitted = int(data.get('pain_opening_submitted') or 0)
         stat.pain_opening_responded = int(data.get('pain_opening_responded') or 0)
+        stat.q1_useful = int(data.get('q1_useful') or 0)
+        stat.q1_unuseful = int(data.get('q1_unuseful') or 0)
+        stat.q2_useful = int(data.get('q2_useful') or 0)
+        stat.q2_unuseful = int(data.get('q2_unuseful') or 0)
         
     else:
         # Create new
@@ -359,7 +371,11 @@ def submit_daily_report():
             qualification_opening_submitted=int(data.get('qualification_opening_submitted') or 0),
             qualification_opening_responded=int(data.get('qualification_opening_responded') or 0),
             pain_opening_submitted=int(data.get('pain_opening_submitted') or 0),
-            pain_opening_responded=int(data.get('pain_opening_responded') or 0)
+            pain_opening_responded=int(data.get('pain_opening_responded') or 0),
+            q1_useful=int(data.get('q1_useful') or 0),
+            q1_unuseful=int(data.get('q1_unuseful') or 0),
+            q2_useful=int(data.get('q2_useful') or 0),
+            q2_unuseful=int(data.get('q2_unuseful') or 0)
         )
         db.session.add(stat)
     
@@ -431,7 +447,11 @@ def get_stats_summary():
         func.sum(SetterDailyStats.funnel_pain).label('total_pain'),
         func.sum(SetterDailyStats.funnel_offer).label('total_offer'),
         func.sum(SetterDailyStats.funnel_link).label('total_link'),
-        func.sum(SetterDailyStats.funnel_agenda).label('total_agenda')
+        func.sum(SetterDailyStats.funnel_agenda).label('total_agenda'),
+        func.sum(SetterDailyStats.q1_useful).label('q1_u'),
+        func.sum(SetterDailyStats.q1_unuseful).label('q1_i'),
+        func.sum(SetterDailyStats.q2_useful).label('q2_u'),
+        func.sum(SetterDailyStats.q2_unuseful).label('q2_i')
     ).filter_by(setter_id=current_user.id)
     
     if start_date_str:
@@ -495,7 +515,13 @@ def get_stats_summary():
             "phone": a.client.phone if a.client else "",
             "last_stage": a.last_stage,
             "type": a.origin or 'Manual'
-        } for a in pending_agendas]
+        } for a in pending_agendas],
+        "questions_efficacy": {
+            "q1_useful": int(fixed_stats.q1_u or 0) if fixed_stats else 0,
+            "q1_unuseful": int(fixed_stats.q1_i or 0) if fixed_stats else 0,
+            "q2_useful": int(fixed_stats.q2_u or 0) if fixed_stats else 0,
+            "q2_unuseful": int(fixed_stats.q2_i or 0) if fixed_stats else 0
+        }
     }), 200
 
 @bp.route('/my-reports', methods=['GET'])
@@ -541,7 +567,11 @@ def get_my_reports():
                 "qualification_opening_submitted": r.qualification_opening_submitted,
                 "qualification_opening_responded": r.qualification_opening_responded,
                 "pain_opening_submitted": r.pain_opening_submitted,
-                "pain_opening_responded": r.pain_opening_responded
+                "pain_opening_responded": r.pain_opening_responded,
+                "q1_useful": r.q1_useful,
+                "q1_unuseful": r.q1_unuseful,
+                "q2_useful": r.q2_useful,
+                "q2_unuseful": r.q2_unuseful
             },
             "funnel_stats": stage_metrics,
             "answers": answers
