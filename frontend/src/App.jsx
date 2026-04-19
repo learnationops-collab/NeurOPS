@@ -68,7 +68,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     if (user.role === 'admin') return <Navigate to="/admin/ventas" />;
     if (user.role === 'operator') return <Navigate to="/ops/dashboard" />;
     if (user.role === 'setter') return <Navigate to="/setter/statistics" />;
-    if (user.role === 'closer') return <Navigate to="/closer/report" />;
+    if (user.role === 'closer') return <Navigate to="/closer/stats" />;
     if (user.role === 'triage') return <Navigate to="/triage/report" />;
     return <Navigate to="/" />;
   }
@@ -170,6 +170,16 @@ function App() {
                 <ProtectedRoute roles={['closer']}>
                   <MainLayout>
                     <PublicCloserReportPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/closer/stats"
+              element={
+                <ProtectedRoute roles={['closer']}>
+                  <MainLayout>
+                    <PublicCloserStatsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

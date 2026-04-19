@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import {
     Search, Trash2, Edit3, Loader2, Calendar,
@@ -195,6 +196,8 @@ const EditCloserReportModal = ({ report, onClose, onSave }) => {
 
 // Componente Principal de la Tabla
 const CloserReportsTable = ({ closers }) => {
+    const auth = useAuth();
+    const user = auth?.user || { role: 'admin' };
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -203,7 +206,7 @@ const CloserReportsTable = ({ closers }) => {
 
     // Filters
     const [filters, setFilters] = useState({
-        closer_id: '',
+        closer_id: user.role === 'closer' && user.id ? user.id.toString() : '',
         start_date: '',
         end_date: '',
         time_preset: 'last_30',

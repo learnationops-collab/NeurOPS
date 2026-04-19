@@ -1,5 +1,12 @@
 # Bitácora - Abril 2026
 
+- **18 de Abril de 2026**:
+  - **Experiencia del Closer:** Se unificó la experiencia del closer con el nuevo sistema de analítica premium.
+  - **Navegación:** Los closers ahora son redirigidos automáticamente a sus estadísticas (`/closer/stats`) al iniciar sesión. Se añadieron botones de navegación bidireccional entre el reporte diario y el dashboard de analítica.
+  - **Filtrado Dinámico:** Se implementó el auto-filtrado por ID de usuario en `PublicCloserStatsPage`, `PublicCloserReportPage` y `CloserReportsTable`, asegurando que cada closer vea y reporte sus datos de forma inmediata y segura.
+  - **Arquitectura:** Se registraron las nuevas rutas protegidas en `App.jsx` y se ajustó el sistema de auto-selección de identidad en el frontend para optimizar la carga operativa del equipo de ventas.
+
+
 - **15 de Abril de 2026**:
   - **Métricas de Eficacia:** Se implementó el sistema de seguimiento de eficacia de preguntas, migrando de un esquema JSON flexible a columnas estructuradas en la base de datos (`q1_useful`, `q1_unuseful`, etc.).
   - **Backend:** Se actualizaron todos los endpoints de reporte (`setter.py` y `public/setter.py`) para soportar la persistencia y agregación estadística de estas nuevas métricas.

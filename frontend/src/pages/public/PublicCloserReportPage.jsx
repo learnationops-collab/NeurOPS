@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headphones } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headphones, BarChart } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Componente reutilizable para inputs numéricos
 const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly = false, isLightMode = false, type = "number", step, placeholder }) => {
@@ -61,6 +62,9 @@ const CollapsibleSection = ({ id, currentOpen, setOpen, title, icon: Icon, isCom
 };
 
 const PublicCloserReportPage = () => {
+    const auth = useAuth();
+    const user = auth?.user || { role: 'admin' };
+    const navigate = useNavigate();
     const [closers, setClosers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -134,6 +138,11 @@ const PublicCloserReportPage = () => {
         try {
             const res = await api.get('/public/active-closers');
             setClosers(res.data);
+            
+            // Si el usuario es closer, auto-seleccionarlo
+            if (user.role === 'closer' && user.id) {
+                setFormData(prev => ({ ...prev, closer_id: user.id.toString() }));
+            }
         } catch (err) {
             console.error("Error fetching closers:", err);
             alert("Hubo un error cargando el formulario. Reintenta.");
@@ -314,11 +323,23 @@ const PublicCloserReportPage = () => {
 
             <div className="w-full max-w-7xl mx-auto z-10 space-y-8">
                 {/* Header */}
-                <div className="text-center space-y-4 mb-2">
+                <div className="text-center space-y-4 mb-2 relative">
                     <p className="text-violet-400 font-bold tracking-widest text-xs uppercase">NeurOPS High Performance</p>
                     <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
                         Reporte Diario Closer
                     </h1>
+                    
+                    {user.role === 'closer' && (
+                        <div className="flex justify-center mt-6">
+                            <button
+                                onClick={() => navigate('/closer/stats')}
+                                className="flex items-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:text-white hover:border-violet-500 transition-all group shadow-xl"
+                            >
+                                <BarChart3 size={16} className="group-hover:text-violet-500" />
+                                Ver Mis Estadísticas
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {loading ? (

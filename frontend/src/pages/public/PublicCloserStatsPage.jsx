@@ -1,21 +1,27 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import {
     Loader2, BarChart3, DollarSign, Phone, Target,
     CalendarDays, Layers, TrendingUp, Users,
-    CheckCircle, XCircle, PhoneOff, RefreshCw, Table, List
+    CheckCircle, XCircle, PhoneOff, RefreshCw, Table, List,
+    PenTool
 } from 'lucide-react';
 import CloserAdvancedStatsView from './CloserAdvancedStatsView';
 import CloserReportsTable from './CloserReportsTable';
 import FunnelChart from '../../components/charts/FunnelChart';
 
 const PublicCloserStatsPage = () => {
+    const auth = useAuth();
+    const user = auth?.user || { role: 'admin' };
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('general'); // 'general', 'advanced', 'history'
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [closers, setClosers] = useState([]);
     const [filters, setFilters] = useState({
-        closer_id: '',
+        closer_id: user.role === 'closer' && user.id ? user.id.toString() : '',
         start_date: '',
         end_date: '',
         agg_type: 'sum',
@@ -167,6 +173,16 @@ const PublicCloserStatsPage = () => {
                         </div>
                         <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]">NeurOPS Closer Performance Analytics</p>
                     </div>
+
+                    {user.role === 'closer' && (
+                        <button
+                            onClick={() => navigate('/closer/report')}
+                            className="flex items-center gap-2 bg-violet-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-violet-600/20 hover:bg-violet-700 transition-colors"
+                        >
+                            <PenTool size={16} />
+                            Completar Reporte Diario
+                        </button>
+                    )}
                 </div>
 
                 {/* TABS */}
