@@ -47,7 +47,7 @@ class Comment(db.Model):
     comment_type = db.Column(db.String(50), nullable=False)
     associated_id = db.Column(db.Integer, nullable=False)
     
-    author = db.relationship('User', foreign_keys=[author_id], overlaps="comments_authored")
+    author = db.relationship('User', foreign_keys=[author_id], overlaps="comments_authored,author_rel")
 
     __table_args__ = (
         db.Index('idx_comments_target', 'comment_type', 'associated_id'),
