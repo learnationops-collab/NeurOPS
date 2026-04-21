@@ -78,6 +78,16 @@ const PublicHubPage = () => {
       ]
     },
     {
+      title: "Workshop Semanal",
+      description: "Analítica de plantillas ManyChat y efectividad de convocatoria.",
+      icon: Sparkles,
+      colorClass: "text-fuchsia-400",
+      gradientClass: "bg-fuchsia-500",
+      links: [
+        { label: "Ver Rendimiento", to: "/admin/workshop", primary: true }
+      ]
+    },
+    {
       title: "Marketing & Ads",
       description: "Gestión de campañas, anuncios y KPIs de tráfico.",
       icon: TrendingUp,

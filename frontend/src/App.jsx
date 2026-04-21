@@ -42,6 +42,7 @@ import PublicTriageStatsPage from './pages/public/PublicTriageStatsPage';
 import PublicHubPage from './pages/public/PublicHubPage';
 import AdManagementPage from './pages/public/AdManagementPage';
 import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPage';
+import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
 
 import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
@@ -190,6 +191,17 @@ function App() {
                 <ProtectedRoute roles={['triage']}>
                   <MainLayout>
                     <PublicTriageReportPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/workshop"
+              element={
+                <ProtectedRoute roles={['admin', 'marketer']}>
+                  <MainLayout>
+                    <PublicWorkshopStatsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import PublicSetterStatsPage from '../../public/PublicSetterStatsPage';
 import PublicCloserStatsPage from '../../public/PublicCloserStatsPage';
 import PublicTriageStatsPage from '../../public/PublicTriageStatsPage';
+import PublicWorkshopStatsPage from '../../public/PublicWorkshopStatsPage';
 
 const AdminSalesHubPage = () => {
     const [tab, setTab] = useState('closer');
@@ -28,12 +29,19 @@ const AdminSalesHubPage = () => {
                 >
                     Triage
                 </button>
+                 <button 
+                    onClick={() => setTab('workshop')} 
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'workshop' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white'}`}
+                >
+                    Workshop
+                </button>
             </div>
             
             <div className="w-full">
                 {tab === 'closer' && <PublicCloserStatsPage />}
                 {tab === 'setter' && <PublicSetterStatsPage />}
                 {tab === 'triage' && <PublicTriageStatsPage />}
+                {tab === 'workshop' && <PublicWorkshopStatsPage />}
             </div>
         </div>
     );
