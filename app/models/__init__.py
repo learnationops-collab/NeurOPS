@@ -13,6 +13,8 @@ from .public_registration import PublicRegistration
 from .financial import FinancialSale, FinancialAgenda
 from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
+from .workshop import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction
+
 
 # Export all for easy access via from app.models import ...
 __all__ = [
@@ -24,6 +26,8 @@ __all__ = [
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdPeriodSpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment',
-    'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'TriageDailyReport', 'TriageTrackerReport'
+    'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'TriageDailyReport', 'TriageTrackerReport',
+    'WorkshopTemplate', 'WorkshopButton', 'WorkshopTemplateSent', 'WorkshopInteraction'
+
 
 ]

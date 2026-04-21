@@ -1,10 +1,11 @@
 # Bitácora - Abril 2026
 
 - **21 de Abril de 2026**:
-  - **Corrección de Estadísticas:** Se solucionó un error crítico en el Performance Center donde la "Tasa de Apertura" siempre mostraba 0%.
-  - **Backend:** Se actualizó `app/api/public/setter.py` para sumar dinámicamente las aperturas de cualificación y dolor en el cálculo de la tasa general, asegurando la compatibilidad con reportes históricos.
-  - **Integridad de Datos:** Se implementó una lógica de autocompletado en los campos legacy (`opening_submitted`, `opening_responded`) al guardar nuevos reportes, manteniendo la consistencia de la base de datos para futuras expansiones.
-  - **Visualización:** Se garantizó que los totales en la tabla de registros y en la evolución histórica reflejen la suma correcta de las etapas del funnel.
+  - **Sistema de Workshop:** Se implementó una nueva infraestructura para el seguimiento de Workshops semanales integrada con ManyChat WhatsApp.
+  - **Modelos de Workshop:** Creación de tablas para `WorkshopTemplate`, `WorkshopButton`, `WorkshopTemplateSent` (envíos diarios) y `WorkshopInteraction` (clicks anónimos).
+  - **API de Seguimiento:** Desarrollo de endpoints en `/api/workshop/plantilla-sent` e `/api/workshop/interaction` para capturar métricas de efectividad en tiempo real.
+  - **Consolidación de Migraciones:** Se realizó una limpieza profunda del historial de migraciones, unificando los cambios del día en una sola versión maestra (`777workshop123`) para asegurar un despliegue estable en la base de datos PostgreSQL de Railway.
+  - **Corrección de Estadísticas:** Se solucionó un error crítico en el Performance Center donde la "Tasa de Apertura" siempre mostraba 0% (Backend: `setter.py`).
 
 
 - **18 de Abril de 2026**:

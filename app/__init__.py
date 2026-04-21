@@ -116,6 +116,10 @@ def create_app(config_class=Config):
     app.register_blueprint(sheets_bp, url_prefix='/api/sheets')
     csrf.exempt(sheets_bp)
 
+    from app.api.workshop import bp as workshop_bp
+    app.register_blueprint(workshop_bp, url_prefix='/api/workshop')
+    csrf.exempt(workshop_bp)
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):
