@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
     LayoutGrid, BarChart3, TrendingUp, Zap, 
     MousePointer2, MessageSquare, Send, RefreshCw, 
-    ChevronRight, ArrowRight, Activity, Loader2, Sparkles
+    ChevronRight, ArrowRight, Activity, Loader2, Sparkles,
+    Layers
 } from 'lucide-react';
 import api from '../../services/api';
 
