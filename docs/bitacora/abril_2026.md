@@ -1,5 +1,12 @@
 # Bitácora - Abril 2026
 
+- **21 de Abril de 2026**:
+  - **Corrección de Estadísticas:** Se solucionó un error crítico en el Performance Center donde la "Tasa de Apertura" siempre mostraba 0%.
+  - **Backend:** Se actualizó `app/api/public/setter.py` para sumar dinámicamente las aperturas de cualificación y dolor en el cálculo de la tasa general, asegurando la compatibilidad con reportes históricos.
+  - **Integridad de Datos:** Se implementó una lógica de autocompletado en los campos legacy (`opening_submitted`, `opening_responded`) al guardar nuevos reportes, manteniendo la consistencia de la base de datos para futuras expansiones.
+  - **Visualización:** Se garantizó que los totales en la tabla de registros y en la evolución histórica reflejen la suma correcta de las etapas del funnel.
+
+
 - **18 de Abril de 2026**:
   - **Experiencia del Closer:** Se unificó la experiencia del closer con el nuevo sistema de analítica premium.
   - **Navegación:** Los closers ahora son redirigidos automáticamente a sus estadísticas (`/closer/stats`) al iniciar sesión. Se añadieron botones de navegación bidireccional entre el reporte diario y el dashboard de analítica.

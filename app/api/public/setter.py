@@ -54,8 +54,16 @@ def submit_public_setter_report():
         stat.inbox_entrantes = int(data.get('inbox_entrantes') or 0)
         stat.inbox_inabribles = int(data.get('inbox_inabribles') or 0)
         stat.inbox_leads = int(data.get('inbox_leads') or 0)
-        stat.opening_submitted = int(data.get('opening_submitted') or 0)
-        stat.opening_responded = int(data.get('opening_responded') or 0)
+        
+        # Calcular totales de aperturas para legacy/compatibilidad
+        q_op_sub = int(data.get('qualification_opening_submitted') or 0)
+        p_op_sub = int(data.get('pain_opening_submitted') or 0)
+        q_op_res = int(data.get('qualification_opening_responded') or 0)
+        p_op_res = int(data.get('pain_opening_responded') or 0)
+        
+        stat.opening_submitted = q_op_sub + p_op_sub
+        stat.opening_responded = q_op_res + p_op_res
+        
         stat.funnel_qualification = int(data.get('funnel_qualification') or 0)
         stat.funnel_pain = int(data.get('funnel_pain') or 0)
         stat.funnel_offer = int(data.get('funnel_offer') or 0)
@@ -87,8 +95,8 @@ def submit_public_setter_report():
             inbox_entrantes=int(data.get('inbox_entrantes') or 0),
             inbox_inabribles=int(data.get('inbox_inabribles') or 0),
             inbox_leads=int(data.get('inbox_leads') or 0),
-            opening_submitted=int(data.get('opening_submitted') or 0),
-            opening_responded=int(data.get('opening_responded') or 0),
+            opening_submitted=int(data.get('qualification_opening_submitted') or 0) + int(data.get('pain_opening_submitted') or 0),
+            opening_responded=int(data.get('qualification_opening_responded') or 0) + int(data.get('pain_opening_responded') or 0),
             funnel_qualification=int(data.get('funnel_qualification') or 0),
             funnel_pain=int(data.get('funnel_pain') or 0),
             funnel_offer=int(data.get('funnel_offer') or 0),
@@ -183,8 +191,9 @@ def get_public_setter_stats():
         func.sum(SetterDailyStats.not_lead).label('not_lead'),
         func.sum(SetterDailyStats.inbox_inabribles).label('inabribles'),
         func.sum(SetterDailyStats.inbox_leads).label('leads'),
-        func.sum(SetterDailyStats.opening_submitted).label('op_sub'),
-        func.sum(SetterDailyStats.opening_responded).label('op_res'),
+        # Sumamos las aperturas de cualificación y dolor para el total
+        func.sum(SetterDailyStats.qualification_opening_submitted + SetterDailyStats.pain_opening_submitted).label('op_sub'),
+        func.sum(SetterDailyStats.qualification_opening_responded + SetterDailyStats.pain_opening_responded).label('op_res'),
         func.sum(SetterDailyStats.funnel_qualification).label('fun_qual'),
         func.sum(SetterDailyStats.funnel_pain).label('fun_pain'),
         func.sum(SetterDailyStats.funnel_offer).label('fun_offer'),
@@ -356,8 +365,8 @@ def get_public_setter_stats():
     time_series_query = db.session.query(
         SetterDailyStats.date,
         func.sum(SetterDailyStats.inbox_entrantes).label('entrantes'),
-        func.sum(SetterDailyStats.opening_submitted).label('op_sub'),
-        func.sum(SetterDailyStats.opening_responded).label('op_res'),
+        func.sum(SetterDailyStats.qualification_opening_submitted + SetterDailyStats.pain_opening_submitted).label('op_sub'),
+        func.sum(SetterDailyStats.qualification_opening_responded + SetterDailyStats.pain_opening_responded).label('op_res'),
         func.sum(SetterDailyStats.qualification_fu).label('fu_q'),
         func.sum(SetterDailyStats.qualification_fur).label('fur_q'),
         func.sum(SetterDailyStats.funnel_agenda).label('fun_agenda')
@@ -413,8 +422,8 @@ def get_public_setter_reports():
             "not_lead": r.not_lead,
             "inabribles": r.inbox_inabribles,
             "leads": r.inbox_leads,
-            "op_sub": r.opening_submitted,
-            "op_res": r.opening_responded,
+            "op_sub": r.opening_submitted if r.opening_submitted > 0 else (r.qualification_opening_submitted + r.pain_opening_submitted),
+            "op_res": r.opening_responded if r.opening_responded > 0 else (r.qualification_opening_responded + r.pain_opening_responded),
             "fun_qual": r.funnel_qualification,
             "fun_pain": r.funnel_pain,
             "fun_offer": r.funnel_offer,
