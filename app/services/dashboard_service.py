@@ -142,6 +142,8 @@ class DashboardService(BaseService):
             func.sum(SetterDailyStats.stage_3_value).label('s3'),
             func.sum(SetterDailyStats.stage_4_value).label('s4'),
             func.sum(SetterDailyStats.stage_5_value).label('s5'),
+            func.sum(SetterDailyStats.qualification_fu + SetterDailyStats.pain_fu + SetterDailyStats.offer_fu + SetterDailyStats.link_fu + SetterDailyStats.agenda_fu).label('tfu_s'),
+            func.sum(SetterDailyStats.qualification_fur + SetterDailyStats.pain_fur + SetterDailyStats.offer_fur + SetterDailyStats.link_fur + SetterDailyStats.agenda_fur).label('tfu_r'),
             func.count(SetterDailyStats.id).label('report_count')
         ).filter(SetterDailyStats.date >= start_date.date(), SetterDailyStats.date <= end_date.date())
         
@@ -181,7 +183,8 @@ class DashboardService(BaseService):
             'stages': stages_output,
             'kpis': {
                 'conversion_rate': safe_div(float(int(res.s4 or 0)), float(inbound)),
-                'opening_rate': safe_div(float(qualified), float(inbound))
+                'opening_rate': safe_div(float(qualified), float(inbound)),
+                'fu_response_rate': safe_div(float(int(res.tfu_r or 0)), float(int(res.tfu_s or 0)))
             },
             'count': int(res.report_count or 0)
         }

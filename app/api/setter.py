@@ -451,7 +451,9 @@ def get_stats_summary():
         func.sum(SetterDailyStats.q1_useful).label('q1_u'),
         func.sum(SetterDailyStats.q1_unuseful).label('q1_i'),
         func.sum(SetterDailyStats.q2_useful).label('q2_u'),
-        func.sum(SetterDailyStats.q2_unuseful).label('q2_i')
+        func.sum(SetterDailyStats.q2_unuseful).label('q2_i'),
+        func.sum(SetterDailyStats.qualification_fu + SetterDailyStats.pain_fu + SetterDailyStats.offer_fu + SetterDailyStats.link_fu + SetterDailyStats.agenda_fu).label('tfu_s'),
+        func.sum(SetterDailyStats.qualification_fur + SetterDailyStats.pain_fur + SetterDailyStats.offer_fur + SetterDailyStats.link_fur + SetterDailyStats.agenda_fur).label('tfu_r')
     ).filter_by(setter_id=current_user.id)
     
     if start_date_str:
@@ -521,7 +523,9 @@ def get_stats_summary():
             "q1_unuseful": int(fixed_stats.q1_i or 0) if fixed_stats else 0,
             "q2_useful": int(fixed_stats.q2_u or 0) if fixed_stats else 0,
             "q2_unuseful": int(fixed_stats.q2_i or 0) if fixed_stats else 0
-        }
+        },
+        "total_fu_submitted": int(fixed_stats.tfu_s or 0) if fixed_stats else 0,
+        "total_fu_responded": int(fixed_stats.tfu_r or 0) if fixed_stats else 0
     }), 200
 
 @bp.route('/my-reports', methods=['GET'])

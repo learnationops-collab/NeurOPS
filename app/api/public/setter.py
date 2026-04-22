@@ -212,6 +212,18 @@ def get_public_setter_stats():
         func.sum(SetterDailyStats.agenda_fu).label('fu_a_s'),
         func.sum(SetterDailyStats.agenda_fur).label('fu_a_r'),
         
+        # Total Follow Ups
+        (func.sum(SetterDailyStats.qualification_fu) + 
+         func.sum(SetterDailyStats.pain_fu) + 
+         func.sum(SetterDailyStats.offer_fu) + 
+         func.sum(SetterDailyStats.link_fu) + 
+         func.sum(SetterDailyStats.agenda_fu)).label('total_fu_s'),
+        (func.sum(SetterDailyStats.qualification_fur) + 
+         func.sum(SetterDailyStats.pain_fur) + 
+         func.sum(SetterDailyStats.offer_fur) + 
+         func.sum(SetterDailyStats.link_fur) + 
+         func.sum(SetterDailyStats.agenda_fur)).label('total_fu_r'),
+        
         # Openings Sub/Res
         func.sum(SetterDailyStats.qualification_opening_submitted).label('q_op_s'),
         func.sum(SetterDailyStats.qualification_opening_responded).label('q_op_r'),
@@ -312,6 +324,7 @@ def get_public_setter_stats():
                 "offer_fur": div(float(stats.fu_o_r or 0), float(stats.fu_o_s or 0)),
                 "link_fur": div(float(stats.fu_l_r or 0), float(stats.fu_l_s or 0)),
                 "agenda_fur": div(float(stats.fu_a_r or 0), float(stats.fu_a_s or 0)),
+                "total_fur": div(float(stats.total_fu_r or 0), float(stats.total_fu_s or 0)),
                 "qualification_opening_rate": div(float(stats.q_op_r or 0), float(stats.q_op_s or 0)),
                 "pain_opening_rate": div(float(stats.p_op_r or 0), float(stats.p_op_s or 0))
             },
