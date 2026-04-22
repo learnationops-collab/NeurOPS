@@ -399,7 +399,7 @@ const PublicSetterStatsPage = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
                                     <StatCard title="Entrantes" value={stats.totals.entrantes} icon={Inbox} colorClass="text-pink-500" tooltipInfo="Suma total de leads nuevos ingresados al CRM en el período seleccionado." />
                                     <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" tooltipInfo="Suma total de leads movidos a la etapa de Agenda." />
-                                    <StatCard title="Tasa Apertura" value={`${stats.percentages.rates.opening_rate}%`} icon={MousePointer2} colorClass="text-emerald-500" tooltipInfo="Mide la calidad de los leads. Cálculo: (Entrantes - No Leads) / Entrantes." />
+                                    <StatCard title="Tasa Apertura" value={`${stats.percentages.rates.opening_rate}%`} icon={MousePointer2} colorClass="text-emerald-500" tooltipInfo="Mide la calidad de los leads. Cálculo: (Cualificación - No Leads) / Entrantes." />
                                     <StatCard title="Op. Response" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" tooltipInfo="Tasa de respuesta a los mensajes de apertura. Cálculo: (Openings Respondidos / Openings Enviados)." />
                                     <StatCard title="FU Response" value={`${stats.percentages.rates.link_fur}%`} icon={RefreshCw} colorClass="text-rose-500" subtitle="Tasa Link FU" tooltipInfo="Tasa de respuesta a los seguimientos (Follow Ups) en la etapa de Link. Cálculo: (Link FU Respondidos / Link FU Enviados)." />
                                 </div>
@@ -420,7 +420,7 @@ const PublicSetterStatsPage = () => {
                                         <MiniRow label="Entrantes" value={stats.totals.entrantes} colorClass="text-slate-900" tooltipInfo="Suma total de leads recibidos en el inbox." />
                                         <MiniRow label="No Leads" value={stats.totals.not_lead} subValue={`${stats.percentages.inbox.not_lead}%`} colorClass="text-rose-500" tooltipInfo="Leads descartados por no cumplir el perfil ideal." />
                                         <MiniRow label="In-abribles" value={stats.totals.inabribles} subValue={`${stats.percentages.inbox.inabribles}%`} colorClass="text-amber-500" tooltipInfo="Leads con los que no se pudo iniciar una conversación (mensajes restringidos, bloqueos, etc)." />
-                                        <MiniRow label="Leads Reales" value={stats.totals.leads} subValue={`${stats.percentages.inbox.leads}%`} colorClass="text-indigo-600" tooltipInfo="Leads válidos para prospectar. Cálculo: (Entrantes - No Leads)." />
+                                        <MiniRow label="Leads Reales" value={stats.totals.leads} subValue={`${stats.percentages.inbox.leads}%`} colorClass="text-indigo-600" tooltipInfo="Leads válidos para prospectar. Cálculo: (Cualificación - No Leads)." />
                                         <div className="bg-indigo-600 rounded-[2rem] p-6 text-white shadow-xl flex flex-col justify-center relative overflow-visible group/tooltip-conv">
                                             <div className="absolute top-4 right-4 group-hover/tooltip-conv:opacity-100 opacity-50 transition-opacity">
                                                 <HelpCircle size={14} className="text-white/50 cursor-help" />

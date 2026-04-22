@@ -442,7 +442,7 @@ def get_stats_summary():
     query_fixed = db.session.query(
         func.sum(SetterDailyStats.not_lead).label('total_not_lead'),
         func.sum(SetterDailyStats.inbox_entrantes).label('total_entrantes'),
-        func.sum(SetterDailyStats.inbox_leads).label('total_leads'),
+        (func.sum(SetterDailyStats.funnel_qualification) - func.sum(SetterDailyStats.not_lead)).label('total_leads'),
         func.sum(SetterDailyStats.funnel_qualification).label('total_qual'),
         func.sum(SetterDailyStats.funnel_pain).label('total_pain'),
         func.sum(SetterDailyStats.funnel_offer).label('total_offer'),

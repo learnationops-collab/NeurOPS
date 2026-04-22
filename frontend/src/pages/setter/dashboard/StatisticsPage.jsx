@@ -62,7 +62,8 @@ const SetterStatisticsPage = () => {
 
     const noLeadValue = stats?.total_not_lead || 0;
     const totalInbound = stats?.total_leads || 0;
-    const qualifiedLeads = Math.max(0, totalInbound - noLeadValue);
+    const qualificationValue = stats?.stage_metrics?.[0]?.value || 0;
+    const qualifiedLeads = Math.max(0, qualificationValue - noLeadValue);
 
     const leadQualityData = [
         { name: 'Cualificados', value: qualifiedLeads, fill: 'var(--color-primary)' },
@@ -153,7 +154,7 @@ const SetterStatisticsPage = () => {
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                                 <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <MetricCard label="Leads Totales" value={totalInbound} icon={<Users size={20} />} tooltipInfo="Suma de leads recibidos en el inbox (Entrantes)." />
-                                    <MetricCard label="Cualificados" value={qualifiedLeads} icon={<Target size={20} />} tooltipInfo="Leads reales filtrados. Cálculo: (Entrantes - Descartados)." />
+                                    <MetricCard label="Cualificados" value={qualifiedLeads} icon={<Target size={20} />} tooltipInfo="Leads reales filtrados. Cálculo: (Cualificación - Descartados)." />
                                     <MetricCard
                                         label="% Agendamiento"
                                         value={`${bookingPct}%`}

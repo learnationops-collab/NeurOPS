@@ -167,9 +167,10 @@ class DashboardService(BaseService):
                 "value": int(stage_values[i] or 0)
             })
             
-        inbound = int(res.entrantes or res.s1 or 0)
+        inbound = int(res.entrantes or 0)
         not_lead = int(res.not_lead or 0)
-        qualified = max(0, inbound - not_lead)
+        qualification = int(res.s1 or 0)
+        qualified = max(0, qualification - not_lead)
         
         return {
             'stats': {

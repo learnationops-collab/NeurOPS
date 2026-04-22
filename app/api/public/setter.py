@@ -190,7 +190,7 @@ def get_public_setter_stats():
         func.sum(SetterDailyStats.inbox_entrantes).label('entrantes'),
         func.sum(SetterDailyStats.not_lead).label('not_lead'),
         func.sum(SetterDailyStats.inbox_inabribles).label('inabribles'),
-        func.sum(SetterDailyStats.inbox_leads).label('leads'),
+        (func.sum(SetterDailyStats.funnel_qualification) - func.sum(SetterDailyStats.not_lead)).label('leads'),
         # Sumamos las aperturas de cualificación y dolor para el total
         func.sum(SetterDailyStats.qualification_opening_submitted + SetterDailyStats.pain_opening_submitted).label('op_sub'),
         func.sum(SetterDailyStats.qualification_opening_responded + SetterDailyStats.pain_opening_responded).label('op_res'),

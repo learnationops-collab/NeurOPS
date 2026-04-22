@@ -66,13 +66,13 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
 
     // Auto-calculate Leads
     useEffect(() => {
-        const entrantesNum = parseInt(formData.inbox_entrantes) || 0;
+        const cualificadosNum = parseInt(formData.funnel_qualification) || 0;
         const noLeadNum = parseInt(formData.not_lead) || 0;
-        const calculatedLeads = Math.max(0, entrantesNum - noLeadNum);
-        if (formData.inbox_leads !== calculatedLeads && (formData.inbox_entrantes !== '' || formData.not_lead !== '')) {
+        const calculatedLeads = Math.max(0, cualificadosNum - noLeadNum);
+        if (formData.inbox_leads !== calculatedLeads && (formData.funnel_qualification !== '' || formData.not_lead !== '')) {
             setFormData(prev => ({ ...prev, inbox_leads: calculatedLeads }));
         }
-    }, [formData.inbox_entrantes, formData.not_lead]);
+    }, [formData.funnel_qualification, formData.not_lead]);
 
     useEffect(() => {
         if (isOpen) fetchData();
