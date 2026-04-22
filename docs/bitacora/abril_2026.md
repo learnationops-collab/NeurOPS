@@ -1,5 +1,9 @@
 # Bitácora - Abril 2026
 
+- **22 de Abril de 2026**:
+  - **Corrección de Estadísticas (Setters):** Se corrigió la fórmula de cálculo de la "Tasa de Apertura" para los setters. Ahora se calcula matemáticamente como Leads Cualificados sobre Leads Entrantes (`(Entrantes - No Leads) / Entrantes`), reflejando la métrica de calidad de manera precisa.
+  - **Tooltips Explicativos:** Se implementó un sistema de tooltips interactivos (icono de interrogación) en todas las tarjetas de métricas (`StatCard`, `MiniRow`, `MetricCard`) tanto en el dashboard público como en el privado de los setters, detallando el significado y la fórmula de cálculo de cada KPI para mejorar la transparencia operativa.
+
 - **21 de Abril de 2026**:
   - **Sistema de Workshop:** Se implementó una nueva infraestructura para el seguimiento de Workshops semanales integrada con ManyChat WhatsApp.
   - **Modelos de Workshop:** Creación de tablas para `WorkshopTemplate`, `WorkshopButton`, `WorkshopTemplateSent` (envíos diarios) y `WorkshopInteraction` (clicks anónimos).
