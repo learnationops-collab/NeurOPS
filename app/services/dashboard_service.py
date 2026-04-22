@@ -136,6 +136,7 @@ class DashboardService(BaseService):
         
         query = db.session.query(
             func.sum(SetterDailyStats.not_lead).label('not_lead'),
+            func.sum(SetterDailyStats.inbox_entrantes).label('entrantes'),
             func.sum(SetterDailyStats.stage_1_value).label('s1'),
             func.sum(SetterDailyStats.stage_2_value).label('s2'),
             func.sum(SetterDailyStats.stage_3_value).label('s3'),
@@ -166,7 +167,7 @@ class DashboardService(BaseService):
                 "value": int(stage_values[i] or 0)
             })
             
-        inbound = int(res.s1 or 0)
+        inbound = int(res.entrantes or res.s1 or 0)
         not_lead = int(res.not_lead or 0)
         qualified = max(0, inbound - not_lead)
         
@@ -178,7 +179,8 @@ class DashboardService(BaseService):
             },
             'stages': stages_output,
             'kpis': {
-                'conversion_rate': safe_div(float(int(res.s4 or 0)), float(inbound))
+                'conversion_rate': safe_div(float(int(res.s4 or 0)), float(inbound)),
+                'opening_rate': safe_div(float(qualified), float(inbound))
             },
             'count': int(res.report_count or 0)
         }

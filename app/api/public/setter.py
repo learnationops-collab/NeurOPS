@@ -306,7 +306,7 @@ def get_public_setter_stats():
             },
             "rates": {
                 "opening_response": div(float(stats.op_res or 0), float(stats.op_sub or 0)),
-                "opening_rate": div(float(stats.op_sub or 0), float(stats.entrantes or 0)),
+                "opening_rate": div(float(stats.leads or 0), float(stats.entrantes or 0)),
                 "qualification_fur": div(float(stats.fu_q_r or 0), float(stats.fu_q_s or 0)),
                 "pain_fur": div(float(stats.fu_p_r or 0), float(stats.fu_p_s or 0)),
                 "offer_fur": div(float(stats.fu_o_r or 0), float(stats.fu_o_s or 0)),
