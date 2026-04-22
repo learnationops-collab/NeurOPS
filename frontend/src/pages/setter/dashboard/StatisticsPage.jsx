@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Loader2, TrendingUp, Users, Target, CalendarDays, PieChart, BarChart3, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Loader2, TrendingUp, Users, Target, CalendarDays, PieChart, BarChart3, X, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
 import Button from '../../../components/ui/Button';
@@ -152,13 +152,14 @@ const SetterStatisticsPage = () => {
 
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                                 <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <MetricCard label="Leads Totales" value={totalInbound} icon={<Users size={20} />} />
-                                    <MetricCard label="Cualificados" value={qualifiedLeads} icon={<Target size={20} />} />
+                                    <MetricCard label="Leads Totales" value={totalInbound} icon={<Users size={20} />} tooltipInfo="Suma de leads recibidos en el inbox (Entrantes)." />
+                                    <MetricCard label="Cualificados" value={qualifiedLeads} icon={<Target size={20} />} tooltipInfo="Leads reales filtrados. Cálculo: (Entrantes - Descartados)." />
                                     <MetricCard
                                         label="% Agendamiento"
                                         value={`${bookingPct}%`}
                                         icon={<CalendarDays size={20} />}
                                         highlight
+                                        tooltipInfo="Porcentaje de leads cualificados que finalmente agendaron. Cálculo: (Agendas / Cualificados)."
                                     />
                                 </div>
 
@@ -316,17 +317,28 @@ const SetterStatisticsPage = () => {
     );
 };
 
-const MetricCard = ({ label, value, icon, highlight }) => (
-    <Card variant="surface" className={`p-8 border-base/50 shadow-xl border-b-4 ${highlight ? 'border-primary shadow-primary/5' : 'border-base'} transition-all hover:translate-y-[-4px] group`}>
+const MetricCard = ({ label, value, icon, highlight, tooltipInfo }) => (
+    <Card variant="surface" className={`p-8 border-base/50 shadow-xl border-b-4 ${highlight ? 'border-primary shadow-primary/5' : 'border-base'} transition-all hover:translate-y-[-4px] group overflow-visible`}>
         <div className="flex justify-between items-start mb-8">
             <span className={`p-3 rounded-2xl ${highlight ? 'bg-primary/20 text-primary shadow-glow shadow-primary/20' : 'bg-surface-hover/50 text-muted'} border border-white/5 transition-all duration-500 group-hover:scale-110`}>
                 {icon}
             </span>
         </div>
         <div className="space-y-1">
-            <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 ${highlight ? 'text-primary' : 'text-muted'}`}>
-                {label}
-            </p>
+            <div className="flex items-center gap-1.5 mb-2">
+                <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${highlight ? 'text-primary' : 'text-muted'}`}>
+                    {label}
+                </p>
+                {tooltipInfo && (
+                    <div className="relative group/tooltip inline-block z-50">
+                        <HelpCircle size={12} className="text-muted cursor-help hover:text-primary transition-colors" />
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-surface border border-base text-base text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none shadow-xl">
+                            {tooltipInfo}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-surface"></div>
+                        </div>
+                    </div>
+                )}
+            </div>
             <p className={`text-5xl font-black italic tracking-tighter ${highlight ? 'text-base' : 'text-base opacity-90'}`}>
                 {value}
             </p>

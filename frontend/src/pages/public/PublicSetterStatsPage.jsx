@@ -128,12 +128,23 @@ const PublicSetterStatsPage = () => {
         </div>
     );
 
-    const StatCard = ({ title, value, percentage, icon: Icon, colorClass, subtitle, trend = null }) => (
-        <div className="bg-white/90 border border-white rounded-3xl p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+    const StatCard = ({ title, value, percentage, icon: Icon, colorClass, subtitle, trend = null, tooltipInfo }) => (
+        <div className="bg-white/90 border border-white rounded-3xl p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow overflow-visible">
             <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-indigo-500`} />
-            <div className="flex items-start justify-between relative z-10">
+            <div className="flex items-start justify-between relative z-10 overflow-visible">
                 <div className="space-y-1">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
+                    <div className="flex items-center gap-1.5">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
+                        {tooltipInfo && (
+                            <div className="relative group/tooltip inline-block">
+                                <HelpCircle size={12} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                    {tooltipInfo}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <h3 className="text-3xl font-black text-slate-900 italic tracking-tighter">{value}</h3>
                     {percentage !== undefined && (
                         <div className="flex items-center gap-1.5 mt-2">
@@ -173,10 +184,21 @@ const PublicSetterStatsPage = () => {
         </div>
     );
 
-    const MiniRow = ({ label, value, subValue, colorClass }) => (
-        <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+    const MiniRow = ({ label, value, subValue, colorClass, tooltipInfo }) => (
+        <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm overflow-visible">
             <div className="flex flex-col">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{label}</span>
+                <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">{label}</span>
+                    {tooltipInfo && (
+                        <div className="relative group/tooltip inline-block">
+                            <HelpCircle size={10} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                {tooltipInfo}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
+                        </div>
+                    )}
+                </div>
                 <span className={`text-lg font-black italic tracking-tighter ${colorClass}`}>{value}</span>
             </div>
             {subValue && (
@@ -375,11 +397,11 @@ const PublicSetterStatsPage = () => {
                             <>
                                 {/* GRID PRINCIPAL */}
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                                    <StatCard title="Entrantes" value={stats.totals.entrantes} icon={Inbox} colorClass="text-pink-500" />
-                                    <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" />
-                                    <StatCard title="Tasa Apertura" value={`${stats.percentages.rates.opening_rate}%`} icon={MousePointer2} colorClass="text-emerald-500" />
-                                    <StatCard title="Op. Response" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" />
-                                    <StatCard title="FU Response" value={`${stats.percentages.rates.link_fur}%`} icon={RefreshCw} colorClass="text-rose-500" subtitle="Tasa Link FU" />
+                                    <StatCard title="Entrantes" value={stats.totals.entrantes} icon={Inbox} colorClass="text-pink-500" tooltipInfo="Suma total de leads nuevos ingresados al CRM en el período seleccionado." />
+                                    <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" tooltipInfo="Suma total de leads movidos a la etapa de Agenda." />
+                                    <StatCard title="Tasa Apertura" value={`${stats.percentages.rates.opening_rate}%`} icon={MousePointer2} colorClass="text-emerald-500" tooltipInfo="Mide la calidad de los leads. Cálculo: (Entrantes - No Leads) / Entrantes." />
+                                    <StatCard title="Op. Response" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" tooltipInfo="Tasa de respuesta a los mensajes de apertura. Cálculo: (Openings Respondidos / Openings Enviados)." />
+                                    <StatCard title="FU Response" value={`${stats.percentages.rates.link_fur}%`} icon={RefreshCw} colorClass="text-rose-500" subtitle="Tasa Link FU" tooltipInfo="Tasa de respuesta a los seguimientos (Follow Ups) en la etapa de Link. Cálculo: (Link FU Respondidos / Link FU Enviados)." />
                                 </div>
 
 
@@ -395,11 +417,18 @@ const PublicSetterStatsPage = () => {
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 relative z-10">
-                                        <MiniRow label="Entrantes" value={stats.totals.entrantes} colorClass="text-slate-900" />
-                                        <MiniRow label="No Leads" value={stats.totals.not_lead} subValue={`${stats.percentages.inbox.not_lead}%`} colorClass="text-rose-500" />
-                                        <MiniRow label="In-abribles" value={stats.totals.inabribles} subValue={`${stats.percentages.inbox.inabribles}%`} colorClass="text-amber-500" />
-                                        <MiniRow label="Leads Reales" value={stats.totals.leads} subValue={`${stats.percentages.inbox.leads}%`} colorClass="text-indigo-600" />
-                                        <div className="bg-indigo-600 rounded-[2rem] p-6 text-white shadow-xl flex flex-col justify-center">
+                                        <MiniRow label="Entrantes" value={stats.totals.entrantes} colorClass="text-slate-900" tooltipInfo="Suma total de leads recibidos en el inbox." />
+                                        <MiniRow label="No Leads" value={stats.totals.not_lead} subValue={`${stats.percentages.inbox.not_lead}%`} colorClass="text-rose-500" tooltipInfo="Leads descartados por no cumplir el perfil ideal." />
+                                        <MiniRow label="In-abribles" value={stats.totals.inabribles} subValue={`${stats.percentages.inbox.inabribles}%`} colorClass="text-amber-500" tooltipInfo="Leads con los que no se pudo iniciar una conversación (mensajes restringidos, bloqueos, etc)." />
+                                        <MiniRow label="Leads Reales" value={stats.totals.leads} subValue={`${stats.percentages.inbox.leads}%`} colorClass="text-indigo-600" tooltipInfo="Leads válidos para prospectar. Cálculo: (Entrantes - No Leads)." />
+                                        <div className="bg-indigo-600 rounded-[2rem] p-6 text-white shadow-xl flex flex-col justify-center relative overflow-visible group/tooltip-conv">
+                                            <div className="absolute top-4 right-4 group-hover/tooltip-conv:opacity-100 opacity-50 transition-opacity">
+                                                <HelpCircle size={14} className="text-white/50 cursor-help" />
+                                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip-conv:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                    Porcentaje de leads reales que terminan en agenda. Cálculo: (Agendas / Leads Reales).
+                                                    <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div>
+                                                </div>
+                                            </div>
                                             <p className="text-[8px] font-black opacity-60 uppercase tracking-widest mb-1">Conversion Total</p>
                                             <p className="text-3xl font-black italic tracking-tighter">{div(stats.totals.funnel_agenda, stats.totals.leads)}%</p>
                                         </div>
@@ -412,22 +441,22 @@ const PublicSetterStatsPage = () => {
                                         {/* Container 1: Leads by Stage */}
                                         <FunnelSubContainer title="Standings (Leads)" icon={BarChart}>
                                             <div className="space-y-4">
-                                                <MiniRow label="Cualificación" value={stats.totals.funnel_qualification} colorClass="text-slate-900" />
-                                                <MiniRow label="Dolor" value={stats.totals.funnel_pain} subValue={`${stats.percentages.funnel_evolution.qual_to_pain}%`} colorClass="text-indigo-600" />
-                                                <MiniRow label="Oferta" value={stats.totals.funnel_offer} subValue={`${stats.percentages.funnel_evolution.pain_to_offer}%`} colorClass="text-indigo-600" />
-                                                <MiniRow label="Link" value={stats.totals.funnel_link} subValue={`${stats.percentages.funnel_evolution.offer_to_link}%`} colorClass="text-indigo-600" />
-                                                <MiniRow label="Agenda" value={stats.totals.funnel_agenda} subValue={`${stats.percentages.funnel_evolution.link_to_agenda}%`} colorClass="text-teal-600" />
+                                                <MiniRow label="Cualificación" value={stats.totals.funnel_qualification} colorClass="text-slate-900" tooltipInfo="Leads en etapa de Cualificación." />
+                                                <MiniRow label="Dolor" value={stats.totals.funnel_pain} subValue={`${stats.percentages.funnel_evolution.qual_to_pain}%`} colorClass="text-indigo-600" tooltipInfo="Leads avanzados a la etapa de Dolor." />
+                                                <MiniRow label="Oferta" value={stats.totals.funnel_offer} subValue={`${stats.percentages.funnel_evolution.pain_to_offer}%`} colorClass="text-indigo-600" tooltipInfo="Leads avanzados a la etapa de Oferta." />
+                                                <MiniRow label="Link" value={stats.totals.funnel_link} subValue={`${stats.percentages.funnel_evolution.offer_to_link}%`} colorClass="text-indigo-600" tooltipInfo="Leads avanzados a la etapa de Link enviado." />
+                                                <MiniRow label="Agenda" value={stats.totals.funnel_agenda} subValue={`${stats.percentages.funnel_evolution.link_to_agenda}%`} colorClass="text-teal-600" tooltipInfo="Leads avanzados a la etapa final de Agenda." />
                                             </div>
                                         </FunnelSubContainer>
 
                                         {/* Container 2: Engagement (Follow Ups) */}
                                         <FunnelSubContainer title="Engagement (Follow Ups)" icon={RefreshCw}>
                                             <div className="space-y-4">
-                                                <MiniRow label="Qual FU" value={`${stats.totals.qualification_fur}/${stats.totals.qualification_fu}`} subValue={`${stats.percentages.rates.qualification_fur}%`} colorClass="text-rose-500" />
-                                                <MiniRow label="Pain FU" value={`${stats.totals.pain_fur}/${stats.totals.pain_fu}`} subValue={`${stats.percentages.rates.pain_fur}%`} colorClass="text-rose-500" />
-                                                <MiniRow label="Offer FU" value={`${stats.totals.offer_fur}/${stats.totals.offer_fu}`} subValue={`${stats.percentages.rates.offer_fur}%`} colorClass="text-rose-500" />
-                                                <MiniRow label="Link FU" value={`${stats.totals.link_fur}/${stats.totals.link_fu}`} subValue={`${stats.percentages.rates.link_fur}%`} colorClass="text-rose-500" />
-                                                <MiniRow label="Agenda FU" value={`${stats.totals.agenda_fur}/${stats.totals.agenda_fu}`} subValue={`${stats.percentages.rates.agenda_fur}%`} colorClass="text-teal-600" />
+                                                <MiniRow label="Qual FU" value={`${stats.totals.qualification_fur}/${stats.totals.qualification_fu}`} subValue={`${stats.percentages.rates.qualification_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Cualificación: Respondidos / Enviados." />
+                                                <MiniRow label="Pain FU" value={`${stats.totals.pain_fur}/${stats.totals.pain_fu}`} subValue={`${stats.percentages.rates.pain_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Dolor: Respondidos / Enviados." />
+                                                <MiniRow label="Offer FU" value={`${stats.totals.offer_fur}/${stats.totals.offer_fu}`} subValue={`${stats.percentages.rates.offer_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Oferta: Respondidos / Enviados." />
+                                                <MiniRow label="Link FU" value={`${stats.totals.link_fur}/${stats.totals.link_fu}`} subValue={`${stats.percentages.rates.link_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Link: Respondidos / Enviados." />
+                                                <MiniRow label="Agenda FU" value={`${stats.totals.agenda_fur}/${stats.totals.agenda_fu}`} subValue={`${stats.percentages.rates.agenda_fur}%`} colorClass="text-teal-600" tooltipInfo="Seguimientos post-Agenda: Respondidos / Enviados." />
                                             </div>
                                         </FunnelSubContainer>
 
