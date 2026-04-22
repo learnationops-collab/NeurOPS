@@ -399,7 +399,7 @@ const PublicSetterStatsPage = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
                                     <StatCard title="Entrantes" value={stats.totals.entrantes} icon={Inbox} colorClass="text-pink-500" tooltipInfo="Suma total de leads nuevos ingresados al CRM en el período seleccionado." />
                                     <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" tooltipInfo="Suma total de leads movidos a la etapa de Agenda." />
-                                    <StatCard title="Tasa Apertura" value={`${stats.percentages.rates.opening_rate}%`} icon={MousePointer2} colorClass="text-emerald-500" tooltipInfo="Mide la calidad de los leads. Cálculo: (Cualificación - No Leads) / Entrantes." />
+                                    <StatCard title="Tasa Apertura" value={`${stats.percentages.rates.opening_rate}%`} icon={MousePointer2} colorClass="text-emerald-500" tooltipInfo="Mide la calidad de los leads. Cálculo: ((Entrantes - No Leads) - (Entrantes - Cualificación)) / Entrantes." />
                                     <StatCard title="Op. Response" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" tooltipInfo="Tasa de respuesta a los mensajes de apertura. Cálculo: (Openings Respondidos / Openings Enviados)." />
                                     <StatCard title="FU Response" value={`${stats.percentages.rates.link_fur}%`} icon={RefreshCw} colorClass="text-rose-500" subtitle="Tasa Link FU" tooltipInfo="Tasa de respuesta a los seguimientos (Follow Ups) en la etapa de Link. Cálculo: (Link FU Respondidos / Link FU Enviados)." />
                                 </div>

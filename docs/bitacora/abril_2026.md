@@ -1,7 +1,7 @@
 # Bitácora - Abril 2026
 
 - **22 de Abril de 2026**:
-  - **Corrección de Estadísticas (Setters):** Se corrigió la fórmula de cálculo de la "Tasa de Apertura" para los setters. Ahora se calcula matemáticamente como Leads Cualificados sobre Leads Entrantes (`(Entrantes - No Leads) / Entrantes`), reflejando la métrica de calidad de manera precisa.
+  - **Corrección de Estadísticas (Setters):** Se refinó la fórmula de la "Tasa de Apertura". Ahora se calcula restando del neto de leads (`Entrantes - No Leads`) aquellos que no respondieron al primer contacto (`Entrantes - Cualificación`), resultando en: `((Entrantes - No Leads) - (Entrantes - Cualificación)) / Entrantes`.
   - **Redefinición de Leads Reales:** Se ajustó la fórmula de "Leads Reales" (Leads Cualificados) para que sea `Cualificación - No Leads`. Este cambio se aplicó de forma integral en el formulario de reporte diario, los tooltips informativos y el motor de agregación del backend para garantizar la coherencia de los KPIs en todos los dashboards.
   - **Tooltips Explicativos:** Se implementó un sistema de tooltips interactivos (icono de interrogación) en todas las tarjetas de métricas (`StatCard`, `MiniRow`, `MetricCard`) tanto en el dashboard público como en el privado de los setters, detallando el significado y la fórmula de cálculo de cada KPI para mejorar la transparencia operativa.
 
