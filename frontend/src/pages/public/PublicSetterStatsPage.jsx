@@ -443,7 +443,7 @@ const PublicSetterStatsPage = () => {
                                         <FunnelSubContainer title="Standings (Leads)" icon={BarChart}>
                                             <div className="space-y-4">
                                                 <MiniRow label="Cualificación" value={stats.totals.funnel_qualification} colorClass="text-slate-900" tooltipInfo="Leads en etapa de Cualificación." />
-                                                <MiniRow label="Dolor" value={stats.totals.funnel_pain} subValue={`${stats.percentages.funnel_evolution.qual_to_pain}%`} colorClass="text-indigo-600" tooltipInfo="Leads avanzados a la etapa de Dolor." />
+                                                <MiniRow label="Dolor" value={stats.totals.funnel_pain} subValue={`${stats.percentages.funnel_evolution.qual_to_pain}%`} colorClass="text-indigo-600" tooltipInfo="Leads avanzados a la etapa de Dolor. Cálculo: (Dolor / Leads Reales)." />
                                                 <MiniRow label="Oferta" value={stats.totals.funnel_offer} subValue={`${stats.percentages.funnel_evolution.pain_to_offer}%`} colorClass="text-indigo-600" tooltipInfo="Leads avanzados a la etapa de Oferta." />
                                                 <MiniRow label="Link" value={stats.totals.funnel_link} subValue={`${stats.percentages.funnel_evolution.offer_to_link}%`} colorClass="text-indigo-600" tooltipInfo="Leads avanzados a la etapa de Link enviado." />
                                                 <MiniRow label="Agenda" value={stats.totals.funnel_agenda} subValue={`${stats.percentages.funnel_evolution.link_to_agenda}%`} colorClass="text-teal-600" tooltipInfo="Leads avanzados a la etapa final de Agenda." />

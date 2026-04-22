@@ -330,7 +330,7 @@ def get_public_setter_stats():
                 "pain_opening_rate": div(float(stats.p_op_r or 0), float(stats.p_op_s or 0))
             },
             "funnel_evolution": {
-                "qual_to_pain": div(float(stats.fun_pain or 0), float(stats.fun_qual or 0)),
+                "qual_to_pain": div(float(stats.fun_pain or 0), float(stats.leads or 0)),
                 "pain_to_offer": div(float(stats.fun_offer or 0), float(stats.fun_pain or 0)),
                 "offer_to_link": div(float(stats.fun_link or 0), float(stats.fun_offer or 0)),
                 "link_to_agenda": div(float(stats.fun_agenda or 0), float(stats.fun_link or 0))

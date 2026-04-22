@@ -49,7 +49,11 @@ const SetterStatisticsPage = () => {
         let conversionBase = 'N/A';
         if (index === 0) {
             conversion = 100;
-        } else if (rawStages[index - 1].value > 0) {
+        } else if (index === 1 && qualifiedLeads > 0) {
+            // Conversión de Dolor (index 1) se basa en Leads Reales (Cualificados - No Leads)
+            conversion = ((stage.value / qualifiedLeads) * 100).toFixed(0);
+            conversionBase = 'Leads Reales';
+        } else if (index > 0 && rawStages[index - 1].value > 0) {
             conversion = ((stage.value / rawStages[index - 1].value) * 100).toFixed(0);
             conversionBase = rawStages[index - 1].name;
         }
