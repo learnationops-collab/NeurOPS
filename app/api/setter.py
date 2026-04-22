@@ -506,6 +506,7 @@ def get_stats_summary():
     return jsonify({
         "total_not_lead": int(fixed_stats.total_not_lead or 0) if fixed_stats else 0,
         "total_leads": int(fixed_stats.total_entrantes or 0) if fixed_stats else 0,
+        "no_response": (int(fixed_stats.total_entrantes or 0) - int(fixed_stats.total_qual or 0)) if fixed_stats else 0,
         "stage_metrics": stage_data,
         "pending_agendas": [{
             "id": a.id,

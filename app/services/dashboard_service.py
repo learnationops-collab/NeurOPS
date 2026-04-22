@@ -178,7 +178,8 @@ class DashboardService(BaseService):
             'stats': {
                 'inbound_leads': inbound,
                 'not_lead': not_lead,
-                'qualified_leads': qualified
+                'qualified_leads': qualified,
+                'no_response': max(0, inbound - qualification)
             },
             'stages': stages_output,
             'kpis': {

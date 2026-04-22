@@ -275,6 +275,7 @@ def get_public_setter_stats():
             "not_lead": process_val(stats.not_lead),
             "inabribles": process_val(stats.inabribles),
             "leads": process_val(stats.leads),
+            "no_response": process_val(stats.entrantes) - process_val(stats.fun_qual),
             "opening_submitted": process_val(stats.op_sub),
             "opening_responded": process_val(stats.op_res),
             "funnel_qualification": process_val(stats.fun_qual),
