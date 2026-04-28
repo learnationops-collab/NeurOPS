@@ -1,6 +1,10 @@
 # Bitácora - Abril 2026
 
 - **27 de Abril de 2026**:
+  - **Mejora en Marketing Intelligence**: Implementación de filtrado por fechas personalizado en el Dashboard de Rendimiento.
+    - Se actualizaron los endpoints `/marketing/ads/performance` y `/manychat-webhook/stats/dashboard` para soportar `start_date` y `end_date`.
+    - Rediseño del selector de periodos en el frontend (`AdDashboardTab.jsx`) con un enfoque minimalista, incluyendo iconos de calendario funcionales y validación de datos para evitar errores de renderizado.
+    - Agregado buscador de anuncios en la tabla de rendimiento.
   - **Sincronización de Datos (Producción -> Local):** Se implementó un script de utilidad `actualizar_db.py` que permite volcar la información de la base de datos PostgreSQL de Railway a la SQLite local. El script utiliza SQLAlchemy para mapear todos los modelos del sistema y realizar un `merge` inteligente de registros, facilitando las pruebas en local con datos reales de producción.
   - **Seguridad y Git:** Se configuró el `.env` para manejar `DATABASE_PRODUCTION` de forma aislada y se añadió `actualizar_db.py` al `.gitignore` para prevenir fugas de credenciales o scripts de mantenimiento en el repositorio público.
 

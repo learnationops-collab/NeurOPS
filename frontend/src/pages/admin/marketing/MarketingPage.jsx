@@ -44,7 +44,12 @@ const MarketingPage = () => {
     // Estado de rendimiento
     const [performanceData, setPerformanceData] = useState([]);
     const [perfLoading, setPerfLoading] = useState(false);
-    const [perfPeriod, setPerfPeriod] = useState('last_month'); // last_month | last_week | yesterday
+    const [perfPeriod, setPerfPeriod] = useState('last_month'); // last_month | last_week | yesterday | custom
+    const [perfSearch, setPerfSearch] = useState('');
+    const [customDates, setCustomDates] = useState({
+        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+        end: new Date().toISOString().split('T')[0]
+    });
 
     const tabs = [
         { id: 'campaigns', label: 'Campañas', icon: Megaphone, endpoint: '/marketing/campaigns' },
@@ -59,7 +64,7 @@ const MarketingPage = () => {
         } else {
             fetchPerformance();
         }
-    }, [activeTab, perfPeriod]);
+    }, [activeTab, perfPeriod, customDates]);
 
     const fetchData = async () => {
         try {
@@ -78,7 +83,12 @@ const MarketingPage = () => {
     const fetchPerformance = async (period = perfPeriod) => {
         try {
             setPerfLoading(true);
-            const res = await api.get('/marketing/ads/performance', { params: { period } });
+            const params = { period };
+            if (period === 'custom') {
+                params.start_date = customDates.start;
+                params.end_date = customDates.end;
+            }
+            const res = await api.get('/marketing/ads/performance', { params });
             setPerformanceData(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error("Error fetching ad performance:", err);
@@ -278,7 +288,7 @@ const MarketingPage = () => {
                     <h1 className="text-3xl font-black text-white italic tracking-tighter">Marketing Intelligence</h1>
                     <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Gestión de pauta y rendimiento publicitario</p>
                 </div>
-                {activeTab !== 'performance' && (
+                {activeTab !== 'performance' ? (
                     <div className="flex flex-wrap gap-3">
                         <Button
                             variant="primary"
@@ -308,6 +318,51 @@ const MarketingPage = () => {
                             Nuevo Anuncio
                         </Button>
                     </div>
+                ) : (
+                    <div className="flex flex-wrap items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="flex items-center gap-1.5 p-1.5 bg-surface border border-base rounded-2xl shadow-inner">
+                            {[
+                                { id: 'last_month', label: 'Mes' },
+                                { id: 'last_week',  label: 'Semana' },
+                                { id: 'yesterday',  label: 'Ayer' },
+                                { id: 'custom',     label: 'Personalizado' },
+                            ].map(opt => (
+                                <button
+                                    key={opt.id}
+                                    onClick={() => setPerfPeriod(opt.id)}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                        perfPeriod === opt.id
+                                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/40 scale-105'
+                                            : 'text-muted hover:text-white hover:bg-white/5'
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {perfPeriod === 'custom' && (
+                            <div className="flex items-center gap-2 animate-in zoom-in-95 duration-300">
+                                <div className="relative group">
+                                    <input 
+                                        type="date"
+                                        value={customDates.start}
+                                        onChange={e => setCustomDates({...customDates, start: e.target.value})}
+                                        className="bg-surface border border-base rounded-xl pl-4 pr-3 py-2 text-[10px] font-black text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
+                                    />
+                                </div>
+                                <span className="text-muted font-black text-[10px] uppercase">a</span>
+                                <div className="relative group">
+                                    <input 
+                                        type="date"
+                                        value={customDates.end}
+                                        onChange={e => setCustomDates({...customDates, end: e.target.value})}
+                                        className="bg-surface border border-base rounded-xl pl-4 pr-3 py-2 text-[10px] font-black text-white outline-none focus:border-violet-500 transition-all cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
             </header>
 
@@ -331,28 +386,17 @@ const MarketingPage = () => {
             {/* Vista Rendimiento por Anuncio */}
             {activeTab === 'performance' && (
                 <>
-                    {/* Selector de periodo */}
-                    <div className="flex items-center gap-3">
-                        {[
-                            { id: 'last_month', label: 'Último Mes' },
-                            { id: 'last_week',  label: 'Última Semana' },
-                            { id: 'yesterday',  label: 'Ayer' },
-                        ].map(opt => (
-                            <button
-                                key={opt.id}
-                                onClick={() => {
-                                    setPerfPeriod(opt.id);
-                                    fetchPerformance(opt.id);
-                                }}
-                                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
-                                    perfPeriod === opt.id
-                                        ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-500/20'
-                                        : 'bg-surface border-base text-muted hover:text-white hover:border-violet-500/50'
-                                }`}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
+                    {/* Barra de búsqueda para rendimiento */}
+                    <div className="flex justify-end">
+                        <div className="relative group w-full md:w-80">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-violet-400 transition-colors" size={14} />
+                            <input 
+                                placeholder="Buscar anuncio..."
+                                value={perfSearch}
+                                onChange={e => setPerfSearch(e.target.value)}
+                                className="w-full bg-surface border border-base rounded-2xl pl-10 pr-4 py-3 text-[10px] font-black text-white outline-none focus:border-violet-500 transition-all placeholder:text-muted/50 shadow-sm"
+                            />
+                        </div>
                     </div>
 
                     {/* KPIs de rendimiento */}
@@ -410,8 +454,10 @@ const MarketingPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-base">
-                                        {performanceData.length > 0 ? (
-                                            performanceData.map(row => (
+                                        {performanceData.filter(row => row.ad_name.toLowerCase().includes(perfSearch.toLowerCase())).length > 0 ? (
+                                            performanceData
+                                                .filter(row => row.ad_name.toLowerCase().includes(perfSearch.toLowerCase()))
+                                                .map(row => (
                                                 <tr key={row.ad_id} className="hover:bg-violet-500/5 transition-all group">
                                                     <td className="px-6 py-5">
                                                         <p className="font-bold text-white text-sm">{row.ad_name}</p>

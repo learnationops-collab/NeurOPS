@@ -14,19 +14,31 @@ const AdDashboardTab = () => {
     
     // Filtros de periodo
     const [period, setPeriod] = useState('last_month');
+    const [customDates, setCustomDates] = useState({
+        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+        end: new Date().toISOString().split('T')[0]
+    });
 
     useEffect(() => {
         fetchStats();
-    }, [period]);
+    }, [period, customDates]);
 
     const fetchStats = async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
         try {
             const params = { period };
+            if (period === 'custom') {
+                params.start_date = customDates.start;
+                params.end_date = customDates.end;
+            }
             const adsRes = await api.get('/manychat-webhook/stats/dashboard', { params });
-            // The backend now returns { ad_stats: [], setter_stats: [] }
-            setStats(adsRes.data);
+            // Asegurar que siempre tengamos la estructura esperada
+            const data = adsRes.data || {};
+            setStats({
+                ad_stats: Array.isArray(data.ad_stats) ? data.ad_stats : [],
+                setter_stats: Array.isArray(data.setter_stats) ? data.setter_stats : []
+            });
         } catch (err) {
             console.error('Error fetching ad stats:', err);
         } finally {
@@ -37,8 +49,9 @@ const AdDashboardTab = () => {
 
     const periods = [
         { id: 'yesterday', label: 'Ayer' },
-        { id: 'last_week', label: 'Última Semana' },
-        { id: 'last_month', label: 'Último Mes' }
+        { id: 'last_week', label: 'Semana' },
+        { id: 'last_month', label: 'Mes' },
+        { id: 'custom', label: 'Personalizado' }
     ];
 
     return (
@@ -55,21 +68,47 @@ const AdDashboardTab = () => {
                     </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
-                    <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
                         {periods.map(p => (
                             <button
                                 key={p.id}
                                 onClick={() => setPeriod(p.id)}
                                 className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all
                                     ${period === p.id 
-                                        ? 'bg-slate-800 text-white shadow-lg' 
+                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
                                         : 'text-slate-500 hover:text-slate-300'}`}
                             >
                                 {p.label}
                             </button>
                         ))}
                     </div>
+
+                    {period === 'custom' && (
+                        <div className="flex items-center gap-2 animate-in zoom-in-95 duration-300">
+                            <div className="relative group">
+                                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 group-hover:text-blue-300 transition-colors pointer-events-none z-10" size={12} />
+                                <input 
+                                    type="date"
+                                    value={customDates.start}
+                                    onChange={e => setCustomDates({...customDates, start: e.target.value})}
+                                    onClick={(e) => e.currentTarget.showPicker?.()}
+                                    className="bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2 py-1.5 text-[8px] font-black text-white/70 outline-none focus:border-blue-500 focus:text-white transition-all cursor-pointer shadow-inner w-32 relative"
+                                />
+                            </div>
+                            <span className="text-slate-600 font-black text-[10px] uppercase">a</span>
+                            <div className="relative group">
+                                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 group-hover:text-blue-300 transition-colors pointer-events-none z-10" size={12} />
+                                <input 
+                                    type="date"
+                                    value={customDates.end}
+                                    onChange={e => setCustomDates({...customDates, end: e.target.value})}
+                                    onClick={(e) => e.currentTarget.showPicker?.()}
+                                    className="bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2 py-1.5 text-[8px] font-black text-white/70 outline-none focus:border-blue-500 focus:text-white transition-all cursor-pointer shadow-inner w-32 relative"
+                                />
+                            </div>
+                        </div>
+                    )}
                     <button
                         onClick={() => fetchStats(true)}
                         disabled={refreshing}

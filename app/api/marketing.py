@@ -237,10 +237,21 @@ def get_ad_performance():
     from sqlalchemy import func
     from datetime import datetime, timedelta, date
 
-    period = request.args.get('period', 'last_month')  # last_month | last_week | yesterday
+    period = request.args.get('period') # last_month | last_week | yesterday | custom
+    start_str = request.args.get('start_date')
+    end_str = request.args.get('end_date')
 
     today = date.today()
-    if period == 'yesterday':
+
+    if start_str and end_str:
+        try:
+            start_dt = datetime.combine(datetime.strptime(start_str, '%Y-%m-%d').date(), datetime.min.time())
+            end_dt   = datetime.combine(datetime.strptime(end_str, '%Y-%m-%d').date(), datetime.max.time())
+        except ValueError:
+            # Fallback if invalid format
+            start_dt = datetime.combine(today - timedelta(days=30), datetime.min.time())
+            end_dt   = datetime.combine(today, datetime.max.time())
+    elif period == 'yesterday':
         start_dt = datetime.combine(today - timedelta(days=1), datetime.min.time())
         end_dt   = datetime.combine(today - timedelta(days=1), datetime.max.time())
     elif period == 'last_week':

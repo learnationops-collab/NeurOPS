@@ -351,10 +351,21 @@ def get_ad_dashboard_stats():
     from sqlalchemy import func
     from datetime import datetime, timedelta
 
-    period = request.args.get('period', 'last_month')
-    now = datetime.utcnow()
+    period = request.args.get('period')
+    start_str = request.args.get('start_date')
+    end_str = request.args.get('end_date')
     
-    if period == 'yesterday':
+    now = datetime.utcnow()
+
+    if start_str and end_str:
+        try:
+            start_dt = datetime.strptime(start_str, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59, microsecond=999999)
+        except ValueError:
+            # Fallback
+            start_dt = (now - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+            end_dt = now
+    elif period == 'yesterday':
         start_dt = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         end_dt = (now - timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=999999)
     elif period == 'last_week':
@@ -382,7 +393,7 @@ def get_ad_dashboard_stats():
     ).group_by(LeadAnswer.ad_id).all()
 
     if not stats:
-        return jsonify([]), 200
+        return jsonify({'ad_stats': [], 'setter_stats': []}), 200
 
     ad_ids = [s.ad_id for s in stats]
     ads = Ad.query.filter(Ad.id.in_(ad_ids)).all()
