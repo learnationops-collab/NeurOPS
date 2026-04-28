@@ -1,5 +1,9 @@
 # Bitácora - Abril 2026
 
+- **27 de Abril de 2026**:
+  - **Sincronización de Datos (Producción -> Local):** Se implementó un script de utilidad `actualizar_db.py` que permite volcar la información de la base de datos PostgreSQL de Railway a la SQLite local. El script utiliza SQLAlchemy para mapear todos los modelos del sistema y realizar un `merge` inteligente de registros, facilitando las pruebas en local con datos reales de producción.
+  - **Seguridad y Git:** Se configuró el `.env` para manejar `DATABASE_PRODUCTION` de forma aislada y se añadió `actualizar_db.py` al `.gitignore` para prevenir fugas de credenciales o scripts de mantenimiento en el repositorio público.
+
 - **22 de Abril de 2026**:
   - **Corrección de Estadísticas (Setters):** Se refinó la fórmula de la "Tasa de Apertura". Ahora se calcula restando del neto de leads (`Entrantes - No Leads`) aquellos que no respondieron al primer contacto (`Entrantes - Cualificación`), resultando en: `((Entrantes - No Leads) - (Entrantes - Cualificación)) / Entrantes`.
   - **Redefinición de Leads Reales:** Se ajustó la fórmula de "Leads Reales" (Leads Cualificados) para que sea `Cualificación - No Leads`. Este cambio se aplicó de forma integral en el formulario de reporte diario, los tooltips informativos y el motor de agregación del backend para garantizar la coherencia de los KPIs en todos los dashboards.
