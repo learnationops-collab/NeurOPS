@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Radio, RefreshCw, CheckCircle, XCircle, HelpCircle, DatabaseBackup, ArrowRightLeft, Search } from 'lucide-react';
+import { Loader2, Radio, RefreshCw, CheckCircle, XCircle, HelpCircle, DatabaseBackup, ArrowRightLeft, Search, Eraser } from 'lucide-react';
 
 const QualificationBadge = ({ value }) => {
     if (value === 'true') return (
@@ -111,6 +111,23 @@ const WebhookMonitorTab = () => {
     }
 
     const [cleaning, setCleaning] = useState(false);
+    const [cleaningDuplicates, setCleaningDuplicates] = useState(false);
+    
+    const handleCleanupDuplicates = async () => {
+        if (!window.confirm("¿Estás seguro de fusionar y limpiar los leads duplicados históricos? Esta acción es irreversible.")) return;
+        
+        try {
+            setCleaningDuplicates(true);
+            const res = await api.post('/manychat-webhook/cleanup-duplicates');
+            alert(res.data.message);
+            fetchLogs(true);
+        } catch (err) {
+            console.error("Cleanup duplicates error", err);
+            alert("Error ejecutando limpieza: " + (err.response?.data?.message || err.message));
+        } finally {
+            setCleaningDuplicates(false);
+        }
+    }
     
     const handleCleanup = async () => {
         if (!window.confirm("¿Limpiar todos los registros que contienen 'cuf_' en su Variante u Opening?")) return;
@@ -197,6 +214,15 @@ const WebhookMonitorTab = () => {
                     >
                         <DatabaseBackup size={14} className={migrating ? 'animate-bounce' : ''} />
                         {migrating ? 'Migrando...' : 'Migrar Data Antigua'}
+                    </button>
+                    <button
+                        onClick={handleCleanupDuplicates}
+                        disabled={cleaningDuplicates || loading}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-xl text-xs font-bold transition-all border border-purple-500/20"
+                        title="Fusiona leads duplicados en las últimas 24h"
+                    >
+                        <Eraser size={14} className={cleaningDuplicates ? 'animate-pulse' : ''} />
+                        {cleaningDuplicates ? 'Limpiando...' : 'Limpieza Inteligente'}
                     </button>
                     <button
                         onClick={() => {

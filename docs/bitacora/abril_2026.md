@@ -5,6 +5,9 @@
     - Nuevo endpoint `POST /manychat-webhook/bulk-reassign/preview` para previsualizar la cantidad de leads afectados por un filtro.
     - Nuevo endpoint `POST /manychat-webhook/bulk-reassign` para ejecutar la actualización masiva del `ad_id`.
     - Interfaz gráfica en el Monitor de Webhooks con soporte para mover cantidades exactas (parámetro `limit`) entre anuncios específicos.
+  - **Sistema Anti-Duplicados (ManyChat)**:
+    - **Prevención (Time-Window)**: Se implementó una validación en `manychat.py` que fuerza la actualización de la interacción más reciente si un mismo usuario interactúa múltiples veces en un rango de 24h, evitando la creación de registros huérfanos.
+    - **Limpieza Histórica**: Nuevo endpoint `POST /manychat-webhook/cleanup-duplicates` y botón de "Limpieza Inteligente" en el frontend para agrupar, fusionar datos útiles (ad_id, cualificacion) y purgar registros duplicados del historial.
 
 - **27 de Abril de 2026**:
   - **Mejora en Marketing Intelligence**: Implementación de filtrado por fechas personalizado en el Dashboard de Rendimiento.

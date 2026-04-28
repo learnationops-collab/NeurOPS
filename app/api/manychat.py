@@ -111,16 +111,39 @@ def receive_manychat_ad_lead():
             logger.info(f"[WEBHOOK] ManychatLead creado: {manychat_id} (ID DB: {lead.id})")
 
         # 2. UPSERT ANSWER
-        # Buscamos si ya existe una respuesta de este lead para este anuncio (o keyword)
+        # 2. UPSERT ANSWER
+        from datetime import datetime, timedelta
+        
         answer = None
-        if ad_id:
-            answer = LeadAnswer.query.filter_by(lead_id=lead.id, ad_id=ad_id).first()
-        elif keyword:
-            answer = LeadAnswer.query.filter_by(lead_id=lead.id, keyword=keyword).first()
+        
+        # --- Fase 1: Ventana de Tiempo Anti-Duplicados ---
+        # Buscamos si hay una interacción en las últimas 24 horas
+        time_window = datetime.utcnow() - timedelta(hours=24)
+        recent_answer = LeadAnswer.query.filter(
+            LeadAnswer.lead_id == lead.id,
+            LeadAnswer.created_at >= time_window
+        ).order_by(LeadAnswer.created_at.desc()).first()
 
-        # Si mandaron a cualificar pero no dijeron qué anuncio, buscamos la última respuesta del Lead
-        if not answer and not ad_id and not keyword:
-            answer = LeadAnswer.query.filter_by(lead_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
+        if recent_answer:
+            # Solo evitamos reutilizarla si el webhook explícitamente dice que es un anuncio *diferente*
+            if ad_id and recent_answer.ad_id and ad_id != recent_answer.ad_id:
+                answer = None # Es un anuncio distinto, dejaremos que cree uno nuevo
+            else:
+                answer = recent_answer
+                # Si la interacción vieja no tenía ad_id pero este webhook sí lo trae, lo aprovechamos para rellenar
+                if ad_id and not answer.ad_id:
+                    answer.ad_id = ad_id
+                logger.info(f"[WEBHOOK] Anti-duplicados: Reutilizando LeadAnswer ID {answer.id}")
+                
+        # Si no se activó la ventana de tiempo o era de otro anuncio, seguimos con el comportamiento normal
+        if not answer:
+            if ad_id:
+                answer = LeadAnswer.query.filter_by(lead_id=lead.id, ad_id=ad_id).first()
+            elif keyword:
+                answer = LeadAnswer.query.filter_by(lead_id=lead.id, keyword=keyword).first()
+
+            if not answer and not ad_id and not keyword:
+                answer = LeadAnswer.query.filter_by(lead_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
 
         if answer:
             # Actualizar respuesta existente
@@ -902,4 +925,57 @@ def cleanup_cuf_data():
     except Exception as e:
         db.session.rollback()
         logger.error(f"[CLEANUP CUF] ERROR: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@bp.route('/manychat-webhook/cleanup-duplicates', methods=['POST'])
+def cleanup_duplicates():
+    """Busca leads con múltiples interacciones en <24h, los fusiona y elimina los sobrantes."""
+    from app.models import LeadAnswer
+    from datetime import timedelta
+    
+    try:
+        answers = LeadAnswer.query.order_by(LeadAnswer.lead_id, LeadAnswer.created_at.asc()).all()
+        
+        to_delete = []
+        merged_count = 0
+        last_lead_id = None
+        last_ans = None
+        
+        for ans in answers:
+            if ans.lead_id != last_lead_id:
+                last_lead_id = ans.lead_id
+                last_ans = ans
+                continue
+                
+            # Es el mismo lead. Verificamos si la diferencia de tiempo es menor a 24 horas.
+            # (Asumimos que created_at siempre existe, pero por si acaso lo validamos)
+            if ans.created_at and last_ans.created_at and (ans.created_at - last_ans.created_at) < timedelta(hours=24):
+                # Es un duplicado. Fusionamos la data útil hacia el "last_ans"
+                if not last_ans.ad_id and ans.ad_id: last_ans.ad_id = ans.ad_id
+                if last_ans.qualification in ('null', None) and ans.qualification not in ('null', None): 
+                    last_ans.qualification = ans.qualification
+                if not last_ans.variante and ans.variante: last_ans.variante = ans.variante
+                if not last_ans.opening and ans.opening: last_ans.opening = ans.opening
+                if not last_ans.keyword and ans.keyword: last_ans.keyword = ans.keyword
+                
+                # Marcamos el actual (más reciente) para borrar
+                to_delete.append(ans)
+                merged_count += 1
+            else:
+                # Es un lead legítimo en una nueva fecha (más de 24h después)
+                last_ans = ans
+                
+        for ans in to_delete:
+            db.session.delete(ans)
+            
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "message": f"Limpieza completada. Se fusionaron y eliminaron {merged_count} registros duplicados."
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"[CLEANUP DUPLICATES] ERROR: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
