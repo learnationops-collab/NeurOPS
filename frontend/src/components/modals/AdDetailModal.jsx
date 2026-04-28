@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Users, TrendingUp, DollarSign, Calendar, Instagram, Loader2, CalendarDays } from 'lucide-react';
+import { X, Users, TrendingUp, DollarSign, Calendar, Instagram, Loader2, CalendarDays, HelpCircle } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
@@ -114,6 +114,7 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                     value={details.total_leads} 
                                     icon={<Users className="text-blue-400" size={14} />}
                                     color="blue"
+                                    description="Suma total de leads registrados para este anuncio en el periodo seleccionado."
                                 />
                                 <StatCard 
                                     label="% Cualificación" 
@@ -121,42 +122,49 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                     subValue={`(${details.qualified_leads})`}
                                     icon={<TrendingUp className="text-emerald-400" size={14} />}
                                     color="emerald"
+                                    description="Porcentaje de leads marcados como cualificados. Cálculo: (Cualificados / Total Leads)."
                                 />
                                 <StatCard 
                                     label="Agendas" 
                                     value={details.agendas || 0} 
                                     icon={<Calendar className="text-cyan-400" size={14} />}
                                     color="cyan"
+                                    description="Cantidad de leads que agendaron una llamada o cita."
                                 />
                                 <StatCard 
                                     label="Ventas" 
                                     value={details.ventas || 0} 
                                     icon={<DollarSign className="text-amber-400" size={14} />}
                                     color="amber"
+                                    description="Cantidad de leads que terminaron en una venta cerrada."
                                 />
                                 <StatCard 
                                     label="CPL" 
                                     value={`$${details.cpl}`} 
                                     icon={<DollarSign className="text-slate-400" size={14} />}
                                     color="slate"
+                                    description="Costo por cada lead generado. Cálculo: (Inversión / Total Leads)."
                                 />
                                 <StatCard 
                                     label="CPA" 
                                     value={`$${details.cpa || 0}`} 
                                     icon={<DollarSign className="text-cyan-400" size={14} />}
                                     color="cyan"
+                                    description="Costo por cada agenda conseguida. Cálculo: (Inversión / Agendas)."
                                 />
                                 <StatCard 
                                     label="CPV" 
                                     value={`$${details.cpv || 0}`} 
                                     icon={<DollarSign className="text-amber-400" size={14} />}
                                     color="amber"
+                                    description="Costo por cada venta cerrada. Cálculo: (Inversión / Ventas)."
                                 />
                                 <StatCard 
                                     label="Inversión" 
                                     value={`$${details.spend || 0}`} 
                                     icon={<DollarSign className="text-violet-400" size={14} />}
                                     color="violet"
+                                    description="Gasto total reportado en la plataforma de anuncios para este periodo."
                                 />
                             </div>
 
@@ -336,19 +344,32 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
     );
 };
 
-const StatCard = ({ label, value, subValue, icon, color }) => {
+const StatCard = ({ label, value, subValue, icon, color, description }) => {
     const colors = {
         blue: "text-blue-400 bg-blue-500/5 border-blue-500/20",
         emerald: "text-emerald-400 bg-emerald-500/5 border-emerald-500/20",
         amber: "text-amber-400 bg-amber-500/5 border-amber-500/20",
         violet: "text-violet-400 bg-violet-500/5 border-violet-500/20",
+        cyan: "text-cyan-400 bg-cyan-500/5 border-cyan-500/20",
+        slate: "text-slate-400 bg-slate-500/5 border-slate-500/20",
     };
 
     return (
-        <div className={`p-4 rounded-2xl border ${colors[color]}`}>
-            <div className="flex items-center gap-2 mb-2 opacity-70">
-                {icon}
-                <p className="text-[9px] font-black uppercase tracking-wider">{label}</p>
+        <div className={`p-4 rounded-2xl border ${colors[color] || colors.slate} relative group/stat overflow-visible`}>
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 opacity-70">
+                    {icon}
+                    <p className="text-[9px] font-black uppercase tracking-wider">{label}</p>
+                </div>
+                {description && (
+                    <div className="relative group/tooltip">
+                        <HelpCircle size={10} className="text-slate-500 cursor-help hover:text-white transition-colors" />
+                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                            {description}
+                            <div className="absolute top-full right-1.5 border-4 border-transparent border-t-slate-800"></div>
+                        </div>
+                    </div>
+                )}
             </div>
             <div className="flex items-baseline gap-1.5">
                 <p className="text-xl font-black text-white">{value}</p>

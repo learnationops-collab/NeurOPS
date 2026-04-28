@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays } from 'lucide-react';
+import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays, HelpCircle } from 'lucide-react';
 import AdDetailModal from '../../components/modals/AdDetailModal';
 
 
@@ -201,30 +201,51 @@ const AdDashboardTab = () => {
                                             </div>
 
                                             {/* Main Metrics (Leads/Qual) */}
-                                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                                <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800/50">
-                                                    <div className="flex items-center gap-1.5 mb-1 opacity-70">
-                                                        <Users size={12} className="text-blue-400" />
-                                                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-wider">Leads</p>
+                                            <div className="grid grid-cols-2 gap-3 mb-4 overflow-visible">
+                                                <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800/50 relative group/tooltip overflow-visible">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <div className="flex items-center gap-1.5 opacity-70">
+                                                            <Users size={12} className="text-blue-400" />
+                                                            <p className="text-[9px] font-black text-blue-400 uppercase tracking-wider">Leads</p>
+                                                        </div>
+                                                        <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
+                                                    </div>
+                                                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                        Suma total de leads registrados para este anuncio en el periodo seleccionado.
+                                                        <div className="absolute top-full right-1.5 border-4 border-transparent border-t-slate-800"></div>
                                                     </div>
                                                     <p className="text-2xl font-black text-white leading-none">{stat.total_leads}</p>
                                                 </div>
 
-                                                <div className={`rounded-xl p-3 border ${qualBg.replace('10', '20').replace('bg-', 'border-')}`}>
-                                                    <div className="flex items-center gap-1.5 mb-1 opacity-70">
-                                                        <TrendingUp size={12} className={qualColor} />
-                                                        <p className={`text-[9px] font-black uppercase tracking-wider ${qualColor}`}>% Cual.</p>
+                                                <div className={`rounded-xl p-3 border ${qualBg.replace('10', '20').replace('bg-', 'border-')} relative group/tooltip overflow-visible`}>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <div className="flex items-center gap-1.5 opacity-70">
+                                                            <TrendingUp size={12} className={qualColor} />
+                                                            <p className={`text-[9px] font-black uppercase tracking-wider ${qualColor}`}>% Cual.</p>
+                                                        </div>
+                                                        <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
+                                                    </div>
+                                                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                        Porcentaje de leads marcados como cualificados. Cálculo: (Cualificados / Total Leads).
+                                                        <div className="absolute top-full right-1.5 border-4 border-transparent border-t-slate-800"></div>
                                                     </div>
                                                     <p className={`text-2xl font-black leading-none ${qualColor}`}>{stat.qualified_percentage}%</p>
                                                 </div>
                                             </div>
 
                                             {/* Conversion Metrics (Agendas/Sales) */}
-                                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                                <div className="bg-slate-950/40 rounded-xl p-3 border border-slate-800/30">
-                                                    <div className="flex items-center gap-1.5 mb-1 opacity-70">
-                                                        <CalendarDays size={12} className="text-emerald-400" />
-                                                        <p className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">Agendas</p>
+                                            <div className="grid grid-cols-2 gap-3 mb-4 overflow-visible">
+                                                <div className="bg-slate-950/40 rounded-xl p-3 border border-slate-800/30 relative group/tooltip overflow-visible">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <div className="flex items-center gap-1.5 opacity-70">
+                                                            <CalendarDays size={12} className="text-emerald-400" />
+                                                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">Agendas</p>
+                                                        </div>
+                                                        <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
+                                                    </div>
+                                                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                        Cantidad de leads que agendaron una llamada o cita.
+                                                        <div className="absolute top-full right-1.5 border-4 border-transparent border-t-slate-800"></div>
                                                     </div>
                                                     <p className="text-xl font-black text-white leading-none">{stat.agendas || 0}</p>
                                                     {/* Setter Breakdown */}
@@ -240,32 +261,67 @@ const AdDashboardTab = () => {
                                                     )}
                                                 </div>
 
-                                                <div className="bg-slate-950/40 rounded-xl p-3 border border-slate-800/30">
-                                                    <div className="flex items-center gap-1.5 mb-1 opacity-70">
-                                                        <DollarSign size={12} className="text-amber-400" />
-                                                        <p className="text-[9px] font-black text-amber-400 uppercase tracking-wider">Ventas</p>
+                                                <div className="bg-slate-950/40 rounded-xl p-3 border border-slate-800/30 relative group/tooltip overflow-visible">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <div className="flex items-center gap-1.5 opacity-70">
+                                                            <DollarSign size={12} className="text-amber-400" />
+                                                            <p className="text-[9px] font-black text-amber-400 uppercase tracking-wider">Ventas</p>
+                                                        </div>
+                                                        <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
+                                                    </div>
+                                                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                        Cantidad de leads que terminaron en una venta cerrada.
+                                                        <div className="absolute top-full right-1.5 border-4 border-transparent border-t-slate-800"></div>
                                                     </div>
                                                     <p className="text-xl font-black text-white leading-none">{stat.ventas || 0}</p>
                                                 </div>
                                             </div>
 
                                             {/* Financial Metrics (CPL, CPA, CPV) */}
-                                            <div className="pt-4 border-t border-slate-800/50">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <div className="flex flex-col">
-                                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Inversión</p>
+                                            <div className="pt-4 border-t border-slate-800/50 overflow-visible">
+                                                <div className="flex items-center justify-between gap-2 overflow-visible">
+                                                    <div className="flex flex-col relative group/tooltip overflow-visible">
+                                                        <div className="flex items-center gap-1">
+                                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Inversión</p>
+                                                            <HelpCircle size={8} className="text-slate-600 cursor-help" />
+                                                        </div>
+                                                        <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                            Gasto total reportado en la plataforma de anuncios para este periodo.
+                                                            <div className="absolute top-full left-2 border-4 border-transparent border-t-slate-800"></div>
+                                                        </div>
                                                         <p className="text-xs font-black text-white">${(stat.spend||0).toLocaleString()}</p>
                                                     </div>
-                                                    <div className="flex flex-col text-center">
-                                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">CPL</p>
+                                                    <div className="flex flex-col text-center relative group/tooltip overflow-visible">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">CPL</p>
+                                                            <HelpCircle size={8} className="text-slate-600 cursor-help" />
+                                                        </div>
+                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                            Costo por cada lead generado. Cálculo: (Inversión / Total Leads).
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                        </div>
                                                         <p className="text-xs font-black text-blue-400">${stat.cpl || '0'}</p>
                                                     </div>
-                                                    <div className="flex flex-col text-center">
-                                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">CPA</p>
+                                                    <div className="flex flex-col text-center relative group/tooltip overflow-visible">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">CPA</p>
+                                                            <HelpCircle size={8} className="text-slate-600 cursor-help" />
+                                                        </div>
+                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                            Costo por cada agenda conseguida. Cálculo: (Inversión / Agendas).
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                        </div>
                                                         <p className="text-xs font-black text-emerald-400">${stat.cpa || '0'}</p>
                                                     </div>
-                                                    <div className="flex flex-col text-right">
-                                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">CPV</p>
+                                                    <div className="flex flex-col text-right relative group/tooltip overflow-visible">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">CPV</p>
+                                                            <HelpCircle size={8} className="text-slate-600 cursor-help" />
+                                                        </div>
+                                                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                            Costo por cada venta cerrada. Cálculo: (Inversión / Ventas).
+                                                            <div className="absolute top-full right-2 border-4 border-transparent border-t-slate-800"></div>
+                                                        </div>
                                                         <p className="text-xs font-black text-amber-400">${stat.cpv || '0'}</p>
                                                     </div>
                                                 </div>

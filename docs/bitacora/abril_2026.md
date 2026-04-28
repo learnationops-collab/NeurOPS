@@ -12,7 +12,10 @@
     - **Ajuste Dinámico Diario**: Nuevo endpoint `POST /marketing/ads/<ad_id>/adjust-leads` que permite forzar la cantidad exacta de leads para un anuncio en un día específico.
     - **Bolsa de Reasignación y Comodines**: Si los leads sobran, el sistema los mueve a una bolsa de reasignación (`ad_id = None`). Si faltan, el sistema consume de la bolsa o, en su defecto, genera comodines momentáneos (`MOMENTARY-{uuid}`).
     - **Auto-Healing**: Función silenciosa `check_and_replace_momentary_leads` que se dispara automáticamente para reemplazar comodines con leads reales tan pronto como ingresan a la bolsa de reasignación.
-    - **Frontend**: Se añadió un panel de edición rápida en `AdDetailModal.jsx` que permite visualizar los leads de los últimos 7 días y ajustar el número directamente, corrigiendo también un bug de visualización de zonas horarias en la gráfica de evolución.
+    - **Frontend & Tooltips**: 
+      - Se añadió un panel de edición rápida en `AdDetailModal.jsx` para ajustar leads por día.
+      - Se implementó un sistema de **Tooltips Explicativos** (icono de ayuda) en todas las métricas de anuncios (Leads, % Cualificación, Agendas, Ventas, CPL, CPA, CPV, Inversión) tanto en el Dashboard principal como en el modal de detalle, detallando la definición y fórmula de cálculo de cada KPI.
+      - Corrección de bug de visualización de zonas horarias en la gráfica de evolución.
 
 - **27 de Abril de 2026**:
   - **Mejora en Marketing Intelligence**: Implementación de filtrado por fechas personalizado en el Dashboard de Rendimiento.
