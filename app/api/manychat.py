@@ -979,3 +979,159 @@ def cleanup_duplicates():
         db.session.rollback()
         logger.error(f"[CLEANUP DUPLICATES] ERROR: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def check_and_replace_momentary_leads():
+    """Busca leads en la bolsa de reasignación y reemplaza leads momentáneos con ellos."""
+    from app.models import LeadAnswer, ManychatLead
+    
+    # Encontrar leads en la bolsa (ad_id = None) que NO sean momentáneos
+    bolsa_answers = LeadAnswer.query.join(ManychatLead).filter(
+        LeadAnswer.ad_id == None,
+        ~ManychatLead.manychat_id.like('MOMENTARY-%')
+    ).order_by(LeadAnswer.created_at.asc()).all()
+
+    if not bolsa_answers:
+        return 0
+        
+    # Encontrar leads momentáneos que estén ocupando un lugar en algún anuncio
+    momentary_answers = LeadAnswer.query.join(ManychatLead).filter(
+        ManychatLead.manychat_id.like('MOMENTARY-%')
+    ).order_by(LeadAnswer.created_at.asc()).all()
+    
+    if not momentary_answers:
+        return 0
+        
+    replaced_count = 0
+    
+    for m_ans in momentary_answers:
+        if not bolsa_answers:
+            break
+            
+        real_ans = bolsa_answers.pop(0)
+        
+        # Le pasamos el ad_id del momentáneo al lead real
+        real_ans.ad_id = m_ans.ad_id
+        # Modificamos la fecha del lead real para que cuadre en el día donde hacía falta
+        real_ans.created_at = m_ans.created_at
+        
+        # Eliminamos el momentáneo
+        m_lead = m_ans.lead
+        db.session.delete(m_ans)
+        db.session.delete(m_lead)
+        
+        replaced_count += 1
+        
+    return replaced_count
+
+
+@bp.route('/marketing/ads/<int:ad_id>/adjust-leads', methods=['POST'])
+def adjust_daily_leads(ad_id):
+    """
+    Ajusta la cantidad de leads de un anuncio en una fecha específica.
+    Usa la bolsa de reasignación y leads momentáneos para balancear.
+    """
+    from app.models import LeadAnswer, ManychatLead
+    from datetime import datetime
+    import uuid
+    
+    data = request.get_json() or {}
+    target_date_str = data.get('date')
+    target_count = data.get('target_count')
+    
+    if not target_date_str or target_count is None:
+        return jsonify({"status": "error", "message": "Faltan datos (date, target_count)"}), 400
+        
+    try:
+        target_count = int(target_count)
+        if target_count < 0:
+            raise ValueError
+    except ValueError:
+        return jsonify({"status": "error", "message": "target_count debe ser un número entero positivo"}), 400
+        
+    try:
+        st = datetime.strptime(target_date_str, '%Y-%m-%d')
+        ed = st.replace(hour=23, minute=59, second=59)
+    except ValueError:
+        return jsonify({"status": "error", "message": "Formato de fecha inválido (YYYY-MM-DD)"}), 400
+        
+    try:
+        # Obtener leads actuales de este anuncio en este día
+        current_answers = LeadAnswer.query.filter(
+            LeadAnswer.ad_id == ad_id,
+            LeadAnswer.created_at >= st,
+            LeadAnswer.created_at <= ed
+        ).order_by(LeadAnswer.created_at.desc()).all()
+        
+        current_count = len(current_answers)
+        diff = target_count - current_count
+        
+        actions_taken = []
+        
+        if diff == 0:
+            return jsonify({"status": "success", "message": "La cantidad de leads ya es la deseada."}), 200
+            
+        if diff < 0:
+            # Sobran leads. Mover los excesos a la bolsa de reasignación.
+            excess = abs(diff)
+            to_remove = current_answers[:excess] # Tomamos los últimos N
+            for ans in to_remove:
+                ans.ad_id = None # A la bolsa
+            
+            actions_taken.append(f"Se movieron {excess} leads a la bolsa de reasignación.")
+            
+            # Al mover a la bolsa, puede que haya momentáneos esperando en otros lados
+            db.session.flush() # Flush para que check_and_replace los vea
+            replaced = check_and_replace_momentary_leads()
+            if replaced > 0:
+                actions_taken.append(f"Se usaron {replaced} de esos leads para rellenar comodines previos.")
+                
+        elif diff > 0:
+            # Faltan leads. Buscar en la bolsa primero.
+            bolsa_answers = LeadAnswer.query.join(ManychatLead).filter(
+                LeadAnswer.ad_id == None,
+                ~ManychatLead.manychat_id.like('MOMENTARY-%')
+            ).order_by(LeadAnswer.created_at.asc()).limit(diff).all()
+            
+            used_from_bolsa = len(bolsa_answers)
+            for ans in bolsa_answers:
+                ans.ad_id = ad_id
+                ans.created_at = st.replace(hour=12) # Ajustar la fecha al día que faltan
+                
+            if used_from_bolsa > 0:
+                actions_taken.append(f"Se tomaron {used_from_bolsa} leads de la bolsa de reasignación.")
+                
+            remaining = diff - used_from_bolsa
+            if remaining > 0:
+                # Faltan crear momentáneos
+                for _ in range(remaining):
+                    momentary_lead = ManychatLead(
+                        manychat_id=f"MOMENTARY-{uuid.uuid4().hex[:8]}",
+                        name="[REASIGNACION]",
+                        ig="N/A",
+                        follower=False
+                    )
+                    db.session.add(momentary_lead)
+                    db.session.flush()
+                    
+                    momentary_ans = LeadAnswer(
+                        lead_id=momentary_lead.id,
+                        ad_id=ad_id,
+                        qualification='null',
+                        created_at=st.replace(hour=12)
+                    )
+                    db.session.add(momentary_ans)
+                    
+                actions_taken.append(f"Se crearon {remaining} comodines momentáneos.")
+                
+        db.session.commit()
+        return jsonify({
+            "status": "success", 
+            "message": " ".join(actions_taken)
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        logger.error(f"[ADJUST LEADS] ERROR: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({"status": "error", "message": str(e)}), 500

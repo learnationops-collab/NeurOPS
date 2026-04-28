@@ -7,6 +7,8 @@ import api from '../../services/api';
 const AdDetailModal = ({ adId, isOpen, onClose }) => {
     const [details, setDetails] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [adjustingDate, setAdjustingDate] = useState(null);
+    const [adjustValue, setAdjustValue] = useState("");
 
     useEffect(() => {
         if (isOpen && adId) {
@@ -23,6 +25,25 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
             console.error('Error fetching ad details:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAdjustLeads = async (dateStr) => {
+        if (adjustValue === "" || parseInt(adjustValue) < 0) return alert("Ingresa un número válido (0 o mayor)");
+        const [y, m, d] = dateStr.split('-');
+        const safeDate = new Date(y, m - 1, d);
+        if (!window.confirm(`¿Ajustar a ${adjustValue} leads el día ${safeDate.toLocaleDateString('es-AR')}? El sistema reasignará o creará comodines automáticamente.`)) return;
+        
+        try {
+            const res = await api.post(`/marketing/ads/${adId}/adjust-leads`, {
+                date: dateStr,
+                target_count: parseInt(adjustValue)
+            });
+            alert(res.data.message);
+            setAdjustingDate(null);
+            fetchDetails();
+        } catch (err) {
+            alert(err.response?.data?.message || err.message);
         }
     };
 
@@ -155,8 +176,9 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                                     stroke="#64748b" 
                                                     fontSize={10} 
                                                     tickFormatter={(str) => {
-                                                        const date = new Date(str);
-                                                        return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+                                                        const [year, month, day] = str.split('-');
+                                                        const safeDate = new Date(year, month - 1, day);
+                                                        return safeDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
                                                     }}
                                                 />
                                                 <YAxis stroke="#64748b" fontSize={10} />
@@ -174,6 +196,52 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                                 />
                                             </LineChart>
                                         </ResponsiveContainer>
+                                    </div>
+                                    
+                                    {/* Daily Breakdown for Adjustment */}
+                                    <div className="mt-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Ajuste de Leads Diarios (Últimos 7 días)</h4>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                            {details.evolution && details.evolution.slice(-7).map(day => {
+                                                const [y, m, d] = day.date.split('-');
+                                                const safeDate = new Date(y, m - 1, d);
+                                                return (
+                                                <div key={day.date} className="bg-slate-800/40 border border-slate-700/50 p-2 rounded-lg flex flex-col justify-between group">
+                                                    <span className="text-[9px] font-bold text-slate-400 mb-1">
+                                                        {safeDate.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' })}
+                                                    </span>
+                                                    {adjustingDate === day.date ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <input 
+                                                                type="number" 
+                                                                autoFocus
+                                                                className="w-full bg-slate-900 border border-blue-500 rounded text-xs text-white px-1 py-0.5 outline-none font-mono text-center"
+                                                                value={adjustValue}
+                                                                onChange={e => setAdjustValue(e.target.value)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === 'Enter') handleAdjustLeads(day.date);
+                                                                    if (e.key === 'Escape') setAdjustingDate(null);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div 
+                                                            className="flex items-center justify-between cursor-pointer hover:bg-slate-700/30 p-1 -mx-1 rounded transition-colors"
+                                                            onClick={() => {
+                                                                setAdjustingDate(day.date);
+                                                                setAdjustValue(day.leads.toString());
+                                                            }}
+                                                            title="Clic para ajustar cantidad de leads"
+                                                        >
+                                                            <span className="text-sm font-black text-white">{day.leads}</span>
+                                                            <span className="text-[8px] text-blue-400 opacity-0 group-hover:opacity-100 uppercase font-black transition-opacity">Editar</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )})}
+                                        </div>
                                     </div>
                                 </div>
 

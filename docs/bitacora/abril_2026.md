@@ -8,6 +8,11 @@
   - **Sistema Anti-Duplicados (ManyChat)**:
     - **Prevención (Time-Window)**: Se implementó una validación en `manychat.py` que fuerza la actualización de la interacción más reciente si un mismo usuario interactúa múltiples veces en un rango de 24h, evitando la creación de registros huérfanos.
     - **Limpieza Histórica**: Nuevo endpoint `POST /manychat-webhook/cleanup-duplicates` y botón de "Limpieza Inteligente" en el frontend para agrupar, fusionar datos útiles (ad_id, cualificacion) y purgar registros duplicados del historial.
+  - **Motor de Conciliación Automática de Leads**:
+    - **Ajuste Dinámico Diario**: Nuevo endpoint `POST /marketing/ads/<ad_id>/adjust-leads` que permite forzar la cantidad exacta de leads para un anuncio en un día específico.
+    - **Bolsa de Reasignación y Comodines**: Si los leads sobran, el sistema los mueve a una bolsa de reasignación (`ad_id = None`). Si faltan, el sistema consume de la bolsa o, en su defecto, genera comodines momentáneos (`MOMENTARY-{uuid}`).
+    - **Auto-Healing**: Función silenciosa `check_and_replace_momentary_leads` que se dispara automáticamente para reemplazar comodines con leads reales tan pronto como ingresan a la bolsa de reasignación.
+    - **Frontend**: Se añadió un panel de edición rápida en `AdDetailModal.jsx` que permite visualizar los leads de los últimos 7 días y ajustar el número directamente, corrigiendo también un bug de visualización de zonas horarias en la gráfica de evolución.
 
 - **27 de Abril de 2026**:
   - **Mejora en Marketing Intelligence**: Implementación de filtrado por fechas personalizado en el Dashboard de Rendimiento.
