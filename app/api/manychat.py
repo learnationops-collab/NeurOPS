@@ -262,6 +262,103 @@ def update_ad_lead(answer_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@bp.route('/manychat-webhook/bulk-reassign/preview', methods=['POST'])
+def preview_bulk_reassign():
+    """Muestra cuántos leads coinciden con los filtros antes de moverlos."""
+    from app.models import LeadAnswer
+    from datetime import datetime
+    
+    data = request.get_json() or {}
+    from_ad_id = data.get('from_ad_id')
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+
+    if from_ad_id is None:
+        return jsonify({"status": "error", "message": "from_ad_id es requerido"}), 400
+
+    from_ad_id_val = int(from_ad_id) if str(from_ad_id).isdigit() else None
+    if str(from_ad_id) == 'null' or str(from_ad_id) == '':
+        query = LeadAnswer.query.filter(LeadAnswer.ad_id == None)
+    else:
+        query = LeadAnswer.query.filter(LeadAnswer.ad_id == from_ad_id_val)
+    
+    if start_date:
+        try:
+            st = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(LeadAnswer.created_at >= st)
+        except ValueError:
+            pass
+            
+    if end_date:
+        try:
+            ed = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            query = query.filter(LeadAnswer.created_at <= ed)
+        except ValueError:
+            pass
+            
+    count = query.count()
+    return jsonify({"status": "success", "count": count}), 200
+
+
+@bp.route('/manychat-webhook/bulk-reassign', methods=['POST'])
+def execute_bulk_reassign():
+    """Ejecuta la reasignación masiva de leads de un anuncio a otro."""
+    from app.models import LeadAnswer
+    from datetime import datetime
+    
+    data = request.get_json() or {}
+    from_ad_id = data.get('from_ad_id')
+    to_ad_id = data.get('to_ad_id')
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+
+    if from_ad_id is None or to_ad_id is None:
+        return jsonify({"status": "error", "message": "Faltan IDs de origen o destino"}), 400
+
+    to_ad_id_val = int(to_ad_id) if str(to_ad_id).isdigit() else None
+    from_ad_id_val = int(from_ad_id) if str(from_ad_id).isdigit() else None
+
+    if str(from_ad_id) == 'null' or str(from_ad_id) == '':
+        query = LeadAnswer.query.filter(LeadAnswer.ad_id == None)
+    else:
+        query = LeadAnswer.query.filter(LeadAnswer.ad_id == from_ad_id_val)
+    
+    limit_count = data.get('limit')
+    
+    if start_date:
+        try:
+            st = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(LeadAnswer.created_at >= st)
+        except ValueError:
+            pass
+            
+    if end_date:
+        try:
+            ed = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            query = query.filter(LeadAnswer.created_at <= ed)
+        except ValueError:
+            pass
+            
+    try:
+        if limit_count and int(limit_count) > 0:
+            limit_val = int(limit_count)
+            # Fetch the specific IDs to update to support limit safely across DB dialects
+            leads_to_update = query.order_by(LeadAnswer.created_at.desc()).limit(limit_val).all()
+            ids_to_update = [l.id for l in leads_to_update]
+            if not ids_to_update:
+                return jsonify({"status": "error", "message": "No se encontraron leads para reasignar"}), 404
+                
+            updated_count = LeadAnswer.query.filter(LeadAnswer.id.in_(ids_to_update)).update({'ad_id': to_ad_id_val}, synchronize_session=False)
+        else:
+            updated_count = query.update({'ad_id': to_ad_id_val}, synchronize_session=False)
+            
+        db.session.commit()
+        return jsonify({"status": "success", "message": f"{updated_count} leads reasignados con éxito."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @bp.route('/manychat-webhook/stats/segmentation', methods=['GET'])
 def get_ad_segmentation_stats():
     """Retorna leads agrupados por variante y por opening."""

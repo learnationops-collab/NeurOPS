@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Radio, RefreshCw, CheckCircle, XCircle, HelpCircle, DatabaseBackup } from 'lucide-react';
+import { Loader2, Radio, RefreshCw, CheckCircle, XCircle, HelpCircle, DatabaseBackup, ArrowRightLeft, Search } from 'lucide-react';
 
 const QualificationBadge = ({ value }) => {
     if (value === 'true') return (
@@ -35,6 +35,18 @@ const WebhookMonitorTab = () => {
         ad_id: ''
     });
     const [saving, setSaving] = useState(false);
+
+    // Reasignación masiva
+    const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+    const [reassignForm, setReassignForm] = useState({
+        from_ad_id: '',
+        to_ad_id: '',
+        start_date: '',
+        end_date: '',
+        limit: ''
+    });
+    const [reassignPreviewCount, setReassignPreviewCount] = useState(null);
+    const [reassigning, setReassigning] = useState(false);
 
     useEffect(() => {
         fetchLogs();
@@ -116,6 +128,40 @@ const WebhookMonitorTab = () => {
         }
     }
 
+    const handlePreviewReassign = async (e) => {
+        e.preventDefault();
+        try {
+            setReassigning(true);
+            const res = await api.post('/manychat-webhook/bulk-reassign/preview', reassignForm);
+            setReassignPreviewCount(res.data.count);
+        } catch (err) {
+            alert(err.response?.data?.message || 'Error al previsualizar');
+        } finally {
+            setReassigning(false);
+        }
+    };
+
+    const handleExecuteReassign = async () => {
+        if (reassignPreviewCount === 0) return;
+        const moverCantidad = reassignForm.limit ? Math.min(reassignPreviewCount, parseInt(reassignForm.limit)) : reassignPreviewCount;
+        if (!window.confirm(`¿Estás seguro de reasignar ${moverCantidad} leads al Anuncio #${reassignForm.to_ad_id}? Esta acción no se puede deshacer.`)) return;
+        
+        try {
+            setReassigning(true);
+            const payload = { ...reassignForm };
+            if (payload.limit === '') delete payload.limit;
+            const res = await api.post('/manychat-webhook/bulk-reassign', payload);
+            alert(res.data.message);
+            setIsReassignModalOpen(false);
+            setReassignPreviewCount(null);
+            fetchLogs(true);
+        } catch (err) {
+            alert(err.response?.data?.message || 'Error al reasignar');
+        } finally {
+            setReassigning(false);
+        }
+    };
+
     // Calcular resumen
     const totalLeads = logs.length;
     const qualified = logs.filter(l => l.qualification === 'true').length;
@@ -151,6 +197,16 @@ const WebhookMonitorTab = () => {
                     >
                         <DatabaseBackup size={14} className={migrating ? 'animate-bounce' : ''} />
                         {migrating ? 'Migrando...' : 'Migrar Data Antigua'}
+                    </button>
+                    <button
+                        onClick={() => {
+                            setReassignForm({ from_ad_id: '', to_ad_id: '', start_date: '', end_date: '', limit: '' });
+                            setReassignPreviewCount(null);
+                            setIsReassignModalOpen(true);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20"
+                    >
+                        <ArrowRightLeft size={14} /> Reasignación Masiva
                     </button>
                     <button
                         onClick={() => fetchLogs(true)}
@@ -329,6 +385,124 @@ const WebhookMonitorTab = () => {
                     Body: {`{ \n  "manychat_id": "...",\n  "lead_name": "...",\n  "lead_ig": "...",\n  "follower": "true/false",\n  "ad_id": N,\n  "keyword": "...",\n  "opening": "...",\n  "variante": "...",\n  "fecha": "...",\n  "cualificacion": "true/false/null"\n}`}
                 </p>
             </div>
+
+            {/* Modal de Reasignación Masiva */}
+            {isReassignModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-slate-900 border border-blue-500/30 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+                        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+                            <h3 className="text-lg font-black text-white italic tracking-tighter uppercase flex items-center gap-2">
+                                <ArrowRightLeft className="text-blue-400" size={18} /> Reasignación Masiva
+                            </h3>
+                            <button onClick={() => setIsReassignModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+                                <XCircle size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6">
+                            <p className="text-xs text-slate-400 mb-5">
+                                Esta herramienta permite mover leads de un anuncio a otro. Útil si se asignó un ID incorrecto en ManyChat o Meta.
+                            </p>
+                            
+                            <form onSubmit={handlePreviewReassign} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Anuncio Origen (Error)</label>
+                                        <input 
+                                            type="text"
+                                            value={reassignForm.from_ad_id}
+                                            onChange={e => setReassignForm({...reassignForm, from_ad_id: e.target.value})}
+                                            placeholder="Ej: 154 o 'null'"
+                                            className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white text-sm outline-none focus:border-blue-500 transition-colors font-mono"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Anuncio Destino (Correcto)</label>
+                                        <input 
+                                            type="number"
+                                            value={reassignForm.to_ad_id}
+                                            onChange={e => setReassignForm({...reassignForm, to_ad_id: e.target.value})}
+                                            placeholder="Ej: 200"
+                                            className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white text-sm outline-none focus:border-blue-500 transition-colors font-mono"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Inicio (Opcional)</label>
+                                        <input 
+                                            type="date"
+                                            value={reassignForm.start_date}
+                                            onChange={e => setReassignForm({...reassignForm, start_date: e.target.value})}
+                                            className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-slate-300 text-sm outline-none focus:border-blue-500 transition-colors"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Fin (Opcional)</label>
+                                        <input 
+                                            type="date"
+                                            value={reassignForm.end_date}
+                                            onChange={e => setReassignForm({...reassignForm, end_date: e.target.value})}
+                                            className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-slate-300 text-sm outline-none focus:border-blue-500 transition-colors"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cantidad Exacta a Mover (Opcional)</label>
+                                    <input 
+                                        type="number"
+                                        value={reassignForm.limit}
+                                        onChange={e => setReassignForm({...reassignForm, limit: e.target.value})}
+                                        placeholder="Ej: 10 (Deja vacío para mover todos)"
+                                        className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-amber-400 text-sm outline-none focus:border-blue-500 transition-colors font-mono"
+                                    />
+                                    <p className="text-[9px] text-slate-500 ml-1">Útil si un anuncio solo recibió "X" leads equivocados un día.</p>
+                                </div>
+
+                                <div className="pt-4 flex gap-3">
+                                    <button 
+                                        type="submit" 
+                                        disabled={reassigning} 
+                                        className="w-full py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {reassigning ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} Buscar Leads Afectados
+                                    </button>
+                                </div>
+                            </form>
+
+                            {reassignPreviewCount !== null && (
+                                <div className="mt-6 p-4 rounded-xl border bg-blue-500/10 border-blue-500/30 animate-in slide-in-from-bottom-2">
+                                    <div className="text-center space-y-2">
+                                        <p className="text-sm font-medium text-slate-300">
+                                            Se encontraron <strong className="text-white text-lg">{reassignPreviewCount}</strong> leads coincidentes.
+                                            {reassignForm.limit && reassignPreviewCount > 0 && (
+                                                <span className="block mt-1 text-amber-400 font-bold">
+                                                    ⚠️ Solo se moverán {Math.min(reassignPreviewCount, parseInt(reassignForm.limit))} leads recientes.
+                                                </span>
+                                            )}
+                                        </p>
+                                        
+                                        {reassignPreviewCount > 0 ? (
+                                            <button 
+                                                onClick={handleExecuteReassign}
+                                                disabled={reassigning}
+                                                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20"
+                                            >
+                                                Confirmar y Mover {reassignForm.limit ? Math.min(reassignPreviewCount, parseInt(reassignForm.limit)) : reassignPreviewCount} Leads
+                                            </button>
+                                        ) : (
+                                            <p className="text-xs text-amber-400">No hay leads que coincidan con estos filtros.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

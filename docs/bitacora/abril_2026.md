@@ -1,5 +1,11 @@
 # Bitácora - Abril 2026
 
+- **28 de Abril de 2026**:
+  - **Reasignación Masiva de Leads**: Implementación de herramientas para corregir discrepancias y asignaciones erróneas de leads en Meta Ads.
+    - Nuevo endpoint `POST /manychat-webhook/bulk-reassign/preview` para previsualizar la cantidad de leads afectados por un filtro.
+    - Nuevo endpoint `POST /manychat-webhook/bulk-reassign` para ejecutar la actualización masiva del `ad_id`.
+    - Interfaz gráfica en el Monitor de Webhooks con soporte para mover cantidades exactas (parámetro `limit`) entre anuncios específicos.
+
 - **27 de Abril de 2026**:
   - **Mejora en Marketing Intelligence**: Implementación de filtrado por fechas personalizado en el Dashboard de Rendimiento.
     - Se actualizaron los endpoints `/marketing/ads/performance` y `/manychat-webhook/stats/dashboard` para soportar `start_date` y `end_date`.
