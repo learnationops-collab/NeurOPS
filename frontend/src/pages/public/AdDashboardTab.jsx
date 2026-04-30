@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays, HelpCircle } from 'lucide-react';
+import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays, HelpCircle, LayoutGrid, List } from 'lucide-react';
 import AdDetailModal from '../../components/modals/AdDetailModal';
 
 
@@ -11,6 +11,7 @@ const AdDashboardTab = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedAdId, setSelectedAdId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [viewMode, setViewMode] = useState('gallery'); // 'gallery' | 'list'
     
     // Filtros de periodo
     const [period, setPeriod] = useState('last_month');
@@ -117,6 +118,23 @@ const AdDashboardTab = () => {
                     >
                         <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                     </button>
+                    
+                    <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner ml-2">
+                        <button
+                            onClick={() => setViewMode('gallery')}
+                            className={`p-1.5 rounded-lg transition-all ${viewMode === 'gallery' ? 'bg-slate-800 text-blue-400 shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                            title="Vista Galería"
+                        >
+                            <LayoutGrid size={16} />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-800 text-blue-400 shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                            title="Vista Lista"
+                        >
+                            <List size={16} />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -159,6 +177,64 @@ const AdDashboardTab = () => {
                         <div className="text-center py-20 bg-slate-900/20 rounded-3xl border border-dashed border-slate-800">
                             <Megaphone size={40} className="mx-auto mb-3 opacity-20" />
                             <p className="font-bold text-slate-500 uppercase tracking-widest text-sm">Sin datos para este periodo</p>
+                        </div>
+                    ) : viewMode === 'list' ? (
+                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl overflow-x-auto shadow-xl">
+                            <table className="w-full text-left border-collapse whitespace-nowrap">
+                                <thead>
+                                    <tr className="border-b border-slate-800/80 bg-slate-950/50">
+                                        <th className="py-4 px-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Anuncio</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Inversión</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-blue-400 uppercase tracking-widest text-center">Leads</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">% Cual.</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-center">Agendas</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-center">Ventas</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-blue-400 uppercase tracking-widest text-right">CPL</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-right">CPQL</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-right">CPA</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-right">CPV</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800/50">
+                                    {stats.ad_stats.map((stat, index) => {
+                                        let qualColor = "text-slate-400";
+                                        if (stat.qualified_percentage >= 50) qualColor = "text-emerald-400";
+                                        else if (stat.qualified_percentage >= 20) qualColor = "text-yellow-400";
+                                        else if (stat.total_leads > 0 && stat.qualified_percentage < 20) qualColor = "text-red-400";
+
+                                        return (
+                                            <tr 
+                                                key={stat.ad_id} 
+                                                onClick={() => { setSelectedAdId(stat.ad_id); setIsModalOpen(true); }}
+                                                className="group hover:bg-slate-800/40 transition-colors cursor-pointer"
+                                            >
+                                                <td className="py-4 px-5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-400">
+                                                            {index + 1}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-black text-white uppercase tracking-tight max-w-[200px] truncate">{stat.ad_name}</h4>
+                                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                                                                <Activity size={10} className="text-blue-500" /> #{stat.ad_id}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-5 text-center text-xs font-black text-white">${(stat.spend||0).toLocaleString()}</td>
+                                                <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.total_leads}</td>
+                                                <td className={`py-4 px-5 text-center text-xs font-black ${qualColor}`}>{stat.qualified_percentage}%</td>
+                                                <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.agendas || 0}</td>
+                                                <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.ventas || 0}</td>
+                                                <td className="py-4 px-5 text-right text-xs font-black text-blue-400">${stat.cpl || '0'}</td>
+                                                <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.cpql || '0'}</td>
+                                                <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.cpa || '0'}</td>
+                                                <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${stat.cpv || '0'}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

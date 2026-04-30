@@ -5,6 +5,7 @@
     - Actualización de la lógica en el backend (`app/api/manychat.py`) para calcular y retornar el `cpql`.
     - Modificación de la interfaz gráfica en el tablero general (`AdDashboardTab.jsx`) para visualizar el CPQL justo debajo del CPL con tooltips ajustados.
     - Integración de esta métrica en la tarjeta de CPL del modal de detalles del anuncio (`AdDetailModal.jsx`).
+  - **Vista Lista en Rendimiento por Anuncio**: Se implementó un selector de visualización en `AdDashboardTab.jsx` que permite alternar entre el formato de Galería (tarjetas) y un nuevo formato de Lista (tabla estructurada), facilitando la comparación horizontal rápida de los KPI.
 
 - **28 de Abril de 2026**:
   - **Reasignación Masiva de Leads**: Implementación de herramientas para corregir discrepancias y asignaciones erróneas de leads en Meta Ads.
