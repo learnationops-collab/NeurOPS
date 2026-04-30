@@ -139,11 +139,12 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                     description="Cantidad de leads que terminaron en una venta cerrada."
                                 />
                                 <StatCard 
-                                    label="CPL" 
+                                    label="CPL / CPQL" 
                                     value={`$${details.cpl}`} 
+                                    subValue={`($${details.cpql})`}
                                     icon={<DollarSign className="text-slate-400" size={14} />}
                                     color="slate"
-                                    description="Costo por cada lead generado. Cálculo: (Inversión / Total Leads)."
+                                    description="CPL: Costo por lead. CPQL: Costo por lead cualificado."
                                 />
                                 <StatCard 
                                     label="CPA" 

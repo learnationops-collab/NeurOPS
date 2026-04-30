@@ -1,5 +1,11 @@
 # Bitácora - Abril 2026
 
+- **30 de Abril de 2026**:
+  - **Métrica CPQL en Marketing**: Se agregó el Costo por Lead Cualificado (CPQL) a los paneles de Rendimiento por Anuncio.
+    - Actualización de la lógica en el backend (`app/api/manychat.py`) para calcular y retornar el `cpql`.
+    - Modificación de la interfaz gráfica en el tablero general (`AdDashboardTab.jsx`) para visualizar el CPQL justo debajo del CPL con tooltips ajustados.
+    - Integración de esta métrica en la tarjeta de CPL del modal de detalles del anuncio (`AdDetailModal.jsx`).
+
 - **28 de Abril de 2026**:
   - **Reasignación Masiva de Leads**: Implementación de herramientas para corregir discrepancias y asignaciones erróneas de leads en Meta Ads.
     - Nuevo endpoint `POST /manychat-webhook/bulk-reassign/preview` para previsualizar la cantidad de leads afectados por un filtro.

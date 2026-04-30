@@ -648,6 +648,7 @@ def get_ad_dashboard_stats():
             'setter_breakdown': setter_breakdown,
             'ventas': v_count,
             'cpl': round(spend / total, 2) if total > 0 else 0,
+            'cpql': round(spend / qual, 2) if qual > 0 else 0,
             'cpa': round(spend / ag_count, 2) if ag_count > 0 else 0,
             'cpv': round(spend / v_count, 2) if v_count > 0 else 0
         })

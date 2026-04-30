@@ -296,11 +296,16 @@ const AdDashboardTab = () => {
                                                             <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">CPL</p>
                                                             <HelpCircle size={8} className="text-slate-600 cursor-help" />
                                                         </div>
-                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
-                                                            Costo por cada lead generado. Cálculo: (Inversión / Total Leads).
+                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                            CPL: Costo por cada lead generado (Inversión / Total Leads).<br/>
+                                                            CPQL: Costo por Lead Cualificado (Inversión / Cualificados).
                                                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                                                         </div>
                                                         <p className="text-xs font-black text-blue-400">${stat.cpl || '0'}</p>
+                                                        <div className="mt-1 flex flex-col items-center">
+                                                            <p className="text-[7px] font-bold text-slate-500 uppercase tracking-widest">CPQL</p>
+                                                            <p className="text-[10px] font-black text-emerald-400">${stat.cpql || '0'}</p>
+                                                        </div>
                                                     </div>
                                                     <div className="flex flex-col text-center relative group/tooltip overflow-visible">
                                                         <div className="flex items-center justify-center gap-1">
