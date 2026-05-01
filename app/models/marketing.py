@@ -112,6 +112,8 @@ class LeadAnswer(db.Model):
     opening = db.Column(db.String(100))
     variante = db.Column(db.String(100))
     qualification = db.Column(db.String(10), default='null')  # 'true', 'false', 'null'
+    id_option = db.Column(db.String(100))
+    id_question = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Users, TrendingUp, DollarSign, Calendar, Instagram, Loader2, CalendarDays, HelpCircle } from 'lucide-react';
+import { X, Users, TrendingUp, DollarSign, Calendar, Instagram, Loader2, CalendarDays, HelpCircle, MessageCircle } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
@@ -9,6 +9,7 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [adjustingDate, setAdjustingDate] = useState(null);
     const [adjustValue, setAdjustValue] = useState("");
+    const [activeTab, setActiveTab] = useState('performance'); // 'performance' | 'conversations'
 
     useEffect(() => {
         if (isOpen && adId) {
@@ -67,7 +68,7 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                     className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
                 >
                     {/* Header */}
-                    <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+                    <div className="p-6 border-b border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/50">
                         <div className="flex items-center gap-3">
                             <div className="p-2.5 bg-blue-500/10 rounded-xl">
                                 <TrendingUp className="text-blue-400" size={20} />
@@ -79,9 +80,27 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                 <p className="text-xs text-slate-500 font-mono">ID: {adId}</p>
                             </div>
                         </div>
+
+                        {!loading && details && (
+                            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
+                                <button
+                                    onClick={() => setActiveTab('performance')}
+                                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'performance' ? 'bg-slate-800 text-blue-400 shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    <TrendingUp size={12} /> Rendimiento
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('conversations')}
+                                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'conversations' ? 'bg-slate-800 text-emerald-400 shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    <MessageCircle size={12} /> Conversaciones
+                                </button>
+                            </div>
+                        )}
+
                         <button 
                             onClick={onClose}
-                            className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
+                            className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors self-start sm:self-auto"
                         >
                             <X size={20} />
                         </button>
@@ -106,8 +125,9 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                     ) : (
                         <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                             
-
-                            {/* Stats Grid */}
+                            {activeTab === 'performance' ? (
+                                <>
+                                    {/* Stats Grid */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <StatCard 
                                     label="Leads Totales" 
@@ -273,6 +293,7 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                             </div>
                                         </div>
                                     )}
+                                    {/* End of Setter Breakdown */}
 
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2">
@@ -325,10 +346,90 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                         </div>
                                     </div>
                                 </div>
+                                </div>
                             </div>
+                            </>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <MessageCircle className="text-emerald-400" size={16} />
+                                        <h4 className="text-xs font-black uppercase text-emerald-400 tracking-wider">Métricas Conversacionales</h4>
+                                    </div>
+                                    <p className="text-xs text-slate-400 font-medium mb-6">
+                                        Analiza cuáles son los mensajes gancho iniciales que más atraen a los usuarios y qué preguntas de seguimiento generan más respuestas y reactivaciones.
+                                    </p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Opciones Iniciales */}
+                                        <div className="bg-slate-800/30 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4 flex items-center justify-between">
+                                                <span>Opciones Iniciales (Ganchos)</span>
+                                            </h5>
+                                            {details.option_breakdown && Object.keys(details.option_breakdown).length > 0 ? (
+                                                <div className="space-y-3">
+                                                    {Object.entries(details.option_breakdown).sort((a,b)=>b[1]-a[1]).map(([opt, count]) => {
+                                                        const total = Object.values(details.option_breakdown).reduce((sum, val) => sum + val, 0);
+                                                        const percentage = Math.round((count / total) * 100);
+                                                        return (
+                                                            <div key={opt} className="group relative">
+                                                                <div className="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800/80 hover:border-blue-500/30 transition-colors z-10 relative">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-xs font-bold text-slate-200" title={opt}>{opt}</span>
+                                                                        <span className="text-[10px] font-medium text-slate-500">{percentage}% del total de respuestas</span>
+                                                                    </div>
+                                                                    <span className="text-sm font-black text-blue-400 bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">{count}</span>
+                                                                </div>
+                                                                {/* Progress bar background */}
+                                                                <div className="absolute left-0 top-0 bottom-0 bg-blue-500/5 rounded-xl z-0 transition-all" style={{ width: `${percentage}%` }}></div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-12 text-slate-500 text-[10px] font-medium border border-dashed border-slate-700/50 rounded-2xl flex flex-col items-center gap-2">
+                                                    <MessageCircle size={24} className="opacity-20" />
+                                                    Sin datos registrados
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Preguntas/Seguimientos */}
+                                        <div className="bg-slate-800/30 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-4 flex items-center justify-between">
+                                                <span>Seguimientos Respondidos</span>
+                                            </h5>
+                                            {details.question_breakdown && Object.keys(details.question_breakdown).length > 0 ? (
+                                                <div className="space-y-3">
+                                                    {Object.entries(details.question_breakdown).sort((a,b)=>b[1]-a[1]).map(([q, count]) => {
+                                                        const total = Object.values(details.question_breakdown).reduce((sum, val) => sum + val, 0);
+                                                        const percentage = Math.round((count / total) * 100);
+                                                        return (
+                                                            <div key={q} className="group relative">
+                                                                <div className="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800/80 hover:border-emerald-500/30 transition-colors z-10 relative">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-xs font-bold text-slate-200" title={q}>{q}</span>
+                                                                        <span className="text-[10px] font-medium text-slate-500">{percentage}% del total de respuestas</span>
+                                                                    </div>
+                                                                    <span className="text-sm font-black text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">{count}</span>
+                                                                </div>
+                                                                {/* Progress bar background */}
+                                                                <div className="absolute left-0 top-0 bottom-0 bg-emerald-500/5 rounded-xl z-0 transition-all" style={{ width: `${percentage}%` }}></div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-12 text-slate-500 text-[10px] font-medium border border-dashed border-slate-700/50 rounded-2xl flex flex-col items-center gap-2">
+                                                    <MessageCircle size={24} className="opacity-20" />
+                                                    Sin datos registrados
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    </div>
-                )}
+                    )}
                     
                     {/* Footer */}
                     <div className="p-4 border-t border-slate-800 flex justify-end bg-slate-900/50">

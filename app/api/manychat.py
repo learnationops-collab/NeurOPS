@@ -46,6 +46,8 @@ def receive_manychat_ad_lead():
     opening = data.get('opening', '')
     variante = data.get('variante', '')
     qualification_raw = data.get('cualificacion')
+    id_option = data.get('id_option')
+    id_question = data.get('id_question')
 
     # Convertir ad_id a int de forma segura
     ad_id = None
@@ -152,6 +154,8 @@ def receive_manychat_ad_lead():
             if opening: answer.opening = opening
             if variante: answer.variante = variante
             if keyword: answer.keyword = keyword
+            if id_option is not None: answer.id_option = str(id_option)
+            if id_question is not None: answer.id_question = str(id_question)
             action = 'updated'
             logger.info(f"[WEBHOOK] LeadAnswer actualizado para Manychat_ID: {manychat_id}")
         else:
@@ -163,7 +167,9 @@ def receive_manychat_ad_lead():
                 fecha_recibida=fecha,
                 opening=opening,
                 variante=variante,
-                qualification=qualification
+                qualification=qualification,
+                id_option=str(id_option) if id_option is not None else None,
+                id_question=str(id_question) if id_question is not None else None
             )
             db.session.add(answer)
             action = 'created'
@@ -810,6 +816,17 @@ def get_ad_details(ad_id):
                 if has_lead:
                     v_count += 1
 
+    # Analysis of Conversational Options & Questions
+    options_query = db.session.query(LeadAnswer.id_option, func.count(LeadAnswer.id)).filter(
+        LeadAnswer.ad_id == ad_id, LeadAnswer.id_option != None
+    ).group_by(LeadAnswer.id_option).all()
+    option_breakdown = {opt: count for opt, count in options_query if opt}
+
+    questions_query = db.session.query(LeadAnswer.id_question, func.count(LeadAnswer.id)).filter(
+        LeadAnswer.ad_id == ad_id, LeadAnswer.id_question != None
+    ).group_by(LeadAnswer.id_question).all()
+    question_breakdown = {q: count for q, count in questions_query if q}
+
     return jsonify({
         'ad_id': ad_id,
         'name': ad_name,
@@ -824,6 +841,8 @@ def get_ad_details(ad_id):
         'cpql': cpql,
         'cpa': round(total_spend / ag_count, 2) if ag_count > 0 else 0,
         'cpv': round(total_spend / v_count, 2) if v_count > 0 else 0,
+        'option_breakdown': option_breakdown,
+        'question_breakdown': question_breakdown,
         'recent_leads': leads_list,
         'evolution': chart_data
     }), 200
