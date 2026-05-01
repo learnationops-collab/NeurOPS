@@ -40,14 +40,19 @@ def receive_manychat_ad_lead():
         follower = True
 
     # ----- Datos de la RESPUESTA (Answer) -----
+    def clean_cuf(val):
+        if val and isinstance(val, str) and ('cuf_' in val or '{{' in val):
+            return None
+        return val
+
     ad_id_raw = data.get('ad_id')
     keyword = data.get('keyword', '')
-    fecha = data.get('fecha', '')
-    opening = data.get('opening', '')
-    variante = data.get('variante', '')
+    fecha = clean_cuf(data.get('fecha', ''))
+    opening = clean_cuf(data.get('opening', ''))
+    variante = clean_cuf(data.get('variante', ''))
     qualification_raw = data.get('cualificacion')
-    id_option = data.get('id_option')
-    id_question = data.get('id_question')
+    id_option = clean_cuf(data.get('id_option'))
+    id_question = clean_cuf(data.get('id_question'))
 
     # Convertir ad_id a int de forma segura
     ad_id = None
@@ -940,9 +945,13 @@ def cleanup_cuf_data():
     from app.models import LeadAnswer
     
     try:
-        # Buscar todos los registros que tengan 'cuf_' en variante u opening
+        # Buscar todos los registros que tengan 'cuf_' en cualquier campo de texto del webhook
         answers = LeadAnswer.query.filter(
-            (LeadAnswer.variante.like('%cuf_%')) | (LeadAnswer.opening.like('%cuf_%'))
+            (LeadAnswer.variante.like('%cuf_%')) | 
+            (LeadAnswer.opening.like('%cuf_%')) |
+            (LeadAnswer.id_option.like('%cuf_%')) |
+            (LeadAnswer.id_question.like('%cuf_%')) |
+            (LeadAnswer.fecha_recibida.like('%cuf_%'))
         ).all()
         
         count = 0
@@ -953,6 +962,15 @@ def cleanup_cuf_data():
                 modified = True
             if ans.opening and 'cuf_' in ans.opening:
                 ans.opening = None
+                modified = True
+            if ans.id_option and 'cuf_' in ans.id_option:
+                ans.id_option = None
+                modified = True
+            if ans.id_question and 'cuf_' in ans.id_question:
+                ans.id_question = None
+                modified = True
+            if ans.fecha_recibida and 'cuf_' in ans.fecha_recibida:
+                ans.fecha_recibida = None
                 modified = True
                 
             if modified:
