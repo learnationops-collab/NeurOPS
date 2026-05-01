@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, Activity, Target, PhoneCall, BarChart2, TrendingUp, Users, Info, DollarSign, CalendarDays } from 'lucide-react';
+import { Loader2, Activity, Target, PhoneCall, BarChart2, TrendingUp, Users, Info, DollarSign, CalendarDays, HelpCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const CloserAdvancedStatsView = ({ stats, loading }) => {
@@ -20,28 +20,50 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
         return n.toFixed(2);
     };
 
-    const StatCard = ({ title, value, icon: Icon, colorClass, subtitle }) => (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-            <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity ${colorClass.replace('text-', 'bg-')}`} />
-            <div className="flex items-start justify-between relative z-10">
-                <div className="space-y-1">
-                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{title}</p>
+    const StatCard = ({ title, value, icon: Icon, colorClass, subtitle, tooltip }) => (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group/stat">
+            <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
+                <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover/stat:opacity-30 transition-opacity ${colorClass.replace('text-', 'bg-')}`} />
+            </div>
+            <div className="flex items-start justify-between relative z-10 overflow-visible">
+                <div className="space-y-1 relative overflow-visible">
+                    <div className="flex items-center gap-1.5">
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{title}</p>
+                        {tooltip && (
+                            <div className="relative group/tooltip flex items-center">
+                                <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-slate-300 transition-colors" />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl border border-slate-700/50">
+                                    {tooltip}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <h3 className="text-3xl font-black text-white italic tracking-tighter">{value}</h3>
                     {subtitle && <p className="text-[9px] text-slate-600 font-bold uppercase mt-1">{subtitle}</p>}
                 </div>
-                <div className={`p-3 rounded-2xl bg-slate-800 border border-slate-700/50 ${colorClass}`}>
+                <div className={`p-3 rounded-2xl bg-slate-800 border border-slate-700/50 shrink-0 ${colorClass}`}>
                     <Icon size={18} />
                 </div>
             </div>
         </div>
     );
 
-    const ProgressRow = ({ label, percentage, colorClass, absolute }) => (
-        <div className="space-y-2">
+    const ProgressRow = ({ label, percentage, colorClass, absolute, tooltip }) => (
+        <div className="space-y-2 relative">
             <div className="flex justify-between items-end">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
-                    {absolute !== undefined && <span className="text-[10px] font-bold text-slate-600">({absolute})</span>}
+                    {tooltip && (
+                        <div className="relative group/tooltip flex items-center">
+                            <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-slate-300 transition-colors" />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl border border-slate-700/50">
+                                {tooltip}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
+                        </div>
+                    )}
+                    {absolute !== undefined && <span className="text-[10px] font-bold text-slate-600 ml-0.5">({absolute})</span>}
                 </div>
                 <span className={`text-xs font-black ${colorClass}`}>{(percentage || 0).toFixed(1)}%</span>
             </div>
@@ -174,18 +196,21 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
                     icon={Target}
                     colorClass="text-amber-500"
                     subtitle={`Tasa Cierre: ${fmtNum(stats.percentages.close_rate, true)}`}
+                    tooltip="Suma total de todas las ventas cerradas por el Closer en el periodo seleccionado. Tasa de Cierre = (Ventas Totales / Ofertas Realizadas)."
                 />
                 <StatCard
                     title="Ticket Promedio"
                     value={fmtNum(calcDiv(stats.sales.totals.cash, stats.sales.totals.count), false, true)}
                     icon={Activity}
                     colorClass="text-emerald-500"
+                    tooltip="Promedio de ingresos generados por cada venta cerrada. Cálculo: (Ingresos Totales / Cierres Totales)."
                 />
                 <StatCard
                     title="Estimado Comisión (10%)"
                     value={fmtNum(stats.sales.totals.cash * 0.10, false, true)}
                     icon={DollarSign}
                     colorClass="text-indigo-500"
+                    tooltip="Cálculo estimativo de la comisión del Closer asumiendo un 10% estándar sobre el Cash Collected total del periodo."
                 />
                 <StatCard
                     title="Ofertas Realizadas"
@@ -193,6 +218,7 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
                     icon={TrendingUp}
                     colorClass="text-fuchsia-500"
                     subtitle={`Offer to Sale: ${fmtNum(stats.percentages.offer_to_sale, true)}`}
+                    tooltip="Total de veces que el Closer presentó la oferta durante una llamada."
                 />
             </div>
 
@@ -223,24 +249,28 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
                             percentage={calcDiv(stats.agendas.first_call.attended, stats.agendas.first_call.scheduled, true)}
                             colorClass="text-emerald-500"
                             absolute={stats.agendas.first_call.attended}
+                            tooltip="Porcentaje de leads agendados que realmente asistieron a la primera llamada."
                         />
                         <ProgressRow
                             label="No Show Rate"
                             percentage={calcDiv(stats.agendas.first_call.no_show, stats.agendas.first_call.scheduled, true)}
                             colorClass="text-rose-500"
                             absolute={stats.agendas.first_call.no_show}
+                            tooltip="Porcentaje de leads agendados que no se presentaron a la primera llamada."
                         />
                         <ProgressRow
                             label="Cancelation Rate"
                             percentage={calcDiv(stats.agendas.first_call.canceled, stats.agendas.first_call.scheduled, true)}
                             colorClass="text-fuchsia-500"
                             absolute={stats.agendas.first_call.canceled}
+                            tooltip="Porcentaje de leads que cancelaron explícitamente su primera llamada."
                         />
                         <ProgressRow
                             label="Reprogramation Rate"
                             percentage={calcDiv(stats.agendas.first_call.rescheduled, stats.agendas.first_call.scheduled, true)}
                             colorClass="text-amber-500"
                             absolute={stats.agendas.first_call.rescheduled}
+                            tooltip="Porcentaje de agendas que fueron reprogramadas para otra fecha."
                         />
                     </div>
 
@@ -261,24 +291,28 @@ const CloserAdvancedStatsView = ({ stats, loading }) => {
                             percentage={calcDiv(stats.agendas.second_call.attended, stats.agendas.second_call.scheduled, true)}
                             colorClass="text-sky-500"
                             absolute={stats.agendas.second_call.attended}
+                            tooltip="Porcentaje de leads agendados que realmente asistieron a la segunda llamada."
                         />
                         <ProgressRow
                             label="No Show Rate"
                             percentage={calcDiv(stats.agendas.second_call.no_show, stats.agendas.second_call.scheduled, true)}
                             colorClass="text-rose-500"
                             absolute={stats.agendas.second_call.no_show}
+                            tooltip="Porcentaje de leads agendados que no se presentaron a la segunda llamada."
                         />
                         <ProgressRow
                             label="Cancelation Rate"
                             percentage={calcDiv(stats.agendas.second_call.canceled, stats.agendas.second_call.scheduled, true)}
                             colorClass="text-fuchsia-500"
                             absolute={stats.agendas.second_call.canceled}
+                            tooltip="Porcentaje de leads que cancelaron explícitamente su segunda llamada."
                         />
                         <ProgressRow
                             label="Reprogramation Rate"
                             percentage={calcDiv(stats.agendas.second_call.rescheduled, stats.agendas.second_call.scheduled, true)}
                             colorClass="text-amber-500"
                             absolute={stats.agendas.second_call.rescheduled}
+                            tooltip="Porcentaje de segundas agendas que fueron reprogramadas para otra fecha."
                         />
                     </div>
                 </div>
