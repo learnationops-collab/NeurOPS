@@ -418,12 +418,26 @@ def get_ad_segmentation_stats():
         LeadAnswer.opening != '',
         not_(LeadAnswer.opening.like('%cuf_%'))
     ]
+    
+    base_filters_options = [
+        LeadAnswer.id_option != None,
+        LeadAnswer.id_option != '',
+        not_(LeadAnswer.id_option.like('%cuf_%'))
+    ]
+
+    base_filters_questions = [
+        LeadAnswer.id_question != None,
+        LeadAnswer.id_question != '',
+        not_(LeadAnswer.id_question.like('%cuf_%'))
+    ]
 
     if start_date:
         try:
             st = datetime.strptime(start_date, '%Y-%m-%d')
             base_filters_variante.append(LeadAnswer.created_at >= st)
             base_filters_opening.append(LeadAnswer.created_at >= st)
+            base_filters_options.append(LeadAnswer.created_at >= st)
+            base_filters_questions.append(LeadAnswer.created_at >= st)
         except ValueError:
             pass
             
@@ -432,6 +446,8 @@ def get_ad_segmentation_stats():
             ed = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
             base_filters_variante.append(LeadAnswer.created_at <= ed)
             base_filters_opening.append(LeadAnswer.created_at <= ed)
+            base_filters_options.append(LeadAnswer.created_at <= ed)
+            base_filters_questions.append(LeadAnswer.created_at <= ed)
         except ValueError:
             pass
 
@@ -453,6 +469,24 @@ def get_ad_segmentation_stats():
         ).label('qualified_leads')
     ).filter(*base_filters_opening).group_by(LeadAnswer.opening).all()
 
+    # Agrupar por Opción
+    stats_options = db.session.query(
+        LeadAnswer.id_option,
+        func.count(LeadAnswer.id).label('total_leads'),
+        func.sum(
+            db.case((LeadAnswer.qualification == 'true', 1), else_=0)
+        ).label('qualified_leads')
+    ).filter(*base_filters_options).group_by(LeadAnswer.id_option).all()
+
+    # Agrupar por Seguimiento
+    stats_questions = db.session.query(
+        LeadAnswer.id_question,
+        func.count(LeadAnswer.id).label('total_leads'),
+        func.sum(
+            db.case((LeadAnswer.qualification == 'true', 1), else_=0)
+        ).label('qualified_leads')
+    ).filter(*base_filters_questions).group_by(LeadAnswer.id_question).all()
+
     def format_stats(stats_list, key_name):
         res = []
         for s in stats_list:
@@ -472,7 +506,9 @@ def get_ad_segmentation_stats():
 
     return jsonify({
         'variantes': format_stats(stats_variante, 'variante'),
-        'openings': format_stats(stats_opening, 'opening')
+        'openings': format_stats(stats_opening, 'opening'),
+        'options': format_stats(stats_options, 'id_option'),
+        'questions': format_stats(stats_questions, 'id_question')
     }), 200
 
 

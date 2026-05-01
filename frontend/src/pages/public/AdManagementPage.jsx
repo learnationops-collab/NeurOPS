@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Plus, Trash2, Pencil, Save, X, DollarSign, Megaphone, ArrowLeft, CalendarDays, TrendingUp, Search, Radio, Users, Folder, Layers, ChevronDown, ChevronRight, Tag } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Save, X, DollarSign, Megaphone, ArrowLeft, CalendarDays, TrendingUp, Search, Radio, Users, Folder, Layers, ChevronDown, ChevronRight, Tag, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebhookMonitorTab from './WebhookMonitorTab';
 import AdDashboardTab from './AdDashboardTab';
+import ConversationalStatsTab from './ConversationalStatsTab';
 
 // ==========================================
 // Componentes Auxiliares
@@ -776,7 +777,8 @@ const AdManagementPage = () => {
     const tabs = [
         { key: 'ads', label: 'Estructura', icon: Layers },
         { key: 'spend', label: 'Inversión (Períodos)', icon: DollarSign },
-        { key: 'ads_dashboard', label: 'Rendimiento por Anuncio', icon: Users },
+        { key: 'ads_dashboard', label: 'Rend. por Anuncio', icon: Users },
+        { key: 'conv_stats', label: 'Rend. Conversacional', icon: MessageSquare },
         { key: 'webhooks', label: 'Webhooks', icon: Radio },
     ];
 
@@ -823,6 +825,8 @@ const AdManagementPage = () => {
                         <PeriodSpendTab ads={ads} campaigns={campaigns} />
                     ) : activeTab === 'ads_dashboard' ? (
                         <AdDashboardTab />
+                    ) : activeTab === 'conv_stats' ? (
+                        <ConversationalStatsTab />
                     ) : (
                         <WebhookMonitorTab />
                     )}
