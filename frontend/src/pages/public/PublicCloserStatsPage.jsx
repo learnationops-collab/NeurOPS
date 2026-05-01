@@ -6,7 +6,7 @@ import {
     Loader2, BarChart3, DollarSign, Phone, Target,
     CalendarDays, Layers, TrendingUp, Users,
     CheckCircle, XCircle, PhoneOff, RefreshCw, Table, List,
-    PenTool
+    PenTool, Info
 } from 'lucide-react';
 import CloserAdvancedStatsView from './CloserAdvancedStatsView';
 import CloserReportsTable from './CloserReportsTable';
@@ -118,12 +118,21 @@ const PublicCloserStatsPage = () => {
         </div>
     );
 
-    const ProgressRow = ({ label, percentage, colorClass, absolute }) => (
-        <div className="space-y-2">
+    const ProgressRow = ({ label, percentage, colorClass, absolute, tooltip }) => (
+        <div className="space-y-2 relative">
             <div className="flex justify-between items-end">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
-                    {absolute !== undefined && <span className="text-[10px] font-bold text-slate-600">({absolute})</span>}
+                    {tooltip && (
+                        <div className="relative group/tooltip flex items-center">
+                            <Info size={10} className="text-slate-500 cursor-help hover:text-white transition-colors" />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                                {tooltip}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
+                        </div>
+                    )}
+                    {absolute !== undefined && <span className="text-[10px] font-bold text-slate-600 ml-0.5">({absolute})</span>}
                 </div>
                 <span className={`text-xs font-black ${colorClass}`}>{percentage}%</span>
             </div>
@@ -330,8 +339,15 @@ const PublicCloserStatsPage = () => {
 
                                         {/* TOTAL CASH EXTRA CARD */}
                                         <div className="pt-4 border-t border-slate-800 mt-auto">
-                                            <div className="p-4 bg-emerald-600/10 rounded-2xl border border-emerald-600/20 flex flex-col items-center justify-center space-y-1">
-                                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Total Cash</p>
+                                            <div className="p-4 bg-emerald-600/10 rounded-2xl border border-emerald-600/20 flex flex-col items-center justify-center space-y-1 relative group/stat overflow-visible">
+                                                <div className="flex items-center gap-1.5 relative group/tooltip">
+                                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">Total Cash</p>
+                                                    <Info size={10} className="text-emerald-500/50 cursor-help" />
+                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                                                        Ingreso total en efectivo generado por las ventas en el periodo, excluyendo saldos pendientes de planes de pago.
+                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                    </div>
+                                                </div>
                                                 <p className="text-2xl font-black text-white italic">{fmtCash(stats.sales.totals.cash)}</p>
                                             </div>
                                         </div>
@@ -387,8 +403,15 @@ const PublicCloserStatsPage = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 flex flex-col justify-center space-y-2">
-                                                <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Global Win Rate</p>
+                                            <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 flex flex-col justify-center space-y-2 relative group/stat overflow-visible">
+                                                <div className="flex items-center gap-1.5 relative group/tooltip">
+                                                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Global Win Rate</p>
+                                                    <Info size={10} className="text-indigo-400/50 cursor-help" />
+                                                    <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                                                        Tasa de cierre global (Ventas / Asistencias totales). Indica el porcentaje de personas con las que hablaste que terminaron comprando.
+                                                        <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
+                                                    </div>
+                                                </div>
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-[10px] font-bold text-indigo-300">Asistencias → Ventas</span>
                                                     <span className="text-lg font-black text-indigo-400 tabular-nums">
@@ -546,11 +569,10 @@ const PublicCloserStatsPage = () => {
                                             ))}
                                         </div>
 
-                                        {/* Tasas */}
                                         <div className="space-y-4 pt-4 border-t border-slate-800">
-                                            <ProgressRow label="Show Rate" percentage={stats.percentages.show_rate} colorClass="text-emerald-500" absolute={`${fmt(stats.agendas.totals.attended)} / ${fmt(stats.agendas.totals.scheduled)}`} />
-                                            <ProgressRow label="No Show Rate" percentage={stats.percentages.no_show_rate} colorClass="text-rose-500" absolute={fmt(stats.agendas.totals.no_show)} />
-                                            <ProgressRow label="Cancel Rate" percentage={stats.percentages.cancel_rate} colorClass="text-amber-500" absolute={fmt(stats.agendas.totals.canceled)} />
+                                            <ProgressRow label="Show Rate" percentage={stats.percentages.show_rate} colorClass="text-emerald-500" absolute={`${fmt(stats.agendas.totals.attended)} / ${fmt(stats.agendas.totals.scheduled)}`} tooltip="Porcentaje de asistencias (Total Asistencias / Total Agendados)." />
+                                            <ProgressRow label="No Show Rate" percentage={stats.percentages.no_show_rate} colorClass="text-rose-500" absolute={fmt(stats.agendas.totals.no_show)} tooltip="Porcentaje de prospectos agendados que no se presentaron." />
+                                            <ProgressRow label="Cancel Rate" percentage={stats.percentages.cancel_rate} colorClass="text-amber-500" absolute={fmt(stats.agendas.totals.canceled)} tooltip="Porcentaje de llamadas que fueron canceladas explícitamente." />
                                         </div>
                                     </div>
 
@@ -688,6 +710,7 @@ const PublicCloserStatsPage = () => {
                                                     percentage={stats.follow_ups?.hot_sent ? ((stats.follow_ups.hot_replied / stats.follow_ups.hot_sent) * 100).toFixed(1) : 0}
                                                     colorClass="text-rose-500"
                                                     absolute={fmt(stats.follow_ups?.hot_replied)}
+                                                    tooltip="Porcentaje de leads del flujo caliente que respondieron al mensaje."
                                                 />
                                             </div>
                                         </div>
@@ -713,6 +736,7 @@ const PublicCloserStatsPage = () => {
                                                     percentage={stats.follow_ups?.cold_sent ? ((stats.follow_ups.cold_replied / stats.follow_ups.cold_sent) * 100).toFixed(1) : 0}
                                                     colorClass="text-sky-500"
                                                     absolute={fmt(stats.follow_ups?.cold_replied)}
+                                                    tooltip="Porcentaje de leads del flujo frío que respondieron al mensaje."
                                                 />
                                             </div>
                                         </div>
