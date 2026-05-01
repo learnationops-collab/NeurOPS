@@ -820,12 +820,32 @@ def get_ad_details(ad_id):
     options_query = db.session.query(LeadAnswer.id_option, func.count(LeadAnswer.id)).filter(
         LeadAnswer.ad_id == ad_id, LeadAnswer.id_option != None
     ).group_by(LeadAnswer.id_option).all()
-    option_breakdown = {opt: count for opt, count in options_query if opt}
+    
+    option_breakdown = {"Opción 1": 0, "Opción 2": 0, "Opción 3": 0}
+    for opt, count in options_query:
+        if not opt: continue
+        opt_str = str(opt).strip()
+        if opt_str == '1': option_breakdown["Opción 1"] += count
+        elif opt_str == '2': option_breakdown["Opción 2"] += count
+        elif opt_str == '3': option_breakdown["Opción 3"] += count
+        else:
+            key = f"Opción {opt_str}"
+            option_breakdown[key] = option_breakdown.get(key, 0) + count
 
     questions_query = db.session.query(LeadAnswer.id_question, func.count(LeadAnswer.id)).filter(
         LeadAnswer.ad_id == ad_id, LeadAnswer.id_question != None
     ).group_by(LeadAnswer.id_question).all()
-    question_breakdown = {q: count for q, count in questions_query if q}
+    
+    question_breakdown = {"Seguimiento 1": 0, "Seguimiento 2": 0, "Seguimiento 3": 0}
+    for q, count in questions_query:
+        if not q: continue
+        q_str = str(q).strip()
+        if q_str == '1': question_breakdown["Seguimiento 1"] += count
+        elif q_str == '2': question_breakdown["Seguimiento 2"] += count
+        elif q_str == '3': question_breakdown["Seguimiento 3"] += count
+        else:
+            key = f"Seguimiento {q_str}"
+            question_breakdown[key] = question_breakdown.get(key, 0) + count
 
     return jsonify({
         'ad_id': ad_id,

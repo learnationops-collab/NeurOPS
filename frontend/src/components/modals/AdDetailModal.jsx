@@ -369,7 +369,7 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                                 <div className="space-y-3">
                                                     {Object.entries(details.option_breakdown).sort((a,b)=>b[1]-a[1]).map(([opt, count]) => {
                                                         const total = Object.values(details.option_breakdown).reduce((sum, val) => sum + val, 0);
-                                                        const percentage = Math.round((count / total) * 100);
+                                                        const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
                                                         return (
                                                             <div key={opt} className="group relative">
                                                                 <div className="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800/80 hover:border-blue-500/30 transition-colors z-10 relative">
@@ -402,7 +402,7 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                                 <div className="space-y-3">
                                                     {Object.entries(details.question_breakdown).sort((a,b)=>b[1]-a[1]).map(([q, count]) => {
                                                         const total = Object.values(details.question_breakdown).reduce((sum, val) => sum + val, 0);
-                                                        const percentage = Math.round((count / total) * 100);
+                                                        const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
                                                         return (
                                                             <div key={q} className="group relative">
                                                                 <div className="flex justify-between items-center bg-slate-900/80 p-3 rounded-xl border border-slate-800/80 hover:border-emerald-500/30 transition-colors z-10 relative">
