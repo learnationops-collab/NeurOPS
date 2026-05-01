@@ -75,12 +75,21 @@ const StatisticsPage = () => {
         return `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     };
 
-    const ProgressRow = ({ label, percentage, colorClass, absolute }) => (
-        <div className="space-y-2">
+    const ProgressRow = ({ label, percentage, colorClass, absolute, tooltip }) => (
+        <div className="space-y-2 relative">
             <div className="flex justify-between items-end">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{label}</span>
-                    {absolute !== undefined && <span className="text-[10px] font-bold text-muted-foreground/50">({absolute})</span>}
+                    {tooltip && (
+                        <div className="relative group/tooltip flex items-center">
+                            <Info size={10} className="text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-surface border border-base text-foreground text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                                {tooltip}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-surface"></div>
+                            </div>
+                        </div>
+                    )}
+                    {absolute !== undefined && <span className="text-[10px] font-bold text-muted-foreground/50 ml-0.5">({absolute})</span>}
                 </div>
                 <span className={`text-xs font-black ${colorClass}`}>{percentage}%</span>
             </div>
@@ -261,8 +270,15 @@ const StatisticsPage = () => {
                                     <h3 className="text-2xl font-black text-foreground italic uppercase tracking-tighter">Ingresos</h3>
                                 </div>
 
-                                <div className="p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] text-center space-y-2 group hover:bg-emerald-500/15 transition-all">
-                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Total Cash Collected</p>
+                                <div className="p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] text-center space-y-2 group hover:bg-emerald-500/15 transition-all relative overflow-visible group/stat">
+                                    <div className="flex items-center justify-center gap-1.5 relative group/tooltip">
+                                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Total Cash Collected</p>
+                                        <Info size={10} className="text-emerald-500/50 cursor-help" />
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-surface border border-base text-foreground text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                                            Ingreso total en efectivo generado por las ventas en el periodo, excluyendo saldos pendientes de planes de pago.
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-surface"></div>
+                                        </div>
+                                    </div>
                                     <h2 className="text-5xl font-black text-emerald-400 tracking-tighter tabular-nums drop-shadow-sm">
                                         {fmtCash(statsData.sales.totals.cash)}
                                     </h2>
@@ -290,9 +306,13 @@ const StatisticsPage = () => {
 
                                 <div className="p-6 bg-primary/5 border border-primary/20 rounded-2xl flex items-center justify-between">
                                     <div className="space-y-1">
-                                        <div className="flex items-center gap-1.5">
+                                        <div className="flex items-center gap-1.5 relative group/tooltip">
                                             <p className="text-[10px] font-black text-primary uppercase tracking-widest">Global Win Rate</p>
-                                            <Info size={10} className="text-primary/50" />
+                                            <Info size={10} className="text-primary/50 cursor-help" />
+                                            <div className="absolute bottom-full left-0 mb-2 w-48 bg-surface border border-base text-foreground text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                                                Tasa de cierre global (Ventas / Asistencias totales). Indica el porcentaje de personas con las que hablaste que terminaron comprando.
+                                                <div className="absolute top-full left-4 border-4 border-transparent border-t-surface"></div>
+                                            </div>
                                         </div>
                                         <p className="text-2xl font-black italic text-primary">{statsData.percentages.close_rate}%</p>
                                     </div>
@@ -342,16 +362,37 @@ const StatisticsPage = () => {
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-4">
-                                    <div className="p-6 bg-surface/50 border border-base rounded-3xl text-center space-y-1">
-                                        <p className="text-[9px] font-black text-emerald-500 uppercase tracking-tighter">Show Rate</p>
+                                    <div className="p-6 bg-surface/50 border border-base rounded-3xl text-center space-y-1 relative group/tooltip">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <p className="text-[9px] font-black text-emerald-500 uppercase tracking-tighter">Show Rate</p>
+                                            <Info size={10} className="text-emerald-500/50 cursor-help" />
+                                        </div>
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-surface border border-base text-foreground text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                                            Porcentaje de asistencias (Total Asistencias / Total Agendados).
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-surface"></div>
+                                        </div>
                                         <p className="text-2xl font-black italic">{statsData.percentages.show_rate}%</p>
                                     </div>
-                                    <div className="p-6 bg-surface/50 border border-base rounded-3xl text-center space-y-1">
-                                        <p className="text-[9px] font-black text-rose-500 uppercase tracking-tighter">No Show</p>
+                                    <div className="p-6 bg-surface/50 border border-base rounded-3xl text-center space-y-1 relative group/tooltip">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <p className="text-[9px] font-black text-rose-500 uppercase tracking-tighter">No Show</p>
+                                            <Info size={10} className="text-rose-500/50 cursor-help" />
+                                        </div>
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-surface border border-base text-foreground text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                                            Porcentaje de prospectos agendados que no se presentaron (No Shows / Total Agendados).
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-surface"></div>
+                                        </div>
                                         <p className="text-2xl font-black italic">{statsData.percentages.no_show_rate}%</p>
                                     </div>
-                                    <div className="p-6 bg-surface/50 border border-base rounded-3xl text-center space-y-1">
-                                        <p className="text-[9px] font-black text-amber-500 uppercase tracking-tighter">Cancelled</p>
+                                    <div className="p-6 bg-surface/50 border border-base rounded-3xl text-center space-y-1 relative group/tooltip">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <p className="text-[9px] font-black text-amber-500 uppercase tracking-tighter">Cancelled</p>
+                                            <Info size={10} className="text-amber-500/50 cursor-help" />
+                                        </div>
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-surface border border-base text-foreground text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                                            Porcentaje de llamadas que fueron canceladas explícitamente.
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-surface"></div>
+                                        </div>
                                         <p className="text-2xl font-black italic">{statsData.percentages.cancel_rate}%</p>
                                     </div>
                                 </div>
@@ -387,6 +428,7 @@ const StatisticsPage = () => {
                                                 label="Respuesta Hot" 
                                                 percentage={statsData.follow_ups.hot_sent ? ((statsData.follow_ups.hot_replied / statsData.follow_ups.hot_sent) * 100).toFixed(1) : 0} 
                                                 colorClass="text-rose-500" 
+                                                tooltip="Porcentaje de leads del flujo caliente que respondieron al mensaje."
                                             />
                                         </div>
                                     </div>
@@ -411,6 +453,7 @@ const StatisticsPage = () => {
                                                 label="Respuesta Cold" 
                                                 percentage={statsData.follow_ups.cold_sent ? ((statsData.follow_ups.cold_replied / statsData.follow_ups.cold_sent) * 100).toFixed(1) : 0} 
                                                 colorClass="text-sky-500" 
+                                                tooltip="Porcentaje de leads del flujo frío que respondieron al mensaje."
                                             />
                                         </div>
                                     </div>
@@ -424,9 +467,14 @@ const StatisticsPage = () => {
                                             <p className="text-2xl font-black italic tabular-nums text-foreground">{statsData.follow_ups.sent} Seguimientos</p>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase italic px-4 py-1.5 bg-surface rounded-full border border-base">
+                                    <div className="text-right relative group/tooltip">
+                                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-surface border border-base text-foreground text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl text-left">
+                                            Porcentaje general de respuestas obtenidas sobre el total de mensajes de seguimiento (Hot + Cold) enviados.
+                                            <div className="absolute top-full right-4 border-4 border-transparent border-t-surface"></div>
+                                        </div>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase italic px-4 py-1.5 bg-surface rounded-full border border-base cursor-help flex items-center gap-1.5">
                                             Tasa de Respuesta Global: {statsData.percentages.respond_rate}%
+                                            <Info size={10} className="text-primary/50" />
                                         </p>
                                     </div>
                                 </div>
