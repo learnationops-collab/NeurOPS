@@ -370,6 +370,8 @@ const WebhookMonitorTab = () => {
                                         <span className="flex items-center gap-1">Ad: <strong className="text-slate-300">{log.ad_name}</strong> {log.ad_id ? <span className="font-mono text-[9px]">(#{log.ad_id})</span> : ''}</span>
                                         {log.variante && <span>Var: <strong className="text-amber-400 font-medium">{log.variante}</strong></span>}
                                         {log.opening && <span>Open: <strong className="text-blue-400 font-medium">{log.opening}</strong></span>}
+                                        {log.id_option && <span>Opt: <strong className="text-pink-400 font-medium">{log.id_option}</strong></span>}
+                                        {log.id_question && <span>Seg: <strong className="text-emerald-400 font-medium">{log.id_question}</strong></span>}
                                         {log.fecha && <span>Fecha (MC): <strong className="text-slate-400">{log.fecha}</strong></span>}
                                         <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-bold text-[9px] ${ log.last_stage != null ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-slate-800/50 border-slate-700/50 text-slate-600' }`}>
                                             {{ 0: 'Entrante', 1: 'Cualificación', 2: 'Dolor' }[log.last_stage] ?? (log.last_stage != null ? `Stage ${log.last_stage}` : '—')}
@@ -408,7 +410,7 @@ const WebhookMonitorTab = () => {
                     POST /api/manychat-webhook
                 </code>
                 <p className="text-[10px] text-slate-600 mt-2 whitespace-pre-wrap font-mono">
-                    Body: {`{ \n  "manychat_id": "...",\n  "lead_name": "...",\n  "lead_ig": "...",\n  "follower": "true/false",\n  "ad_id": N,\n  "keyword": "...",\n  "opening": "...",\n  "variante": "...",\n  "fecha": "...",\n  "cualificacion": "true/false/null"\n}`}
+                    Body: {`{ \n  "manychat_id": "...",\n  "lead_name": "...",\n  "lead_ig": "...",\n  "follower": "true/false",\n  "ad_id": N,\n  "keyword": "...",\n  "opening": "...",\n  "variante": "...",\n  "id_option": "...",\n  "id_question": "...",\n  "fecha": "...",\n  "cualificacion": "true/false/null"\n}`}
                 </p>
             </div>
 

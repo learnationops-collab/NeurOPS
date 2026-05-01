@@ -230,6 +230,8 @@ def get_webhook_log():
         'fecha': ans.fecha_recibida,
         'opening': ans.opening,
         'variante': ans.variante,
+        'id_option': ans.id_option,
+        'id_question': ans.id_question,
         'qualification': ans.qualification,
         'created_at': ans.created_at.isoformat() if ans.created_at else None,
         'updated_at': ans.updated_at.isoformat() if ans.updated_at else None
