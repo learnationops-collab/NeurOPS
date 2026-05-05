@@ -117,3 +117,17 @@ class LeadAnswer(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+class UTMLog(db.Model):
+    __tablename__ = 'utm_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    base_url = db.Column(db.String(500), nullable=False)
+    final_url = db.Column(db.String(1000), nullable=False)
+    utm_source = db.Column(db.String(50))
+    utm_medium = db.Column(db.String(50))
+    utm_campaign = db.Column(db.String(100))
+    utm_content = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('utm_logs', lazy='dynamic'))

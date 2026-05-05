@@ -6,11 +6,13 @@ import {
     Shield,
     HardDrive,
     Activity,
-    Users
+    Users,
+    Share2
 } from 'lucide-react';
 import DatabasePage from '../../admin/database/DatabasePage';
 import OperationsPage from '../../admin/database/OperationsPage';
 import TeamManagementPage from '../../admin/team/TeamManagementPage';
+import UTMGenerator from '../../../components/operations/UTMGenerator';
 import Card from '../../../components/ui/Card';
 
 const OperationsSettingsPage = () => {
@@ -18,6 +20,7 @@ const OperationsSettingsPage = () => {
 
     const sections = [
         { id: 'team', label: 'Gestión de Equipo', icon: Users },
+        { id: 'marketing', label: 'Marketing UTMs', icon: Share2 },
         { id: 'database', label: 'Base de Datos', icon: Database },
         { id: 'operations', label: 'Operaciones Críticas', icon: Activity },
         { id: 'infra', label: 'Infraestructura', icon: HardDrive },
@@ -54,6 +57,12 @@ const OperationsSettingsPage = () => {
                     {activeSection === 'team' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
                             <TeamManagementPage />
+                        </div>
+                    )}
+
+                    {activeSection === 'marketing' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                            <UTMGenerator />
                         </div>
                     )}
 
