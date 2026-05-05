@@ -9,14 +9,14 @@ import {
     Layers, 
     Share2, 
     Type,
-    AlertCircle
+    HelpCircle
 } from 'lucide-react';
 import Card from '../ui/Card';
 import { toast } from 'react-hot-toast';
 
 const UTMGenerator = () => {
     const [formData, setFormData] = useState({
-        baseUrl: '',
+        baseUrl: 'https://institute.thelearnation.com/',
         source: 'instagram',
         medium: 'stories',
         campaign: '',
@@ -141,7 +141,7 @@ const UTMGenerator = () => {
                                 name="baseUrl"
                                 value={formData.baseUrl}
                                 onChange={handleInputChange}
-                                placeholder="https://landing.hostinger.com/oferta"
+                                placeholder="https://institute.thelearnation.com/tu-landing"
                                 className={`w-full p-4 bg-white/[0.03] border ${!isValidUrl ? 'border-rose-500/50' : 'border-white/10'} rounded-2xl text-xs font-medium focus:border-primary/50 transition-all outline-none text-white`}
                             />
                             {!isValidUrl && (
@@ -167,9 +167,24 @@ const UTMGenerator = () => {
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
-                                <Layers size={12} /> UTM Medium
-                            </label>
+                            <div className="flex items-center justify-between">
+                                <label className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
+                                    <Layers size={12} /> UTM Medium
+                                </label>
+                                <div className="relative group/tooltip">
+                                    <HelpCircle size={14} className="text-muted/50 cursor-help hover:text-primary transition-colors" />
+                                    <div className="absolute bottom-full right-0 mb-2 w-64 bg-[#1a1b1e] border border-white/10 rounded-2xl p-4 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-2xl backdrop-blur-xl">
+                                        <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-3 border-b border-white/5 pb-2">Guía de Mediums</p>
+                                        <ul className="space-y-2 text-[10px] text-white/70 font-medium">
+                                            <li><span className="text-white font-bold">bio:</span> Link en la biografía del perfil.</li>
+                                            <li><span className="text-white font-bold">cpc:</span> Anuncios pagados (pago por clic).</li>
+                                            <li><span className="text-white font-bold">stories:</span> Enlaces en historias (IG/FB).</li>
+                                            <li><span className="text-white font-bold">newsletter:</span> Enlaces en campañas de email.</li>
+                                            <li><span className="text-white font-bold">organic:</span> Tráfico natural no pagado.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                             <select
                                 name="medium"
                                 value={formData.medium}
@@ -235,8 +250,7 @@ const UTMGenerator = () => {
                                 {copied ? 'Copiado!' : 'Copiar al portapapeles'}
                             </button>
 
-                            {/* Decoración de Fondo */}
-                            <Share2 className="absolute -right-8 -bottom-8 text-primary/5 w-48 h-48 -rotate-12 group-hover:scale-110 transition-transform duration-700" />
+
                         </div>
                     </div>
                 </div>
