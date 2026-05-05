@@ -56,7 +56,8 @@ def create_app(config_class=Config):
         "http://localhost:5173", 
         "http://localhost:3000",
         "https://work.thelearnation.com",
-        "https://neurops-production.up.railway.app" # Assuming this might be the backend URL too
+        "https://neurops-production.up.railway.app",
+        "https://institute.thelearnation.com"
     ]
     CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
 
@@ -119,6 +120,10 @@ def create_app(config_class=Config):
     from app.api.workshop import bp as workshop_bp
     app.register_blueprint(workshop_bp, url_prefix='/api/workshop')
     csrf.exempt(workshop_bp)
+
+    from app.api.metrics import bp as metrics_bp
+    app.register_blueprint(metrics_bp, url_prefix='/api/v1/metrics')
+    csrf.exempt(metrics_bp)
 
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')

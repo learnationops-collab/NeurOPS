@@ -131,3 +131,14 @@ class UTMLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', backref=db.backref('utm_logs', lazy='dynamic'))
+
+class LandingTracking(db.Model):
+    __tablename__ = 'landing_trackings'
+    id = db.Column(db.Integer, primary_key=True)
+    utm_source = db.Column(db.String(100))
+    utm_medium = db.Column(db.String(100))
+    utm_campaign = db.Column(db.String(100))
+    utm_content = db.Column(db.String(100))
+    page_path = db.Column(db.String(255))
+    referrer = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

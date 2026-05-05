@@ -26,8 +26,6 @@ const UTMGenerator = () => {
     const [generatedUrl, setGeneratedUrl] = useState('');
     const [copied, setCopied] = useState(false);
     const [isValidUrl, setIsValidUrl] = useState(true);
-    const [shortenedUrl, setShortenedUrl] = useState('');
-    const [isShortening, setIsShortening] = useState(false);
 
     const sources = ['instagram', 'facebook', 'google', 'email', 'whatsapp'];
     const mediums = ['bio', 'cpc', 'stories', 'newsletter', 'organic'];
@@ -68,7 +66,6 @@ const UTMGenerator = () => {
 
                 // Reconstruir URL preservando hash si existe
                 setGeneratedUrl(`${url.origin}${url.pathname}?${params.toString()}${url.hash}`);
-                setShortenedUrl(''); // Reset short URL when base changes
             } catch (err) {
                 setGeneratedUrl('');
             }
@@ -82,29 +79,10 @@ const UTMGenerator = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const shortenUrl = async () => {
+    const copyToClipboard = async () => {
         if (!generatedUrl) return;
         try {
-            setIsShortening(true);
-            const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(generatedUrl)}`);
-            if (response.ok) {
-                const short = await response.text();
-                setShortenedUrl(short);
-                toast.success('URL acortada con éxito');
-            } else {
-                throw new Error('Error al acortar');
-            }
-        } catch (err) {
-            toast.error('Error al conectar con el acortador');
-        } finally {
-            setIsShortening(false);
-        }
-    };
-
-    const copyToClipboard = async (textToCopy) => {
-        if (!textToCopy) return;
-        try {
-            await navigator.clipboard.writeText(textToCopy);
+            await navigator.clipboard.writeText(generatedUrl);
             setCopied(true);
             
             // Log to backend (silent)
@@ -114,7 +92,7 @@ const UTMGenerator = () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         base_url: formData.baseUrl,
-                        final_url: textToCopy,
+                        final_url: generatedUrl,
                         utm_source: formData.source,
                         utm_medium: formData.medium,
                         utm_campaign: formData.campaign,
@@ -252,55 +230,26 @@ const UTMGenerator = () => {
                     <div className="h-full flex flex-col">
                         <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2">Resultado Final</label>
                         <div className="flex-1 p-6 bg-primary/5 border border-primary/20 rounded-3xl flex flex-col justify-between relative group overflow-hidden">
-                            <div className="relative z-10 space-y-4">
-                                <div>
-                                    <p className="text-[9px] font-bold text-primary tracking-widest uppercase mb-2">URL Larga</p>
-                                    <div className="text-[11px] font-mono break-all text-white/60 leading-relaxed bg-black/20 p-3 rounded-xl border border-white/5">
-                                        {generatedUrl || <span className="text-white/10 italic">Esperando datos...</span>}
-                                    </div>
+                            <div className="relative z-10">
+                                <p className="text-[9px] font-bold text-primary tracking-widest uppercase mb-4">URL Generada</p>
+                                <div className="text-sm font-mono break-all text-white/90 leading-relaxed min-h-[100px]">
+                                    {generatedUrl || <span className="text-white/20 italic">Completa los campos para generar el enlace...</span>}
                                 </div>
-
-                                {shortenedUrl && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                    >
-                                        <p className="text-[9px] font-bold text-emerald-400 tracking-widest uppercase mb-2">URL Acortada</p>
-                                        <div className="text-sm font-mono break-all text-white font-bold bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
-                                            {shortenedUrl}
-                                        </div>
-                                    </motion.div>
-                                )}
                             </div>
 
-                            <div className="mt-8 space-y-3 relative z-10">
-                                {!shortenedUrl && generatedUrl && (
-                                    <button
-                                        onClick={shortenUrl}
-                                        disabled={isShortening}
-                                        className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl flex items-center justify-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest text-muted hover:text-white"
-                                    >
-                                        {isShortening ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Link size={14} />}
-                                        {isShortening ? 'Acortando...' : 'Acortar URL'}
-                                    </button>
-                                )}
+                            <button
+                                onClick={copyToClipboard}
+                                disabled={!generatedUrl}
+                                className={`mt-6 w-full py-4 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 font-black uppercase text-[10px] tracking-widest ${
+                                    copied 
+                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                                    : 'bg-primary text-white hover:shadow-lg hover:shadow-primary/30 disabled:opacity-30 disabled:hover:shadow-none'
+                                }`}
+                            >
+                                {copied ? <Check size={16} /> : <Copy size={16} />}
+                                {copied ? 'Copiado!' : 'Copiar al portapapeles'}
+                            </button>
 
-                                <button
-                                    onClick={() => copyToClipboard(shortenedUrl || generatedUrl)}
-                                    disabled={!generatedUrl}
-                                    className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 font-black uppercase text-[10px] tracking-widest ${
-                                        copied 
-                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
-                                        : 'bg-primary text-white hover:shadow-lg hover:shadow-primary/30 disabled:opacity-30 disabled:hover:shadow-none'
-                                    }`}
-                                >
-                                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                                    {copied ? 'Copiado!' : (shortenedUrl ? 'Copiar URL Acortada' : 'Copiar URL Completa')}
-                                </button>
-                            </div>
-
-                            {/* Decoración de Fondo */}
-                            <Share2 className="absolute -right-10 -bottom-10 text-primary/5 w-40 h-40 -rotate-12 pointer-events-none" />
                         </div>
                     </div>
                 </div>
