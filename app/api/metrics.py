@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from app import db
 from app.models.marketing import LandingTracking
+from flask_login import login_required
+from app.decorators import admin_required
 import logging
 
 bp = Blueprint('metrics', __name__)
@@ -38,3 +40,23 @@ def track_visit():
             "status": "error",
             "message": "Internal server error"
         }), 500
+
+@bp.route('/track-visits', methods=['GET'])
+@login_required
+@admin_required
+def get_track_visits():
+    try:
+        visits = LandingTracking.query.order_by(LandingTracking.created_at.desc()).limit(500).all()
+        return jsonify([{
+            "id": v.id,
+            "utm_source": v.utm_source,
+            "utm_medium": v.utm_medium,
+            "utm_campaign": v.utm_campaign,
+            "utm_content": v.utm_content,
+            "page_path": v.page_path,
+            "referrer": v.referrer,
+            "created_at": v.created_at.isoformat()
+        } for v in visits]), 200
+    except Exception as e:
+        logging.error(f"Error al obtener visitas de landing: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500

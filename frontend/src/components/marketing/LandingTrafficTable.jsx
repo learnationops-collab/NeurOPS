@@ -1,0 +1,154 @@
+import React, { useState, useEffect } from 'react';
+import { 
+    Activity, 
+    RefreshCw, 
+    Globe, 
+    Calendar, 
+    Search,
+    ExternalLink,
+    Filter
+} from 'lucide-react';
+import Card from '../ui/Card';
+import { toast } from 'react-hot-toast';
+
+const LandingTrafficTable = () => {
+    const [visits, setVisits] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const fetchVisits = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/api/v1/metrics/track-visits');
+            if (response.ok) {
+                const data = await response.json();
+                setVisits(data);
+            } else {
+                toast.error('Error al cargar datos de tráfico');
+            }
+        } catch (err) {
+            toast.error('Error de conexión');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchVisits();
+    }, []);
+
+    const filteredVisits = visits.filter(v => 
+        (v.utm_source?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (v.page_path?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (v.utm_campaign?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+    );
+
+    const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return new Intl.DateTimeFormat('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(date);
+    };
+
+    return (
+        <Card variant="surface" className="border-white/5 bg-[#0a0b0e]/80 backdrop-blur-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                        <Activity className="text-emerald-400" size={20} />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-black italic uppercase tracking-tighter">Tráfico en Tiempo Real</h2>
+                        <p className="text-[9px] font-bold text-muted uppercase tracking-widest">Últimas 500 visitas registradas</p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                        <input 
+                            type="text"
+                            placeholder="Buscar fuente, campaña o ruta..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-9 pr-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-xs focus:border-primary/50 transition-all outline-none text-white min-w-[250px]"
+                        />
+                    </div>
+                    <button 
+                        onClick={fetchVisits}
+                        disabled={loading}
+                        className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all disabled:opacity-50"
+                    >
+                        <RefreshCw className={`text-muted ${loading ? 'animate-spin' : ''}`} size={18} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-separate border-spacing-y-2">
+                    <thead>
+                        <tr className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">
+                            <th className="px-6 py-4">Fecha</th>
+                            <th className="px-6 py-4">Página / Ruta</th>
+                            <th className="px-6 py-4">Origen (Source)</th>
+                            <th className="px-6 py-4">Medio (Medium)</th>
+                            <th className="px-6 py-4">Campaña</th>
+                            <th className="px-6 py-4">Referrer</th>
+                        </tr>
+                    </thead>
+                    <tbody className="text-xs">
+                        {loading ? (
+                            <tr>
+                                <td colSpan="6" className="text-center py-20 text-muted font-bold uppercase tracking-widest animate-pulse">
+                                    Cargando datos de tráfico...
+                                </td>
+                            </tr>
+                        ) : filteredVisits.length === 0 ? (
+                            <tr>
+                                <td colSpan="6" className="text-center py-20 text-muted font-bold uppercase tracking-widest">
+                                    No se encontraron visitas registradas
+                                </td>
+                            </tr>
+                        ) : (
+                            filteredVisits.map((visit) => (
+                                <tr key={visit.id} className="group hover:translate-x-1 transition-all duration-300">
+                                    <td className="px-6 py-4 bg-white/[0.02] border-y border-l border-white/5 rounded-l-2xl whitespace-nowrap">
+                                        <div className="flex items-center gap-2 text-muted font-medium">
+                                            <Calendar size={12} />
+                                            {formatDate(visit.created_at)}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5">
+                                        <div className="flex items-center gap-2 font-bold text-white group-hover:text-primary transition-colors">
+                                            <Globe size={12} className="text-primary/50" />
+                                            {visit.page_path}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5">
+                                        <span className="px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-lg text-primary font-black uppercase text-[9px] tracking-widest">
+                                            {visit.utm_source || 'directo'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 text-muted font-medium">
+                                        {visit.utm_medium || '-'}
+                                    </td>
+                                    <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5">
+                                        <span className="font-bold text-white/80 italic">{visit.utm_campaign || '-'}</span>
+                                    </td>
+                                    <td className="px-6 py-4 bg-white/[0.02] border-y border-r border-white/5 rounded-r-2xl text-muted font-medium italic truncate max-w-[200px]">
+                                        {visit.referrer || 'ninguno'}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </Card>
+    );
+};
+
+export default LandingTrafficTable;

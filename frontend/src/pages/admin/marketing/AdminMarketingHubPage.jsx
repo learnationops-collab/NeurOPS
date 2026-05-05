@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { LayoutGrid, Share2 } from 'lucide-react';
+import { LayoutGrid, Share2, Activity } from 'lucide-react';
 import AdManagementPage from '../../public/AdManagementPage';
 import UTMGenerator from '../../../components/operations/UTMGenerator';
+import LandingTrafficTable from '../../../components/marketing/LandingTrafficTable';
 
 const AdminMarketingHubPage = () => {
     const [activeTab, setActiveTab] = useState('ads');
@@ -9,6 +10,7 @@ const AdminMarketingHubPage = () => {
     const tabs = [
         { id: 'ads', label: 'Gestión de Anuncios', icon: LayoutGrid },
         { id: 'utms', label: 'Generador UTM', icon: Share2 },
+        { id: 'traffic', label: 'Tráfico Landings', icon: Activity },
     ];
 
     return (
@@ -34,11 +36,17 @@ const AdminMarketingHubPage = () => {
             </div>
 
             <div className="w-full">
-                {activeTab === 'ads' ? (
-                    <AdManagementPage />
-                ) : (
+                {activeTab === 'ads' && <AdManagementPage />}
+                
+                {activeTab === 'utms' && (
                     <div className="p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <UTMGenerator />
+                    </div>
+                )}
+
+                {activeTab === 'traffic' && (
+                    <div className="p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <LandingTrafficTable />
                     </div>
                 )}
             </div>
