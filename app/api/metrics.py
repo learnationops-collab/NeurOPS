@@ -60,3 +60,17 @@ def get_track_visits():
     except Exception as e:
         logging.error(f"Error al obtener visitas de landing: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
+
+@bp.route('/track-visit/<int:id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_track_visit(id):
+    try:
+        visit = LandingTracking.query.get_or_404(id)
+        db.session.delete(visit)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Visit deleted"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error al eliminar visita de landing: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500

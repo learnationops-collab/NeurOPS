@@ -6,7 +6,8 @@ import {
     Calendar, 
     Search,
     ExternalLink,
-    Filter
+    Filter,
+    Trash2
 } from 'lucide-react';
 import Card from '../ui/Card';
 import { toast } from 'react-hot-toast';
@@ -30,6 +31,25 @@ const LandingTrafficTable = () => {
             toast.error('Error de conexión');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
+        
+        try {
+            const response = await fetch(`/api/v1/metrics/track-visit/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                toast.success('Registro eliminado');
+                setVisits(prev => prev.filter(v => v.id !== id));
+            } else {
+                toast.error('Error al eliminar');
+            }
+        } catch (err) {
+            toast.error('Error de conexión');
         }
     };
 
@@ -97,18 +117,19 @@ const LandingTrafficTable = () => {
                             <th className="px-6 py-4">Medio (Medium)</th>
                             <th className="px-6 py-4">Campaña</th>
                             <th className="px-6 py-4">Referrer</th>
+                            <th className="px-6 py-4 text-right">Acciones</th>
                         </tr>
                     </thead>
                     <tbody className="text-xs">
                         {loading ? (
                             <tr>
-                                <td colSpan="6" className="text-center py-20 text-muted font-bold uppercase tracking-widest animate-pulse">
+                                <td colSpan="7" className="text-center py-20 text-muted font-bold uppercase tracking-widest animate-pulse">
                                     Cargando datos de tráfico...
                                 </td>
                             </tr>
                         ) : filteredVisits.length === 0 ? (
                             <tr>
-                                <td colSpan="6" className="text-center py-20 text-muted font-bold uppercase tracking-widest">
+                                <td colSpan="7" className="text-center py-20 text-muted font-bold uppercase tracking-widest">
                                     No se encontraron visitas registradas
                                 </td>
                             </tr>
@@ -138,8 +159,17 @@ const LandingTrafficTable = () => {
                                     <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5">
                                         <span className="font-bold text-white/80 italic">{visit.utm_campaign || '-'}</span>
                                     </td>
-                                    <td className="px-6 py-4 bg-white/[0.02] border-y border-r border-white/5 rounded-r-2xl text-muted font-medium italic truncate max-w-[200px]">
+                                    <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5 text-muted font-medium italic truncate max-w-[200px]">
                                         {visit.referrer || 'ninguno'}
+                                    </td>
+                                    <td className="px-6 py-4 bg-white/[0.02] border-y border-r border-white/5 rounded-r-2xl text-right">
+                                        <button 
+                                            onClick={() => handleDelete(visit.id)}
+                                            className="p-2 text-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                                            title="Eliminar registro"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                     </td>
                                 </tr>
                             ))
