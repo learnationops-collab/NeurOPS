@@ -180,9 +180,16 @@ def _trigger_setter_report_webhook(stat):
             
             "averages": avg_metrics,
             "questions_efficacy": {
-                "q1": {"useful": stat.q1_useful or 0, "unuseful": stat.q1_unuseful or 0},
-                "q2_u": stat.q2_useful or 0,
-                "q2_un": stat.q2_unuseful or 0
+                "q1": {
+                    "useful": stat.q1_useful or 0, 
+                    "unuseful": stat.q1_unuseful or 0,
+                    "pct": safe_percent(stat.q1_useful or 0, (stat.q1_useful or 0) + (stat.q1_unuseful or 0))
+                },
+                "q2": {
+                    "useful": stat.q2_useful or 0, 
+                    "unuseful": stat.q2_unuseful or 0,
+                    "pct": safe_percent(stat.q2_useful or 0, (stat.q2_useful or 0) + (stat.q2_unuseful or 0))
+                }
             },
             "qualitative": qualitative_callouts,
             "reflections": stat.reflections or {}
