@@ -47,6 +47,8 @@ def _trigger_setter_report_webhook(stat):
         if stat.answers:
             questions = {q.id: q.text for q in DailyReportQuestion.query.filter_by(role='setter', is_active=True).all()}
             for q_id, answer in stat.answers.items():
+                if not str(q_id).isdigit():
+                    continue
                 q_id_int = int(q_id)
                 if q_id_int in questions and answer and answer.strip():
                     qualitative_callouts.append({
@@ -421,12 +423,18 @@ def submit_daily_report():
             
     try:
         db.session.commit()
-        # Trigger Webhook after successful commit
-        _trigger_setter_report_webhook(stat)
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar el reporte: {str(e)}"}), 500
-        
+
+    # Discord separado para no comprometer el guardado si falla
+    try:
+        _trigger_setter_report_webhook(stat)
+    except Exception as e:
+        print(f"[Setter Webhook Error] {e}")
+        import traceback
+        traceback.print_exc()
+
     return jsonify({"message": "Reporte enviado con éxito", "id": stat.id}), 201
 
 @bp.route('/stats/summary', methods=['GET'])

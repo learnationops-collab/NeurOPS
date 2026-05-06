@@ -103,14 +103,21 @@ def submit_public_closer_report():
 
     try:
         db.session.commit()
-        # Disparar webhook de Discord después de guardar
-        _trigger_closer_report_discord(report)
-        return jsonify({"message": "Reporte de closer guardado exitosamente"}), 201
     except Exception as e:
         db.session.rollback()
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+    # Discord separado para no comprometer el guardado si falla
+    try:
+        _trigger_closer_report_discord(report)
+    except Exception as e:
+        print(f"[Closer Webhook Error] {e}")
+        import traceback
+        traceback.print_exc()
+
+    return jsonify({"message": "Reporte de closer guardado exitosamente"}), 201
 
 
 def _trigger_closer_report_discord(report):
