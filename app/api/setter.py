@@ -180,53 +180,64 @@ def _trigger_setter_report_webhook(stat):
             
             "averages": avg_metrics,
             "questions_efficacy": {
-                "q1": {"useful": stat.q1_useful or 0, "unuseful": stat.q1_unuseful or 0, "pct": safe_percent(stat.q1_useful or 0, (stat.q1_useful or 0) + (stat.q1_unuseful or 0))},
-                "q2": {"useful": stat.q2_useful or 0, "unuseful": stat.q2_unuseful or 0, "pct": safe_percent(stat.q2_useful or 0, (stat.q2_useful or 0) + (stat.q2_unuseful or 0))}
+                "q1": {"useful": stat.q1_useful or 0, "unuseful": stat.q1_unuseful or 0},
+                "q2_u": stat.q2_useful or 0,
+                "q2_un": stat.q2_unuseful or 0
             },
-            "qualitative": qualitative_callouts
+            "qualitative": qualitative_callouts,
+            "reflections": stat.reflections or {}
         }
 
-        # 4. Generate Image
+        # 4. Generate Images
         img_buffer = ImageService.generate_setter_report_card(img_data)
         
-        # 5. Discord Metadata (Improved format)
-        resumen_str = f"{stat.inbox_entrantes} Entrantes | {stat.funnel_agenda} Agendas"
+        reflection_data = {
+            "user_name": setter_name,
+            "date": stat.date.strftime('%d/%m/%Y'),
+            "reflections": stat.reflections or {}
+        }
+        reflection_buffer = ImageService.generate_reflection_card(reflection_data)
         
+        # 5. Discord Metadata
         content = (
-            f"🚀 **REPORTE DIARIO DE SETTER**\n"
+            f"🚀 **NUEVO REPORTE DIARIO DE SETTER**\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"👤 **Setter:** `{setter_name}`\n"
             f"📅 **Fecha:** `{stat.date.strftime('%d/%m/%Y')}`\n"
-            f"📊 **Resumen:** `{resumen_str}`\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"@everyone"
         )
         
         json_payload = {
             "content": content,
-            "embeds": [{
-                "color": 4521291, # #2DD4BF Teal color
-                "image": {
-                    "url": "attachment://setter_report.png"
+            "embeds": [
+                {
+                    "color": 4521291, # #2DD4BF
+                    "image": {"url": "attachment://setter_report.png"},
+                    "footer": {"text": "NeurOPS Stats"}
                 },
-                "footer": {
-                    "text": "NeurOPS Performance System • " + datetime.now().strftime('%H:%M')
+                {
+                    "color": 6502897, # #6366F1
+                    "image": {"url": "attachment://reflection.png"},
+                    "footer": {"text": "Daily Reflection"}
                 }
-            }]
+            ]
         }
         
         files = {
-            'file': ('setter_report.png', img_buffer, 'image/png')
+            'file1': ('setter_report.png', img_buffer, 'image/png'),
+            'file2': ('reflection.png', reflection_buffer, 'image/png')
         }
         
         # 6. Send
-        res = requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
+        res = requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=20)
         print(f"[Discord Setter] Status: {res.status_code}")
         
     except Exception as e:
         print(f"[Discord Setter Error] {e}")
         import traceback
         traceback.print_exc()
+
 
 @bp.route('/daily-report', methods=['POST', 'GET'])
 @role_required(ROLE_SETTER)

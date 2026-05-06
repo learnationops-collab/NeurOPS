@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { Loader2, Send, Calendar, ListChecks, User, ArrowLeft, Inbox, MessageSquare, Filter, RefreshCw, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import FunnelChart from '../../components/charts/FunnelChart';
+import DailyReflectionSection from '../../components/reports/DailyReflectionSection';
 const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly = false }) => {
     const isFilled = value > 0 || value !== '';
     const colorClasses = {
@@ -77,6 +78,7 @@ const PublicSetterReportPage = () => {
         q2_useful: '',
         q2_unuseful: '',
         answers: [],
+        reflections: {},
         frequent_questions: [{ number: '', is_good: false }]
     });
 
@@ -104,12 +106,6 @@ const PublicSetterReportPage = () => {
 
             setSetters(settersRes.data);
             setQuestions(qRes.data);
-
-            setFormData(prev => ({
-                ...prev,
-                answers: qRes.data.map(q => ({ question_id: q.id, answer: '' }))
-            }));
-
         } catch (err) {
             console.error("Error fetching data:", err);
             alert("Hubo un error cargando el formulario. Reintenta.");
@@ -169,7 +165,8 @@ const PublicSetterReportPage = () => {
                 q1_unuseful: '',
                 q2_useful: '',
                 q2_unuseful: '',
-                answers: prev.answers.map(a => ({ ...a, answer: '' }))
+                answers: [],
+                reflections: {}
             }));
 
         } catch (err) {
@@ -583,45 +580,18 @@ const PublicSetterReportPage = () => {
                             </div>
                         </div>
 
-                        {/* BOTTOM SECTION: QUALITATIVE FEEDBACK */}
+                        {/* BOTTOM SECTION: QUALITATIVE FEEDBACK (DAILY REFLECTION) */}
                         <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 md:p-12 shadow-sm border-t-8 border-t-teal-600">
-                            <SectionHeader icon={ListChecks} title="Victorias y Feedback del Día" colorClass="text-teal-600" />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                {questions.map(q => {
-                                    const ansVal = formData.answers.find(a => a.question_id === q.id)?.answer || '';
-                                    const isFilled = ansVal.trim() !== '';
-                                    return (
-                                        <div key={q.id} className="space-y-3 group">
-                                            <label className={`text-[11px] font-black uppercase tracking-widest ml-1 transition-colors ${isFilled ? 'text-teal-600' : 'text-slate-400'}`}>
-                                                {q.text}
-                                            </label>
-                                            {q.type === 'long_text' ? (
-                                                <textarea
-                                                    className={`w-full px-6 py-5 rounded-[1.75rem] outline-none transition-all font-medium min-h-[140px] border leading-relaxed
-                                                        ${isFilled ? 'bg-white border-teal-100 text-slate-800 shadow-sm' : 'bg-slate-50/50 border-slate-200/60 text-slate-500 shadow-inner'}
-                                                        focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5
-                                                    `}
-                                                    value={ansVal}
-                                                    onChange={e => handleAnswerChange(q.id, e.target.value)}
-                                                    placeholder="Escribe aquí tu respuesta..."
-                                                />
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    className={`w-full px-6 py-5 rounded-[1.75rem] outline-none transition-all font-bold border
-                                                        ${isFilled ? 'bg-white border-teal-100 text-slate-800 shadow-sm' : 'bg-slate-50/50 border-slate-200/60 text-slate-500 shadow-inner'}
-                                                        focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5
-                                                    `}
-                                                    value={ansVal}
-                                                    onChange={e => handleAnswerChange(q.id, e.target.value)}
-                                                    placeholder="Respuesta corta..."
-                                                />
-                                            )}
-                                        </div>
-                                    )
-                                })}
-                            </div>
+                            <DailyReflectionSection
+                                role="setter"
+                                values={formData.reflections}
+                                onChange={(key, val) => setFormData(prev => ({
+                                    ...prev,
+                                    reflections: { ...prev.reflections, [key]: val }
+                                }))}
+                            />
                         </div>
+
                     </form>
                 )}
 

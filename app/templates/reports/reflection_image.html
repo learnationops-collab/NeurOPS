@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Reflection - NeurOPS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #030712;
+            --surface-color: #0f172a;
+            --primary-color: #6366f1;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            width: 1200px;
+            padding: 60px;
+        }
+
+        .container {
+            background: linear-gradient(145deg, #0f172a 0%, #020617 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 40px;
+            padding: 50px;
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -200px;
+            right: -200px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 50px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 30px;
+        }
+
+        .header-left h1 {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: -2px;
+            text-transform: uppercase;
+            font-style: italic;
+            background: linear-gradient(to right, #fff, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-left p {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-top: 5px;
+        }
+
+        .header-right {
+            text-align: right;
+        }
+
+        .header-right .date {
+            font-size: 24px;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .header-right .user {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .reflection-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .reflection-card.full-width {
+            grid-column: span 2;
+            background: linear-gradient(to right, rgba(99, 102, 241, 0.05), transparent);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-color);
+        }
+
+        .card-title {
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+        }
+
+        .card-content {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .no-data {
+            color: rgba(255, 255, 255, 0.1);
+            font-style: italic;
+        }
+
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>Daily Reflection</h1>
+                <p>NeurOPS Performance</p>
+            </div>
+            <div class="header-right">
+                <div class="date">{{ date }}</div>
+                <div class="user">{{ user_name }}</div>
+            </div>
+        </header>
+
+        <div class="grid">
+            <div class="reflection-card full-width">
+                <div class="card-header">
+                    <div class="card-title">General Reflection / Operations</div>
+                </div>
+                <div class="card-content">
+                    {{ reflections.daily_reflection or 'Sin comentarios registrados.' }}
+                </div>
+            </div>
+
+            <div class="reflection-card">
+                <div class="card-header">
+                    <div class="card-title">Win of the day</div>
+                </div>
+                <div class="card-content">
+                    {{ reflections.win_of_day or 'Sin datos.' }}
+                </div>
+            </div>
+
+            <div class="reflection-card">
+                <div class="card-header">
+                    <div class="card-title">Why it was a win</div>
+                </div>
+                <div class="card-content">
+                    {{ reflections.explain_why or 'Sin datos.' }}
+                </div>
+            </div>
+
+            <div class="reflection-card">
+                <div class="card-header">
+                    <div class="card-title">Opportunity</div>
+                </div>
+                <div class="card-content">
+                    {{ reflections.opportunity or 'Sin datos.' }}
+                </div>
+            </div>
+
+            <div class="reflection-card">
+                <div class="card-header">
+                    <div class="card-title">Learning Process</div>
+                </div>
+                <div class="card-content">
+                    {{ reflections.learning_process or 'Sin datos.' }}
+                </div>
+            </div>
+
+            <div class="reflection-card full-width">
+                <div class="card-header">
+                    <div class="card-title">The Plan for Tomorrow</div>
+                </div>
+                <div class="card-content">
+                    {{ reflections.the_plan or 'Sin plan registrado.' }}
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            Data-Driven Growth • High Performance Culture
+        </footer>
+    </div>
+</body>
+</html>

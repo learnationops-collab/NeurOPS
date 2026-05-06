@@ -251,35 +251,49 @@ def _trigger_closer_report_discord(report):
         
         has_ref = report.reflection_victory or report.reflection_opportunity
         ref_text = f"\n💡 **Reflexión:**\n- **Victoria:** {report.reflection_victory}\n- **Oportunidad:** {report.reflection_opportunity}" if has_ref else ""
-        
+        # Renderizar Imagen Principal
+        img_buffer = ImageService.generate_closer_report_card(img_data)
+
+        # Renderizar Imagen de Reflexión
+        reflection_data = {
+            "user_name": closer_name,
+            "date": date_str,
+            "reflections": report.reflections or {}
+        }
+        reflection_buffer = ImageService.generate_reflection_card(reflection_data)
+
+        # Payload para Discord
         content = (
-            f"💰 **REPORTE DIARIO DE CLOSER**\n"
+            f"🎯 **NUEVO REPORTE DIARIO DE CLOSER**\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"👤 **Closer:** `{closer_name}`\n"
             f"📅 **Fecha:** `{date_str}`\n"
-            f"📊 **Resumen:** `{resumen_str}`\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━{ref_text}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"@everyone"
         )
-        
+
         json_payload = {
             "content": content,
-            "embeds": [{
-                "color": 16753920, # #FFB100 Amber color
-                "image": {
-                    "url": "attachment://closer_report.png"
+            "embeds": [
+                {
+                    "color": 9384170, # Violeta
+                    "image": {"url": "attachment://closer_report.png"},
+                    "footer": {"text": "NeurOPS Performance"}
                 },
-                "footer": {
-                    "text": "NeurOPS Performance System • " + datetime.now().strftime('%H:%M')
+                {
+                    "color": 6502897, # Indigo
+                    "image": {"url": "attachment://reflection.png"},
+                    "footer": {"text": "Daily Reflection"}
                 }
-            }]
+            ]
         }
-        
+
         files = {
-            'file': ('closer_report.png', img_buffer, 'image/png')
+            'file1': ('closer_report.png', img_buffer, 'image/png'),
+            'file2': ('reflection.png', reflection_buffer, 'image/png')
         }
-        
-        res = req.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
+
+        res = req.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=25)
         print(f"[Discord Closer] Status: {res.status_code}")
 
     except Exception as e:

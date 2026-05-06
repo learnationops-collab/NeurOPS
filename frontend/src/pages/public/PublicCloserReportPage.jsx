@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headphones, BarChart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import DailyReflectionSection from '../../components/reports/DailyReflectionSection';
 
 // Componente reutilizable para inputs numéricos
 const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly = false, isLightMode = false, type = "number", step, placeholder }) => {
@@ -122,8 +123,7 @@ const PublicCloserReportPage = () => {
         follow_ups_cold_replied: '',
 
         // Reflexión
-        reflection_victory: '',
-        reflection_opportunity: '',
+        reflections: {},
     };
 
     const [formData, setFormData] = useState(initialFormData);
@@ -152,13 +152,10 @@ const PublicCloserReportPage = () => {
     };
 
     const handleFieldChange = (field, value) => {
-        const textFields = ['reflection_victory', 'reflection_opportunity'];
         // Campos monetarios aceptan decimales
         const moneyFields = ['pif_cash_collected', 'pif_in_call_cash', 'split_cash_collected', 'split_in_call_cash', 'deposit_cash_collected', 'deposit_in_call_cash'];
         
-        if (textFields.includes(field)) {
-            setFormData(prev => ({ ...prev, [field]: value }));
-        } else if (moneyFields.includes(field)) {
+        if (moneyFields.includes(field)) {
             setFormData(prev => ({ ...prev, [field]: value === '' ? '' : value }));
         } else {
             setFormData(prev => ({ ...prev, [field]: value === '' ? '' : (parseInt(value) || 0) }));
@@ -230,13 +227,13 @@ const PublicCloserReportPage = () => {
     ];
     const followUpsFields = ['follow_ups_hot_sent', 'follow_ups_hot_replied', 'follow_ups_cold_sent', 'follow_ups_cold_replied'];
     const salesFields = ['pif_count', 'pif_cash_collected', 'pif_in_call_count', 'pif_in_call_cash', 'split_count', 'split_cash_collected', 'split_in_call_count', 'split_in_call_cash', 'deposit_count', 'deposit_cash_collected', 'deposit_in_call_count', 'deposit_in_call_cash'];
-    const reflectionFields = ['reflection_victory', 'reflection_opportunity'];
+    const reflectionFields = ['reflections'];
 
     const llamadasComplete = isSectionComplete(llamadasFields);
     const agendaComplete = isSectionComplete([...generalFields, ...agendaFields]);
     const followUpsComplete = isSectionComplete(followUpsFields);
     const salesComplete = isSectionComplete(salesFields);
-    const reflectionComplete = isSectionComplete(reflectionFields);
+    const reflectionComplete = Object.keys(formData.reflections).length >= 5;
 
     // Auto-colapsar logica (solo una vez por sección)
     const autoAdvancedRef = useRef({ agendas: false, llamadas: false, seguimientos: false, ventas: false });
@@ -721,35 +718,22 @@ const PublicCloserReportPage = () => {
                                     id="reflexion"
                                     currentOpen={openSection}
                                     setOpen={setOpenSection}
-                                    title="Reflexión"
+                                    title="Reflexión Diaria"
                                     icon={Brain}
                                     isComplete={reflectionComplete}
                                     colorClass="text-indigo-500"
                                     borderColorClass="border-t-indigo-600"
                                 >
-                                    <div className="flex flex-col gap-4 mt-2 mb-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Victoria del Día</label>
-                                            <textarea
-                                                required
-                                                className={`w-full px-5 py-3.5 bg-slate-800/50 border ${reflectionComplete ? 'border-indigo-500/50' : 'border-slate-700/80'} rounded-2xl text-white outline-none focus:border-indigo-500 transition-all text-sm resize-none h-24`}
-                                                placeholder="Ej: Logré rebatir la objeción de precio con el lead X..."
-                                                value={formData.reflection_victory}
-                                                onChange={(e) => handleFieldChange("reflection_victory", e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Oportunidad de Mejora</label>
-                                            <textarea
-                                                required
-                                                className={`w-full px-5 py-3.5 bg-slate-800/50 border ${reflectionComplete ? 'border-indigo-500/50' : 'border-slate-700/80'} rounded-2xl text-white outline-none focus:border-indigo-500 transition-all text-sm resize-none h-24`}
-                                                placeholder="Ej: Necesito mejorar mi escucha activa antes de la oferta..."
-                                                value={formData.reflection_opportunity}
-                                                onChange={(e) => handleFieldChange("reflection_opportunity", e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
+                                    <DailyReflectionSection
+                                        role="closer"
+                                        values={formData.reflections}
+                                        onChange={(key, val) => setFormData(prev => ({
+                                            ...prev,
+                                            reflections: { ...prev.reflections, [key]: val }
+                                        }))}
+                                    />
                                 </CollapsibleSection>
+
 
                                 {/* Botón de envío */}
                                 <div className="pt-4">
