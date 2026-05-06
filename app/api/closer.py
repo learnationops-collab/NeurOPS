@@ -21,7 +21,12 @@ def get_dashboard():
     today_stats_serialized = None
     if data.get('today_stats'):
         ts = data['today_stats']
-        today_stats_serialized = {"id": ts.id, "date": ts.date.isoformat(), "answers": {a.question_id: a.answer for a in ts.answers}}
+        today_stats_serialized = {
+            "id": ts.id,
+            "date": ts.date.isoformat(),
+            "answers": {a.question_id: a.answer for a in ts.answers},
+            "reflections": ts.reflections or {}
+        }
 
     serialized = {
         "kpis": data['kpis'],
@@ -121,6 +126,9 @@ def submit_report():
             DailyReportAnswer.query.filter_by(daily_stats_id=stats.id, question_id=q_id_int).delete()
             db.session.add(DailyReportAnswer(daily_stats_id=stats.id, question_id=q_id_int, answer=str(val)))
         except ValueError: continue
+
+    if 'reflections' in data:
+        stats.reflections = data.get('reflections')
         
     db.session.commit()
     return jsonify({"message": "Reporte guardado con exito"}), 200

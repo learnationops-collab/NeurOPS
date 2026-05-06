@@ -89,9 +89,11 @@ def submit_public_closer_report():
         'follow_ups_hot_replied': get_int('follow_ups_hot_replied'),
         'follow_ups_cold_sent': get_int('follow_ups_cold_sent'),
         'follow_ups_cold_replied': get_int('follow_ups_cold_replied'),
-        # Reflexión
+        # Reflexión legacy
         'reflection_victory': data.get('reflection_victory'),
         'reflection_opportunity': data.get('reflection_opportunity'),
+        # Daily Reflection (5 preguntas como JSON)
+        'reflections': data.get('reflections'),
     }
 
     if report:
@@ -367,7 +369,10 @@ def get_public_closer_reports():
             "follow_ups_hot_sent": r.follow_ups_hot_sent,
             "follow_ups_hot_replied": r.follow_ups_hot_replied,
             "follow_ups_cold_sent": r.follow_ups_cold_sent,
-            "follow_ups_cold_replied": r.follow_ups_cold_replied
+            "follow_ups_cold_replied": r.follow_ups_cold_replied,
+            "reflection_victory": r.reflection_victory,
+            "reflection_opportunity": r.reflection_opportunity,
+            "reflections": r.reflections or {}
         })
         
     return jsonify({
@@ -438,6 +443,8 @@ def update_public_closer_report(report_id):
         
         stat.reflection_victory = data.get('reflection_victory', stat.reflection_victory)
         stat.reflection_opportunity = data.get('reflection_opportunity', stat.reflection_opportunity)
+        if 'reflections' in data:
+            stat.reflections = data.get('reflections')
 
         db.session.commit()
         return jsonify({"message": "Reporte actualizado"}), 200

@@ -294,7 +294,8 @@ def submit_daily_report():
                 "q2_unuseful": stat.q2_unuseful
             },
             "funnel_stats": stage_metrics,
-            "answers": answers
+            "answers": answers,
+            "reflections": stat.reflections or {}
         }), 200
 
     # POST Logic
@@ -420,6 +421,11 @@ def submit_daily_report():
         answers_json['frequent_questions'] = freq_q
     
     stat.answers = answers_json
+
+    # Guardar Daily Reflection si viene en el payload
+    reflections_data = data.get('reflections')
+    if reflections_data:
+        stat.reflections = reflections_data
             
     try:
         db.session.commit()

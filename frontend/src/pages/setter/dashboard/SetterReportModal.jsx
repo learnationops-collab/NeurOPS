@@ -15,6 +15,7 @@ import {
 import api from '../../../services/api';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
+import DailyReflectionSection from '../../../components/reports/DailyReflectionSection';
 
 const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null, onSuccess }) => {
     const [loading, setLoading] = useState(false);
@@ -67,7 +68,7 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
                     updatedFunnel[id] = val || '';
                 });
                 setFunnelStats(updatedFunnel);
-                setAnswers(existingReport.answers || {});
+                setAnswers({ ...(existingReport.answers || {}), ...(existingReport.reflections || {}) });
                 
                 setExtraStats({
                     q1_useful: existingReport.fixed_stats.q1_useful || '',
@@ -125,10 +126,18 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
             value: value === '' ? 0 : parseInt(value)
         }));
 
-        const answersList = Object.entries(answers).map(([qId, val]) => ({
-            question_id: parseInt(qId),
-            answer: val
-        })).filter(a => a.answer && a.answer.trim() !== '');
+        // Solo preguntas con ID numérico (legacy de BD)
+        const answersList = Object.entries(answers)
+            .filter(([qId]) => /^\d+$/.test(String(qId)))
+            .map(([qId, val]) => ({ question_id: parseInt(qId), answer: val }))
+            .filter(a => a.answer && a.answer.trim() !== '');
+
+        // Preguntas de Daily Reflection (claves string)
+        const reflectionKeys = ['daily_reflection', 'win_of_day', 'explain_why', 'opportunity', 'learning_process', 'the_plan'];
+        const reflectionAnswers = {};
+        reflectionKeys.forEach(key => {
+            if (answers[key]) reflectionAnswers[key] = answers[key];
+        });
 
         try {
             await api.post('/setter/daily-report', {
@@ -136,7 +145,8 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
                 ...fixedStats,
                 ...extraStats,
                 funnel_metrics: funnelMetricsList,
-                answers: answersList
+                answers: answersList,
+                reflections: reflectionAnswers
             });
             if (onSuccess) onSuccess();
             onClose();
@@ -236,79 +246,11 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
                                 </div>
 
                                 {/* Qualitative Section */}
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className="p-2 bg-pink-500/10 rounded-lg text-pink-500">
-                                            <MessageSquare size={18} />
-                                        </div>
-                                        <h3 className="text-xs font-black text-white uppercase tracking-widest">Cualitativo</h3>
-                                    </div>
-
-                                    <div className="space-y-6">
-                                        {questions.map(q => (
-                                            <div key={q.id} className="space-y-2">
-                                                <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">{q.text}</label>
-                                                <textarea
-                                                    className="w-full px-5 py-4 bg-main border border-base rounded-2xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all min-h-[100px] resize-none"
-                                                    placeholder="Escribe tu respuesta..."
-                                                    value={answers[q.id] || ''}
-                                                    onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                    
-                                    {/* Eficacia de preguntas (REESTRUCTURADO) */}
-                                    <div className="flex items-center gap-3 mb-4 mt-8">
-                                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
-                                            <HelpCircle size={18} />
-                                        </div>
-                                        <h3 className="text-xs font-black text-white uppercase tracking-widest">Eficacia de Preguntas</h3>
-                                    </div>
-                                    
-                                    <div className="space-y-4">
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-left border-collapse">
-                                                <thead>
-                                                    <tr className="text-[8px] font-black text-muted uppercase tracking-widest">
-                                                        <th className="pb-2">Pregunta</th>
-                                                        <th className="pb-2 text-center">Servibles</th>
-                                                        <th className="pb-2 text-center">Inservibles</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-base/50">
-                                                    {[
-                                                        { label: 'Pregunta 1', keyU: 'q1_useful', keyI: 'q1_unuseful' },
-                                                        { label: 'Pregunta 2', keyU: 'q2_useful', keyI: 'q2_unuseful' }
-                                                    ].map((q) => (
-                                                        <tr key={q.label} className="group">
-                                                            <td className="py-4">
-                                                                <span className="text-[10px] font-black text-muted uppercase tracking-widest">{q.label}</span>
-                                                            </td>
-                                                            <td className="py-4 text-center">
-                                                                <input
-                                                                    type="number"
-                                                                    className="w-16 bg-main border border-base rounded-xl px-2 py-2 text-center font-black text-amber-500 text-xs focus:ring-2 focus:ring-amber-500/20 outline-none"
-                                                                    value={extraStats[q.keyU]}
-                                                                    onChange={e => handleExtraChange(q.keyU, e.target.value)}
-                                                                />
-                                                            </td>
-                                                            <td className="py-4 text-center">
-                                                                <input
-                                                                    type="number"
-                                                                    className="w-16 bg-main border border-base rounded-xl px-2 py-2 text-center font-black text-muted text-xs focus:ring-2 focus:ring-amber-500/20 outline-none"
-                                                                    value={extraStats[q.keyI]}
-                                                                    onChange={e => handleExtraChange(q.keyI, e.target.value)}
-                                                                />
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                </div>
+                                <DailyReflectionSection
+                                        role="setter"
+                                        values={answers}
+                                        onChange={(key, val) => handleAnswerChange(key, val)}
+                                    />
                             </div>
                         </form>
                     )}

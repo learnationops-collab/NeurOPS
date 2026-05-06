@@ -94,6 +94,9 @@ class SetterDailyStats(db.Model):
 
     # Qualitative answers stored as a JSON dictionary: {question_id: answer_text}
     answers = db.Column(db.JSON, nullable=True)
+
+    # Daily Reflection (6 preguntas como JSON)
+    reflections = db.Column(db.JSON, nullable=True)
     
     setter = db.relationship('User', foreign_keys=[setter_id], overlaps="setter_daily_stats_rel,user_rel")
     __table_args__ = (db.UniqueConstraint('setter_id', 'date', name='_setter_date_uc'),)
@@ -114,7 +117,11 @@ class CloserDailyStats(db.Model):
     cash_collected = db.Column(db.Float, default=0.0)
     
     slots_defined = db.Column(db.Integer, default=0)
-    self_generated_bookings = db.Column(db.Integer, default=0)  
+    self_generated_bookings = db.Column(db.Integer, default=0)
+
+    # Daily Reflection (6 preguntas como JSON)
+    reflections = db.Column(db.JSON, nullable=True)
     
     closer = db.relationship('User', foreign_keys=[closer_id], overlaps="closer_daily_stats_rel,user_rel")
     __table_args__ = (db.UniqueConstraint('closer_id', 'date', name='_closer_date_uc'),)
+

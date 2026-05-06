@@ -13,6 +13,7 @@ import HotkeysTable from '../../../components/dashboard/HotkeysTable';
 import BookingLinkModal from '../../../components/dashboard/BookingLinkModal';
 import QuickSaleModal from '../../../components/modals/QuickSaleModal';
 import QuickAppointmentModal from '../../../components/modals/QuickAppointmentModal';
+import DailyReflectionSection from '../../../components/reports/DailyReflectionSection';
 import {
 
     Loader2,
@@ -56,6 +57,7 @@ const CloserDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [answers, setAnswers] = useState({});
+    const [reflections, setReflections] = useState({});
     const [submitting, setSubmitting] = useState(false);
     const [feedback, setFeedback] = useState(null);
     const [isReportExpanded, setIsReportExpanded] = useState(false);
@@ -157,6 +159,9 @@ const CloserDashboard = () => {
             if (res.data.today_stats?.answers) {
                 setAnswers(res.data.today_stats.answers);
             }
+            if (res.data.today_stats?.reflections) {
+                setReflections(res.data.today_stats.reflections);
+            }
         } catch (err) {
             console.error("Error fetching dashboard", err);
             setError("Error al cargar estadísticas.");
@@ -209,7 +214,7 @@ const CloserDashboard = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            await api.post('/closer/daily-report', { answers });
+            await api.post('/closer/daily-report', { answers, reflections });
             setShowSavedToast(true);
             setTimeout(() => setShowSavedToast(false), 3000);
             fetchDashboard();
@@ -380,6 +385,11 @@ const CloserDashboard = () => {
                                         >
                                             Sincronizar reporte
                                         </Button>
+                                        <DailyReflectionSection
+                                            role="closer"
+                                            values={reflections}
+                                            onChange={(key, val) => setReflections(prev => ({ ...prev, [key]: val }))}
+                                        />
                                     </form>
                                 </Card>
                             </div>
