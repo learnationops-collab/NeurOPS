@@ -378,6 +378,11 @@ const CloserDashboard = () => {
                                                 </div>
                                             ))}
                                         </div>
+                                        <DailyReflectionSection
+                                            role="closer"
+                                            values={reflections}
+                                            onChange={(key, val) => setReflections(prev => ({ ...prev, [key]: val }))}
+                                        />
                                         <Button
                                             type="submit"
                                             loading={submitting}
@@ -385,11 +390,7 @@ const CloserDashboard = () => {
                                         >
                                             Sincronizar reporte
                                         </Button>
-                                        <DailyReflectionSection
-                                            role="closer"
-                                            values={reflections}
-                                            onChange={(key, val) => setReflections(prev => ({ ...prev, [key]: val }))}
-                                        />
+
                                     </form>
                                 </Card>
                             </div>

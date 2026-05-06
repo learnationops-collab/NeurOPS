@@ -1,174 +1,223 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown, ChevronUp, Info, Target, Trophy, Lightbulb, TrendingUp, Rocket, MessageSquare } from 'lucide-react';
 
-// Preguntas por rol
 const CLOSER_QUESTIONS = [
     {
         key: 'daily_reflection',
-        title: 'Daily Reflection',
-        description: 'Cuéntame cómo fue tu día comercial.',
+        title: 'Reflection',
+        icon: <MessageSquare size={16} />,
+        description: 'Día Comercial',
         info: 'Habla de leads, llamadas, conversaciones, pitches, objeciones, cierres, no-shows, seguimientos y cualquier cosa relevante.',
-        placeholder: 'Ej: Hoy tuve 8 leads, asistieron 6, porque 1 fue no show y el otro me reprogramó, pero ya está 100% reprogramado, todo cool. De esas 6 calls tomadas, hice 4 ofertas, las otras 2 se dividen en 1 que no tenía un centavo y no quise extenderme, y la otra que tomaba decisión con los padres. Entonces estamos en proceso de reagendar, no pude reagendarla en vivo. Hice 2 cierres, un PIF de 1.5k uno para RR y otro de 2k para SI, en Split Pay.'
+        placeholder: 'Ej: Hoy tuve 8 leads, asistieron 6, porque 1 fue no show y el otro me reprogramó, pero ya está 100% reprogramado, todo cool...'
     },
     {
         key: 'win_of_day',
-        title: 'Win of the day',
-        description: '¿Cuál fue tu victoria del día?',
-        info: 'Puede ser un cierre, una conversación difícil que manejaste bien, una objeción que enfrentaste mejor que antes, una acción que normalmente habrías evitado, una mejora en tu proceso o una decisión comercial que te dejó aprendizaje.',
-        placeholder: 'Ej: Mi victoria del día fue hacerle pitch a un lead que inicialmente dijo que solo tenía 13 USD de presupuesto. Normalmente habría descartado rápido esa conversación, pero decidí avanzar para probar el nuevo pitch, entender mejor su dolor y ver si podía construir valor antes de asumir que no calificaba.'
+        title: 'Win',
+        icon: <Trophy size={16} />,
+        description: 'Victoria del día',
+        info: 'Puede ser un cierre, una conversación difícil que manejaste bien, una objeción que enfrentaste mejor que antes...',
+        placeholder: 'Ej: Mi victoria del día fue hacerle pitch a un lead que inicialmente dijo que solo tenía 13 USD de presupuesto...'
     },
     {
         key: 'explain_why',
-        title: 'Explain why',
-        description: 'Explica por qué eso fue una victoria.',
-        info: 'No te quedes solo en lo que pasó: cuenta qué obstáculo, creencia, miedo o incomodidad atravesaste, qué intentaste probar o validar, qué aprendiste y qué te demuestra sobre tu proceso comercial.',
-        placeholder: 'Lo considero una victoria porque rompí la creencia de que un lead sin presupuesto inicial no merece una presentación. Atravesé la incomodidad de sentir que podía estar perdiendo el tiempo, pero usé la conversación para validar si el nuevo pitch generaba interés incluso con una barrera económica fuerte...'
+        title: 'Why',
+        icon: <Target size={16} />,
+        description: 'Por qué fue victoria',
+        info: 'No te quedes solo en lo que pasó: cuenta qué obstáculo, creencia, miedo o incomodidad atravesaste...',
+        placeholder: 'Lo considero una victoria porque rompí la creencia de que un lead sin presupuesto inicial no merece una presentación...'
     },
     {
         key: 'opportunity',
         title: 'Opportunity',
-        description: '¿Cuál fue tu principal oportunidad de mejora hoy?',
-        info: 'Piensa en el punto más importante que, si lo mejoras, puede impactar directamente tu performance comercial. No escribas algo genérico como "mejorar objeciones". Especifica qué parte exacta debes mejorar.',
-        placeholder: 'Ej: Mi principal oportunidad de mejora fue el premanejo de la objeción de precio. Hoy noté que esperé demasiado a que el lead dijera que no tenía presupuesto, en vez de anticipar esa resistencia durante el pitch y construir mejor el valor antes de hablar de inversión...'
+        icon: <Lightbulb size={16} />,
+        description: 'Mejora continua',
+        info: 'Piensa en el punto más importante que, si lo mejoras, puede impactar directamente tu performance comercial.',
+        placeholder: 'Ej: Mi principal oportunidad de mejora fue el premanejo de la objeción de precio...'
     },
     {
         key: 'learning_process',
-        title: 'The Learning Process',
-        description: '¿Qué aprendiste hoy sobre los leads, las objeciones, el pitch, la oferta o tu forma de vender?',
-        info: 'No pongas solo "aprendí que debo mejorar". Cuenta qué patrón viste, qué comportamiento se repitió, qué reacción tuvieron los leads, qué parte del pitch funcionó, qué parte generó fricción o qué descubriste sobre tu manera de vender.',
-        placeholder: 'Ej: Aprendí que cuando no construyo suficiente valor antes de presentar el precio, los leads interpretan la inversión como un gasto y no como una solución a un problema urgente...'
+        title: 'Learning',
+        icon: <TrendingUp size={16} />,
+        description: 'Aprendizaje',
+        info: '¿Qué aprendiste hoy sobre los leads, las objeciones, el pitch, la oferta o tu forma de vender?',
+        placeholder: 'Ej: Aprendí que cuando no construyo suficiente valor antes de presentar el precio, los leads interpretan la inversión como un gasto...'
     },
     {
         key: 'the_plan',
-        title: 'The Plan',
-        description: '¿Cómo lo vas a mejorar concretamente?',
-        info: 'Escribe una acción específica, observable y ejecutable. Nada de "voy a tener mejor actitud". Define qué vas a hacer, cuándo lo vas a hacer y cómo sabrás que lo hiciste.',
-        placeholder: 'Ej: Mañana antes de mis llamadas voy a escribir 3 frases de premanejo de precio y practicarlas durante 10 minutos. Luego las voy a usar en al menos 2 conversaciones antes de presentar la inversión...'
+        title: 'Plan',
+        icon: <Rocket size={16} />,
+        description: 'Acción Concreta',
+        info: 'Escribe una acción específica, observable y ejecutable. Define qué vas a hacer, cuándo lo vas a hacer.',
+        placeholder: 'Ej: Mañana antes de mis llamadas voy a escribir 3 frases de premanejo de precio y practicarlas durante 10 minutos...'
     }
 ];
 
 const SETTER_QUESTIONS = [
     {
         key: 'daily_reflection',
-        title: 'Daily Operations',
-        description: 'Cuéntame cómo fue tu flujo de trabajo hoy.',
-        info: 'Habla de volumen de prospección, mensajes nuevos enviados, conversaciones abiertas, seguimientos realizados, leads calificados y, sobre todo, cuántos bookings (citas agendadas) lograste o cuántos leads pasaste al closer.',
-        placeholder: 'Ej: Hoy inicié 50 nuevas conversaciones y retomé 30 seguimientos pendientes. Tuve un flujo alto en Instagram pero algo lento en LinkedIn. Logré agendar 4 llamadas confirmadas...'
+        title: 'Operations',
+        icon: <MessageSquare size={16} />,
+        description: 'Flujo de trabajo',
+        info: 'Habla de volumen de prospección, mensajes, conversaciones abiertas, seguimientos y bookings logrados.',
+        placeholder: 'Ej: Hoy inicié 50 nuevas conversaciones y retomé 30 seguimientos pendientes. Logré agendar 4 llamadas...'
     },
     {
         key: 'win_of_day',
-        title: 'Win of the day',
-        description: '¿Cuál fue tu victoria del día?',
-        info: 'Puede ser haber agendado a un "pez gordo", rescatar a un lead que ya no respondía, manejar una objeción de "envíame la información por mail" con éxito, o haber mantenido el volumen de mensajes a pesar de un día de baja energía.',
-        placeholder: 'Ej: Mi victoria fue reactivar a un lead que llevaba 10 días sin responder. En lugar de enviar el típico "¿sigues ahí?", usé un video corto de 30 segundos personalizando el valor de nuestra solución para su caso específico. Respondió a los 5 minutos y terminamos agendando para el jueves.'
+        title: 'Win',
+        icon: <Trophy size={16} />,
+        description: 'Victoria del día',
+        info: 'Puede ser haber agendado a un "pez gordo", rescatar a un lead que ya no respondía, manejar una objeción con éxito...',
+        placeholder: 'Ej: Mi victoria fue reactivar a un lead que llevaba 10 días sin responder...'
     },
     {
         key: 'explain_why',
-        title: 'Explain why',
-        description: 'Explica por qué eso fue una victoria.',
-        info: 'No te quedes en el resultado: describe qué barrera mental rompiste, qué técnica nueva probaste o qué cambio de enfoque te permitió avanzar en el funnel donde antes te trababas.',
-        placeholder: 'Lo considero una victoria porque vencí la pereza de hacer contenido personalizado para un solo lead "perdido". Me demostró que el seguimiento creativo y de alto valor rompe el ruido mucho más que la insistencia genérica...'
+        title: 'Why',
+        icon: <Target size={16} />,
+        description: 'Por qué fue victoria',
+        info: 'Describe qué barrera mental rompiste, qué técnica nueva probaste o qué cambio de enfoque te permitió avanzar.',
+        placeholder: 'Lo considero una victoria porque vencí la pereza de hacer contenido personalizado para un solo lead "perdido"...'
     },
     {
         key: 'opportunity',
         title: 'Opportunity',
-        description: '¿Cuál fue tu principal oportunidad de mejora hoy?',
-        info: 'Identifica el cuello de botella técnico de tu día. ¿Estás perdiendo leads en la transición al cierre? ¿Tu calificación es muy floja y agendas gente sin dinero? ¿Tardas mucho en responder y el lead se enfría? Sé específico.',
-        placeholder: 'Ej: Mi oportunidad de mejora es la fase de diagnóstico en el chat. Noté que salto demasiado rápido al link de agenda sin haber rascado lo suficiente en el "dolor" del prospecto...'
+        icon: <Lightbulb size={16} />,
+        description: 'Cuello de botella',
+        info: 'Identifica el punto técnico donde te trabaste. ¿Mala calificación? ¿Lentitud en respuesta?',
+        placeholder: 'Ej: Mi oportunidad de mejora es la fase de diagnóstico en el chat. Salto demasiado rápido al link de agenda...'
     },
     {
         key: 'learning_process',
-        title: 'The Learning Process',
-        description: '¿Qué patrones o comportamientos notaste hoy en los leads?',
-        info: 'Evita frases vacías. Describe qué disparadores (triggers) funcionaron mejor, qué objeción se repitió más en el chat o en qué punto exacto de la conversación se está perdiendo el interés de la gente.',
-        placeholder: 'Ej: He notado un patrón: cuando pregunto directamente por la facturación actual antes de generar confianza, el lead se pone a la defensiva o deja de responder. Sin embargo, si primero pregunto por el tamaño del equipo o el objetivo del trimestre, sueltan el dato financiero con más naturalidad después...'
+        title: 'Learning',
+        icon: <TrendingUp size={16} />,
+        description: 'Patrones vistos',
+        info: 'Describe qué disparadores funcionaron mejor o qué objeción se repitió más en el chat.',
+        placeholder: 'Ej: He notado que cuando pregunto por facturación antes de generar confianza, el lead se pone a la defensiva...'
     },
     {
         key: 'the_plan',
-        title: 'The Plan',
-        description: '¿Cómo lo vas a mejorar concretamente mañana?',
-        info: 'Escribe una acción táctica, medible y ejecutable. Define qué cambio harás en tu script o en tu gestión de tiempo y cómo verificarás que funcionó.',
-        placeholder: 'Ej: Mañana voy a modificar mi script de calificación: antes de pedir la cita, voy a implementar la pregunta de "consecuencia" (¿qué pasa si no solucionas esto en los próximos 3 meses?). Aplicaré esto en todas mis conversaciones nuevas del día...'
+        title: 'Plan',
+        icon: <Rocket size={16} />,
+        description: 'Mañana mejor',
+        info: 'Escribe una acción táctica, medible y ejecutable. Define qué cambio harás en tu script.',
+        placeholder: 'Ej: Mañana voy a modificar mi script de calificación: implementaré la pregunta de consecuencia...'
     }
 ];
 
-// Tooltip flotante
-const Tooltip = ({ text }) => (
-    <div className="absolute left-0 top-full mt-2 z-50 w-72 p-3 bg-zinc-900 border border-zinc-700 rounded-xl text-[11px] text-zinc-300 leading-relaxed shadow-2xl pointer-events-none">
-        {text}
-    </div>
-);
-
-// Item de pregunta individual
-const QuestionItem = ({ q, value, onChange }) => {
-    const [showTooltip, setShowTooltip] = useState(false);
-
-    return (
-        <div className="space-y-2">
-            <div className="flex items-center gap-2">
-                <label className="text-[10px] font-black text-primary uppercase tracking-widest">
-                    {q.title}
-                </label>
-                <span className="text-[10px] text-zinc-400 font-medium">— {q.description}</span>
-                <div
-                    className="relative ml-auto flex-shrink-0"
-                    onMouseEnter={() => setShowTooltip(true)}
-                    onMouseLeave={() => setShowTooltip(false)}
-                >
-                    <Info size={13} className="text-zinc-500 hover:text-primary cursor-help transition-colors" />
-                    {showTooltip && <Tooltip text={q.info} />}
-                </div>
-            </div>
-            <textarea
-                className="w-full px-5 py-4 bg-main border border-base rounded-2xl text-sm font-medium text-text-main focus:ring-2 focus:ring-primary/20 outline-none transition-all min-h-[100px] resize-none placeholder:text-muted/30 leading-relaxed"
-                placeholder={q.placeholder}
-                value={value || ''}
-                onChange={(e) => onChange(q.key, e.target.value)}
-            />
-        </div>
-    );
-};
-
 const DailyReflectionSection = ({ role = 'closer', values = {}, onChange }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(true);
+    const [activeTab, setActiveTab] = useState('daily_reflection');
+    const [showInfo, setShowInfo] = useState(false);
+    
     const questions = role === 'setter' ? SETTER_QUESTIONS : CLOSER_QUESTIONS;
+    const currentQ = questions.find(q => q.key === activeTab) || questions[0];
 
     return (
-        <div className="rounded-3xl border border-base overflow-hidden">
-            {/* Header colapsable */}
-            <button
-                type="button"
-                onClick={() => setIsOpen(prev => !prev)}
-                className="w-full flex items-center justify-between p-6 bg-surface/50 hover:bg-surface transition-all"
-            >
+        <div className="mt-8 space-y-4">
+            <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    <span className="text-[11px] font-black text-white uppercase tracking-[0.2em]">
-                        Daily Reflection
-                    </span>
-                    <span className="text-[9px] font-bold text-muted bg-main px-3 py-1 rounded-full">
-                        {questions.length} preguntas
-                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <TrendingUp size={18} />
+                    </div>
+                    <div>
+                        <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em]">Daily Reflection</h3>
+                        <p className="text-[9px] font-bold text-muted uppercase tracking-widest">Mentalidad y Mejora Continua</p>
+                    </div>
                 </div>
-                {isOpen
-                    ? <ChevronUp size={18} className="text-muted" />
-                    : <ChevronDown size={18} className="text-muted" />
-                }
-            </button>
+                <button 
+                    type="button"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="p-2 hover:bg-surface rounded-lg transition-colors text-muted"
+                >
+                    {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+            </div>
 
-            {/* Contenido desplegable */}
-            {isOpen && (
-                <div className="p-6 space-y-6 border-t border-base bg-main/20">
-                    {questions.map(q => (
-                        <QuestionItem
-                            key={q.key}
-                            q={q}
-                            value={values[q.key]}
-                            onChange={onChange}
-                        />
-                    ))}
-                </div>
-            )}
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="bg-surface/30 border border-base rounded-[2.5rem] overflow-hidden"
+                    >
+                        {/* Tab Headers */}
+                        <div className="flex p-2 gap-1 border-b border-base overflow-x-auto no-scrollbar bg-main/20">
+                            {questions.map(q => (
+                                <button
+                                    key={q.key}
+                                    type="button"
+                                    onClick={() => setActiveTab(q.key)}
+                                    className={`
+                                        flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap
+                                        ${activeTab === q.key 
+                                            ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+                                            : 'text-muted hover:text-white hover:bg-surface'}
+                                    `}
+                                >
+                                    {q.icon}
+                                    {q.title}
+                                    {values[q.key] && (
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Content Area */}
+                        <div className="p-8 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <h4 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                        {currentQ.icon}
+                                        {currentQ.description}
+                                    </h4>
+                                    <p className="text-[10px] text-muted font-medium italic">
+                                        {currentQ.placeholder.substring(0, 80)}...
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onMouseEnter={() => setShowInfo(true)}
+                                    onMouseLeave={() => setShowInfo(false)}
+                                    className="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all relative"
+                                >
+                                    <Info size={18} />
+                                    {showInfo && (
+                                        <div className="absolute right-0 top-full mt-2 z-[100] w-72 p-4 bg-zinc-900 border border-zinc-700 rounded-2xl text-[11px] text-zinc-300 leading-relaxed shadow-2xl animate-in fade-in slide-in-from-top-1">
+                                            <div className="font-black text-primary uppercase mb-2 flex items-center gap-2">
+                                                <Info size={12} /> Guía de Respuesta
+                                            </div>
+                                            {currentQ.info}
+                                        </div>
+                                    )}
+                                </button>
+                            </div>
+
+                            <textarea
+                                className="w-full h-48 p-6 bg-main/50 border border-base rounded-3xl text-sm font-medium text-text-main focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none placeholder:text-muted/20 leading-relaxed"
+                                placeholder={currentQ.placeholder}
+                                value={values[currentQ.key] || ''}
+                                onChange={(e) => onChange(currentQ.key, e.target.value)}
+                            />
+
+                            <div className="flex justify-between items-center pt-2">
+                                <p className="text-[9px] font-black text-muted uppercase tracking-[0.2em]">
+                                    {questions.findIndex(q => q.key === activeTab) + 1} / {questions.length} PASOS
+                                </p>
+                                <div className="flex gap-2">
+                                    {questions.map(q => (
+                                        <div 
+                                            key={q.key}
+                                            className={`h-1 rounded-full transition-all duration-500 ${activeTab === q.key ? 'w-8 bg-primary' : 'w-2 bg-base'}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
