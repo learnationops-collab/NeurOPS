@@ -194,8 +194,8 @@ const DailyReflectionSection = ({ role = 'closer', values = {}, onChange }) => {
                                 </button>
                             </div>
 
-                            <textarea
-                                className="w-full h-48 p-6 bg-main/50 border border-base rounded-3xl text-sm font-medium text-white focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none placeholder:text-muted/40 leading-relaxed"
+                             <textarea
+                                className="w-full h-48 p-6 bg-slate-900 border border-slate-700 rounded-3xl text-sm font-medium text-white focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none placeholder:text-slate-600 leading-relaxed"
                                 placeholder={currentQ.placeholder}
                                 value={values[currentQ.key] || ''}
                                 onChange={(e) => onChange(currentQ.key, e.target.value)}
