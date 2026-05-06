@@ -160,6 +160,11 @@ def submit_public_setter_report():
             
     stat.answers = answers_json
     
+    # Guardar Daily Reflection si viene en el payload
+    reflections_data = data.get('reflections')
+    if reflections_data:
+        stat.reflections = reflections_data
+    
     try:
         db.session.commit()
         # Trigger webhook AFTER successful save (imported directly from setter.py logic)
