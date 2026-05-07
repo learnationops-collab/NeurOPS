@@ -121,98 +121,92 @@ const CloserClientsPage = () => {
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {data.map((customer) => (
-                        <Card 
-                            key={customer.id} 
-                            variant="surface" 
-                            padding="p-0" 
-                            className="overflow-hidden border-base/50 hover:border-primary/30 transition-all group"
-                        >
-                            <div className="p-8 flex flex-col md:flex-row gap-8">
-                                {/* Info Principal */}
-                                <div className="flex-1 space-y-6">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/5 rounded-[1.5rem] flex items-center justify-center text-primary font-black text-2xl shadow-inner border border-primary/10">
-                                                {customer.full_name ? customer.full_name[0] : 'U'}
-                                            </div>
-                                            <div>
-                                                <h3 className="text-2xl font-black text-base italic leading-none">{customer.full_name}</h3>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <Badge variant="neutral" className="text-[8px] tracking-tighter">ID: #{customer.id}</Badge>
-                                                    <span className="text-[10px] text-muted font-medium italic">Miembro desde {new Date(customer.created_at).toLocaleDateString()}</span>
+                <div className="bg-surface/30 border border-base rounded-[2.5rem] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left border-collapse min-w-[1000px]">
+                            <thead>
+                                <tr className="bg-surface-hover/50 border-b border-base">
+                                    <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Cliente</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Contacto</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Programas e Inversión</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-muted uppercase tracking-[0.2em]">Miembro Desde</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-primary uppercase tracking-[0.2em] text-right">Gestión</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-base">
+                                {data.map((customer) => (
+                                    <tr key={customer.id} className="hover:bg-surface-hover/30 transition-all group">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl flex items-center justify-center text-primary font-black text-lg border border-primary/10 shadow-inner">
+                                                    {customer.full_name ? customer.full_name[0] : 'U'}
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    <p className="text-base font-black text-base italic leading-none">{customer.full_name}</p>
+                                                    <p className="text-[11px] font-medium text-muted">{customer.email}</p>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="flex items-center gap-3 p-3 bg-main/40 rounded-xl border border-base/50">
-                                            <Mail size={14} className="text-primary" />
-                                            <span className="text-[11px] font-bold text-muted truncate">{customer.email}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 p-3 bg-main/40 rounded-xl border border-base/50">
-                                            <Phone size={14} className="text-primary" />
-                                            <span className="text-[11px] font-bold text-muted">{customer.phone || 'S/N'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 p-3 bg-main/40 rounded-xl border border-base/50">
-                                            <Instagram size={14} className="text-primary" />
-                                            <span className="text-[11px] font-bold text-muted">@{customer.instagram || 'No vinculado'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 p-3 bg-main/40 rounded-xl border border-base/50">
-                                            <CreditCard size={14} className="text-primary" />
-                                            <span className="text-[11px] font-bold text-muted">{customer.enrollments.length} Inscripciones</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Resumen Financiero / Inscripciones */}
-                                <div className="w-full md:w-72 bg-main/50 rounded-[2rem] border border-base p-6 flex flex-col justify-between group-hover:bg-primary/[0.02] transition-colors">
-                                    <div className="space-y-4">
-                                        <p className="text-[9px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
-                                            <DollarSign size={10} className="text-emerald-500" /> Estados Actuales
-                                        </p>
-                                        <div className="space-y-3 max-h-40 overflow-y-auto custom-scrollbar pr-2">
-                                            {customer.enrollments.map((enr) => (
-                                                <div key={enr.id} className="space-y-1">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-black text-base truncate max-w-[120px]">{enr.program_name}</span>
-                                                        <Badge variant={enr.status === 'completed' ? 'success' : 'neutral'} className="scale-75 origin-right">
-                                                            {enr.status === 'completed' ? 'PAGADO' : 'PENDIENTE'}
-                                                        </Badge>
-                                                    </div>
-                                                    <div className="w-full h-1 bg-base rounded-full overflow-hidden">
-                                                        <div 
-                                                            className={`h-full transition-all duration-1000 ${enr.status === 'completed' ? 'bg-emerald-500' : 'bg-primary'}`}
-                                                            style={{ width: `${Math.min(100, (enr.total_paid / enr.program_price) * 100)}%` }}
-                                                        />
-                                                    </div>
-                                                    <div className="flex justify-between text-[8px] font-black text-muted uppercase tracking-tighter">
-                                                        <span>${enr.total_paid.toLocaleString()}</span>
-                                                        <span>/ ${enr.program_price.toLocaleString()}</span>
-                                                    </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-col gap-1.5">
+                                                <div className="flex items-center gap-2 text-muted">
+                                                    <Phone size={12} className="text-primary" />
+                                                    <span className="text-[11px] font-bold">{customer.phone || 'S/N'}</span>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <button 
-                                        onClick={() => {
-                                            if (customer.enrollments.length > 0) {
-                                                setSelectedEnrollmentId(customer.enrollments[0].id);
-                                                setIsDetailModalOpen(true);
-                                            }
-                                        }}
-                                        className="w-full mt-6 py-4 bg-surface border border-base rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black text-base tracking-widest hover:bg-primary hover:text-white hover:border-primary transition-all group/btn"
-                                    >
-                                        GESTIONAR PAGOS
-                                        <ArrowUpRight size={14} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
-                                    </button>
-                                </div>
-                            </div>
-                        </Card>
-                    ))}
+                                                <div className="flex items-center gap-2 text-muted">
+                                                    <Instagram size={12} className="text-primary" />
+                                                    <span className="text-[11px] font-bold">@{customer.instagram || 'No vinculado'}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="space-y-3 max-w-xs">
+                                                {customer.enrollments.map((enr) => (
+                                                    <div key={enr.id} className="space-y-1">
+                                                        <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-tighter">
+                                                            <span className="text-base truncate max-w-[120px]">{enr.program_name}</span>
+                                                            <span className={enr.status === 'completed' ? 'text-emerald-500' : 'text-primary'}>
+                                                                {((enr.total_paid / enr.program_price) * 100).toFixed(0)}%
+                                                            </span>
+                                                        </div>
+                                                        <div className="w-full h-1 bg-base rounded-full overflow-hidden">
+                                                            <div 
+                                                                className={`h-full transition-all duration-1000 ${enr.status === 'completed' ? 'bg-emerald-500' : 'bg-primary'}`}
+                                                                style={{ width: `${Math.min(100, (enr.total_paid / enr.program_price) * 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {customer.enrollments.length === 0 && (
+                                                    <span className="text-[10px] font-bold text-muted italic">Sin inscripciones activas</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-2 text-muted">
+                                                <Clock size={12} />
+                                                <span className="text-[11px] font-bold italic">{new Date(customer.created_at).toLocaleDateString()}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <button 
+                                                onClick={() => {
+                                                    if (customer.enrollments.length > 0) {
+                                                        setSelectedEnrollmentId(customer.enrollments[0].id);
+                                                        setIsDetailModalOpen(true);
+                                                    }
+                                                }}
+                                                className="inline-flex items-center gap-2 px-6 py-3 bg-surface border border-base rounded-xl text-[10px] font-black text-base tracking-widest hover:bg-primary hover:text-white hover:border-primary transition-all group/btn"
+                                            >
+                                                PAGOS
+                                                <ArrowUpRight size={14} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
