@@ -186,12 +186,12 @@ const AdDashboardTab = () => {
                                         <th className="py-4 px-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Anuncio</th>
                                         <th className="py-4 px-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Inversión</th>
                                         <th className="py-4 px-5 text-[10px] font-black text-blue-400 uppercase tracking-widest text-center">Leads</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">% Cual.</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-center">Agendas</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-center">Ventas</th>
                                         <th className="py-4 px-5 text-[10px] font-black text-blue-400 uppercase tracking-widest text-right">CPL</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">% Cual.</th>
                                         <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-right">CPQL</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-center">Agendas</th>
                                         <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-right">CPA</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-center">Ventas</th>
                                         <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-right">CPV</th>
                                     </tr>
                                 </thead>
@@ -223,12 +223,12 @@ const AdDashboardTab = () => {
                                                 </td>
                                                 <td className="py-4 px-5 text-center text-xs font-black text-white">${(stat.spend||0).toLocaleString()}</td>
                                                 <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.total_leads}</td>
-                                                <td className={`py-4 px-5 text-center text-xs font-black ${qualColor}`}>{stat.qualified_percentage}%</td>
-                                                <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.agendas || 0}</td>
-                                                <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.ventas || 0}</td>
                                                 <td className="py-4 px-5 text-right text-xs font-black text-blue-400">${stat.cpl || '0'}</td>
+                                                <td className={`py-4 px-5 text-center text-xs font-black ${qualColor}`}>{stat.qualified_percentage}%</td>
                                                 <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.cpql || '0'}</td>
+                                                <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.agendas || 0}</td>
                                                 <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.cpa || '0'}</td>
+                                                <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.ventas || 0}</td>
                                                 <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${stat.cpv || '0'}</td>
                                             </tr>
                                         );
