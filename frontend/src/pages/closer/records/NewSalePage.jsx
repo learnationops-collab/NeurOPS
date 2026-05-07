@@ -14,6 +14,7 @@ const CloserNewSalePage = () => {
 
     const [form, setForm] = useState({
         lead_id: '',
+        instagram: '',
         program_id: '',
         payment_method_id: '',
         payment_amount: '',
@@ -76,7 +77,15 @@ const CloserNewSalePage = () => {
                         <select
                             className="w-full bg-main border border-base rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-primary/50 outline-none transition-all"
                             value={form.lead_id}
-                            onChange={e => setForm({ ...form, lead_id: e.target.value })}
+                            onChange={e => {
+                                const selectedId = e.target.value;
+                                const lead = metadata.leads.find(l => l.id === parseInt(selectedId));
+                                setForm({ 
+                                    ...form, 
+                                    lead_id: selectedId,
+                                    instagram: lead?.instagram || ''
+                                });
+                            }}
                             required
                         >
                             <option value="">Seleccionar Lead...</option>
@@ -85,6 +94,21 @@ const CloserNewSalePage = () => {
                             ))}
                         </select>
                         <p className="text-[9px] text-muted font-medium">* Solo aparecen leads con los que has tenido agenda reciente</p>
+                    </div>
+
+                    {/* Instagram */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2">
+                            @ Instagram
+                        </label>
+                        <input
+                            type="text"
+                            className="w-full bg-main border border-base rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-primary/50 outline-none transition-all"
+                            placeholder="ej. unneuronal"
+                            value={form.instagram}
+                            onChange={e => setForm({ ...form, instagram: e.target.value })}
+                            required
+                        />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

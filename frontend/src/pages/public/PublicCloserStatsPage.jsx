@@ -11,6 +11,7 @@ import {
 import CloserAdvancedStatsView from './CloserAdvancedStatsView';
 import CloserReportsTable from './CloserReportsTable';
 import FunnelChart from '../../components/charts/FunnelChart';
+import PublicFinancialSalesPage from './PublicFinancialSalesPage';
 
 const PublicCloserStatsPage = () => {
     const auth = useAuth();
@@ -199,6 +200,7 @@ const PublicCloserStatsPage = () => {
                     <TabButton id="general" label="Vista General" icon={BarChart3} />
                     <TabButton id="advanced" label="% Rendimiento" icon={Table} />
                     <TabButton id="history" label="Historial de Reportes" icon={List} />
+                    <TabButton id="sales_log" label="Registro Ventas" icon={DollarSign} />
                 </div>
 
                 {/* FILTROS (Comunes para ambas vistas) */}
@@ -767,6 +769,13 @@ const PublicCloserStatsPage = () => {
                         {activeTab === 'history' && (
                             <div className="animate-in fade-in duration-500">
                                 <CloserReportsTable closers={closers} />
+                            </div>
+                        )}
+
+                        {/* TAB REGISTRO DE VENTAS */}
+                        {activeTab === 'sales_log' && (
+                            <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
+                                <PublicFinancialSalesPage />
                             </div>
                         )}
 

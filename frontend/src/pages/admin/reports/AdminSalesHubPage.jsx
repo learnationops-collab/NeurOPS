@@ -3,6 +3,7 @@ import PublicSetterStatsPage from '../../public/PublicSetterStatsPage';
 import PublicCloserStatsPage from '../../public/PublicCloserStatsPage';
 import PublicTriageStatsPage from '../../public/PublicTriageStatsPage';
 import PublicWorkshopStatsPage from '../../public/PublicWorkshopStatsPage';
+import PublicFinancialSalesPage from '../../public/PublicFinancialSalesPage';
 
 const AdminSalesHubPage = () => {
     const [tab, setTab] = useState('closer');
@@ -11,6 +12,12 @@ const AdminSalesHubPage = () => {
         <div className="relative bg-background min-h-screen">
             {/* Tabs Dropdown/Selector Overlaying Top */}
             <div className="fixed top-8 right-8 z-[100] flex gap-2 bg-surface p-1.5 rounded-2xl border border-base/50 shadow-2xl backdrop-blur-xl">
+                 <button 
+                    onClick={() => setTab('sales')} 
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'sales' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:text-white'}`}
+                >
+                    Registro Ventas
+                </button>
                  <button 
                     onClick={() => setTab('closer')} 
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'closer' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white'}`}
@@ -38,6 +45,7 @@ const AdminSalesHubPage = () => {
             </div>
             
             <div className="w-full">
+                {tab === 'sales' && <PublicFinancialSalesPage />}
                 {tab === 'closer' && <PublicCloserStatsPage />}
                 {tab === 'setter' && <PublicSetterStatsPage />}
                 {tab === 'triage' && <PublicTriageStatsPage />}

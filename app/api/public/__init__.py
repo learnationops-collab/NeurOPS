@@ -504,8 +504,12 @@ def update_financial_sale(sale_id):
             sale.setter = data['setter_name']
         if 'amount' in data:
             sale.monto = float(data['amount'])
-            
-        
+        if 'instagram' in data:
+            sale.instagram = data['instagram']
+        if 'nombre_cliente' in data:
+            sale.nombre_cliente = data['nombre_cliente']
+        if 'email_vendedor' in data:
+            sale.email_vendedor = data['email_vendedor']
         db.session.commit()
         return jsonify({"message": "Venta actualizada correctamente", "sale": sale.to_dict()}), 200
     except Exception as e:

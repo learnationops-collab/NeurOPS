@@ -231,9 +231,15 @@ class CloserService:
     @staticmethod
     def register_sale(closer_id, client_id, data):
         program_id = data.get('program_id')
+        instagram = data.get('instagram')
         
         # Look for existing active enrollment for this client and program
         enrollment = Enrollment.query.filter_by(client_id=client_id, program_id=program_id).first()
+        
+        client = Client.query.get(client_id)
+        if client and instagram:
+            client.instagram = instagram.strip('@').strip()
+        
         
         if not enrollment:
             enrollment = Enrollment(
@@ -410,7 +416,7 @@ class CloserService:
         return {
             "programs": [{"id": p.id, "name": p.name, "price": p.price} for p in programs],
             "payment_methods": [{"id": m.id, "name": m.name} for m in methods],
-            "leads": [{"id": l.id, "username": l.full_name or l.email, "email": l.email} for l in leads],
+            "leads": [{"id": l.id, "username": l.full_name or l.email, "email": l.email, "instagram": l.instagram} for l in leads],
             "integration": integration_status
         }
     @staticmethod
