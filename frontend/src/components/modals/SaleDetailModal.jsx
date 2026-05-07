@@ -29,6 +29,9 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
     const [submittingPayment, setSubmittingPayment] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [metadata, setMetadata] = useState(null);
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [submittingProfile, setSubmittingProfile] = useState(false);
+    const [tempProfile, setTempProfile] = useState({ full_name: '', email: '', phone: '', instagram: '' });
 
     // New Payment Form
     const [newPayment, setNewPayment] = useState({
@@ -125,6 +128,20 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
         }
     };
 
+    const handleUpdateProfile = async () => {
+        setSubmittingProfile(true);
+        try {
+            await api.patch(`/closer/customers/${data.client.id}`, tempProfile);
+            await fetchDetails();
+            setIsEditingProfile(false);
+            if (onSuccess) onSuccess();
+        } catch (err) {
+            alert("Error al actualizar perfil");
+        } finally {
+            setSubmittingProfile(false);
+        }
+    };
+
     const handleDeleteEnrollment = async () => {
         if (!confirm("¿ESTÁS TOTALMENTE SEGURO? Esta acción eliminará la venta y todos sus pagos asociados permanentemente.")) return;
         setDeleting(true);
@@ -216,25 +233,94 @@ const SaleDetailModal = ({ isOpen, enrollmentId, onClose, onSuccess }) => {
                                                 <User size={12} className="text-primary" /> Información de Contacto
                                             </h4>
                                             <div className="bg-main/50 p-8 rounded-[2rem] border border-base space-y-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary font-black text-xl">
-                                                        {data.client.name[0]}
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary font-black text-xl">
+                                                            {data.client.name ? data.client.name[0] : 'U'}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            {isEditingProfile ? (
+                                                                <input
+                                                                    className="w-full bg-surface border border-base rounded-xl p-2 text-xl font-black text-base italic outline-none focus:ring-1 focus:ring-primary"
+                                                                    value={tempProfile.full_name}
+                                                                    onChange={(e) => setTempProfile({ ...tempProfile, full_name: e.target.value })}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-xl font-black text-base italic">{data.client.name}</p>
+                                                            )}
+                                                            {isEditingProfile ? (
+                                                                <input
+                                                                    className="w-full bg-surface border border-base rounded-xl p-2 text-xs font-medium text-muted mt-1 outline-none"
+                                                                    value={tempProfile.email}
+                                                                    onChange={(e) => setTempProfile({ ...tempProfile, email: e.target.value })}
+                                                                />
+                                                            ) : (
+                                                                <p className="text-xs font-medium text-muted">{data.client.email}</p>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-xl font-black text-base italic">{data.client.name}</p>
-                                                        <p className="text-xs font-medium text-muted">{data.client.email}</p>
+                                                    <div className="grid grid-cols-1 gap-4 pt-4 border-t border-base">
+                                                        <div className="flex items-center gap-3 text-muted">
+                                                            <Phone size={14} className="text-primary" />
+                                                            {isEditingProfile ? (
+                                                                <input
+                                                                    className="flex-1 bg-surface border border-base rounded-xl p-2 text-sm font-bold outline-none"
+                                                                    value={tempProfile.phone}
+                                                                    onChange={(e) => setTempProfile({ ...tempProfile, phone: e.target.value })}
+                                                                />
+                                                            ) : (
+                                                                <span className="text-sm font-bold">{data.client.phone || 'N/A'}</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-3 text-muted">
+                                                            <Instagram size={14} className="text-primary" />
+                                                            {isEditingProfile ? (
+                                                                <input
+                                                                    className="flex-1 bg-surface border border-base rounded-xl p-2 text-sm font-bold outline-none"
+                                                                    value={tempProfile.instagram}
+                                                                    onChange={(e) => setTempProfile({ ...tempProfile, instagram: e.target.value })}
+                                                                    placeholder="usuario_sin_arroba"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-sm font-bold">@{data.client.instagram || 'No vinculado'}</span>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div className="grid grid-cols-1 gap-4 pt-4 border-t border-base">
-                                                    <div className="flex items-center gap-3 text-muted">
-                                                        <Phone size={14} className="text-primary" />
-                                                        <span className="text-sm font-bold">{data.client.phone || 'N/A'}</span>
+                                                    <div className="pt-4 border-t border-base flex justify-end">
+                                                        {isEditingProfile ? (
+                                                            <div className="flex gap-2">
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="neutral" 
+                                                                    onClick={() => setIsEditingProfile(false)}
+                                                                >
+                                                                    CANCELAR
+                                                                </Button>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="primary" 
+                                                                    onClick={handleUpdateProfile}
+                                                                    loading={submittingProfile}
+                                                                >
+                                                                    GUARDAR
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setTempProfile({
+                                                                        full_name: data.client.name,
+                                                                        email: data.client.email,
+                                                                        phone: data.client.phone || '',
+                                                                        instagram: data.client.instagram || ''
+                                                                    });
+                                                                    setIsEditingProfile(true);
+                                                                }}
+                                                                className="text-[10px] font-black text-primary tracking-widest hover:underline"
+                                                            >
+                                                                EDITAR PERFIL
+                                                            </button>
+                                                        )}
                                                     </div>
-                                                    <div className="flex items-center gap-3 text-muted">
-                                                        <Instagram size={14} className="text-primary" />
-                                                        <span className="text-sm font-bold">@{data.client.instagram || 'No vinculado'}</span>
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>

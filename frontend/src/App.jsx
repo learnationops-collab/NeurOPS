@@ -20,6 +20,7 @@ import CloserLeadsPage from './pages/closer/leads/LeadsPage';
 import CloserSettingsPage from './pages/closer/settings/SettingsPage';
 import CloserNewSalePage from './pages/closer/records/NewSalePage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
+import CloserClientsPage from './pages/closer/clients/ClientsPage';
 import SalesAdminDashboard from './pages/sales_admin/dashboard/SalesAdminDashboard';
 import TeamManagement from './pages/sales_admin/team/TeamManagement';
 import SalesSettingsPage from './pages/sales_admin/settings/SalesSettingsPage';
@@ -181,6 +182,16 @@ function App() {
                 <ProtectedRoute roles={['closer']}>
                   <MainLayout>
                     <PublicCloserStatsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/closer/clients"
+              element={
+                <ProtectedRoute roles={['closer']}>
+                  <MainLayout>
+                    <CloserClientsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

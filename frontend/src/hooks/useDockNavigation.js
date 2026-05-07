@@ -40,7 +40,9 @@ const useDockNavigation = () => {
 
         if (isCloser) {
             return [
-                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/closer/report' }
+                { id: 'stats', icon: BarChart3, label: 'Dashboard', path: '/closer/stats' },
+                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/closer/report' },
+                { id: 'clients', icon: Users, label: 'Clientes', path: '/closer/clients' }
             ];
         } else if (isSetter) {
             return [
@@ -60,6 +62,7 @@ const useDockNavigation = () => {
             return [
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
                 { id: 'marketing', icon: Target, label: 'Marketing', path: '/admin/marketing' },
+                { id: 'clients', icon: Users, label: 'Clientes', path: '/closer/clients' },
                 { id: 'sheets', icon: CalendarDays, label: 'Importaciones Sheets', path: '/admin/sheets' }
             ];
         }
