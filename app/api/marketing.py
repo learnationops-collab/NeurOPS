@@ -414,7 +414,7 @@ def get_ad_performance():
             agenda_igs.add(ig_clean)
 
     # -------------------------------------------------------------------------
-    # 4. VENTAS — atribución por modelo correcto
+    # 4. VENTAS — atribución con fallbacks (Parche A)
     # -------------------------------------------------------------------------
     sales_in_period = FinancialSale.query.filter(
         FinancialSale.date >= start_dt,
@@ -425,22 +425,31 @@ def get_ad_performance():
     for sale in sales_in_period:
         ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
         ig_norm = normalize_ig(ig_val)
-        
-        if not ig_norm:
-            continue
 
-        # Buscar el ManychatLead cuyo ig coincida
-        matched_lead = ManychatLead.query.filter(
-            db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
-        ).first()
+        matched_lead = None
+
+        # Primario: match por instagram
+        if ig_norm:
+            matched_lead = ManychatLead.query.filter(
+                db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
+            ).first()
+
+        # Fallback: match por nombre_cliente si no hay ig o no matcheó
+        if not matched_lead:
+            nombre_norm = (sale.nombre_cliente or '').strip().lower()
+            if nombre_norm:
+                matched_lead = ManychatLead.query.filter(
+                    db.func.lower(ManychatLead.name) == nombre_norm
+                ).first()
 
         if not matched_lead:
             continue
 
-        # Buscar el LeadAnswer más reciente ANTES de la venta (sin límite de fecha inicial para encontrar el origen aunque sea antiguo)
+        # LeadAnswer más reciente ANTERIOR a la venta.
+        # Sin restricción a ad_ids del periodo: cubre leads captados en periodos previos.
         closest = LeadAnswer.query.filter(
             LeadAnswer.lead_id == matched_lead.id,
-            LeadAnswer.ad_id.in_(ad_ids),
+            LeadAnswer.ad_id != None,
             LeadAnswer.created_at <= sale.date
         ).order_by(LeadAnswer.created_at.desc()).first()
 
