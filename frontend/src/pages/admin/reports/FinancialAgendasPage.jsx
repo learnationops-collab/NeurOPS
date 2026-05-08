@@ -20,6 +20,8 @@ const FinancialAgendasPage = () => {
     const [syncing, setSyncing] = useState(false);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     useEffect(() => {
         fetchAgendas();
@@ -53,26 +55,66 @@ const FinancialAgendasPage = () => {
         }
     };
 
-    const filteredAgendas = agendas.filter(agenda => 
-        (agenda.lead || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (agenda.nombre || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredAgendas = agendas.filter(agenda => {
+        const matchesSearch = (agenda.lead || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (agenda.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (agenda.closer || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+        let matchesDate = true;
+        if (startDate || endDate) {
+            const aDate = new Date(agenda.date);
+            if (startDate) {
+                const sDate = new Date(startDate);
+                sDate.setHours(0, 0, 0, 0);
+                if (aDate < sDate) matchesDate = false;
+            }
+            if (endDate) {
+                const eDate = new Date(endDate);
+                eDate.setHours(23, 59, 59, 999);
+                if (aDate > eDate) matchesDate = false;
+            }
+        }
+        return matchesSearch && matchesDate;
+    });
+
+    const agendasByCloser = filteredAgendas.reduce((acc, curr) => {
+        const c = curr.closer || 'Sin Asignar';
+        acc[c] = (acc[c] || 0) + 1;
+        return acc;
+    }, {});
+    
+    const sortedClosers = Object.entries(agendasByCloser).sort((a, b) => b[1] - a[1]);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
+        <div className="p-8 pt-24 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="space-y-1">
                     <h1 className="text-4xl font-black text-white italic tracking-tighter text-balance">Tablero de Agendas</h1>
                     <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Registro de Citas Externas (Sheets)</p>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2 bg-surface p-2 rounded-2xl border border-base">
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0"
+                        />
+                        <span className="text-muted text-xs">-</span>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0"
+                        />
+                    </div>
                      <div className="relative group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
                         <input
                             type="text"
                             placeholder="Buscar setter o cliente..."
-                            className="bg-surface border border-base rounded-2xl pl-12 pr-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-64"
+                            className="bg-surface border border-base rounded-2xl pl-12 pr-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-64 text-white"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -103,6 +145,29 @@ const FinancialAgendasPage = () => {
                     </h3>
                 </Card>
             </div>
+
+            {/* Summary by Closer Section */}
+            <Card variant="surface" className="p-8 space-y-6 rounded-[2.5rem] border-base relative overflow-hidden">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
+                        <Users className="text-primary" size={16} />
+                        Agendas por Closer (Comparativa Calendly)
+                    </h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {sortedClosers.map(([closerName, count]) => (
+                        <div key={closerName} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center text-center gap-2 hover:bg-white/10 transition-colors">
+                            <span className="text-[9px] text-muted font-black uppercase tracking-widest">{closerName}</span>
+                            <span className="text-3xl font-black italic tracking-tighter text-white">{count}</span>
+                        </div>
+                    ))}
+                    {sortedClosers.length === 0 && !loading && (
+                        <div className="col-span-full py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
+                            No hay agendas en el rango seleccionado
+                        </div>
+                    )}
+                </div>
+            </Card>
 
             {/* List Section */}
             <Card variant="surface" className="p-8 space-y-6 rounded-[2.5rem] border-base relative">

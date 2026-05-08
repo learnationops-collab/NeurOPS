@@ -4,6 +4,7 @@ import PublicCloserStatsPage from '../../public/PublicCloserStatsPage';
 import PublicTriageStatsPage from '../../public/PublicTriageStatsPage';
 import PublicWorkshopStatsPage from '../../public/PublicWorkshopStatsPage';
 import PublicFinancialSalesPage from '../../public/PublicFinancialSalesPage';
+import FinancialAgendasPage from './FinancialAgendasPage';
 
 const AdminSalesHubPage = () => {
     const [tab, setTab] = useState('closer');
@@ -17,6 +18,12 @@ const AdminSalesHubPage = () => {
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'sales' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:text-white'}`}
                 >
                     Registro Ventas
+                </button>
+                 <button 
+                    onClick={() => setTab('agendas')} 
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'agendas' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white'}`}
+                >
+                    Registro Agendas
                 </button>
                  <button 
                     onClick={() => setTab('closer')} 
@@ -46,6 +53,7 @@ const AdminSalesHubPage = () => {
             
             <div className="w-full">
                 {tab === 'sales' && <PublicFinancialSalesPage />}
+                {tab === 'agendas' && <FinancialAgendasPage />}
                 {tab === 'closer' && <PublicCloserStatsPage />}
                 {tab === 'setter' && <PublicSetterStatsPage />}
                 {tab === 'triage' && <PublicTriageStatsPage />}
