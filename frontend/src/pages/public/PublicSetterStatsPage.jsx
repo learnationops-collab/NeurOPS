@@ -14,6 +14,7 @@ import FunnelChart from '../../components/charts/FunnelChart';
 import EvolutionChart from '../../components/charts/EvolutionChart';
 import SetterReportsTable from './SetterReportsTable';
 import SetterComparisonView from './SetterComparisonView';
+import ConversationalStatsTab from './ConversationalStatsTab';
 
 const PublicSetterStatsPage = () => {
     const auth = useAuth();
@@ -294,6 +295,7 @@ const PublicSetterStatsPage = () => {
                                 <TabButton id="comparison" label="Comparación" icon={ArrowRightLeft} />
                             )}
                             <TabButton id="reports" label="Registros" icon={Table} />
+                            <TabButton id="conv_stats" label="Rend. Conversacional" icon={MessageSquare} />
                         </div>
                     </div>
                 </div>
@@ -559,6 +561,13 @@ const PublicSetterStatsPage = () => {
                 {/* --- TAB: REGISTROS (LOG) --- */}
                 {activeTab === 'reports' && (
                     <SetterReportsTable setters={setters} />
+                )}
+
+                {/* --- TAB: REND. CONVERSACIONAL --- */}
+                {activeTab === 'conv_stats' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <ConversationalStatsTab />
+                    </div>
                 )}
             </div>
 
