@@ -8,7 +8,8 @@ import {
     Users,
     Instagram,
     Filter,
-    ArrowUpRight
+    ArrowUpRight,
+    Copy
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -222,15 +223,27 @@ const FinancialAgendasPage = () => {
                                         </td>
                                         <td className="py-4 px-4 text-center">
                                             {agenda.instagram && agenda.instagram !== 'N/A' ? (
-                                                <a 
-                                                    href={`https://instagram.com/${agenda.instagram.replace('@', '')}`} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
-                                                    className="text-xs font-bold text-primary hover:underline flex items-center justify-center gap-1"
-                                                >
-                                                    <Instagram size={10} />
-                                                    {agenda.instagram.startsWith('@') ? agenda.instagram : `@${agenda.instagram}`}
-                                                </a>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <a 
+                                                        href={`https://instagram.com/${agenda.instagram.replace('@', '')}`} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                                                    >
+                                                        <Instagram size={10} />
+                                                        {agenda.instagram.startsWith('@') ? agenda.instagram : `@${agenda.instagram}`}
+                                                    </a>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigator.clipboard.writeText(agenda.instagram.startsWith('@') ? agenda.instagram : `@${agenda.instagram}`);
+                                                        }}
+                                                        className="text-muted hover:text-primary transition-colors p-1"
+                                                        title="Copiar usuario"
+                                                    >
+                                                        <Copy size={12} />
+                                                    </button>
+                                                </div>
                                             ) : (
                                                 <span className="text-xs text-muted">No IG</span>
                                             )}
