@@ -196,13 +196,51 @@ const AdDashboardTab = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800/50">
-                                    {stats.ad_stats.map((stat, index) => {
+                                    {(() => {
+                                        const totals = stats.ad_stats.reduce((acc, curr) => {
+                                            acc.spend += (curr.spend || 0);
+                                            acc.total_leads += (curr.total_leads || 0);
+                                            acc.agendas += (curr.agendas || 0);
+                                            acc.ventas += (curr.ventas || 0);
+                                            const qual = Math.round(((curr.qualified_percentage || 0) / 100) * (curr.total_leads || 0));
+                                            acc.total_qualified += qual;
+                                            return acc;
+                                        }, { spend: 0, total_leads: 0, agendas: 0, ventas: 0, total_qualified: 0 });
+
+                                        const totalCPL = totals.total_leads > 0 ? (totals.spend / totals.total_leads).toFixed(2) : '0';
+                                        const totalCPQL = totals.total_qualified > 0 ? (totals.spend / totals.total_qualified).toFixed(2) : '0';
+                                        const totalCPA = totals.agendas > 0 ? (totals.spend / totals.agendas).toFixed(2) : '0';
+                                        const totalCPV = totals.ventas > 0 ? (totals.spend / totals.ventas).toFixed(2) : '0';
+                                        const totalQualPercentage = totals.total_leads > 0 ? Math.round((totals.total_qualified / totals.total_leads) * 100) : 0;
+
                                         let qualColor = "text-slate-400";
-                                        if (stat.qualified_percentage >= 50) qualColor = "text-emerald-400";
-                                        else if (stat.qualified_percentage >= 20) qualColor = "text-yellow-400";
-                                        else if (stat.total_leads > 0 && stat.qualified_percentage < 20) qualColor = "text-red-400";
+                                        if (totalQualPercentage >= 50) qualColor = "text-emerald-400";
+                                        else if (totalQualPercentage >= 20) qualColor = "text-yellow-400";
+                                        else if (totals.total_leads > 0 && totalQualPercentage < 20) qualColor = "text-red-400";
 
                                         return (
+                                            <>
+                                                <tr className="bg-slate-800/80 border-b-2 border-slate-700/50 shadow-md relative z-10">
+                                                    <td className="py-4 px-5">
+                                                        <span className="text-sm font-black text-white uppercase tracking-widest">Total General</span>
+                                                    </td>
+                                                    <td className="py-4 px-5 text-center text-xs font-black text-white">${totals.spend.toLocaleString()}</td>
+                                                    <td className="py-4 px-5 text-center text-xs font-black text-white">{totals.total_leads}</td>
+                                                    <td className="py-4 px-5 text-right text-xs font-black text-blue-400">${totalCPL}</td>
+                                                    <td className={`py-4 px-5 text-center text-xs font-black ${qualColor}`}>{totalQualPercentage}%</td>
+                                                    <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${totalCPQL}</td>
+                                                    <td className="py-4 px-5 text-center text-xs font-black text-white">{totals.agendas}</td>
+                                                    <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${totalCPA}</td>
+                                                    <td className="py-4 px-5 text-center text-xs font-black text-white">{totals.ventas}</td>
+                                                    <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${totalCPV}</td>
+                                                </tr>
+                                                {stats.ad_stats.map((stat, index) => {
+                                                    let qualColorStat = "text-slate-400";
+                                                    if (stat.qualified_percentage >= 50) qualColorStat = "text-emerald-400";
+                                                    else if (stat.qualified_percentage >= 20) qualColorStat = "text-yellow-400";
+                                                    else if (stat.total_leads > 0 && stat.qualified_percentage < 20) qualColorStat = "text-red-400";
+
+                                                    return (
                                             <tr 
                                                 key={stat.ad_id} 
                                                 onClick={() => { setSelectedAdId(stat.ad_id); setIsModalOpen(true); }}
@@ -230,9 +268,12 @@ const AdDashboardTab = () => {
                                                 <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.cpa || '0'}</td>
                                                 <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.ventas || 0}</td>
                                                 <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${stat.cpv || '0'}</td>
-                                            </tr>
+                                                </tr>
+                                                    );
+                                                })}
+                                            </>
                                         );
-                                    })}
+                                    })()}
                                 </tbody>
                             </table>
                         </div>
