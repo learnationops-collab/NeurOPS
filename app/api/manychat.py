@@ -649,6 +649,8 @@ def get_ad_dashboard_stats():
     # Ventas
     sales_in_period = FinancialSale.query.filter(FinancialSale.date >= start_dt, FinancialSale.date <= end_dt).all()
     ventas_por_ad = {}
+    cash_collect_data = {}
+    
     for sale in sales_in_period:
         ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
         ig_n = normalize_ig(ig_val)
@@ -659,7 +661,15 @@ def get_ad_dashboard_stats():
         
         closest = LeadAnswer.query.filter(LeadAnswer.lead_id == matched_lead.id, LeadAnswer.ad_id.in_(ad_ids), LeadAnswer.created_at <= sale.date)\
                  .order_by(LeadAnswer.created_at.desc()).first()
-        if closest: ventas_por_ad[closest.ad_id] = ventas_por_ad.get(closest.ad_id, 0) + 1
+        if closest: 
+            ventas_por_ad[closest.ad_id] = ventas_por_ad.get(closest.ad_id, 0) + 1
+            
+            # Cash Collect: Primer pago o pago completo (> 100)
+            if sale.monto and float(sale.monto) > 100:
+                if closest.ad_id not in cash_collect_data:
+                    cash_collect_data[closest.ad_id] = {'total': 0, 'count': 0}
+                cash_collect_data[closest.ad_id]['total'] += float(sale.monto)
+                cash_collect_data[closest.ad_id]['count'] += 1
 
     # 4. RESULTADO
     result = []
@@ -685,6 +695,10 @@ def get_ad_dashboard_stats():
                     setter_breakdown[sname] = setter_breakdown.get(sname, 0) + 1
         
         v_count = ventas_por_ad.get(ad_id, 0)
+        
+        # Promedio Cash Collect
+        cc_data = cash_collect_data.get(ad_id, {'total': 0, 'count': 0})
+        avg_cash_collect = round(cc_data['total'] / cc_data['count'], 2) if cc_data['count'] > 0 else 0
 
         result.append({
             'ad_id': ad_id,
@@ -699,7 +713,8 @@ def get_ad_dashboard_stats():
             'cpl': round(spend / total, 2) if total > 0 else 0,
             'cpql': round(spend / qual, 2) if qual > 0 else 0,
             'cpa': round(spend / ag_count, 2) if ag_count > 0 else 0,
-            'cpv': round(spend / v_count, 2) if v_count > 0 else 0
+            'cpv': round(spend / v_count, 2) if v_count > 0 else 0,
+            'avg_cash_collect': avg_cash_collect
         })
 
 

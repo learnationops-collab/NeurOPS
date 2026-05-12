@@ -193,6 +193,7 @@ const AdDashboardTab = () => {
                                         <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-right">CPA</th>
                                         <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-center">Ventas</th>
                                         <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-right">CPV</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-right">Cash Col.</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800/50">
@@ -202,15 +203,23 @@ const AdDashboardTab = () => {
                                             acc.total_leads += (curr.total_leads || 0);
                                             acc.agendas += (curr.agendas || 0);
                                             acc.ventas += (curr.ventas || 0);
+                                            
+                                            // Cash collect average accumulator
+                                            if (curr.avg_cash_collect > 0) {
+                                                acc.cc_sum += curr.avg_cash_collect;
+                                                acc.cc_count += 1;
+                                            }
+
                                             const qual = Math.round(((curr.qualified_percentage || 0) / 100) * (curr.total_leads || 0));
                                             acc.total_qualified += qual;
                                             return acc;
-                                        }, { spend: 0, total_leads: 0, agendas: 0, ventas: 0, total_qualified: 0 });
+                                        }, { spend: 0, total_leads: 0, agendas: 0, ventas: 0, total_qualified: 0, cc_sum: 0, cc_count: 0 });
 
                                         const totalCPL = totals.total_leads > 0 ? (totals.spend / totals.total_leads).toFixed(2) : '0';
                                         const totalCPQL = totals.total_qualified > 0 ? (totals.spend / totals.total_qualified).toFixed(2) : '0';
                                         const totalCPA = totals.agendas > 0 ? (totals.spend / totals.agendas).toFixed(2) : '0';
                                         const totalCPV = totals.ventas > 0 ? (totals.spend / totals.ventas).toFixed(2) : '0';
+                                        const totalAvgCC = totals.cc_count > 0 ? (totals.cc_sum / totals.cc_count).toFixed(2) : '0';
                                         const totalQualPercentage = totals.total_leads > 0 ? Math.round((totals.total_qualified / totals.total_leads) * 100) : 0;
 
                                         let qualColor = "text-slate-400";
@@ -233,6 +242,7 @@ const AdDashboardTab = () => {
                                                     <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${totalCPA}</td>
                                                     <td className="py-4 px-5 text-center text-xs font-black text-white">{totals.ventas}</td>
                                                     <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${totalCPV}</td>
+                                                    <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${totalAvgCC}</td>
                                                 </tr>
                                                 {stats.ad_stats.map((stat, index) => {
                                                     let qualColorStat = "text-slate-400";
@@ -268,6 +278,7 @@ const AdDashboardTab = () => {
                                                 <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.cpa || '0'}</td>
                                                 <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.ventas || 0}</td>
                                                 <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${stat.cpv || '0'}</td>
+                                                <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.avg_cash_collect || '0'}</td>
                                                 </tr>
                                                     );
                                                 })}
