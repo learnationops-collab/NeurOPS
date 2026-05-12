@@ -4,6 +4,7 @@ import {
     Loader2, BarChart3, Target, Layers, Phone, Activity,
     Table, Users, ListChecks
 } from 'lucide-react';
+import usePersistentFilters from '../../hooks/usePersistentFilters';
 import TriageTrackerTable from '../admin/reports/TriageTrackerTable';
 
 const PublicTriageStatsPage = () => {
@@ -11,7 +12,7 @@ const PublicTriageStatsPage = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const [filters, setFilters] = useState({
+    const { filters, updateFilter: setFilters } = usePersistentFilters('filters_triage_stats', {
         triage_name: '',
         start_date: '',
         end_date: '',
@@ -19,6 +20,7 @@ const PublicTriageStatsPage = () => {
         time_preset: 'last_days',
         custom_days: 7
     });
+
 
     useEffect(() => {
         if (filters.time_preset === 'custom') return;

@@ -10,6 +10,7 @@ import {
     Copy, Calendar, Info, ArrowRightLeft, ListChecks, Table,
     Activity, Zap, BarChart, PenTool, HelpCircle, UserX
 } from 'lucide-react';
+import usePersistentFilters from '../../hooks/usePersistentFilters';
 import FunnelChart from '../../components/charts/FunnelChart';
 import EvolutionChart from '../../components/charts/EvolutionChart';
 import SetterReportsTable from './SetterReportsTable';
@@ -26,7 +27,7 @@ const PublicSetterStatsPage = () => {
     const [setters, setSetters] = useState([]);
 
     // Filters for General & Comparison
-    const [filters, setFilters] = useState({
+    const { filters, updateFilter: setFilters } = usePersistentFilters('filters_setter_stats', {
         setter_id: user.role === 'setter' && user.id ? user.id.toString() : '',
         start_date: '',
         end_date: '',
@@ -34,6 +35,7 @@ const PublicSetterStatsPage = () => {
         time_preset: 'last_days', // default to last X days
         custom_days: 7
     });
+
 
     // Helper to calculate dates based on preset
     useEffect(() => {

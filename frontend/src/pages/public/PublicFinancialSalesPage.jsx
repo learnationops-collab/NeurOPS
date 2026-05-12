@@ -3,12 +3,20 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { RefreshCcw, Search, Edit2, Check, X } from 'lucide-react';
 import Card from '../../components/ui/Card';
+import usePersistentFilters from '../../hooks/usePersistentFilters';
 
 const PublicFinancialSalesPage = () => {
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
+    
+    const { filters, updateFilter: setFilters } = usePersistentFilters('filters_financial_sales', {
+        searchTerm: ''
+    });
+
+    const { searchTerm } = filters;
+    const setSearchTerm = (val) => setFilters({ searchTerm: val });
+
     
     // Edit Modal State
     const [editingSale, setEditingSale] = useState(null);

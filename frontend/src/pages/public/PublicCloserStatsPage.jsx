@@ -8,6 +8,7 @@ import {
     CheckCircle, XCircle, PhoneOff, RefreshCw, Table, List,
     PenTool, Info
 } from 'lucide-react';
+import usePersistentFilters from '../../hooks/usePersistentFilters';
 import CloserAdvancedStatsView from './CloserAdvancedStatsView';
 import CloserReportsTable from './CloserReportsTable';
 import FunnelChart from '../../components/charts/FunnelChart';
@@ -23,7 +24,8 @@ const PublicCloserStatsPage = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [closers, setClosers] = useState([]);
-    const [filters, setFilters] = useState({
+
+    const { filters, updateFilter: setFilters } = usePersistentFilters('filters_closer_stats', {
         closer_id: user.role === 'closer' && user.id ? user.id.toString() : '',
         start_date: '',
         end_date: '',
@@ -31,6 +33,7 @@ const PublicCloserStatsPage = () => {
         time_preset: 'last_days',
         custom_days: 7
     });
+
 
     // Cálculo de fechas según preset
     useEffect(() => {

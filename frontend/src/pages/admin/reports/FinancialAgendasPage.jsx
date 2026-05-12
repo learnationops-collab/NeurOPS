@@ -14,15 +14,25 @@ import {
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
+import usePersistentFilters from '../../../hooks/usePersistentFilters';
 
 const FinancialAgendasPage = () => {
     const [agendas, setAgendas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
     const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    
+    const { filters, updateFilter: setFilters } = usePersistentFilters('filters_financial_agendas', {
+        searchTerm: '',
+        startDate: '',
+        endDate: ''
+    });
+
+    const { searchTerm, startDate, endDate } = filters;
+    const setSearchTerm = (val) => setFilters({ searchTerm: val });
+    const setStartDate = (val) => setFilters({ startDate: val });
+    const setEndDate = (val) => setFilters({ endDate: val });
+
 
     useEffect(() => {
         fetchAgendas();

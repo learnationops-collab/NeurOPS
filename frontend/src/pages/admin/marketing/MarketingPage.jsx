@@ -23,6 +23,7 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Input from '../../../components/ui/Input';
 import { AnimatePresence, motion } from 'framer-motion';
+import usePersistentFilters from '../../../hooks/usePersistentFilters';
 
 const MarketingPage = () => {
     const [activeTab, setActiveTab] = useState('campaigns');
@@ -41,15 +42,22 @@ const MarketingPage = () => {
     const [campaignsList, setCampaignsList] = useState([]);
     const [adSetsList, setAdSetsList] = useState([]);
 
-    // Estado de rendimiento
+    // Estado de rendimiento persistente
     const [performanceData, setPerformanceData] = useState([]);
     const [perfLoading, setPerfLoading] = useState(false);
-    const [perfPeriod, setPerfPeriod] = useState('last_month'); // last_month | last_week | yesterday | custom
     const [perfSearch, setPerfSearch] = useState('');
-    const [customDates, setCustomDates] = useState({
+    
+    const { filters: perfFilters, updateFilter: setPerfFilters } = usePersistentFilters('filters_marketing_perf', {
+        period: 'last_month',
         start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
         end: new Date().toISOString().split('T')[0]
     });
+
+    const perfPeriod = perfFilters.period;
+    const setPerfPeriod = (val) => setPerfFilters({ period: val });
+    const customDates = { start: perfFilters.start, end: perfFilters.end };
+    const setCustomDates = (val) => setPerfFilters({ ...val });
+
 
     const tabs = [
         { id: 'campaigns', label: 'Campañas', icon: Megaphone, endpoint: '/marketing/campaigns' },

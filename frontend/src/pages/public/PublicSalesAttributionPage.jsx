@@ -23,6 +23,7 @@ import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import usePersistentFilters from '../../hooks/usePersistentFilters';
 
 // ─────────────────────────────────────────────
 // Sub-componente: tarjeta de KPI de resumen
@@ -57,13 +58,23 @@ const AtribucionBadge = ({ status }) => {
 };
 
 const PublicSalesAttributionPage = () => {
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
     const [loading, setLoading] = useState(false);
     const [report, setReport] = useState(null);
     const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterAtribucion, setFilterAtribucion] = useState('all');
+
+    const { filters, updateFilter: setFilters } = usePersistentFilters('filters_sales_attribution', {
+        startDate: '',
+        endDate: '',
+        searchTerm: '',
+        filterAtribucion: 'all'
+    });
+
+    const { startDate, endDate, searchTerm, filterAtribucion } = filters;
+    const setStartDate = (val) => setFilters({ startDate: val });
+    const setEndDate = (val) => setFilters({ endDate: val });
+    const setSearchTerm = (val) => setFilters({ searchTerm: val });
+    const setFilterAtribucion = (val) => setFilters({ filterAtribucion: val });
+
 
     // States for Manual Attribution
     const [adsList, setAdsList] = useState([]);
