@@ -31,8 +31,10 @@ const usePersistentFilters = (storageKey, initialFilters) => {
             }
             if (typeof arg1 === 'function') {
                 const updated = arg1(prev);
+                if (Array.isArray(updated)) return updated;
                 return { ...prev, ...updated };
             }
+            if (Array.isArray(arg1)) return arg1;
             return { ...prev, ...arg1 };
         });
     };

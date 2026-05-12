@@ -1,7 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays, HelpCircle, LayoutGrid, List } from 'lucide-react';
+import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays, HelpCircle, LayoutGrid, List, Settings } from 'lucide-react';
 import AdDetailModal from '../../components/modals/AdDetailModal';
+import usePersistentFilters from '../../hooks/usePersistentFilters';
+import ColumnSettings from '../../components/marketing/ColumnSettings';
+
+const initialColumns = [
+    { id: 'ad_name', label: 'Anuncio', visible: true, align: 'left' },
+    { id: 'spend', label: 'Inversión', visible: true, align: 'center' },
+    { id: 'total_leads', label: 'Leads', visible: true, align: 'center', color: 'text-blue-400' },
+    { id: 'cpl', label: 'CPL', visible: true, align: 'right', color: 'text-blue-400' },
+    { id: 'qualified_percentage', label: '% Cual.', visible: true, align: 'center' },
+    { id: 'cpql', label: 'CPQL', visible: true, align: 'right', color: 'text-emerald-400' },
+    { id: 'agendas', label: 'Agendas', visible: true, align: 'center', color: 'text-emerald-400' },
+    { id: 'cpa', label: 'CPA', visible: true, align: 'right', color: 'text-emerald-400' },
+    { id: 'ventas', label: 'Ventas', visible: true, align: 'center', color: 'text-amber-400' },
+    { id: 'cpv', label: 'CPV', visible: true, align: 'right', color: 'text-amber-400' },
+    { id: 'avg_cash_collect', label: 'Cash Col.', visible: true, align: 'right', color: 'text-emerald-400' },
+    { id: 'roi', label: 'ROI', visible: true, align: 'right', color: 'text-indigo-400' },
+];
 
 
 
@@ -12,6 +29,9 @@ const AdDashboardTab = () => {
     const [selectedAdId, setSelectedAdId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState('gallery'); // 'gallery' | 'list'
+    
+    const { filters: columns, updateFilter: setColumns } = usePersistentFilters('ad_dashboard_columns_v2', initialColumns);
+    const visibleColumns = columns.filter(c => c.visible);
     
     // Filtros de periodo
     const [period, setPeriod] = useState('last_month');
@@ -119,6 +139,8 @@ const AdDashboardTab = () => {
                         <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                     </button>
                     
+                    <ColumnSettings columns={columns} setColumns={setColumns} />
+                    
                     <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner ml-2">
                         <button
                             onClick={() => setViewMode('gallery')}
@@ -181,20 +203,18 @@ const AdDashboardTab = () => {
                     ) : viewMode === 'list' ? (
                         <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl overflow-x-auto shadow-xl">
                             <table className="w-full text-left border-collapse whitespace-nowrap">
-                                <thead>
+                                <thead className="sticky top-0 z-20">
                                     <tr className="border-b border-slate-800/80 bg-slate-950/50">
-                                        <th className="py-4 px-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Anuncio</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Inversión</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-blue-400 uppercase tracking-widest text-center">Leads</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-blue-400 uppercase tracking-widest text-right">CPL</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">% Cual.</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-right">CPQL</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-center">Agendas</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-right">CPA</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-center">Ventas</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-right">CPV</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-right">Cash Col.</th>
-                                        <th className="py-4 px-5 text-[10px] font-black text-indigo-400 uppercase tracking-widest text-right">ROI</th>
+                                        {visibleColumns.map(col => (
+                                            <th 
+                                                key={col.id} 
+                                                className={`py-4 px-5 text-[10px] font-black uppercase tracking-widest ${
+                                                    col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
+                                                } ${col.color || 'text-slate-500'}`}
+                                            >
+                                                {col.label}
+                                            </th>
+                                        ))}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800/50">
@@ -232,20 +252,31 @@ const AdDashboardTab = () => {
                                         return (
                                             <>
                                                 <tr className="bg-slate-800/80 border-b-2 border-slate-700/50 shadow-md relative z-10">
-                                                    <td className="py-4 px-5">
-                                                        <span className="text-sm font-black text-white uppercase tracking-widest">Total General</span>
-                                                    </td>
-                                                    <td className="py-4 px-5 text-center text-xs font-black text-white">${totals.spend.toLocaleString()}</td>
-                                                    <td className="py-4 px-5 text-center text-xs font-black text-white">{totals.total_leads}</td>
-                                                    <td className="py-4 px-5 text-right text-xs font-black text-blue-400">${totalCPL}</td>
-                                                    <td className={`py-4 px-5 text-center text-xs font-black ${qualColor}`}>{totalQualPercentage}%</td>
-                                                    <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${totalCPQL}</td>
-                                                    <td className="py-4 px-5 text-center text-xs font-black text-white">{totals.agendas}</td>
-                                                    <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${totalCPA}</td>
-                                                    <td className="py-4 px-5 text-center text-xs font-black text-white">{totals.ventas}</td>
-                                                    <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${totalCPV}</td>
-                                                    <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${totalAvgCC}</td>
-                                                    <td className={`py-4 px-5 text-right text-xs font-black ${parseFloat(totalROI) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>${totalROI}</td>
+                                                    {visibleColumns.map(col => {
+                                                        let content;
+                                                        let color = "text-white";
+                                                        
+                                                        if (col.id === 'ad_name') content = <span className="text-sm font-black uppercase tracking-widest">Total General</span>;
+                                                        else if (col.id === 'spend') content = `$${totals.spend.toLocaleString()}`;
+                                                        else if (col.id === 'total_leads') content = totals.total_leads;
+                                                        else if (col.id === 'cpl') { content = `$${totalCPL}`; color = "text-blue-400"; }
+                                                        else if (col.id === 'qualified_percentage') { content = `${totalQualPercentage}%`; color = qualColor; }
+                                                        else if (col.id === 'cpql') { content = `$${totalCPQL}`; color = "text-emerald-400"; }
+                                                        else if (col.id === 'agendas') content = totals.agendas;
+                                                        else if (col.id === 'cpa') { content = `$${totalCPA}`; color = "text-emerald-400"; }
+                                                        else if (col.id === 'ventas') content = totals.ventas;
+                                                        else if (col.id === 'cpv') { content = `$${totalCPV}`; color = "text-amber-400"; }
+                                                        else if (col.id === 'avg_cash_collect') { content = `$${totalAvgCC}`; color = "text-emerald-400"; }
+                                                        else if (col.id === 'roi') { content = `$${totalROI}`; color = parseFloat(totalROI) >= 0 ? 'text-emerald-400' : 'text-red-400'; }
+
+                                                        return (
+                                                            <td key={col.id} className={`py-4 px-5 text-xs font-black ${color} ${
+                                                                col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
+                                                            }`}>
+                                                                {content}
+                                                            </td>
+                                                        );
+                                                    })}
                                                 </tr>
                                                 {stats.ad_stats.map((stat, index) => {
                                                     let qualColorStat = "text-slate-400";
@@ -254,36 +285,51 @@ const AdDashboardTab = () => {
                                                     else if (stat.total_leads > 0 && stat.qualified_percentage < 20) qualColorStat = "text-red-400";
 
                                                     return (
-                                            <tr 
-                                                key={stat.ad_id} 
-                                                onClick={() => { setSelectedAdId(stat.ad_id); setIsModalOpen(true); }}
-                                                className="group hover:bg-slate-800/40 transition-colors cursor-pointer"
-                                            >
-                                                <td className="py-4 px-5">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-400">
-                                                            {index + 1}
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-sm font-black text-white uppercase tracking-tight max-w-[200px] truncate">{stat.ad_name}</h4>
-                                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                                                                <Activity size={10} className="text-blue-500" /> #{stat.ad_id}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="py-4 px-5 text-center text-xs font-black text-white">${(stat.spend||0).toLocaleString()}</td>
-                                                <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.total_leads}</td>
-                                                <td className="py-4 px-5 text-right text-xs font-black text-blue-400">${stat.cpl || '0'}</td>
-                                                <td className={`py-4 px-5 text-center text-xs font-black ${qualColor}`}>{stat.qualified_percentage}%</td>
-                                                <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.cpql || '0'}</td>
-                                                <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.agendas || 0}</td>
-                                                <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.cpa || '0'}</td>
-                                                <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.ventas || 0}</td>
-                                                <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${stat.cpv || '0'}</td>
-                                                <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.avg_cash_collect || '0'}</td>
-                                                <td className={`py-4 px-5 text-right text-xs font-black ${parseFloat(stat.roi || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>${stat.roi || '0'}</td>
-                                                </tr>
+                                                        <tr 
+                                                            key={stat.ad_id} 
+                                                            onClick={() => { setSelectedAdId(stat.ad_id); setIsModalOpen(true); }}
+                                                            className="group hover:bg-slate-800/40 transition-colors cursor-pointer"
+                                                        >
+                                                            {visibleColumns.map(col => {
+                                                                let content;
+                                                                let color = "text-white";
+
+                                                                if (col.id === 'ad_name') {
+                                                                    content = (
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-400">
+                                                                                {index + 1}
+                                                                            </div>
+                                                                            <div>
+                                                                                <h4 className="text-sm font-black text-white uppercase tracking-tight max-w-[200px] truncate">{stat.ad_name}</h4>
+                                                                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                                                                                    <Activity size={10} className="text-blue-500" /> #{stat.ad_id}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                else if (col.id === 'spend') content = `$${(stat.spend||0).toLocaleString()}`;
+                                                                else if (col.id === 'total_leads') content = stat.total_leads;
+                                                                else if (col.id === 'cpl') { content = `$${stat.cpl || '0'}`; color = "text-blue-400"; }
+                                                                else if (col.id === 'qualified_percentage') { content = `${stat.qualified_percentage}%`; color = qualColorStat; }
+                                                                else if (col.id === 'cpql') { content = `$${stat.cpql || '0'}`; color = "text-emerald-400"; }
+                                                                else if (col.id === 'agendas') content = stat.agendas || 0;
+                                                                else if (col.id === 'cpa') { content = `$${stat.cpa || '0'}`; color = "text-emerald-400"; }
+                                                                else if (col.id === 'ventas') content = stat.ventas || 0;
+                                                                else if (col.id === 'cpv') { content = `$${stat.cpv || '0'}`; color = "text-amber-400"; }
+                                                                else if (col.id === 'avg_cash_collect') { content = `$${stat.avg_cash_collect || '0'}`; color = "text-emerald-400"; }
+                                                                else if (col.id === 'roi') { content = `$${stat.roi || '0'}`; color = parseFloat(stat.roi || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'; }
+
+                                                                return (
+                                                                    <td key={col.id} className={`py-4 px-5 text-xs font-black ${color} ${
+                                                                        col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
+                                                                    }`}>
+                                                                        {content}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
                                                     );
                                                 })}
                                             </>
