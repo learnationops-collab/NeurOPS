@@ -699,6 +699,12 @@ def get_ad_dashboard_stats():
         # Promedio Cash Collect
         cc_data = cash_collect_data.get(ad_id, {'total': 0, 'count': 0})
         avg_cash_collect = round(cc_data['total'] / cc_data['count'], 2) if cc_data['count'] > 0 else 0
+        
+        # CPV
+        cpv = round(spend / v_count, 2) if v_count > 0 else 0
+        
+        # ROI (Retorno de inversión: Diferencia entre Cash Collect y CPV)
+        roi = round(avg_cash_collect - cpv, 2)
 
         result.append({
             'ad_id': ad_id,
@@ -713,8 +719,9 @@ def get_ad_dashboard_stats():
             'cpl': round(spend / total, 2) if total > 0 else 0,
             'cpql': round(spend / qual, 2) if qual > 0 else 0,
             'cpa': round(spend / ag_count, 2) if ag_count > 0 else 0,
-            'cpv': round(spend / v_count, 2) if v_count > 0 else 0,
-            'avg_cash_collect': avg_cash_collect
+            'cpv': cpv,
+            'avg_cash_collect': avg_cash_collect,
+            'roi': roi
         })
 
 

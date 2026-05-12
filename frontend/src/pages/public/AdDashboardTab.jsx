@@ -194,6 +194,7 @@ const AdDashboardTab = () => {
                                         <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-center">Ventas</th>
                                         <th className="py-4 px-5 text-[10px] font-black text-amber-400 uppercase tracking-widest text-right">CPV</th>
                                         <th className="py-4 px-5 text-[10px] font-black text-emerald-400 uppercase tracking-widest text-right">Cash Col.</th>
+                                        <th className="py-4 px-5 text-[10px] font-black text-indigo-400 uppercase tracking-widest text-right">ROI</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800/50">
@@ -220,6 +221,7 @@ const AdDashboardTab = () => {
                                         const totalCPA = totals.agendas > 0 ? (totals.spend / totals.agendas).toFixed(2) : '0';
                                         const totalCPV = totals.ventas > 0 ? (totals.spend / totals.ventas).toFixed(2) : '0';
                                         const totalAvgCC = totals.cc_count > 0 ? (totals.cc_sum / totals.cc_count).toFixed(2) : '0';
+                                        const totalROI = (parseFloat(totalAvgCC) - parseFloat(totalCPV)).toFixed(2);
                                         const totalQualPercentage = totals.total_leads > 0 ? Math.round((totals.total_qualified / totals.total_leads) * 100) : 0;
 
                                         let qualColor = "text-slate-400";
@@ -243,6 +245,7 @@ const AdDashboardTab = () => {
                                                     <td className="py-4 px-5 text-center text-xs font-black text-white">{totals.ventas}</td>
                                                     <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${totalCPV}</td>
                                                     <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${totalAvgCC}</td>
+                                                    <td className="py-4 px-5 text-right text-xs font-black text-indigo-400">${totalROI}</td>
                                                 </tr>
                                                 {stats.ad_stats.map((stat, index) => {
                                                     let qualColorStat = "text-slate-400";
@@ -279,6 +282,7 @@ const AdDashboardTab = () => {
                                                 <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.ventas || 0}</td>
                                                 <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${stat.cpv || '0'}</td>
                                                 <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.avg_cash_collect || '0'}</td>
+                                                <td className="py-4 px-5 text-right text-xs font-black text-indigo-400">${stat.roi || '0'}</td>
                                                 </tr>
                                                     );
                                                 })}
