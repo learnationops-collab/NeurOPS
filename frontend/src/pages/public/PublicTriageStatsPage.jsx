@@ -8,9 +8,15 @@ import usePersistentFilters from '../../hooks/usePersistentFilters';
 import TriageTrackerTable from '../admin/reports/TriageTrackerTable';
 
 const PublicTriageStatsPage = () => {
-    const [activeTab, setActiveTab] = useState('general'); // 'general', 'tracker'
+    const { filters: tabFilters, updateFilter: setTabFilters } = usePersistentFilters('triage_active_tab', {
+        active: 'general'
+    });
+    const activeTab = tabFilters.active;
+    const setActiveTab = (val) => setTabFilters({ active: val });
+
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+
 
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_triage_stats', {
         triage_name: '',

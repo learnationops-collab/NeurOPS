@@ -26,10 +26,24 @@ import { AnimatePresence, motion } from 'framer-motion';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
 
 const MarketingPage = () => {
-    const [activeTab, setActiveTab] = useState('campaigns');
+    const { filters: tabFilters, updateFilter: setTabFilters } = usePersistentFilters('marketing_active_tab', {
+
+        active: 'campaigns'
+    });
+    const activeTab = tabFilters.active;
+    const setActiveTab = (val) => setTabFilters({ active: val });
+
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
+
+    const { filters: searchFilters, updateFilter: setSearchFilters } = usePersistentFilters('marketing_search_filters', {
+        general: '',
+        performance: ''
+    });
+    const search = searchFilters.general;
+    const setSearch = (val) => setSearchFilters({ general: val });
+    const perfSearch = searchFilters.performance;
+    const setPerfSearch = (val) => setSearchFilters({ performance: val });
 
     // CRUD State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -45,7 +59,6 @@ const MarketingPage = () => {
     // Estado de rendimiento persistente
     const [performanceData, setPerformanceData] = useState([]);
     const [perfLoading, setPerfLoading] = useState(false);
-    const [perfSearch, setPerfSearch] = useState('');
     
     const { filters: perfFilters, updateFilter: setPerfFilters } = usePersistentFilters('filters_marketing_perf', {
         period: 'last_month',
@@ -57,6 +70,7 @@ const MarketingPage = () => {
     const setPerfPeriod = (val) => setPerfFilters({ period: val });
     const customDates = { start: perfFilters.start, end: perfFilters.end };
     const setCustomDates = (val) => setPerfFilters({ ...val });
+
 
 
     const tabs = [

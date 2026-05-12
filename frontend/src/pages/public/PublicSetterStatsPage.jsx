@@ -21,7 +21,12 @@ const PublicSetterStatsPage = () => {
     const auth = useAuth();
     const user = auth?.user || { role: 'admin' };
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('general'); // 'general', 'comparison', 'reports'
+    const { filters: tabFilters, updateFilter: setTabFilters } = usePersistentFilters('setter_active_tab', {
+        active: 'general'
+    });
+    const activeTab = tabFilters.active;
+    const setActiveTab = (val) => setTabFilters({ active: val });
+
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [setters, setSetters] = useState([]);

@@ -20,7 +20,12 @@ const PublicCloserStatsPage = () => {
     const auth = useAuth();
     const user = auth?.user || { role: 'admin' };
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('general'); // 'general', 'advanced', 'history'
+    const { filters: tabFilters, updateFilter: setTabFilters } = usePersistentFilters('closer_active_tab', {
+        active: 'general'
+    });
+    const activeTab = tabFilters.active;
+    const setActiveTab = (val) => setTabFilters({ active: val });
+
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [closers, setClosers] = useState([]);
