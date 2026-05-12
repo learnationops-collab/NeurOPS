@@ -245,7 +245,7 @@ const AdDashboardTab = () => {
                                                     <td className="py-4 px-5 text-center text-xs font-black text-white">{totals.ventas}</td>
                                                     <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${totalCPV}</td>
                                                     <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${totalAvgCC}</td>
-                                                    <td className="py-4 px-5 text-right text-xs font-black text-indigo-400">${totalROI}</td>
+                                                    <td className={`py-4 px-5 text-right text-xs font-black ${parseFloat(totalROI) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>${totalROI}</td>
                                                 </tr>
                                                 {stats.ad_stats.map((stat, index) => {
                                                     let qualColorStat = "text-slate-400";
@@ -282,7 +282,7 @@ const AdDashboardTab = () => {
                                                 <td className="py-4 px-5 text-center text-xs font-black text-white">{stat.ventas || 0}</td>
                                                 <td className="py-4 px-5 text-right text-xs font-black text-amber-400">${stat.cpv || '0'}</td>
                                                 <td className="py-4 px-5 text-right text-xs font-black text-emerald-400">${stat.avg_cash_collect || '0'}</td>
-                                                <td className="py-4 px-5 text-right text-xs font-black text-indigo-400">${stat.roi || '0'}</td>
+                                                <td className={`py-4 px-5 text-right text-xs font-black ${parseFloat(stat.roi || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>${stat.roi || '0'}</td>
                                                 </tr>
                                                     );
                                                 })}
