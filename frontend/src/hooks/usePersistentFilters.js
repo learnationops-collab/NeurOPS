@@ -24,9 +24,19 @@ const usePersistentFilters = (storageKey, initialFilters) => {
         }
     }, [filters, storageKey]);
 
-    const updateFilter = (key, value) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
+    const updateFilter = (arg1, arg2) => {
+        setFilters(prev => {
+            if (typeof arg1 === 'string') {
+                return { ...prev, [arg1]: arg2 };
+            }
+            if (typeof arg1 === 'function') {
+                const updated = arg1(prev);
+                return { ...prev, ...updated };
+            }
+            return { ...prev, ...arg1 };
+        });
     };
+
 
     const resetFilters = () => setFilters(initialFilters);
 
