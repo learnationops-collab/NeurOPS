@@ -457,7 +457,7 @@ const AdminDashboard = () => {
             </Button>
           </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-[1600px] mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-[98%] mx-auto">
             {/* LEFT COLUMN: HOTKEYS */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-4">
@@ -486,7 +486,7 @@ const AdminDashboard = () => {
 
         {/* SECTION 1: DAILY SUMMARY (Old Dashboard) */}
         <div className="absolute top-[50%] left-0 w-full h-[50%] p-8 sm:p-12 overflow-y-auto">
-          <div className="max-w-[1600px] mx-auto space-y-12">
+          <div className="max-w-[98%] mx-auto space-y-12">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
               <div className="space-y-2">
                 <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-lg">

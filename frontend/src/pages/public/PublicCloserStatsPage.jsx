@@ -173,7 +173,7 @@ const PublicCloserStatsPage = () => {
         <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden">
             <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-violet-900/10 to-transparent pointer-events-none" />
 
-            <div className="max-w-7xl mx-auto z-10 relative space-y-8">
+            <div className="max-w-[98%] mx-auto z-10 relative space-y-8">
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-slate-800/50">
                     <div className="space-y-3">

@@ -612,7 +612,7 @@ const PeriodSpendTab = ({ campaigns }) => {
 
             {/* Arbol de inputs de inversión (Campañas / Conjuntos) */}
             {campaigns.length === 0 ? (
-                <div className="text-center py-12 text-slate-500">
+                <div className="max-w-[98%] mx-auto space-y-12 animate-in fade-in duration-700">
                     <DollarSign size={48} className="mx-auto mb-4 opacity-30" />
                     <p className="font-medium">No hay campañas disponibles</p>
                 </div>
@@ -784,7 +784,7 @@ const AdManagementPage = () => {
         <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col items-center p-4 py-12 relative overflow-hidden">
             <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-emerald-900/15 to-transparent pointer-events-none" />
 
-            <div className="w-full max-w-5xl z-10 space-y-8">
+            <div className="w-full max-w-[98%] z-10 space-y-8">
                 {/* Header */}
                 <div className="text-center space-y-4 mb-2">
                     <p className="text-emerald-400 font-bold tracking-widest text-xs uppercase">NeurOPS High Performance</p>

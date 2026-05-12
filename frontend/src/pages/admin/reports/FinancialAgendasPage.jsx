@@ -87,7 +87,7 @@ const FinancialAgendasPage = () => {
     const sortedClosers = Object.entries(agendasByCloser).sort((a, b) => b[1] - a[1]);
 
     return (
-        <div className="p-8 pt-24 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
+        <div className="p-8 pt-24 max-w-[98%] mx-auto space-y-10 animate-in fade-in duration-700">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="space-y-1">
                     <h1 className="text-4xl font-black text-white italic tracking-tighter text-balance">Tablero de Agendas</h1>

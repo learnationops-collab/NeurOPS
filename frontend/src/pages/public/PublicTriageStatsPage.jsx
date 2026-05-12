@@ -152,7 +152,7 @@ const PublicTriageStatsPage = () => {
             <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-200/30 blur-[120px] rounded-full" />
             <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-teal-100/40 blur-[100px] rounded-full" />
 
-            <div className="w-full max-w-7xl mx-auto z-10 space-y-10">
+            <div className="w-full max-w-[98%] mx-auto z-10 space-y-10">
                 {/* Dashboard Header */}
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div className="space-y-1">

@@ -146,7 +146,7 @@ const PublicSalesAttributionPage = () => {
             <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-100 blur-[120px] rounded-full opacity-50" />
             <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-emerald-50 blur-[100px] rounded-full opacity-50" />
 
-            <div className="w-full max-w-7xl mx-auto z-10 relative space-y-12">
+            <div className="w-full max-w-[98%] mx-auto z-10 relative space-y-12">
                 
                 {/* Header Section */}
                 <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">

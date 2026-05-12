@@ -282,7 +282,7 @@ const MarketingPage = () => {
     }), { leads: 0, agendas: 0, ventas: 0, spend: 0 });
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
+        <div className="p-8 max-w-[98%] mx-auto space-y-8 animate-in fade-in duration-700">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black text-white italic tracking-tighter">Marketing Intelligence</h1>

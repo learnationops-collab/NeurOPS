@@ -264,7 +264,7 @@ const PublicSetterStatsPage = () => {
             <div className="absolute top-[-100px] right-[-100px] w-96 h-96 bg-indigo-100 rounded-full blur-[100px] opacity-50 pointer-events-none" />
             <div className="absolute bottom-[-100px] left-[-100px] w-96 h-96 bg-teal-50 rounded-full blur-[100px] opacity-50 pointer-events-none" />
 
-            <div className="max-w-7xl mx-auto z-10 relative space-y-8">
+            <div className="max-w-[98%] mx-auto z-10 relative space-y-8">
                 {/* TOP HEADER */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-8 border-b border-slate-200">
                     <div className="space-y-3">

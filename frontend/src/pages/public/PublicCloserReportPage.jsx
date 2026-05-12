@@ -318,7 +318,7 @@ const PublicCloserReportPage = () => {
             {/* Background */}
             <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-violet-900/20 to-transparent pointer-events-none" />
 
-            <div className="w-full max-w-7xl mx-auto z-10 space-y-8">
+            <div className="w-full max-w-[98%] mx-auto z-10 space-y-8">
                 {/* Header */}
                 <div className="text-center space-y-4 mb-2 relative">
                     <p className="text-violet-400 font-bold tracking-widest text-xs uppercase">NeurOPS High Performance</p>
