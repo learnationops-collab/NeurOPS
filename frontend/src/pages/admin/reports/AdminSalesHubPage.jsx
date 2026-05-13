@@ -22,6 +22,7 @@ const AdminSalesHubPage = () => {
                 >
                     Setters
                 </button>
+                {/* 
                  <button 
                     onClick={() => setTab('triage')} 
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'triage' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white'}`}
@@ -34,6 +35,7 @@ const AdminSalesHubPage = () => {
                 >
                     Workshop
                 </button>
+                */}
             </div>
             
             <div className="w-full">

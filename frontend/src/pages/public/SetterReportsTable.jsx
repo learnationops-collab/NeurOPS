@@ -128,11 +128,11 @@ const SetterReportsTable = ({ setters }) => {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* FILTERS */}
-            <div className="bg-white/80 border border-white p-6 rounded-[2rem] flex flex-wrap items-end gap-6 shadow-sm backdrop-blur-md">
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] flex flex-wrap items-end gap-6 shadow-sm">
                 <div className="flex flex-col gap-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Setter</label>
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Setter</label>
                     <select
-                        className="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500 min-w-[150px]"
+                        className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 min-w-[150px]"
                         value={filters.setter_id}
                         onChange={e => { setFilters({ ...filters, setter_id: e.target.value }); setPage(1); }}
                     >
@@ -142,9 +142,9 @@ const SetterReportsTable = ({ setters }) => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Periodo</label>
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
                     <select
-                        className="bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500 min-w-[150px]"
+                        className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 min-w-[150px]"
                         value={filters.time_preset}
                         onChange={e => setFilters({ ...filters, time_preset: e.target.value })}
                     >
@@ -157,10 +157,10 @@ const SetterReportsTable = ({ setters }) => {
 
                 {filters.time_preset === 'last_days' && (
                     <div className="flex flex-col gap-2 animate-in slide-in-from-left duration-300">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Días</label>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Días</label>
                         <input
                             type="number"
-                            className="w-16 bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500 transition-all font-black text-center"
+                            className="w-16 bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 transition-all font-black text-center"
                             value={filters.custom_days}
                             onChange={e => setFilters({ ...filters, custom_days: parseInt(e.target.value) || 0 })}
                         />
@@ -177,28 +177,28 @@ const SetterReportsTable = ({ setters }) => {
             </div>
 
             {/* TABLE */}
-            <div className="bg-white/80 border border-white rounded-[2.5rem] overflow-hidden shadow-xl backdrop-blur-md">
+            <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-xl">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[1200px]">
                         <thead>
-                            <tr className="bg-slate-50/50">
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Setter</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Entrantes</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Leads</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Op. Sub</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Op. Res</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Qual FU/R</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Pain FU/R</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Offer FU/R</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Link FU/R</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Agenda FU/R</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Qual Op</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Pain Op</th>
-                                <th className="p-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+                            <tr className="bg-slate-950/50">
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Setter</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Entrantes</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Leads</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Op. Sub</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Op. Res</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Qual FU/R</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Pain FU/R</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Offer FU/R</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Link FU/R</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Agenda FU/R</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Qual Op</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Pain Op</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-800">
                             {loading ? (
                                 <tr>
                                     <td colSpan="14" className="py-20 text-center">
@@ -211,9 +211,9 @@ const SetterReportsTable = ({ setters }) => {
                                     <td colSpan="14" className="py-20 text-center text-slate-500 font-bold italic">No se encontraron reportes</td>
                                 </tr>
                             ) : reports.map(r => (
-                                <tr key={r.id} className="hover:bg-indigo-50/30 transition-colors group">
-                                    <td className="p-4 text-[11px] font-black text-slate-700 tabular-nums">{r.date}</td>
-                                    <td className="p-4 text-xs font-bold text-slate-900 uppercase italic">{r.setter_name}</td>
+                                <tr key={r.id} className="hover:bg-indigo-500/5 transition-colors group">
+                                    <td className="p-4 text-[11px] font-black text-slate-400 tabular-nums">{r.date}</td>
+                                    <td className="p-4 text-xs font-bold text-white uppercase italic">{r.setter_name}</td>
 
                                     {/* MAPPING DYNAMICALLY FOR DISPLAY/EDIT */}
                                     {[
@@ -232,25 +232,25 @@ const SetterReportsTable = ({ setters }) => {
                                         <td key={col.f} className="p-4 text-center">
                                             {editingId === r.id ? (
                                                 <div className="flex flex-col gap-1 items-center">
-                                                    <input
-                                                        type="number"
-                                                        value={editForm[col.f]}
-                                                        onChange={e => setEditForm({ ...editForm, [col.f]: parseInt(e.target.value) || 0 })}
-                                                        className="w-12 bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] text-center font-black text-indigo-600 focus:border-indigo-500 outline-none"
-                                                    />
+                                                        <input
+                                                            type="number"
+                                                            value={editForm[col.f]}
+                                                            onChange={e => setEditForm({ ...editForm, [col.f]: parseInt(e.target.value) || 0 })}
+                                                            className="w-12 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-center font-black text-indigo-400 focus:border-indigo-500 outline-none"
+                                                        />
                                                     {col.fur && (
                                                         <input
                                                             type="number"
                                                             value={editForm[col.fur]}
                                                             onChange={e => setEditForm({ ...editForm, [col.fur]: parseInt(e.target.value) || 0 })}
-                                                            className="w-12 bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] text-center font-black text-rose-500 focus:border-rose-500 outline-none"
+                                                            className="w-12 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-center font-black text-rose-500 focus:border-rose-500 outline-none"
                                                         />
                                                     )}
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col items-center">
-                                                    <span className="text-xs font-black text-slate-900 tabular-nums">{r[col.f]}</span>
-                                                    {col.fur && <span className="text-[10px] font-bold text-slate-400 tabular-nums border-t border-slate-100 w-full mt-1 pt-1">{r[col.fur]}</span>}
+                                                    <span className="text-xs font-black text-white tabular-nums">{r[col.f]}</span>
+                                                    {col.fur && <span className="text-[10px] font-bold text-slate-500 border-t border-slate-800 w-full mt-1 pt-1 tabular-nums">{r[col.fur]}</span>}
                                                 </div>
                                             )}
                                         </td>
@@ -286,20 +286,20 @@ const SetterReportsTable = ({ setters }) => {
                 </div>
 
                 {/* PAGINATION */}
-                <div className="bg-slate-50/50 p-4 border-t border-slate-100 flex items-center justify-between">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Página {page} de {totalPages}</p>
+                <div className="bg-slate-950/50 p-4 border-t border-slate-800 flex items-center justify-between">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Página {page} de {totalPages}</p>
                     <div className="flex gap-2">
                         <button
                             disabled={page === 1}
                             onClick={() => setPage(p => p - 1)}
-                            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 shadow-sm"
+                            className="p-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 disabled:opacity-30 shadow-sm hover:text-white"
                         >
                             <ChevronLeft size={16} />
                         </button>
                         <button
                             disabled={page === totalPages}
                             onClick={() => setPage(p => p + 1)}
-                            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 shadow-sm"
+                            className="p-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 disabled:opacity-30 shadow-sm hover:text-white"
                         >
                             <ChevronRight size={16} />
                         </button>

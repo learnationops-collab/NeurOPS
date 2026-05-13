@@ -12,7 +12,7 @@ const EvolutionChart = ({ data, variables }) => {
 
     if (!data || !variables || data.length === 0) {
         return (
-            <div className="h-48 flex items-center justify-center text-slate-400 bg-white/50 rounded-3xl border border-dashed border-slate-200 uppercase text-[10px] font-black tracking-widest italic">
+            <div className="h-48 flex items-center justify-center text-slate-500 bg-slate-900 rounded-3xl border border-dashed border-slate-800 uppercase text-[10px] font-black tracking-widest italic">
                 Cargando historial de evolución...
             </div>
         );
@@ -48,7 +48,7 @@ const EvolutionChart = ({ data, variables }) => {
             <div className="w-full h-48">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                         <XAxis 
                             dataKey="date" 
                             fontSize={9} 
@@ -68,17 +68,17 @@ const EvolutionChart = ({ data, variables }) => {
                         />
                         <Tooltip
                             contentStyle={{ 
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-                                border: '1px solid #e2e8f0', 
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)', 
+                                border: '1px solid #1e293b', 
                                 borderRadius: '12px',
                                 fontSize: '10px',
                                 fontWeight: '900',
                                 textTransform: 'uppercase',
-                                color: '#1e293b'
+                                color: '#f8fafc'
                             }}
                             itemStyle={{ padding: '2px 0' }}
-                            labelStyle={{ color: '#64748b', marginBottom: '4px' }}
-                            cursor={{ fill: '#00000005' }}
+                            labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                            cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                         />
                         {variables.map(v => selectedVars.includes(v.key) && (
                             <Bar 

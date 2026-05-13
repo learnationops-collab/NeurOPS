@@ -108,17 +108,17 @@ const SetterComparisonView = ({ setters }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
 
                 {/* LADO A */}
-                <div className="bg-white/80 border border-white rounded-[2.5rem] p-8 space-y-6 shadow-xl backdrop-blur-md">
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 shadow-xl">
                     <div className="flex items-center gap-4 mb-4">
                         <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-black text-white shadow-lg shadow-indigo-600/30">A</div>
-                        <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tighter">{getDisplayTitle('A')}</h3>
+                        <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">{getDisplayTitle('A')}</h3>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Setter</label>
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Setter</label>
                             <select
-                                className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500 transition-all font-black"
+                                className="w-full bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 transition-all font-black"
                                 value={compA.setter_id}
                                 onChange={e => setCompA({ ...compA, setter_id: e.target.value })}
                             >
@@ -127,9 +127,9 @@ const SetterComparisonView = ({ setters }) => {
                             </select>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Periodo</label>
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
                             <select
-                                className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-indigo-500 transition-all font-black"
+                                className="w-full bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 transition-all font-black"
                                 value={compA.time_preset}
                                 onChange={e => updateCompPreset('A', e.target.value)}
                             >
@@ -144,10 +144,10 @@ const SetterComparisonView = ({ setters }) => {
 
                         {compA.time_preset === 'last_days' && (
                             <div className="space-y-1 col-span-2">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Número de Días</label>
+                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Número de Días</label>
                                 <input
                                     type="number"
-                                    className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 font-black outline-none focus:border-indigo-500"
+                                    className="w-full bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white font-black outline-none focus:border-indigo-500"
                                     value={compA.custom_days}
                                     onChange={e => updateCompPreset('A', 'last_days', e.target.value)}
                                 />
@@ -157,19 +157,19 @@ const SetterComparisonView = ({ setters }) => {
                         {compA.time_preset === 'custom' && (
                             <>
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Desde</label>
+                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Desde</label>
                                     <input
                                         type="date"
-                                        className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 font-black outline-none focus:border-indigo-500"
+                                        className="w-full bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white font-black outline-none focus:border-indigo-500"
                                         value={compA.start_date}
                                         onChange={e => setCompA({ ...compA, start_date: e.target.value })}
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Hasta</label>
+                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Hasta</label>
                                     <input
                                         type="date"
-                                        className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 font-black outline-none focus:border-indigo-500"
+                                        className="w-full bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white font-black outline-none focus:border-indigo-500"
                                         value={compA.end_date}
                                         onChange={e => setCompA({ ...compA, end_date: e.target.value })}
                                     />
@@ -186,17 +186,17 @@ const SetterComparisonView = ({ setters }) => {
                 </div>
 
                 {/* LADO B */}
-                <div className="bg-white/80 border border-white rounded-[2.5rem] p-8 space-y-6 shadow-xl backdrop-blur-md">
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 shadow-xl">
                     <div className="flex items-center gap-4 mb-4">
                         <div className="w-10 h-10 rounded-full bg-fuchsia-600 flex items-center justify-center font-black text-white shadow-lg shadow-fuchsia-600/30">B</div>
-                        <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tighter">{getDisplayTitle('B')}</h3>
+                        <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">{getDisplayTitle('B')}</h3>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Setter</label>
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Setter</label>
                             <select
-                                className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-fuchsia-500 transition-all font-black"
+                                className="w-full bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-fuchsia-500 transition-all font-black"
                                 value={compB.setter_id}
                                 onChange={e => setCompB({ ...compB, setter_id: e.target.value })}
                             >
@@ -205,9 +205,9 @@ const SetterComparisonView = ({ setters }) => {
                             </select>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Periodo</label>
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
                             <select
-                                className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 outline-none focus:border-fuchsia-500 transition-all font-black"
+                                className="w-full bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-fuchsia-500 transition-all font-black"
                                 value={compB.time_preset}
                                 onChange={e => updateCompPreset('B', e.target.value)}
                             >
@@ -222,10 +222,10 @@ const SetterComparisonView = ({ setters }) => {
 
                         {compB.time_preset === 'last_days' && (
                             <div className="space-y-1 col-span-2">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Número de Días</label>
+                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Número de Días</label>
                                 <input
                                     type="number"
-                                    className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 font-black outline-none focus:border-fuchsia-500"
+                                    className="w-full bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white font-black outline-none focus:border-fuchsia-500"
                                     value={compB.custom_days}
                                     onChange={e => updateCompPreset('B', 'last_days', e.target.value)}
                                 />
@@ -235,19 +235,19 @@ const SetterComparisonView = ({ setters }) => {
                         {compB.time_preset === 'custom' && (
                             <>
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Desde</label>
+                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Desde</label>
                                     <input
                                         type="date"
-                                        className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 font-black outline-none focus:border-fuchsia-500"
+                                        className="w-full bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white font-black outline-none focus:border-fuchsia-500"
                                         value={compB.start_date}
                                         onChange={e => setCompB({ ...compB, start_date: e.target.value })}
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Hasta</label>
+                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Hasta</label>
                                     <input
                                         type="date"
-                                        className="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl px-4 py-2 text-slate-700 font-black outline-none focus:border-fuchsia-500"
+                                        className="w-full bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white font-black outline-none focus:border-fuchsia-500"
                                         value={compB.end_date}
                                         onChange={e => setCompB({ ...compB, end_date: e.target.value })}
                                     />
@@ -269,17 +269,17 @@ const SetterComparisonView = ({ setters }) => {
                 <div className="grid grid-cols-1 gap-8 animate-in slide-in-from-bottom duration-700">
 
                     {/* TABLE COMPARISON */}
-                    <div className="bg-white/80 border border-white rounded-[2.5rem] overflow-hidden shadow-xl backdrop-blur-md">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-xl">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50/50">
-                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Métrica Analizada</th>
-                                    <th className="p-6 text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] text-center">Valor A</th>
-                                    <th className="p-6 text-[10px] font-black text-fuchsia-600 uppercase tracking-[0.2em] text-center">Valor B</th>
-                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Diferencia</th>
+                                <tr className="bg-slate-950/50">
+                                    <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Métrica Analizada</th>
+                                    <th className="p-6 text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] text-center">Valor A</th>
+                                    <th className="p-6 text-[10px] font-black text-fuchsia-400 uppercase tracking-[0.2em] text-center">Valor B</th>
+                                    <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">Diferencia</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-800">
                                 {[
                                     { label: 'Entrantes', key: 'entrantes', category: 'totals' },
                                     { label: 'Leads Clasificados', key: 'leads', category: 'totals' },
@@ -307,17 +307,17 @@ const SetterComparisonView = ({ setters }) => {
                                     const isBetter = diff >= 0;
 
                                     return (
-                                        <tr key={idx} className="hover:bg-indigo-50/20 transition-colors">
-                                            <td className="p-6 font-bold text-slate-700">
+                                        <tr key={idx} className="hover:bg-indigo-500/5 transition-colors">
+                                            <td className="p-6 font-bold text-slate-300">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-sm" />
                                                     <span className="text-xs uppercase font-black tracking-wider">{row.label}</span>
                                                 </div>
                                             </td>
-                                            <td className="p-6 text-center font-black text-slate-900 text-lg italic tabular-nums">
+                                            <td className="p-6 text-center font-black text-white text-lg italic tabular-nums">
                                                 {valA}{row.isPct ? '%' : ''}
                                             </td>
-                                            <td className="p-6 text-center font-black text-slate-900 text-lg italic tabular-nums">
+                                            <td className="p-6 text-center font-black text-white text-lg italic tabular-nums">
                                                 {valB}{row.isPct ? '%' : ''}
                                             </td>
                                             <td className="p-6">
@@ -337,8 +337,8 @@ const SetterComparisonView = ({ setters }) => {
 
                     {/* COMPARATIVE FUNNELS */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="bg-white/80 border border-white rounded-[2.5rem] p-8 shadow-xl backdrop-blur-md">
-                            <h4 className="text-sm font-black text-indigo-600 uppercase tracking-widest mb-8 text-center italic">Embudo A - Proceso</h4>
+                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-xl">
+                            <h4 className="text-sm font-black text-indigo-400 uppercase tracking-widest mb-8 text-center italic">Embudo A - Proceso</h4>
                             <FunnelChart data={[
                                 { name: 'Qual', value: compA.data.totals.funnel_qualification, fill: '#6366f1' },
                                 { name: 'Pain', value: compA.data.totals.funnel_pain, fill: '#818cf8' },
@@ -347,8 +347,8 @@ const SetterComparisonView = ({ setters }) => {
                                 { name: 'Agenda', value: compA.data.totals.funnel_agenda, fill: '#4f46e5' }
                             ]} />
                         </div>
-                        <div className="bg-white/80 border border-white rounded-[2.5rem] p-8 shadow-xl backdrop-blur-md">
-                            <h4 className="text-sm font-black text-fuchsia-600 uppercase tracking-widest mb-8 text-center italic">Embudo B - Proceso</h4>
+                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-xl">
+                            <h4 className="text-sm font-black text-fuchsia-400 uppercase tracking-widest mb-8 text-center italic">Embudo B - Proceso</h4>
                             <FunnelChart data={[
                                 { name: 'Qual', value: compB.data.totals.funnel_qualification, fill: '#be185d' },
                                 { name: 'Pain', value: compB.data.totals.funnel_pain, fill: '#db2777' },
@@ -361,9 +361,9 @@ const SetterComparisonView = ({ setters }) => {
 
                 </div>
             ) : (
-                <div className="py-32 flex flex-col items-center justify-center bg-white/40 border border-dashed border-slate-200 rounded-[3rem] opacity-50">
-                    <ArrowRightLeft size={48} className="text-slate-300 mb-4" />
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs italic">Carga dos periodos para comparar rendimiento side-by-side</p>
+                <div className="py-32 flex flex-col items-center justify-center bg-slate-900/50 border border-dashed border-slate-800 rounded-[3rem] opacity-50">
+                    <ArrowRightLeft size={48} className="text-slate-700 mb-4" />
+                    <p className="text-slate-500 font-bold uppercase tracking-widest text-xs italic">Carga dos periodos para comparar rendimiento side-by-side</p>
                 </div>
             )}
         </div>

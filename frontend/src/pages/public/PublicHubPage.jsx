@@ -66,6 +66,7 @@ const PublicHubPage = () => {
         { label: "Ver Estadísticas", to: "/estadisticas-closers" }
       ]
     },
+    /*
     {
       title: "Equipo Triage",
       description: "Seguimiento de agendas nuevas, asistencias y cancelaciones.",
@@ -87,6 +88,7 @@ const PublicHubPage = () => {
         { label: "Ver Rendimiento", to: "/admin/workshop", primary: true }
       ]
     },
+    */
     {
       title: "Marketing & Ads",
       description: "Gestión de campañas, anuncios y KPIs de tráfico.",
