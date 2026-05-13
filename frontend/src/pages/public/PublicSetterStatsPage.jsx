@@ -17,6 +17,7 @@ import SetterReportsTable from './SetterReportsTable';
 import SetterComparisonView from './SetterComparisonView';
 import ConversationalStatsTab from './ConversationalStatsTab';
 import LeadUnifiedKPI from '../../components/shared/LeadUnifiedKPI';
+import ConfigurableStatCard from '../../components/shared/ConfigurableStatCard';
 
 const PublicSetterStatsPage = () => {
     const auth = useAuth();
@@ -408,6 +409,35 @@ const PublicSetterStatsPage = () => {
                                 {/* GRID PRINCIPAL */}
                                 <div className="space-y-6">
                                     <LeadUnifiedKPI stats={stats} />
+                                    
+                                    {/* Grupo de KPIs Configurables */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <ConfigurableStatCard 
+                                            id="qual_rate_base"
+                                            title="Leads Cualificados" 
+                                            value={stats.totals.funnel_qualification} 
+                                            percentage={div(stats.totals.funnel_qualification, stats.totals.entrantes)}
+                                            icon={Target}
+                                            tooltipInfo="Porcentaje de leads que entraron en etapa de cualificación sobre el total de entrantes."
+                                        />
+                                        <ConfigurableStatCard 
+                                            id="pain_evolution"
+                                            title="Pasaron a Dolor" 
+                                            value={stats.totals.funnel_pain} 
+                                            percentage={div(stats.totals.funnel_pain, stats.totals.funnel_qualification)}
+                                            icon={TrendingUp}
+                                            tooltipInfo="Porcentaje de leads cualificados que avanzaron a la etapa de Dolor."
+                                        />
+                                        <ConfigurableStatCard 
+                                            id="setter_opening_rate"
+                                            title="Tasa Apertura Setting" 
+                                            value={stats.totals.funnel_qualification} 
+                                            percentage={div(stats.totals.funnel_qualification, (stats.totals.entrantes - stats.totals.not_lead))}
+                                            icon={MousePointer2}
+                                            tooltipInfo="Eficacia del setter abriendo conversaciones. Cálculo: (Cualificación / (Entrantes - No Leads))."
+                                        />
+                                    </div>
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" tooltipInfo="Suma total de leads movidos a la etapa de Agenda." />
                                         <StatCard title="FU Response" value={`${stats.percentages.rates.total_fur}%`} icon={RefreshCw} colorClass="text-rose-500" tooltipInfo="Tasa de respuesta a todos los seguimientos (Follow Ups) realizados en cualquier etapa. Cálculo: (Total FU Respondidos / Total FU Enviados)." />
