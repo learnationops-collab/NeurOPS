@@ -16,8 +16,8 @@ const initialColumns = [
     { id: 'cpa', label: 'CPA', visible: true, align: 'right', color: 'text-emerald-400' },
     { id: 'ventas', label: 'Ventas', visible: true, align: 'center', color: 'text-amber-400' },
     { id: 'cpv', label: 'CPV', visible: true, align: 'right', color: 'text-amber-400' },
-    { id: 'avg_cash_collect', label: 'Cash Col.', visible: true, align: 'right', color: 'text-emerald-400' },
-    { id: 'roi', label: 'ROI', visible: true, align: 'right', color: 'text-indigo-400' },
+    { id: 'cash_collect', label: 'Cash Col.', visible: true, align: 'right', color: 'text-emerald-400' },
+    { id: 'roas', label: 'ROAS', visible: true, align: 'right', color: 'text-indigo-400' },
 ];
 
 
@@ -30,7 +30,7 @@ const AdDashboardTab = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState('gallery'); // 'gallery' | 'list'
     
-    const { filters: columns, updateFilter: setColumns } = usePersistentFilters('ad_dashboard_columns_v2', initialColumns);
+    const { filters: columns, updateFilter: setColumns } = usePersistentFilters('ad_dashboard_columns_v3', initialColumns);
     const visibleColumns = columns.filter(c => c.visible);
     
     // Filtros de periodo
@@ -225,23 +225,20 @@ const AdDashboardTab = () => {
                                             acc.agendas += (curr.agendas || 0);
                                             acc.ventas += (curr.ventas || 0);
                                             
-                                            // Cash collect average accumulator
-                                            if (curr.avg_cash_collect > 0) {
-                                                acc.cc_sum += curr.avg_cash_collect;
-                                                acc.cc_count += 1;
-                                            }
+                                            // Cash collect sum
+                                            acc.cash_collect += (curr.cash_collect || 0);
 
                                             const qual = Math.round(((curr.qualified_percentage || 0) / 100) * (curr.total_leads || 0));
                                             acc.total_qualified += qual;
                                             return acc;
-                                        }, { spend: 0, total_leads: 0, agendas: 0, ventas: 0, total_qualified: 0, cc_sum: 0, cc_count: 0 });
+                                        }, { spend: 0, total_leads: 0, agendas: 0, ventas: 0, total_qualified: 0, cash_collect: 0 });
 
                                         const totalCPL = totals.total_leads > 0 ? (totals.spend / totals.total_leads).toFixed(2) : '0';
                                         const totalCPQL = totals.total_qualified > 0 ? (totals.spend / totals.total_qualified).toFixed(2) : '0';
                                         const totalCPA = totals.agendas > 0 ? (totals.spend / totals.agendas).toFixed(2) : '0';
                                         const totalCPV = totals.ventas > 0 ? (totals.spend / totals.ventas).toFixed(2) : '0';
-                                        const totalAvgCC = totals.cc_count > 0 ? (totals.cc_sum / totals.cc_count).toFixed(2) : '0';
-                                        const totalROI = (parseFloat(totalAvgCC) - parseFloat(totalCPV)).toFixed(2);
+                                        const totalCashCollect = totals.cash_collect.toFixed(2);
+                                        const totalROAS = totals.spend > 0 ? (totals.cash_collect / totals.spend).toFixed(2) : '0';
                                         const totalQualPercentage = totals.total_leads > 0 ? Math.round((totals.total_qualified / totals.total_leads) * 100) : 0;
 
                                         let qualColor = "text-slate-400";
@@ -266,8 +263,8 @@ const AdDashboardTab = () => {
                                                         else if (col.id === 'cpa') { content = `$${totalCPA}`; color = "text-emerald-400"; }
                                                         else if (col.id === 'ventas') content = totals.ventas;
                                                         else if (col.id === 'cpv') { content = `$${totalCPV}`; color = "text-amber-400"; }
-                                                        else if (col.id === 'avg_cash_collect') { content = `$${totalAvgCC}`; color = "text-emerald-400"; }
-                                                        else if (col.id === 'roi') { content = `$${totalROI}`; color = parseFloat(totalROI) >= 0 ? 'text-emerald-400' : 'text-red-400'; }
+                                                        else if (col.id === 'cash_collect') { content = `$${totalCashCollect}`; color = "text-emerald-400"; }
+                                                        else if (col.id === 'roas') { content = `${totalROAS}x`; color = parseFloat(totalROAS) >= 1 ? 'text-emerald-400' : 'text-red-400'; }
 
                                                         return (
                                                             <td key={col.id} className={`py-4 px-5 text-xs font-black ${color} ${
@@ -318,8 +315,8 @@ const AdDashboardTab = () => {
                                                                 else if (col.id === 'cpa') { content = `$${stat.cpa || '0'}`; color = "text-emerald-400"; }
                                                                 else if (col.id === 'ventas') content = stat.ventas || 0;
                                                                 else if (col.id === 'cpv') { content = `$${stat.cpv || '0'}`; color = "text-amber-400"; }
-                                                                else if (col.id === 'avg_cash_collect') { content = `$${stat.avg_cash_collect || '0'}`; color = "text-emerald-400"; }
-                                                                else if (col.id === 'roi') { content = `$${stat.roi || '0'}`; color = parseFloat(stat.roi || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'; }
+                                                                else if (col.id === 'cash_collect') { content = `$${stat.cash_collect || '0'}`; color = "text-emerald-400"; }
+                                                                else if (col.id === 'roas') { content = `${stat.roas || '0'}x`; color = parseFloat(stat.roas || 0) >= 1 ? 'text-emerald-400' : 'text-red-400'; }
 
                                                                 return (
                                                                     <td key={col.id} className={`py-4 px-5 text-xs font-black ${color} ${
@@ -509,6 +506,20 @@ const AdDashboardTab = () => {
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            {/* Cash Collect & ROAS */}
+                                            {(stat.cash_collect > 0 || stat.roas > 0) && (
+                                                <div className="mt-3 pt-3 border-t border-slate-800/50 grid grid-cols-2 gap-2">
+                                                    <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-2 text-center">
+                                                        <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-0.5">Cash Col.</p>
+                                                        <p className="text-xs font-black text-emerald-400">${(stat.cash_collect || 0).toLocaleString()}</p>
+                                                    </div>
+                                                    <div className={`border rounded-xl p-2 text-center ${parseFloat(stat.roas || 0) >= 1 ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+                                                        <p className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${parseFloat(stat.roas || 0) >= 1 ? 'text-indigo-400' : 'text-red-400'}`}>ROAS</p>
+                                                        <p className={`text-xs font-black ${parseFloat(stat.roas || 0) >= 1 ? 'text-indigo-400' : 'text-red-400'}`}>{stat.roas || '0'}x</p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );

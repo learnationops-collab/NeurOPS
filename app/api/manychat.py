@@ -659,24 +659,44 @@ def get_ad_dashboard_stats():
         matched_lead = ManychatLead.query.filter(func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_n).first()
         if not matched_lead: continue
         
-        closest = LeadAnswer.query.filter(LeadAnswer.lead_id == matched_lead.id, LeadAnswer.ad_id.in_(ad_ids), LeadAnswer.created_at <= sale.date)\
+        # LeadAnswer más reciente ANTERIOR a la venta (Atribución global, no limitada a ad_ids del periodo)
+        closest = LeadAnswer.query.filter(LeadAnswer.lead_id == matched_lead.id, LeadAnswer.ad_id != None, LeadAnswer.created_at <= sale.date)\
                  .order_by(LeadAnswer.created_at.desc()).first()
         if closest: 
             ventas_por_ad[closest.ad_id] = ventas_por_ad.get(closest.ad_id, 0) + 1
             
-            # Cash Collect: Primer pago o pago completo (> 100)
-            if sale.monto and float(sale.monto) > 100:
+            # Cash Collect: Suma de todos los pagos atribuidos en el periodo
+            if sale.monto and float(sale.monto) > 0:
                 if closest.ad_id not in cash_collect_data:
-                    cash_collect_data[closest.ad_id] = {'total': 0, 'count': 0}
-                cash_collect_data[closest.ad_id]['total'] += float(sale.monto)
-                cash_collect_data[closest.ad_id]['count'] += 1
+                    cash_collect_data[closest.ad_id] = 0
+                cash_collect_data[closest.ad_id] += float(sale.monto)
 
-    # 4. RESULTADO
+    # 4. CONSOLIDAR TODOS LOS ANUNCIOS (con leads o con ventas)
+    all_active_ad_ids = set(ad_ids) | set(ventas_por_ad.keys())
+    
+    # Asegurar que tenemos todos los modelos de anuncios necesarios
+    missing_ad_ids = [aid for aid in all_active_ad_ids if aid not in ads_map]
+    if missing_ad_ids:
+        missing_ads = Ad.query.filter(Ad.id.in_(missing_ad_ids)).all()
+        for a in missing_ads:
+            ads_map[a.id] = a
+            # Actualizar también mapas de jerarquía si es necesario
+            if a.ad_set_id not in adset_map:
+                s = AdSet.query.get(a.ad_set_id)
+                if s: 
+                    adset_map[s.id] = s
+                    if s.campaign_id not in campaign_map_by_id:
+                        c = Campaign.query.get(s.campaign_id)
+                        if c: campaign_map_by_id[c.id] = c
+
+    # Mapeo de leads para facilitar el loop
+    lead_stats_map = {s.ad_id: s for s in stats}
+
     result = []
-    for s in stats:
-        ad_id = s.ad_id
-        total = s.total_leads
-        qual = int(s.qualified_leads or 0)
+    for ad_id in all_active_ad_ids:
+        s_data = lead_stats_map.get(ad_id)
+        total = s_data.total_leads if s_data else 0
+        qual = int(s_data.qualified_leads or 0) if s_data else 0
         
         ad = ads_map.get(ad_id)
         ad_name = ad.name if ad else f"ID: {ad_id}"
@@ -696,15 +716,14 @@ def get_ad_dashboard_stats():
         
         v_count = ventas_por_ad.get(ad_id, 0)
         
-        # Promedio Cash Collect
-        cc_data = cash_collect_data.get(ad_id, {'total': 0, 'count': 0})
-        avg_cash_collect = round(cc_data['total'] / cc_data['count'], 2) if cc_data['count'] > 0 else 0
+        # Total Cash Collect
+        cash_collect = round(cash_collect_data.get(ad_id, 0), 2)
         
         # CPV
         cpv = round(spend / v_count, 2) if v_count > 0 else 0
         
-        # ROI (Retorno de inversión: Diferencia entre Cash Collect y CPV)
-        roi = round(avg_cash_collect - cpv, 2)
+        # ROAS (Cash Collect / Inversión)
+        roas = round(cash_collect / spend, 2) if spend > 0 else 0
 
         result.append({
             'ad_id': ad_id,
@@ -720,8 +739,8 @@ def get_ad_dashboard_stats():
             'cpql': round(spend / qual, 2) if qual > 0 else 0,
             'cpa': round(spend / ag_count, 2) if ag_count > 0 else 0,
             'cpv': cpv,
-            'avg_cash_collect': avg_cash_collect,
-            'roi': roi
+            'cash_collect': cash_collect,
+            'roas': roas
         })
 
 
@@ -844,6 +863,7 @@ def get_ad_details(ad_id):
     ag_count = 0
     setter_breakdown = {}
     v_count = 0
+    cash_collect = 0
 
     if ad_igs:
         # Una mejor forma es buscar por una lista de posibles valores (con y sin @)
@@ -880,6 +900,8 @@ def get_ad_details(ad_id):
                 has_lead = LeadAnswer.query.filter(LeadAnswer.lead_id == matched_lead.id, LeadAnswer.ad_id == ad_id, LeadAnswer.created_at <= sale.date).first()
                 if has_lead:
                     v_count += 1
+                    if sale.monto:
+                        cash_collect += float(sale.monto)
 
     # Analysis of Conversational Options & Questions
     options_query = db.session.query(LeadAnswer.id_option, func.count(LeadAnswer.id)).filter(
@@ -926,6 +948,8 @@ def get_ad_details(ad_id):
         'cpql': cpql,
         'cpa': round(total_spend / ag_count, 2) if ag_count > 0 else 0,
         'cpv': round(total_spend / v_count, 2) if v_count > 0 else 0,
+        'cash_collect': round(cash_collect, 2),
+        'roas': round(cash_collect / total_spend, 2) if total_spend > 0 else 0,
         'option_breakdown': option_breakdown,
         'question_breakdown': question_breakdown,
         'recent_leads': leads_list,

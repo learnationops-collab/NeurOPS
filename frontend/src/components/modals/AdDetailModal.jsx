@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Users, TrendingUp, DollarSign, Calendar, Instagram, Loader2, CalendarDays, HelpCircle, MessageCircle } from 'lucide-react';
+import { X, Users, TrendingUp, DollarSign, Calendar, Instagram, Loader2, CalendarDays, HelpCircle, MessageCircle, Activity } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
@@ -186,6 +186,20 @@ const AdDetailModal = ({ adId, isOpen, onClose }) => {
                                     icon={<DollarSign className="text-violet-400" size={14} />}
                                     color="violet"
                                     description="Gasto total reportado en la plataforma de anuncios para este periodo."
+                                />
+                                <StatCard 
+                                    label="Cash Collect" 
+                                    value={`$${(details.cash_collect || 0).toLocaleString()}`} 
+                                    icon={<DollarSign className="text-emerald-400" size={14} />}
+                                    color="emerald"
+                                    description="Total de ingresos (pagos) atribuidos a este anuncio en este periodo."
+                                />
+                                <StatCard 
+                                    label="ROAS" 
+                                    value={`${details.roas || 0}x`} 
+                                    icon={<Activity className="text-indigo-400" size={14} />}
+                                    color="indigo"
+                                    description="Retorno de Inversión Publicitaria (Cash Collect / Inversión)."
                                 />
                             </div>
 
