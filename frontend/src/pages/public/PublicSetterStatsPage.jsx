@@ -410,37 +410,98 @@ const PublicSetterStatsPage = () => {
                                 <div className="space-y-6">
                                     <LeadUnifiedKPI stats={stats} />
                                     
-                                    {/* Grupo de KPIs Configurables */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <ConfigurableStatCard 
-                                            id="qual_rate_base"
-                                            title="Leads Cualificados" 
-                                            value={stats.totals.funnel_qualification} 
-                                            percentage={div(stats.totals.funnel_qualification, stats.totals.entrantes)}
-                                            icon={Target}
-                                            tooltipInfo="Porcentaje de leads que entraron en etapa de cualificación sobre el total de entrantes."
-                                        />
-                                        <ConfigurableStatCard 
-                                            id="pain_evolution"
-                                            title="Pasaron a Dolor" 
-                                            value={stats.totals.funnel_pain} 
-                                            percentage={div(stats.totals.funnel_pain, stats.totals.funnel_qualification)}
-                                            icon={TrendingUp}
-                                            tooltipInfo="Porcentaje de leads cualificados que avanzaron a la etapa de Dolor."
-                                        />
-                                        <ConfigurableStatCard 
-                                            id="setter_opening_rate"
-                                            title="Tasa Apertura Setting" 
-                                            value={stats.totals.funnel_qualification} 
-                                            percentage={div(stats.totals.funnel_qualification, (stats.totals.entrantes - stats.totals.not_lead))}
-                                            icon={MousePointer2}
-                                            tooltipInfo="Eficacia del setter abriendo conversaciones. Cálculo: (Cualificación / (Entrantes - No Leads))."
-                                        />
+                                    {/* SECCIÓN: DESCUBRIMIENTO Y CALIDAD */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3 px-4">
+                                            <div className="h-5 w-1.5 bg-indigo-500 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+                                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] italic">Lead Discovery & Quality</h2>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <ConfigurableStatCard 
+                                                id="qual_rate_base"
+                                                title="Leads Cualificados" 
+                                                value={stats.totals.funnel_qualification} 
+                                                percentage={div(stats.totals.funnel_qualification, stats.totals.entrantes)}
+                                                icon={Target}
+                                                tooltipInfo="Porcentaje de leads que entraron en etapa de cualificación sobre el total de entrantes."
+                                            />
+                                            <ConfigurableStatCard 
+                                                id="pain_evolution"
+                                                title="Pasaron a Dolor" 
+                                                value={stats.totals.funnel_pain} 
+                                                percentage={div(stats.totals.funnel_pain, stats.totals.funnel_qualification)}
+                                                icon={TrendingUp}
+                                                tooltipInfo="Porcentaje de leads cualificados que avanzaron a la etapa de Dolor."
+                                            />
+                                            <ConfigurableStatCard 
+                                                id="setter_opening_rate"
+                                                title="Tasa Apertura Setting" 
+                                                value={stats.totals.funnel_qualification} 
+                                                percentage={div(stats.totals.funnel_qualification, (stats.totals.entrantes - stats.totals.not_lead))}
+                                                icon={MousePointer2}
+                                                tooltipInfo="Eficacia del setter abriendo conversaciones. Cálculo: (Cualificación / (Entrantes - No Leads))."
+                                            />
+                                        </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" tooltipInfo="Suma total de leads movidos a la etapa de Agenda." />
-                                        <StatCard title="FU Response" value={`${stats.percentages.rates.total_fur}%`} icon={RefreshCw} colorClass="text-rose-500" tooltipInfo="Tasa de respuesta a todos los seguimientos (Follow Ups) realizados en cualquier etapa. Cálculo: (Total FU Respondidos / Total FU Enviados)." />
+                                    {/* SECCIÓN: ENGAGEMENT CONVERSACIONAL */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3 px-4">
+                                            <div className="h-5 w-1.5 bg-fuchsia-500 rounded-full shadow-[0_0_10px_rgba(217,70,239,0.5)]" />
+                                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] italic">Conversational Engagement</h2>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <ConfigurableStatCard 
+                                                id="opening_resp_qual"
+                                                title="Resp. Opening (Qual)" 
+                                                value={`${stats.totals.qualification_opening_responded}/${stats.totals.qualification_opening_submitted}`}
+                                                percentage={stats.percentages.rates.qualification_opening_rate}
+                                                icon={MessageSquare}
+                                                tooltipInfo="Tasa de respuesta a mensajes de apertura en la etapa de Cualificación."
+                                            />
+                                            <ConfigurableStatCard 
+                                                id="opening_resp_pain"
+                                                title="Resp. Opening (Dolor)" 
+                                                value={`${stats.totals.pain_opening_responded}/${stats.totals.pain_opening_submitted}`}
+                                                percentage={stats.percentages.rates.pain_opening_rate}
+                                                icon={MessageSquare}
+                                                tooltipInfo="Tasa de respuesta a mensajes de apertura en la etapa de Dolor."
+                                            />
+                                            <ConfigurableStatCard 
+                                                id="opening_resp_total"
+                                                title="Resp. Opening (Total)" 
+                                                value={`${stats.totals.opening_responded}/${stats.totals.opening_submitted}`}
+                                                percentage={stats.percentages.rates.opening_response}
+                                                icon={Layers}
+                                                tooltipInfo="Tasa de respuesta global a todos los mensajes de apertura enviados."
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* SECCIÓN: RESULTADOS FINALES Y SEGUIMIENTO */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3 px-4">
+                                            <div className="h-5 w-1.5 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] italic">Final Outcomes & Follow-up</h2>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <ConfigurableStatCard 
+                                                id="final_agendas"
+                                                title="Agendas Generadas" 
+                                                value={stats.totals.funnel_agenda} 
+                                                percentage={div(stats.totals.funnel_agenda, stats.totals.entrantes)}
+                                                icon={CalendarDays}
+                                                tooltipInfo="Cantidad total de citas agendadas y su tasa de conversión sobre el total de entrantes."
+                                            />
+                                            <ConfigurableStatCard 
+                                                id="total_fu_response"
+                                                title="FU Response Rate" 
+                                                value={stats.totals.total_fur}
+                                                percentage={stats.percentages.rates.total_fur}
+                                                icon={RefreshCw}
+                                                tooltipInfo="Tasa de respuesta a todos los seguimientos realizados."
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
