@@ -412,97 +412,136 @@ const PublicSetterStatsPage = () => {
                                 <div className="space-y-6">
                                     <LeadUnifiedKPI stats={stats} />
                                     
-                                    {/* SECCIÓN: DESCUBRIMIENTO Y CALIDAD */}
+                                    {/* SECCIÓN 1: DESCUBRIMIENTO Y CALIDAD (FILA SUPERIOR - RESUMEN) */}
                                     <div className="space-y-6">
-                                        <div className="flex items-center gap-3 px-4">
-                                            <div className="h-5 w-1.5 bg-indigo-500 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
-                                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] italic">Lead Discovery & Quality</h2>
+                                        <div className="flex items-center gap-4 px-2">
+                                            <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 shadow-inner">
+                                                <Target size={18} />
+                                            </div>
+                                            <h2 className="text-xl font-bold text-white tracking-tight">Discovery & Lead Quality</h2>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <ConfigurableStatCard 
                                                 id="qual_rate_base"
+                                                variant="summary"
+                                                accentColor="#8B5CF6"
                                                 title="Leads Cualificados" 
                                                 value={stats.totals.funnel_qualification} 
                                                 percentage={div(stats.totals.funnel_qualification, stats.totals.entrantes)}
+                                                subValue={`${div(stats.totals.funnel_qualification, stats.totals.entrantes)}% de entrantes`}
                                                 icon={Target}
-                                                tooltipInfo="Porcentaje de leads que entraron en etapa de cualificación sobre el total de entrantes."
+                                                tooltipInfo="Cantidad de leads que superaron el filtro inicial de cualificación."
                                             />
                                             <ConfigurableStatCard 
                                                 id="pain_evolution"
+                                                variant="summary"
+                                                accentColor="#8B5CF6"
                                                 title="Pasaron a Dolor" 
                                                 value={stats.totals.funnel_pain} 
                                                 percentage={div(stats.totals.funnel_pain, stats.totals.funnel_qualification)}
+                                                subValue={`${div(stats.totals.funnel_pain, stats.totals.funnel_qualification)}% de cualificados`}
                                                 icon={TrendingUp}
-                                                tooltipInfo="Porcentaje de leads cualificados que avanzaron a la etapa de Dolor."
+                                                tooltipInfo="Leads que avanzaron a la etapa donde se identifica el punto de dolor."
                                             />
                                             <ConfigurableStatCard 
                                                 id="setter_opening_rate"
-                                                title="Tasa Apertura Setting" 
-                                                value={stats.totals.funnel_qualification} 
-                                                percentage={div(stats.totals.funnel_qualification, (stats.totals.entrantes - stats.totals.not_lead))}
+                                                variant="summary"
+                                                accentColor="#8B5CF6"
+                                                title="Tasa de Apertura" 
+                                                value={stats.totals.opening_submitted} 
+                                                percentage={div(stats.totals.opening_submitted, (stats.totals.entrantes - stats.totals.not_lead))}
+                                                subValue={`${div(stats.totals.opening_submitted, (stats.totals.entrantes - stats.totals.not_lead))}% de leads reales`}
                                                 icon={MousePointer2}
-                                                tooltipInfo="Eficacia del setter abriendo conversaciones. Cálculo: (Cualificación / (Entrantes - No Leads))."
+                                                tooltipInfo="Calcula cuántos leads contactó el setter del total de leads recibidos (excluyendo descartados automáticos por ManyChat). Fórmula: Aperturas / (Entrantes - No Leads)."
                                             />
                                         </div>
                                     </div>
 
-                                    {/* SECCIÓN: ENGAGEMENT CONVERSACIONAL */}
+                                    {/* SECCIÓN 2: ENGAGEMENT CONVERSACIONAL (FILA MEDIA - ANÁLISIS) */}
                                     <div className="space-y-6">
-                                        <div className="flex items-center gap-3 px-4">
-                                            <div className="h-5 w-1.5 bg-fuchsia-500 rounded-full shadow-[0_0_10px_rgba(217,70,239,0.5)]" />
-                                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] italic">Conversational Engagement</h2>
+                                        <div className="flex items-center gap-4 px-2">
+                                            <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 shadow-inner">
+                                                <MessageSquare size={18} />
+                                            </div>
+                                            <h2 className="text-xl font-bold text-white tracking-tight">Conversational Analysis</h2>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <ConfigurableStatCard 
                                                 id="opening_resp_qual"
+                                                variant="analysis"
+                                                accentColor="#3B82F6"
                                                 title="Resp. Opening (Qual)" 
-                                                value={`${stats.totals.qualification_opening_responded}/${stats.totals.qualification_opening_submitted}`}
+                                                value={stats.percentages.rates.qualification_opening_rate}
                                                 percentage={stats.percentages.rates.qualification_opening_rate}
+                                                subValue={`${stats.totals.qualification_opening_responded} resp / ${stats.totals.qualification_opening_submitted} aperturas`}
                                                 icon={MessageSquare}
-                                                tooltipInfo="Tasa de respuesta a mensajes de apertura en la etapa de Cualificación."
+                                                tooltipInfo="Tasa de respuesta a mensajes enviados en etapa de cualificación."
                                             />
                                             <ConfigurableStatCard 
                                                 id="opening_resp_pain"
+                                                variant="analysis"
+                                                accentColor="#3B82F6"
                                                 title="Resp. Opening (Dolor)" 
-                                                value={`${stats.totals.pain_opening_responded}/${stats.totals.pain_opening_submitted}`}
+                                                value={stats.percentages.rates.pain_opening_rate}
                                                 percentage={stats.percentages.rates.pain_opening_rate}
-                                                icon={MessageSquare}
-                                                tooltipInfo="Tasa de respuesta a mensajes de apertura en la etapa de Dolor."
+                                                subValue={`${stats.totals.pain_opening_responded} resp / ${stats.totals.pain_opening_submitted} aperturas`}
+                                                icon={Zap}
+                                                tooltipInfo="Tasa de respuesta a mensajes enviados en etapa de dolor."
                                             />
                                             <ConfigurableStatCard 
                                                 id="opening_resp_total"
+                                                variant="analysis"
+                                                accentColor="#3B82F6"
                                                 title="Resp. Opening (Total)" 
-                                                value={`${stats.totals.opening_responded}/${stats.totals.opening_submitted}`}
+                                                value={stats.percentages.rates.opening_response}
                                                 percentage={stats.percentages.rates.opening_response}
+                                                subValue={`${stats.totals.opening_responded} resp / ${stats.totals.opening_submitted} totales`}
                                                 icon={Layers}
-                                                tooltipInfo="Tasa de respuesta global a todos los mensajes de apertura enviados."
+                                                tooltipInfo="Rendimiento global de respuesta a todos los mensajes de apertura."
                                             />
                                         </div>
                                     </div>
 
-                                    {/* SECCIÓN: RESULTADOS FINALES Y SEGUIMIENTO */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-3 px-4">
-                                            <div className="h-5 w-1.5 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] italic">Final Outcomes & Follow-up</h2>
+                                    {/* SECCIÓN 3: RESULTADOS Y FOOTER (FILA INFERIOR) */}
+                                    <div className="space-y-8">
+                                        <div className="flex items-center gap-4 px-2">
+                                            <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 shadow-inner">
+                                                <CalendarDays size={18} />
+                                            </div>
+                                            <h2 className="text-xl font-bold text-white tracking-tight">Final Outcomes & Velocity</h2>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <ConfigurableStatCard 
                                                 id="final_agendas"
+                                                variant="summary"
+                                                accentColor="#10B981"
                                                 title="Agendas Generadas" 
                                                 value={stats.totals.funnel_agenda} 
                                                 percentage={div(stats.totals.funnel_agenda, stats.totals.entrantes)}
+                                                subValue={`${div(stats.totals.funnel_agenda, stats.totals.entrantes)}% de conversión total`}
                                                 icon={CalendarDays}
-                                                tooltipInfo="Cantidad total de citas agendadas y su tasa de conversión sobre el total de entrantes."
+                                                tooltipInfo="Impacto final en el calendario de ventas."
                                             />
                                             <ConfigurableStatCard 
                                                 id="total_fu_response"
+                                                variant="summary"
+                                                accentColor="#10B981"
                                                 title="FU Response Rate" 
                                                 value={stats.totals.total_fur}
                                                 percentage={stats.percentages.rates.total_fur}
+                                                subValue="Efectividad en seguimientos"
                                                 icon={RefreshCw}
-                                                tooltipInfo="Tasa de respuesta a todos los seguimientos realizados."
+                                                tooltipInfo="Capacidad de recuperar leads mediante follow-ups."
                                             />
+                                        </div>
+
+                                        {/* FOOTER DE DATOS SECUNDARIOS */}
+                                        <div className="pt-8 border-t border-slate-800/50">
+                                            <div className="flex flex-wrap items-center justify-center gap-4">
+                                                <ConfigurableStatCard variant="footer" icon={Inbox} title="Entrantes" value={stats.totals.entrantes} />
+                                                <ConfigurableStatCard variant="footer" icon={UserX} title="No Leads" value={stats.totals.not_lead} />
+                                                <ConfigurableStatCard variant="footer" icon={MessageSquare} title="Sin Rpta" value={stats.totals.no_response} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
