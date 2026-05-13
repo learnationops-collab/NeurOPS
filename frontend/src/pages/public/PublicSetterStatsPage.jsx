@@ -298,15 +298,17 @@ const PublicSetterStatsPage = () => {
                                 Completar Reporte Diario
                             </button>
                         )}
-                        <div className="flex items-center gap-2 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 shadow-sm backdrop-blur-sm">
-                            <TabButton id="general" label="Vista General" icon={BarChart3} />
-                            {user.role !== 'setter' && (
-                                <TabButton id="comparison" label="Comparación" icon={ArrowRightLeft} />
-                            )}
-                            <TabButton id="reports" label="Registros" icon={Table} />
-                            <TabButton id="conv_stats" label="Rend. Conversacional" icon={MessageSquare} />
-                        </div>
                     </div>
+                </div>
+
+                {/* TABS */}
+                <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit shadow-sm backdrop-blur-sm">
+                    <TabButton id="general" label="Vista General" icon={BarChart3} />
+                    {user.role !== 'setter' && (
+                        <TabButton id="comparison" label="Comparación" icon={ArrowRightLeft} />
+                    )}
+                    <TabButton id="reports" label="Registros" icon={Table} />
+                    <TabButton id="conv_stats" label="Rend. Conversacional" icon={MessageSquare} />
                 </div>
 
                 {/* FILTERS BAR (Only for General) */}
