@@ -471,6 +471,8 @@ const MarketingPage = () => {
                                             <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">CP Agenda</th>
                                             <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">Ventas</th>
                                             <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">CP Venta</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Cash Collect</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">ROAS</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-base">
@@ -524,11 +526,25 @@ const MarketingPage = () => {
                                                             {row.cpv > 0 ? `$${row.cpv}` : '—'}
                                                         </span>
                                                     </td>
+                                                    <td className="px-6 py-5 text-right">
+                                                        <span className="font-black text-emerald-400">
+                                                            {row.cash_collect > 0 ? `$${row.cash_collect.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className={`font-black text-sm ${
+                                                            !row.roas || row.roas === 0 ? 'text-muted' :
+                                                            row.roas >= 3 ? 'text-emerald-400' :
+                                                            row.roas >= 1 ? 'text-amber-400' : 'text-rose-400'
+                                                        }`}>
+                                                            {row.roas > 0 ? `${row.roas}x` : '—'}
+                                                        </span>
+                                                    </td>
                                                 </tr>
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="8" className="p-20 text-center">
+                                                <td colSpan="10" className="p-20 text-center">
                                                     <p className="text-[10px] font-black text-muted uppercase tracking-widest italic opacity-50">No hay datos de rendimiento disponibles</p>
                                                 </td>
                                             </tr>
