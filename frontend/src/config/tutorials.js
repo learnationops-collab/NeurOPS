@@ -35,7 +35,7 @@ export const TUTORIALS = {
             {
                 target: '#tab-setters',
                 title: 'Rendimiento de Setters',
-                content: 'Mira la eficacia de cada setter, sus tasas de apertura y conversión individualmente.',
+                content: 'Mira la eficacia de cada setter, sus tasas de cualificación y conversión individualmente.',
                 placement: 'bottom'
             },
             {

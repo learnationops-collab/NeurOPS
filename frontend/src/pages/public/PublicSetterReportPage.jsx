@@ -269,10 +269,13 @@ const PublicSetterReportPage = () => {
             { name: 'Agenda', value: fa, fill: '#10b981' }
         ];
 
+        const qualRate = ie > 0 ? ((fq - nl) / ie) * 100 : 0;
+
         return {
             noLeadPct: noLeadPct.toFixed(1),
             inabriblesPct: inabriblesPct.toFixed(1),
             openingResponse: openingResp.toFixed(1),
+            qualRate: qualRate.toFixed(1),
             followUpResponse: followUpResp.toFixed(1),
             qualToPain: qualToPain.toFixed(1),
             painToOffer: painToOffer.toFixed(1),
@@ -344,7 +347,7 @@ const PublicSetterReportPage = () => {
                             {[
                                 { label: 'Entrantes', value: formData.inbox_entrantes || '0', icon: Inbox, color: 'text-rose-400', bg: 'bg-rose-500/10' },
                                 { label: 'Agendas', value: formData.funnel_agenda || '0', icon: Calendar, color: 'text-teal-400', bg: 'bg-teal-500/10' },
-                                { label: 'Tasa Apertura', value: `${liveMetrics.openingResponse}%`, icon: MessageSquare, color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
+                                { label: 'Tasa Cualificación', value: `${liveMetrics.qualRate}%`, icon: MessageSquare, color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
                                 { label: 'Tasa Respuesta FU', value: `${liveMetrics.followUpResponse}%`, icon: RefreshCw, color: 'text-indigo-400', bg: 'bg-indigo-500/10' }
                             ].map((card, i) => (
                                 <div key={i} className="bg-slate-900/80 backdrop-blur-lg border border-slate-800 p-6 rounded-[2.5rem] shadow-xl hover:border-slate-700 transition-all group">

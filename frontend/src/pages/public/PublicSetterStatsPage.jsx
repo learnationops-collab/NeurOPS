@@ -16,6 +16,7 @@ import EvolutionChart from '../../components/charts/EvolutionChart';
 import SetterReportsTable from './SetterReportsTable';
 import SetterComparisonView from './SetterComparisonView';
 import ConversationalStatsTab from './ConversationalStatsTab';
+import LeadUnifiedKPI from '../../components/shared/LeadUnifiedKPI';
 
 const PublicSetterStatsPage = () => {
     const auth = useAuth();
@@ -405,13 +406,12 @@ const PublicSetterStatsPage = () => {
                         ) : stats ? (
                             <>
                                 {/* GRID PRINCIPAL */}
-                                <div className="grid grid-cols-2 md:grid-cols-6 gap-6">
-                                    <StatCard title="Entrantes" value={stats.totals.entrantes} icon={Inbox} colorClass="text-pink-500" tooltipInfo="Suma total de leads nuevos ingresados al CRM en el período seleccionado." />
-                                    <StatCard title="Sin Respuesta" value={stats.totals.no_response} icon={UserX} colorClass="text-slate-500" tooltipInfo="Leads que ingresaron pero no han respondido al mensaje de apertura. Cálculo: (Entrantes - Cualificación)." />
-                                    <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" tooltipInfo="Suma total de leads movidos a la etapa de Agenda." />
-                                    <StatCard title="Tasa Apertura" value={`${stats.percentages.rates.opening_rate}%`} icon={MousePointer2} colorClass="text-emerald-500" tooltipInfo="Mide la calidad de los leads. Cálculo: ((Entrantes - No Leads) - (Entrantes - Cualificación)) / Entrantes." />
-                                    <StatCard title="Op. Response" value={`${stats.percentages.rates.opening_response}%`} icon={MessageSquare} colorClass="text-fuchsia-500" tooltipInfo="Tasa de respuesta a los mensajes de apertura. Cálculo: (Openings Respondidos / Openings Enviados)." />
-                                    <StatCard title="FU Response" value={`${stats.percentages.rates.total_fur}%`} icon={RefreshCw} colorClass="text-rose-500" tooltipInfo="Tasa de respuesta a todos los seguimientos (Follow Ups) realizados en cualquier etapa. Cálculo: (Total FU Respondidos / Total FU Enviados)." />
+                                <div className="space-y-6">
+                                    <LeadUnifiedKPI stats={stats} />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <StatCard title="Agendas" value={stats.totals.funnel_agenda} icon={CalendarDays} colorClass="text-indigo-500" tooltipInfo="Suma total de leads movidos a la etapa de Agenda." />
+                                        <StatCard title="FU Response" value={`${stats.percentages.rates.total_fur}%`} icon={RefreshCw} colorClass="text-rose-500" tooltipInfo="Tasa de respuesta a todos los seguimientos (Follow Ups) realizados en cualquier etapa. Cálculo: (Total FU Respondidos / Total FU Enviados)." />
+                                    </div>
                                 </div>
 
 
@@ -485,7 +485,7 @@ const PublicSetterStatsPage = () => {
                                                 </div>
                                                 <div className="flex gap-4">
                                                     <div className="flex-1 bg-fuchsia-600 p-4 rounded-2xl text-white text-center">
-                                                        <p className="text-[7px] font-black opacity-60 uppercase mb-1">Total Aperturas</p>
+                                                        <p className="text-[7px] font-black opacity-60 uppercase mb-1">Total Cualificación</p>
                                                         <p className="text-xl font-black italic">{stats.totals.opening_submitted}</p>
                                                     </div>
                                                     <div className="flex-1 bg-slate-900 p-4 rounded-2xl text-white text-center">
@@ -542,7 +542,7 @@ const PublicSetterStatsPage = () => {
                                                 variables={[
                                                     { key: 'entrantes', label: 'Entrantes', color: '#f43f5e' },
                                                     { key: 'fun_agenda', label: 'Agendas', color: '#10b981' },
-                                                    { key: 'op_sub', label: 'Aperturas', color: '#d946ef' }
+                                                    { key: 'op_sub', label: 'Cualificación', color: '#d946ef' }
                                                 ]} 
                                             />
                                         </div>
