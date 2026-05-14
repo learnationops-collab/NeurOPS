@@ -52,6 +52,7 @@ def receive_manychat_ad_lead():
     variante = clean_cuf(data.get('variante', ''))
     qualification_raw = data.get('cualificacion')
     id_option = clean_cuf(data.get('id_option'))
+    id_option_send = clean_cuf(data.get('id_option_send'))
     id_question = clean_cuf(data.get('id_question'))
 
     # Convertir ad_id a int de forma segura
@@ -160,6 +161,7 @@ def receive_manychat_ad_lead():
             if variante: answer.variante = variante
             if keyword: answer.keyword = keyword
             if id_option is not None: answer.id_option = str(id_option)
+            if id_option_send is not None: answer.id_option_send = str(id_option_send)
             if id_question is not None: answer.id_question = str(id_question)
             action = 'updated'
             logger.info(f"[WEBHOOK] LeadAnswer actualizado para Manychat_ID: {manychat_id}")
@@ -174,6 +176,7 @@ def receive_manychat_ad_lead():
                 variante=variante,
                 qualification=qualification,
                 id_option=str(id_option) if id_option is not None else None,
+                id_option_send=str(id_option_send) if id_option_send is not None else None,
                 id_question=str(id_question) if id_question is not None else None
             )
             db.session.add(answer)
@@ -236,6 +239,7 @@ def get_webhook_log():
         'opening': ans.opening,
         'variante': ans.variante,
         'id_option': ans.id_option,
+        'id_option_send': ans.id_option_send,
         'id_question': ans.id_question,
         'qualification': ans.qualification,
         'created_at': ans.created_at.isoformat() if ans.created_at else None,
@@ -425,6 +429,12 @@ def get_ad_segmentation_stats():
         not_(LeadAnswer.id_option.like('%cuf_%'))
     ]
 
+    base_filters_options_send = [
+        LeadAnswer.id_option_send != None,
+        LeadAnswer.id_option_send != '',
+        not_(LeadAnswer.id_option_send.like('%cuf_%'))
+    ]
+
     base_filters_questions = [
         LeadAnswer.id_question != None,
         LeadAnswer.id_question != '',
@@ -437,6 +447,7 @@ def get_ad_segmentation_stats():
             base_filters_variante.append(LeadAnswer.created_at >= st)
             base_filters_opening.append(LeadAnswer.created_at >= st)
             base_filters_options.append(LeadAnswer.created_at >= st)
+            base_filters_options_send.append(LeadAnswer.created_at >= st)
             base_filters_questions.append(LeadAnswer.created_at >= st)
         except ValueError:
             pass
@@ -447,6 +458,7 @@ def get_ad_segmentation_stats():
             base_filters_variante.append(LeadAnswer.created_at <= ed)
             base_filters_opening.append(LeadAnswer.created_at <= ed)
             base_filters_options.append(LeadAnswer.created_at <= ed)
+            base_filters_options_send.append(LeadAnswer.created_at <= ed)
             base_filters_questions.append(LeadAnswer.created_at <= ed)
         except ValueError:
             pass
@@ -478,6 +490,18 @@ def get_ad_segmentation_stats():
         ).label('qualified_leads')
     ).filter(*base_filters_options).group_by(LeadAnswer.id_option).all()
 
+    # Agrupar por Opción Enviada (Performance de envío)
+    stats_options_send = db.session.query(
+        LeadAnswer.id_option_send,
+        func.count(LeadAnswer.id).label('total_sends'),
+        func.sum(
+            db.case((LeadAnswer.id_option != None, 1), else_=0)
+        ).label('total_responses'),
+        func.sum(
+            db.case((LeadAnswer.qualification == 'true', 1), else_=0)
+        ).label('qualified_leads')
+    ).filter(*base_filters_options_send).group_by(LeadAnswer.id_option_send).all()
+
     # Agrupar por Seguimiento
     stats_questions = db.session.query(
         LeadAnswer.id_question,
@@ -504,10 +528,34 @@ def get_ad_segmentation_stats():
         res.sort(key=lambda x: x['total_leads'], reverse=True)
         return res
 
+    def format_options_send_stats(stats_list):
+        res = []
+        for s in stats_list:
+            total_s = s.total_sends
+            total_r = int(s.total_responses or 0)
+            qual = int(s.qualified_leads or 0)
+            
+            response_percent = round((total_r / total_s) * 100, 1) if total_s > 0 else 0
+            qual_percent = round((qual / total_r) * 100, 1) if total_r > 0 else 0
+            
+            val = s.id_option_send
+            if not val or '{{' in val: continue
+            res.append({
+                'name': val,
+                'total_sends': total_s,
+                'total_responses': total_r,
+                'response_percentage': response_percent,
+                'qualified_leads': qual,
+                'qualified_percentage': qual_percent
+            })
+        res.sort(key=lambda x: x['total_sends'], reverse=True)
+        return res
+
     return jsonify({
         'variantes': format_stats(stats_variante, 'variante'),
         'openings': format_stats(stats_opening, 'opening'),
         'options': format_stats(stats_options, 'id_option'),
+        'options_send': format_options_send_stats(stats_options_send),
         'questions': format_stats(stats_questions, 'id_question')
     }), 200
 

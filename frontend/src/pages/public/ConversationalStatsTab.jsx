@@ -3,7 +3,7 @@ import api from '../../services/api';
 import { Loader2, MessageSquare, RefreshCw, HelpCircle, Activity, CalendarDays, BarChart2 } from 'lucide-react';
 
 const ConversationalStatsTab = () => {
-    const [stats, setStats] = useState({ opciones: [], seguimientos: [], variantes: [], openings: [] });
+    const [stats, setStats] = useState({ opciones: [], seguimientos: [], variantes: [], openings: [], opciones_send: [] });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     
@@ -52,7 +52,8 @@ const ConversationalStatsTab = () => {
                 opciones: data.options || [],
                 seguimientos: data.questions || [],
                 variantes: data.variantes || [],
-                openings: data.openings || []
+                openings: data.openings || [],
+                opciones_send: data.options_send || []
             });
         } catch (err) {
             console.error('Error fetching conversational stats:', err);
@@ -124,6 +125,78 @@ const ConversationalStatsTab = () => {
                                 <div className="flex items-center justify-between mt-2">
                                     <span className="text-xs text-slate-400 font-bold">{item.total_leads} Respuestas</span>
                                     <span className="text-[10px] text-blue-400 font-black">{percentageOfTotal}% del total</span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    const renderSendPerformanceCard = (items) => {
+        if (!items || items.length === 0) return null;
+        
+        // Ensure options 1, 2, 3 exist
+        let displayItems = [...items];
+        const keys = ['1', '2', '3'];
+        keys.forEach(k => {
+            if (!displayItems.find(i => i.name === k)) {
+                displayItems.push({ name: k, total_sends: 0, total_responses: 0, response_percentage: 0, qualified_percentage: 0 });
+            }
+        });
+        displayItems.sort((a, b) => a.name.localeCompare(b.name));
+
+        return (
+            <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 shadow-xl col-span-1 md:col-span-2">
+                <div className="flex items-center gap-2 mb-4 border-b border-slate-800/80 pb-3">
+                    <Activity size={18} className="text-pink-400" />
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">Efectividad de Envío (Preguntas Aleatorias)</h3>
+                    <div className="ml-auto group relative">
+                        <HelpCircle size={14} className="text-slate-500 cursor-help" />
+                        <div className="absolute right-0 bottom-full mb-2 w-64 bg-slate-800 text-[10px] text-slate-300 p-3 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-slate-700 shadow-2xl z-20">
+                            Mide cuántas veces se envió cada opción y qué porcentaje de esas personas respondió y luego cualificó.
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {displayItems.map((item, idx) => {
+                        const isZero = item.total_sends === 0;
+                        
+                        let responseColor = "text-slate-400";
+                        if (item.response_percentage >= 40) responseColor = "text-emerald-400";
+                        else if (item.response_percentage >= 20) responseColor = "text-yellow-400";
+                        else if (!isZero) responseColor = "text-red-400";
+
+                        return (
+                            <div key={idx} className="bg-slate-950/50 rounded-xl p-4 border border-slate-800/50 hover:border-pink-500/30 transition-colors">
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-xs font-black text-white uppercase tracking-widest bg-slate-800 px-2 py-1 rounded">Opción {item.name}</span>
+                                    <div className="text-right">
+                                        <div className={`text-lg font-black ${responseColor}`}>{item.response_percentage}%</div>
+                                        <div className="text-[8px] text-slate-500 font-bold uppercase">Respuesta</div>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-3">
+                                    <div>
+                                        <div className="flex justify-between text-[10px] mb-1">
+                                            <span className="text-slate-400 font-bold">VOLUMEN</span>
+                                            <span className="text-white font-black">{item.total_responses} / {item.total_sends}</span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                                            <div 
+                                                className="h-full bg-pink-500 transition-all duration-1000"
+                                                style={{ width: `${item.response_percentage}%` }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/50">
+                                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">Cualificación</span>
+                                        <span className="text-xs font-black text-emerald-400">{item.qualified_percentage}%</span>
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -205,6 +278,7 @@ const ConversationalStatsTab = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {renderSendPerformanceCard(stats.opciones_send)}
                     {renderCard("Opciones Iniciales", stats.opciones, <BarChart2 size={18} className="text-blue-400" />)}
                     {renderCard("Seguimientos (Preguntas)", stats.seguimientos, <BarChart2 size={18} className="text-emerald-400" />)}
                     {renderCard("Variantes", stats.variantes, <BarChart2 size={18} className="text-amber-400" />)}
