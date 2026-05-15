@@ -184,6 +184,17 @@ const PublicSetterStatsPage = () => {
         }));
     }, [stats]);
 
+    const funnelData = useMemo(() => {
+        if (!stats) return [];
+        return [
+            { name: 'Cualificación', value: stats.totals.funnel_qualification, fill: '#8b5cf6' }, // violet
+            { name: 'Dolor', value: stats.totals.funnel_pain, fill: '#3b82f6' }, // indigo/blue
+            { name: 'Oferta', value: stats.totals.funnel_offer, fill: '#d946ef' }, // fuchsia
+            { name: 'Link', value: stats.totals.funnel_link, fill: '#6366f1' }, // sky (actually closer to indigo)
+            { name: 'Agenda', value: stats.totals.funnel_agenda, fill: '#10b981' } // emerald
+        ];
+    }, [stats]);
+
     const FunnelSubContainer = ({ title, icon: Icon, children }) => (
         <div className="bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
@@ -577,54 +588,87 @@ const PublicSetterStatsPage = () => {
                                     </div>
                                 </div>
 
-                                {/* SECCIÓN: FUNNEL (REESTRUCTURADO) */}
+                                 {/* SECCIÓN: FUNNEL (REESTRUCTURADO) */}
                                 <MetricSection title="Funnel" icon={TrendingUp}>
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                         {/* Container 1: Leads by Stage */}
                                         <FunnelSubContainer title="Standings (Leads)" icon={BarChart}>
                                             <div className="space-y-4">
-                                                <MiniRow label="Cualificación" value={stats.totals.funnel_qualification} colorClass="text-white" tooltipInfo="Leads en etapa de Cualificación." />
-                                                <MiniRow label="Dolor" value={stats.totals.funnel_pain} subValue={`${stats.percentages.funnel_evolution.qual_to_pain}%`} colorClass="text-indigo-400" tooltipInfo="Leads avanzados a la etapa de Dolor. Cálculo: (Dolor / Leads Reales)." />
-                                                <MiniRow label="Oferta" value={stats.totals.funnel_offer} subValue={`${stats.percentages.funnel_evolution.pain_to_offer}%`} colorClass="text-indigo-400" tooltipInfo="Leads avanzados a la etapa de Oferta." />
-                                                <MiniRow label="Link" value={stats.totals.funnel_link} subValue={`${stats.percentages.funnel_evolution.offer_to_link}%`} colorClass="text-indigo-400" tooltipInfo="Leads avanzados a la etapa de Link enviado." />
-                                                <MiniRow label="Agenda" value={stats.totals.funnel_agenda} subValue={`${stats.percentages.funnel_evolution.link_to_agenda}%`} colorClass="text-teal-400" tooltipInfo="Leads avanzados a la etapa final de Agenda." />
+                                                <div className="group/f transition-all hover:translate-x-1">
+                                                    <MiniRow label="Cualificación" value={stats.totals.funnel_qualification} colorClass="text-violet-500" tooltipInfo="Leads en etapa de Cualificación." />
+                                                    <div className="h-1 w-full bg-violet-500/20 rounded-full mt-1 overflow-hidden">
+                                                        <div className="h-full bg-violet-500" style={{ width: '100%' }} />
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="group/f transition-all hover:translate-x-1">
+                                                    <MiniRow label="Dolor" value={stats.totals.funnel_pain} subValue={`${stats.percentages.funnel_evolution.qual_to_pain}%`} colorClass="text-blue-500" tooltipInfo="Leads avanzados a la etapa de Dolor. Cálculo: (Dolor / Leads Reales)." />
+                                                    <div className="h-1 w-full bg-blue-500/20 rounded-full mt-1 overflow-hidden">
+                                                        <div className="h-full bg-blue-500" style={{ width: `${stats.percentages.funnel_evolution.qual_to_pain}%` }} />
+                                                    </div>
+                                                </div>
+
+                                                <div className="group/f transition-all hover:translate-x-1">
+                                                    <MiniRow label="Oferta" value={stats.totals.funnel_offer} subValue={`${stats.percentages.funnel_evolution.pain_to_offer}%`} colorClass="text-fuchsia-500" tooltipInfo="Leads avanzados a la etapa de Oferta." />
+                                                    <div className="h-1 w-full bg-fuchsia-500/20 rounded-full mt-1 overflow-hidden">
+                                                        <div className="h-full bg-fuchsia-500" style={{ width: `${stats.percentages.funnel_evolution.pain_to_offer}%` }} />
+                                                    </div>
+                                                </div>
+
+                                                <div className="group/f transition-all hover:translate-x-1">
+                                                    <MiniRow label="Link" value={stats.totals.funnel_link} subValue={`${stats.percentages.funnel_evolution.offer_to_link}%`} colorClass="text-indigo-500" tooltipInfo="Leads avanzados a la etapa de Link enviado." />
+                                                    <div className="h-1 w-full bg-indigo-500/20 rounded-full mt-1 overflow-hidden">
+                                                        <div className="h-full bg-indigo-500" style={{ width: `${stats.percentages.funnel_evolution.offer_to_link}%` }} />
+                                                    </div>
+                                                </div>
+
+                                                <div className="group/f transition-all hover:translate-x-1">
+                                                    <MiniRow label="Agenda" value={stats.totals.funnel_agenda} subValue={`${stats.percentages.funnel_evolution.link_to_agenda}%`} colorClass="text-emerald-500" tooltipInfo="Leads avanzados a la etapa final de Agenda." />
+                                                    <div className="h-1 w-full bg-emerald-500/20 rounded-full mt-1 overflow-hidden">
+                                                        <div className="h-full bg-emerald-500" style={{ width: `${stats.percentages.funnel_evolution.link_to_agenda}%` }} />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </FunnelSubContainer>
 
-                                        {/* Container 2: Engagement (Follow Ups) */}
-                                        <FunnelSubContainer title="Engagement (Follow Ups)" icon={RefreshCw}>
+                                        {/* Container 2: Engagement & Openings */}
+                                        <FunnelSubContainer title="Engagement & Discovery" icon={RefreshCw}>
                                             <div className="space-y-4">
-                                                <MiniRow label="Qual FU" value={`${stats.totals.qualification_fur}/${stats.totals.qualification_fu}`} subValue={`${stats.percentages.rates.qualification_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Cualificación: Respondidos / Enviados." />
-                                                <MiniRow label="Pain FU" value={`${stats.totals.pain_fur}/${stats.totals.pain_fu}`} subValue={`${stats.percentages.rates.pain_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Dolor: Respondidos / Enviados." />
-                                                <MiniRow label="Offer FU" value={`${stats.totals.offer_fur}/${stats.totals.offer_fu}`} subValue={`${stats.percentages.rates.offer_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Oferta: Respondidos / Enviados." />
-                                                <MiniRow label="Link FU" value={`${stats.totals.link_fur}/${stats.totals.link_fu}`} subValue={`${stats.percentages.rates.link_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Link: Respondidos / Enviados." />
-                                                <MiniRow label="Agenda FU" value={`${stats.totals.agenda_fur}/${stats.totals.agenda_fu}`} subValue={`${stats.percentages.rates.agenda_fur}%`} colorClass="text-teal-600" tooltipInfo="Seguimientos post-Agenda: Respondidos / Enviados." />
+                                                <div className="p-4 bg-slate-900 border border-slate-800 rounded-3xl space-y-3">
+                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Tasa de Respuesta Openings</p>
+                                                    <div className="flex justify-around items-end gap-2">
+                                                        <div className="text-center">
+                                                            <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Qual</p>
+                                                            <p className="text-lg font-black text-fuchsia-500 italic">{stats.percentages.rates.qualification_opening_rate}%</p>
+                                                        </div>
+                                                        <div className="h-8 w-px bg-slate-800" />
+                                                        <div className="text-center">
+                                                            <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Pain</p>
+                                                            <p className="text-lg font-black text-fuchsia-500 italic">{stats.percentages.rates.pain_opening_rate}%</p>
+                                                        </div>
+                                                        <div className="h-8 w-px bg-slate-800" />
+                                                        <div className="text-center">
+                                                            <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Total</p>
+                                                            <p className="text-lg font-black text-fuchsia-400 italic">{stats.percentages.rates.opening_response}%</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2">Follow Ups (R/S)</p>
+                                                    <MiniRow label="Qual FU" value={`${stats.totals.qualification_fur}/${stats.totals.qualification_fu}`} subValue={`${stats.percentages.rates.qualification_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Cualificación: Respondidos / Enviados." />
+                                                    <MiniRow label="Pain FU" value={`${stats.totals.pain_fur}/${stats.totals.pain_fu}`} subValue={`${stats.percentages.rates.pain_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Dolor: Respondidos / Enviados." />
+                                                    <MiniRow label="Offer FU" value={`${stats.totals.offer_fur}/${stats.totals.offer_fu}`} subValue={`${stats.percentages.rates.offer_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Oferta: Respondidos / Enviados." />
+                                                    <MiniRow label="Link FU" value={`${stats.totals.link_fur}/${stats.totals.link_fu}`} subValue={`${stats.percentages.rates.link_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Link: Respondidos / Enviados." />
+                                                    <MiniRow label="Agenda FU" value={`${stats.totals.agenda_fur}/${stats.totals.agenda_fu}`} subValue={`${stats.percentages.rates.agenda_fur}%`} colorClass="text-teal-600" tooltipInfo="Seguimientos post-Agenda: Respondidos / Enviados." />
+                                                </div>
                                             </div>
                                         </FunnelSubContainer>
 
-                                        {/* Container 3: Discovery (Openings) */}
-                                        <FunnelSubContainer title="Discovery (Openings)" icon={MousePointer2}>
-                                            <div className="space-y-4">
-                                                <div className="bg-slate-950/50 p-6 rounded-[2rem] border border-slate-800 shadow-sm flex flex-col items-center justify-center text-center">
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">Cualificación</p>
-                                                    <p className="text-4xl font-black text-white italic tracking-tighter">{stats.totals.qualification_opening_responded} <span className="text-slate-700">/</span> {stats.totals.qualification_opening_submitted}</p>
-                                                    <p className="text-lg font-black text-fuchsia-500 mt-2">{stats.percentages.rates.qualification_opening_rate}%</p>
-                                                </div>
-                                                <div className="bg-slate-950/50 p-6 rounded-[2rem] border border-slate-800 shadow-sm flex flex-col items-center justify-center text-center">
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">Dolor</p>
-                                                    <p className="text-4xl font-black text-white italic tracking-tighter">{stats.totals.pain_opening_responded} <span className="text-slate-700">/</span> {stats.totals.pain_opening_submitted}</p>
-                                                    <p className="text-lg font-black text-fuchsia-500 mt-2">{stats.percentages.rates.pain_opening_rate}%</p>
-                                                </div>
-                                                <div className="flex gap-4">
-                                                    <div className="flex-1 bg-fuchsia-600 p-4 rounded-2xl text-white text-center">
-                                                        <p className="text-[7px] font-black opacity-60 uppercase mb-1">Total Cualificación</p>
-                                                        <p className="text-xl font-black italic">{stats.totals.opening_submitted}</p>
-                                                    </div>
-                                                    <div className="flex-1 bg-slate-900 p-4 rounded-2xl text-white text-center">
-                                                        <p className="text-[7px] font-black opacity-60 uppercase mb-1">Respuesta Tot</p>
-                                                        <p className="text-xl font-black italic">{stats.percentages.rates.opening_response}%</p>
-                                                    </div>
-                                                </div>
+                                        {/* Container 3: Visualización (Chart) */}
+                                        <FunnelSubContainer title="Visualización" icon={TrendingUp}>
+                                            <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
+                                                <FunnelChart data={funnelData} />
                                             </div>
                                         </FunnelSubContainer>
                                     </div>
