@@ -4,6 +4,21 @@ import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity,
 import AdDetailModal from '../../components/modals/AdDetailModal';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import ColumnSettings from '../../components/marketing/ColumnSettings';
+import GradientSettings from '../../components/marketing/GradientSettings';
+
+const defaultThresholds = {
+    spend: { optimal: 100, tolerable: 50, mode: 'higher' },
+    total_leads: { optimal: 100, tolerable: 30, mode: 'higher' },
+    cpl: { optimal: 3, tolerable: 6, mode: 'lower' },
+    qualified_percentage: { optimal: 40, tolerable: 20, mode: 'higher' },
+    cpql: { optimal: 10, tolerable: 20, mode: 'lower' },
+    agendas: { optimal: 20, tolerable: 5, mode: 'higher' },
+    cpa: { optimal: 20, tolerable: 40, mode: 'lower' },
+    ventas: { optimal: 10, tolerable: 3, mode: 'higher' },
+    cpv: { optimal: 50, tolerable: 100, mode: 'lower' },
+    cash_collect: { optimal: 500, tolerable: 100, mode: 'higher' },
+    roas: { optimal: 3, tolerable: 1, mode: 'higher' },
+};
 
 const initialColumns = [
     { id: 'ad_name', label: 'Anuncio', visible: true, align: 'left' },
@@ -39,10 +54,19 @@ const AdDashboardTab = () => {
         setSortConfig({ key, direction });
     };
 
+    const isAllZero = (stat) => {
+        return (stat.spend || 0) === 0 && (stat.total_leads || 0) === 0 && (stat.agendas || 0) === 0 && (stat.ventas || 0) === 0;
+    };
+
     const getSortedAdStats = () => {
         let sortableData = [...stats.ad_stats];
         if (sortConfig.key) {
             sortableData.sort((a, b) => {
+                const aZero = isAllZero(a);
+                const bZero = isAllZero(b);
+                if (aZero && !bZero) return 1;
+                if (!aZero && bZero) return -1;
+
                 let aValue = a[sortConfig.key];
                 let bValue = b[sortConfig.key];
                 
@@ -64,12 +88,21 @@ const AdDashboardTab = () => {
                 if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
             });
+        } else {
+            sortableData.sort((a, b) => {
+                const aZero = isAllZero(a);
+                const bZero = isAllZero(b);
+                if (aZero && !bZero) return 1;
+                if (!aZero && bZero) return -1;
+                return 0;
+            });
         }
         return sortableData;
     };
     
     const { filters: columns, updateFilter: setColumns } = usePersistentFilters('ad_dashboard_columns_v3', initialColumns);
     const visibleColumns = columns.filter(c => c.visible);
+    const { filters: colorThresholds, updateFilter: setColorThresholds } = usePersistentFilters('ad_dashboard_thresholds_v1', defaultThresholds);
     
     // Filtros de periodo
     const [period, setPeriod] = useState('last_month');
@@ -178,6 +211,7 @@ const AdDashboardTab = () => {
                     </button>
                     
                     <ColumnSettings columns={columns} setColumns={setColumns} />
+                    <GradientSettings sortKey={sortConfig.key} thresholds={colorThresholds} setThresholds={setColorThresholds} columns={initialColumns} />
                     
                     <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner ml-2">
                         <button
@@ -323,17 +357,49 @@ const AdDashboardTab = () => {
                                                         );
                                                     })}
                                                 </tr>
-                                                {getSortedAdStats().map((stat, index) => {
+                                                {getSortedAdStats().map((stat, index, array) => {
                                                     let qualColorStat = "text-slate-400";
                                                     if (stat.qualified_percentage >= 50) qualColorStat = "text-emerald-400";
                                                     else if (stat.qualified_percentage >= 20) qualColorStat = "text-yellow-400";
                                                     else if (stat.total_leads > 0 && stat.qualified_percentage < 20) qualColorStat = "text-red-400";
 
+                                                    const zeroRow = isAllZero(stat);
+                                                    
+                                                    // Determine background based on rank
+                                                    const totalValid = array.filter(a => !isAllZero(a)).length;
+                                                    let rankColor = "hover:bg-slate-800/40"; // fallback
+                                                    
+                                                    if (zeroRow) {
+                                                        rankColor = "bg-red-900/20 hover:bg-red-900/30";
+                                                    } else if (sortConfig.key && colorThresholds[sortConfig.key]) {
+                                                        const conf = colorThresholds[sortConfig.key];
+                                                        const val = parseFloat(stat[sortConfig.key] || 0);
+                                                        
+                                                        if (conf.mode === 'higher') {
+                                                            if (val >= conf.optimal) rankColor = "bg-emerald-900/10 hover:bg-emerald-900/20";
+                                                            else if (val >= conf.tolerable) rankColor = "bg-amber-900/10 hover:bg-amber-900/20";
+                                                            else rankColor = "bg-red-900/10 hover:bg-red-900/20";
+                                                        } else {
+                                                            if (val <= conf.optimal) rankColor = "bg-emerald-900/10 hover:bg-emerald-900/20";
+                                                            else if (val <= conf.tolerable) rankColor = "bg-amber-900/10 hover:bg-amber-900/20";
+                                                            else rankColor = "bg-red-900/10 hover:bg-red-900/20";
+                                                        }
+                                                    } else if (totalValid > 0) {
+                                                        const rankRatio = index / totalValid;
+                                                        if (rankRatio <= 0.33) {
+                                                            rankColor = "bg-emerald-900/10 hover:bg-emerald-900/20";
+                                                        } else if (rankRatio <= 0.66) {
+                                                            rankColor = "bg-amber-900/10 hover:bg-amber-900/20";
+                                                        } else {
+                                                            rankColor = "bg-red-900/10 hover:bg-red-900/20";
+                                                        }
+                                                    }
+
                                                     return (
                                                         <tr 
                                                             key={stat.ad_id} 
                                                             onClick={() => { setSelectedAdId(stat.ad_id); setIsModalOpen(true); }}
-                                                            className="group hover:bg-slate-800/40 transition-colors cursor-pointer"
+                                                            className={`group transition-colors cursor-pointer ${rankColor} ${zeroRow ? 'opacity-80' : ''}`}
                                                         >
                                                             {visibleColumns.map(col => {
                                                                 let content;
@@ -346,9 +412,9 @@ const AdDashboardTab = () => {
                                                                                 {index + 1}
                                                                             </div>
                                                                             <div>
-                                                                                <h4 className="text-sm font-black text-white uppercase tracking-tight max-w-[200px] truncate">{stat.ad_name}</h4>
-                                                                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                                                                                    <Activity size={10} className="text-blue-500" /> #{stat.ad_id}
+                                                                                <h4 className={`text-sm font-black uppercase tracking-tight max-w-[200px] truncate ${zeroRow ? 'text-red-400' : 'text-white'}`}>{stat.ad_name}</h4>
+                                                                                <p className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 ${zeroRow ? 'text-red-500' : 'text-slate-500'}`}>
+                                                                                    <Activity size={10} className={zeroRow ? 'text-red-400' : 'text-blue-500'} /> #{stat.ad_id}
                                                                                 </p>
                                                                             </div>
                                                                         </div>
@@ -367,7 +433,7 @@ const AdDashboardTab = () => {
                                                                 else if (col.id === 'roas') { content = `${stat.roas || '0'}x`; color = parseFloat(stat.roas || 0) >= 1 ? 'text-emerald-400' : 'text-red-400'; }
 
                                                                 return (
-                                                                    <td key={col.id} className={`py-4 px-5 text-xs font-black ${color} ${
+                                                                    <td key={col.id} className={`py-4 px-5 text-xs font-black ${zeroRow ? 'text-red-300 opacity-60' : color} ${
                                                                         col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
                                                                     }`}>
                                                                         {content}
