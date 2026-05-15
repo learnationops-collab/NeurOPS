@@ -2,8 +2,23 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import {
     Search, Trash2, Edit3, Loader2, Calendar,
-    ChevronLeft, ChevronRight, X, Save, AlertCircle
+    ChevronLeft, ChevronRight, X, Save, AlertCircle, HelpCircle
 } from 'lucide-react';
+
+const HeaderWithTooltip = ({ label, tooltipInfo }) => (
+    <div className="group/h flex items-center justify-center gap-1.5 cursor-help py-1">
+        <span className="transition-colors group-hover/h:text-indigo-400">{label}</span>
+        {tooltipInfo && (
+            <>
+                <HelpCircle size={10} className="text-indigo-500 opacity-0 group-hover/h:opacity-100 transition-all transform scale-50 group-hover/h:scale-100" />
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 bg-slate-900 text-white text-[10px] font-medium normal-case tracking-normal rounded-2xl p-4 opacity-0 group-hover/h:opacity-100 transition-all pointer-events-none z-[9999] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-700/50 backdrop-blur-xl">
+                    <div className="relative z-10 leading-relaxed">{tooltipInfo}</div>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-b-slate-900"></div>
+                </div>
+            </>
+        )}
+    </div>
+);
 
 const SetterReportsTable = ({ setters }) => {
     const [reports, setReports] = useState([]);
@@ -177,24 +192,24 @@ const SetterReportsTable = ({ setters }) => {
             </div>
 
             {/* TABLE */}
-            <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-xl">
+            <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-xl">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[1200px]">
                         <thead>
-                            <tr className="bg-slate-950/50">
+                            <tr className="bg-slate-950/50 relative z-30">
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Setter</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Entrantes</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Leads</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Op. Sub</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Op. Res</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Qual FU/R</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Pain FU/R</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Offer FU/R</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Link FU/R</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Agenda FU/R</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Qual Op</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Pain Op</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Entrantes" tooltipInfo="Suma total de leads recibidos en el inbox." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Leads" tooltipInfo="Leads válidos para prospectar, excluyendo no leads." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Op. Sub" tooltipInfo="Total de aperturas enviadas (Opening Submitted)." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Op. Res" tooltipInfo="Total de aperturas respondidas (Opening Responded)." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Qual FU/R" tooltipInfo="Follow Ups en Cualificación: Enviados (Arriba) / Respondidos (Abajo)." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Pain FU/R" tooltipInfo="Follow Ups en Dolor: Enviados (Arriba) / Respondidos (Abajo)." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Offer FU/R" tooltipInfo="Follow Ups en Oferta: Enviados (Arriba) / Respondidos (Abajo)." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Link FU/R" tooltipInfo="Follow Ups en Link: Enviados (Arriba) / Respondidos (Abajo)." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Agenda FU/R" tooltipInfo="Follow Ups en Agenda: Enviados (Arriba) / Respondidos (Abajo)." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Qual Op" tooltipInfo="Aperturas en Cualificación: Enviadas (Arriba) / Respondidas (Abajo)." /></th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center relative group/th"><HeaderWithTooltip label="Pain Op" tooltipInfo="Aperturas en Dolor: Enviadas (Arriba) / Respondidas (Abajo)." /></th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
                             </tr>
                         </thead>
