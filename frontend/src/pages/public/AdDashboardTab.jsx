@@ -142,7 +142,8 @@ const AdDashboardTab = () => {
     const periods = [
         { id: 'yesterday', label: 'Ayer' },
         { id: 'last_week', label: 'Semana' },
-        { id: 'last_month', label: 'Mes' },
+        { id: 'this_month', label: 'Este mes' },
+        { id: 'last_month', label: 'Últ. 30 días' },
         { id: 'custom', label: 'Personalizado' }
     ];
 

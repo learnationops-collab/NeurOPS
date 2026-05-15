@@ -588,6 +588,9 @@ def get_ad_dashboard_stats():
     elif period == 'last_week':
         start_dt = (now - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
         end_dt = now
+    elif period == 'this_month':
+        start_dt = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_dt = now
     else: # last_month as default
         start_dt = (now - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
         end_dt = now
