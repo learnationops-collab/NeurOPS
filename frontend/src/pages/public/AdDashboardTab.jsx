@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays, HelpCircle, LayoutGrid, List, Settings } from 'lucide-react';
+import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays, HelpCircle, LayoutGrid, List, Settings, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import AdDetailModal from '../../components/modals/AdDetailModal';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import ColumnSettings from '../../components/marketing/ColumnSettings';
@@ -29,6 +29,44 @@ const AdDashboardTab = () => {
     const [selectedAdId, setSelectedAdId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState('gallery'); // 'gallery' | 'list'
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+    
+    const handleSort = (key) => {
+        let direction = 'desc';
+        if (sortConfig.key === key && sortConfig.direction === 'desc') {
+            direction = 'asc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortedAdStats = () => {
+        let sortableData = [...stats.ad_stats];
+        if (sortConfig.key) {
+            sortableData.sort((a, b) => {
+                let aValue = a[sortConfig.key];
+                let bValue = b[sortConfig.key];
+                
+                if (aValue == null) aValue = '';
+                if (bValue == null) bValue = '';
+                
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    aValue = aValue.toLowerCase();
+                    bValue = bValue.toLowerCase();
+                } else if (typeof aValue === 'string') {
+                    const parsedA = parseFloat(aValue.replace(/[^0-9.-]+/g,""));
+                    if(!isNaN(parsedA)) aValue = parsedA;
+                } else if (typeof bValue === 'string') {
+                    const parsedB = parseFloat(bValue.replace(/[^0-9.-]+/g,""));
+                    if(!isNaN(parsedB)) bValue = parsedB;
+                }
+
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return sortableData;
+    };
     
     const { filters: columns, updateFilter: setColumns } = usePersistentFilters('ad_dashboard_columns_v3', initialColumns);
     const visibleColumns = columns.filter(c => c.visible);
@@ -207,12 +245,22 @@ const AdDashboardTab = () => {
                                     <tr className="border-b border-slate-800/80 bg-slate-950/50">
                                         {visibleColumns.map(col => (
                                             <th 
-                                                key={col.id} 
-                                                className={`py-4 px-5 text-[10px] font-black uppercase tracking-widest ${
+                                                key={col.id}
+                                                onClick={() => handleSort(col.id)} 
+                                                className={`py-4 px-5 text-[10px] font-black uppercase tracking-widest cursor-pointer group/th hover:text-white transition-colors ${
                                                     col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
                                                 } ${col.color || 'text-slate-500'}`}
                                             >
-                                                {col.label}
+                                                <div className={`flex items-center gap-1.5 ${
+                                                    col.align === 'center' ? 'justify-center' : col.align === 'right' ? 'justify-end' : 'justify-start'
+                                                }`}>
+                                                    {col.label}
+                                                    {sortConfig.key === col.id ? (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp size={12} className="text-blue-400" /> : <ChevronDown size={12} className="text-blue-400" />
+                                                    ) : (
+                                                        <ArrowUpDown size={12} className="opacity-30 group-hover/th:opacity-100 transition-opacity" />
+                                                    )}
+                                                </div>
                                             </th>
                                         ))}
                                     </tr>
@@ -275,7 +323,7 @@ const AdDashboardTab = () => {
                                                         );
                                                     })}
                                                 </tr>
-                                                {stats.ad_stats.map((stat, index) => {
+                                                {getSortedAdStats().map((stat, index) => {
                                                     let qualColorStat = "text-slate-400";
                                                     if (stat.qualified_percentage >= 50) qualColorStat = "text-emerald-400";
                                                     else if (stat.qualified_percentage >= 20) qualColorStat = "text-yellow-400";
@@ -337,7 +385,7 @@ const AdDashboardTab = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {stats.ad_stats.map((stat, index) => {
+                            {getSortedAdStats().map((stat, index) => {
                                 let qualColor = "text-slate-400";
                                 let qualBg = "bg-slate-500/10";
                                 if (stat.qualified_percentage >= 50) {

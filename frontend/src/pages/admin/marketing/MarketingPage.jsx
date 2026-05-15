@@ -16,7 +16,10 @@ import {
     DollarSign,
     Users,
     Calendar,
-    ShoppingBag
+    ShoppingBag,
+    ArrowUpDown,
+    ChevronUp,
+    ChevronDown
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -59,6 +62,40 @@ const MarketingPage = () => {
     // Estado de rendimiento persistente
     const [performanceData, setPerformanceData] = useState([]);
     const [perfLoading, setPerfLoading] = useState(false);
+    
+    // Sorting state
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+
+    const handleSort = (key) => {
+        let direction = 'desc';
+        if (sortConfig.key === key && sortConfig.direction === 'desc') {
+            direction = 'asc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortedPerformanceData = () => {
+        let sortableData = [...performanceData];
+        if (sortConfig.key) {
+            sortableData.sort((a, b) => {
+                let aValue = a[sortConfig.key];
+                let bValue = b[sortConfig.key];
+                
+                if (aValue == null) aValue = '';
+                if (bValue == null) bValue = '';
+                
+                if (typeof aValue === 'string') {
+                    aValue = aValue.toLowerCase();
+                    bValue = bValue.toLowerCase();
+                }
+
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return sortableData;
+    };
     
     const { filters: perfFilters, updateFilter: setPerfFilters } = usePersistentFilters('filters_marketing_perf', {
         period: 'last_month',
@@ -463,21 +500,41 @@ const MarketingPage = () => {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-base bg-base/50">
-                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest">Anuncio</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Inversión</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">Leads</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">CPL</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">Agendas</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">CP Agenda</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">Ventas</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">CP Venta</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Cash Collect</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">ROAS</th>
+                                            {[
+                                                { key: 'ad_name', label: 'Anuncio', align: 'text-left' },
+                                                { key: 'spend', label: 'Inversión', align: 'text-right' },
+                                                { key: 'leads', label: 'Leads', align: 'text-center' },
+                                                { key: 'cpl', label: 'CPL', align: 'text-center' },
+                                                { key: 'agendas', label: 'Agendas', align: 'text-center' },
+                                                { key: 'cpa', label: 'CP Agenda', align: 'text-center' },
+                                                { key: 'ventas', label: 'Ventas', align: 'text-center' },
+                                                { key: 'cpv', label: 'CP Venta', align: 'text-center' },
+                                                { key: 'cash_collect', label: 'Cash Collect', align: 'text-right' },
+                                                { key: 'roas', label: 'ROAS', align: 'text-center' },
+                                            ].map((col) => (
+                                                <th 
+                                                    key={col.key}
+                                                    onClick={() => handleSort(col.key)}
+                                                    className={`px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest cursor-pointer hover:text-white transition-colors group/th ${col.align}`}
+                                                >
+                                                    <div className={`flex items-center gap-1.5 ${
+                                                        col.align === 'text-right' ? 'justify-end' :
+                                                        col.align === 'text-center' ? 'justify-center' : 'justify-start'
+                                                    }`}>
+                                                        {col.label}
+                                                        {sortConfig.key === col.key ? (
+                                                            sortConfig.direction === 'asc' ? <ChevronUp size={12} className="text-violet-400" /> : <ChevronDown size={12} className="text-violet-400" />
+                                                        ) : (
+                                                            <ArrowUpDown size={12} className="opacity-30 group-hover/th:opacity-100 transition-opacity" />
+                                                        )}
+                                                    </div>
+                                                </th>
+                                            ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-base">
-                                        {performanceData.filter(row => row.ad_name.toLowerCase().includes(perfSearch.toLowerCase())).length > 0 ? (
-                                            performanceData
+                                        {getSortedPerformanceData().filter(row => row.ad_name.toLowerCase().includes(perfSearch.toLowerCase())).length > 0 ? (
+                                            getSortedPerformanceData()
                                                 .filter(row => row.ad_name.toLowerCase().includes(perfSearch.toLowerCase()))
                                                 .map(row => (
                                                 <tr key={row.ad_id} className="hover:bg-violet-500/5 transition-all group">
