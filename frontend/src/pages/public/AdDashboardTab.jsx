@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays, HelpCircle, LayoutGrid, List, Settings, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { ResponsiveContainer, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ComposedChart } from 'recharts';
 import AdDetailModal from '../../components/modals/AdDetailModal';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import ColumnSettings from '../../components/marketing/ColumnSettings';
@@ -236,28 +237,27 @@ const AdDashboardTab = () => {
 
             {/* Rendimiento por Fuente (Setter) */}
             {!loading && stats.setter_stats && stats.setter_stats.length > 0 && (
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 px-1">
+                <div className="bg-slate-900/40 p-5 rounded-2xl border border-slate-800/50 shadow-xl">
+                    <div className="flex items-center gap-2 mb-4">
                         <Users className="text-slate-400" size={16} />
-                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Rendimiento por Fuente (Setter)</h4>
+                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Rendimiento por Fuente</h4>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                        {stats.setter_stats.map(setter => (
-                            <div key={setter.name} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center group hover:border-emerald-500/50 transition-all shadow-lg">
-                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 group-hover:text-emerald-400 transition-colors">{setter.name}</p>
-                                <div className="flex items-center gap-4">
-                                    <div className="text-center">
-                                        <p className="text-xl font-black text-white">{setter.agendas}</p>
-                                        <p className="text-[7px] font-bold text-slate-500 uppercase tracking-tighter">Agendas</p>
-                                    </div>
-                                    <div className="w-px h-6 bg-slate-800" />
-                                    <div className="text-center">
-                                        <p className="text-xl font-black text-amber-400">{setter.ventas || 0}</p>
-                                        <p className="text-[7px] font-bold text-slate-500 uppercase tracking-tighter">Ventas</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                    <div className="h-48 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={stats.setter_stats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                                <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                                <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', fontSize: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                                    itemStyle={{ fontWeight: 'bold' }}
+                                    cursor={{ fill: '#1e293b', opacity: 0.4 }}
+                                />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                                <Bar dataKey="agendas" name="Agendas" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                <Bar dataKey="ventas" name="Ventas" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
             )}
