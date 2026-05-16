@@ -15,11 +15,13 @@ def track_visit():
             return jsonify({"error": "No data provided"}), 400
 
         # Obtener el path del dato enviado o del referrer
-        raw_path = data.get('page_path') or data.get('path') or request.referrer
+        data_path = data.get('page_path') or data.get('path')
+        raw_path = data_path or request.referrer
         
-        # Si el path es solo el dominio (ej. https://dominio.com/), intentar forzar la extracción del path del referrer
-        if raw_path and raw_path.count('/') <= 3 and request.referrer and len(request.referrer) > len(raw_path):
-            raw_path = request.referrer
+        # Si el path de los datos es solo la raíz '/' o el dominio, y el referrer tiene más información, usar el referrer
+        if (not data_path or data_path == '/' or data_path.count('/') <= 3) and request.referrer:
+            if len(request.referrer) > len(raw_path) or '/' in request.referrer.replace('https://', '').replace('http://', ''):
+                raw_path = request.referrer
 
         tracking = LandingTracking(
             utm_source=data.get('utm_source'),
