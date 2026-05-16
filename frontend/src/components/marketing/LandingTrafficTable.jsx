@@ -55,16 +55,49 @@ const LandingTrafficTable = () => {
         (v.utm_campaign?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
-    // Agregación para el resumen
+    // Agregación para el resumen con mapeo de nombres amigables
     const pageStats = useMemo(() => {
-        const counts = {};
+        const mainLandings = {
+            '/acceso': 'Acceso',
+            '/bienvenido': 'Bienvenido',
+            '/live-class': 'Live Class',
+            '/live': 'Live'
+        };
+
+        const stats = {
+            'Acceso': 0,
+            'Bienvenido': 0,
+            'Live Class': 0,
+            'Live': 0,
+            'Otros': 0
+        };
+
         visits.forEach(v => {
-            const path = v.page_path || 'desconocida';
-            counts[path] = (counts[path] || 0) + 1;
+            if (!v.page_path) {
+                stats['Otros']++;
+                return;
+            }
+
+            // Normalizar la ruta (quitar dominio si viene completo, quitar slash final)
+            let path = v.page_path.replace('https://institute.thelearnation.com', '');
+            if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
+            if (!path.startsWith('/')) path = '/' + path;
+
+            const name = mainLandings[path];
+            if (name) {
+                stats[name]++;
+            } else {
+                stats['Otros']++;
+            }
         });
-        return Object.entries(counts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 3);
+
+        return Object.entries(stats)
+            .filter(([_, count]) => count > 0 || ['Acceso', 'Bienvenido', 'Live Class', 'Live'].includes(_))
+            .sort((a, b) => {
+                if (a[0] === 'Otros') return 1;
+                if (b[0] === 'Otros') return -1;
+                return b[1] - a[1];
+            });
     }, [visits]);
 
     const formatDate = (dateStr) => {
@@ -112,26 +145,20 @@ const LandingTrafficTable = () => {
             </div>
 
             {/* Resumen de Top Páginas */}
-            {!loading && pageStats.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    {pageStats.map(([path, count], idx) => (
-                        <div key={path} className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex items-center justify-between group hover:border-primary/30 transition-all">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
-                                    idx === 0 ? 'bg-amber-500/20 text-amber-400' : 
-                                    idx === 1 ? 'bg-slate-400/20 text-slate-300' : 
-                                    'bg-amber-700/20 text-amber-600'
-                                }`}>
-                                    #{idx + 1}
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-0.5">Landing Page</p>
-                                    <p className="text-xs font-bold text-white truncate max-w-[150px]">{path}</p>
-                                </div>
+            {!loading && (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                    {pageStats.map(([name, count], idx) => (
+                        <div key={name} className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex flex-col justify-between group hover:border-primary/30 transition-all">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-[9px] font-black text-muted uppercase tracking-widest">{name === 'Otros' ? 'Resto' : 'Landing'}</p>
+                                <Globe size={10} className={name === 'Otros' ? 'text-slate-500' : 'text-primary/50'} />
                             </div>
-                            <div className="text-right">
-                                <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-0.5">Visitas</p>
-                                <p className="text-sm font-black text-primary">{count}</p>
+                            <div className="min-w-0">
+                                <h4 className={`text-xs font-black uppercase truncate ${name === 'Otros' ? 'text-slate-400' : 'text-white'}`}>{name}</h4>
+                                <div className="mt-1 flex items-baseline gap-1">
+                                    <span className="text-xl font-black text-primary">{count}</span>
+                                    <span className="text-[8px] font-bold text-muted uppercase">visitas</span>
+                                </div>
                             </div>
                         </div>
                     ))}
