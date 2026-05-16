@@ -460,6 +460,9 @@ const PeriodSpendTab = ({ campaigns }) => {
     const [history, setHistory] = useState([]);
     const [saving, setSaving] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
+    const [expandedCamps, setExpandedCamps] = useState({});
+    const [expandedHistory, setExpandedHistory] = useState({});
+    const [allCollapsed, setAllCollapsed] = useState(true);
 
     useEffect(() => { loadPeriodData(); }, [selectedStartDate, selectedEndDate, campaigns]);
     useEffect(() => { loadHistory(); }, []);
@@ -590,6 +593,22 @@ const PeriodSpendTab = ({ campaigns }) => {
         return Object.entries(grouped).sort((a, b) => b[1].start.localeCompare(a[1].start));
     }, [history]);
 
+    const handleToggleAll = () => {
+        if (allCollapsed) {
+            const newCamps = {};
+            campaigns.forEach(c => newCamps[c.id] = true);
+            setExpandedCamps(newCamps);
+            const newHist = {};
+            historyByDate.forEach(([k]) => newHist[k] = true);
+            setExpandedHistory(newHist);
+            setAllCollapsed(false);
+        } else {
+            setExpandedCamps({});
+            setExpandedHistory({});
+            setAllCollapsed(true);
+        }
+    };
+
     return (
         <div className="space-y-8">
             {/* Cabecera */}
@@ -604,8 +623,19 @@ const PeriodSpendTab = ({ campaigns }) => {
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total del Período</p>
-                        <p className="text-3xl font-black text-amber-400">${periodTotal.toFixed(2)}</p>
+                        <div className="flex flex-col items-end gap-2">
+                            <div>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total del Período</p>
+                                <p className="text-3xl font-black text-amber-400">${periodTotal.toFixed(2)}</p>
+                            </div>
+                            <button 
+                                onClick={handleToggleAll} 
+                                className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors flex items-center gap-1 border border-slate-700/50"
+                            >
+                                {allCollapsed ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                {allCollapsed ? 'Expandir Todo' : 'Minimizar Todo'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -626,12 +656,18 @@ const PeriodSpendTab = ({ campaigns }) => {
                         return (
                             <div key={camp.id} className="bg-slate-900/50 border border-slate-800 shadow-lg rounded-2xl overflow-hidden">
                                 {/* Encabezado Campaña */}
-                                <div className={`flex flex-wrap items-center justify-between p-4 px-5 border-b transition-colors ${isCampFilled ? 'bg-slate-800/80 border-slate-700' : 'border-slate-800'}`}>
+                                <div 
+                                    className={`flex flex-wrap items-center justify-between p-4 px-5 transition-colors cursor-pointer ${isCampFilled ? 'bg-slate-800/80 hover:bg-slate-800' : 'hover:bg-slate-800/50'} ${expandedCamps[camp.id] ? 'border-b border-slate-700' : 'border-b border-transparent'}`}
+                                    onClick={() => setExpandedCamps(prev => ({ ...prev, [camp.id]: !prev[camp.id] }))}
+                                >
                                     <div className="flex items-center gap-3">
-                                        <Folder size={20} className="text-emerald-500" />
+                                        <div className={`p-1.5 rounded-lg ${expandedCamps[camp.id] ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-500 bg-slate-950'}`}>
+                                            {expandedCamps[camp.id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                        </div>
+                                        <Folder size={20} className={expandedCamps[camp.id] ? "text-emerald-400" : "text-emerald-500"} />
                                         <span className="text-white font-bold text-lg tracking-wide">{camp.name}</span>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
                                         <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Inversión Total</span>
                                         <div className="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800 focus-within:border-emerald-500 transition-colors shadow-inner">
                                             <span className="pl-3 font-black text-slate-500">$</span>
@@ -643,7 +679,8 @@ const PeriodSpendTab = ({ campaigns }) => {
                                 </div>
 
                                 {/* Conjuntos de la Campaña */}
-                                <div className="p-4 space-y-3">
+                                {expandedCamps[camp.id] && (
+                                <div className="p-4 space-y-3 bg-slate-950/20">
                                     {campSets.length === 0 ? (
                                         <div className="py-2 text-sm text-slate-600 pl-4">No hay conjuntos de anuncios.</div>
                                     ) : (
@@ -684,6 +721,7 @@ const PeriodSpendTab = ({ campaigns }) => {
                                         })
                                     )}
                                 </div>
+                                )}
                             </div>
                         );
                     })}
@@ -711,16 +749,25 @@ const PeriodSpendTab = ({ campaigns }) => {
                     <div className="space-y-4">
                         {historyByDate.map(([key, group]) => (
                             <div key={key} className="bg-slate-900/50 border border-slate-800/50 rounded-2xl overflow-hidden">
-                                <div className="flex items-center justify-between px-5 py-3 bg-slate-800/30">
-                                    <div className="flex items-center gap-2">
-                                        <CalendarDays size={14} className="text-slate-500" />
-                                        <span className="text-sm font-bold text-slate-300">
-                                            {new Date(group.start + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-                                            {group.start !== group.end && <> al {new Date(group.end + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>}
-                                        </span>
+                                <div 
+                                    className="flex items-center justify-between px-5 py-3 bg-slate-800/30 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                                    onClick={() => setExpandedHistory(prev => ({ ...prev, [key]: !prev[key] }))}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-1 rounded-lg ${expandedHistory[key] ? 'text-amber-400 bg-amber-500/10' : 'text-slate-500 bg-slate-900'}`}>
+                                            {expandedHistory[key] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <CalendarDays size={14} className={expandedHistory[key] ? "text-amber-400" : "text-slate-500"} />
+                                            <span className="text-sm font-bold text-slate-300">
+                                                {new Date(group.start + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                                {group.start !== group.end && <> al {new Date(group.end + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>}
+                                            </span>
+                                        </div>
                                     </div>
                                     <span className="text-sm font-black text-amber-400">${group.total.toFixed(2)}</span>
                                 </div>
+                                {expandedHistory[key] && (
                                 <div className="divide-y divide-slate-800/30">
                                     {group.entries.map(entry => (
                                         <div key={entry.id} className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-800/20 transition-colors">
@@ -735,6 +782,7 @@ const PeriodSpendTab = ({ campaigns }) => {
                                         </div>
                                     ))}
                                 </div>
+                                )}
                             </div>
                         ))}
                     </div>
