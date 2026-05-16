@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Link, 
@@ -9,14 +9,32 @@ import {
     Layers, 
     Share2, 
     Type,
-    HelpCircle
+    HelpCircle,
+    Plus,
+    X,
+    AlertCircle
 } from 'lucide-react';
 import Card from '../ui/Card';
 import { toast } from 'react-hot-toast';
 
 const UTMGenerator = () => {
+    const defaultLandings = [
+        'https://institute.thelearnation.com/acceso',
+        'https://institute.thelearnation.com/bienvenido',
+        'https://institute.thelearnation.com/live-class',
+        'https://institute.thelearnation.com/live'
+    ];
+
+    const [customLandings, setCustomLandings] = useState(() => {
+        const saved = localStorage.getItem('utm_generator_custom_landings');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    const [newLandingUrl, setNewLandingUrl] = useState('');
+    const [showAddLanding, setShowAddLanding] = useState(false);
+
     const [formData, setFormData] = useState({
-        baseUrl: 'https://institute.thelearnation.com/',
+        baseUrl: defaultLandings[0],
         source: 'instagram',
         medium: 'stories',
         campaign: '',
@@ -27,8 +45,12 @@ const UTMGenerator = () => {
     const [copied, setCopied] = useState(false);
     const [isValidUrl, setIsValidUrl] = useState(true);
 
-    const sources = ['instagram', 'facebook', 'google', 'email', 'whatsapp'];
-    const mediums = ['bio', 'cpc', 'stories', 'newsletter', 'organic'];
+    const sources = ['instagram', 'facebook', 'google', 'email', 'whatsapp', 'manychat'];
+    const mediums = ['bio', 'cpc', 'stories', 'newsletter', 'organic', 'automation'];
+
+    useEffect(() => {
+        localStorage.setItem('utm_generator_custom_landings', JSON.stringify(customLandings));
+    }, [customLandings]);
 
     const formatString = (str) => {
         return str
@@ -79,13 +101,33 @@ const UTMGenerator = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleAddLanding = () => {
+        if (!validateUrl(newLandingUrl)) {
+            toast.error('URL inválida');
+            return;
+        }
+        if (customLandings.includes(newLandingUrl) || defaultLandings.includes(newLandingUrl)) {
+            toast.error('URL ya existe en la lista');
+            return;
+        }
+        setCustomLandings(prev => [...prev, newLandingUrl]);
+        setFormData(prev => ({ ...prev, baseUrl: newLandingUrl }));
+        setNewLandingUrl('');
+        setShowAddLanding(false);
+        toast.success('Landing agregada');
+    };
+
+    const removeLanding = (url, e) => {
+        e.stopPropagation();
+        setCustomLandings(prev => prev.filter(l => l !== url));
+    };
+
     const copyToClipboard = async () => {
         if (!generatedUrl) return;
         try {
             await navigator.clipboard.writeText(generatedUrl);
             setCopied(true);
             
-            // Log to backend (silent)
             try {
                 await fetch('/api/marketing/utm-logs', {
                     method: 'POST',
@@ -116,16 +158,90 @@ const UTMGenerator = () => {
         }
     };
 
+    const allLandings = [...defaultLandings, ...customLandings];
+
     return (
         <Card variant="surface" className="max-w-4xl mx-auto space-y-8 border-white/5 bg-[#0a0b0e]/80 backdrop-blur-xl">
-            <div className="flex items-center gap-4 border-b border-white/5 pb-6">
-                <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
-                    <Share2 className="text-primary" size={24} />
+            <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
+                        <Share2 className="text-primary" size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-black italic tracking-tighter uppercase">Generador de UTMs</h2>
+                        <p className="text-[10px] font-bold text-muted tracking-widest uppercase">Estandarización de enlaces de campaña</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 className="text-2xl font-black italic tracking-tighter uppercase">Generador de UTMs</h2>
-                    <p className="text-[10px] font-bold text-muted tracking-widest uppercase">Estandarización de enlaces de campaña</p>
+            </div>
+
+            {/* Selección Rápida de Landings */}
+            <div className="space-y-4">
+                <label className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
+                    <Globe size={12} /> Seleccionar Landing Page
+                </label>
+                <div className="flex flex-wrap gap-2">
+                    {allLandings.map((url) => {
+                        const isCustom = customLandings.includes(url);
+                        const isActive = formData.baseUrl === url;
+                        const label = url.split('/').pop() || url;
+
+                        return (
+                            <div key={url} className="relative group">
+                                <button
+                                    onClick={() => setFormData(prev => ({ ...prev, baseUrl: url }))}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
+                                        isActive 
+                                        ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' 
+                                        : 'bg-white/[0.03] border-white/10 text-muted hover:border-white/30 hover:text-white'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                                {isCustom && (
+                                    <button 
+                                        onClick={(e) => removeLanding(url, e)}
+                                        className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border-2 border-[#0a0b0e]"
+                                    >
+                                        <X size={8} className="text-white" />
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
+                    <button 
+                        onClick={() => setShowAddLanding(!showAddLanding)}
+                        className="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-500/20 transition-all flex items-center gap-2"
+                    >
+                        <Plus size={12} /> Agregar Landing
+                    </button>
                 </div>
+
+                <AnimatePresence>
+                    {showAddLanding && (
+                        <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                        >
+                            <div className="flex gap-2 p-4 bg-white/[0.02] border border-white/5 rounded-2xl mt-2">
+                                <input 
+                                    type="text"
+                                    placeholder="https://otra-landing.com/..."
+                                    value={newLandingUrl}
+                                    onChange={(e) => setNewLandingUrl(e.target.value)}
+                                    className="flex-1 bg-transparent border-none outline-none text-xs text-white placeholder:text-white/20"
+                                />
+                                <button 
+                                    onClick={handleAddLanding}
+                                    className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:shadow-lg hover:shadow-emerald-500/20 transition-all"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -133,23 +249,16 @@ const UTMGenerator = () => {
                 <div className="space-y-6">
                     <div className="space-y-2">
                         <label className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
-                            <Globe size={12} /> URL Base
+                            URL Manual
                         </label>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                name="baseUrl"
-                                value={formData.baseUrl}
-                                onChange={handleInputChange}
-                                placeholder="https://institute.thelearnation.com/tu-landing"
-                                className={`w-full p-4 bg-white/[0.03] border ${!isValidUrl ? 'border-rose-500/50' : 'border-white/10'} rounded-2xl text-xs font-medium focus:border-primary/50 transition-all outline-none text-white`}
-                            />
-                            {!isValidUrl && (
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-rose-500">
-                                    <AlertCircle size={16} />
-                                </div>
-                            )}
-                        </div>
+                        <input
+                            type="text"
+                            name="baseUrl"
+                            value={formData.baseUrl}
+                            onChange={handleInputChange}
+                            placeholder="https://institute.thelearnation.com/tu-landing"
+                            className={`w-full p-4 bg-white/[0.03] border ${!isValidUrl ? 'border-rose-500/50' : 'border-white/10'} rounded-2xl text-xs font-medium focus:border-primary/50 transition-all outline-none text-white`}
+                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -167,24 +276,9 @@ const UTMGenerator = () => {
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
-                                    <Layers size={12} /> UTM Medium
-                                </label>
-                                <div className="relative group/tooltip">
-                                    <HelpCircle size={14} className="text-muted/50 cursor-help hover:text-primary transition-colors" />
-                                    <div className="absolute bottom-full right-0 mb-2 w-64 bg-[#1a1b1e] border border-white/10 rounded-2xl p-4 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-2xl backdrop-blur-xl">
-                                        <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-3 border-b border-white/5 pb-2">Guía de Mediums</p>
-                                        <ul className="space-y-2 text-[10px] text-white/70 font-medium">
-                                            <li><span className="text-white font-bold">bio:</span> Link en la biografía del perfil.</li>
-                                            <li><span className="text-white font-bold">cpc:</span> Anuncios pagados (pago por clic).</li>
-                                            <li><span className="text-white font-bold">stories:</span> Enlaces en historias (IG/FB).</li>
-                                            <li><span className="text-white font-bold">newsletter:</span> Enlaces en campañas de email.</li>
-                                            <li><span className="text-white font-bold">organic:</span> Tráfico natural no pagado.</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
+                            <label className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
+                                <Layers size={12} /> UTM Medium
+                            </label>
                             <select
                                 name="medium"
                                 value={formData.medium}
@@ -249,7 +343,6 @@ const UTMGenerator = () => {
                                 {copied ? <Check size={16} /> : <Copy size={16} />}
                                 {copied ? 'Copiado!' : 'Copiar al portapapeles'}
                             </button>
-
                         </div>
                     </div>
                 </div>
