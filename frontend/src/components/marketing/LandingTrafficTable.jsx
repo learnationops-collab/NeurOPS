@@ -79,11 +79,17 @@ const LandingTrafficTable = () => {
             }
 
             // Normalizar la ruta: quitar dominio, quitar query strings (?, #) y slash final
-            let path = v.page_path
-                .replace('https://institute.thelearnation.com', '')
-                .replace('https://work.thelearnation.com', '')
-                .split('?')[0]
-                .split('#')[0];
+            // Normalizar la ruta: extraer solo el path de cualquier URL completa
+            let path = v.page_path || '';
+            try {
+                if (path.includes('://')) {
+                    path = new URL(path).pathname;
+                } else {
+                    path = path.split('?')[0].split('#')[0];
+                }
+            } catch (e) {
+                path = path.split('?')[0].split('#')[0];
+            }
             
             if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
             if (!path.startsWith('/')) path = '/' + path;
@@ -210,10 +216,13 @@ const LandingTrafficTable = () => {
                                             <div className="flex items-center gap-2 font-bold text-white">
                                                 <Globe size={12} className="text-primary/50" />
                                                 {(() => {
-                                                    const p = (visit.page_path || '')
-                                                        .replace('https://institute.thelearnation.com', '')
-                                                        .replace('https://work.thelearnation.com', '')
-                                                        .split('?')[0].split('#')[0];
+                                                    let p = visit.page_path || '';
+                                                    try {
+                                                        if (p.includes('://')) p = new URL(p).pathname;
+                                                        else p = p.split('?')[0].split('#')[0];
+                                                    } catch (e) {
+                                                        p = p.split('?')[0].split('#')[0];
+                                                    }
                                                     const cleanPath = p.endsWith('/') && p.length > 1 ? p.slice(0, -1) : (p || '/');
                                                     const names = { '/acceso': 'Acceso', '/bienvenido': 'Bienvenido', '/live-class': 'Live Class', '/live': 'Live' };
                                                     return names[cleanPath] || cleanPath;

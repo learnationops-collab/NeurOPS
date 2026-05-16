@@ -16,11 +16,14 @@ def track_visit():
 
         # Obtener el path del dato enviado o del referrer
         data_path = data.get('page_path') or data.get('path')
-        raw_path = data_path or request.referrer
         
-        # Si el path de los datos es solo la raíz '/' o el dominio, y el referrer tiene más información, usar el referrer
-        if (not data_path or data_path == '/' or data_path.count('/') <= 3) and request.referrer:
-            if len(request.referrer) > len(raw_path) or '/' in request.referrer.replace('https://', '').replace('http://', ''):
+        # Priorizar el dato explícito enviado desde el frontend
+        if data_path and data_path != '/':
+            raw_path = data_path
+        else:
+            # Solo si no hay path o es '/', intentamos usar el referrer
+            raw_path = data_path or request.referrer or '/'
+            if request.referrer and (not data_path or data_path == '/'):
                 raw_path = request.referrer
 
         tracking = LandingTracking(
