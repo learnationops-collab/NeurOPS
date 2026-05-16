@@ -206,9 +206,22 @@ const LandingTrafficTable = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5">
-                                        <div className="flex items-center gap-2 font-bold text-white group-hover:text-primary transition-colors">
-                                            <Globe size={12} className="text-primary/50" />
-                                            {visit.page_path || <span className="text-muted font-normal italic">ruta desconocida</span>}
+                                        <div className="flex flex-col gap-0.5 group-hover:text-primary transition-colors">
+                                            <div className="flex items-center gap-2 font-bold text-white">
+                                                <Globe size={12} className="text-primary/50" />
+                                                {(() => {
+                                                    const p = (visit.page_path || '')
+                                                        .replace('https://institute.thelearnation.com', '')
+                                                        .replace('https://work.thelearnation.com', '')
+                                                        .split('?')[0].split('#')[0];
+                                                    const cleanPath = p.endsWith('/') && p.length > 1 ? p.slice(0, -1) : (p || '/');
+                                                    const names = { '/acceso': 'Acceso', '/bienvenido': 'Bienvenido', '/live-class': 'Live Class', '/live': 'Live' };
+                                                    return names[cleanPath] || cleanPath;
+                                                })()}
+                                            </div>
+                                            <span className="text-[10px] text-muted truncate max-w-[200px] font-medium opacity-50">
+                                                {visit.page_path || 'ruta desconocida'}
+                                            </span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5">

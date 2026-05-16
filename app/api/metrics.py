@@ -14,13 +14,20 @@ def track_visit():
         if not data:
             return jsonify({"error": "No data provided"}), 400
 
+        # Obtener el path del dato enviado o del referrer
+        raw_path = data.get('page_path') or data.get('path') or request.referrer
+        
+        # Si el path es solo el dominio (ej. https://dominio.com/), intentar forzar la extracción del path del referrer
+        if raw_path and raw_path.count('/') <= 3 and request.referrer and len(request.referrer) > len(raw_path):
+            raw_path = request.referrer
+
         tracking = LandingTracking(
             utm_source=data.get('utm_source'),
             utm_medium=data.get('utm_medium'),
             utm_campaign=data.get('utm_campaign'),
             utm_content=data.get('utm_content'),
-            page_path=data.get('page_path') or data.get('path') or request.referrer,
-            referrer=data.get('referrer') or request.referrer
+            page_path=raw_path,
+            referrer=request.referrer
         )
         db.session.add(tracking)
         db.session.commit()
