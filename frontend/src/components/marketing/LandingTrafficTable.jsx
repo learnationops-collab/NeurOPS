@@ -12,6 +12,8 @@ import {
 import Card from '../ui/Card';
 import { toast } from 'react-hot-toast';
 
+import api from '../../services/api';
+
 const LandingTrafficTable = () => {
     const [visits, setVisits] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -20,15 +22,11 @@ const LandingTrafficTable = () => {
     const fetchVisits = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/v1/metrics/track-visits');
-            if (response.ok) {
-                const data = await response.json();
-                setVisits(data);
-            } else {
-                toast.error('Error al cargar datos de tráfico');
-            }
+            const response = await api.get('/v1/metrics/track-visits');
+            setVisits(response.data);
         } catch (err) {
-            toast.error('Error de conexión');
+            toast.error('Error al cargar datos de tráfico');
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -38,18 +36,12 @@ const LandingTrafficTable = () => {
         if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
         
         try {
-            const response = await fetch(`/api/v1/metrics/track-visit/${id}`, {
-                method: 'DELETE'
-            });
-            
-            if (response.ok) {
-                toast.success('Registro eliminado');
-                setVisits(prev => prev.filter(v => v.id !== id));
-            } else {
-                toast.error('Error al eliminar');
-            }
+            await api.delete(`/v1/metrics/track-visit/${id}`);
+            toast.success('Registro eliminado');
+            setVisits(prev => prev.filter(v => v.id !== id));
         } catch (err) {
-            toast.error('Error de conexión');
+            toast.error('Error al eliminar');
+            console.error(err);
         }
     };
 
