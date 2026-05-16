@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Plus, Trash2, Pencil, Save, X, DollarSign, Megaphone, ArrowLeft, CalendarDays, TrendingUp, Search, Radio, Users, Folder, Layers, ChevronDown, ChevronRight, Tag, MessageSquare } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Save, X, DollarSign, Megaphone, ArrowLeft, CalendarDays, TrendingUp, Search, Radio, Users, Folder, Layers, ChevronDown, ChevronRight, Tag, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebhookMonitorTab from './WebhookMonitorTab';
 import AdDashboardTab from './AdDashboardTab';
+import usePersistentFilters from '../../hooks/usePersistentFilters';
 
 // ==========================================
 // Componentes Auxiliares
@@ -464,6 +465,10 @@ const PeriodSpendTab = ({ campaigns }) => {
     const [expandedHistory, setExpandedHistory] = useState({});
     const [allCollapsed, setAllCollapsed] = useState(true);
 
+    const { filters: hiddenFilters, updateFilter: setHiddenFilters } = usePersistentFilters('hidden_camps_v1', { hidden: [] });
+    const hiddenCamps = hiddenFilters.hidden || [];
+    const [showHidden, setShowHidden] = useState(false);
+
     useEffect(() => { loadPeriodData(); }, [selectedStartDate, selectedEndDate, campaigns]);
     useEffect(() => { loadHistory(); }, []);
 
@@ -609,6 +614,17 @@ const PeriodSpendTab = ({ campaigns }) => {
         }
     };
 
+    const handleToggleHideCamp = (e, campId) => {
+        e.stopPropagation();
+        if (hiddenCamps.includes(campId)) {
+            setHiddenFilters({ hidden: hiddenCamps.filter(id => id !== campId) });
+        } else {
+            setHiddenFilters({ hidden: [...hiddenCamps, campId] });
+        }
+    };
+
+    const visibleCampaigns = showHidden ? campaigns : campaigns.filter(c => !hiddenCamps.includes(c.id));
+
     return (
         <div className="space-y-8">
             {/* Cabecera */}
@@ -628,13 +644,24 @@ const PeriodSpendTab = ({ campaigns }) => {
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total del Período</p>
                                 <p className="text-3xl font-black text-amber-400">${periodTotal.toFixed(2)}</p>
                             </div>
-                            <button 
-                                onClick={handleToggleAll} 
-                                className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors flex items-center gap-1 border border-slate-700/50"
-                            >
-                                {allCollapsed ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                                {allCollapsed ? 'Expandir Todo' : 'Minimizar Todo'}
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {hiddenCamps.length > 0 && (
+                                    <button 
+                                        onClick={() => setShowHidden(!showHidden)} 
+                                        className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 border ${showHidden ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700/50'}`}
+                                    >
+                                        {showHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                                        {showHidden ? 'Ocultar Archivados' : `Mostrar Archivados (${hiddenCamps.length})`}
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={handleToggleAll} 
+                                    className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors flex items-center gap-1 border border-slate-700/50"
+                                >
+                                    {allCollapsed ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                    {allCollapsed ? 'Expandir Todo' : 'Minimizar Todo'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -646,15 +673,21 @@ const PeriodSpendTab = ({ campaigns }) => {
                     <DollarSign size={48} className="mx-auto mb-4 opacity-30" />
                     <p className="font-medium">No hay campañas disponibles</p>
                 </div>
+            ) : visibleCampaigns.length === 0 ? (
+                <div className="text-center py-12 bg-slate-900/30 rounded-2xl border border-slate-800/50 border-dashed">
+                    <EyeOff size={40} className="mx-auto mb-3 opacity-30 text-slate-400" />
+                    <p className="text-slate-400 text-sm font-medium">Todas las campañas están archivadas/ocultas.</p>
+                </div>
             ) : (
                 <div className="space-y-6">
-                    {campaigns.map(camp => {
+                    {visibleCampaigns.map(camp => {
                         const campSets = camp.ad_sets || [];
                         const cVal = campValues[camp.id] ?? '';
                         const isCampFilled = cVal !== '' && parseFloat(cVal) > 0;
+                        const isHidden = hiddenCamps.includes(camp.id);
                         
                         return (
-                            <div key={camp.id} className="bg-slate-900/50 border border-slate-800 shadow-lg rounded-2xl overflow-hidden">
+                            <div key={camp.id} className={`bg-slate-900/50 border border-slate-800 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 ${isHidden ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}>
                                 {/* Encabezado Campaña */}
                                 <div 
                                     className={`flex flex-wrap items-center justify-between p-4 px-5 transition-colors cursor-pointer ${isCampFilled ? 'bg-slate-800/80 hover:bg-slate-800' : 'hover:bg-slate-800/50'} ${expandedCamps[camp.id] ? 'border-b border-slate-700' : 'border-b border-transparent'}`}
@@ -665,7 +698,17 @@ const PeriodSpendTab = ({ campaigns }) => {
                                             {expandedCamps[camp.id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                                         </div>
                                         <Folder size={20} className={expandedCamps[camp.id] ? "text-emerald-400" : "text-emerald-500"} />
-                                        <span className="text-white font-bold text-lg tracking-wide">{camp.name}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-white font-bold text-lg tracking-wide">{camp.name}</span>
+                                            {isHidden && <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none">Archivada</span>}
+                                        </div>
+                                        <button 
+                                            onClick={(e) => handleToggleHideCamp(e, camp.id)} 
+                                            className="ml-2 p-1.5 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                                            title={isHidden ? "Desarchivar Campaña" : "Archivar / Ocultar Campaña"}
+                                        >
+                                            {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                                        </button>
                                     </div>
                                     <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
                                         <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Inversión Total</span>
