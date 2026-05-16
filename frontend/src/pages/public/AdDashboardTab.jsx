@@ -370,29 +370,33 @@ const AdDashboardTab = () => {
                                                     const totalValid = array.filter(a => !isAllZero(a)).length;
                                                     let rankColor = "hover:bg-slate-800/40"; // fallback
                                                     
+                                                    const colorEmerald = "bg-emerald-500/10 hover:bg-emerald-400/25";
+                                                    const colorAmber = "bg-amber-500/10 hover:bg-amber-400/25";
+                                                    const colorRed = "bg-red-500/10 hover:bg-red-400/25";
+
                                                     if (zeroRow) {
-                                                        rankColor = "bg-red-900/20 hover:bg-red-900/30";
+                                                        rankColor = "bg-red-950/30 hover:bg-red-900/40";
                                                     } else if (sortConfig.key && colorThresholds[sortConfig.key]) {
                                                         const conf = colorThresholds[sortConfig.key];
                                                         const val = parseFloat(stat[sortConfig.key] || 0);
                                                         
                                                         if (conf.mode === 'higher') {
-                                                            if (val >= conf.optimal) rankColor = "bg-emerald-900/10 hover:bg-emerald-900/20";
-                                                            else if (val >= conf.tolerable) rankColor = "bg-amber-900/10 hover:bg-amber-900/20";
-                                                            else rankColor = "bg-red-900/10 hover:bg-red-900/20";
+                                                            if (val >= conf.optimal) rankColor = colorEmerald;
+                                                            else if (val >= conf.tolerable) rankColor = colorAmber;
+                                                            else rankColor = colorRed;
                                                         } else {
-                                                            if (val <= conf.optimal) rankColor = "bg-emerald-900/10 hover:bg-emerald-900/20";
-                                                            else if (val <= conf.tolerable) rankColor = "bg-amber-900/10 hover:bg-amber-900/20";
-                                                            else rankColor = "bg-red-900/10 hover:bg-red-900/20";
+                                                            if (val <= conf.optimal) rankColor = colorEmerald;
+                                                            else if (val <= conf.tolerable) rankColor = colorAmber;
+                                                            else rankColor = colorRed;
                                                         }
                                                     } else if (totalValid > 0) {
                                                         const rankRatio = index / totalValid;
                                                         if (rankRatio <= 0.33) {
-                                                            rankColor = "bg-emerald-900/10 hover:bg-emerald-900/20";
+                                                            rankColor = colorEmerald;
                                                         } else if (rankRatio <= 0.66) {
-                                                            rankColor = "bg-amber-900/10 hover:bg-amber-900/20";
+                                                            rankColor = colorAmber;
                                                         } else {
-                                                            rankColor = "bg-red-900/10 hover:bg-red-900/20";
+                                                            rankColor = colorRed;
                                                         }
                                                     }
 
