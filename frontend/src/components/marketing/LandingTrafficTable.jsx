@@ -78,8 +78,13 @@ const LandingTrafficTable = () => {
                 return;
             }
 
-            // Normalizar la ruta (quitar dominio si viene completo, quitar slash final)
-            let path = v.page_path.replace('https://institute.thelearnation.com', '');
+            // Normalizar la ruta: quitar dominio, quitar query strings (?, #) y slash final
+            let path = v.page_path
+                .replace('https://institute.thelearnation.com', '')
+                .replace('https://work.thelearnation.com', '')
+                .split('?')[0]
+                .split('#')[0];
+            
             if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
             if (!path.startsWith('/')) path = '/' + path;
 
