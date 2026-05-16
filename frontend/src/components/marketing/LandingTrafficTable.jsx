@@ -55,6 +55,18 @@ const LandingTrafficTable = () => {
         (v.utm_campaign?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
+    // Agregación para el resumen
+    const pageStats = useMemo(() => {
+        const counts = {};
+        visits.forEach(v => {
+            const path = v.page_path || 'desconocida';
+            counts[path] = (counts[path] || 0) + 1;
+        });
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3);
+    }, [visits]);
+
     const formatDate = (dateStr) => {
         const date = new Date(dateStr);
         return new Intl.DateTimeFormat('es-ES', {
@@ -99,6 +111,33 @@ const LandingTrafficTable = () => {
                 </div>
             </div>
 
+            {/* Resumen de Top Páginas */}
+            {!loading && pageStats.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    {pageStats.map(([path, count], idx) => (
+                        <div key={path} className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex items-center justify-between group hover:border-primary/30 transition-all">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
+                                    idx === 0 ? 'bg-amber-500/20 text-amber-400' : 
+                                    idx === 1 ? 'bg-slate-400/20 text-slate-300' : 
+                                    'bg-amber-700/20 text-amber-600'
+                                }`}>
+                                    #{idx + 1}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-0.5">Landing Page</p>
+                                    <p className="text-xs font-bold text-white truncate max-w-[150px]">{path}</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-0.5">Visitas</p>
+                                <p className="text-sm font-black text-primary">{count}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-separate border-spacing-y-2">
                     <thead>
@@ -137,7 +176,7 @@ const LandingTrafficTable = () => {
                                     <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5">
                                         <div className="flex items-center gap-2 font-bold text-white group-hover:text-primary transition-colors">
                                             <Globe size={12} className="text-primary/50" />
-                                            {visit.page_path}
+                                            {visit.page_path || <span className="text-muted font-normal italic">ruta desconocida</span>}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 bg-white/[0.02] border-y border-white/5">

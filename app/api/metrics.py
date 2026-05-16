@@ -19,8 +19,8 @@ def track_visit():
             utm_medium=data.get('utm_medium'),
             utm_campaign=data.get('utm_campaign'),
             utm_content=data.get('utm_content'),
-            page_path=data.get('page_path'),
-            referrer=data.get('referrer')
+            page_path=data.get('page_path') or data.get('path') or request.referrer,
+            referrer=data.get('referrer') or request.referrer
         )
         db.session.add(tracking)
         db.session.commit()
