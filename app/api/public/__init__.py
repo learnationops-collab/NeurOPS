@@ -518,11 +518,39 @@ def update_financial_sale(sale_id):
 
 @bp.route('/public/financial-sales', methods=['GET'])
 def get_financial_sales():
-    """Returns all financial sales records."""
+    """Returns all financial sales records with pagination and search options."""
     from app.models import FinancialSale
+    from sqlalchemy import or_
     
-    sales = FinancialSale.query.order_by(FinancialSale.date.desc()).all()
-    return jsonify([s.to_dict() for s in sales]), 200
+    page = request.args.get('page', default=None, type=int)
+    limit = request.args.get('limit', default=10, type=int)
+    search = request.args.get('search', default='', type=str).strip()
+    
+    query = FinancialSale.query
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(or_(
+            FinancialSale.nombre_cliente.ilike(search_pattern),
+            FinancialSale.instagram.ilike(search_pattern),
+            FinancialSale.email_vendedor.ilike(search_pattern),
+            FinancialSale.setter.ilike(search_pattern)
+        ))
+        
+    query = query.order_by(FinancialSale.date.desc())
+    
+    if page is not None:
+        sales_pagination = query.paginate(page=page, per_page=limit, error_out=False)
+        return jsonify({
+            "data": [s.to_dict() for s in sales_pagination.items],
+            "total": sales_pagination.total,
+            "page": sales_pagination.page,
+            "pages": sales_pagination.pages,
+            "has_more": sales_pagination.has_next
+        }), 200
+    else:
+        sales = query.all()
+        return jsonify([s.to_dict() for s in sales]), 200
+
 
 # --- Financial Agendas Sync (Similar to Sales) ---
 
@@ -576,10 +604,72 @@ def sync_financial_agendas_from_sheets():
 
 @bp.route('/public/financial-agendas', methods=['GET'])
 def get_financial_agendas():
-    """Returns all financial agendas records."""
-    from app.models import FinancialAgenda
-    agendas = FinancialAgenda.query.order_by(FinancialAgenda.date.desc()).all()
-    return jsonify([a.to_dict() for a in agendas]), 200
+    """Returns all financial agendas records with pagination, search and date options."""
+    from app.models import db, FinancialAgenda
+    from sqlalchemy import or_, func
+    
+    page = request.args.get('page', default=None, type=int)
+    limit = request.args.get('limit', default=10, type=int)
+    search = request.args.get('search', default='', type=str).strip()
+    start_date_str = request.args.get('start_date', default='', type=str).strip()
+    end_date_str = request.args.get('end_date', default='', type=str).strip()
+    
+    query = FinancialAgenda.query
+    
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(or_(
+            FinancialAgenda.lead.ilike(search_pattern),
+            FinancialAgenda.nombre.ilike(search_pattern),
+            FinancialAgenda.closer.ilike(search_pattern)
+        ))
+        
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            query = query.filter(FinancialAgenda.date >= start_date)
+        except ValueError:
+            pass
+            
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            query = query.filter(FinancialAgenda.date <= end_date)
+        except ValueError:
+            pass
+            
+    query = query.order_by(FinancialAgenda.date.desc())
+    
+    if page is not None:
+        agendas_pagination = query.paginate(page=page, per_page=limit, error_out=False)
+        
+        # Calculate aggregations based on the filtered query
+        total_count = query.count()
+        upcoming_count = query.filter(FinancialAgenda.date >= datetime.utcnow()).count()
+        
+        # Calculate closer counts
+        closer_counts = db.session.query(
+            FinancialAgenda.closer, 
+            func.count(FinancialAgenda.id)
+        ).filter(
+            FinancialAgenda.id.in_(query.with_entities(FinancialAgenda.id))
+        ).group_by(FinancialAgenda.closer).all()
+        
+        by_closer = {closer or 'Sin Asignar': count for closer, count in closer_counts}
+        
+        return jsonify({
+            "data": [a.to_dict() for a in agendas_pagination.items],
+            "total": total_count,
+            "upcoming_count": upcoming_count,
+            "by_closer": by_closer,
+            "page": agendas_pagination.page,
+            "pages": agendas_pagination.pages,
+            "has_more": agendas_pagination.has_next
+        }), 200
+    else:
+        agendas = query.all()
+        return jsonify([a.to_dict() for a in agendas]), 200
 
 
 from . import triage
