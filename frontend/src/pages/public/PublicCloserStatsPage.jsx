@@ -31,7 +31,7 @@ const PublicCloserStatsPage = () => {
     const [closers, setClosers] = useState([]);
 
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_closer_stats', {
-        closer_id: user.role === 'closer' && user.id ? user.id.toString() : '',
+        closer_id: user.role === 'closer' && user.id ? user.id.toString() : '3',
         start_date: '',
         end_date: '',
         agg_type: 'sum',

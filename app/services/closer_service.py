@@ -942,6 +942,84 @@ class CloserService:
         def div(n, d):
             return round((n / d) * 100, 1) if d and d > 0 else 0
 
+        # Retrieve closer identifiers to link with official sales
+        closer_identifiers = []
+        if closer_id:
+            user = User.query.get(closer_id)
+            if user:
+                username_lower = (user.username or '').lower()
+                mapping = {
+                    'jean carlo': ['jeancarlo@thelearnation.com'],
+                    'marlon': ['marlon@thelearnation.com', 'marlongarcia27948@gmail.com'],
+                    'guillermo': ['guillermo@thelearnation.com'],
+                    'tomas': ['tomas@thelearnation.com', 'tomaszetaaa@gmail.com'],
+                    'mario': ['mario@neurocogniciones.com', 'mario@thelearnation.com'],
+                    'mercari': ['mercaricc@gmail.com', 'mírcari', 'mircari', 'mercari'],
+                    'iñaki': ['iñaki', 'inaki'],
+                    'rafael': ['rafael'],
+                    'mateo': ['mateo'],
+                    'belén': ['mbelenamerise@gmail.com', 'belen'],
+                    'valery': ['valeryjohana.cabrera@gmail.com', 'valery']
+                }
+                
+                matched = False
+                for key, val_list in mapping.items():
+                    if key in username_lower:
+                        closer_identifiers = val_list
+                        matched = True
+                        break
+                
+                if not matched and user.email:
+                    closer_identifiers = [user.email]
+
+        # Query official sales from FinancialSale to match Sales Log exactly
+        from app.models import FinancialSale
+        sales_query = db.session.query(
+            FinancialSale.tipo_pago,
+            func.count(FinancialSale.id).label('count'),
+            func.sum(FinancialSale.monto).label('cash')
+        )
+        sales_filters = []
+        if start_date:
+            sales_filters.append(FinancialSale.date >= (datetime.strptime(start_date, '%Y-%m-%d') if isinstance(start_date, str) else datetime.combine(start_date, datetime.min.time())))
+        if end_date:
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d') if isinstance(end_date, str) else datetime.combine(end_date, datetime.min.time())
+            sales_filters.append(FinancialSale.date < (end_dt + timedelta(days=1)))
+        if closer_identifiers:
+            sales_filters.append(FinancialSale.email_vendedor.in_(closer_identifiers))
+            
+        sales_rows = sales_query.filter(*sales_filters).group_by(FinancialSale.tipo_pago).all()
+        
+        official_pif_count = 0.0
+        official_pif_cash = 0.0
+        official_split_count = 0.0
+        official_split_cash = 0.0
+        official_deposit_count = 0.0
+        official_deposit_cash = 0.0
+        
+        for tipo, count, cash in sales_rows:
+            tipo_lower = (tipo or '').lower()
+            cash_val = float(cash or 0.0)
+            count_val = float(count or 0.0)
+            
+            if 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower:
+                official_pif_count += count_val
+                official_pif_cash += cash_val
+            elif 'seña' in tipo_lower or 'deposito' in tipo_lower or 'deposit' in tipo_lower:
+                official_deposit_count += count_val
+                official_deposit_cash += cash_val
+            else:
+                official_split_count += count_val
+                official_split_cash += cash_val
+
+        # Scale official sales metrics by aggregation type
+        final_pif_count = round(official_pif_count / days_count, 2) if agg_type == 'avg' else official_pif_count
+        final_pif_cash = round(official_pif_cash / days_count, 2) if agg_type == 'avg' else official_pif_cash
+        final_split_count = round(official_split_count / days_count, 2) if agg_type == 'avg' else official_split_count
+        final_split_cash = round(official_split_cash / days_count, 2) if agg_type == 'avg' else official_split_cash
+        final_deposit_count = round(official_deposit_count / days_count, 2) if agg_type == 'avg' else official_deposit_count
+        final_deposit_cash = round(official_deposit_cash / days_count, 2) if agg_type == 'avg' else official_deposit_cash
+
         # Totals
         total_scheduled = val(stats.fc_scheduled) + val(stats.sc_scheduled)
         total_attended = val(stats.fc_attended) + val(stats.sc_attended)
@@ -949,8 +1027,8 @@ class CloserService:
         total_rescheduled = val(stats.fc_rescheduled) + val(stats.sc_rescheduled)
         total_canceled = val(stats.fc_canceled) + val(stats.sc_canceled)
 
-        total_sales = val(stats.pif_count) + val(stats.split_count) + val(stats.deposit_count)
-        total_cash = val(stats.pif_cash) + val(stats.split_cash) + val(stats.deposit_cash)
+        total_sales = final_pif_count + final_split_count + final_deposit_count
+        total_cash = final_pif_cash + final_split_cash + final_deposit_cash
         total_ic_sales = val(stats.pif_ic_count) + val(stats.split_ic_count) + val(stats.deposit_ic_count)
         total_ic_cash = val(stats.pif_ic_cash) + val(stats.split_ic_cash) + val(stats.deposit_ic_cash)
 
@@ -984,9 +1062,9 @@ class CloserService:
                 }
             },
             "sales": {
-                "pif": {"count": val(stats.pif_count), "cash": val(stats.pif_cash), "in_call_count": val(stats.pif_ic_count), "in_call_cash": val(stats.pif_ic_cash)},
-                "split": {"count": val(stats.split_count), "cash": val(stats.split_cash), "in_call_count": val(stats.split_ic_count), "in_call_cash": val(stats.split_ic_cash)},
-                "deposit": {"count": val(stats.deposit_count), "cash": val(stats.deposit_cash), "in_call_count": val(stats.deposit_ic_count), "in_call_cash": val(stats.deposit_ic_cash)},
+                "pif": {"count": final_pif_count, "cash": final_pif_cash, "in_call_count": val(stats.pif_ic_count), "in_call_cash": val(stats.pif_ic_cash)},
+                "split": {"count": final_split_count, "cash": final_split_cash, "in_call_count": val(stats.split_ic_count), "in_call_cash": val(stats.split_ic_cash)},
+                "deposit": {"count": final_deposit_count, "cash": final_deposit_cash, "in_call_count": val(stats.deposit_ic_count), "in_call_cash": val(stats.deposit_ic_cash)},
                 "totals": {"count": total_sales, "cash": total_cash, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}
             },
             "follow_ups": {
