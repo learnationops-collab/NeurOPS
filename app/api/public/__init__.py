@@ -518,13 +518,16 @@ def update_financial_sale(sale_id):
 
 @bp.route('/public/financial-sales', methods=['GET'])
 def get_financial_sales():
-    """Returns all financial sales records with pagination and search options."""
-    from app.models import FinancialSale
-    from sqlalchemy import or_
+    """Returns all financial sales records with pagination, search, and date range options."""
+    from app.models import db, FinancialSale
+    from sqlalchemy import or_, func
+    from datetime import datetime
     
     page = request.args.get('page', default=None, type=int)
     limit = request.args.get('limit', default=10, type=int)
     search = request.args.get('search', default='', type=str).strip()
+    start_date_str = request.args.get('start_date', default='', type=str).strip()
+    end_date_str = request.args.get('end_date', default='', type=str).strip()
     
     query = FinancialSale.query
     if search:
@@ -536,16 +539,55 @@ def get_financial_sales():
             FinancialSale.setter.ilike(search_pattern)
         ))
         
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            query = query.filter(FinancialSale.date >= start_date)
+        except ValueError:
+            pass
+            
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            query = query.filter(FinancialSale.date <= end_date)
+        except ValueError:
+            pass
+            
     query = query.order_by(FinancialSale.date.desc())
     
     if page is not None:
         sales_pagination = query.paginate(page=page, per_page=limit, error_out=False)
+        
+        # Calculate aggregations on the filtered set
+        subquery = query.with_entities(FinancialSale.id)
+        total_monto = db.session.query(func.sum(FinancialSale.monto)).filter(FinancialSale.id.in_(subquery)).scalar() or 0.0
+        
+        # Calculate breakdown by setter (source)
+        breakdown_query = db.session.query(
+            FinancialSale.setter,
+            func.count(FinancialSale.id),
+            func.sum(FinancialSale.monto)
+        ).filter(
+            FinancialSale.id.in_(subquery)
+        ).group_by(FinancialSale.setter).all()
+        
+        sources_breakdown = []
+        for setter, count, total_source_monto in breakdown_query:
+            sources_breakdown.append({
+                "source": setter or "Sin Setter",
+                "count": count,
+                "total_monto": float(total_source_monto or 0.0)
+            })
+            
         return jsonify({
             "data": [s.to_dict() for s in sales_pagination.items],
             "total": sales_pagination.total,
             "page": sales_pagination.page,
             "pages": sales_pagination.pages,
-            "has_more": sales_pagination.has_next
+            "has_more": sales_pagination.has_next,
+            "total_monto": float(total_monto),
+            "sources_breakdown": sources_breakdown
         }), 200
     else:
         sales = query.all()
