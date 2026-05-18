@@ -14,6 +14,16 @@ import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
 
+const getFirstDayOfCurrentMonth = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+};
+
+const getTodayDate = () => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+};
+
 const FinancialAgendasPage = () => {
     const [agendas, setAgendas] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -29,14 +39,24 @@ const FinancialAgendasPage = () => {
     
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_financial_agendas', {
         searchTerm: '',
-        startDate: '',
-        endDate: ''
+        startDate: getFirstDayOfCurrentMonth(),
+        endDate: getTodayDate()
     });
 
     const { searchTerm, startDate, endDate } = filters;
     const setSearchTerm = (val) => setFilters({ searchTerm: val });
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
+
+    // Forzar inicio en el mes actual si los filtros cargados de localStorage están vacíos
+    useEffect(() => {
+        if (!startDate || !endDate) {
+            setFilters({
+                startDate: startDate || getFirstDayOfCurrentMonth(),
+                endDate: endDate || getTodayDate()
+            });
+        }
+    }, [startDate, endDate]);
 
     const loaderRef = useRef(null);
 
@@ -175,24 +195,18 @@ const FinancialAgendasPage = () => {
             </header>
 
             {/* KPI Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card variant="surface" className="flex flex-col justify-center rounded-[2rem] p-6 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                        <Users size={80} />
-                    </div>
-                    <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-2">Total Agendados</p>
-                    <h3 className="text-4xl font-black text-white italic tracking-tighter">{totalAgendados}</h3>
-                </Card>
+            <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl py-2 px-4 hover:bg-white/10 transition-colors">
+                    <Users className="text-slate-400" size={14} />
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Agendados</span>
+                    <span className="text-lg font-black text-white italic tracking-tight">{totalAgendados}</span>
+                </div>
 
-                <Card variant="surface" className="flex flex-col justify-center rounded-[2rem] p-6 relative overflow-hidden group border-primary/20 bg-primary/5">
-                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                        <CalendarIcon size={80} />
-                    </div>
-                    <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest mb-2">Próximas Citas</p>
-                    <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                        {proximasCitas}
-                    </h3>
-                </Card>
+                <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-2xl py-2 px-4 hover:bg-primary/10 transition-colors shadow-sm">
+                    <CalendarIcon className="text-primary" size={14} />
+                    <span className="text-[9px] font-black text-primary/80 uppercase tracking-widest font-black">Próximas Citas</span>
+                    <span className="text-lg font-black text-white italic tracking-tight">{proximasCitas}</span>
+                </div>
             </div>
 
             {/* Summary by Closer Section */}

@@ -215,87 +215,89 @@ const PublicCloserStatsPage = () => {
                     <TabButton id="customers" label="Cartera Clientes" icon={Users} />
                 </div>
 
-                {/* FILTROS (Comunes para ambas vistas) */}
-                <div className="flex flex-wrap items-center gap-6 bg-slate-900/80 p-6 rounded-[2rem] border border-slate-800 shadow-2xl">
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Closer / Equipo</label>
-                        <select
-                            className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all cursor-pointer min-w-[200px]"
-                            value={filters.closer_id}
-                            onChange={e => setFilters({ ...filters, closer_id: e.target.value })}
-                        >
-                            <option value="">Todo el Equipo ({filters.agg_type === 'sum' ? 'Suma' : 'Promedio'})</option>
-                            {closers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
-                        <select
-                            className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all cursor-pointer min-w-[150px]"
-                            value={filters.time_preset}
-                            onChange={e => setFilters({ ...filters, time_preset: e.target.value })}
-                        >
-                            <option value="yesterday">Ayer</option>
-                            <option value="last_days">Últimos X días</option>
-                            <option value="all_time">Todo el tiempo</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
-                    </div>
-
-                    {filters.time_preset === 'last_days' && (
+                {/* FILTROS (Comunes para vistas general y advanced) */}
+                {(activeTab === 'general' || activeTab === 'advanced') && (
+                    <div className="flex flex-wrap items-center gap-6 bg-slate-900/80 p-6 rounded-[2rem] border border-slate-800 shadow-2xl">
                         <div className="flex flex-col gap-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Días</label>
-                            <input
-                                type="number"
-                                className="w-16 bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black text-center"
-                                value={filters.custom_days}
-                                onChange={e => setFilters({ ...filters, custom_days: parseInt(e.target.value) || 0 })}
-                            />
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Closer / Equipo</label>
+                            <select
+                                className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all cursor-pointer min-w-[200px]"
+                                value={filters.closer_id}
+                                onChange={e => setFilters({ ...filters, closer_id: e.target.value })}
+                            >
+                                <option value="">Todo el Equipo ({filters.agg_type === 'sum' ? 'Suma' : 'Promedio'})</option>
+                                {closers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
                         </div>
-                    )}
 
-                    {filters.time_preset === 'custom' && (
-                        <>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
+                            <select
+                                className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all cursor-pointer min-w-[150px]"
+                                value={filters.time_preset}
+                                onChange={e => setFilters({ ...filters, time_preset: e.target.value })}
+                            >
+                                <option value="yesterday">Ayer</option>
+                                <option value="last_days">Últimos X días</option>
+                                <option value="all_time">Todo el tiempo</option>
+                                <option value="custom">Personalizado</option>
+                            </select>
+                        </div>
+
+                        {filters.time_preset === 'last_days' && (
                             <div className="flex flex-col gap-2">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Desde</label>
+                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Días</label>
                                 <input
-                                    type="date"
-                                    className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black"
-                                    value={filters.start_date}
-                                    onChange={e => setFilters({ ...filters, start_date: e.target.value })}
+                                    type="number"
+                                    className="w-16 bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black text-center"
+                                    value={filters.custom_days}
+                                    onChange={e => setFilters({ ...filters, custom_days: parseInt(e.target.value) || 0 })}
                                 />
                             </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Hasta</label>
-                                <input
-                                    type="date"
-                                    className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black"
-                                    value={filters.end_date}
-                                    onChange={e => setFilters({ ...filters, end_date: e.target.value })}
-                                />
-                            </div>
-                        </>
-                    )}
+                        )}
 
-                    <div className="flex flex-col gap-2 ml-auto">
-                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 text-right">Agregación</label>
-                        <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
-                            <button
-                                onClick={() => setFilters({ ...filters, agg_type: 'sum' })}
-                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${filters.agg_type === 'sum' ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                Suma
-                            </button>
-                            <button
-                                onClick={() => setFilters({ ...filters, agg_type: 'avg' })}
-                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${filters.agg_type === 'avg' ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30' : 'text-slate-500 hover:text-slate-300'}`}
-                            >
-                                Promedio
-                            </button>
+                        {filters.time_preset === 'custom' && (
+                            <>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Desde</label>
+                                    <input
+                                        type="date"
+                                        className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black"
+                                        value={filters.start_date}
+                                        onChange={e => setFilters({ ...filters, start_date: e.target.value })}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Hasta</label>
+                                    <input
+                                        type="date"
+                                        className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black"
+                                        value={filters.end_date}
+                                        onChange={e => setFilters({ ...filters, end_date: e.target.value })}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        <div className="flex flex-col gap-2 ml-auto">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 text-right">Agregación</label>
+                            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                                <button
+                                    onClick={() => setFilters({ ...filters, agg_type: 'sum' })}
+                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${filters.agg_type === 'sum' ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30' : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    Suma
+                                </button>
+                                <button
+                                    onClick={() => setFilters({ ...filters, agg_type: 'avg' })}
+                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${filters.agg_type === 'avg' ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30' : 'text-slate-500 hover:text-slate-300'}`}
+                                >
+                                    Promedio
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* CONTENIDO PRINCIPAL */}
                 {loading && !stats ? (
