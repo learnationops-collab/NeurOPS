@@ -465,6 +465,12 @@ const PeriodSpendTab = ({ campaigns }) => {
     const [expandedHistory, setExpandedHistory] = useState({});
     const [allCollapsed, setAllCollapsed] = useState(true);
 
+    // Estados para la edicion en el historial
+    const [editingSpendId, setEditingSpendId] = useState(null);
+    const [editingSpendValue, setEditingSpendValue] = useState('');
+    const [updatingSpendId, setUpdatingSpendId] = useState(null);
+
+
     const { filters: hiddenFilters, updateFilter: setHiddenFilters } = usePersistentFilters('hidden_camps_v1', { hidden: [] });
     const hiddenCamps = hiddenFilters.hidden || [];
     const [showHidden, setShowHidden] = useState(false);
@@ -578,6 +584,26 @@ const PeriodSpendTab = ({ campaigns }) => {
         if (!confirm('¿Eliminar registro?')) return;
         try { await api.delete(`/public/ads/period-spend/${id}`); loadHistory(); loadPeriodData(); } catch (err) {}
     };
+
+    const handleUpdateSpend = async (id, newSpend) => {
+        const val = parseFloat(newSpend);
+        if (isNaN(val) || val < 0) {
+            alert('Por favor ingrese un monto válido.');
+            return;
+        }
+        setUpdatingSpendId(id);
+        try {
+            await api.put(`/public/ads/period-spend/${id}`, { spend: val });
+            setEditingSpendId(null);
+            setEditingSpendValue('');
+            await Promise.all([loadHistory(), loadPeriodData()]);
+        } catch (err) {
+            alert('Error al actualizar: ' + (err.response?.data?.error || err.message));
+        } finally {
+            setUpdatingSpendId(null);
+        }
+    };
+
 
     const periodTotal = useMemo(() => {
         let sum = 0;
@@ -819,7 +845,40 @@ const PeriodSpendTab = ({ campaigns }) => {
                                                 <span className="text-xs text-slate-500 ml-2 font-mono uppercase tracking-wider">{entry.campaign_name || 'Desconocido'}</span>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <span className="text-sm font-bold text-white">${entry.spend.toFixed(2)}</span>
+                                                {editingSpendId === entry.id ? (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-700 shadow-inner">
+                                                            <span className="pl-1 font-black text-slate-500 text-xs">$</span>
+                                                            <input 
+                                                                type="number" 
+                                                                step="0.01" 
+                                                                min="0" 
+                                                                placeholder="0.00"
+                                                                className="w-16 py-0.5 px-1 outline-none font-bold text-right bg-transparent text-white text-xs"
+                                                                value={editingSpendValue} 
+                                                                onChange={e => setEditingSpendValue(e.target.value)}
+                                                                autoFocus
+                                                                onKeyDown={e => {
+                                                                    if (e.key === 'Enter') handleUpdateSpend(entry.id, editingSpendValue);
+                                                                    if (e.key === 'Escape') { setEditingSpendId(null); setEditingSpendValue(''); }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        {updatingSpendId === entry.id ? (
+                                                            <Loader2 size={12} className="animate-spin text-emerald-500" />
+                                                        ) : (
+                                                            <div className="flex gap-1">
+                                                                <button onClick={() => handleUpdateSpend(entry.id, editingSpendValue)} className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors" title="Guardar"><Save size={12} /></button>
+                                                                <button onClick={() => { setEditingSpendId(null); setEditingSpendValue(''); }} className="p-1 text-slate-400 hover:text-slate-200 transition-colors" title="Cancelar"><X size={12} /></button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-bold text-white">${entry.spend.toFixed(2)}</span>
+                                                        <button onClick={() => { setEditingSpendId(entry.id); setEditingSpendValue(entry.spend.toString()); }} className="p-1 text-slate-400 hover:text-white transition-colors" title="Editar"><Pencil size={12} /></button>
+                                                    </div>
+                                                )}
                                                 <button onClick={() => handleDeleteSpend(entry.id)} className="p-1 text-slate-600 hover:text-red-400"><Trash2 size={12} /></button>
                                             </div>
                                         </div>

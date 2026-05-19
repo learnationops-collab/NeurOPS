@@ -357,6 +357,28 @@ def save_public_period_spend():
         return jsonify({"error": str(e)}), 500
 
 
+@bp.route('/public/ads/period-spend/<int:spend_id>', methods=['PUT'])
+def update_public_period_spend(spend_id):
+    """Actualiza el monto de un registro de gasto por periodo."""
+    from app.models import AdPeriodSpend
+
+    record = AdPeriodSpend.query.get_or_404(spend_id)
+    data = request.get_json() or {}
+    
+    if 'spend' in data:
+        try:
+            record.spend = float(data['spend'])
+        except ValueError:
+            return jsonify({"error": "El monto debe ser un número válido."}), 400
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Registro actualizado exitosamente", "spend": record.spend}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
 @bp.route('/public/ads/period-spend/<int:spend_id>', methods=['DELETE'])
 def delete_public_period_spend(spend_id):
     """Elimina un registro de gasto por periodo."""
@@ -370,6 +392,7 @@ def delete_public_period_spend(spend_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
 
 
 # ============================================================
