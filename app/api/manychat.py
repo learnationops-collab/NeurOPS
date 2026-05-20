@@ -29,6 +29,19 @@ def receive_manychat_ad_lead():
     if not manychat_id:
         return jsonify({"status": "error", "message": "manychat_id es obligatorio"}), 400
 
+    # ----- Helper de validación selectiva -----
+    def is_valid_value(val):
+        if val is None:
+            return False
+        if isinstance(val, str):
+            val_stripped = val.strip()
+            # Evita registrar variables sin expandir o strings vacíos
+            if val_stripped == "" or val_stripped.lower() in ('null', 'none', 'undefined', 'indeterminado'):
+                return False
+            if '{{' in val_stripped or '}}' in val_stripped or 'cuf_' in val_stripped:
+                return False
+        return True
+
     # ----- Datos del LEAD -----
     lead_name = data.get('lead_name', '')
     lead_ig = data.get('lead_ig', '')
@@ -64,120 +77,121 @@ def receive_manychat_ad_lead():
             ad_id = None
             logger.warning(f"[WEBHOOK] ad_id no es un entero válido: '{ad_id_raw}', se guardará como None")
 
-    # Normalizar cualificación a string limitados (true/false/null)
-    if qualification_raw is None or str(qualification_raw).lower() in ('null', 'none', ''):
-        qualification = 'null'
-    elif str(qualification_raw).lower() in ('true', '1', 'si', 'sí', 'yes'):
-        qualification = 'true'
-    else:
-        qualification = 'false'
-
     # Intentar resolver ad_id por keyword si no viene explícito
-    if not ad_id and keyword:
+    if not ad_id and is_valid_value(keyword):
         try:
             ad = Ad.query.filter_by(keyword=keyword, status='active').first()
             if ad:
                 ad_id = ad.id
                 logger.info(f"[WEBHOOK] ad_id resuelto por keyword '{keyword}': {ad_id}")
         except Exception:
-            pass  # Si falla la búsqueda, seguimos sin ad_id
+            pass
 
     try:
         # 1. UPSERT LEAD
         lead = ManychatLead.query.filter_by(manychat_id=str(manychat_id)).first()
         if lead:
-            # Actualizamos datos del usuario
-            if lead_name: lead.name = lead_name
-            if lead_ig: lead.ig = lead_ig
-            lead.follower = follower
-            # Actualizamos last_stage si viene en el payload
+            # Actualiza solo si los valores entrantes son válidos
+            if is_valid_value(lead_name): 
+                lead.name = lead_name
+            if is_valid_value(lead_ig): 
+                lead.ig = lead_ig
+            if follower_raw is not None: 
+                lead.follower = follower
+            
             raw_last_stage = data.get('last_stage')
-            if raw_last_stage is not None:
+            if raw_last_stage is not None and is_valid_value(raw_last_stage):
                 try:
                     lead.last_stage = int(raw_last_stage)
                 except (ValueError, TypeError):
                     pass
-            logger.info(f"[WEBHOOK] ManychatLead actualizado: {manychat_id}")
+            logger.info(f"[WEBHOOK] ManychatLead actualizado selectivamente: {manychat_id}")
         else:
-            # Lo creamos
+            # Crea el lead nuevo
             raw_last_stage = data.get('last_stage')
             parsed_last_stage = None
-            if raw_last_stage is not None:
+            if raw_last_stage is not None and is_valid_value(raw_last_stage):
                 try:
                     parsed_last_stage = int(raw_last_stage)
                 except (ValueError, TypeError):
                     pass
+            
             lead = ManychatLead(
                 manychat_id=str(manychat_id),
-                name=lead_name,
-                ig=lead_ig,
+                name=lead_name if is_valid_value(lead_name) else None,
+                ig=lead_ig if is_valid_value(lead_ig) else None,
                 follower=follower,
                 last_stage=parsed_last_stage
             )
             db.session.add(lead)
-            db.session.flush() # Para obtener lead.id antes del commit
+            db.session.flush()
             logger.info(f"[WEBHOOK] ManychatLead creado: {manychat_id} (ID DB: {lead.id})")
 
-        # 2. UPSERT ANSWER
-        # 2. UPSERT ANSWER
-        from datetime import datetime, timedelta
-        
+        # 2. UPSERT ANSWER (Deduplicación histórica permanente)
         answer = None
         
-        # --- Fase 1: Ventana de Tiempo Anti-Duplicados ---
-        # Buscamos si hay una interacción en las últimas 24 horas
-        time_window = datetime.utcnow() - timedelta(hours=24)
-        recent_answer = LeadAnswer.query.filter(
-            LeadAnswer.lead_id == lead.id,
-            LeadAnswer.created_at >= time_window
-        ).order_by(LeadAnswer.created_at.desc()).first()
-
-        if recent_answer:
-            # Solo evitamos reutilizarla si el webhook explícitamente dice que es un anuncio *diferente*
-            if ad_id and recent_answer.ad_id and ad_id != recent_answer.ad_id:
-                answer = None # Es un anuncio distinto, dejaremos que cree uno nuevo
-            else:
-                answer = recent_answer
-                # Si la interacción vieja no tenía ad_id pero este webhook sí lo trae, lo aprovechamos para rellenar
-                if ad_id and not answer.ad_id:
-                    answer.ad_id = ad_id
-                logger.info(f"[WEBHOOK] Anti-duplicados: Reutilizando LeadAnswer ID {answer.id}")
-                
-        # Si no se activó la ventana de tiempo o era de otro anuncio, seguimos con el comportamiento normal
+        # Busca por ad_id primero
+        if ad_id:
+            answer = LeadAnswer.query.filter_by(lead_id=lead.id, ad_id=ad_id).first()
+        
+        # Si no hay por ad_id, busca por keyword
+        if not answer and is_valid_value(keyword):
+            answer = LeadAnswer.query.filter_by(lead_id=lead.id, keyword=keyword).first()
+            
+        # Si no, busca la última interacción registrada
         if not answer:
-            if ad_id:
-                answer = LeadAnswer.query.filter_by(lead_id=lead.id, ad_id=ad_id).first()
-            elif keyword:
-                answer = LeadAnswer.query.filter_by(lead_id=lead.id, keyword=keyword).first()
-
-            if not answer and not ad_id and not keyword:
-                answer = LeadAnswer.query.filter_by(lead_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
+            answer = LeadAnswer.query.filter_by(lead_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
 
         if answer:
-            # Actualizar respuesta existente
-            if qualification_raw is not None: answer.qualification = qualification
-            if fecha: answer.fecha_recibida = fecha
-            if opening: answer.opening = opening
-            if variante: answer.variante = variante
-            if keyword: answer.keyword = keyword
-            if id_option is not None: answer.id_option = str(id_option)
-            if id_option_send is not None: answer.id_option_send = str(id_option_send)
-            if id_question is not None: answer.id_question = str(id_question)
+            # Actualiza la respuesta existente selectivamente
+            if ad_id and not answer.ad_id:
+                answer.ad_id = ad_id
+            
+            if is_valid_value(qualification_raw):
+                qual_str = str(qualification_raw).lower()
+                if qual_str in ('true', '1', 'si', 'sí', 'yes'):
+                    answer.qualification = 'true'
+                elif qual_str in ('false', '0', 'no'):
+                    answer.qualification = 'false'
+            
+            if is_valid_value(fecha): 
+                answer.fecha_recibida = fecha
+            if is_valid_value(opening): 
+                answer.opening = opening
+            if is_valid_value(variante): 
+                answer.variante = variante
+            if is_valid_value(keyword): 
+                answer.keyword = keyword
+            if is_valid_value(id_option): 
+                answer.id_option = str(id_option)
+            if is_valid_value(id_option_send): 
+                answer.id_option_send = str(id_option_send)
+            if is_valid_value(id_question): 
+                answer.id_question = str(id_question)
+                
             action = 'updated'
-            logger.info(f"[WEBHOOK] LeadAnswer actualizado para Manychat_ID: {manychat_id}")
+            logger.info(f"[WEBHOOK] LeadAnswer actualizado selectivamente para Manychat_ID: {manychat_id}")
         else:
-            # Crear nueva respuesta (Primer contacto con este Anuncio/Variante)
+            # Crea una nueva interacción
+            qual = 'null'
+            if is_valid_value(qualification_raw):
+                qual_str = str(qualification_raw).lower()
+                if qual_str in ('true', '1', 'si', 'sí', 'yes'):
+                    qual = 'true'
+                elif qual_str in ('false', '0', 'no'):
+                    qual = 'false'
+            
             answer = LeadAnswer(
                 lead_id=lead.id,
                 ad_id=ad_id,
-                keyword=keyword,
-                fecha_recibida=fecha,
-                opening=opening,
-                variante=variante,
-                qualification=qualification,
-                id_option=str(id_option) if id_option is not None else None,
-                id_option_send=str(id_option_send) if id_option_send is not None else None,
-                id_question=str(id_question) if id_question is not None else None
+                keyword=keyword if is_valid_value(keyword) else None,
+                fecha_recibida=fecha if is_valid_value(fecha) else None,
+                opening=opening if is_valid_value(opening) else None,
+                variante=variante if is_valid_value(variante) else None,
+                qualification=qual,
+                id_option=str(id_option) if is_valid_value(id_option) else None,
+                id_option_send=str(id_option_send) if is_valid_value(id_option_send) else None,
+                id_question=str(id_question) if is_valid_value(id_question) else None
             )
             db.session.add(answer)
             action = 'created'
