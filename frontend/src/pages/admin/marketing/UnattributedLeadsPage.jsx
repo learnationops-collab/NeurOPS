@@ -393,7 +393,6 @@ const UnattributedLeadsPage = () => {
                                                     </td>
                                                     <td className="p-4">
                                                         <div className="font-bold text-white text-xs">{sale.cliente}</div>
-                                                        <div className="text-[10px] text-slate-500 font-medium uppercase mt-0.5">{sale.producto}</div>
                                                     </td>
                                                     <td className="p-4 text-xs font-mono">
                                                         {sale.instagram && sale.instagram !== 'N/A' ? (

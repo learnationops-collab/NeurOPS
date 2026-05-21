@@ -632,8 +632,10 @@ def get_unattributed_leads():
             return None
         return ig_str.strip().lstrip('@').lower()
 
+    unattributed_sales_map = {}
     unattributed_sales = []
     unattributed_agendas = []
+    seen_agenda_leads = set()
 
     # 1. Buscar ventas sin anuncio
     if lead_type in ('all', 'sales'):
@@ -645,6 +647,24 @@ def get_unattributed_leads():
         for sale in sales:
             ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
             ig_norm = normalize_ig(ig_val)
+            nombre_norm = (sale.nombre_cliente or '').strip().lower()
+
+            lead_key = None
+            if ig_norm:
+                lead_key = f"ig:{ig_norm}"
+            elif nombre_norm:
+                lead_key = f"nombre:{nombre_norm}"
+            else:
+                lead_key = f"sale:{sale.id}"
+
+            # Si ya validamos a este lead y se determinó que no está atribuido, sumamos al acumulado
+            if lead_key in unattributed_sales_map:
+                unattributed_sales_map[lead_key]["monto"] += (sale.monto or 0.0)
+                # Mantener la fecha de la venta más antigua (primer pago)
+                sale_date_str = sale.date.isoformat() if sale.date else sale.created_at.isoformat()
+                if sale_date_str < unattributed_sales_map[lead_key]["date"]:
+                    unattributed_sales_map[lead_key]["date"] = sale_date_str
+                continue
 
             matched_lead = None
             if ig_norm:
@@ -653,7 +673,6 @@ def get_unattributed_leads():
                 ).first()
 
             if not matched_lead:
-                nombre_norm = (sale.nombre_cliente or '').strip().lower()
                 if nombre_norm:
                     matched_lead = ManychatLead.query.filter(
                         db.func.lower(ManychatLead.name) == nombre_norm
@@ -674,28 +693,31 @@ def get_unattributed_leads():
                 closer = (sale.raw_data or {}).get('vendedor') or (sale.raw_data or {}).get('closer') or sale.email_vendedor or 'Sin asignar'
                 setter = sale.setter or 'Sin asignar'
                 
-                sale_data = {
+                unattributed_sales_map[lead_key] = {
                     "id": sale.id,
                     "date": sale.date.isoformat() if sale.date else sale.created_at.isoformat(),
                     "cliente": sale.nombre_cliente or 'Desconocido',
                     "instagram": sale.instagram or 'N/A',
                     "setter": setter,
                     "closer": closer,
-                    "monto": sale.monto or 0.0,
-                    "producto": sale.tipo_pago or (sale.raw_data or {}).get('tipo_pago') or 'N/A'
+                    "monto": sale.monto or 0.0
                 }
-                
-                if search_query:
-                    search_match = (
-                        search_query in sale_data["cliente"].lower() or
-                        search_query in sale_data["instagram"].lower() or
-                        search_query in sale_data["setter"].lower() or
-                        search_query in sale_data["closer"].lower()
-                    )
-                    if search_match:
-                        unattributed_sales.append(sale_data)
-                else:
+
+        # Redondear y aplicar filtros de búsqueda
+        for lead_key, sale_data in unattributed_sales_map.items():
+            sale_data["monto"] = round(sale_data["monto"], 2)
+            
+            if search_query:
+                search_match = (
+                    search_query in sale_data["cliente"].lower() or
+                    search_query in sale_data["instagram"].lower() or
+                    search_query in sale_data["setter"].lower() or
+                    search_query in sale_data["closer"].lower()
+                )
+                if search_match:
                     unattributed_sales.append(sale_data)
+            else:
+                unattributed_sales.append(sale_data)
 
     # 2. Buscar agendas sin anuncio
     if lead_type in ('all', 'agendas'):
@@ -707,6 +729,16 @@ def get_unattributed_leads():
         for agenda in agendas:
             ig_val = agenda.instagram or (agenda.raw_data or {}).get('instagram') or (agenda.raw_data or {}).get('ig')
             ig_norm = normalize_ig(ig_val)
+            nombre_norm = (agenda.nombre or '').strip().lower()
+
+            lead_key = None
+            if ig_norm:
+                lead_key = f"ig:{ig_norm}"
+            elif nombre_norm:
+                lead_key = f"nombre:{nombre_norm}"
+
+            if lead_key and lead_key in seen_agenda_leads:
+                continue
 
             matched_lead = None
             if ig_norm:
@@ -715,7 +747,6 @@ def get_unattributed_leads():
                 ).first()
 
             if not matched_lead:
-                nombre_norm = (agenda.nombre or '').strip().lower()
                 if nombre_norm:
                     matched_lead = ManychatLead.query.filter(
                         db.func.lower(ManychatLead.name) == nombre_norm
@@ -733,6 +764,9 @@ def get_unattributed_leads():
                     has_attribution = True
 
             if not has_attribution:
+                if lead_key:
+                    seen_agenda_leads.add(lead_key)
+
                 setter = agenda.lead or 'Sin asignar'
                 closer = agenda.closer or 'Sin asignar'
                 
