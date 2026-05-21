@@ -139,16 +139,19 @@ const PublicSetterStatsPage = () => {
     );
 
     const StatCard = ({ title, value, percentage, icon: Icon, colorClass, subtitle, trend = null, tooltipInfo }) => (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:shadow-indigo-500/5 transition-all overflow-visible">
-            <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-indigo-500`} />
-            <div className="flex items-start justify-between relative z-10 overflow-visible">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
+            {/* Contenedor del brillo de fondo con overflow-hidden para no salirse de los bordes redondeados */}
+            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-indigo-500`} />
+            </div>
+            <div className="flex items-start justify-between relative z-10">
                 <div className="space-y-1">
                     <div className="flex items-center gap-1.5">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
                         {tooltipInfo && (
                             <div className="relative group/tooltip inline-block">
                                 <HelpCircle size={12} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
                                     {tooltipInfo}
                                     <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                                 </div>
@@ -213,7 +216,7 @@ const PublicSetterStatsPage = () => {
                     {tooltipInfo && (
                         <div className="relative group/tooltip inline-block">
                             <HelpCircle size={10} className="text-slate-500 cursor-help hover:text-indigo-500 transition-colors" />
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
                                 {tooltipInfo}
                                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                             </div>
@@ -577,7 +580,7 @@ const PublicSetterStatsPage = () => {
                                         <div className="bg-indigo-600 rounded-[2rem] p-6 text-white shadow-xl flex flex-col justify-center relative overflow-visible group/tooltip-conv">
                                             <div className="absolute top-4 right-4 group-hover/tooltip-conv:opacity-100 opacity-50 transition-opacity">
                                                 <HelpCircle size={14} className="text-white/50 cursor-help" />
-                                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip-conv:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
+                                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip-conv:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
                                                     Porcentaje de leads reales que terminan en agenda. Cálculo: (Agendas / Leads Reales).
                                                     <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div>
                                                 </div>

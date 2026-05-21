@@ -64,7 +64,7 @@ const ConfigurableStatCard = ({
                     {tooltipInfo && (
                         <div className="relative group/tooltip inline-block">
                             <Info size={12} className="text-slate-600 cursor-help hover:text-blue-400 transition-colors" />
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 bg-[#0f172a] text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-2xl border border-slate-800">
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 bg-[#0f172a] text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-2xl border border-slate-800">
                                 <div className="text-blue-400 font-bold mb-1 uppercase tracking-tighter">Explicación:</div>
                                 {tooltipInfo}
                                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#0f172a]"></div>

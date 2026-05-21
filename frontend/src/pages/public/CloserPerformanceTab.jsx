@@ -37,8 +37,11 @@ const CloserPerformanceTab = ({ stats, loading }) => {
     };
 
     const StatCard = ({ title, value, icon: Icon, colorClass, subtitle, tooltip }) => (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-            <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity ${colorClass.replace('text-', 'bg-')}`} />
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group">
+            {/* Contenedor del brillo de fondo con overflow-hidden para no salirse de los bordes redondeados */}
+            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity ${colorClass.replace('text-', 'bg-')}`} />
+            </div>
             <div className="flex items-start justify-between relative z-10">
                 <div className="space-y-1">
                     <div className="flex items-center gap-1.5">
@@ -46,7 +49,7 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                         {tooltip && (
                             <div className="relative group/tooltip flex items-center">
                                 <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-slate-300 transition-colors" />
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl border border-slate-700/50">
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
                                     {tooltip}
                                     <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                                 </div>
@@ -71,7 +74,7 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                     {tooltip && (
                         <div className="relative group/tooltip flex items-center">
                             <Info size={10} className="text-slate-500 cursor-help hover:text-white transition-colors" />
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl">
                                 {tooltip}
                                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                             </div>
@@ -162,12 +165,26 @@ const CloserPerformanceTab = ({ stats, loading }) => {
     }
 
     // Chart Data Configs
+    const pifCount = stats.sales.pif?.count ?? stats.sales.totals?.pif_count ?? 0;
+    const splitCount = stats.sales.split?.count ?? stats.sales.totals?.split_count ?? 0;
+    const depositCount = stats.sales.deposit?.count ?? stats.sales.totals?.deposit_count ?? stats.sales.totals?.seña_count ?? 0;
+    
+    const pifCash = stats.sales.pif?.cash ?? stats.sales.totals?.pif_cash_collected ?? stats.sales.totals?.pif_cash ?? 0;
+    const splitCash = stats.sales.split?.cash ?? stats.sales.totals?.split_cash_collected ?? stats.sales.totals?.split_cash ?? 0;
+    const depositCash = stats.sales.deposit?.cash ?? stats.sales.totals?.deposit_cash_collected ?? stats.sales.totals?.deposit_cash ?? stats.sales.totals?.seña_cash ?? 0;
+
+    const realSalesCount = pifCount + splitCount;
+    const realSalesCash = pifCash + splitCash;
+
+    const ticketPromedioReal = realSalesCount > 0 ? (realSalesCash / realSalesCount) : 0;
+
     const salesData = [
-        { name: 'Cierre en Llamada', value: stats.sales.totals.in_call_count },
-        { name: 'Cierre Seguimiento', value: stats.sales.totals.count - stats.sales.totals.in_call_count },
+        { name: 'PIF', value: pifCount },
+        { name: 'Split Pay', value: splitCount },
+        { name: 'Promesas (Señas)', value: depositCount }
     ].filter(d => d.value > 0);
     if (salesData.length === 0) salesData.push({ name: 'Sin Ventas', value: 1 });
-    const salesColors = salesData[0].name === 'Sin Ventas' ? ['#334155'] : ['#10b981', '#3b82f6'];
+    const salesColors = salesData[0].name === 'Sin Ventas' ? ['#334155'] : ['#10b981', '#3b82f6', '#f59e0b'];
 
     const totalAttended = stats.agendas.totals.attended;
     const totalNoShow = stats.agendas.totals.no_show;
@@ -207,32 +224,34 @@ const CloserPerformanceTab = ({ stats, loading }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     title="Ingreso Total Cash"
-                    value={fmtCash(stats.sales.totals.cash)}
+                    value={fmtCash(realSalesCash)}
                     icon={DollarSign}
                     colorClass="text-emerald-500"
-                    tooltip="Ingreso total en efectivo generado por las ventas en el periodo, excluyendo saldos pendientes."
+                    subtitle={`Total Promesa: ${fmtCash(depositCash)}`}
+                    tooltip="Ingreso en efectivo generado por ventas reales (PIF y Split). Excluye Promesas/Señas."
                 />
                 <StatCard
-                    title="Cierres Totales"
-                    value={fmt(stats.sales.totals.count)}
+                    title="Cierres Reales"
+                    value={fmt(realSalesCount)}
                     icon={Target}
                     colorClass="text-amber-500"
-                    subtitle={`Tasa Cierre: ${fmtNum(stats.percentages.close_rate, true)}`}
-                    tooltip="Suma total de todas las ventas cerradas en el periodo. Tasa de Cierre = (Ventas Totales / Ofertas Realizadas)."
+                    subtitle={`Tasa Cierre Real: ${fmtNum(calcDiv(realSalesCount, stats.agendas.totals.attended, true), true)}`}
+                    tooltip="Total de ventas completadas o con cuota iniciada (PIF + Split). No incluye señas."
                 />
                 <StatCard
                     title="Ticket Promedio"
-                    value={fmtNum(calcDiv(stats.sales.totals.cash, stats.sales.totals.count), false, true)}
+                    value={fmtNum(ticketPromedioReal, false, true)}
                     icon={Activity}
                     colorClass="text-sky-500"
-                    tooltip="Promedio de ingresos generados por cada venta cerrada: (Ingresos Totales / Cierres Totales)."
+                    tooltip="Promedio de ingresos generados solo por ventas reales (PIF + Split)."
                 />
                 <StatCard
-                    title="Estimado Comisión (10%)"
-                    value={fmtNum(stats.sales.totals.cash * 0.10, false, true)}
+                    title="Promesas de Venta"
+                    value={fmt(depositCount)}
                     icon={DollarSign}
-                    colorClass="text-indigo-500"
-                    tooltip="Cálculo estimativo de la comisión del Closer asumiendo un 10% estándar sobre el Cash Collected total."
+                    colorClass="text-fuchsia-500"
+                    subtitle={`Close Rate Promesa: ${fmtNum(calcDiv(depositCount, stats.agendas.totals.attended, true), true)}`}
+                    tooltip="Total de señas o reservas (Promesas de venta) realizadas en el periodo."
                 />
             </div>
 
@@ -265,8 +284,12 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                             <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.general.offers_made)}</span>
                         </div>
                         <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Ventas</span>
-                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.sales.totals.count)}</span>
+                            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Cierres Reales</span>
+                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(realSalesCount)}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                            <span className="text-[10px] font-black text-fuchsia-500 uppercase tracking-widest">Promesas (Señas)</span>
+                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(depositCount)}</span>
                         </div>
                         <div className="flex justify-between items-center p-4 bg-rose-500/5 rounded-2xl border border-rose-500/10">
                             <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Seg. Hot</span>
@@ -320,11 +343,21 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                         </div>
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
-                            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Close Rate (Ofertas)</p>
+                            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Close Rate Real</p>
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-slate-400">Ofertas → Ventas</span>
+                                <span className="text-[10px] font-bold text-slate-400">Ofertas → Cierres Reales</span>
                                 <span className="text-lg font-black text-white tabular-nums">
-                                    {stats.general.offers_made ? ((stats.sales.totals.count / stats.general.offers_made) * 100).toFixed(1) : 0}%
+                                    {stats.general.offers_made ? ((realSalesCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
+                            <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest">Close Rate Promesa</p>
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-slate-400">Ofertas → Promesas</span>
+                                <span className="text-lg font-black text-white tabular-nums">
+                                    {stats.general.offers_made ? ((depositCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
                                 </span>
                             </div>
                         </div>
@@ -333,15 +366,21 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                             <div className="flex items-center gap-1.5 relative group/tooltip">
                                 <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Global Win Rate</p>
                                 <Info size={10} className="text-indigo-400/50 cursor-help" />
-                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[100] shadow-xl">
+                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl">
                                     Tasa de cierre global (Ventas / Asistencias totales). Indica el porcentaje de personas con las que hablaste que terminaron comprando.
                                     <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
                                 </div>
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-indigo-300">Asistencias → Ventas</span>
+                            <div className="flex justify-between items-center mt-1">
+                                <span className="text-[10px] font-bold text-indigo-300">Asistencias → Cierres Reales</span>
                                 <span className="text-lg font-black text-indigo-400 tabular-nums">
-                                    {stats.agendas.totals.attended ? ((stats.sales.totals.count / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
+                                    {stats.agendas.totals.attended ? ((realSalesCount / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-indigo-300">Asistencias → Promesas</span>
+                                <span className="text-lg font-black text-indigo-400 tabular-nums">
+                                    {stats.agendas.totals.attended ? ((depositCount / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
                                 </span>
                             </div>
                         </div>
@@ -521,19 +560,19 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                         </div>
 
                         {[
-                            { label: 'PIF (Completo)', keyCount: 'pif_count', keyCash: 'pif_cash', keyRecCount: 'rec_pif_count', keyRecCash: 'rec_pif_cash' },
-                            { label: 'Split (Cuotas)', keyCount: 'split_count', keyCash: 'split_cash', keyRecCount: 'rec_split_count', keyRecCash: 'rec_split_cash' },
-                            { label: 'Señas (Reserva)', keyCount: 'seña_count', keyCash: 'seña_cash', keyRecCount: 'rec_seña_count', keyRecCash: 'rec_seña_cash' },
+                            { label: 'PIF (Completo)', keyCount: 'pif_count', keyCash: 'pif_cash', keyRecCount: 'rec_pif_count', keyRecCash: 'rec_pif_cash', valCount: pifCount, valCash: pifCash },
+                            { label: 'Split (Cuotas)', keyCount: 'split_count', keyCash: 'split_cash', keyRecCount: 'rec_split_count', keyRecCash: 'rec_split_cash', valCount: splitCount, valCash: splitCash },
+                            { label: 'Promesas (Señas)', keyCount: 'deposit_count', keyCash: 'deposit_cash', keyRecCount: 'rec_seña_count', keyRecCash: 'rec_seña_cash', valCount: depositCount, valCash: depositCash },
                         ].map((row, i) => (
                             <div key={row.label} className={`grid grid-cols-5 gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
                                 <div className="p-3 flex items-center gap-2 border-r border-slate-800/50">
                                     <p className="text-[9px] font-bold text-slate-300">{row.label}</p>
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
-                                    <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(stats.sales.totals[row.keyCount])}</p>
+                                    <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(row.valCount)}</p>
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
-                                    <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(stats.sales.totals[row.keyCash])}</p>
+                                    <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(row.valCash)}</p>
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
                                     <p className="text-sm font-black text-blue-400 tabular-nums">{fmt(stats.sales.totals[row.keyRecCount] || 0)}</p>
@@ -549,16 +588,16 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                                 <p className="text-[9px] font-black text-white uppercase tracking-widest">Totales</p>
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
-                                <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(stats.sales.totals.count)}</p>
+                                <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(realSalesCount + depositCount)}</p>
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
-                                <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(stats.sales.totals.cash)}</p>
+                                <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash + depositCash)}</p>
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
-                                <p className="text-sm font-black text-blue-400 tabular-nums">{fmt(stats.sales.totals.recuperado_count)}</p>
+                                <p className="text-sm font-black text-blue-400 tabular-nums">{fmt(stats.sales.totals.recuperado_count || 0)}</p>
                             </div>
                             <div className="p-3 text-center">
-                                <p className="text-[11px] font-black text-indigo-400 tabular-nums">{fmtCash(stats.sales.totals.recuperado_cash)}</p>
+                                <p className="text-[11px] font-black text-indigo-400 tabular-nums">{fmtCash(stats.sales.totals.recuperado_cash || 0)}</p>
                             </div>
                         </div>
                     </div>
@@ -567,13 +606,13 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                         <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 flex flex-col justify-center space-y-1">
                             <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest text-center">Ticket Promedio PIF</p>
                             <p className="text-lg font-black text-white text-center tabular-nums">
-                                {stats.sales.totals.pif_count ? fmtCash(stats.sales.totals.pif_cash / stats.sales.totals.pif_count) : '$0'}
+                                {pifCount ? fmtCash(pifCash / pifCount) : '$0'}
                             </p>
                         </div>
                         <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 flex flex-col justify-center space-y-1">
                             <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest text-center">Ticket Promedio Split</p>
                             <p className="text-lg font-black text-white text-center tabular-nums">
-                                {stats.sales.totals.split_count ? fmtCash(stats.sales.totals.split_cash / stats.sales.totals.split_count) : '$0'}
+                                {splitCount ? fmtCash(splitCash / splitCount) : '$0'}
                             </p>
                         </div>
                     </div>
