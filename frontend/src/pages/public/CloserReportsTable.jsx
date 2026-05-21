@@ -427,7 +427,10 @@ const CloserReportsTable = ({ closers }) => {
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 {user.role === 'admin' && (
                                                     <button 
-                                                        onClick={() => window.open(`/api/public/closer-reports/${r.id}/preview`, '_blank')} 
+                                                        onClick={() => {
+                                                            const token = localStorage.getItem('auth_token');
+                                                            window.open(`/api/public/closer-reports/${r.id}/preview?token=${token}`, '_blank');
+                                                        }} 
                                                         className="p-2 bg-violet-600/20 text-violet-400 border border-violet-600/30 rounded-lg hover:bg-violet-600 hover:text-white transition-colors cursor-pointer" 
                                                         title="Vista Previa de Discord"
                                                     >
