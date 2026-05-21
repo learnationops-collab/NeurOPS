@@ -43,6 +43,7 @@ const useDockNavigation = () => {
             return [
                 { id: 'stats', icon: BarChart3, label: 'Dashboard', path: '/closer/stats' },
                 { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/closer/report' },
+                { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' },
                 { id: 'clients', icon: Users, label: 'Clientes', path: '/closer/clients' }
             ];
         } else if (isSetter) {

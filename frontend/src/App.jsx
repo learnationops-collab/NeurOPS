@@ -222,7 +222,7 @@ function App() {
             <Route
               path="/unattributed-leads"
               element={
-                <ProtectedRoute roles={['admin', 'setter']}>
+                <ProtectedRoute roles={['admin', 'setter', 'closer']}>
                   <MainLayout>
                     <UnattributedLeadsPage />
                   </MainLayout>
