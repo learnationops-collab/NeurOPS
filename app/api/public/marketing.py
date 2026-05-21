@@ -531,21 +531,39 @@ def force_manual_attribution():
     """
     Fuerza la atribución de una venta inyectando un usuario y una interacción virtual.
     """
-    from app.models import FinancialSale, ManychatLead, LeadAnswer
+    from app.models import FinancialSale, ManychatLead, LeadAnswer, Ad
     from datetime import timedelta
     import uuid
+    import logging
+    logger = logging.getLogger(__name__)
 
     data = request.json or {}
-    sale_id = data.get('sale_id')
-    ad_id = data.get('ad_id')
+    raw_sale_id = data.get('sale_id')
+    raw_ad_id = data.get('ad_id')
     instagram_input = data.get('instagram')
 
-    if not sale_id or not ad_id or not instagram_input:
+    if not raw_sale_id or not raw_ad_id or not instagram_input:
         return jsonify({"error": "Faltan parámetros requeridos (sale_id, ad_id, instagram)"}), 400
 
+    # Conversión segura a entero para evitar problemas en base de datos estricta
+    try:
+        sale_id = int(raw_sale_id)
+        ad_id = int(raw_ad_id)
+    except (ValueError, TypeError) as e:
+        logger.error(f"Error de casteo en atribucion manual: sale_id={raw_sale_id}, ad_id={raw_ad_id}. Detalle: {str(e)}")
+        return jsonify({"error": "Los IDs de venta y anuncio deben ser enteros válidos"}), 400
+
+    # Validar existencia de la venta
     sale = FinancialSale.query.get(sale_id)
     if not sale:
-        return jsonify({"error": "No se encontró la venta"}), 404
+        logger.error(f"Atribucion fallida: No se encontro la venta con ID={sale_id}")
+        return jsonify({"error": f"No se encontró la venta con ID {sale_id}"}), 404
+
+    # Validar existencia del anuncio
+    ad_exists = Ad.query.get(ad_id)
+    if not ad_exists:
+        logger.error(f"Atribucion fallida: No se encontro el anuncio con ID={ad_id}")
+        return jsonify({"error": f"El anuncio con ID {ad_id} no existe en la base de datos"}), 404
 
     # 1. Normalizar IG y guardarlo en la venta si es diferente/nuevo
     ig_normalizado = instagram_input.strip().lstrip('@').lower()
@@ -569,26 +587,23 @@ def force_manual_attribution():
         db.session.flush()
 
     # 3. Crear LeadAnswer (interacción de webhook falsa) un minuto antes de la venta
-    # Para asegurar que la próxima vez que el reporte corra, la empareje orgánicamente.
     fake_time = sale.date - timedelta(minutes=1) if sale.date else db.func.now()
     
     answer = LeadAnswer(
         lead_id=matched_lead.id,
         ad_id=ad_id,
         keyword="manual_attribution",
-        qualification="true", # asumimos calificado ya que compró
+        qualification="true", # calificado porque compro
         created_at=fake_time,
         updated_at=fake_time
     )
     
-    # Modificamos la hora de creación insertada en la base de datos (pues db.func.now sobreescribe el default en SQLAlchemy pero podemos forzar)
-    # Algunas DBS respetan asignarlo directo al modelo si no hay trigger de BD
     db.session.add(answer)
     
     try:
         db.session.commit()
         
-        # Opcional: forzar timestamps post-commit por si SQLAlchemy los sobreescribe
+        # Forzar timestamps post-commit por si SQLAlchemy los sobreescribe
         answer.created_at = fake_time
         answer.updated_at = fake_time
         db.session.commit()
@@ -601,7 +616,8 @@ def force_manual_attribution():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error de base de datos en atribucion manual: {str(e)}")
+        return jsonify({"error": f"Error interno al guardar: {str(e)}"}), 500
 
 
 @bp.route('/public/marketing/unattributed-leads', methods=['GET'])
@@ -807,21 +823,39 @@ def get_unattributed_leads():
 @bp.route('/public/marketing/manual-attribution-agenda', methods=['POST'])
 def force_manual_attribution_agenda():
     """Asocia un anuncio a una agenda insertando lead e interaccion virtual."""
-    from app.models import FinancialAgenda, ManychatLead, LeadAnswer
+    from app.models import FinancialAgenda, ManychatLead, LeadAnswer, Ad
     from datetime import timedelta
     import uuid
+    import logging
+    logger = logging.getLogger(__name__)
 
     data = request.json or {}
-    agenda_id = data.get('agenda_id')
-    ad_id = data.get('ad_id')
+    raw_agenda_id = data.get('agenda_id')
+    raw_ad_id = data.get('ad_id')
     instagram_input = data.get('instagram')
 
-    if not agenda_id or not ad_id or not instagram_input:
+    if not raw_agenda_id or not raw_ad_id or not instagram_input:
         return jsonify({"error": "Faltan parametros requeridos"}), 400
 
+    # Conversión segura de IDs para consistencia en bases relacionales
+    try:
+        agenda_id = int(raw_agenda_id)
+        ad_id = int(raw_ad_id)
+    except (ValueError, TypeError) as e:
+        logger.error(f"Error de casteo en atribucion manual de agenda: agenda_id={raw_agenda_id}, ad_id={raw_ad_id}. Detalle: {str(e)}")
+        return jsonify({"error": "Los IDs de agenda y anuncio deben ser enteros válidos"}), 400
+
+    # Validar que exista la agenda
     agenda = FinancialAgenda.query.get(agenda_id)
     if not agenda:
-        return jsonify({"error": "No se encontro la agenda"}), 404
+        logger.error(f"Atribucion fallida: No se encontro la agenda con ID={agenda_id}")
+        return jsonify({"error": f"No se encontró la agenda con ID {agenda_id}"}), 404
+
+    # Validar que exista el anuncio
+    ad_exists = Ad.query.get(ad_id)
+    if not ad_exists:
+        logger.error(f"Atribucion fallida: No se encontro el anuncio con ID={ad_id}")
+        return jsonify({"error": f"El anuncio con ID {ad_id} no existe en la base de datos"}), 404
 
     # Normalizar IG y guardar
     ig_normalizado = instagram_input.strip().lstrip('@').lower()
@@ -873,5 +907,6 @@ def force_manual_attribution_agenda():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error de base de datos en atribucion de agenda: {str(e)}")
+        return jsonify({"error": f"Error interno al guardar: {str(e)}"}), 500
 
