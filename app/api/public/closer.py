@@ -487,15 +487,44 @@ def delete_public_closer_report(report_id):
 @bp.route('/public/closer-reports/<int:report_id>/preview', methods=['GET'])
 def preview_closer_report_discord(report_id):
     """Genera una vista previa del reporte de Closer renderizado en HTML para administradores."""
-    from app.models import CloserDailyReport
+    from app.models import CloserDailyReport, User
+    from flask import current_app, render_template_string
+    import os
 
-    # Validar permisos de administrador (flask-login)
-    if not current_user.is_authenticated or current_user.role != 'admin':
+    # Validacion de token robusta si current_user no esta autenticado
+    user = None
+    if current_user.is_authenticated:
+        user = current_user
+    else:
+        token = request.args.get('token')
+        if token:
+            user_id = User.verify_auth_token(token)
+            if user_id:
+                user = User.query.get(user_id)
+            
+            # Soporte de compatibilidad en desarrollo local (DEBUG) si el ID de admin no existe en SQLite
+            if not user and (current_app.config.get('DEBUG') or current_app.debug):
+                try:
+                    import jwt
+                    # Decodificar para asegurar que sea un token firmado con la misma SECRET_KEY
+                    jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+                    # En local asignamos el primer administrador disponible de forma transparente
+                    user = User.query.filter_by(role='admin').first()
+                except Exception as e:
+                    print(f"DEBUG PREVIEW BYPASS ERROR: {e}")
+
+    # Validar permisos de administrador
+    if not user or user.role != 'admin':
         return jsonify({"error": "No autorizado"}), 403
 
     report = CloserDailyReport.query.get_or_404(report_id)
     img_data = _prepare_report_data(report)
 
-    return render_template('reports/closer_report.html', **img_data)
+    # Cargar manualmente el template fisico para evitar TemplateNotFound por template_folder global
+    template_path = os.path.join(current_app.root_path, 'templates', 'reports', 'closer_report.html')
+    with open(template_path, 'r', encoding='utf-8') as f:
+        template_content = f.read()
+
+    return render_template_string(template_content, **img_data)
 
 
