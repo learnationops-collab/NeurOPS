@@ -1,5 +1,6 @@
-from flask import request, jsonify
+from flask import request, jsonify, render_template
 from app.models import db, User
+from flask_login import current_user
 from datetime import datetime
 from . import bp
 
@@ -122,6 +123,121 @@ def submit_public_closer_report():
     return jsonify({"message": "Reporte de closer guardado exitosamente"}), 201
 
 
+def _prepare_report_data(report):
+    """Calcula y estructura todas las métricas del reporte diario de un closer (KISS & DRY)."""
+    closer_name = report.closer.username if report.closer else "Closer"
+    date_str = report.date.strftime('%d/%m/%Y')
+
+    def safe_percent(part, total):
+        try:
+            if total > 0:
+                return round((part / total) * 100)
+        except:
+            pass
+        return 0
+
+    # Totales de ventas
+    total_sales = (report.pif_count or 0) + (report.split_count or 0) + (report.deposit_count or 0)
+    total_cash = (report.pif_cash_collected or 0) + (report.split_cash_collected or 0) + (report.deposit_cash_collected or 0)
+
+    # Totales de agendas
+    total_scheduled = (report.first_call_scheduled or 0) + (report.second_call_scheduled or 0)
+    total_attended = (report.first_call_attended or 0) + (report.second_call_attended or 0)
+    
+    offers_made = report.offers_made or 0
+    decision_makers = report.decision_makers or 0
+    rescheduled_calls = report.rescheduled_calls or 0
+
+    # Cálculos de porcentajes y tasas
+    show_rate = safe_percent(total_attended, total_scheduled)
+    pitch_rate = safe_percent(offers_made, total_attended)
+    close_rate = safe_percent(total_sales, total_attended)
+    offer_to_sale = safe_percent(total_sales, offers_made)
+    total_no_show = (report.first_call_no_show or 0) + (report.second_call_no_show or 0)
+    no_show_rate = safe_percent(total_no_show, total_scheduled)
+
+    return {
+        "closer_name": closer_name,
+        "date_str": date_str,
+        "general": {
+            "slots": report.slots or 0,
+            "offers_made": offers_made,
+            "decision_makers": decision_makers,
+            "rescheduled_calls": rescheduled_calls
+        },
+        "rates": {
+            "show_rate": show_rate,
+            "pitch_rate": pitch_rate,
+            "close_rate": close_rate,
+            "offer_to_sale": offer_to_sale,
+            "no_show_rate": no_show_rate
+        },
+        "agendas": {
+            "totals": {
+                "scheduled": total_scheduled,
+                "attended": total_attended,
+                "no_show": total_no_show,
+                "canceled": (report.first_call_canceled or 0) + (report.second_call_canceled or 0),
+                "rescheduled": (report.first_call_rescheduled or 0) + (report.second_call_rescheduled or 0),
+            },
+            "first_call": {
+                "scheduled": report.first_call_scheduled or 0,
+                "attended": report.first_call_attended or 0,
+                "no_show": report.first_call_no_show or 0,
+                "canceled": report.first_call_canceled or 0,
+                "rescheduled": report.first_call_rescheduled or 0,
+            },
+            "second_call": {
+                "scheduled": report.second_call_scheduled or 0,
+                "attended": report.second_call_attended or 0,
+                "no_show": report.second_call_no_show or 0,
+                "canceled": report.second_call_canceled or 0,
+                "rescheduled": report.second_call_rescheduled or 0,
+            }
+        },
+        "sales": {
+            "totals": {
+                "count": total_sales,
+                "cash": total_cash,
+                "in_call_count": (report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0),
+                "in_call_cash": (report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0),
+            },
+            "pif": {
+                "count": report.pif_count or 0,
+                "cash": report.pif_cash_collected or 0,
+                "in_call_count": report.pif_in_call_count or 0,
+                "in_call_cash": report.pif_in_call_cash or 0,
+            },
+            "split": {
+                "count": report.split_count or 0,
+                "cash": report.split_cash_collected or 0,
+                "in_call_count": report.split_in_call_count or 0,
+                "in_call_cash": report.split_in_call_cash or 0,
+            },
+            "deposit": {
+                "count": report.deposit_count or 0,
+                "cash": report.deposit_cash_collected or 0,
+                "in_call_count": report.deposit_in_call_count or 0,
+                "in_call_cash": report.deposit_in_call_cash or 0,
+            }
+        },
+        "follow_up": {
+            "hot_sent": report.follow_ups_hot_sent or 0,
+            "hot_replied": report.follow_ups_hot_replied or 0,
+            "hot_response_pct": safe_percent(report.follow_ups_hot_replied or 0, report.follow_ups_hot_sent or 0),
+            "cold_sent": report.follow_ups_cold_sent or 0,
+            "cold_replied": report.follow_ups_cold_replied or 0,
+            "cold_response_pct": safe_percent(report.follow_ups_cold_replied or 0, report.follow_ups_cold_sent or 0),
+            "total_sent": report.follow_ups_sent or 0,
+            "total_replied": report.follow_ups_replied or 0,
+        },
+        "reflections": {
+            "victory": report.reflection_victory or "Sin especificar",
+            "opportunity": report.reflection_opportunity or "Sin especificar"
+        }
+    }
+
+
 def _trigger_closer_report_discord(report):
     """Envía el reporte diario del closer a Discord con un embed formateado y una imagen renderizada."""
     try:
@@ -136,125 +252,13 @@ def _trigger_closer_report_discord(report):
         closer_name = report.closer.username if report.closer else "Closer"
         date_str = report.date.strftime('%d/%m/%Y')
 
-        def safe_percent(part, total):
-            try:
-                if total > 0:
-                    return round((part / total) * 100)
-            except:
-                pass
-            return 0
+        # Obtener los datos estructurados del reporte
+        img_data = _prepare_report_data(report)
 
-        # Totales de ventas
-        total_sales = (report.pif_count or 0) + (report.split_count or 0) + (report.deposit_count or 0)
-        total_cash = (report.pif_cash_collected or 0) + (report.split_cash_collected or 0) + (report.deposit_cash_collected or 0)
-
-        # Totales de agendas
-        total_scheduled = (report.first_call_scheduled or 0) + (report.second_call_scheduled or 0)
-        total_attended = (report.first_call_attended or 0) + (report.second_call_attended or 0)
-        
-        offers_made = report.offers_made or 0
-        decision_makers = report.decision_makers or 0
-        rescheduled_calls = report.rescheduled_calls or 0
-
-        # Calculations
-        show_rate = safe_percent(total_attended, total_scheduled)
-        pitch_rate = safe_percent(offers_made, total_attended)
-        close_rate = safe_percent(total_sales, total_attended)
-        offer_to_sale = safe_percent(total_sales, offers_made)
-
-        # Construct image data
-        img_data = {
-            "closer_name": closer_name,
-            "date_str": date_str,
-            "general": {
-                "slots": report.slots or 0,
-                "offers_made": offers_made,
-                "decision_makers": decision_makers,
-                "rescheduled_calls": rescheduled_calls
-            },
-            "rates": {
-                "show_rate": show_rate,
-                "pitch_rate": pitch_rate,
-                "close_rate": close_rate,
-                "offer_to_sale": offer_to_sale
-            },
-            "agendas": {
-                "totals": {
-                    "scheduled": total_scheduled,
-                    "attended": total_attended,
-                    "no_show": (report.first_call_no_show or 0) + (report.second_call_no_show or 0),
-                    "canceled": (report.first_call_canceled or 0) + (report.second_call_canceled or 0),
-                    "rescheduled": (report.first_call_rescheduled or 0) + (report.second_call_rescheduled or 0),
-                },
-                "first_call": {
-                    "scheduled": report.first_call_scheduled or 0,
-                    "attended": report.first_call_attended or 0,
-                    "no_show": report.first_call_no_show or 0,
-                    "canceled": report.first_call_canceled or 0,
-                    "rescheduled": report.first_call_rescheduled or 0,
-                },
-                "second_call": {
-                    "scheduled": report.second_call_scheduled or 0,
-                    "attended": report.second_call_attended or 0,
-                    "no_show": report.second_call_no_show or 0,
-                    "canceled": report.second_call_canceled or 0,
-                    "rescheduled": report.second_call_rescheduled or 0,
-                }
-            },
-            "sales": {
-                "totals": {
-                    "count": total_sales,
-                    "cash": total_cash,
-                    "in_call_count": (report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0),
-                    "in_call_cash": (report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0),
-                },
-                "pif": {
-                    "count": report.pif_count or 0,
-                    "cash": report.pif_cash_collected or 0,
-                    "in_call_count": report.pif_in_call_count or 0,
-                    "in_call_cash": report.pif_in_call_cash or 0,
-                },
-                "split": {
-                    "count": report.split_count or 0,
-                    "cash": report.split_cash_collected or 0,
-                    "in_call_count": report.split_in_call_count or 0,
-                    "in_call_cash": report.split_in_call_cash or 0,
-                },
-                "deposit": {
-                    "count": report.deposit_count or 0,
-                    "cash": report.deposit_cash_collected or 0,
-                    "in_call_count": report.deposit_in_call_count or 0,
-                    "in_call_cash": report.deposit_in_call_cash or 0,
-                }
-            },
-            "follow_up": {
-                "hot_sent": report.follow_ups_hot_sent or 0,
-                "hot_replied": report.follow_ups_hot_replied or 0,
-                "hot_response_pct": safe_percent(report.follow_ups_hot_replied or 0, report.follow_ups_hot_sent or 0),
-                "cold_sent": report.follow_ups_cold_sent or 0,
-                "cold_replied": report.follow_ups_cold_replied or 0,
-                "cold_response_pct": safe_percent(report.follow_ups_cold_replied or 0, report.follow_ups_cold_sent or 0),
-                "total_sent": report.follow_ups_sent or 0,
-                "total_replied": report.follow_ups_replied or 0,
-            },
-            "reflections": {
-                "victory": report.reflection_victory or "Sin especificar",
-                "opportunity": report.reflection_opportunity or "Sin especificar"
-            }
-        }
-
-        # Generate Image
+        # Generar Imagen Principal
         img_buffer = ImageService.generate_closer_report_card(img_data)
 
-        # Discord Text & Metadata
-        resumen_str = f"{total_attended} Asistencias | {total_sales} Ventas (${total_cash:,.0f})"
-        
-        has_ref = report.reflection_victory or report.reflection_opportunity
-        ref_text = f"\n💡 **Reflexión:**\n- **Victoria:** {report.reflection_victory}\n- **Oportunidad:** {report.reflection_opportunity}" if has_ref else ""
-        # Renderizar Imagen Principal
-        img_buffer = ImageService.generate_closer_report_card(img_data)
-
-        # Renderizar Imagen de Reflexión
+        # Generar Imagen de Reflexión
         reflection_data = {
             "user_name": closer_name,
             "date": date_str,
@@ -478,5 +482,20 @@ def delete_public_closer_report(report_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+@bp.route('/public/closer-reports/<int:report_id>/preview', methods=['GET'])
+def preview_closer_report_discord(report_id):
+    """Genera una vista previa del reporte de Closer renderizado en HTML para administradores."""
+    from app.models import CloserDailyReport
+
+    # Validar permisos de administrador (flask-login)
+    if not current_user.is_authenticated or current_user.role != 'admin':
+        return jsonify({"error": "No autorizado"}), 403
+
+    report = CloserDailyReport.query.get_or_404(report_id)
+    img_data = _prepare_report_data(report)
+
+    return render_template('reports/closer_report.html', **img_data)
 
 

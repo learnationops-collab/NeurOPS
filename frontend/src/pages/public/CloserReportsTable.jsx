@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import {
     Search, Trash2, Edit3, Loader2, Calendar,
-    ChevronLeft, ChevronRight, X, Save, AlertCircle, PhoneCall, Flag, Activity, Users
+    ChevronLeft, ChevronRight, X, Save, AlertCircle, PhoneCall, Flag, Activity, Users, Eye
 } from 'lucide-react';
 
 // Modal de Edición Compleja para Closers
@@ -425,6 +425,15 @@ const CloserReportsTable = ({ closers }) => {
 
                                         <td className="p-4 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {user.role === 'admin' && (
+                                                    <button 
+                                                        onClick={() => window.open(`/api/public/closer-reports/${r.id}/preview`, '_blank')} 
+                                                        className="p-2 bg-violet-600/20 text-violet-400 border border-violet-600/30 rounded-lg hover:bg-violet-600 hover:text-white transition-colors cursor-pointer" 
+                                                        title="Vista Previa de Discord"
+                                                    >
+                                                        <Eye size={14} />
+                                                    </button>
+                                                )}
                                                 <button onClick={() => setEditingReport(r)} className="p-2 bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer" title="Editar Reporte Completo">
                                                     <Edit3 size={14} />
                                                 </button>
