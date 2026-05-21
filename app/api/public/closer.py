@@ -151,16 +151,31 @@ def _prepare_report_data(report):
     # Cálculos de porcentajes y tasas
     show_rate = safe_percent(total_attended, total_scheduled)
     pitch_rate = safe_percent(offers_made, total_attended)
-    close_rate = safe_percent(total_sales, total_attended)
+    # Close rate promesa: incluye señas (compromiso de compra)
+    close_rate_promesa = safe_percent(total_sales, total_attended)
+    # Close rate operativo: solo PIF + Split (dinero real cerrado en llamada)
+    sales_operativo = (report.pif_count or 0) + (report.split_count or 0)
+    close_rate_operativo = safe_percent(sales_operativo, total_attended)
     offer_to_sale = safe_percent(total_sales, offers_made)
     total_no_show = (report.first_call_no_show or 0) + (report.second_call_no_show or 0)
     no_show_rate = safe_percent(total_no_show, total_scheduled)
+    total_canc_rep = (
+        (report.first_call_canceled or 0) + (report.second_call_canceled or 0) +
+        (report.first_call_rescheduled or 0) + (report.second_call_rescheduled or 0)
+    )
+    canc_rep_rate = safe_percent(total_canc_rep, total_scheduled)
+
+    # Slots disponibles y su porcentaje
+    slots_totales = report.slots or 0
+    slots_disponibles = max(0, slots_totales - total_scheduled)
+    slots_available_pct = safe_percent(slots_disponibles, slots_totales)
 
     return {
         "closer_name": closer_name,
         "date_str": date_str,
         "general": {
-            "slots": report.slots or 0,
+            "slots": slots_totales,
+            "slots_available_pct": slots_available_pct,
             "offers_made": offers_made,
             "decision_makers": decision_makers,
             "rescheduled_calls": rescheduled_calls
@@ -168,9 +183,11 @@ def _prepare_report_data(report):
         "rates": {
             "show_rate": show_rate,
             "pitch_rate": pitch_rate,
-            "close_rate": close_rate,
+            "close_rate_promesa": close_rate_promesa,
+            "close_rate_operativo": close_rate_operativo,
             "offer_to_sale": offer_to_sale,
-            "no_show_rate": no_show_rate
+            "no_show_rate": no_show_rate,
+            "canc_rep_rate": canc_rep_rate
         },
         "agendas": {
             "totals": {
@@ -201,6 +218,8 @@ def _prepare_report_data(report):
                 "cash": total_cash,
                 "in_call_count": (report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0),
                 "in_call_cash": (report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0),
+                "out_call_count": total_sales - ((report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0)),
+                "out_call_cash": total_cash - ((report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0)),
             },
             "pif": {
                 "count": report.pif_count or 0,

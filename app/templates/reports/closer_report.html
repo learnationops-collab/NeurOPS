@@ -335,11 +335,11 @@
             <div class="metrics-grid-4">
                 <div class="metric-box highlight-emerald">
                     <div class="metric-label">Total Agendas</div>
-                    <div class="metric-value val-emerald">{{ agendas.totals.scheduled }}</div>
+                    <div class="metric-value val-emerald">{{ agendas.totals.scheduled }} <span style="font-size: 16px; font-weight: 800; color: var(--slate-400); vertical-align: middle; margin-left: 4px;">({{ general.slots_available_pct }}% disp.)</span></div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">Total Asist.</div>
-                    <div class="metric-value val-sky">{{ agendas.totals.attended }}</div>
+                    <div class="metric-value val-sky">{{ agendas.totals.attended }} <span style="font-size: 16px; font-weight: 800; color: var(--slate-400); vertical-align: middle; margin-left: 4px;">({{ rates.show_rate }}%)</span></div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">Total No Show</div>
@@ -347,7 +347,7 @@
                 </div>
                 <div class="metric-box">
                     <div class="metric-label">Total Canc/Rep</div>
-                    <div class="metric-value val-amber">{{ agendas.totals.canceled + agendas.totals.rescheduled }}</div>
+                    <div class="metric-value val-amber">{{ agendas.totals.canceled + agendas.totals.rescheduled }} <span style="font-size: 16px; font-weight: 800; color: var(--slate-400); vertical-align: middle; margin-left: 4px;">({{ rates.canc_rep_rate }}%)</span></div>
                 </div>
             </div>
 
@@ -415,7 +415,7 @@
                 </div>
             </div>
 
-            <div class="metrics-grid-4" style="margin-top: 5px;">
+            <div class="metrics-grid-2" style="margin-top: 5px;">
                 <div class="metric-box" style="background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.3);">
                     <div class="metric-label">Show Rate</div>
                     <div class="metric-value val-emerald">{{ rates.show_rate }}%</div>
@@ -423,14 +423,6 @@
                 <div class="metric-box" style="background: rgba(217, 70, 239, 0.05); border-color: rgba(217, 70, 239, 0.3);">
                     <div class="metric-label">Pitch Rate</div>
                     <div class="metric-value" style="color: #e879f9;">{{ rates.pitch_rate }}%</div>
-                </div>
-                <div class="metric-box" style="background: rgba(245, 158, 11, 0.05); border-color: rgba(245, 158, 11, 0.3);">
-                    <div class="metric-label">Close Rate</div>
-                    <div class="metric-value val-amber">{{ rates.close_rate }}%</div>
-                </div>
-                <div class="metric-box" style="background: rgba(139, 92, 246, 0.05); border-color: rgba(139, 92, 246, 0.3);">
-                    <div class="metric-label">Offer to Sale</div>
-                    <div class="metric-value" style="color: #a78bfa;">{{ rates.offer_to_sale }}%</div>
                 </div>
             </div>
         </div>
@@ -441,34 +433,42 @@
                 <div class="icon-box" style="color: var(--amber-500)">💰</div>
                 <div class="card-title">VENTAS</div>
             </div>
-            
-            <div class="metrics-grid-4">
+
+            <!-- Totales globales -->
+            <div class="metrics-grid-2" style="margin-bottom: 16px;">
                 <div class="metric-box highlight-amber">
                     <div class="metric-label">Total Ventas</div>
                     <div class="metric-value val-amber">{{ sales.totals.count }}</div>
                 </div>
                 <div class="metric-box highlight-emerald">
-                    <div class="metric-label">Cash Collected</div>
+                    <div class="metric-label">Cash Collected Total</div>
                     <div class="metric-value val-emerald">${{ sales.totals.cash }}</div>
-                </div>
-                <div class="metric-box">
-                    <div class="metric-label">En Llamada</div>
-                    <div class="metric-value val-sky">{{ sales.totals.in_call_count }}</div>
-                </div>
-                <div class="metric-box">
-                    <div class="metric-label">Cash (En Llamada)</div>
-                    <div class="metric-value">${{ sales.totals.in_call_cash }}</div>
                 </div>
             </div>
 
+            <!-- En Llamada vs Fuera de Llamada -->
+            <div class="metrics-grid-2" style="margin-bottom: 16px;">
+                <div class="metric-box" style="border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.05);">
+                    <div class="metric-label" style="color: var(--sky-400);">🎯 En Llamada</div>
+                    <div class="metric-value val-sky">{{ sales.totals.in_call_count }}</div>
+                    <div style="font-size: 14px; color: var(--emerald-400); font-weight: 700; margin-top: 6px;">${{ sales.totals.in_call_cash }}</div>
+                </div>
+                <div class="metric-box" style="border-color: rgba(148, 163, 184, 0.3); background: rgba(148, 163, 184, 0.05);">
+                    <div class="metric-label" style="color: var(--slate-400);">📤 Fuera de Llamada</div>
+                    <div class="metric-value" style="color: var(--slate-300);">{{ sales.totals.out_call_count }}</div>
+                    <div style="font-size: 14px; color: var(--emerald-400); font-weight: 700; margin-top: 6px;">${{ sales.totals.out_call_cash }}</div>
+                </div>
+            </div>
+
+            <!-- Tabla por tipo -->
             <table class="dual-table">
                 <thead>
                     <tr>
                         <th style="text-align: left; color: var(--amber-500)">Tipo</th>
-                        <th>Cantidad</th>
-                        <th>Cash Coll.</th>
-                        <th>En Llamada (Cant)</th>
-                        <th>En Llamada (Cash)</th>
+                        <th>Total</th>
+                        <th>Cash Total</th>
+                        <th>En Llamada</th>
+                        <th>Cash Llamada</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -495,6 +495,20 @@
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Close Rates -->
+            <div class="metrics-grid-2" style="margin-top: 16px;">
+                <div class="metric-box" style="background: rgba(245, 158, 11, 0.05); border-color: rgba(245, 158, 11, 0.3);">
+                    <div class="metric-label">Close Rate Operativo</div>
+                    <div class="metric-value val-amber">{{ rates.close_rate_operativo }}%</div>
+                    <div style="font-size: 11px; color: var(--slate-500); margin-top: 4px;">Solo PIF + Split Pay</div>
+                </div>
+                <div class="metric-box" style="background: rgba(139, 92, 246, 0.05); border-color: rgba(139, 92, 246, 0.3);">
+                    <div class="metric-label">Close Rate Promesa</div>
+                    <div class="metric-value" style="color: #a78bfa;">{{ rates.close_rate_promesa }}%</div>
+                    <div style="font-size: 11px; color: var(--slate-500); margin-top: 4px;">PIF + Split + Señas</div>
+                </div>
+            </div>
         </div>
 
         <!-- 4. FOLLOW UPS -->
@@ -555,25 +569,6 @@
                 <div class="metric-box highlight-blue">
                     <div class="metric-label">Total Respondidos</div>
                     <div class="metric-value val-blue">{{ follow_up.total_replied }}</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 5. REFLECTIONS -->
-        <div class="card reflection">
-            <div class="card-header">
-                <div class="icon-box" style="color: var(--violet-500)">💡</div>
-                <div class="card-title" style="color: var(--violet-500)">REFLEXIÓN CUALITATIVA</div>
-            </div>
-            
-            <div class="reflection-content">
-                <div class="reflection-item victory">
-                    <div class="reflection-label">🏆 Victoria del Día</div>
-                    <div class="reflection-text">{{ reflections.victory }}</div>
-                </div>
-                <div class="reflection-item opportunity">
-                    <div class="reflection-label">⚡ Oportunidad de Mejora</div>
-                    <div class="reflection-text">{{ reflections.opportunity }}</div>
                 </div>
             </div>
         </div>

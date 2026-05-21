@@ -170,6 +170,14 @@ const PublicCloserReportPage = () => {
             return;
         }
 
+        // Validar que se haya enviado al menos un seguimiento
+        const totalFuSent = (parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0);
+        if (totalFuSent === 0) {
+            alert('Debes hacer al menos un seguimiento. Completa la sección de Seguimientos antes de enviar.');
+            setOpenSection('seguimientos');
+            return;
+        }
+
         setSubmitting(true);
         try {
             // Computar los totales de seguimiento antes de enviar
@@ -622,6 +630,13 @@ const PublicCloserReportPage = () => {
                                                 </p>
                                             </div>
                                         </div>
+                                        {/* Advertencia si no hay seguimientos */}
+                                        {((parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0)) === 0 && (
+                                            <div className="mt-3 flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+                                                <span className="text-amber-400 text-lg">⚠️</span>
+                                                <p className="text-xs font-bold text-amber-400">Debes hacer al menos un seguimiento para enviar el reporte.</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </CollapsibleSection>
 
