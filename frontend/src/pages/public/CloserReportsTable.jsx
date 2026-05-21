@@ -209,7 +209,7 @@ const CloserReportsTable = ({ closers }) => {
         closer_id: user.role === 'closer' && user.id ? user.id.toString() : '',
         start_date: '',
         end_date: '',
-        time_preset: 'last_30',
+        time_preset: 'last_days',
         custom_days: 30
     });
 
