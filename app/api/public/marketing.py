@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from flask import request, jsonify
 from app.models import db, User
 from datetime import datetime, date, timedelta
@@ -13,6 +14,7 @@ import requests
 def get_public_ads():
     """Lista todos los anuncios con spend acumulado y leads, y sus relaciones de campaña."""
     from app.models import Ad, AdPeriodSpend, ManychatAdLead, AdSet, Campaign
+    # pyrefly: ignore [missing-import]
     from sqlalchemy import func
 
     # Join para traer AdSet y Campaign fácilmente
@@ -594,6 +596,244 @@ def force_manual_attribution():
         return jsonify({
             "message": "Atribución forzada con éxito.",
             "sale_id": sale.id,
+            "lead_id": matched_lead.id
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/public/marketing/unattributed-leads', methods=['GET'])
+def get_unattributed_leads():
+    """Obtiene ventas y agendas sin anuncio en un rango de fechas."""
+    from app.models import FinancialSale, FinancialAgenda, ManychatLead, LeadAnswer
+    from datetime import datetime, timedelta
+
+    start_str = request.args.get('start_date')
+    end_str = request.args.get('end_date')
+    lead_type = request.args.get('type', 'all')
+    search_query = request.args.get('search', '').strip().lower()
+
+    # Rango de fechas por defecto: ultimos 30 dias
+    if not start_str or not end_str:
+        today = datetime.utcnow().date()
+        start_dt = datetime.combine(today - timedelta(days=30), datetime.min.time())
+        end_dt = datetime.combine(today, datetime.max.time())
+    else:
+        try:
+            start_dt = datetime.strptime(start_str, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+        except ValueError:
+            return jsonify({"error": "Formato de fecha invalido"}), 400
+
+    def normalize_ig(ig_str):
+        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
+            return None
+        return ig_str.strip().lstrip('@').lower()
+
+    unattributed_sales = []
+    unattributed_agendas = []
+
+    # 1. Buscar ventas sin anuncio
+    if lead_type in ('all', 'sales'):
+        sales = FinancialSale.query.filter(
+            FinancialSale.date >= start_dt,
+            FinancialSale.date <= end_dt
+        ).order_by(FinancialSale.date.desc()).all()
+
+        for sale in sales:
+            ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
+            ig_norm = normalize_ig(ig_val)
+
+            matched_lead = None
+            if ig_norm:
+                matched_lead = ManychatLead.query.filter(
+                    db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
+                ).first()
+
+            if not matched_lead:
+                nombre_norm = (sale.nombre_cliente or '').strip().lower()
+                if nombre_norm:
+                    matched_lead = ManychatLead.query.filter(
+                        db.func.lower(ManychatLead.name) == nombre_norm
+                    ).first()
+
+            has_attribution = False
+            if matched_lead:
+                closest = LeadAnswer.query.filter(
+                    LeadAnswer.lead_id == matched_lead.id,
+                    LeadAnswer.ad_id != None,
+                    LeadAnswer.created_at <= sale.date
+                ).order_by(LeadAnswer.created_at.desc()).first()
+
+                if closest and closest.ad_id:
+                    has_attribution = True
+
+            if not has_attribution:
+                closer = (sale.raw_data or {}).get('vendedor') or (sale.raw_data or {}).get('closer') or sale.email_vendedor or 'Sin asignar'
+                setter = sale.setter or 'Sin asignar'
+                
+                sale_data = {
+                    "id": sale.id,
+                    "date": sale.date.isoformat() if sale.date else sale.created_at.isoformat(),
+                    "cliente": sale.nombre_cliente or 'Desconocido',
+                    "instagram": sale.instagram or 'N/A',
+                    "setter": setter,
+                    "closer": closer,
+                    "monto": sale.monto or 0.0,
+                    "producto": sale.tipo_pago or (sale.raw_data or {}).get('tipo_pago') or 'N/A'
+                }
+                
+                if search_query:
+                    search_match = (
+                        search_query in sale_data["cliente"].lower() or
+                        search_query in sale_data["instagram"].lower() or
+                        search_query in sale_data["setter"].lower() or
+                        search_query in sale_data["closer"].lower()
+                    )
+                    if search_match:
+                        unattributed_sales.append(sale_data)
+                else:
+                    unattributed_sales.append(sale_data)
+
+    # 2. Buscar agendas sin anuncio
+    if lead_type in ('all', 'agendas'):
+        agendas = FinancialAgenda.query.filter(
+            FinancialAgenda.date >= start_dt,
+            FinancialAgenda.date <= end_dt
+        ).order_by(FinancialAgenda.date.desc()).all()
+
+        for agenda in agendas:
+            ig_val = agenda.instagram or (agenda.raw_data or {}).get('instagram') or (agenda.raw_data or {}).get('ig')
+            ig_norm = normalize_ig(ig_val)
+
+            matched_lead = None
+            if ig_norm:
+                matched_lead = ManychatLead.query.filter(
+                    db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
+                ).first()
+
+            if not matched_lead:
+                nombre_norm = (agenda.nombre or '').strip().lower()
+                if nombre_norm:
+                    matched_lead = ManychatLead.query.filter(
+                        db.func.lower(ManychatLead.name) == nombre_norm
+                    ).first()
+
+            has_attribution = False
+            if matched_lead:
+                closest = LeadAnswer.query.filter(
+                    LeadAnswer.lead_id == matched_lead.id,
+                    LeadAnswer.ad_id != None,
+                    LeadAnswer.created_at <= agenda.date
+                ).order_by(LeadAnswer.created_at.desc()).first()
+
+                if closest and closest.ad_id:
+                    has_attribution = True
+
+            if not has_attribution:
+                setter = agenda.lead or 'Sin asignar'
+                closer = agenda.closer or 'Sin asignar'
+                
+                agenda_data = {
+                    "id": agenda.id,
+                    "date": agenda.date.isoformat() if agenda.date else agenda.created_at.isoformat(),
+                    "cliente": agenda.nombre or 'Desconocido',
+                    "instagram": agenda.instagram or 'N/A',
+                    "setter": setter,
+                    "closer": closer,
+                    "whatsapp": agenda.whatsapp or 'N/A',
+                    "fecha_meet": agenda.fecha_meet or 'N/A'
+                }
+                
+                if search_query:
+                    search_match = (
+                        search_query in agenda_data["cliente"].lower() or
+                        search_query in agenda_data["instagram"].lower() or
+                        search_query in agenda_data["setter"].lower() or
+                        search_query in agenda_data["closer"].lower()
+                    )
+                    if search_match:
+                        unattributed_agendas.append(agenda_data)
+                else:
+                    unattributed_agendas.append(agenda_data)
+
+    return jsonify({
+        "summary": {
+            "unattributed_sales": len(unattributed_sales),
+            "unattributed_agendas": len(unattributed_agendas),
+            "total_unattributed": len(unattributed_sales) + len(unattributed_agendas)
+        },
+        "sales": unattributed_sales,
+        "agendas": unattributed_agendas
+    }), 200
+
+
+@bp.route('/public/marketing/manual-attribution-agenda', methods=['POST'])
+def force_manual_attribution_agenda():
+    """Asocia un anuncio a una agenda insertando lead e interaccion virtual."""
+    from app.models import FinancialAgenda, ManychatLead, LeadAnswer
+    from datetime import timedelta
+    import uuid
+
+    data = request.json or {}
+    agenda_id = data.get('agenda_id')
+    ad_id = data.get('ad_id')
+    instagram_input = data.get('instagram')
+
+    if not agenda_id or not ad_id or not instagram_input:
+        return jsonify({"error": "Faltan parametros requeridos"}), 400
+
+    agenda = FinancialAgenda.query.get(agenda_id)
+    if not agenda:
+        return jsonify({"error": "No se encontro la agenda"}), 404
+
+    # Normalizar IG y guardar
+    ig_normalizado = instagram_input.strip().lstrip('@').lower()
+    agenda.instagram = f"@{ig_normalizado}"
+    
+    # Buscar/crear lead de Manychat
+    matched_lead = ManychatLead.query.filter(
+        db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_normalizado
+    ).first()
+
+    if not matched_lead:
+        cliente_nombre = agenda.nombre or 'Desconocido'
+        matched_lead = ManychatLead(
+            manychat_id=f"manual_agenda_{agenda.id}_{uuid.uuid4().hex[:6]}",
+            name=cliente_nombre,
+            ig=f"@{ig_normalizado}",
+            follower=False
+        )
+        db.session.add(matched_lead)
+        db.session.flush()
+
+    # Interaccion virtual un minuto antes
+    fake_time = agenda.date - timedelta(minutes=1) if agenda.date else db.func.now()
+    
+    answer = LeadAnswer(
+        lead_id=matched_lead.id,
+        ad_id=ad_id,
+        keyword="manual_attribution",
+        qualification="true",
+        created_at=fake_time,
+        updated_at=fake_time
+    )
+    
+    db.session.add(answer)
+    
+    try:
+        db.session.commit()
+        
+        # Forzar timestamps post-commit
+        answer.created_at = fake_time
+        answer.updated_at = fake_time
+        db.session.commit()
+
+        return jsonify({
+            "message": "Atribucion de agenda completada.",
+            "agenda_id": agenda.id,
             "lead_id": matched_lead.id
         }), 200
         

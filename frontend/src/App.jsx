@@ -45,6 +45,7 @@ import AdManagementPage from './pages/public/AdManagementPage';
 import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPage';
 import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
+import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
 
 import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
@@ -213,6 +214,17 @@ function App() {
                 <ProtectedRoute roles={['admin', 'marketer']}>
                   <MainLayout>
                     <PublicWorkshopStatsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/unattributed-leads"
+              element={
+                <ProtectedRoute roles={['admin', 'setter']}>
+                  <MainLayout>
+                    <UnattributedLeadsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

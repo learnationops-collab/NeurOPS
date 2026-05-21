@@ -13,7 +13,8 @@ import {
     Ghost,
     Activity,
     CalendarDays,
-    Target
+    Target,
+    Link2Off
 } from 'lucide-react';
 
 /**
@@ -46,7 +47,8 @@ const useDockNavigation = () => {
             ];
         } else if (isSetter) {
             return [
-                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/setter/report' }
+                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/setter/report' },
+                { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' }
             ];
         } else if (isTriage) {
             return [
@@ -62,6 +64,7 @@ const useDockNavigation = () => {
             return [
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
                 { id: 'marketing', icon: Target, label: 'Marketing', path: '/admin/marketing' },
+                { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' },
                 { id: 'clients', icon: Users, label: 'Clientes', path: '/closer/clients' },
                 { id: 'sheets', icon: CalendarDays, label: 'Importaciones Sheets', path: '/admin/sheets' }
             ];
