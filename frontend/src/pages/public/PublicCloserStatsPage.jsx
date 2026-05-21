@@ -72,7 +72,10 @@ const PublicCloserStatsPage = () => {
 
     // Fetch stats
     useEffect(() => {
-        if (activeTab === 'history') return;
+        if (activeTab !== 'performance') {
+            setLoading(false);
+            return;
+        }
         fetchStats();
     }, [filters, activeTab]);
 
