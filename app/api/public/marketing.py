@@ -10,9 +10,59 @@ import requests
 # ADS MANAGEMENT (Público)
 # ============================================================
 
+def ensure_inbound_ad_exists():
+    """Garantiza la existencia del anuncio ficticio Inbound en la base de datos."""
+    from app.models import Campaign, AdSet, Ad
+    try:
+        # 1. Buscar o crear la campaña Inbound
+        campaign = Campaign.query.filter_by(name='Inbound').first()
+        if not campaign:
+            campaign = Campaign(
+                name='Inbound',
+                status='active',
+                type='organic',
+                external_id='CAM-INBOUND'
+            )
+            db.session.add(campaign)
+            db.session.flush()
+
+        # 2. Buscar o crear el AdSet Inbound Grupo
+        ad_set = AdSet.query.filter_by(campaign_id=campaign.id, name='Inbound Grupo').first()
+        if not ad_set:
+            ad_set = AdSet(
+                name='Inbound Grupo',
+                campaign_id=campaign.id,
+                status='active',
+                external_id='SET-INBOUND'
+            )
+            db.session.add(ad_set)
+            db.session.flush()
+
+        # 3. Buscar o crear el anuncio Inbound
+        ad = Ad.query.filter_by(ad_set_id=ad_set.id, keyword='Inbound').first()
+        if not ad:
+            ad = Ad(
+                name='Inbound',
+                ad_set_id=ad_set.id,
+                keyword='Inbound',
+                status='active',
+                total_spend=0.0,
+                external_id='ADS-INBOUND'
+            )
+            db.session.add(ad)
+            db.session.commit()
+        elif ad.name != 'Inbound':
+            ad.name = 'Inbound'
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        import logging
+        logging.getLogger(__name__).error(f"Error al asegurar ad Inbound: {str(e)}")
+
 @bp.route('/public/ads', methods=['GET'])
 def get_public_ads():
     """Lista todos los anuncios con spend acumulado y leads, y sus relaciones de campaña."""
+    ensure_inbound_ad_exists()
     from app.models import Ad, AdPeriodSpend, ManychatAdLead, AdSet, Campaign
     # pyrefly: ignore [missing-import]
     from sqlalchemy import func
@@ -415,6 +465,7 @@ def get_sales_attribution_report():
         - start_date (str): Fecha inicio YYYY-MM-DD
         - end_date   (str): Fecha fin YYYY-MM-DD
     """
+    ensure_inbound_ad_exists()
     from app.models import FinancialSale, ManychatLead, LeadAnswer, Ad
     from datetime import datetime
 
@@ -500,6 +551,9 @@ def get_sales_attribution_report():
 
     # Agrupar monto por anuncio
     revenue_by_ad = {}
+    monto_indeterminado = 0.0
+    ventas_indeterminadas = 0
+
     for r in report_rows:
         if r["atribucion"] == "encontrado" and r["ad_id"]:
             key = r["ad_id"]
@@ -509,10 +563,27 @@ def get_sales_attribution_report():
                     "ad_name": r["ad_name"],
                     "ad_keyword": r["ad_keyword"],
                     "ventas": 0,
-                    "monto_total": 0
+                    "monto_total": 0.0
                 }
             revenue_by_ad[key]["ventas"] += 1
-            revenue_by_ad[key]["monto_total"] += r["monto"]
+            revenue_by_ad[key]["monto_total"] += (r["monto"] or 0.0)
+        else:
+            monto_indeterminado += (r["monto"] or 0.0)
+            ventas_indeterminadas += 1
+
+    for key in revenue_by_ad:
+        revenue_by_ad[key]["monto_total"] = round(revenue_by_ad[key]["monto_total"], 2)
+
+    revenue_list = sorted(revenue_by_ad.values(), key=lambda x: x["monto_total"], reverse=True)
+
+    if ventas_indeterminadas > 0 or monto_indeterminado > 0:
+        revenue_list.append({
+            "ad_id": 0,
+            "ad_name": "No asignados aún",
+            "ad_keyword": "SIN_ANUNCIO",
+            "ventas": ventas_indeterminadas,
+            "monto_total": round(monto_indeterminado, 2)
+        })
 
     return jsonify({
         "summary": {
@@ -522,7 +593,7 @@ def get_sales_attribution_report():
             "sin_instagram": sin_instagram,
             "porcentaje_atribucion": round((atribuidas / total_ventas * 100), 1) if total_ventas > 0 else 0
         },
-        "revenue_by_ad": sorted(revenue_by_ad.values(), key=lambda x: x["monto_total"], reverse=True),
+        "revenue_by_ad": revenue_list,
         "rows": report_rows
     }), 200
 

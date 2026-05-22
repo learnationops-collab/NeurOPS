@@ -242,7 +242,7 @@ const SalesAttributionPage = () => {
                             </div>
                             <div className="space-y-3">
                                 {revenue_by_ad.map((ad, idx) => {
-                                    const maxMonto = revenue_by_ad[0]?.monto_total || 1;
+                                    const maxMonto = Math.max(...revenue_by_ad.map(a => a.monto_total), 1);
                                     const pct = Math.round((ad.monto_total / maxMonto) * 100);
                                     return (
                                         <div key={ad.ad_id} className="space-y-1.5">
