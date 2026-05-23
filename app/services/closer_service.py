@@ -1077,12 +1077,10 @@ class CloserService:
                 venta_definitiva = FinancialSale.query.filter(
                     or_(*sub_filters),
                     FinancialSale.id != seña.id,
-                    or_(
-                        FinancialSale.tipo_pago.ilike('%completo%'),
-                        FinancialSale.tipo_pago.ilike('%unico%'),
-                        FinancialSale.tipo_pago.ilike('%pif%'),
-                        FinancialSale.tipo_pago.ilike('%primer pago%'),
-                        FinancialSale.tipo_pago.ilike('%split%')
+                    ~or_(
+                        FinancialSale.tipo_pago.ilike('%seña%'),
+                        FinancialSale.tipo_pago.ilike('%deposito%'),
+                        FinancialSale.tipo_pago.ilike('%deposit%')
                     )
                 ).first()
                 
