@@ -231,22 +231,23 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                     value={fmtCash(totalCashCollected)}
                     icon={DollarSign}
                     colorClass="text-emerald-500"
-                    subtitle={`Total Promesa: ${fmtCash(depositCash)}`}
+                    subtitle={`New Cash: ${fmtCash(realSalesCash)}`}
                     tooltip="Ingreso total en efectivo cobrado. Incluye PIF, Split, Cuotas y Señas (Promesas de venta)."
                 />
                 <StatCard
-                    title="Cierres Reales"
+                    title="Nuevos Clientes"
                     value={fmt(realSalesCount)}
                     icon={Target}
                     colorClass="text-amber-500"
                     subtitle={`Tasa Cierre Real: ${fmtNum(calcDiv(realSalesCount, stats.agendas.totals.attended, true), true)}`}
-                    tooltip="Total de ventas completadas o con cuota iniciada (PIF + Split). No incluye señas."
+                    tooltip="Total de nuevos clientes cerrados en el periodo (PIF + Split). Excluye señas y cuotas."
                 />
                 <StatCard
                     title="Ticket Promedio"
                     value={fmtNum(ticketPromedioReal, false, true)}
                     icon={Activity}
                     colorClass="text-sky-500"
+                    subtitle={`PIF: ${pifCount ? fmtCash(pifCash / pifCount) : '$0'} | Split: ${splitCount ? fmtCash(splitCash / splitCount) : '$0'}`}
                     tooltip="Promedio de ingresos generados solo por ventas reales (PIF + Split)."
                 />
                 <StatCard
@@ -254,7 +255,7 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                     value={fmt(depositCount)}
                     icon={DollarSign}
                     colorClass="text-fuchsia-500"
-                    subtitle={`Close Rate Promesa: ${fmtNum(calcDiv(depositCount, stats.general.offers_made, true), true)}`}
+                    subtitle={`Cash Señas: ${fmtCash(depositCash)}`}
                     tooltip={`Total de señas o reservas (Promesas de venta) realizadas en el periodo. Conversión a venta real: ${stats.sales.deposit_conversions?.rate ?? 0}%`}
                 />
             </div>
@@ -614,18 +615,64 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
-                        <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 flex flex-col justify-center space-y-1">
-                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest text-center">Ticket Promedio PIF</p>
-                            <p className="text-lg font-black text-white text-center tabular-nums">
-                                {pifCount ? fmtCash(pifCash / pifCount) : '$0'}
-                            </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-6 border-t border-slate-800">
+                        {/* 1. New Cash Collect */}
+                        <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
+                            <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest text-center">New Cash Collect</p>
+                            <p className="text-xl font-black text-white text-center tabular-nums">{fmtCash(realSalesCash)}</p>
+                            <p className="text-[8px] text-slate-500 text-center uppercase tracking-wider font-bold">PIF + Split Pay (Sin Cuotas/Señas)</p>
                         </div>
-                        <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 flex flex-col justify-center space-y-1">
-                            <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest text-center">Ticket Promedio Split</p>
-                            <p className="text-lg font-black text-white text-center tabular-nums">
-                                {splitCount ? fmtCash(splitCash / splitCount) : '$0'}
-                            </p>
+
+                        {/* 2. New Clients */}
+                        <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
+                            <p className="text-[8px] font-black text-amber-400 uppercase tracking-widest text-center">New Clients (Cant. Ventas)</p>
+                            <p className="text-xl font-black text-white text-center tabular-nums">{fmt(realSalesCount)}</p>
+                            <p className="text-[8px] text-slate-500 text-center uppercase tracking-wider font-bold">Total PIF + Split Pay</p>
+                        </div>
+
+                        {/* 3. Ticket Promedio PIF */}
+                        <div className="p-4 bg-slate-950/40 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-1 relative group overflow-hidden">
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">Ticket Promedio PIF</p>
+                            <p className="text-xl font-black text-white text-center tabular-nums">{pifCount ? fmtCash(pifCash / pifCount) : '$0'}</p>
+                        </div>
+
+                        {/* 4. Ticket Promedio Split */}
+                        <div className="p-4 bg-slate-950/40 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-1 relative group overflow-hidden">
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">Ticket Promedio Split</p>
+                            <p className="text-xl font-black text-white text-center tabular-nums">{splitCount ? fmtCash(splitCash / splitCount) : '$0'}</p>
+                        </div>
+
+                        {/* 5. Cash Collect por Señas */}
+                        <div className="p-4 bg-fuchsia-500/5 rounded-2xl border border-fuchsia-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
+                            <p className="text-[8px] font-black text-fuchsia-400 uppercase tracking-widest text-center">Cash Collect por Señas</p>
+                            <p className="text-xl font-black text-white text-center tabular-nums">{fmtCash(depositCash)}</p>
+                            <p className="text-[8px] text-slate-500 text-center uppercase tracking-wider font-bold">Total {fmt(depositCount)} Promesas</p>
+                        </div>
+
+                        {/* 6. Ticket Promedio por Señas */}
+                        <div className="p-4 bg-fuchsia-500/5 rounded-2xl border border-fuchsia-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
+                            <p className="text-[8px] font-black text-fuchsia-400 uppercase tracking-widest text-center">Ticket Promedio por Señas</p>
+                            <p className="text-xl font-black text-white text-center tabular-nums">{depositCount ? fmtCash(depositCash / depositCount) : '$0'}</p>
+                        </div>
+
+                        {/* 7. Cantidad de Cuotas */}
+                        <div className="p-4 bg-violet-500/5 rounded-2xl border border-violet-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
+                            <p className="text-[8px] font-black text-violet-400 uppercase tracking-widest text-center">Cantidad de Cuotas</p>
+                            <p className="text-xl font-black text-white text-center tabular-nums">{fmt(installmentCount)}</p>
+                            <p className="text-[8px] text-slate-500 text-center uppercase tracking-wider font-bold">Cuotas de Seguimiento</p>
+                        </div>
+
+                        {/* 8. Cash Collect por Cuotas */}
+                        <div className="p-4 bg-violet-500/5 rounded-2xl border border-violet-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
+                            <p className="text-[8px] font-black text-violet-400 uppercase tracking-widest text-center">Cash Collect por Cuotas</p>
+                            <p className="text-xl font-black text-white text-center tabular-nums">{fmtCash(installmentCash)}</p>
+                            <p className="text-[8px] text-slate-500 text-center uppercase tracking-wider font-bold">Total Cobrado de Cuotas</p>
+                        </div>
+
+                        {/* 9. Ticket Promedio por Cuotas */}
+                        <div className="p-4 bg-violet-500/5 rounded-2xl border border-violet-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
+                            <p className="text-[8px] font-black text-violet-400 uppercase tracking-widest text-center">Ticket Promedio por Cuotas</p>
+                            <p className="text-xl font-black text-white text-center tabular-nums">{installmentCount ? fmtCash(installmentCash / installmentCount) : '$0'}</p>
                         </div>
                     </div>
                 </div>
