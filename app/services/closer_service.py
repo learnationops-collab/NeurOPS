@@ -1043,6 +1043,54 @@ class CloserService:
         final_installment_count = round(official_installment_count / days_count, 2) if agg_type == 'avg' else official_installment_count
         final_installment_cash = round(official_installment_cash / days_count, 2) if agg_type == 'avg' else official_installment_cash
 
+        # Calcular conversión de señas en venta real (PIF o Split)
+        señas_convertidas = 0
+        total_señas = 0
+        
+        # Recuperar todas las transacciones individuales de tipo "seña" del closer en el periodo consultado
+        señas_rows_periodo = FinancialSale.query.filter(
+            *sales_filters,
+            or_(
+                FinancialSale.tipo_pago.ilike('%seña%'),
+                FinancialSale.tipo_pago.ilike('%deposito%'),
+                FinancialSale.tipo_pago.ilike('%deposit%')
+            )
+        ).all()
+        
+        total_señas = len(señas_rows_periodo)
+        
+        for seña in señas_rows_periodo:
+            # Buscar si el mismo cliente tiene una venta posterior/igual de tipo PIF/Split
+            ig_norm = seña.instagram.strip().lstrip('@').lower() if seña.instagram else None
+            email_norm = seña.mail_cliente.strip().lower() if seña.mail_cliente else None
+            tel_norm = seña.telefono.strip() if seña.telefono else None
+            
+            sub_filters = []
+            if ig_norm and ig_norm != 'n/a' and len(ig_norm) > 2:
+                sub_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_norm)
+            if email_norm and email_norm != 'n/a' and len(email_norm) > 2:
+                sub_filters.append(func.lower(FinancialSale.mail_cliente) == email_norm)
+            if tel_norm and tel_norm != 'n/a' and len(tel_norm) > 4:
+                sub_filters.append(FinancialSale.telefono == tel_norm)
+                
+            if sub_filters:
+                venta_definitiva = FinancialSale.query.filter(
+                    or_(*sub_filters),
+                    FinancialSale.id != seña.id,
+                    or_(
+                        FinancialSale.tipo_pago.ilike('%completo%'),
+                        FinancialSale.tipo_pago.ilike('%unico%'),
+                        FinancialSale.tipo_pago.ilike('%pif%'),
+                        FinancialSale.tipo_pago.ilike('%primer pago%'),
+                        FinancialSale.tipo_pago.ilike('%split%')
+                    )
+                ).first()
+                
+                if venta_definitiva:
+                    señas_convertidas += 1
+                    
+        conversion_señas_rate = round((señas_convertidas / total_señas * 100), 1) if total_señas > 0 else 0.0
+
         # Totals
         total_scheduled = val(stats.fc_scheduled) + val(stats.sc_scheduled)
         total_attended = val(stats.fc_attended) + val(stats.sc_attended)
@@ -1091,6 +1139,7 @@ class CloserService:
                 "split": {"count": final_split_count, "cash": final_split_cash, "in_call_count": val(stats.split_ic_count), "in_call_cash": val(stats.split_ic_cash)},
                 "deposit": {"count": final_deposit_count, "cash": final_deposit_cash, "in_call_count": val(stats.deposit_ic_count), "in_call_cash": val(stats.deposit_ic_cash)},
                 "installment": {"count": final_installment_count, "cash": final_installment_cash, "in_call_count": 0, "in_call_cash": 0},
+                "deposit_conversions": {"total": total_señas, "converted": señas_convertidas, "rate": conversion_señas_rate},
                 "totals": {"count": total_sales, "cash": total_cash, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}
             },
             "follow_ups": {
@@ -1107,6 +1156,7 @@ class CloserService:
                 "respond_rate": div(val(stats.fu_replied), val(stats.fu_sent)),
                 "pitch_rate": div(val(stats.offers_made), total_attended),
                 "decision_maker_rate": div(val(stats.decision_makers), total_attended),
-                "rescheduled_rate": div(val(stats.rescheduled_calls), total_attended)
+                "rescheduled_rate": div(val(stats.rescheduled_calls), total_attended),
+                "deposit_conversion_rate": conversion_señas_rate
             }
         }
