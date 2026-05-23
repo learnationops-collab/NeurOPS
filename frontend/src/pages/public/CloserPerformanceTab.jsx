@@ -478,7 +478,7 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                         label="Reschedule Rate" 
                         percentage={stats.percentages.rescheduled_rate} 
                         colorClass="text-amber-500" 
-                        absolute={`${fmt(stats.agendas.totals.attended - stats.general.decision_makers)} / ${fmt(stats.general.rescheduled_calls)}`} 
+                        absolute={`${fmt(stats.general.rescheduled_calls)} / ${fmt(stats.agendas.totals.attended - stats.general.decision_makers)}`} 
                     />
                 </div>
             </div>

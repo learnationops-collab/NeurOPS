@@ -1154,7 +1154,7 @@ class CloserService:
                 "respond_rate": div(val(stats.fu_replied), val(stats.fu_sent)),
                 "pitch_rate": div(val(stats.offers_made), total_attended),
                 "decision_maker_rate": div(val(stats.decision_makers), total_attended),
-                "rescheduled_rate": div(total_attended - val(stats.decision_makers), val(stats.rescheduled_calls)),
+                "rescheduled_rate": div(val(stats.rescheduled_calls), total_attended - val(stats.decision_makers)),
                 "deposit_conversion_rate": conversion_señas_rate
             }
         }
