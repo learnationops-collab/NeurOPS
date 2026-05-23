@@ -5,8 +5,6 @@ import {
     Globe, 
     Calendar, 
     Search,
-    ExternalLink,
-    Filter,
     Trash2
 } from 'lucide-react';
 import Card from '../ui/Card';
@@ -14,15 +12,73 @@ import { toast } from 'react-hot-toast';
 
 import api from '../../services/api';
 
+// Definición de presets de fechas en zona horaria local
+const DATE_PRESETS = [
+    { 
+        label: 'Hoy', 
+        getValue: () => {
+            const d = new Date();
+            const yyyymmdd = d.toLocaleDateString('sv-SE');
+            return { start: yyyymmdd, end: yyyymmdd };
+        }
+    },
+    { 
+        label: 'Ayer', 
+        getValue: () => {
+            const d = new Date();
+            d.setDate(d.getDate() - 1);
+            const yyyymmdd = d.toLocaleDateString('sv-SE');
+            return { start: yyyymmdd, end: yyyymmdd };
+        }
+    },
+    { 
+        label: 'Últimos 7 días', 
+        getValue: () => {
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - 6);
+            return { start: start.toLocaleDateString('sv-SE'), end: end.toLocaleDateString('sv-SE') };
+        }
+    },
+    { 
+        label: 'Este mes', 
+        getValue: () => {
+            const end = new Date();
+            const start = new Date(end.getFullYear(), end.getMonth(), 1);
+            return { start: start.toLocaleDateString('sv-SE'), end: end.toLocaleDateString('sv-SE') };
+        }
+    },
+    { 
+        label: 'Personalizado', 
+        getValue: () => null 
+    }
+];
+
 const LandingTrafficTable = () => {
     const [visits, setVisits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // Estados de filtrado por fechas (predeterminado: últimos 7 días)
+    const [preset, setPreset] = useState('Últimos 7 días');
+    const [startDate, setStartDate] = useState(() => {
+        const start = new Date();
+        start.setDate(start.getDate() - 6);
+        return start.toLocaleDateString('sv-SE');
+    });
+    const [endDate, setEndDate] = useState(() => {
+        return new Date().toLocaleDateString('sv-SE');
+    });
 
-    const fetchVisits = async () => {
+    const fetchVisits = async (start = startDate, end = endDate) => {
         try {
             setLoading(true);
-            const response = await api.get('/v1/metrics/track-visits');
+            const response = await api.get('/v1/metrics/track-visits', {
+                params: {
+                    start_date: start,
+                    end_date: end
+                }
+            });
             setVisits(response.data);
         } catch (err) {
             toast.error('Error al cargar datos de tráfico');
@@ -46,16 +102,30 @@ const LandingTrafficTable = () => {
     };
 
     useEffect(() => {
-        fetchVisits();
-    }, []);
+        fetchVisits(startDate, endDate);
+    }, [startDate, endDate]);
 
+    const handlePresetChange = (presetName) => {
+        setPreset(presetName);
+        const presetObj = DATE_PRESETS.find(p => p.label === presetName);
+        if (presetObj) {
+            const vals = presetObj.getValue();
+            if (vals) {
+                setStartDate(vals.start);
+                setEndDate(vals.end);
+            }
+        }
+    };
+
+    // Búsqueda textual local en la tabla
     const filteredVisits = visits.filter(v => 
         (v.utm_source?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (v.page_path?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (v.utm_campaign?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+        (v.utm_campaign?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (v.utm_medium?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
-    // Agregación para el resumen con mapeo de nombres amigables
+    // Agregación de Top Páginas
     const pageStats = useMemo(() => {
         const mainLandings = {
             '/acceso': 'Acceso',
@@ -78,8 +148,6 @@ const LandingTrafficTable = () => {
                 return;
             }
 
-            // Normalizar la ruta: quitar dominio, quitar query strings (?, #) y slash final
-            // Normalizar la ruta: extraer solo el path de cualquier URL completa
             let path = v.page_path || '';
             try {
                 if (path.includes('://')) {
@@ -111,6 +179,41 @@ const LandingTrafficTable = () => {
             });
     }, [visits]);
 
+    // Agregación para estadísticas UTM (Origen, Medio y Campaña)
+    const utmStats = useMemo(() => {
+        const sources = {};
+        const mediums = {};
+        const campaigns = {};
+        const total = visits.length;
+
+        visits.forEach(v => {
+            const src = v.utm_source || 'directo';
+            const med = v.utm_medium || 'ninguno';
+            const camp = v.utm_campaign || 'ninguno';
+
+            sources[src] = (sources[src] || 0) + 1;
+            mediums[med] = (mediums[med] || 0) + 1;
+            campaigns[camp] = (campaigns[camp] || 0) + 1;
+        });
+
+        const sortAndFormat = (obj) => {
+            return Object.entries(obj)
+                .map(([name, count]) => ({
+                    name,
+                    count,
+                    percentage: total > 0 ? Math.round((count / total) * 100) : 0
+                }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+        };
+
+        return {
+            sources: sortAndFormat(sources),
+            mediums: sortAndFormat(mediums),
+            campaigns: sortAndFormat(campaigns)
+        };
+    }, [visits]);
+
     const formatDate = (dateStr) => {
         const date = new Date(dateStr);
         return new Intl.DateTimeFormat('es-ES', {
@@ -123,14 +226,19 @@ const LandingTrafficTable = () => {
 
     return (
         <Card variant="surface" className="border-white/5 bg-[#0a0b0e]/80 backdrop-blur-xl">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            {/* Cabecera Principal */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
                         <Activity className="text-emerald-400" size={20} />
                     </div>
                     <div>
                         <h2 className="text-xl font-black italic uppercase tracking-tighter">Tráfico en Tiempo Real</h2>
-                        <p className="text-[9px] font-bold text-muted uppercase tracking-widest">Últimas 500 visitas registradas</p>
+                        <p className="text-[9px] font-bold text-muted uppercase tracking-widest">
+                            {preset === 'Personalizado' 
+                                ? `Visitas desde ${startDate} hasta ${endDate}` 
+                                : `Visitas de: ${preset}`}
+                        </p>
                     </div>
                 </div>
 
@@ -139,20 +247,66 @@ const LandingTrafficTable = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={14} />
                         <input 
                             type="text"
-                            placeholder="Buscar fuente, campaña o ruta..."
+                            placeholder="Buscar fuente, campaña, medio o ruta..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-9 pr-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-xs focus:border-primary/50 transition-all outline-none text-white min-w-[250px]"
                         />
                     </div>
                     <button 
-                        onClick={fetchVisits}
+                        onClick={() => fetchVisits(startDate, endDate)}
                         disabled={loading}
                         className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all disabled:opacity-50"
+                        title="Refrescar datos"
                     >
                         <RefreshCw className={`text-muted ${loading ? 'animate-spin' : ''}`} size={18} />
                     </button>
                 </div>
+            </div>
+
+            {/* Controles de Filtros de Fechas */}
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-8 p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-black text-muted uppercase tracking-widest mr-2 flex items-center gap-1.5">
+                        <Calendar size={12} className="text-primary" /> Rango de Fechas:
+                    </span>
+                    {DATE_PRESETS.map((p) => (
+                        <button
+                            key={p.label}
+                            onClick={() => handlePresetChange(p.label)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                                preset === p.label
+                                    ? 'bg-primary/20 text-primary border border-primary/30'
+                                    : 'bg-white/5 hover:bg-white/10 text-muted border border-transparent'
+                            }`}
+                        >
+                            {p.label}
+                        </button>
+                    ))}
+                </div>
+
+                {preset === 'Personalizado' && (
+                    <div className="flex items-center gap-3 animate-fade-in">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-muted uppercase">Desde</span>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="px-3 py-1.5 bg-[#12131a] border border-white/10 rounded-lg text-xs text-white focus:border-primary/50 transition-all outline-none"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-muted uppercase">Hasta</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="px-3 py-1.5 bg-[#12131a] border border-white/10 rounded-lg text-xs text-white focus:border-primary/50 transition-all outline-none"
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Resumen de Top Páginas */}
@@ -176,6 +330,111 @@ const LandingTrafficTable = () => {
                 </div>
             )}
 
+            {/* Estadísticas Detalladas de UTM (Source, Medium, Campaign) */}
+            {!loading && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {/* Tarjeta de Origen (Source) */}
+                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 hover:border-emerald-500/20 transition-all">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-emerald-400">Top Orígenes (Source)</h3>
+                            <span className="text-[10px] font-bold text-muted uppercase">Visitas</span>
+                        </div>
+                        <div className="space-y-3">
+                            {utmStats.sources.length === 0 ? (
+                                <p className="text-xs text-muted text-center py-4">Sin datos de origen</p>
+                            ) : (
+                                utmStats.sources.map((s) => (
+                                    <div key={s.name} className="relative p-2 rounded-lg bg-white/[0.01] overflow-hidden group">
+                                        <div 
+                                            className="absolute inset-y-0 left-0 bg-emerald-500/5 transition-all duration-500 rounded-lg"
+                                            style={{ width: `${s.percentage}%` }}
+                                        />
+                                        <div className="relative flex items-center justify-between text-xs">
+                                            <span className="font-bold text-white/90 truncate max-w-[70%] group-hover:text-emerald-300 transition-colors uppercase text-[10px] tracking-wider">
+                                                {s.name}
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-black text-white">{s.count}</span>
+                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">
+                                                    {s.percentage}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Tarjeta de Medio (Medium) */}
+                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 hover:border-indigo-500/20 transition-all">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400">Top Medios (Medium)</h3>
+                            <span className="text-[10px] font-bold text-muted uppercase">Visitas</span>
+                        </div>
+                        <div className="space-y-3">
+                            {utmStats.mediums.length === 0 ? (
+                                <p className="text-xs text-muted text-center py-4">Sin datos de medios</p>
+                            ) : (
+                                utmStats.mediums.map((m) => (
+                                    <div key={m.name} className="relative p-2 rounded-lg bg-white/[0.01] overflow-hidden group">
+                                        <div 
+                                            className="absolute inset-y-0 left-0 bg-indigo-500/5 transition-all duration-500 rounded-lg"
+                                            style={{ width: `${m.percentage}%` }}
+                                        />
+                                        <div className="relative flex items-center justify-between text-xs">
+                                            <span className="font-bold text-white/90 truncate max-w-[70%] group-hover:text-indigo-300 transition-colors uppercase text-[10px] tracking-wider">
+                                                {m.name}
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-black text-white">{m.count}</span>
+                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400">
+                                                    {m.percentage}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Tarjeta de Campaña (Campaign) */}
+                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 hover:border-purple-500/20 transition-all">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-purple-400">Top Campañas (Campaign)</h3>
+                            <span className="text-[10px] font-bold text-muted uppercase">Visitas</span>
+                        </div>
+                        <div className="space-y-3">
+                            {utmStats.campaigns.length === 0 ? (
+                                <p className="text-xs text-muted text-center py-4">Sin datos de campañas</p>
+                            ) : (
+                                utmStats.campaigns.map((c) => (
+                                    <div key={c.name} className="relative p-2 rounded-lg bg-white/[0.01] overflow-hidden group">
+                                        <div 
+                                            className="absolute inset-y-0 left-0 bg-purple-500/5 transition-all duration-500 rounded-lg"
+                                            style={{ width: `${c.percentage}%` }}
+                                        />
+                                        <div className="relative flex items-center justify-between text-xs">
+                                            <span className="font-bold text-white/90 truncate max-w-[70%] group-hover:text-purple-300 transition-colors italic text-[10px] tracking-wider">
+                                                {c.name}
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-black text-white">{c.count}</span>
+                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">
+                                                    {c.percentage}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Tabla Detallada */}
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-separate border-spacing-y-2">
                     <thead>

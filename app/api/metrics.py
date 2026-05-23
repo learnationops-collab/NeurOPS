@@ -58,7 +58,33 @@ def track_visit():
 @admin_required
 def get_track_visits():
     try:
-        visits = LandingTracking.query.order_by(LandingTracking.created_at.desc()).limit(500).all()
+        from datetime import datetime, time
+        
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        
+        query = LandingTracking.query
+        
+        # Filtrar por fecha de inicio si se proporciona (YYYY-MM-DD)
+        if start_date_str:
+            try:
+                start_dt = datetime.strptime(start_date_str, '%Y-%m-%d')
+                query = query.filter(LandingTracking.created_at >= datetime.combine(start_dt, time.min))
+            except ValueError:
+                logging.warning(f"Formato de start_date invalido: {start_date_str}")
+        
+        # Filtrar por fecha de fin si se proporciona (YYYY-MM-DD)
+        if end_date_str:
+            try:
+                end_dt = datetime.strptime(end_date_str, '%Y-%m-%d')
+                query = query.filter(LandingTracking.created_at <= datetime.combine(end_dt, time.max))
+            except ValueError:
+                logging.warning(f"Formato de end_date invalido: {end_date_str}")
+        
+        # Limite adaptable para no sobrecargar pero permitir ver mas registros si hay filtro
+        limit = 5000 if (start_date_str or end_date_str) else 500
+        
+        visits = query.order_by(LandingTracking.created_at.desc()).limit(limit).all()
         return jsonify([{
             "id": v.id,
             "utm_source": v.utm_source,
