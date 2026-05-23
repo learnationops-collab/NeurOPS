@@ -253,7 +253,7 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                     value={fmt(depositCount)}
                     icon={DollarSign}
                     colorClass="text-fuchsia-500"
-                    subtitle={`Close Rate Promesa: ${fmtNum(calcDiv(depositCount, stats.agendas.totals.attended, true), true)}`}
+                    subtitle={`Close Rate Promesa: ${fmtNum(calcDiv(depositCount, stats.general.offers_made, true), true)}`}
                     tooltip={`Total de señas o reservas (Promesas de venta) realizadas en el periodo. Conversión a venta real: ${stats.sales.deposit_conversions?.rate ?? 0}%`}
                 />
             </div>
@@ -346,14 +346,25 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                         </div>
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
-                            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Close Rate Real</p>
+                            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Close Rate Real (Asist.)</p>
                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-slate-400">Ofertas → Cierres Reales</span>
+                                <span className="text-[10px] font-bold text-slate-400">Asistencias → Ventas Reales</span>
+                                <span className="text-lg font-black text-white tabular-nums">
+                                    {stats.agendas.totals.attended ? ((realSalesCount / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
+                            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Close Rate Real (Oferta)</p>
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-slate-400">Ofertas → Ventas Reales</span>
                                 <span className="text-lg font-black text-white tabular-nums">
                                     {stats.general.offers_made ? ((realSalesCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
                                 </span>
                             </div>
                         </div>
+
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
                             <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest">Close Rate Promesa</p>
                             <div className="flex justify-between items-center">
@@ -382,29 +393,6 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                             <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider mt-1 text-right">
                                 {stats.sales.deposit_conversions?.converted ?? 0} de {stats.sales.deposit_conversions?.total ?? 0} señas convertidas
                             </p>
-                        </div>               
-
-                        <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 flex flex-col justify-center space-y-2 relative group/stat overflow-visible">
-                            <div className="flex items-center gap-1.5 relative group/tooltip">
-                                <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Global Win Rate</p>
-                                <Info size={10} className="text-indigo-400/50 cursor-help" />
-                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl">
-                                    Tasa de cierre global (Ventas / Asistencias totales). Indica el porcentaje de personas con las que hablaste que terminaron comprando.
-                                    <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
-                                </div>
-                            </div>
-                            <div className="flex justify-between items-center mt-1">
-                                <span className="text-[10px] font-bold text-indigo-300">Asistencias → Cierres Reales</span>
-                                <span className="text-lg font-black text-indigo-400 tabular-nums">
-                                    {stats.agendas.totals.attended ? ((realSalesCount / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-indigo-300">Asistencias → Promesas</span>
-                                <span className="text-lg font-black text-indigo-400 tabular-nums">
-                                    {stats.agendas.totals.attended ? ((depositCount / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
-                                </span>
-                            </div>
                         </div>
                     </div>
                 </div>
