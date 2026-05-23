@@ -476,7 +476,7 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                     />
                     <ProgressRow 
                         label="Reschedule Rate" 
-                        percentage={stats.general.rescheduled_calls ? (((stats.agendas.totals.attended - stats.general.decision_makers) / stats.general.rescheduled_calls) * 100) : 0} 
+                        percentage={stats.percentages.rescheduled_rate} 
                         colorClass="text-amber-500" 
                         absolute={`${fmt(stats.agendas.totals.attended - stats.general.decision_makers)} / ${fmt(stats.general.rescheduled_calls)}`} 
                     />
