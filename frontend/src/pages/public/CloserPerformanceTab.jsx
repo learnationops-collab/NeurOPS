@@ -168,10 +168,12 @@ const CloserPerformanceTab = ({ stats, loading }) => {
     const pifCount = stats.sales.pif?.count ?? stats.sales.totals?.pif_count ?? 0;
     const splitCount = stats.sales.split?.count ?? stats.sales.totals?.split_count ?? 0;
     const depositCount = stats.sales.deposit?.count ?? stats.sales.totals?.deposit_count ?? stats.sales.totals?.seña_count ?? 0;
+    const installmentCount = stats.sales.installment?.count ?? stats.sales.totals?.installment_count ?? 0;
     
     const pifCash = stats.sales.pif?.cash ?? stats.sales.totals?.pif_cash_collected ?? stats.sales.totals?.pif_cash ?? 0;
     const splitCash = stats.sales.split?.cash ?? stats.sales.totals?.split_cash_collected ?? stats.sales.totals?.split_cash ?? 0;
     const depositCash = stats.sales.deposit?.cash ?? stats.sales.totals?.deposit_cash_collected ?? stats.sales.totals?.deposit_cash ?? stats.sales.totals?.seña_cash ?? 0;
+    const installmentCash = stats.sales.installment?.cash ?? stats.sales.totals?.installment_cash ?? stats.sales.totals?.installment_cash_collected ?? 0;
 
     const realSalesCount = pifCount + splitCount;
     const realSalesCash = pifCash + splitCash;
@@ -181,10 +183,11 @@ const CloserPerformanceTab = ({ stats, loading }) => {
     const salesData = [
         { name: 'PIF', value: pifCount },
         { name: 'Split Pay', value: splitCount },
+        { name: 'Cuotas', value: installmentCount },
         { name: 'Promesas (Señas)', value: depositCount }
     ].filter(d => d.value > 0);
     if (salesData.length === 0) salesData.push({ name: 'Sin Ventas', value: 1 });
-    const salesColors = salesData[0].name === 'Sin Ventas' ? ['#334155'] : ['#10b981', '#3b82f6', '#f59e0b'];
+    const salesColors = salesData[0].name === 'Sin Ventas' ? ['#334155'] : ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'];
 
     const totalAttended = stats.agendas.totals.attended;
     const totalNoShow = stats.agendas.totals.no_show;
@@ -561,7 +564,8 @@ const CloserPerformanceTab = ({ stats, loading }) => {
 
                         {[
                             { label: 'PIF (Completo)', keyCount: 'pif_count', keyCash: 'pif_cash', keyRecCount: 'rec_pif_count', keyRecCash: 'rec_pif_cash', valCount: pifCount, valCash: pifCash },
-                            { label: 'Split (Cuotas)', keyCount: 'split_count', keyCash: 'split_cash', keyRecCount: 'rec_split_count', keyRecCash: 'rec_split_cash', valCount: splitCount, valCash: splitCash },
+                            { label: 'Split Pay (Inicial)', keyCount: 'split_count', keyCash: 'split_cash', keyRecCount: 'rec_split_count', keyRecCash: 'rec_split_cash', valCount: splitCount, valCash: splitCash },
+                            { label: 'Cuotas Cobradas', keyCount: 'installment_count', keyCash: 'installment_cash', keyRecCount: 'rec_installment_count', keyRecCash: 'rec_installment_cash', valCount: installmentCount, valCash: installmentCash },
                             { label: 'Promesas (Señas)', keyCount: 'deposit_count', keyCash: 'deposit_cash', keyRecCount: 'rec_seña_count', keyRecCash: 'rec_seña_cash', valCount: depositCount, valCash: depositCash },
                         ].map((row, i) => (
                             <div key={row.label} className={`grid grid-cols-5 gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
@@ -588,10 +592,10 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                                 <p className="text-[9px] font-black text-white uppercase tracking-widest">Totales</p>
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
-                                <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(realSalesCount + depositCount)}</p>
+                                <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(realSalesCount + depositCount + installmentCount)}</p>
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
-                                <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash + depositCash)}</p>
+                                <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash + depositCash + installmentCash)}</p>
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
                                 <p className="text-sm font-black text-blue-400 tabular-nums">{fmt(stats.sales.totals.recuperado_count || 0)}</p>

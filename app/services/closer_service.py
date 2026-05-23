@@ -996,6 +996,8 @@ class CloserService:
         official_split_cash = 0.0
         official_deposit_count = 0.0
         official_deposit_cash = 0.0
+        official_installment_count = 0.0
+        official_installment_cash = 0.0
         
         for tipo, count, cash in sales_rows:
             tipo_lower = (tipo or '').lower()
@@ -1008,9 +1010,28 @@ class CloserService:
             elif 'seña' in tipo_lower or 'deposito' in tipo_lower or 'deposit' in tipo_lower:
                 official_deposit_count += count_val
                 official_deposit_cash += cash_val
-            else:
+            elif 'primer pago' in tipo_lower or 'split' in tipo_lower:
                 official_split_count += count_val
                 official_split_cash += cash_val
+            elif 'cuota' in tipo_lower or 'installment' in tipo_lower or 'pago 2' in tipo_lower or 'pago 3' in tipo_lower or 'pago 4' in tipo_lower:
+                official_installment_count += count_val
+                official_installment_cash += cash_val
+            else:
+                # Si no matchea palabras clave de cuota pero es un pago fraccionado, verificar si es posterior
+                is_subsequent = False
+                import re
+                match = re.search(r'pago\s*(\d+)', tipo_lower)
+                if match:
+                    num = int(match.group(1))
+                    if num > 1:
+                        is_subsequent = True
+                
+                if is_subsequent:
+                    official_installment_count += count_val
+                    official_installment_cash += cash_val
+                else:
+                    official_split_count += count_val
+                    official_split_cash += cash_val
 
         # Scale official sales metrics by aggregation type
         final_pif_count = round(official_pif_count / days_count, 2) if agg_type == 'avg' else official_pif_count
@@ -1019,6 +1040,8 @@ class CloserService:
         final_split_cash = round(official_split_cash / days_count, 2) if agg_type == 'avg' else official_split_cash
         final_deposit_count = round(official_deposit_count / days_count, 2) if agg_type == 'avg' else official_deposit_count
         final_deposit_cash = round(official_deposit_cash / days_count, 2) if agg_type == 'avg' else official_deposit_cash
+        final_installment_count = round(official_installment_count / days_count, 2) if agg_type == 'avg' else official_installment_count
+        final_installment_cash = round(official_installment_cash / days_count, 2) if agg_type == 'avg' else official_installment_cash
 
         # Totals
         total_scheduled = val(stats.fc_scheduled) + val(stats.sc_scheduled)
@@ -1027,8 +1050,10 @@ class CloserService:
         total_rescheduled = val(stats.fc_rescheduled) + val(stats.sc_rescheduled)
         total_canceled = val(stats.fc_canceled) + val(stats.sc_canceled)
 
+        # Cierres reales excluyen las cuotas
         total_sales = final_pif_count + final_split_count + final_deposit_count
-        total_cash = final_pif_cash + final_split_cash + final_deposit_cash
+        # Efectivo total recaudado incluye las cuotas
+        total_cash = final_pif_cash + final_split_cash + final_deposit_cash + final_installment_cash
         total_ic_sales = val(stats.pif_ic_count) + val(stats.split_ic_count) + val(stats.deposit_ic_count)
         total_ic_cash = val(stats.pif_ic_cash) + val(stats.split_ic_cash) + val(stats.deposit_ic_cash)
 
@@ -1065,6 +1090,7 @@ class CloserService:
                 "pif": {"count": final_pif_count, "cash": final_pif_cash, "in_call_count": val(stats.pif_ic_count), "in_call_cash": val(stats.pif_ic_cash)},
                 "split": {"count": final_split_count, "cash": final_split_cash, "in_call_count": val(stats.split_ic_count), "in_call_cash": val(stats.split_ic_cash)},
                 "deposit": {"count": final_deposit_count, "cash": final_deposit_cash, "in_call_count": val(stats.deposit_ic_count), "in_call_cash": val(stats.deposit_ic_cash)},
+                "installment": {"count": final_installment_count, "cash": final_installment_cash, "in_call_count": 0, "in_call_cash": 0},
                 "totals": {"count": total_sales, "cash": total_cash, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}
             },
             "follow_ups": {
