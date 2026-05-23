@@ -177,6 +177,7 @@ const CloserPerformanceTab = ({ stats, loading }) => {
 
     const realSalesCount = pifCount + splitCount;
     const realSalesCash = pifCash + splitCash;
+    const totalCashCollected = pifCash + splitCash + installmentCash + depositCash;
 
     const ticketPromedioReal = realSalesCount > 0 ? (realSalesCash / realSalesCount) : 0;
 
@@ -227,11 +228,11 @@ const CloserPerformanceTab = ({ stats, loading }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     title="Ingreso Total Cash"
-                    value={fmtCash(realSalesCash)}
+                    value={fmtCash(totalCashCollected)}
                     icon={DollarSign}
                     colorClass="text-emerald-500"
                     subtitle={`Total Promesa: ${fmtCash(depositCash)}`}
-                    tooltip="Ingreso en efectivo generado por ventas reales (PIF y Split). Excluye Promesas/Señas."
+                    tooltip="Ingreso total en efectivo cobrado. Incluye PIF, Split, Cuotas y Señas (Promesas de venta)."
                 />
                 <StatCard
                     title="Cierres Reales"
