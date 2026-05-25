@@ -831,10 +831,13 @@ def mark_notification_read(id):
 @bp.route('/deck', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_setter_deck():
-    # Obtener agendas de los últimos 15 días asignadas a este setter
+    # Obtener agendas de los últimos 15 días asignadas a este setter que no estén en estado Agendado
     from datetime import timedelta
     limit_date = datetime.utcnow() - timedelta(days=15)
-    query = Appointment.query.filter(Appointment.start_time >= limit_date)
+    query = Appointment.query.filter(
+        Appointment.start_time >= limit_date,
+        or_(Appointment.result != 'Agendado', Appointment.result == None)
+    )
     if current_user.role != 'admin':
         query = query.filter_by(setter_id=current_user.id)
     
