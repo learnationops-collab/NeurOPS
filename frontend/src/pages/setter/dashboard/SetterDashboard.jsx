@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Send,
@@ -26,6 +27,7 @@ import SetterReportModal from './SetterReportModal';
 import AgendaManagerModal from '../../../components/modals/AgendaManagerModal';
 
 const SetterDashboard = () => {
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [activeSection, setActiveSection] = useState(0);
@@ -150,7 +152,9 @@ const SetterDashboard = () => {
     };
 
     const handleNotificationClick = async (noti) => {
-        if (noti.associated_type === 'appointment' && noti.associated_id) {
+        if (noti.associated_type === 'deck_comment' && noti.associated_id) {
+            navigate(`/setter/deck?appt_id=${noti.associated_id}`);
+        } else if (noti.associated_type === 'appointment' && noti.associated_id) {
             try {
                 const res = await api.get(`/closer/appointments/${noti.associated_id}`);
                 setSelectedAgenda(res.data);

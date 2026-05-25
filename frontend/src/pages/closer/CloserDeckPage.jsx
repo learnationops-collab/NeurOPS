@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useSearchParams } from 'react-router-dom';
 import { 
     Instagram, 
     Link as LinkIcon, 
@@ -28,6 +29,9 @@ import Button from '../../components/ui/Button';
 
 // Estilos de comentarios en español cortos
 const CloserDeckPage = () => {
+    const [searchParams] = useSearchParams();
+    const apptIdParam = searchParams.get('appt_id');
+
     const [cards, setCards] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -57,8 +61,12 @@ const CloserDeckPage = () => {
     };
 
     useEffect(() => {
-        fetchQueue();
-    }, []);
+        if (apptIdParam) {
+            handleSelectLead(apptIdParam);
+        } else {
+            fetchQueue();
+        }
+    }, [apptIdParam]);
 
     // Sincronizar form con la carta activa del Closer
     useEffect(() => {
@@ -70,6 +78,58 @@ const CloserDeckPage = () => {
             setResult(activeCard.result || 'Pendiente');
         }
     }, [cards, currentIndex]);
+
+    // Comentarios states
+    const [comments, setComments] = useState([]);
+    const [newCommentText, setNewCommentText] = useState('');
+    const [replyToId, setReplyToId] = useState(null);
+    const [replyToName, setReplyToName] = useState('');
+    const [loadingComments, setLoadingComments] = useState(false);
+
+    const activeCard = cards[currentIndex];
+
+    // Cargar comentarios
+    const fetchComments = async (apptId) => {
+        setLoadingComments(true);
+        try {
+            const res = await api.get(`/closer/deck/comments/${apptId}`);
+            setComments(res.data || []);
+        } catch (err) {
+            console.error("Error al cargar comentarios:", err);
+        } finally {
+            setLoadingComments(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeCard?.id) {
+            fetchComments(activeCard.id);
+        } else {
+            setComments([]);
+        }
+    }, [activeCard?.id]);
+
+    const handleSendComment = async (e) => {
+        if (e) e.preventDefault();
+        if (!newCommentText.trim() || !activeCard?.id) return;
+        
+        try {
+            const payload = {
+                text: newCommentText,
+                parent_id: replyToId
+            };
+            await api.post(`/closer/deck/comments/${activeCard.id}`, payload);
+            toast.success(replyToId ? "Respuesta enviada" : "Comentario enviado");
+            setNewCommentText('');
+            setReplyToId(null);
+            setReplyToName('');
+            fetchComments(activeCard.id);
+        } catch (err) {
+            console.error("Error al enviar comentario:", err);
+            toast.error("Error al enviar comentario");
+        }
+    };
+
 
     // Buscar lead específico para Closer
     const handleSelectLead = async (leadId) => {
@@ -116,8 +176,6 @@ const CloserDeckPage = () => {
             setSubmitting(false);
         }
     };
-
-    const activeCard = cards[currentIndex];
 
     // Formatear fecha legible
     const formatTime = (isoStr) => {
@@ -388,8 +446,118 @@ const CloserDeckPage = () => {
                                     </div>
                                 </div>
 
+                                {/* Sección de Comentarios e Intercambio de Leads (Closer) */}
+                                {activeCard && (
+                                    <div className="bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-8 shadow-2xl space-y-6 text-left relative overflow-hidden">
+                                        <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                                <MessageSquare size={16} className="text-primary" />
+                                                Intercambio de Leads
+                                            </h3>
+                                            <span className="text-[10px] font-black uppercase bg-[#1534ff]/10 text-primary border border-[#1534ff]/20 px-2.5 py-1 rounded-xl">
+                                                {comments.length} Mensajes
+                                            </span>
+                                        </div>
+
+                                        {/* Historial de Comentarios con Scroll */}
+                                        <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                                            {loadingComments ? (
+                                                <div className="flex justify-center py-6">
+                                                    <Loader2 className="animate-spin text-primary" size={20} />
+                                                </div>
+                                            ) : comments.length === 0 ? (
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider text-center py-6">
+                                                    Sin comentarios en este lead aún.
+                                                </p>
+                                            ) : (
+                                                comments.filter(c => !c.parent_id).map(comment => (
+                                                    <div key={comment.id} className="space-y-3">
+                                                        {/* Comentario Principal */}
+                                                        <div className="bg-black/35 border border-slate-850/80 p-4 rounded-3xl relative group">
+                                                            <div className="flex justify-between items-start mb-1.5">
+                                                                <span className="text-[10px] font-black text-primary uppercase tracking-wider">
+                                                                    {comment.author_name}
+                                                                </span>
+                                                                <span className="text-[9px] text-slate-500 font-bold">
+                                                                    {new Date(comment.created_at).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                                                {comment.text}
+                                                            </p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setReplyToId(comment.id);
+                                                                    setReplyToName(comment.author_name);
+                                                                }}
+                                                                className="mt-2 text-[9px] font-black text-slate-500 hover:text-white uppercase tracking-wider transition-colors block"
+                                                            >
+                                                                Responder
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Respuestas Identadas */}
+                                                        {comments.filter(c => c.parent_id === comment.id).map(reply => (
+                                                            <div key={reply.id} className="ml-6 bg-[#1d1e26]/50 border border-slate-800/40 p-4 rounded-3xl relative">
+                                                                <div className="flex justify-between items-start mb-1.5">
+                                                                    <span className="text-[10px] font-black text-violet-400 uppercase tracking-wider">
+                                                                        {reply.author_name}
+                                                                    </span>
+                                                                    <span className="text-[9px] text-slate-500 font-bold">
+                                                                        {new Date(reply.created_at).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                                                    {reply.text}
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+
+                                        {/* Input de Nuevo Comentario */}
+                                        <form onSubmit={handleSendComment} className="space-y-3">
+                                            {replyToId && (
+                                                <div className="flex justify-between items-center bg-violet-500/10 border border-violet-500/20 px-4 py-2.5 rounded-2xl">
+                                                    <span className="text-[9px] font-black text-violet-400 uppercase tracking-wider">
+                                                        Respondiendo a {replyToName}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setReplyToId(null);
+                                                            setReplyToName('');
+                                                        }}
+                                                        className="text-slate-400 hover:text-white"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                            <div className="relative flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder={replyToId ? "Escribe tu respuesta..." : "Escribe un comentario..."}
+                                                    value={newCommentText}
+                                                    onChange={(e) => setNewCommentText(e.target.value)}
+                                                    className="flex-1 bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    className="bg-[#1534ff] hover:bg-[#1534ff]/90 text-white font-black text-[9px] uppercase tracking-widest px-4 rounded-2xl transition-all shadow-lg shadow-blue-600/10 flex items-center justify-center"
+                                                >
+                                                    Enviar
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                )}
+
                                 {/* Tips de Closer */}
-                                <div className="bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden text-left space-y-4">
+                                <div className="bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden text-left space-y-4 font-bold text-slate-400">
                                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Instrucciones del Closer</h3>
                                     <ul className="space-y-3 text-[11px] text-slate-400 font-medium">
                                         <li className="flex gap-2">

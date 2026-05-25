@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import NewSaleModal from '../../../components/modals/NewSaleModal';
 import SaleDetailModal from '../../../components/modals/SaleDetailModal';
@@ -39,6 +40,7 @@ import {
 } from 'lucide-react';
 
 const CloserDashboard = () => {
+    const navigate = useNavigate();
     // Dashboard Stats State
     const [data, setData] = useState({
         kpis: {},
@@ -182,7 +184,9 @@ const CloserDashboard = () => {
     };
 
     const handleNotificationClick = async (noti) => {
-        if (noti.associated_type === 'appointment' && noti.associated_id) {
+        if (noti.associated_type === 'deck_comment' && noti.associated_id) {
+            navigate(`/closer/deck?appt_id=${noti.associated_id}`);
+        } else if (noti.associated_type === 'appointment' && noti.associated_id) {
             try {
                 const res = await api.get(`/closer/appointments/${noti.associated_id}`);
                 setSelectedAgenda(res.data);

@@ -1072,7 +1072,11 @@ def get_closer_deck_card(appt_id):
         
     appt = Appointment.query.get_or_404(appt_id)
     if current_user.role != 'admin' and appt.closer_id != current_user.id:
-        return jsonify({"message": "Forbidden"}), 403
+        if appt.origin == 'ManyChat':
+            appt.closer_id = current_user.id
+            db.session.commit()
+        else:
+            return jsonify({"message": "Forbidden"}), 403
         
     return jsonify({
         "id": appt.id,
@@ -1091,3 +1095,63 @@ def get_closer_deck_card(appt_id):
         "setter_processed": appt.setter_processed,
         "closer_processed": appt.closer_processed
     }), 200
+
+
+@bp.route('/deck/comments/<int:appt_id>', methods=['GET'])
+@login_required
+def get_closer_deck_comments(appt_id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    from app.models import Comment
+    comments = Comment.query.filter_by(associated_id=appt_id, comment_type='appointment').order_by(Comment.created_at.asc()).all()
+    return jsonify([c.to_dict() for c in comments]), 200
+
+
+@bp.route('/deck/comments/<int:appt_id>', methods=['POST'])
+@login_required
+def post_closer_deck_comment(appt_id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    appt = Appointment.query.get_or_404(appt_id)
+    data = request.get_json() or {}
+    text = data.get('text', '').strip()
+    parent_id = data.get('parent_id')
+    
+    if not text:
+        return jsonify({"message": "El texto del comentario es requerido"}), 400
+        
+    comment = Comment(
+        author_id=current_user.id,
+        text=text,
+        comment_type='appointment',
+        associated_id=appt_id,
+        parent_id=parent_id
+    )
+    db.session.add(comment)
+    
+    # Notificación cruzada al Setter (dirigida al rol si es Manychat)
+    lead_name = appt.client.full_name if appt.client else "Sin Nombre"
+    subject = f"💬 Lead: {lead_name}"
+    content = f"\"{text}\" - de Closer {current_user.username}"
+    
+    target_users = "role:setter"
+    if appt.origin != 'ManyChat' and appt.setter_id:
+        target_users = [appt.setter_id]
+        
+    notif = Notification(
+        subject=subject,
+        content=content,
+        associated_id=appt_id,
+        associated_type='deck_comment',
+        target_users=target_users
+    )
+    db.session.add(notif)
+        
+    try:
+        db.session.commit()
+        return jsonify(comment.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error al guardar comentario: {str(e)}"}), 500
+

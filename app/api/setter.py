@@ -1006,7 +1006,11 @@ def search_deck_leads():
 def get_deck_card(appt_id):
     appt = Appointment.query.get_or_404(appt_id)
     if current_user.role != 'admin' and appt.setter_id != current_user.id:
-        return jsonify({"message": "Forbidden"}), 403
+        if appt.origin == 'ManyChat':
+            appt.setter_id = current_user.id
+            db.session.commit()
+        else:
+            return jsonify({"message": "Forbidden"}), 403
         
     return jsonify({
         "id": appt.id,
@@ -1022,5 +1026,62 @@ def get_deck_card(appt_id):
         "setter_notes": appt.setter_notes or "",
         "setter_processed": appt.setter_processed
     }), 200
+
+
+@bp.route('/deck/comments/<int:appt_id>', methods=['GET'])
+@role_required(ROLE_SETTER)
+def get_setter_deck_comments(appt_id):
+    from app.models import Comment
+    comments = Comment.query.filter_by(associated_id=appt_id, comment_type='appointment').order_by(Comment.created_at.asc()).all()
+    return jsonify([c.to_dict() for c in comments]), 200
+
+
+@bp.route('/deck/comments/<int:appt_id>', methods=['POST'])
+@role_required(ROLE_SETTER)
+def post_setter_deck_comment(appt_id):
+    from app.models import Comment, Appointment, Notification
+    
+    appt = Appointment.query.get_or_404(appt_id)
+    data = request.get_json() or {}
+    text = data.get('text', '').strip()
+    parent_id = data.get('parent_id')
+    
+    if not text:
+        return jsonify({"message": "El texto del comentario es requerido"}), 400
+        
+    comment = Comment(
+        author_id=current_user.id,
+        text=text,
+        comment_type='appointment',
+        associated_id=appt_id,
+        parent_id=parent_id
+    )
+    db.session.add(comment)
+    
+    # Notificación cruzada al Closer (dirigida al rol si es Manychat)
+    lead_name = appt.client.full_name if appt.client else "Sin Nombre"
+    subject = f"💬 Lead: {lead_name}"
+    content = f"\"{text}\" - de Setter {current_user.username}"
+    
+    target_users = "role:closer"
+    if appt.origin != 'ManyChat' and appt.closer_id:
+        target_users = [appt.closer_id]
+        
+    notif = Notification(
+        subject=subject,
+        content=content,
+        associated_id=appt_id,
+        associated_type='deck_comment',
+        target_users=target_users
+    )
+    db.session.add(notif)
+        
+    try:
+        db.session.commit()
+        return jsonify(comment.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error al guardar comentario: {str(e)}"}), 500
+
 
 

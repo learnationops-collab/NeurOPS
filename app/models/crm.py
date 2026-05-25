@@ -46,8 +46,10 @@ class Comment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     comment_type = db.Column(db.String(50), nullable=False)
     associated_id = db.Column(db.Integer, nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('comments.id'), nullable=True)
     
     author = db.relationship('User', foreign_keys=[author_id], overlaps="comments_authored,author_rel")
+    replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]), lazy='dynamic', cascade="all, delete-orphan")
 
     __table_args__ = (
         db.Index('idx_comments_target', 'comment_type', 'associated_id'),
@@ -61,5 +63,6 @@ class Comment(db.Model):
             "author_name": self.author.username if self.author else "Unknown",
             "created_at": self.created_at.isoformat(),
             "type": self.comment_type,
-            "associated_id": self.associated_id
+            "associated_id": self.associated_id,
+            "parent_id": self.parent_id
         }
