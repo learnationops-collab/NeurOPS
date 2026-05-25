@@ -831,16 +831,95 @@ def mark_notification_read(id):
 @bp.route('/deck', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_setter_deck():
-    # Obtener agendas de los últimos 15 días asignadas a este setter que no estén en estado Agendado
-    from datetime import timedelta
-    limit_date = datetime.utcnow() - timedelta(days=15)
+    # Obtener los últimos 20 leads de Manychat y asegurar que tengan cita para el Setter
+    from app.models import ManychatLead, Client, User, Appointment
+    from sqlalchemy import or_
+    
+    # 1. Obtener los últimos 20 leads que llegaron por Manychat
+    m_leads = ManychatLead.query.order_by(ManychatLead.created_at.desc()).limit(20).all()
+    
+    # 2. Asegurar asignación por defecto de Closer
+    closer = User.query.filter_by(role='closer', is_active=True).first()
+    if not closer:
+        closer = User.query.filter_by(role='closer').first()
+    default_closer_id = closer.id if closer else 1
+    
+    for ml in m_leads:
+        client = None
+        if ml.ig:
+            ig_clean = ml.ig.strip().replace('@', '')
+            client = Client.query.filter(
+                or_(
+                    db.func.lower(Client.instagram) == ig_clean.lower(),
+                    db.func.lower(Client.instagram) == ml.ig.lower()
+                )
+            ).first()
+            
+        if not client and ml.name:
+            client = Client.query.filter(db.func.lower(Client.full_name) == ml.name.lower()).first()
+            
+        if not client:
+            client = Client(
+                full_name=ml.name or "Sin Nombre",
+                instagram=ml.ig,
+                created_at=ml.created_at
+            )
+            db.session.add(client)
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                continue
+                
+        # Asegurar que tenga cita con origen ManyChat
+        appt = Appointment.query.filter_by(client_id=client.id, origin='ManyChat').first()
+        if not appt:
+            appt = Appointment(
+                closer_id=default_closer_id,
+                setter_id=current_user.id,
+                client_id=client.id,
+                start_time=ml.created_at,
+                origin='ManyChat',
+                result='Entrante',
+                setter_processed=False
+            )
+            db.session.add(appt)
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                continue
+
+    # 3. Obtener las citas de Manychat de los últimos 20 leads que no estén en estado Agendado
+    client_ids = []
+    for ml in m_leads:
+        client_found = None
+        if ml.ig:
+            ig_clean = ml.ig.strip().replace('@', '')
+            client_found = Client.query.filter(
+                or_(
+                    db.func.lower(Client.instagram) == ig_clean.lower(),
+                    db.func.lower(Client.instagram) == ml.ig.lower()
+                )
+            ).first()
+        if not client_found and ml.name:
+            client_found = Client.query.filter(db.func.lower(Client.full_name) == ml.name.lower()).first()
+            
+        if client_found:
+            client_ids.append(client_found.id)
+            
+    if not client_ids:
+        return jsonify([]), 200
+        
     query = Appointment.query.filter(
-        Appointment.start_time >= limit_date,
+        Appointment.client_id.in_(client_ids),
+        Appointment.origin == 'ManyChat',
         or_(Appointment.result != 'Agendado', Appointment.result == None)
     )
+    
     if current_user.role != 'admin':
         query = query.filter_by(setter_id=current_user.id)
-    
+        
     appointments = query.order_by(Appointment.start_time.desc()).all()
     
     return jsonify([{
