@@ -146,12 +146,15 @@ const CloserPerformanceTab = ({ stats, loading }) => {
 
     const funnelData = useMemo(() => {
         if (!stats) return [];
+        const pif = stats.sales.pif?.count ?? stats.sales.totals?.pif_count ?? 0;
+        const split = stats.sales.split?.count ?? stats.sales.totals?.split_count ?? 0;
+        const realSales = pif + split;
         return [
             { name: 'Slots', value: stats.general.slots, fill: '#8b5cf6' },
             { name: 'Agendas', value: stats.agendas.totals.scheduled, fill: '#10b981' },
-            { name: 'Asistencias', value: stats.agendas.totals.attended, fill: '#0ea5e9' },
+            { name: 'Asistencias', value: stats.agendas.first_call.attended, fill: '#0ea5e9' },
             { name: 'Ofertas', value: stats.general.offers_made, fill: '#d946ef' },
-            { name: 'Ventas', value: stats.sales.totals.count, fill: '#f59e0b' }
+            { name: 'Ventas', value: realSales, fill: '#f59e0b' }
         ];
     }, [stats]);
 
@@ -239,7 +242,7 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                     value={fmt(realSalesCount)}
                     icon={Target}
                     colorClass="text-amber-500"
-                    subtitle={`Tasa Cierre Real: ${fmtNum(calcDiv(realSalesCount, stats.agendas.totals.attended, true), true)}`}
+                    subtitle={`Tasa Cierre Real: ${fmtNum(calcDiv(realSalesCount, stats.agendas.first_call.attended, true), true)}`}
                     tooltip="Total de nuevos clientes cerrados en el periodo (PIF + Split). Excluye señas y cuotas."
                 />
                 <StatCard
@@ -352,7 +355,7 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                             <div className="flex justify-between items-center">
                                 <span className="text-[10px] font-bold text-slate-400">Asistencias → Ventas Reales</span>
                                 <span className="text-lg font-black text-white tabular-nums">
-                                    {stats.agendas.totals.attended ? ((realSalesCount / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
+                                    {stats.agendas.first_call.attended ? ((realSalesCount / stats.agendas.first_call.attended) * 100).toFixed(1) : 0}%
                                 </span>
                             </div>
                         </div>
