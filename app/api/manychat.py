@@ -715,19 +715,33 @@ def get_ad_dashboard_stats():
     sales_in_period = FinancialSale.query.filter(FinancialSale.date >= start_dt, FinancialSale.date <= end_dt).all()
     ventas_por_ad = {}
     cash_collect_data = {}
+    ventas_sin_asignar = 0
+    monto_sin_asignar = 0.0
     
     for sale in sales_in_period:
         ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
         ig_n = normalize_ig(ig_val)
-        if not ig_n: continue
         
-        matched_lead = ManychatLead.query.filter(func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_n).first()
-        if not matched_lead: continue
+        matched_lead = None
+        if ig_n:
+            matched_lead = ManychatLead.query.filter(func.lower(func.replace(ManychatLead.ig, '@', '')) == ig_n).first()
+        
+        if not matched_lead:
+            nombre_norm = (sale.nombre_cliente or '').strip().lower()
+            if nombre_norm:
+                matched_lead = ManychatLead.query.filter(
+                    db.func.lower(ManychatLead.name) == nombre_norm
+                ).first()
+                
+        if not matched_lead:
+            ventas_sin_asignar += 1
+            monto_sin_asignar += float(sale.monto or 0.0)
+            continue
         
         # LeadAnswer más reciente ANTERIOR a la venta (Atribución global, no limitada a ad_ids del periodo)
         closest = LeadAnswer.query.filter(LeadAnswer.lead_id == matched_lead.id, LeadAnswer.ad_id != None, LeadAnswer.created_at <= sale.date)\
                  .order_by(LeadAnswer.created_at.desc()).first()
-        if closest: 
+        if closest and closest.ad_id: 
             ventas_por_ad[closest.ad_id] = ventas_por_ad.get(closest.ad_id, 0) + 1
             
             # Cash Collect: Suma de todos los pagos atribuidos en el periodo
@@ -735,6 +749,41 @@ def get_ad_dashboard_stats():
                 if closest.ad_id not in cash_collect_data:
                     cash_collect_data[closest.ad_id] = 0
                 cash_collect_data[closest.ad_id] += float(sale.monto)
+        else:
+            ventas_sin_asignar += 1
+            monto_sin_asignar += float(sale.monto or 0.0)
+
+    # Agendas sin asignar
+    agendas_sin_asignar = 0
+    for ag in agendas_all:
+        ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
+        ig_norm = normalize_ig(ig_val)
+        
+        matched_lead = None
+        if ig_norm:
+            matched_lead = ManychatLead.query.filter(
+                db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
+            ).first()
+            
+        if not matched_lead:
+            nombre_norm = (ag.nombre or '').strip().lower()
+            if nombre_norm:
+                matched_lead = ManychatLead.query.filter(
+                    db.func.lower(ManychatLead.name) == nombre_norm
+                ).first()
+                
+        if not matched_lead:
+            agendas_sin_asignar += 1
+            continue
+            
+        closest = LeadAnswer.query.filter(
+            LeadAnswer.lead_id == matched_lead.id,
+            LeadAnswer.ad_id != None,
+            LeadAnswer.created_at <= ag.date
+        ).order_by(LeadAnswer.created_at.desc()).first()
+        
+        if not closest or not closest.ad_id:
+            agendas_sin_asignar += 1
 
     # 4. CONSOLIDAR TODOS LOS ANUNCIOS (con leads o con ventas)
     all_active_ad_ids = set(ad_ids) | set(ventas_por_ad.keys())
@@ -806,6 +855,26 @@ def get_ad_dashboard_stats():
             'cpv': cpv,
             'cash_collect': cash_collect,
             'roas': roas
+        })
+
+    # Fila especial "Ventas desatribuidas"
+    if agendas_sin_asignar > 0 or ventas_sin_asignar > 0 or monto_sin_asignar > 0:
+        result.append({
+            'ad_id': 0,
+            'ad_name': 'Ventas desatribuidas',
+            'total_leads': 0,
+            'qualified_leads': 0,
+            'qualified_percentage': 0.0,
+            'spend': 0.0,
+            'agendas': agendas_sin_asignar,
+            'setter_breakdown': {},
+            'ventas': ventas_sin_asignar,
+            'cpl': 0.0,
+            'cpql': 0.0,
+            'cpa': 0.0,
+            'cpv': 0.0,
+            'cash_collect': round(monto_sin_asignar, 2),
+            'roas': 0.0
         })
 
 

@@ -311,11 +311,11 @@ class MarketingService:
                 'roas': roas
             })
 
-        # Añadir fila especial "Sin asignar"
+        # Añadir fila especial "Ventas desatribuidas"
         if agendas_sin_asignar > 0 or ventas_sin_asignar > 0 or monto_sin_asignar > 0:
             result.append({
                 'ad_id': 0,
-                'ad_name': 'Sin asignar',
+                'ad_name': 'Ventas desatribuidas',
                 'adset_name': '—',
                 'campaign_name': '—',
                 'spend': 0.0,

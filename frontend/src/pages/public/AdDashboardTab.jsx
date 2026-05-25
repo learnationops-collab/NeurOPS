@@ -447,8 +447,8 @@ const AdDashboardTab = () => {
                                                     return (
                                                         <tr 
                                                             key={stat.ad_id} 
-                                                            onClick={() => { setSelectedAdId(stat.ad_id); setIsModalOpen(true); }}
-                                                            className={`group transition-colors cursor-pointer ${rankColor} ${zeroRow ? 'opacity-80' : ''}`}
+                                                            onClick={() => { if (stat.ad_id !== 0) { setSelectedAdId(stat.ad_id); setIsModalOpen(true); } }}
+                                                            className={`group transition-colors ${stat.ad_id !== 0 ? 'cursor-pointer hover:bg-slate-800/40' : 'cursor-default'} ${rankColor} ${zeroRow ? 'opacity-80' : ''}`}
                                                         >
                                                             {visibleColumns.map(col => {
                                                                 let content;
@@ -458,22 +458,36 @@ const AdDashboardTab = () => {
                                                                     const isAdHidden = hiddenAds.includes(stat.ad_id);
                                                                     content = (
                                                                         <div className="flex items-center gap-3">
-                                                                            <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-400">
-                                                                                {index + 1}
-                                                                            </div>
+                                                                            {stat.ad_id !== 0 ? (
+                                                                                <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-400">
+                                                                                    {index + 1}
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-[9px] font-black text-emerald-400">
+                                                                                    ★
+                                                                                </div>
+                                                                            )}
                                                                             <div className="flex-1 min-w-0">
                                                                                 <div className="flex items-center gap-2">
                                                                                     <h4 className={`text-sm font-black uppercase tracking-tight max-w-[200px] truncate ${zeroRow ? 'text-red-400' : 'text-white'}`}>{stat.ad_name}</h4>
-                                                                                    <button 
-                                                                                        onClick={(e) => handleToggleHideAd(e, stat.ad_id)}
-                                                                                        className="p-1 text-slate-500 hover:text-slate-200 transition-colors rounded hover:bg-slate-800"
-                                                                                        title={isAdHidden ? "Desarchivar / Mostrar anuncio" : "Archivar / Ocultar anuncio"}
-                                                                                    >
-                                                                                        {isAdHidden ? <Eye size={12} className="text-indigo-400" /> : <EyeOff size={12} />}
-                                                                                    </button>
+                                                                                    {stat.ad_id !== 0 && (
+                                                                                        <button 
+                                                                                            onClick={(e) => handleToggleHideAd(e, stat.ad_id)}
+                                                                                            className="p-1 text-slate-500 hover:text-slate-200 transition-colors rounded hover:bg-slate-800"
+                                                                                            title={isAdHidden ? "Desarchivar / Mostrar anuncio" : "Archivar / Ocultar anuncio"}
+                                                                                        >
+                                                                                            {isAdHidden ? <Eye size={12} className="text-indigo-400" /> : <EyeOff size={12} />}
+                                                                                        </button>
+                                                                                    )}
                                                                                 </div>
                                                                                 <p className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 ${zeroRow ? 'text-red-500' : 'text-slate-500'}`}>
-                                                                                    <Activity size={10} className={zeroRow ? 'text-red-400' : 'text-blue-500'} /> #{stat.ad_id}
+                                                                                    {stat.ad_id !== 0 ? (
+                                                                                        <>
+                                                                                            <Activity size={10} className={zeroRow ? 'text-red-400' : 'text-blue-500'} /> #{stat.ad_id}
+                                                                                        </>
+                                                                                    ) : (
+                                                                                        <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Desatribuido</span>
+                                                                                    )}
                                                                                     {isAdHidden && <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest ml-1">Archivado</span>}
                                                                                 </p>
                                                                             </div>
@@ -531,18 +545,28 @@ const AdDashboardTab = () => {
                                         <div 
                                             key={stat.ad_id} 
                                             onClick={() => {
-                                                setSelectedAdId(stat.ad_id);
-                                                setIsModalOpen(true);
+                                                if (stat.ad_id !== 0) {
+                                                    setSelectedAdId(stat.ad_id);
+                                                    setIsModalOpen(true);
+                                                }
                                             }}
-                                            className={`bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 hover:bg-slate-800/60 hover:border-blue-500/30 transition-all relative overflow-hidden group cursor-pointer shadow-xl ${isAdHidden ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}
+                                            className={`bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 hover:bg-slate-800/60 hover:border-blue-500/30 transition-all relative overflow-hidden group shadow-xl ${stat.ad_id !== 0 ? 'cursor-pointer' : 'cursor-default'} ${isAdHidden ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}
                                         >
                                             <div className="relative">
                                                 {/* Header */}
                                                 <div className="flex items-start justify-between mb-5">
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                                            <Activity size={10} className="text-blue-500" />
-                                                            Anuncio #{stat.ad_id}
+                                                            {stat.ad_id !== 0 ? (
+                                                                <>
+                                                                    <Activity size={10} className="text-blue-500" />
+                                                                    Anuncio #{stat.ad_id}
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
+                                                                    ★ Ventas desatribuidas
+                                                                </span>
+                                                            )}
                                                             {isAdHidden && <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest ml-1">Archivado</span>}
                                                         </p>
                                                         <h4 className="text-sm font-black text-white italic tracking-tight leading-tight line-clamp-2 uppercase">
@@ -550,14 +574,20 @@ const AdDashboardTab = () => {
                                                         </h4>
                                                     </div>
                                                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                                                        <button 
-                                                            onClick={(e) => handleToggleHideAd(e, stat.ad_id)}
-                                                            className="p-1 text-slate-500 hover:text-slate-200 transition-colors rounded hover:bg-slate-800"
-                                                            title={isAdHidden ? "Desarchivar / Mostrar anuncio" : "Archivar / Ocultar anuncio"}
-                                                        >
-                                                            {isAdHidden ? <Eye size={12} className="text-indigo-400" /> : <EyeOff size={12} />}
-                                                        </button>
-                                                        <span className="text-slate-700 text-[10px] font-black tracking-tighter">#{index + 1}</span>
+                                                        {stat.ad_id !== 0 ? (
+                                                            <>
+                                                                <button 
+                                                                    onClick={(e) => handleToggleHideAd(e, stat.ad_id)}
+                                                                    className="p-1 text-slate-500 hover:text-slate-200 transition-colors rounded hover:bg-slate-800"
+                                                                    title={isAdHidden ? "Desarchivar / Mostrar anuncio" : "Archivar / Ocultar anuncio"}
+                                                                >
+                                                                    {isAdHidden ? <Eye size={12} className="text-indigo-400" /> : <EyeOff size={12} />}
+                                                                </button>
+                                                                <span className="text-slate-700 text-[10px] font-black tracking-tighter">#{index + 1}</span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-emerald-500 text-[10px] font-black tracking-tighter bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">Orgánico</span>
+                                                        )}
                                                     </div>
                                                 </div>
 

@@ -338,8 +338,9 @@ const MarketingPage = () => {
         leads: acc.leads + (row.leads || 0),
         agendas: acc.agendas + (row.agendas || 0),
         ventas: acc.ventas + (row.ventas || 0),
-        spend: acc.spend + (row.spend || 0)
-    }), { leads: 0, agendas: 0, ventas: 0, spend: 0 });
+        spend: acc.spend + (row.spend || 0),
+        cash_collect: acc.cash_collect + (row.cash_collect || 0)
+    }), { leads: 0, agendas: 0, ventas: 0, spend: 0, cash_collect: 0 });
 
     return (
         <div className="p-8 max-w-[98%] mx-auto space-y-8 animate-in fade-in duration-700">
@@ -403,7 +404,7 @@ const MarketingPage = () => {
             {activeTab === 'performance' && (
                 <>
                     {/* 2. Tarjetas de resumen (KPIs) */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 animate-in slide-in-from-top-4 duration-500">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 animate-in slide-in-from-top-4 duration-500">
                         <Card variant="glass" className="p-5 border-l-4 border-l-violet-500">
                             <div className="flex items-center gap-3 mb-2">
                                 <Users className="text-violet-400" size={18} />
@@ -418,12 +419,19 @@ const MarketingPage = () => {
                             </div>
                             <h3 className="text-3xl font-black text-white">{perfTotals.agendas.toLocaleString()}</h3>
                         </Card>
-                        <Card variant="glass" className="p-5 border-l-4 border-l-emerald-500">
+                        <Card variant="glass" className="p-5 border-l-4 border-l-emerald-400">
                             <div className="flex items-center gap-3 mb-2">
-                                <ShoppingBag className="text-emerald-400" size={18} />
+                                <ShoppingBag className="text-emerald-300" size={18} />
                                 <p className="text-[10px] font-black text-muted uppercase tracking-widest">Total Ventas</p>
                             </div>
                             <h3 className="text-3xl font-black text-white">{perfTotals.ventas.toLocaleString()}</h3>
+                        </Card>
+                        <Card variant="glass" className="p-5 border-l-4 border-l-emerald-500">
+                            <div className="flex items-center gap-3 mb-2">
+                                <DollarSign className="text-emerald-400" size={18} />
+                                <p className="text-[10px] font-black text-muted uppercase tracking-widest">Cash Collect</p>
+                            </div>
+                            <h3 className="text-3xl font-black text-white">${perfTotals.cash_collect.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h3>
                         </Card>
                         <Card variant="glass" className="p-5 border-l-4 border-l-amber-500">
                             <div className="flex items-center gap-3 mb-2">
@@ -533,6 +541,53 @@ const MarketingPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-base">
+                                        {getSortedPerformanceData().filter(row => row.ad_name.toLowerCase().includes(perfSearch.toLowerCase())).length > 0 && (
+                                            <tr className="bg-violet-950/40 border-b-2 border-violet-900/30 font-black relative z-10">
+                                                <td className="px-6 py-5">
+                                                    <p className="font-black text-violet-400 text-sm uppercase tracking-widest">TOTAL GENERAL</p>
+                                                    <p className="text-[10px] text-muted font-bold uppercase">Consolidado</p>
+                                                </td>
+                                                <td className="px-6 py-5 text-right font-mono">
+                                                    <span className="font-black text-amber-400 text-sm">
+                                                        ${perfTotals.spend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-center font-mono">
+                                                    <span className="font-black text-violet-300 text-base">{perfTotals.leads}</span>
+                                                </td>
+                                                <td className="px-6 py-5 text-center font-mono">
+                                                    <span className="font-black text-sm text-violet-400">
+                                                        {perfTotals.leads > 0 ? `$${(perfTotals.spend / perfTotals.leads).toFixed(2)}` : '—'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-center font-mono">
+                                                    <span className="font-black text-sky-300 text-base">{perfTotals.agendas}</span>
+                                                </td>
+                                                <td className="px-6 py-5 text-center font-mono">
+                                                    <span className="font-black text-sm text-sky-400">
+                                                        {perfTotals.agendas > 0 ? `$${(perfTotals.spend / perfTotals.agendas).toFixed(2)}` : '—'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-center font-mono">
+                                                    <span className="font-black text-emerald-300 text-base">{perfTotals.ventas}</span>
+                                                </td>
+                                                <td className="px-6 py-5 text-center font-mono">
+                                                    <span className="font-black text-sm text-emerald-400">
+                                                        {perfTotals.ventas > 0 ? `$${(perfTotals.spend / perfTotals.ventas).toFixed(2)}` : '—'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-right bg-emerald-500/5 font-mono">
+                                                    <span className="font-black text-emerald-400 text-sm">
+                                                        ${perfTotals.cash_collect.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-center font-mono">
+                                                    <span className="font-black text-sm text-indigo-400">
+                                                        {perfTotals.spend > 0 ? `${(perfTotals.cash_collect / perfTotals.spend).toFixed(2)}x` : '—'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        )}
                                         {getSortedPerformanceData().filter(row => row.ad_name.toLowerCase().includes(perfSearch.toLowerCase())).length > 0 ? (
                                             getSortedPerformanceData()
                                                 .filter(row => row.ad_name.toLowerCase().includes(perfSearch.toLowerCase()))
