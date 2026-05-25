@@ -981,15 +981,21 @@ def get_closer_deck():
     elif date_range == 'month':
         start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
 
-    # Obtener agendas con estado 'Agendado'
-    limit_date = datetime.utcnow() - timedelta(days=15)
-    if start_date and start_date > limit_date:
-        limit_date = start_date
-        
-    query = Appointment.query.filter(Appointment.start_time >= limit_date, Appointment.result == 'Agendado')
+    # Leads pendientes de atención: 'Entrante' o 'Agendado'
+    ACTIVE_STATES = ['Entrante', 'Agendado']
+
+    query = Appointment.query.filter(Appointment.result.in_(ACTIVE_STATES))
+
+    # Aplicar filtro de fecha solo si se especifica un rango
+    if start_date:
+        query = query.filter(Appointment.start_time >= start_date)
+    elif date_range == 'all':
+        # Sin filtro de fecha: mostrar todos los leads activos
+        pass
+
     if current_user.role != 'admin':
         query = query.filter_by(closer_id=current_user.id)
-        
+
     appointments = query.order_by(Appointment.start_time.desc()).all()
 
     
@@ -1063,8 +1069,8 @@ def search_closer_deck_leads():
     if current_user.role != 'admin':
         query = query.filter(Appointment.closer_id == current_user.id)
     
-    # Solo buscar leads que estén agendados
-    query = query.filter(Appointment.result == 'Agendado')
+    # Solo buscar leads activos (pendientes de atención)
+    query = query.filter(Appointment.result.in_(['Entrante', 'Agendado']))
         
     appointments = query.filter(
         or_(
