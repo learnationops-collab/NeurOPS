@@ -971,8 +971,8 @@ def get_closer_deck():
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
         
-    # Obtener agendas procesadas por setter, pero no por closer
-    query = Appointment.query.filter_by(setter_processed=True, closer_processed=False)
+    # Obtener agendas procesadas por setter, marcadas como Agendado, pero no por closer
+    query = Appointment.query.filter_by(setter_processed=True, closer_processed=False, result='Agendado')
     if current_user.role != 'admin':
         query = query.filter_by(closer_id=current_user.id)
         
@@ -1007,13 +1007,15 @@ def process_closer_card(appt_id):
         
     data = request.get_json() or {}
     
-    # El closer puede editar/verificar la palabra clave
+    # El closer puede editar/verificar la palabra clave y el resultado de la agenda (Asistió, No Show, etc)
     if 'keyword' in data:
         appt.keyword = data['keyword']
     if 'linked_call' in data:
         appt.linked_call = data['linked_call']
     if 'closer_notes' in data:
         appt.closer_notes = data['closer_notes']
+    if 'result' in data:
+        appt.result = data['result']
         
     appt.closer_processed = True
     
@@ -1039,6 +1041,9 @@ def search_closer_deck_leads():
     query = Appointment.query.join(Client)
     if current_user.role != 'admin':
         query = query.filter(Appointment.closer_id == current_user.id)
+    
+    # Solo buscar leads que estén agendados
+    query = query.filter(Appointment.result == 'Agendado')
         
     appointments = query.filter(
         or_(

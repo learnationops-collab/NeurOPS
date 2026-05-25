@@ -37,6 +37,7 @@ const CloserDeckPage = () => {
     const [keyword, setKeyword] = useState('');
     const [linkedCall, setLinkedCall] = useState('');
     const [closerNotes, setCloserNotes] = useState('');
+    const [result, setResult] = useState('Pendiente');
 
     // Cargar cola del Closer
     const fetchQueue = async () => {
@@ -65,6 +66,7 @@ const CloserDeckPage = () => {
             setKeyword(activeCard.keyword || '');
             setLinkedCall(activeCard.linked_call || '');
             setCloserNotes(activeCard.closer_notes || '');
+            setResult(activeCard.result || 'Pendiente');
         }
     }, [cards, currentIndex]);
 
@@ -96,7 +98,8 @@ const CloserDeckPage = () => {
         const payload = {
             keyword,
             linked_call: linkedCall,
-            closer_notes: closerNotes
+            closer_notes: closerNotes,
+            result
         };
 
         try {
@@ -262,6 +265,37 @@ const CloserDeckPage = () => {
                                                     </div>
                                                 </div>
 
+                                                {/* Estado de la Agenda (Result) */}
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1 block">
+                                                        Resultado de la Agenda (Asistencia)
+                                                    </label>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        {[
+                                                            { key: 'Pendiente', color: 'amber' },
+                                                            { key: 'Asistió', color: 'emerald' },
+                                                            { key: 'No Show', color: 'rose' }
+                                                        ].map(opt => {
+                                                            const isActive = result === opt.key;
+                                                            const colorMap = {
+                                                                amber: isActive ? 'bg-amber-500/10 border-amber-500/50 text-amber-400' : 'hover:bg-amber-500/5 border-slate-800 text-slate-400',
+                                                                emerald: isActive ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'hover:bg-emerald-500/5 border-slate-800 text-slate-400',
+                                                                rose: isActive ? 'bg-rose-500/10 border-rose-500/50 text-rose-400' : 'hover:bg-rose-500/5 border-slate-800 text-slate-400'
+                                                            };
+                                                            return (
+                                                                <button
+                                                                    key={opt.key}
+                                                                    type="button"
+                                                                    onClick={() => setResult(opt.key)}
+                                                                    className={`py-3 rounded-2xl border text-[10px] font-black uppercase tracking-wider transition-all ${colorMap[opt.color]}`}
+                                                                >
+                                                                    {opt.key}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+ 
                                                 {/* Notas del Closer */}
                                                 <div className="space-y-2">
                                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1 block">

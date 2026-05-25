@@ -37,7 +37,7 @@ const SetterDeckPage = () => {
     const [igChatLink, setIgChatLink] = useState('');
     const [keyword, setKeyword] = useState('');
     const [setterNotes, setSetterNotes] = useState('');
-    const [result, setResult] = useState('Pendiente');
+    const [result, setResult] = useState('Entrante');
 
     // Cargar cola inicial
     const fetchQueue = async () => {
@@ -116,7 +116,11 @@ const SetterDeckPage = () => {
 
         try {
             await api.post(`/setter/deck/${activeCard.id}`, payload);
-            toast.success("Lead verificado y enviado al Closer");
+            if (result === 'Agendado') {
+                toast.success("Lead agendado y despachado al Closer");
+            } else {
+                toast.success("Progreso guardado y lead avanzado");
+            }
             
             // Pasar a la siguiente carta
             setCurrentIndex(prev => prev + 1);
@@ -315,26 +319,28 @@ const SetterDeckPage = () => {
                                                 {/* Estado de la Agenda (Result) */}
                                                 <div className="space-y-2">
                                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1 block">
-                                                        Estado de Asistencia
+                                                        Estado del Lead
                                                     </label>
-                                                    <div className="grid grid-cols-3 gap-2">
+                                                    <div className="grid grid-cols-4 gap-2">
                                                         {[
-                                                            { key: 'Pendiente', color: 'amber' },
-                                                            { key: 'Asistió', color: 'emerald' },
-                                                            { key: 'No Show', color: 'rose' }
+                                                            { key: 'Entrante', color: 'slate' },
+                                                            { key: 'Contactado', color: 'blue' },
+                                                            { key: 'Link', color: 'violet' },
+                                                            { key: 'Agendado', color: 'emerald' }
                                                         ].map(opt => {
                                                             const isActive = result === opt.key;
                                                             const colorMap = {
-                                                                amber: isActive ? 'bg-amber-500/10 border-amber-500/50 text-amber-400' : 'hover:bg-amber-500/5 border-slate-800 text-slate-400',
-                                                                emerald: isActive ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'hover:bg-emerald-500/5 border-slate-800 text-slate-400',
-                                                                rose: isActive ? 'bg-rose-500/10 border-rose-500/50 text-rose-400' : 'hover:bg-rose-500/5 border-slate-800 text-slate-400'
+                                                                slate: isActive ? 'bg-slate-500/10 border-slate-500/50 text-slate-300' : 'hover:bg-slate-500/5 border-slate-800 text-slate-500',
+                                                                blue: isActive ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'hover:bg-blue-500/5 border-slate-800 text-slate-500',
+                                                                violet: isActive ? 'bg-violet-500/10 border-violet-500/50 text-violet-400' : 'hover:bg-violet-500/5 border-slate-800 text-slate-500',
+                                                                emerald: isActive ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'hover:bg-emerald-500/5 border-slate-800 text-slate-500'
                                                             };
                                                             return (
                                                                 <button
                                                                     key={opt.key}
                                                                     type="button"
                                                                     onClick={() => setResult(opt.key)}
-                                                                    className={`py-3 rounded-2xl border text-[10px] font-black uppercase tracking-wider transition-all ${colorMap[opt.color]}`}
+                                                                    className={`py-3 rounded-2xl border text-[9px] font-black uppercase tracking-wider transition-all ${colorMap[opt.color]}`}
                                                                 >
                                                                     {opt.key}
                                                                 </button>
@@ -355,7 +361,7 @@ const SetterDeckPage = () => {
                                                     <Loader2 className="animate-spin" size={14} />
                                                 ) : (
                                                     <>
-                                                        Confirmar y Despachar al Closer
+                                                        {result === 'Agendado' ? 'Confirmar y Despachar al Closer' : 'Guardar y Avanzar en el Mazo'}
                                                         <Check size={14} className="group-hover:scale-110 transition-transform" />
                                                     </>
                                                 )}
@@ -404,11 +410,11 @@ const SetterDeckPage = () => {
                                         </li>
                                         <li className="flex gap-2">
                                             <span className="text-primary font-black">3.</span>
-                                            <span>Confirma el estado de asistencia de la cita (Pendiente/Asistió/No Show).</span>
+                                            <span>Selecciona el estado actual del lead (Entrante, Contactado, Link, Agendado).</span>
                                         </li>
                                         <li className="flex gap-2">
                                             <span className="text-primary font-black">4.</span>
-                                            <span>Al confirmar, la carta pasará de inmediato a la pila del Closer de forma secuencial.</span>
+                                            <span>Si seleccionas "Agendado", el lead se despachará de inmediato a la cola del Closer.</span>
                                         </li>
                                     </ul>
                                 </div>
