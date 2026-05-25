@@ -963,3 +963,125 @@ def get_client_details(client_id):
         "instagram": client.instagram,
         "survey_answers": formatted_answers
     })
+
+
+@bp.route('/deck', methods=['GET'])
+@login_required
+def get_closer_deck():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    # Obtener agendas procesadas por setter, pero no por closer
+    query = Appointment.query.filter_by(setter_processed=True, closer_processed=False)
+    if current_user.role != 'admin':
+        query = query.filter_by(closer_id=current_user.id)
+        
+    appointments = query.order_by(Appointment.start_time.asc()).all()
+    
+    return jsonify([{
+        "id": a.id,
+        "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
+        "email": a.client.email if a.client else "",
+        "phone": a.client.phone if a.client else "",
+        "instagram": a.client.instagram if a.client else "",
+        "start_time": a.start_time.isoformat(),
+        "origin": a.origin,
+        "result": a.result or "Pendiente",
+        "ig_chat_link": a.ig_chat_link or "",
+        "keyword": a.keyword or "",
+        "setter_notes": a.setter_notes or "",
+        "closer_notes": a.closer_notes or "",
+        "linked_call": a.linked_call or ""
+    } for a in appointments]), 200
+
+
+@bp.route('/deck/<int:appt_id>', methods=['POST'])
+@login_required
+def process_closer_card(appt_id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    appt = Appointment.query.get_or_404(appt_id)
+    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    data = request.get_json() or {}
+    
+    # El closer puede editar/verificar la palabra clave
+    if 'keyword' in data:
+        appt.keyword = data['keyword']
+    if 'linked_call' in data:
+        appt.linked_call = data['linked_call']
+    if 'closer_notes' in data:
+        appt.closer_notes = data['closer_notes']
+        
+    appt.closer_processed = True
+    
+    try:
+        db.session.commit()
+        return jsonify({"message": "Carta procesada con éxito", "id": appt.id}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error al guardar: {str(e)}"}), 500
+
+
+@bp.route('/deck/search', methods=['GET'])
+@login_required
+def search_closer_deck_leads():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    query_str = request.args.get('q', '')
+    if len(query_str) < 2:
+        return jsonify([]), 200
+    
+    term = f"%{query_str}%"
+    query = Appointment.query.join(Client)
+    if current_user.role != 'admin':
+        query = query.filter(Appointment.closer_id == current_user.id)
+        
+    appointments = query.filter(
+        or_(
+            Client.full_name.ilike(term),
+            Client.email.ilike(term),
+            Client.instagram.ilike(term),
+            Client.phone.ilike(term)
+        )
+    ).order_by(Appointment.start_time.desc()).limit(20).all()
+    
+    return jsonify([{
+        "id": a.id,
+        "lead_name": a.client.full_name or a.client.email if a.client else "Unknown",
+        "start_time": a.start_time.isoformat(),
+        "setter_processed": a.setter_processed,
+        "closer_processed": a.closer_processed
+    } for a in appointments]), 200
+
+
+@bp.route('/deck/card/<int:appt_id>', methods=['GET'])
+@login_required
+def get_closer_deck_card(appt_id):
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    appt = Appointment.query.get_or_404(appt_id)
+    if current_user.role != 'admin' and appt.closer_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    return jsonify({
+        "id": appt.id,
+        "lead_name": appt.client.full_name or "Sin Nombre" if appt.client else "Sin Cliente",
+        "email": appt.client.email if appt.client else "",
+        "phone": appt.client.phone if appt.client else "",
+        "instagram": appt.client.instagram if appt.client else "",
+        "start_time": appt.start_time.isoformat(),
+        "origin": appt.origin,
+        "result": appt.result or "Pendiente",
+        "ig_chat_link": appt.ig_chat_link or "",
+        "keyword": appt.keyword or "",
+        "setter_notes": appt.setter_notes or "",
+        "closer_notes": appt.closer_notes or "",
+        "linked_call": appt.linked_call or "",
+        "setter_processed": appt.setter_processed,
+        "closer_processed": appt.closer_processed
+    }), 200

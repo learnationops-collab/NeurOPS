@@ -828,3 +828,115 @@ def mark_notification_read(id):
     return jsonify({"message": "Marked as read"}), 200
 
 
+@bp.route('/deck', methods=['GET'])
+@role_required(ROLE_SETTER)
+def get_setter_deck():
+    # Obtener agendas no procesadas asignadas a este setter
+    query = Appointment.query.filter_by(setter_processed=False)
+    if current_user.role != 'admin':
+        query = query.filter_by(setter_id=current_user.id)
+    
+    appointments = query.order_by(Appointment.start_time.asc()).all()
+    
+    return jsonify([{
+        "id": a.id,
+        "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
+        "email": a.client.email if a.client else "",
+        "phone": a.client.phone if a.client else "",
+        "instagram": a.client.instagram if a.client else "",
+        "start_time": a.start_time.isoformat(),
+        "origin": a.origin,
+        "result": a.result or "Pendiente",
+        "ig_chat_link": a.ig_chat_link or "",
+        "keyword": a.keyword or "",
+        "setter_notes": a.setter_notes or ""
+    } for a in appointments]), 200
+
+
+@bp.route('/deck/<int:appt_id>', methods=['POST'])
+@role_required(ROLE_SETTER)
+def process_setter_card(appt_id):
+    appt = Appointment.query.get_or_404(appt_id)
+    if current_user.role != 'admin' and appt.setter_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    data = request.get_json() or {}
+    
+    # 1. Actualizar datos del Cliente
+    if appt.client:
+        if 'instagram' in data:
+            appt.client.instagram = data['instagram']
+            
+    # 2. Actualizar la Agenda
+    if 'ig_chat_link' in data:
+        appt.ig_chat_link = data['ig_chat_link']
+    if 'keyword' in data:
+        appt.keyword = data['keyword']
+    if 'setter_notes' in data:
+        appt.setter_notes = data['setter_notes']
+    if 'result' in data:
+        appt.result = data['result']
+        
+    appt.setter_processed = True
+    
+    try:
+        db.session.commit()
+        return jsonify({"message": "Carta procesada con éxito", "id": appt.id}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error al guardar: {str(e)}"}), 500
+
+
+@bp.route('/deck/search', methods=['GET'])
+@role_required(ROLE_SETTER)
+def search_deck_leads():
+    query_str = request.args.get('q', '')
+    if len(query_str) < 2:
+        return jsonify([]), 200
+    
+    term = f"%{query_str}%"
+    query = Appointment.query.join(Client)
+    if current_user.role != 'admin':
+        query = query.filter(Appointment.setter_id == current_user.id)
+        
+    appointments = query.filter(
+        or_(
+            Client.full_name.ilike(term),
+            Client.email.ilike(term),
+            Client.instagram.ilike(term),
+            Client.phone.ilike(term)
+        )
+    ).order_by(Appointment.start_time.desc()).limit(20).all()
+    
+    return jsonify([{
+        "id": a.id,
+        "lead_name": a.client.full_name or a.client.email if a.client else "Unknown",
+        "start_time": a.start_time.isoformat(),
+        "setter_processed": a.setter_processed,
+        "closer_processed": a.closer_processed
+    } for a in appointments]), 200
+
+
+@bp.route('/deck/card/<int:appt_id>', methods=['GET'])
+@role_required(ROLE_SETTER)
+def get_deck_card(appt_id):
+    appt = Appointment.query.get_or_404(appt_id)
+    if current_user.role != 'admin' and appt.setter_id != current_user.id:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    return jsonify({
+        "id": appt.id,
+        "lead_name": appt.client.full_name or "Sin Nombre" if appt.client else "Sin Cliente",
+        "email": appt.client.email if appt.client else "",
+        "phone": appt.client.phone if appt.client else "",
+        "instagram": appt.client.instagram if appt.client else "",
+        "start_time": appt.start_time.isoformat(),
+        "origin": appt.origin,
+        "result": appt.result or "Pendiente",
+        "ig_chat_link": appt.ig_chat_link or "",
+        "keyword": appt.keyword or "",
+        "setter_notes": appt.setter_notes or "",
+        "setter_processed": appt.setter_processed
+    }), 200
+
+

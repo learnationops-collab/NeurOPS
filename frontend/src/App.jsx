@@ -28,6 +28,8 @@ import SalesAgendasPage from './pages/sales_admin/agendas/SalesAgendasPage';
 import SetterDashboard from './pages/setter/dashboard/SetterDashboard';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import SetterAgendasPage from './pages/setter/agendas/SetterAgendasPage';
+import SetterDeckPage from './pages/setter/SetterDeckPage';
+import CloserDeckPage from './pages/closer/CloserDeckPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
 import OperationsDashboard from './pages/operations/dashboard/OperationsDashboard';
 import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
@@ -168,6 +170,16 @@ function App() {
               }
             />
             <Route
+              path="/setter/deck"
+              element={
+                <ProtectedRoute roles={['setter']}>
+                  <MainLayout>
+                    <SetterDeckPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/closer/report"
               element={
                 <ProtectedRoute roles={['closer']}>
@@ -193,6 +205,16 @@ function App() {
                 <ProtectedRoute roles={['closer']}>
                   <MainLayout>
                     <CloserClientsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/closer/deck"
+              element={
+                <ProtectedRoute roles={['closer']}>
+                  <MainLayout>
+                    <CloserDeckPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

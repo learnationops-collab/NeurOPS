@@ -16,6 +16,14 @@ class Appointment(db.Model):
     linked_call = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Campos de flujo de mazo secuencial (Setter & Closer)
+    setter_processed = db.Column(db.Boolean, default=False, nullable=False)
+    closer_processed = db.Column(db.Boolean, default=False, nullable=False)
+    setter_notes = db.Column(db.Text, nullable=True)
+    closer_notes = db.Column(db.Text, nullable=True)
+    ig_chat_link = db.Column(db.String(500), nullable=True)
+    keyword = db.Column(db.String(100), nullable=True)
+
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
     setter = db.relationship('User', foreign_keys=[setter_id], backref='appointments_set')
