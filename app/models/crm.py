@@ -66,3 +66,28 @@ class Comment(db.Model):
             "associated_id": self.associated_id,
             "parent_id": self.parent_id
         }
+
+class LeadEventLog(db.Model):
+    __tablename__ = 'lead_event_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) # None si es ManyChat/sistema
+    action_type = db.Column(db.String(100), nullable=False) # e.g. 'comment', 'setter_notes', 'closing_notes', 'status_changed', 'incoming_lead'
+    description = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = db.relationship('User', backref=db.backref('lead_event_logs', lazy='dynamic'))
+    appointment = db.relationship('Appointment', backref=db.backref('event_logs', lazy='dynamic', cascade="all, delete-orphan"))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "appointment_id": self.appointment_id,
+            "user_id": self.user_id,
+            "username": self.user.username if self.user else "Sistema (ManyChat)",
+            "user_role": self.user.role if self.user else "system",
+            "action_type": self.action_type,
+            "description": self.description,
+            "created_at": self.created_at.isoformat()
+        }

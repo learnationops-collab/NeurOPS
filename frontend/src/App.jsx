@@ -28,8 +28,7 @@ import SalesAgendasPage from './pages/sales_admin/agendas/SalesAgendasPage';
 import SetterDashboard from './pages/setter/dashboard/SetterDashboard';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import SetterAgendasPage from './pages/setter/agendas/SetterAgendasPage';
-import SetterDeckPage from './pages/setter/SetterDeckPage';
-import CloserDeckPage from './pages/closer/CloserDeckPage';
+import LeadsManagementPage from './pages/shared/LeadsManagementPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
 import OperationsDashboard from './pages/operations/dashboard/OperationsDashboard';
 import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
@@ -174,7 +173,7 @@ function App() {
               element={
                 <ProtectedRoute roles={['setter']}>
                   <MainLayout>
-                    <SetterDeckPage />
+                    <LeadsManagementPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -214,7 +213,7 @@ function App() {
               element={
                 <ProtectedRoute roles={['closer']}>
                   <MainLayout>
-                    <CloserDeckPage />
+                    <LeadsManagementPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

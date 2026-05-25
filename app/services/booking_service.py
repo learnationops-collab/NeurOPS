@@ -348,3 +348,22 @@ class BookingService:
                 
         except Exception as e:
             print(f"[Agenda Webhook Error] {e}")
+
+    @staticmethod
+    def log_lead_event(appt_id, user_id, action_type, description):
+        from app.models import LeadEventLog
+        
+        log = LeadEventLog(
+            appointment_id=appt_id,
+            user_id=user_id,
+            action_type=action_type,
+            description=description
+        )
+        db.session.add(log)
+        try:
+            db.session.commit()
+            return log
+        except Exception as err:
+            db.session.rollback()
+            print(f"[LeadEventLog Error] {err}")
+            return None

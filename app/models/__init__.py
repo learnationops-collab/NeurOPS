@@ -7,7 +7,7 @@ from .payment import Enrollment, PaymentMethod, Payment
 from .marketing import Campaign, AdSet, Ad, MarketingBudget, AdPeriodSpend, ManychatAdLead, ManychatLead, LeadAnswer, UTMLog, LandingTracking
 from .report import SetterDailyStats, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Expense, RecurringExpense
 from .closer_report import CloserDailyReport
-from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment
+from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment, LeadEventLog
 from .integration import Integration
 from .public_registration import PublicRegistration
 from .financial import FinancialSale, FinancialAgenda
@@ -25,7 +25,7 @@ __all__ = [
     'Enrollment', 'PaymentMethod', 'Payment',
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdPeriodSpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer', 'UTMLog', 'LandingTracking',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
-    'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment',
+    'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment', 'LeadEventLog',
     'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'TriageDailyReport', 'TriageTrackerReport',
     'WorkshopTemplate', 'WorkshopButton', 'WorkshopTemplateSent', 'WorkshopInteraction'
 

@@ -971,13 +971,27 @@ def get_closer_deck():
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
         
-    # Obtener agendas de los últimos 15 días con estado 'Agendado'
+    date_range = request.args.get('date_range', 'all')
+    start_date = None
+    today = date.today()
+    if date_range == 'today':
+        start_date = datetime.combine(today, datetime.min.time())
+    elif date_range == 'week':
+        start_date = datetime.combine(today - timedelta(days=7), datetime.min.time())
+    elif date_range == 'month':
+        start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
+
+    # Obtener agendas con estado 'Agendado'
     limit_date = datetime.utcnow() - timedelta(days=15)
+    if start_date and start_date > limit_date:
+        limit_date = start_date
+        
     query = Appointment.query.filter(Appointment.start_time >= limit_date, Appointment.result == 'Agendado')
     if current_user.role != 'admin':
         query = query.filter_by(closer_id=current_user.id)
         
     appointments = query.order_by(Appointment.start_time.desc()).all()
+
     
     return jsonify([{
         "id": a.id,
@@ -1019,6 +1033,12 @@ def process_closer_card(appt_id):
         appt.result = data['result']
         
     appt.closer_processed = True
+    
+    from app.services.booking_service import BookingService
+    description = f"Closer {current_user.username} completó seguimiento. Estado: {data.get('result', 'Pendiente')}."
+    if data.get('closer_notes'):
+        description += f" Notas: \"{data['closer_notes']}\""
+    BookingService.log_lead_event(appt.id, current_user.id, 'closer_notes', description)
     
     try:
         db.session.commit()
@@ -1130,6 +1150,10 @@ def post_closer_deck_comment(appt_id):
     )
     db.session.add(comment)
     
+    from app.services.booking_service import BookingService
+    description = f"Closer {current_user.username} comentó: \"{text[:60]}...\""
+    BookingService.log_lead_event(appt.id, current_user.id, 'comment', description)
+    
     # Notificación cruzada al Setter (dirigida al rol si es Manychat)
     lead_name = appt.client.full_name if appt.client else "Sin Nombre"
     subject = f"💬 Lead: {lead_name}"
@@ -1154,4 +1178,175 @@ def post_closer_deck_comment(appt_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar comentario: {str(e)}"}), 500
+
+
+@bp.route('/deck/stats/kpis', methods=['GET'])
+@login_required
+def get_deck_stats_kpis():
+    if current_user.role not in ['closer', 'setter', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    from app.models import Appointment, ManychatLead, SetterDailyStats, CloserDailyStats
+    from sqlalchemy import func, or_
+    from datetime import date, datetime, timedelta
+    
+    date_range = request.args.get('date_range', 'all')
+    start_date = None
+    today = date.today()
+    if date_range == 'today':
+        start_date = datetime.combine(today, datetime.min.time())
+    elif date_range == 'week':
+        start_date = datetime.combine(today - timedelta(days=7), datetime.min.time())
+    elif date_range == 'month':
+        start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
+
+    query_total = Appointment.query
+    if start_date:
+        query_total = query_total.filter(Appointment.start_time >= start_date)
+    total_agendas = query_total.count()
+    
+    query_mis = Appointment.query
+    if current_user.role == 'setter':
+        query_mis = query_mis.filter_by(setter_id=current_user.id)
+    elif current_user.role == 'closer':
+        query_mis = query_mis.filter_by(closer_id=current_user.id)
+    if start_date:
+        query_mis = query_mis.filter(Appointment.start_time >= start_date)
+    mis_agendas = query_mis.count()
+        
+    query_sin = Appointment.query.filter(or_(Appointment.closer_id == None, Appointment.setter_id == None))
+    if start_date:
+        query_sin = query_sin.filter(Appointment.start_time >= start_date)
+    sin_asignar = query_sin.count()
+    
+    query_real = Appointment.query.filter(Appointment.result.in_(['Asistió', 'Terminada']))
+    if start_date:
+        query_real = query_real.filter(Appointment.start_time >= start_date)
+    realizadas = query_real.count()
+    pct_realizadas = (realizadas / total_agendas * 100) if total_agendas > 0 else 0
+    
+    query_canc = Appointment.query.filter(Appointment.result.in_(['Cancelada', 'No Show']))
+    if start_date:
+        query_canc = query_canc.filter(Appointment.start_time >= start_date)
+    canceladas = query_canc.count()
+    pct_canceladas = (canceladas / total_agendas * 100) if total_agendas > 0 else 0
+    
+    today_start = datetime.combine(today, datetime.min.time())
+    today_end = datetime.combine(today, datetime.max.time())
+    
+    agendas_hoy = Appointment.query.filter(Appointment.created_at >= today_start, Appointment.created_at <= today_end).count()
+    
+    confirmadas_hoy = Appointment.query.filter(
+        Appointment.start_time >= today_start,
+        Appointment.start_time <= today_end,
+        Appointment.result == 'Agendado'
+    ).count()
+    
+    cancelaciones_hoy = Appointment.query.filter(
+        Appointment.start_time >= today_start,
+        Appointment.start_time <= today_end,
+        Appointment.result == 'Cancelada'
+    ).count()
+    
+    reprogramadas_hoy = Appointment.query.filter(
+        Appointment.start_time >= today_start,
+        Appointment.start_time <= today_end,
+        Appointment.result == 'Reprogramada'
+    ).count()
+    
+    calificados_hoy = Appointment.query.filter(
+        Appointment.created_at >= today_start,
+        Appointment.created_at <= today_end,
+        Appointment.setter_processed == True
+    ).count()
+    
+    llamadas_hoy = 0
+    setter_stats = SetterDailyStats.query.filter_by(date=today).all()
+    for s in setter_stats:
+        llamadas_hoy += (s.inbox_entrantes or 0)
+        
+    closer_stats = CloserDailyStats.query.filter_by(date=today).all()
+    if llamadas_hoy == 0:
+        llamadas_hoy = confirmadas_hoy + cancelaciones_hoy
+        
+    query_chart = db.session.query(
+        Appointment.result, func.count(Appointment.id)
+    )
+    if start_date:
+        query_chart = query_chart.filter(Appointment.start_time >= start_date)
+    status_counts = query_chart.group_by(Appointment.result).all()
+    
+    chart_data = []
+    total_chart = sum(c[1] for c in status_counts)
+    for res_name, count in status_counts:
+        name = res_name or "Pendiente"
+        pct = (count / total_chart * 100) if total_chart > 0 else 0
+        chart_data.append({
+            "name": name,
+            "value": count,
+            "percentage": round(pct, 1)
+        })
+
+        
+    return jsonify({
+        "kpis_top": {
+            "total_agendas": total_agendas,
+            "mis_agendas": mis_agendas,
+            "sin_asignar": sin_asignar,
+            "realizadas": realizadas,
+            "pct_realizadas": round(pct_realizadas, 1),
+            "canceladas": canceladas,
+            "pct_canceladas": round(pct_canceladas, 1)
+        },
+        "kpis_bottom": {
+            "llamadas_hoy": llamadas_hoy,
+            "confirmadas_hoy": confirmadas_hoy,
+            "cancelaciones_hoy": cancelaciones_hoy,
+            "reprogramaciones_hoy": reprogramadas_hoy,
+            "calificados_hoy": calificados_hoy
+        },
+        "chart_data": chart_data
+    }), 200
+
+
+@bp.route('/deck/events/<int:appt_id>', methods=['GET'])
+@login_required
+def get_deck_events(appt_id):
+    if current_user.role not in ['closer', 'setter', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    from app.models import LeadEventLog
+    limit = request.args.get('limit', 5, type=int)
+    
+    logs = LeadEventLog.query.filter_by(appointment_id=appt_id)\
+        .order_by(LeadEventLog.created_at.desc())\
+        .limit(limit).all()
+        
+    return jsonify([log.to_dict() for log in logs]), 200
+
+
+@bp.route('/deck/unassigned-today', methods=['GET'])
+@login_required
+def get_unassigned_leads_today():
+    if current_user.role not in ['closer', 'setter', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    from app.models import Appointment
+    from sqlalchemy import or_
+    from datetime import date, datetime
+    
+    today = date.today()
+    today_start = datetime.combine(today, datetime.min.time())
+    
+    appointments = Appointment.query.filter(
+        Appointment.created_at >= today_start,
+        or_(Appointment.closer_id == None, Appointment.setter_id == None)
+    ).order_by(Appointment.created_at.desc()).limit(15).all()
+    
+    return jsonify([{
+        "id": a.id,
+        "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
+        "created_at": a.created_at.isoformat(),
+        "origin": a.origin or "ManyChat"
+    } for a in appointments]), 200
 

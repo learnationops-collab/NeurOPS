@@ -43,7 +43,7 @@ const useDockNavigation = () => {
         if (isCloser) {
             return [
                 { id: 'stats', icon: BarChart3, label: 'Dashboard', path: '/closer/stats' },
-                { id: 'deck', icon: Layers, label: 'Mazo de Leads', path: '/closer/deck' },
+                { id: 'deck', icon: Layers, label: 'Gestión de Leads', path: '/closer/deck' },
                 { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/closer/report' },
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' },
                 { id: 'clients', icon: Users, label: 'Clientes', path: '/closer/clients' }
@@ -51,7 +51,7 @@ const useDockNavigation = () => {
         } else if (isSetter) {
             return [
                 { id: 'stats', icon: BarChart3, label: 'Dashboard', path: '/setter/statistics' },
-                { id: 'deck', icon: Layers, label: 'Mazo de Leads', path: '/setter/deck' },
+                { id: 'deck', icon: Layers, label: 'Gestión de Leads', path: '/setter/deck' },
                 { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/setter/report' },
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' }
             ];
