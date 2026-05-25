@@ -20,7 +20,8 @@ import {
     Clock,
     Tag,
     Video,
-    MessageCircle
+    MessageCircle,
+    X
 } from 'lucide-react';
 import api from '../../services/api';
 import MazoCartas from '../../components/deck/MazoCartas';

@@ -1006,7 +1006,7 @@ def search_deck_leads():
 def get_deck_card(appt_id):
     appt = Appointment.query.get_or_404(appt_id)
     if current_user.role != 'admin' and appt.setter_id != current_user.id:
-        if appt.origin == 'ManyChat':
+        if appt.origin == 'ManyChat' or not appt.setter_id:
             appt.setter_id = current_user.id
             db.session.commit()
         else:
