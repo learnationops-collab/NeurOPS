@@ -279,13 +279,25 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                             <span className="text-[10px] font-black text-violet-500 uppercase tracking-widest">Slots</span>
                             <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.general.slots)}</span>
                         </div>
-                        <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Agendas</span>
-                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.totals.scheduled)}</span>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Agendas 1ra</span>
+                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.first_call.scheduled)}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                                <span className="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest">Agendas 2da</span>
+                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.second_call.scheduled)}</span>
+                            </div>
                         </div>
-                        <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                            <span className="text-[10px] font-black text-sky-500 uppercase tracking-widest">Asistencias</span>
-                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.totals.attended)}</span>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                                <span className="text-[10px] font-black text-sky-500 uppercase tracking-widest">Asist. 1ra</span>
+                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.first_call.attended)}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                                <span className="text-[10px] font-black text-sky-500/80 uppercase tracking-widest">Asist. 2da</span>
+                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.second_call.attended)}</span>
+                            </div>
                         </div>
                         <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
                             <span className="text-[10px] font-black text-fuchsia-500 uppercase tracking-widest">Ofertas</span>
