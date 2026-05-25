@@ -11,6 +11,7 @@ import {
     Phone, 
     Mail, 
     ArrowLeft, 
+    ArrowRight,
     ExternalLink, 
     Layers, 
     Loader2, 
@@ -190,7 +191,34 @@ const SetterDeckPage = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                             
                             {/* Columna Mazo de Cartas */}
-                            <div className="lg:col-span-2 flex flex-col items-center">
+                            <div className="lg:col-span-2 flex flex-col items-center w-full space-y-4">
+                                {cards.length > 0 && (
+                                    <div className="flex justify-between items-center bg-[#1a1c23]/90 border border-slate-800/80 px-6 py-3 rounded-2xl w-full max-w-xl mx-auto shadow-xl">
+                                        <button
+                                            type="button"
+                                            disabled={currentIndex === 0}
+                                            onClick={() => setCurrentIndex(prev => prev - 1)}
+                                            className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400 transition-colors flex items-center gap-1.5"
+                                        >
+                                            <ArrowLeft size={14} />
+                                            Anterior
+                                        </button>
+                                        
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                            Ficha {Math.min(currentIndex + 1, cards.length)} de {cards.length}
+                                        </span>
+                                        
+                                        <button
+                                            type="button"
+                                            disabled={currentIndex >= cards.length}
+                                            onClick={() => setCurrentIndex(prev => prev + 1)}
+                                            className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400 transition-colors flex items-center gap-1.5"
+                                        >
+                                            Siguiente
+                                            <ArrowRight size={14} />
+                                        </button>
+                                    </div>
+                                )}
                                 <MazoCartas cards={cards} currentIndex={currentIndex}>
                                     {activeCard && (
                                         <div className="flex flex-col justify-between h-full space-y-6">

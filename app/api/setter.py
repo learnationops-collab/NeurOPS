@@ -831,12 +831,14 @@ def mark_notification_read(id):
 @bp.route('/deck', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_setter_deck():
-    # Obtener agendas no procesadas asignadas a este setter
-    query = Appointment.query.filter_by(setter_processed=False)
+    # Obtener agendas de los últimos 15 días asignadas a este setter
+    from datetime import timedelta
+    limit_date = datetime.utcnow() - timedelta(days=15)
+    query = Appointment.query.filter(Appointment.start_time >= limit_date)
     if current_user.role != 'admin':
         query = query.filter_by(setter_id=current_user.id)
     
-    appointments = query.order_by(Appointment.start_time.asc()).all()
+    appointments = query.order_by(Appointment.start_time.desc()).all()
     
     return jsonify([{
         "id": a.id,

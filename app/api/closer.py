@@ -971,12 +971,13 @@ def get_closer_deck():
     if current_user.role not in ['closer', 'admin']:
         return jsonify({"message": "Forbidden"}), 403
         
-    # Obtener agendas procesadas por setter, marcadas como Agendado, pero no por closer
-    query = Appointment.query.filter_by(setter_processed=True, closer_processed=False, result='Agendado')
+    # Obtener agendas de los últimos 15 días con estado 'Agendado'
+    limit_date = datetime.utcnow() - timedelta(days=15)
+    query = Appointment.query.filter(Appointment.start_time >= limit_date, Appointment.result == 'Agendado')
     if current_user.role != 'admin':
         query = query.filter_by(closer_id=current_user.id)
         
-    appointments = query.order_by(Appointment.start_time.asc()).all()
+    appointments = query.order_by(Appointment.start_time.desc()).all()
     
     return jsonify([{
         "id": a.id,
