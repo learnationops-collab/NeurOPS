@@ -133,6 +133,21 @@ class UTMLog(db.Model):
 
     user = db.relationship('User', backref=db.backref('utm_logs', lazy='dynamic'))
 
+class ConversationalMessage(db.Model):
+    """Mensaje configurable del flujo ManyChat. Se vincula a LeadAnswer por message_id."""
+    __tablename__ = 'conversational_messages'
+    id = db.Column(db.Integer, primary_key=True)
+    # ID que se configura en ManyChat (id_option_send / id_option)
+    message_id = db.Column(db.String(100), unique=True, nullable=False)
+    title = db.Column(db.String(150), nullable=False)
+    body = db.Column(db.Text)
+    # 'cualificacion' | 'dolor' | 'seguimiento'
+    category = db.Column(db.String(30), nullable=False, default='cualificacion')
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class LandingTracking(db.Model):
     __tablename__ = 'landing_trackings'
     id = db.Column(db.Integer, primary_key=True)

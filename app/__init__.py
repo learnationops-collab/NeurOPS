@@ -125,6 +125,10 @@ def create_app(config_class=Config):
     app.register_blueprint(metrics_bp, url_prefix='/api/v1/metrics')
     csrf.exempt(metrics_bp)
 
+    from app.api.conversational import bp as conversational_bp
+    app.register_blueprint(conversational_bp, url_prefix='/api/conversational')
+    csrf.exempt(conversational_bp)
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react(path):

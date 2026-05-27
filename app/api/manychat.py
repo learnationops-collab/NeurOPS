@@ -199,6 +199,17 @@ def receive_manychat_ad_lead():
 
         db.session.commit()
 
+        # Log de mensajes sin ConversationalMessage configurado
+        if is_valid_value(id_option_send) or is_valid_value(id_option):
+            from app.models import ConversationalMessage
+            ids_to_check = []
+            if is_valid_value(id_option_send): ids_to_check.append(str(id_option_send))
+            if is_valid_value(id_option): ids_to_check.append(str(id_option))
+            for mid in ids_to_check:
+                exists = ConversationalMessage.query.filter_by(message_id=mid).first()
+                if not exists:
+                    logger.warning(f"[WEBHOOK] ID de mensaje sin configurar: '{mid}' (lead: {manychat_id}). Regístralo en Mensajes Conversacionales.")
+
         return jsonify({
             "status": "success",
             "action": action,

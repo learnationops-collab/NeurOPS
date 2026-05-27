@@ -1,350 +1,605 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  MessageSquare, Reply, Users, Target, CalendarDays, TrendingUp,
+  RefreshCw, Settings2, HelpCircle, Info, Calendar, ChevronDown, Loader2
+} from 'lucide-react';
 import api from '../../services/api';
-import { Loader2, MessageSquare, RefreshCw, HelpCircle, Activity, CalendarDays, BarChart2 } from 'lucide-react';
+import MessageManagerModal from '../setter/dashboard/MessageManagerModal';
+
+// ── Helpers de formato ──
+const pct = (a, b) => (b > 0 ? `${((a / b) * 100).toFixed(1)}%` : '0.0%');
+const fmt = (n) => (n ?? 0).toLocaleString();
 
 const ConversationalStatsTab = () => {
-    const [stats, setStats] = useState({ opciones: [], seguimientos: [], variantes: [], openings: [], opciones_send: [] });
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    
-    // Filtros de periodo
-    const [period, setPeriod] = useState('last_month');
-    const [customDates, setCustomDates] = useState({
-        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-        end: new Date().toISOString().split('T')[0]
-    });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [data, setData] = useState(null);
+  const [ads, setAds] = useState([]);
+  const [showManager, setShowManager] = useState(false);
 
-    useEffect(() => {
-        fetchStats();
-    }, [period, customDates]);
+  // Filtros principales
+  const [period, setPeriod] = useState('this_month'); // Default "Mes"
+  const [category, setCategory] = useState('all');
+  const [adId, setAdId] = useState('');
+  const [customRange, setCustomRange] = useState({
+    start: new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  });
 
-    const fetchStats = async (isRefresh = false) => {
-        if (isRefresh) setRefreshing(true);
-        else setLoading(true);
-        try {
-            const params = {};
+  useEffect(() => {
+    fetchAds();
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [period, category, adId, customRange]);
+
+  const fetchAds = async () => {
+    try {
+      const res = await api.get('/marketing/ads');
+      setAds(res.data || []);
+    } catch {
+      setAds([]);
+    }
+  };
+
+  const fetchStats = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+
+    try {
+      const params = {};
+      if (category !== 'all') params.category = category;
+      if (adId) params.ad_id = adId;
+
+      if (period === 'custom') {
+        params.start_date = customRange.start;
+        params.end_date = customRange.end;
+      } else {
+        params.period = period;
+      }
+
+      const res = await api.get('/conversational/stats/conversational', { params });
+      setData(res.data);
+    } catch (err) {
+      console.error('[ConversationalStatsTab] Error:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const kpis = data?.kpis || {};
+  const table = data?.table || [];
+
+  // Dividir la tabla en Openings (Cualificación / Dolor) y Seguimientos (Seguimiento)
+  const openings = useMemo(() => {
+    return table.filter(row => row.category === 'cualificacion' || row.category === 'dolor' || !row.category);
+  }, [table]);
+
+  const seguimientos = useMemo(() => {
+    return table.filter(row => row.category === 'seguimiento');
+  }, [table]);
+
+  // Totales Openings
+  const totalOpenings = useMemo(() => {
+    const sends = openings.reduce((acc, curr) => acc + curr.total_sends, 0);
+    const responses = openings.reduce((acc, curr) => acc + curr.total_responses, 0);
+    return { sends, responses };
+  }, [openings]);
+
+  // Totales Seguimientos
+  const totalSeguimientos = useMemo(() => {
+    const sends = seguimientos.reduce((acc, curr) => acc + curr.total_sends, 0);
+    const responses = seguimientos.reduce((acc, curr) => acc + curr.total_responses, 0);
+    return { sends, responses };
+  }, [seguimientos]);
+
+  // Totales globales para cálculo de porcentajes relativos
+  const globalTotalSends = useMemo(() => {
+    return table.reduce((acc, curr) => acc + curr.total_sends, 0);
+  }, [table]);
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      {/* ── HEADER DE SECCIÓN CON FILTROS ── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-slate-900/40 p-6 rounded-3xl border border-slate-800/80 backdrop-blur-xl">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 shadow-inner">
+            <MessageSquare className="text-indigo-400" size={24} />
+          </div>
+          <div>
+            <h3 className="text-lg font-black uppercase tracking-widest text-white italic">Rendimiento Conversacional</h3>
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">
+              Métricas de tus flujos de mensajes (independiente de los anuncios)
+            </p>
+          </div>
+        </div>
+
+        {/* Controles de Filtros */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Selector de Periodo Rápido */}
+          <div className="flex bg-slate-950 p-1 rounded-2xl border border-slate-800/80">
+            {[
+              { id: 'yesterday', label: 'Ayer' },
+              { id: 'last_7', label: 'Semana' },
+              { id: 'this_month', label: 'Mes' },
+              { id: 'custom', label: 'Personalizado' }
+            ].map(p => (
+              <button
+                key={p.id}
+                onClick={() => setPeriod(p.id)}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
+                  period === p.id
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Rango de Fecha Personalizado */}
+          <AnimatePresence>
+            {period === 'custom' && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex items-center gap-2"
+              >
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" size={12} />
+                  <input
+                    type="date"
+                    value={customRange.start}
+                    onChange={e => setCustomRange(p => ({ ...p, start: e.target.value }))}
+                    className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-[10px] font-black text-white/70 outline-none focus:border-indigo-500 transition-all w-36"
+                  />
+                </div>
+                <span className="text-slate-700 font-black text-xs">/</span>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" size={12} />
+                  <input
+                    type="date"
+                    value={customRange.end}
+                    onChange={e => setCustomRange(p => ({ ...p, end: e.target.value }))}
+                    className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-[10px] font-black text-white/70 outline-none focus:border-indigo-500 transition-all w-36"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Selector de Anuncio (Filtro avanzado) */}
+          <div className="relative">
+            <select
+              value={adId}
+              onChange={e => setAdId(e.target.value)}
+              className="appearance-none bg-slate-950 border border-slate-800 text-[10px] font-black text-slate-300 rounded-xl pl-4 pr-9 py-2.5 outline-none focus:border-indigo-500 cursor-pointer w-44"
+            >
+              <option value="">Todos los Anuncios</option>
+              {ads.map(ad => (
+                <option key={ad.id} value={ad.id}>{ad.name}</option>
+              ))}
+            </select>
+            <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+          </div>
+
+          {/* Botones de acción */}
+          <button
+            onClick={() => setShowManager(true)}
+            className="p-2.5 bg-slate-800 hover:bg-slate-750 text-indigo-400 hover:text-indigo-300 rounded-xl transition-all border border-slate-700/60 active:scale-95 shadow-lg flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+            title="Configurar Mensajes"
+          >
+            <Settings2 size={15} />
+            <span className="hidden sm:inline">Configurar</span>
+          </button>
+
+          <button
+            onClick={() => fetchStats(true)}
+            disabled={refreshing}
+            className="p-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl transition-all border border-slate-700/60 active:scale-95 shadow-lg"
+          >
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <Loader2 className="animate-spin text-indigo-500" size={40} />
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Procesando métricas...</span>
+        </div>
+      ) : (
+        <>
+          {/* ── FILA DE 6 KPI CARDS ── */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             
-            // Transformar periodos a fechas absolutas
-            if (period === 'custom') {
-                params.start_date = customDates.start;
-                params.end_date = customDates.end;
-            } else {
-                const now = new Date();
-                let start = new Date();
-                if (period === 'yesterday') {
-                    start.setDate(now.getDate() - 1);
-                    params.start_date = start.toISOString().split('T')[0];
-                    params.end_date = start.toISOString().split('T')[0];
-                } else if (period === 'last_week') {
-                    start.setDate(now.getDate() - 7);
-                    params.start_date = start.toISOString().split('T')[0];
-                    params.end_date = now.toISOString().split('T')[0];
-                } else if (period === 'last_month') {
-                    start.setDate(now.getDate() - 30);
-                    params.start_date = start.toISOString().split('T')[0];
-                    params.end_date = now.toISOString().split('T')[0];
-                }
-            }
+            {/* Mensajes Recibidos (Enviados) */}
+            <div className="bg-slate-900/30 border border-slate-800/80 rounded-3xl p-5 shadow-xl relative group hover:border-slate-700/50 transition-all flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-3">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mensajes recibidos</p>
+                <div className="p-2 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-indigo-400">
+                  <MessageSquare size={14} />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_sends)}</h3>
+                <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Prom. diario: {fmt(kpis.daily_avg_sends)}</p>
+              </div>
+            </div>
+
+            {/* Respuestas Totales */}
+            <div className="bg-slate-900/30 border border-slate-800/80 rounded-3xl p-5 shadow-xl relative group hover:border-slate-700/50 transition-all flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-3">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Respuestas totales</p>
+                <div className="p-2 bg-pink-500/10 rounded-xl border border-pink-500/20 text-pink-400">
+                  <Reply size={14} />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_responses)}</h3>
+                <p className="text-[9px] text-pink-400 font-black uppercase mt-1">Tasa de respuesta: {kpis.global_response_rate}%</p>
+              </div>
+            </div>
+
+            {/* Leads Generados */}
+            <div className="bg-slate-900/30 border border-slate-800/80 rounded-3xl p-5 shadow-xl relative group hover:border-slate-700/50 transition-all flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-3">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Leads generados</p>
+                <div className="p-2 bg-blue-500/10 rounded-xl border border-blue-500/20 text-blue-400">
+                  <Users size={14} />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_responses)}</h3>
+                <p className="text-[9px] text-blue-400 font-black uppercase mt-1">
+                  Tasa de conversión: {pct(kpis.total_responses, kpis.total_sends)}
+                </p>
+              </div>
+            </div>
+
+            {/* Leads Cualificados */}
+            <div className="bg-slate-900/30 border border-slate-800/80 rounded-3xl p-5 shadow-xl relative group hover:border-slate-700/50 transition-all flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-3">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Leads cualificados</p>
+                <div className="p-2 bg-violet-500/10 rounded-xl border border-violet-500/20 text-violet-400">
+                  <Target size={14} />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_leads)}</h3>
+                <p className="text-[9px] text-violet-400 font-black uppercase mt-1">Tasa de cualificación: {kpis.global_qualification_rate}%</p>
+              </div>
+            </div>
+
+            {/* Agendas Generadas */}
+            <div className="bg-slate-900/30 border border-slate-800/80 rounded-3xl p-5 shadow-xl relative group hover:border-slate-700/50 transition-all flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-3">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Agendas generadas</p>
+                <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+                  <CalendarDays size={14} />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_agendas)}</h3>
+                <p className="text-[9px] text-emerald-400 font-black uppercase mt-1">Tasa de agenda: {kpis.agenda_rate}%</p>
+              </div>
+            </div>
+
+            {/* Ventas Generadas */}
+            <div className="bg-slate-900/30 border border-slate-800/80 rounded-3xl p-5 shadow-xl relative group hover:border-slate-700/50 transition-all flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-3">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ventas generadas</p>
+                <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/20 text-amber-400">
+                  <TrendingUp size={14} />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_ventas)}</h3>
+                <p className="text-[9px] text-amber-400 font-black uppercase mt-1">Tasa de cierre: {kpis.venta_rate_from_agendas}%</p>
+              </div>
+            </div>
+
+          </div>
+
+          {/* ── RENDIMIENTO DE CONVERSACIONES (Doble Panel) ── */}
+          <div className="bg-slate-900/20 border border-slate-800/60 rounded-[2.5rem] p-6 lg:p-8 space-y-6 shadow-2xl backdrop-blur-sm">
             
-            const res = await api.get('/manychat-webhook/stats/segmentation', { params });
-            const data = res.data || {};
-            setStats({
-                opciones: data.options || [],
-                seguimientos: data.questions || [],
-                variantes: data.variantes || [],
-                openings: data.openings || [],
-                opciones_send: data.options_send || []
-            });
-        } catch (err) {
-            console.error('Error fetching conversational stats:', err);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    };
-
-    const periods = [
-        { id: 'yesterday', label: 'Ayer' },
-        { id: 'last_week', label: 'Semana' },
-        { id: 'last_month', label: 'Mes' },
-        { id: 'custom', label: 'Personalizado' }
-    ];
-
-    const renderCompactCard = (title, items, icon, description, colorClass = "indigo") => {
-        if (!items || items.length === 0) return null;
-        
-        const isSeguimiento = title === 'Seguimientos (Preguntas)';
-        let displayItems = [...items];
-        
-        // Compact styles
-        const colorMap = {
-            indigo: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
-            emerald: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-            amber: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-            purple: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-            blue: "bg-blue-500/20 text-blue-400 border-blue-500/30"
-        };
-        
-        const barColorMap = {
-            indigo: "bg-indigo-500",
-            emerald: "bg-emerald-500",
-            amber: "bg-amber-500",
-            purple: "bg-purple-500",
-            blue: "bg-blue-500"
-        };
-
-        const total = displayItems.reduce((acc, curr) => acc + curr.total_leads, 0);
-
-        return (
-            <div className="bg-slate-900/30 border border-slate-800/60 rounded-2xl p-4 shadow-lg flex flex-col h-full">
-                <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800/40">
-                    <div className="flex items-center gap-2">
-                        <div className={`p-1.5 rounded-lg ${colorMap[colorClass].split(' ')[0]}`}>
-                            {React.cloneElement(icon, { size: 14, className: colorMap[colorClass].split(' ')[1] })}
-                        </div>
-                        <h3 className="text-[11px] font-black text-white uppercase tracking-tighter">{title}</h3>
-                    </div>
-                    {description && (
-                        <div className="group relative">
-                            <HelpCircle size={12} className="text-slate-600 cursor-help" />
-                            <div className="absolute right-0 bottom-full mb-2 w-48 bg-slate-800 text-[9px] text-slate-400 p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-slate-700 shadow-2xl z-40">
-                                {description}
-                            </div>
-                        </div>
-                    )}
-                </div>
-                
-                <div className="space-y-2 overflow-y-auto max-h-[300px] pr-1 scrollbar-thin">
-                    {displayItems.map((item, idx) => {
-                        const percent = total > 0 ? (item.total_leads / total * 100).toFixed(0) : 0;
-                        return (
-                            <div key={idx} className="group">
-                                <div className="flex items-center justify-between text-[10px] mb-1">
-                                    <span className="text-slate-300 font-bold truncate max-w-[120px]">{item.name}</span>
-                                    <span className="text-slate-500 font-black">{item.total_leads} <span className="opacity-50">u.</span></span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="h-1.5 flex-1 bg-slate-950/50 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full ${barColorMap[colorClass]} opacity-60 group-hover:opacity-100 transition-all`}
-                                            style={{ width: `${percent}%` }}
-                                        />
-                                    </div>
-                                    <span className="text-[9px] font-black text-slate-600 w-6 text-right">{percent}%</span>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+            <div className="border-b border-slate-800 pb-4">
+              <h3 className="text-lg font-black text-white italic uppercase tracking-tight">Rendimiento de conversaciones</h3>
+              <p className="text-xs text-slate-500 font-bold uppercase mt-1">
+                Analiza qué tan efectivos son tus openings y seguimientos.
+              </p>
             </div>
-        );
-    };
 
-
-
-    // Lógica para determinar el ganador (Best Performer)
-    const getWinnerId = (items) => {
-        if (!items || items.length === 0) return null;
-        const validItems = items.filter(i => i.total_sends > 0);
-        if (validItems.length === 0) return null;
-        const maxRR = Math.max(...validItems.map(i => i.response_percentage));
-        if (maxRR === 0) return null;
-        return items.find(i => i.response_percentage === maxRR)?.name;
-    };
-    const renderSendPerformanceCard = (items) => {
-        if (!items || items.length === 0) return null;
-        
-        let displayItems = [...items];
-        const keys = ['1', '2', '3'];
-        keys.forEach(k => {
-            if (!displayItems.find(i => i.name === k)) {
-                displayItems.push({ name: k, total_sends: 0, total_responses: 0, response_percentage: 0, qualified_percentage: 0, qualified_leads: 0 });
-            }
-        });
-        displayItems.sort((a, b) => a.name.localeCompare(b.name));
-        
-        const winnerId = getWinnerId(displayItems);
-
-        return (
-            <div className="col-span-1 md:col-span-2 lg:col-span-4 space-y-8">
-                {/* Header de Sección */}
-                <div className="flex items-center justify-between bg-slate-900/40 p-6 rounded-[2rem] border border-slate-800/50 backdrop-blur-xl">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-indigo-500/20 rounded-2xl border border-indigo-500/30">
-                            <Activity size={24} className="text-indigo-400" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-black text-white uppercase tracking-widest italic">A/B Testing: Eficacia de Preguntas</h3>
-                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Comparativa de conversión por opción de mensaje</p>
-                        </div>
-                    </div>
-                    
-                    <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-950/50 rounded-xl border border-slate-800/50">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Monitoreo en Tiempo Real</span>
-                    </div>
-                </div>
-
-                {/* Grid de Opciones */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {displayItems.map((item, idx) => {
-                        const isWinner = winnerId === item.name;
-                        
-                        let colorClass = "text-rose-500";
-                        let borderColor = "border-rose-500/20";
-                        let glowColor = "shadow-rose-500/5";
-                        
-                        if (item.response_percentage >= 40) {
-                            colorClass = "text-emerald-500";
-                            borderColor = "border-emerald-500/20";
-                            glowColor = "shadow-emerald-500/5";
-                        } else if (item.response_percentage >= 20) {
-                            colorClass = "text-yellow-500";
-                            borderColor = "border-yellow-500/20";
-                            glowColor = "shadow-yellow-500/5";
-                        }
-
-                        return (
-                            <div key={idx} className={`relative group transition-all duration-500 ${isWinner ? 'scale-[1.02]' : 'opacity-90 hover:opacity-100'}`}>
-                                {isWinner && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full shadow-xl shadow-emerald-900/40 z-30 flex items-center gap-2">
-                                        <TrendingUp size={12} />
-                                        Best Performer
-                                    </div>
-                                )}
-                                
-                                <div className={`h-full bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] p-8 border-2 ${isWinner ? 'border-emerald-500/50 shadow-[0_0_50px_rgba(16,185,129,0.15)]' : 'border-slate-800/80'} relative overflow-hidden flex flex-col transition-all duration-500`}>
-                                    {/* Decoración de fondo */}
-                                    <div className={`absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 transition-opacity ${isWinner ? 'bg-emerald-500' : 'bg-slate-500'}`} />
-                                    
-                                    <div className="relative z-10 flex-1 space-y-8">
-                                        {/* Top Header */}
-                                        <div className="flex justify-between items-start">
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Variante</span>
-                                                <h4 className="text-3xl font-black text-white italic tracking-tighter">Opción {item.name}</h4>
-                                            </div>
-                                            <div className={`w-16 h-16 rounded-[1.25rem] bg-slate-950 border-2 ${borderColor} flex flex-col items-center justify-center shadow-inner`}>
-                                                <span className={`text-xl font-black ${colorClass} leading-none`}>{item.response_percentage}%</span>
-                                                <span className="text-[8px] font-black uppercase text-slate-500 mt-1">RR</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Metrics Grid */}
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-800/50 space-y-1">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Respondidos</p>
-                                                <p className="text-2xl font-black text-white italic tabular-nums">{item.total_responses}</p>
-                                            </div>
-                                            <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-800/50 space-y-1">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Cualificados</p>
-                                                <p className="text-2xl font-black text-emerald-500 italic tabular-nums">{item.qualified_leads}</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Explicit Summary Block */}
-                                        <div className={`mt-auto pt-6 border-t ${isWinner ? 'border-emerald-500/20' : 'border-slate-800'}`}>
-                                            <div className={`bg-slate-950 rounded-2xl p-4 border ${isWinner ? 'border-emerald-500/20' : 'border-slate-800/50'} shadow-inner group-hover:border-slate-700 transition-colors`}>
-                                                <p className="text-[11px] font-bold text-slate-400 text-center leading-relaxed">
-                                                    <span className="text-indigo-400 font-black text-sm">{item.total_sends}</span> enviados, 
-                                                    <br />
-                                                    <span className="text-pink-400 font-black text-sm">{item.total_responses}</span> respondidos y 
-                                                    <br />
-                                                    <span className={`${colorClass} font-black text-sm`}>{item.response_percentage}%</span> de respuesta
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        );
-    };
-
-    return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/40 p-6 rounded-3xl border border-slate-800/50 backdrop-blur-xl">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-pink-500/10 rounded-2xl border border-pink-500/20 shadow-inner">
-                        <MessageSquare className="text-pink-400" size={24} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* ─ PANEL IZQUIERDO: OPENINGS ─ */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                      <MessageSquare size={13} />
                     </div>
                     <div>
-                        <h3 className="text-lg font-black uppercase tracking-widest text-white italic">Intelligence Center</h3>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Análisis detallado de flujos y conversión conversacional</p>
+                      <h4 className="text-xs font-black text-white uppercase tracking-wider">Openings (Mensajes Iniciales)</h4>
+                      <p className="text-[9px] text-slate-500 uppercase font-black">Mensajes enviados primero al contacto.</p>
                     </div>
+                  </div>
                 </div>
-                
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800/80 shadow-2xl">
-                        {periods.map(p => (
-                            <button
-                                key={p.id}
-                                onClick={() => setPeriod(p.id)}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300
-                                    ${period === p.id 
-                                        ? 'bg-gradient-to-br from-pink-600 to-rose-700 text-white shadow-lg shadow-pink-500/20' 
-                                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'}`}
-                            >
-                                {p.label}
-                            </button>
-                        ))}
-                    </div>
 
-                    {period === 'custom' && (
-                        <div className="flex items-center gap-2 animate-in slide-in-from-right-4 duration-500">
-                            <div className="relative group">
-                                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-400 group-hover:text-pink-300 transition-colors pointer-events-none z-10" size={14} />
-                                <input 
-                                    type="date"
-                                    value={customDates.start}
-                                    onChange={e => setCustomDates({...customDates, start: e.target.value})}
-                                    className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-[10px] font-black text-white/70 outline-none focus:border-pink-500 focus:text-white transition-all w-36"
-                                />
-                            </div>
-                            <span className="text-slate-700 font-black text-xs">/</span>
-                            <div className="relative group">
-                                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-400 group-hover:text-pink-300 transition-colors pointer-events-none z-10" size={14} />
-                                <input 
-                                    type="date"
-                                    value={customDates.end}
-                                    onChange={e => setCustomDates({...customDates, end: e.target.value})}
-                                    className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-[10px] font-black text-white/70 outline-none focus:border-pink-500 focus:text-white transition-all w-36"
-                                />
-                            </div>
-                        </div>
+                <div className="bg-slate-950/40 rounded-2xl border border-slate-800/60 overflow-hidden shadow-inner">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-900/30 border-b border-slate-800/80">
+                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-8">#</th>
+                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Opening</th>
+                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Enviados</th>
+                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Respuestas</th>
+                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-32">% Respuesta</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/30 font-medium">
+                      {openings.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-[10px] text-slate-600 font-black uppercase tracking-widest">
+                            Sin openings registrados
+                          </td>
+                        </tr>
+                      ) : (
+                        openings.map((row, idx) => {
+                          const sendsRel = globalTotalSends > 0 ? pct(row.total_sends, globalTotalSends) : '0%';
+                          return (
+                            <tr key={row.message_id} className="hover:bg-slate-800/20 transition-all group">
+                              <td className="p-3.5 text-[9px] font-bold text-slate-600">{idx + 1}</td>
+                              <td className="p-3.5 max-w-[150px]">
+                                <div className="flex items-center gap-2">
+                                  <div className="truncate">
+                                    <p className="font-black text-white group-hover:text-blue-400 transition-colors truncate">{row.title}</p>
+                                    <p className="text-[8px] text-slate-500 font-mono mt-0.5 truncate">{row.message_id}</p>
+                                  </div>
+                                  {row.body && (
+                                    <div className="relative group/body flex-shrink-0">
+                                      <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-blue-400 transition-colors" />
+                                      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-64 bg-slate-900 border border-slate-800 text-[10px] font-medium text-slate-300 rounded-xl p-3 opacity-0 group-hover/body:opacity-100 transition-all pointer-events-none shadow-2xl z-50 leading-relaxed">
+                                        {row.body}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {!row.is_configured && (
+                                    <span className="text-[6px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded-full flex-shrink-0">
+                                      Sin conf.
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3.5 text-center">
+                                <p className="font-black text-white font-mono">{fmt(row.total_sends)}</p>
+                                <p className="text-[8px] text-slate-500 font-mono mt-0.5">{sendsRel}</p>
+                              </td>
+                              <td className="p-3.5 text-center">
+                                <p className="font-black text-white font-mono">{fmt(row.total_responses)}</p>
+                              </td>
+                              <td className="p-3.5">
+                                <div className="space-y-1">
+                                  <span className="text-[9px] font-black text-blue-400 font-mono">{row.response_rate}%</span>
+                                  <div className="h-1 bg-slate-850 rounded-full overflow-hidden p-px">
+                                    <div
+                                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                      style={{ width: `${Math.min(row.response_rate, 100)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                    {openings.length > 0 && (
+                      <tfoot className="border-t border-slate-800 bg-slate-900/20">
+                        <tr className="font-black text-[9px] uppercase tracking-wider text-slate-400">
+                          <td colSpan={2} className="p-3.5">Total</td>
+                          <td className="p-3.5 text-center font-mono">{fmt(totalOpenings.sends)}</td>
+                          <td className="p-3.5 text-center font-mono">{fmt(totalOpenings.responses)}</td>
+                          <td className="p-3.5 font-mono text-blue-400">{pct(totalOpenings.responses, totalOpenings.sends)}</td>
+                        </tr>
+                      </tfoot>
                     )}
-                    <button
-                        onClick={() => fetchStats(true)}
-                        disabled={refreshing}
-                        className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-all border border-slate-700 active:scale-95 shadow-lg"
-                    >
-                        <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
-                    </button>
+                  </table>
                 </div>
+
+                <div className="flex items-center gap-2 p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+                  <Info size={12} className="text-blue-400 flex-shrink-0" />
+                  <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wide leading-relaxed">
+                    <span className="text-blue-400 font-black">% Respuesta =</span> (Respuestas / Enviados) * 100. Mide qué porcentaje de contactos respondió cada opening.
+                  </p>
+                </div>
+              </div>
+
+              {/* ─ PANEL DERECHO: SEGUIMIENTOS ─ */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                      <Target size={13} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-white uppercase tracking-wider">Seguimientos (Mensajes de Follow Up)</h4>
+                      <p className="text-[9px] text-slate-500 uppercase font-black">Mensajes enviados después del primer contacto.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950/40 rounded-2xl border border-slate-800/60 overflow-hidden shadow-inner">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-900/30 border-b border-slate-800/80">
+                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-8">#</th>
+                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Seguimiento</th>
+                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Enviados</th>
+                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Respuestas</th>
+                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-32">% Respuesta</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/30 font-medium">
+                      {seguimientos.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-[10px] text-slate-600 font-black uppercase tracking-widest">
+                            Sin seguimientos registrados
+                          </td>
+                        </tr>
+                      ) : (
+                        seguimientos.map((row, idx) => {
+                          const sendsRel = globalTotalSends > 0 ? pct(row.total_sends, globalTotalSends) : '0%';
+                          return (
+                            <tr key={row.message_id} className="hover:bg-slate-800/20 transition-all group">
+                              <td className="p-3.5 text-[9px] font-bold text-slate-600">{idx + 1}</td>
+                              <td className="p-3.5 max-w-[150px]">
+                                <div className="flex items-center gap-2">
+                                  <div className="truncate">
+                                    <p className="font-black text-white group-hover:text-emerald-400 transition-colors truncate">{row.title}</p>
+                                    <p className="text-[8px] text-slate-500 font-mono mt-0.5 truncate">{row.message_id}</p>
+                                  </div>
+                                  {row.body && (
+                                    <div className="relative group/body flex-shrink-0">
+                                      <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-emerald-400 transition-colors" />
+                                      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-64 bg-slate-900 border border-slate-800 text-[10px] font-medium text-slate-300 rounded-xl p-3 opacity-0 group-hover/body:opacity-100 transition-all pointer-events-none shadow-2xl z-50 leading-relaxed">
+                                        {row.body}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {!row.is_configured && (
+                                    <span className="text-[6px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded-full flex-shrink-0">
+                                      Sin conf.
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3.5 text-center">
+                                <p className="font-black text-white font-mono">{fmt(row.total_sends)}</p>
+                                <p className="text-[8px] text-slate-500 font-mono mt-0.5">{sendsRel}</p>
+                              </td>
+                              <td className="p-3.5 text-center">
+                                <p className="font-black text-white font-mono">{fmt(row.total_responses)}</p>
+                              </td>
+                              <td className="p-3.5">
+                                <div className="space-y-1">
+                                  <span className="text-[9px] font-black text-emerald-400 font-mono">{row.response_rate}%</span>
+                                  <div className="h-1 bg-slate-850 rounded-full overflow-hidden p-px">
+                                    <div
+                                      className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                      style={{ width: `${Math.min(row.response_rate, 100)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                    {seguimientos.length > 0 && (
+                      <tfoot className="border-t border-slate-800 bg-slate-900/20">
+                        <tr className="font-black text-[9px] uppercase tracking-wider text-slate-400">
+                          <td colSpan={2} className="p-3.5">Total</td>
+                          <td className="p-3.5 text-center font-mono">{fmt(totalSeguimientos.sends)}</td>
+                          <td className="p-3.5 text-center font-mono">{fmt(totalSeguimientos.responses)}</td>
+                          <td className="p-3.5 font-mono text-emerald-400">{pct(totalSeguimientos.responses, totalSeguimientos.sends)}</td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+                  <Info size={12} className="text-emerald-400 flex-shrink-0" />
+                  <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wide leading-relaxed">
+                    <span className="text-emerald-400 font-black">% Respuesta =</span> (Respuestas / Enviados) * 100. Mide qué porcentaje de contactos respondió cada seguimiento.
+                  </p>
+                </div>
+              </div>
+
             </div>
 
-            {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-4">
-                    <Loader2 className="animate-spin text-pink-500" size={40} />
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Cargando Inteligencia...</span>
+          </div>
+
+          {/* ── ¿CÓMO SE CALCULAN ESTAS MÉTRICAS? ── */}
+          <div className="bg-slate-900/10 border border-slate-800/40 rounded-3xl p-6 space-y-6">
+            <h4 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <HelpCircle className="text-indigo-400" size={14} /> ¿Cómo se calculan estas métricas?
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              <div className="bg-slate-950/30 border border-slate-850 p-4 rounded-2xl flex gap-3">
+                <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl h-fit border border-indigo-500/10">
+                  <MessageSquare size={13} />
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {renderSendPerformanceCard(stats.options_send)}
-                    <div className="col-span-1 md:col-span-2 lg:col-span-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {renderCompactCard("Seguimientos", stats.seguimientos, <BarChart2 />, "Métricas de avance en el flujo de seguimiento.", "emerald")}
-                        {renderCompactCard("Opciones Iniciales", stats.opciones, <BarChart2 />, "Desglose por elección del usuario.", "blue")}
-                        {renderCompactCard("Variantes", stats.variantes, <BarChart2 />, "Rendimiento por variante de anuncio.", "amber")}
-                        {renderCompactCard("Openings", stats.openings, <BarChart2 />, "Efectividad del gancho de apertura.", "purple")}
-                    </div>
+                <div>
+                  <h5 className="text-[10px] font-black uppercase text-white tracking-wider">Enviados</h5>
+                  <p className="text-[9px] text-slate-400 mt-1 leading-relaxed">
+                    Cantidad total de mensajes enviados en flujos automatizados de ManyChat.
+                  </p>
                 </div>
-            )}
-        </div>
-    );
+              </div>
+
+              <div className="bg-slate-950/30 border border-slate-850 p-4 rounded-2xl flex gap-3">
+                <div className="p-2 bg-pink-500/10 text-pink-400 rounded-xl h-fit border border-pink-500/10">
+                  <Reply size={13} />
+                </div>
+                <div>
+                  <h5 className="text-[10px] font-black uppercase text-white tracking-wider">Respuestas</h5>
+                  <p className="text-[9px] text-slate-400 mt-1 leading-relaxed">
+                    Cantidad total de respuestas o clicks recibidos por parte del lead sobre esos mensajes.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/30 border border-slate-850 p-4 rounded-2xl flex gap-3">
+                <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl h-fit border border-blue-500/10">
+                  <TrendingUp size={13} />
+                </div>
+                <div>
+                  <h5 className="text-[10px] font-black uppercase text-white tracking-wider">% Respuesta</h5>
+                  <p className="text-[9px] text-slate-400 mt-1 leading-relaxed">
+                    Porcentaje de leads que respondieron del total de mensajes de esa variante que recibieron.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/30 border border-slate-850 p-4 rounded-2xl flex gap-3">
+                <div className="p-2 bg-violet-500/10 text-violet-400 rounded-xl h-fit border border-violet-500/10">
+                  <Users size={13} />
+                </div>
+                <div>
+                  <h5 className="text-[10px] font-black uppercase text-white tracking-wider">Recepción de mensajes</h5>
+                  <p className="text-[9px] text-slate-400 mt-1 leading-relaxed">
+                    Interacciones y asignaciones en tiempo real desde webhook e integraciones de ManyChat.
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── MODAL DE GESTIÓN DE MENSAJES CONVERSACIONALES ── */}
+      <MessageManagerModal
+        isOpen={showManager}
+        onClose={() => {
+          setShowManager(false);
+          fetchStats();
+        }}
+      />
+
+    </div>
+  );
 };
 
 export default ConversationalStatsTab;
