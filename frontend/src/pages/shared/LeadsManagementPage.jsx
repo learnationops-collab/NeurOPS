@@ -105,10 +105,10 @@ const LeadsManagementPage = () => {
         }
     };
 
-    // Cargar leads sin asignar de hoy
+    // Cargar leads sin asignar
     const fetchUnassignedToday = async () => {
         try {
-            const res = await api.get(`/${rolePath}/deck/unassigned-today`);
+            const res = await api.get(`/${rolePath}/deck/unassigned-today?date_range=${filterDateRange}`);
             setUnassignedLeads(res.data || []);
         } catch (err) {
             console.error("Error al cargar leads sin asignar:", err);
@@ -404,7 +404,7 @@ const LeadsManagementPage = () => {
                         {[
                             { label: "Agendas Totales", value: stats?.kpis_top?.total_agendas || 0, icon: Layers, color: "text-[#1534ff] bg-[#1534ff]/10" },
                             { label: "Mis Agendas", value: stats?.kpis_top?.mis_agendas || 0, icon: User, color: "text-violet-400 bg-violet-500/10" },
-                            { label: "Sin Asignar (Huérfanos)", value: stats?.kpis_top?.sin_assignar || stats?.kpis_top?.sin_asignar || 0, icon: UserPlus, color: "text-rose-400 bg-rose-500/10" },
+                            { label: "Sin asignar", value: stats?.kpis_top?.sin_assignar || stats?.kpis_top?.sin_asignar || 0, icon: UserPlus, color: "text-rose-400 bg-rose-500/10" },
                             { label: "Realizadas", value: `${stats?.kpis_top?.realizadas || 0} (${stats?.kpis_top?.pct_realizadas || 0}%)`, icon: CheckCircle, color: "text-emerald-400 bg-emerald-500/10" },
                             { label: "Cancelaciones / No Show", value: `${stats?.kpis_top?.canceladas || 0} (${stats?.kpis_top?.pct_canceladas || 0}%)`, icon: AlertTriangle, color: "text-amber-400 bg-amber-500/10" }
                         ].map((kpi, idx) => (
@@ -427,12 +427,12 @@ const LeadsManagementPage = () => {
                     {/* Contenido Principal (3 Columnas Grid) */}
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
                         
-                        {/* Columna 1: Leads de hoy sin asignar (Delgada) */}
+                        {/* Columna 1: Leads sin asignar (Delgada) */}
                         <div className="lg:col-span-1 space-y-4 text-left bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-6 shadow-2xl">
                             <div className="border-b border-slate-800 pb-3 mb-4 flex justify-between items-center">
                                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                     <UserPlus className="text-rose-400" size={14} />
-                                    Huérfanos de Hoy
+                                    Sin asignar
                                 </h3>
                                 <span className="text-[9px] font-black uppercase bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded-lg">
                                     {unassignedLeads.length} Activos
@@ -442,7 +442,7 @@ const LeadsManagementPage = () => {
                             <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
                                 {unassignedLeads.length === 0 ? (
                                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider text-center py-8">
-                                        Sin leads huérfanos hoy.
+                                        Sin leads sin asignar.
                                     </p>
                                 ) : (
                                     unassignedLeads.map(l => (

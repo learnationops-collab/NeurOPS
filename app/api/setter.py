@@ -1164,17 +1164,53 @@ def get_deck_events(appt_id):
 @bp.route('/deck/unassigned-today', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_unassigned_leads_today():
-    from app.models import Appointment
-    from sqlalchemy import or_
-    from datetime import date, datetime
+    from app.models import Appointment, Client
+    from sqlalchemy import or_, and_
+    from datetime import date, timedelta, datetime
     
+    # Obtener el rango de fechas para el filtrado temporal
+    date_range = request.args.get('date_range', 'all')
+    start_date = None
     today = date.today()
-    today_start = datetime.combine(today, datetime.min.time())
     
-    appointments = Appointment.query.filter(
-        Appointment.created_at >= today_start,
-        or_(Appointment.closer_id == None, Appointment.setter_id == None)
-    ).order_by(Appointment.created_at.desc()).limit(15).all()
+    if date_range == 'today':
+        start_date = datetime.combine(today, datetime.min.time())
+    elif date_range == 'week':
+        start_date = datetime.combine(today - timedelta(days=7), datetime.min.time())
+    elif date_range == 'month':
+        start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
+        
+    # Unir con Client para acceder a sus atributos en el filtro
+    query = Appointment.query.join(Client)
+    
+    # 1. Filtro: Citas sin agendar o con resultado no confirmado como Agendado
+    query = query.filter(
+        or_(
+            Appointment.result == None,
+            Appointment.result == '',
+            Appointment.result != 'Agendado'
+        )
+    )
+    
+    # 2. Filtro: Que no tengan todos los campos completados para la carta del mazo
+    query = query.filter(
+        or_(
+            Client.instagram == None,
+            Client.instagram == '',
+            Appointment.ig_chat_link == None,
+            Appointment.ig_chat_link == '',
+            Appointment.keyword == None,
+            Appointment.keyword == '',
+            Appointment.setter_notes == None,
+            Appointment.setter_notes == ''
+        )
+    )
+    
+    # Aplicar restriccion de fechas si corresponde
+    if start_date:
+        query = query.filter(Appointment.created_at >= start_date)
+        
+    appointments = query.order_by(Appointment.created_at.desc()).limit(30).all()
     
     return jsonify([{
         "id": a.id,
