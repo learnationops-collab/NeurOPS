@@ -625,78 +625,74 @@ const LeadsManagementPage = () => {
                                             </div>
 
                                             {/* SECCIÓN CLOSER DATA */}
-                                            <div className="space-y-4 pt-1">
-                                                <h4 className="text-[10px] font-black text-violet-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                                                    <Video size={14} />
-                                                    Información de Closing
-                                                </h4>
+                                            {(user?.role === 'closer' || user?.role === 'admin') && (
+                                                <div className="space-y-4 pt-1">
+                                                    <h4 className="text-[10px] font-black text-violet-400 uppercase tracking-[0.25em] flex items-center gap-2">
+                                                        <Video size={14} />
+                                                        Información de Closing
+                                                    </h4>
 
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Enlace a Video / Google Meet</label>
-                                                    <div className="flex gap-2">
-                                                        <input 
-                                                            type="url"
-                                                            placeholder="https://meet.google.com/..."
-                                                            value={linkedCall}
-                                                            onChange={(e) => setLinkedCall(e.target.value)}
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Enlace a Video / Google Meet</label>
+                                                        <div className="flex gap-2">
+                                                            <input 
+                                                                type="url"
+                                                                placeholder="https://meet.google.com/..."
+                                                                value={linkedCall}
+                                                                onChange={(e) => setLinkedCall(e.target.value)}
+                                                                disabled={user?.role !== 'closer' && user?.role !== 'admin'}
+                                                                className="flex-1 bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all disabled:opacity-50"
+                                                            />
+                                                            {linkedCall && (
+                                                                <a href={linkedCall} target="_blank" rel="noopener noreferrer" className="bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 border border-violet-500/20 px-4 rounded-2xl flex items-center justify-center transition-all">
+                                                                    <ExternalLink size={14} />
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Notas del Closer (Seguimiento / Cierre)</label>
+                                                        <textarea 
+                                                            rows={2}
+                                                            placeholder="Detalles sobre objeciones, monto cobrado, señas, etc..."
+                                                            value={closerNotes}
+                                                            onChange={(e) => setCloserNotes(e.target.value)}
                                                             disabled={user?.role !== 'closer' && user?.role !== 'admin'}
-                                                            className="flex-1 bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all disabled:opacity-50"
+                                                            className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all resize-none disabled:opacity-50"
                                                         />
-                                                        {linkedCall && (
-                                                            <a href={linkedCall} target="_blank" rel="noopener noreferrer" className="bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 border border-violet-500/20 px-4 rounded-2xl flex items-center justify-center transition-all">
-                                                                <ExternalLink size={14} />
-                                                            </a>
-                                                        )}
+                                                    </div>
+
+                                                    {/* Estado / Resultado dependiente del rol */}
+                                                    <div className="space-y-2">
+                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Estado de Cierre / Agenda</label>
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            {[
+                                                                { key: 'Pendiente', color: 'amber' },
+                                                                { key: 'Asistió', color: 'emerald' },
+                                                                { key: 'No Show', color: 'rose' }
+                                                            ].map(opt => {
+                                                                const isActive = result === opt.key;
+                                                                const colorMap = {
+                                                                    amber: isActive ? 'bg-amber-500/10 border-amber-500/50 text-amber-400' : 'hover:bg-amber-500/5 border-slate-800 text-slate-500',
+                                                                    emerald: isActive ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'hover:bg-emerald-500/5 border-slate-800 text-slate-500',
+                                                                    rose: isActive ? 'bg-rose-500/10 border-rose-500/50 text-rose-400' : 'hover:bg-rose-500/5 border-slate-800 text-slate-500'
+                                                                };
+                                                                return (
+                                                                    <button
+                                                                        key={opt.key}
+                                                                        type="button"
+                                                                        onClick={() => setResult(opt.key)}
+                                                                        className={`py-3 rounded-2xl border text-[9px] font-black uppercase tracking-wider transition-all ${colorMap[opt.color]}`}
+                                                                    >
+                                                                        {opt.key}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                 </div>
-
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Notas del Closer (Seguimiento / Cierre)</label>
-                                                    <textarea 
-                                                        rows={2}
-                                                        placeholder="Detalles sobre objeciones, monto cobrado, señas, etc..."
-                                                        value={closerNotes}
-                                                        onChange={(e) => setCloserNotes(e.target.value)}
-                                                        disabled={user?.role !== 'closer' && user?.role !== 'admin'}
-                                                        className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all resize-none disabled:opacity-50"
-                                                    />
-                                                </div>
-
-                                                {/* Estado / Resultado dependiente del rol */}
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Estado de Cierre / Agenda</label>
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        {(user?.role === 'closer' ? [
-                                                            { key: 'Pendiente', color: 'amber' },
-                                                            { key: 'Asistió', color: 'emerald' },
-                                                            { key: 'No Show', color: 'rose' }
-                                                        ] : [
-                                                            { key: 'Entrante', color: 'slate' },
-                                                            { key: 'Contactado', color: 'blue' },
-                                                            { key: 'Agendado', color: 'emerald' }
-                                                        ]).map(opt => {
-                                                            const isActive = result === opt.key;
-                                                            const colorMap = {
-                                                                slate: isActive ? 'bg-slate-500/10 border-slate-500/50 text-slate-300' : 'hover:bg-slate-500/5 border-slate-800 text-slate-500',
-                                                                blue: isActive ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'hover:bg-blue-500/5 border-slate-800 text-slate-500',
-                                                                amber: isActive ? 'bg-amber-500/10 border-amber-500/50 text-amber-400' : 'hover:bg-amber-500/5 border-slate-800 text-slate-500',
-                                                                emerald: isActive ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'hover:bg-emerald-500/5 border-slate-800 text-slate-500',
-                                                                rose: isActive ? 'bg-rose-500/10 border-rose-500/50 text-rose-400' : 'hover:bg-rose-500/5 border-slate-800 text-slate-500'
-                                                            };
-                                                            return (
-                                                                <button
-                                                                    key={opt.key}
-                                                                    type="button"
-                                                                    onClick={() => setResult(opt.key)}
-                                                                    className={`py-3 rounded-2xl border text-[9px] font-black uppercase tracking-wider transition-all ${colorMap[opt.color]}`}
-                                                                >
-                                                                    {opt.key}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            )}
                                         </form>
 
                                         {/* Botón de envío */}

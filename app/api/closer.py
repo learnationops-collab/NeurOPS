@@ -980,13 +980,11 @@ def get_closer_deck():
         start_date = datetime.combine(today - timedelta(days=7), datetime.min.time())
     elif date_range == 'month':
         start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
-
-    # Leads pendientes de cierre: Citas en estado 'Agendado' no procesadas por el closer
+    from sqlalchemy import or_
     query = Appointment.query.filter(
-        Appointment.result == 'Agendado',
+        or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
         Appointment.closer_processed == False
     )
-
     if start_date:
         query = query.filter(Appointment.start_time >= start_date)
 

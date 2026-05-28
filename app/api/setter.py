@@ -843,10 +843,9 @@ def get_setter_deck():
         start_date = datetime.combine(today - timedelta(days=7), datetime.min.time())
     elif date_range == 'month':
         start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
-
-    # Solo gestionar leads agendados pendientes
+    from sqlalchemy import or_
     query = Appointment.query.filter(
-        Appointment.result == 'Agendado',
+        or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
         Appointment.setter_processed == False
     )
     
