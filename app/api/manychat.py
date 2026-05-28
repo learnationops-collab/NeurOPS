@@ -127,23 +127,33 @@ def receive_manychat_ad_lead():
             db.session.flush()
             logger.info(f"[WEBHOOK] ManychatLead creado: {manychat_id} (ID DB: {lead.id})")
 
-        # 2. UPSERT ANSWER (Deduplicación histórica permanente)
+        # 2. DECISIÓN INTELIGENTE DE INSERCIÓN O ACTUALIZACIÓN (Deduplicación y acumulación)
         answer = None
-        
-        # Busca por ad_id primero
-        if ad_id:
-            answer = LeadAnswer.query.filter_by(lead_id=lead.id, ad_id=ad_id).first()
-        
-        # Si no hay por ad_id, busca por keyword
-        if not answer and is_valid_value(keyword):
-            answer = LeadAnswer.query.filter_by(lead_id=lead.id, keyword=keyword).first()
-            
-        # Si no, busca la última interacción registrada
-        if not answer:
-            answer = LeadAnswer.query.filter_by(lead_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
+        is_new_interaction = False
+        from datetime import datetime
 
-        if answer:
-            # Actualiza la respuesta existente selectivamente
+        # Obtiene la última interacción registrada de este lead
+        latest_answer = LeadAnswer.query.filter_by(lead_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
+
+        if latest_answer:
+            # Ventana de sesión de 30 minutos
+            time_diff = datetime.utcnow() - latest_answer.created_at
+            within_window = time_diff.total_seconds() < 1800
+
+            # Evalúa si los IDs son diferentes a la última interacción (sin considerar nulos como diferentes)
+            different_send = is_valid_value(id_option_send) and latest_answer.id_option_send and latest_answer.id_option_send != str(id_option_send)
+            different_resp = is_valid_value(id_option) and latest_answer.id_option and latest_answer.id_option != str(id_option)
+
+            # Crea nuevo si cambia anuncio, mensajes o expira ventana temporal
+            if (ad_id and latest_answer.ad_id != ad_id) or different_send or different_resp or not within_window:
+                is_new_interaction = True
+            else:
+                answer = latest_answer  # Consolida en la misma interacción
+        else:
+            is_new_interaction = True
+
+        if not is_new_interaction and answer:
+            # ACTUALIZAR: Consolida la información en el registro actual
             if ad_id and not answer.ad_id:
                 answer.ad_id = ad_id
             
@@ -170,9 +180,9 @@ def receive_manychat_ad_lead():
                 answer.id_question = str(id_question)
                 
             action = 'updated'
-            logger.info(f"[WEBHOOK] LeadAnswer actualizado selectivamente para Manychat_ID: {manychat_id}")
+            logger.info(f"[WEBHOOK] LeadAnswer de sesión actualizado selectivamente para Manychat_ID: {manychat_id}")
         else:
-            # Crea una nueva interacción
+            # CREAR: Registra una nueva interacción independiente
             qual = 'null'
             if is_valid_value(qualification_raw):
                 qual_str = str(qualification_raw).lower()
@@ -195,7 +205,7 @@ def receive_manychat_ad_lead():
             )
             db.session.add(answer)
             action = 'created'
-            logger.info(f"[WEBHOOK] LeadAnswer creado para Manychat_ID: {manychat_id}, Ad_ID: {ad_id}")
+            logger.info(f"[WEBHOOK] LeadAnswer nuevo creado (acumulativo) para Manychat_ID: {manychat_id}")
 
         db.session.commit()
 
