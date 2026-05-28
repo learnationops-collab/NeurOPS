@@ -981,24 +981,20 @@ def get_closer_deck():
     elif date_range == 'month':
         start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
 
-    # Leads pendientes de atención: 'Entrante' o 'Agendado'
-    ACTIVE_STATES = ['Entrante', 'Agendado']
+    # Leads pendientes de cierre: Citas en estado 'Agendado' no procesadas por el closer
+    query = Appointment.query.filter(
+        Appointment.result == 'Agendado',
+        Appointment.closer_processed == False
+    )
 
-    query = Appointment.query.filter(Appointment.result.in_(ACTIVE_STATES))
-
-    # Aplicar filtro de fecha solo si se especifica un rango
     if start_date:
         query = query.filter(Appointment.start_time >= start_date)
-    elif date_range == 'all':
-        # Sin filtro de fecha: mostrar todos los leads activos
-        pass
 
     if current_user.role != 'admin':
         query = query.filter_by(closer_id=current_user.id)
 
-    appointments = query.order_by(Appointment.start_time.desc()).all()
+    appointments = query.order_by(Appointment.start_time.asc()).all()
 
-    
     return jsonify([{
         "id": a.id,
         "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",

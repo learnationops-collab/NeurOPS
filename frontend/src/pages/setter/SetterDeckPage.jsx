@@ -396,42 +396,9 @@ const SetterDeckPage = () => {
                                                             placeholder="Instrucciones especiales para el Closer, dudas del lead, etc..."
                                                             value={setterNotes}
                                                             onChange={(e) => setSetterNotes(e.target.value)}
-                                                            rows={3}
+                                                            rows={4}
                                                             className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all resize-none"
                                                         />
-                                                    </div>
-                                                </div>
-
-                                                {/* Estado de la Agenda (Result) */}
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1 block">
-                                                        Estado del Lead
-                                                    </label>
-                                                    <div className="grid grid-cols-4 gap-2">
-                                                        {[
-                                                            { key: 'Entrante', color: 'slate' },
-                                                            { key: 'Contactado', color: 'blue' },
-                                                            { key: 'Link', color: 'violet' },
-                                                            { key: 'Agendado', color: 'emerald' }
-                                                        ].map(opt => {
-                                                            const isActive = result === opt.key;
-                                                            const colorMap = {
-                                                                slate: isActive ? 'bg-slate-500/10 border-slate-500/50 text-slate-300' : 'hover:bg-slate-500/5 border-slate-800 text-slate-500',
-                                                                blue: isActive ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'hover:bg-blue-500/5 border-slate-800 text-slate-500',
-                                                                violet: isActive ? 'bg-violet-500/10 border-violet-500/50 text-violet-400' : 'hover:bg-violet-500/5 border-slate-800 text-slate-500',
-                                                                emerald: isActive ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'hover:bg-emerald-500/5 border-slate-800 text-slate-500'
-                                                            };
-                                                            return (
-                                                                <button
-                                                                    key={opt.key}
-                                                                    type="button"
-                                                                    onClick={() => setResult(opt.key)}
-                                                                    className={`py-3 rounded-2xl border text-[9px] font-black uppercase tracking-wider transition-all ${colorMap[opt.color]}`}
-                                                                >
-                                                                    {opt.key}
-                                                                </button>
-                                                            );
-                                                        })}
                                                     </div>
                                                 </div>
                                             </form>
@@ -447,7 +414,7 @@ const SetterDeckPage = () => {
                                                     <Loader2 className="animate-spin" size={14} />
                                                 ) : (
                                                     <>
-                                                        {result === 'Agendado' ? 'Confirmar y Despachar al Closer' : 'Guardar y Avanzar en el Mazo'}
+                                                        Guardar Precalificación y Avanzar
                                                         <Check size={14} className="group-hover:scale-110 transition-transform" />
                                                     </>
                                                 )}
@@ -606,11 +573,11 @@ const SetterDeckPage = () => {
                                         </li>
                                         <li className="flex gap-2">
                                             <span className="text-primary font-black">3.</span>
-                                            <span>Selecciona el estado actual del lead (Entrante, Contactado, Link, Agendado).</span>
+                                            <span>Una vez completado, haz clic en Guardar para avanzar al siguiente lead.</span>
                                         </li>
                                         <li className="flex gap-2">
                                             <span className="text-primary font-black">4.</span>
-                                            <span>Si seleccionas "Agendado", el lead se despachará de inmediato a la cola del Closer.</span>
+                                            <span>El lead desaparecerá de tu bandeja y estará listo para el Closer.</span>
                                         </li>
                                     </ul>
                                 </div>

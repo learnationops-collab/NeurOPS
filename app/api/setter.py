@@ -831,86 +831,9 @@ def mark_notification_read(id):
 @bp.route('/deck', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_setter_deck():
-    # Obtener los últimos 20 leads de Manychat y asegurar que tengan cita para el Setter
-    from app.models import ManychatLead, Client, User, Appointment
-    from sqlalchemy import or_
+    from app.models import Appointment
+    from datetime import date, timedelta, datetime
     
-    # 1. Obtener los últimos 20 leads que llegaron por Manychat
-    m_leads = ManychatLead.query.order_by(ManychatLead.created_at.desc()).limit(20).all()
-    
-    # 2. Asegurar asignación por defecto de Closer
-    closer = User.query.filter_by(role='closer', is_active=True).first()
-    if not closer:
-        closer = User.query.filter_by(role='closer').first()
-    default_closer_id = closer.id if closer else 1
-    
-    for ml in m_leads:
-        client = None
-        if ml.ig:
-            ig_clean = ml.ig.strip().replace('@', '')
-            client = Client.query.filter(
-                or_(
-                    db.func.lower(Client.instagram) == ig_clean.lower(),
-                    db.func.lower(Client.instagram) == ml.ig.lower()
-                )
-            ).first()
-            
-        if not client and ml.name:
-            client = Client.query.filter(db.func.lower(Client.full_name) == ml.name.lower()).first()
-            
-        if not client:
-            client = Client(
-                full_name=ml.name or "Sin Nombre",
-                instagram=ml.ig,
-                created_at=ml.created_at
-            )
-            db.session.add(client)
-            try:
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                continue
-                
-        # Asegurar que tenga cita con origen ManyChat
-        appt = Appointment.query.filter_by(client_id=client.id, origin='ManyChat').first()
-        if not appt:
-            appt = Appointment(
-                closer_id=default_closer_id,
-                setter_id=current_user.id,
-                client_id=client.id,
-                start_time=ml.created_at,
-                origin='ManyChat',
-                result='Entrante',
-                setter_processed=False
-            )
-            db.session.add(appt)
-            try:
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                continue
-
-    # 3. Obtener las citas de Manychat de los últimos 20 leads que no estén en estado Agendado
-    client_ids = []
-    for ml in m_leads:
-        client_found = None
-        if ml.ig:
-            ig_clean = ml.ig.strip().replace('@', '')
-            client_found = Client.query.filter(
-                or_(
-                    db.func.lower(Client.instagram) == ig_clean.lower(),
-                    db.func.lower(Client.instagram) == ml.ig.lower()
-                )
-            ).first()
-        if not client_found and ml.name:
-            client_found = Client.query.filter(db.func.lower(Client.full_name) == ml.name.lower()).first()
-            
-        if client_found:
-            client_ids.append(client_found.id)
-            
-    if not client_ids:
-        return jsonify([]), 200
-        
     date_range = request.args.get('date_range', 'all')
     start_date = None
     today = date.today()
@@ -921,10 +844,10 @@ def get_setter_deck():
     elif date_range == 'month':
         start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
 
+    # Solo gestionar leads agendados pendientes
     query = Appointment.query.filter(
-        Appointment.client_id.in_(client_ids),
-        Appointment.origin == 'ManyChat',
-        or_(Appointment.result != 'Agendado', Appointment.result == None)
+        Appointment.result == 'Agendado',
+        Appointment.setter_processed == False
     )
     
     if start_date:
@@ -933,9 +856,8 @@ def get_setter_deck():
     if current_user.role != 'admin':
         query = query.filter_by(setter_id=current_user.id)
         
-    appointments = query.order_by(Appointment.start_time.desc()).all()
+    appointments = query.order_by(Appointment.start_time.asc()).all()
 
-    
     return jsonify([{
         "id": a.id,
         "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
@@ -944,7 +866,7 @@ def get_setter_deck():
         "instagram": a.client.instagram if a.client else "",
         "start_time": a.start_time.isoformat(),
         "origin": a.origin,
-        "result": a.result or "Pendiente",
+        "result": a.result or "Agendado",
         "ig_chat_link": a.ig_chat_link or "",
         "keyword": a.keyword or "",
         "setter_notes": a.setter_notes or ""
@@ -972,13 +894,12 @@ def process_setter_card(appt_id):
         appt.keyword = data['keyword']
     if 'setter_notes' in data:
         appt.setter_notes = data['setter_notes']
-    if 'result' in data:
-        appt.result = data['result']
+    # El setter ya no selecciona estados (result no se edita)
         
     appt.setter_processed = True
     
     from app.services.booking_service import BookingService
-    description = f"Setter {current_user.username} actualizó información de la carta. Notas: \"{data.get('setter_notes', '')}\""
+    description = f"Setter {current_user.username} precalificó la carta. Notas: \"{data.get('setter_notes', '')}\""
     BookingService.log_lead_event(appt.id, current_user.id, 'setter_notes', description)
     
     try:
