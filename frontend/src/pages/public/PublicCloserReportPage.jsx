@@ -114,6 +114,12 @@ const PublicCloserReportPage = () => {
         deposit_in_call_count: '',
         deposit_in_call_cash: '',
 
+        // Ventas Cuotas
+        installment_count: '',
+        installment_cash_collected: '',
+        installment_in_call_count: '',
+        installment_in_call_cash: '',
+
         // Seguimientos
         follow_ups_sent: '',
         follow_ups_replied: '',
@@ -153,7 +159,7 @@ const PublicCloserReportPage = () => {
 
     const handleFieldChange = (field, value) => {
         // Campos monetarios aceptan decimales
-        const moneyFields = ['pif_cash_collected', 'pif_in_call_cash', 'split_cash_collected', 'split_in_call_cash', 'deposit_cash_collected', 'deposit_in_call_cash'];
+        const moneyFields = ['pif_cash_collected', 'pif_in_call_cash', 'split_cash_collected', 'split_in_call_cash', 'deposit_cash_collected', 'deposit_in_call_cash', 'installment_cash_collected', 'installment_in_call_cash'];
         
         if (moneyFields.includes(field)) {
             setFormData(prev => ({ ...prev, [field]: value === '' ? '' : value }));
@@ -234,7 +240,7 @@ const PublicCloserReportPage = () => {
         'second_call_scheduled', 'second_call_attended', 'second_call_no_show', 'second_call_rescheduled', 'second_call_canceled'
     ];
     const followUpsFields = ['follow_ups_hot_sent', 'follow_ups_hot_replied', 'follow_ups_cold_sent', 'follow_ups_cold_replied'];
-    const salesFields = ['pif_count', 'pif_cash_collected', 'pif_in_call_count', 'pif_in_call_cash', 'split_count', 'split_cash_collected', 'split_in_call_count', 'split_in_call_cash', 'deposit_count', 'deposit_cash_collected', 'deposit_in_call_count', 'deposit_in_call_cash'];
+    const salesFields = ['pif_count', 'pif_cash_collected', 'pif_in_call_count', 'pif_in_call_cash', 'split_count', 'split_cash_collected', 'split_in_call_count', 'split_in_call_cash', 'deposit_count', 'deposit_cash_collected', 'deposit_in_call_count', 'deposit_in_call_cash', 'installment_count', 'installment_cash_collected', 'installment_in_call_count', 'installment_in_call_cash'];
     const reflectionFields = ['reflections'];
 
     const llamadasComplete = isSectionComplete(llamadasFields);
@@ -267,10 +273,10 @@ const PublicCloserReportPage = () => {
         const totalScheduled = (parseInt(formData.first_call_scheduled) || 0) + (parseInt(formData.second_call_scheduled) || 0);
         const totalAttended = (parseInt(formData.first_call_attended) || 0) + (parseInt(formData.second_call_attended) || 0);
         const totalNoShow = (parseInt(formData.first_call_no_show) || 0) + (parseInt(formData.second_call_no_show) || 0);
-        const totalSales = (parseInt(formData.pif_count) || 0) + (parseInt(formData.split_count) || 0) + (parseInt(formData.deposit_count) || 0);
-        const totalCash = (parseFloat(formData.pif_cash_collected) || 0) + (parseFloat(formData.split_cash_collected) || 0) + (parseFloat(formData.deposit_cash_collected) || 0);
-        const totalInCallSales = (parseInt(formData.pif_in_call_count) || 0) + (parseInt(formData.split_in_call_count) || 0) + (parseInt(formData.deposit_in_call_count) || 0);
-        const totalInCallCash = (parseFloat(formData.pif_in_call_cash) || 0) + (parseFloat(formData.split_in_call_cash) || 0) + (parseFloat(formData.deposit_in_call_cash) || 0);
+        const totalSales = (parseInt(formData.pif_count) || 0) + (parseInt(formData.split_count) || 0) + (parseInt(formData.deposit_count) || 0) + (parseInt(formData.installment_count) || 0);
+        const totalCash = (parseFloat(formData.pif_cash_collected) || 0) + (parseFloat(formData.split_cash_collected) || 0) + (parseFloat(formData.deposit_cash_collected) || 0) + (parseFloat(formData.installment_cash_collected) || 0);
+        const totalInCallSales = (parseInt(formData.pif_in_call_count) || 0) + (parseInt(formData.split_in_call_count) || 0) + (parseInt(formData.deposit_in_call_count) || 0) + (parseInt(formData.installment_in_call_count) || 0);
+        const totalInCallCash = (parseFloat(formData.pif_in_call_cash) || 0) + (parseFloat(formData.split_in_call_cash) || 0) + (parseFloat(formData.deposit_in_call_cash) || 0) + (parseFloat(formData.installment_in_call_cash) || 0);
         const slots = parseInt(formData.slots) || 0;
         const offers = parseInt(formData.offers_made) || 0;
         const fuHotSent = parseInt(formData.follow_ups_hot_sent) || 0;
@@ -319,6 +325,7 @@ const PublicCloserReportPage = () => {
         { label: 'PIF', countField: 'pif_count', cashField: 'pif_cash_collected', inCallField: 'pif_in_call_count', inCallCashField: 'pif_in_call_cash' },
         { label: 'Split Pay', countField: 'split_count', cashField: 'split_cash_collected', inCallField: 'split_in_call_count', inCallCashField: 'split_in_call_cash' },
         { label: 'Señas', countField: 'deposit_count', cashField: 'deposit_cash_collected', inCallField: 'deposit_in_call_count', inCallCashField: 'deposit_in_call_cash' },
+        { label: 'Cuotas', countField: 'installment_count', cashField: 'installment_cash_collected', inCallField: 'installment_in_call_count', inCallCashField: 'installment_in_call_cash' },
     ];
 
     return (
@@ -703,25 +710,25 @@ const PublicCloserReportPage = () => {
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Ventas</p>
                                                 <p className="text-2xl font-black text-amber-500">
-                                                    {(parseInt(formData.pif_count) || 0) + (parseInt(formData.split_count) || 0) + (parseInt(formData.deposit_count) || 0)}
+                                                    {(parseInt(formData.pif_count) || 0) + (parseInt(formData.split_count) || 0) + (parseInt(formData.deposit_count) || 0) + (parseInt(formData.installment_count) || 0)}
                                                 </p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Cash</p>
                                                 <p className="text-2xl font-black text-emerald-500">
-                                                    ${((parseFloat(formData.pif_cash_collected) || 0) + (parseFloat(formData.split_cash_collected) || 0) + (parseFloat(formData.deposit_cash_collected) || 0)).toLocaleString()}
+                                                    ${((parseFloat(formData.pif_cash_collected) || 0) + (parseFloat(formData.split_cash_collected) || 0) + (parseFloat(formData.deposit_cash_collected) || 0) + (parseFloat(formData.installment_cash_collected) || 0)).toLocaleString()}
                                                 </p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">En Llamada</p>
                                                 <p className="text-2xl font-black text-sky-500">
-                                                    {(parseInt(formData.pif_in_call_count) || 0) + (parseInt(formData.split_in_call_count) || 0) + (parseInt(formData.deposit_in_call_count) || 0)}
+                                                    {(parseInt(formData.pif_in_call_count) || 0) + (parseInt(formData.split_in_call_count) || 0) + (parseInt(formData.deposit_in_call_count) || 0) + (parseInt(formData.installment_in_call_count) || 0)}
                                                 </p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Cash En Llamada</p>
                                                 <p className="text-2xl font-black text-violet-500">
-                                                    ${((parseFloat(formData.pif_in_call_cash) || 0) + (parseFloat(formData.split_in_call_cash) || 0) + (parseFloat(formData.deposit_in_call_cash) || 0)).toLocaleString()}
+                                                    ${((parseFloat(formData.pif_in_call_cash) || 0) + (parseFloat(formData.split_in_call_cash) || 0) + (parseFloat(formData.deposit_in_call_cash) || 0) + (parseFloat(formData.installment_in_call_cash) || 0)).toLocaleString()}
                                                 </p>
                                             </div>
                                         </div>

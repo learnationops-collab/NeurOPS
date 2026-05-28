@@ -49,6 +49,12 @@ class CloserDailyReport(db.Model):
     deposit_in_call_count = db.Column(db.Integer, default=0)
     deposit_in_call_cash = db.Column(db.Float, default=0.0)
 
+    # --- VENTAS: Cuotas ---
+    installment_count = db.Column(db.Integer, default=0)
+    installment_cash_collected = db.Column(db.Float, default=0.0)
+    installment_in_call_count = db.Column(db.Integer, default=0)
+    installment_in_call_cash = db.Column(db.Float, default=0.0)
+
     # --- SEGUIMIENTOS ---
     follow_ups_sent = db.Column(db.Integer, default=0)
     follow_ups_replied = db.Column(db.Integer, default=0)

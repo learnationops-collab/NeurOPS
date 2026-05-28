@@ -83,6 +83,11 @@ def submit_public_closer_report():
         'deposit_cash_collected': get_float('deposit_cash_collected'),
         'deposit_in_call_count': get_int('deposit_in_call_count'),
         'deposit_in_call_cash': get_float('deposit_in_call_cash'),
+        # Ventas Cuotas
+        'installment_count': get_int('installment_count'),
+        'installment_cash_collected': get_float('installment_cash_collected'),
+        'installment_in_call_count': get_int('installment_in_call_count'),
+        'installment_in_call_cash': get_float('installment_in_call_cash'),
         # Seguimientos
         'follow_ups_sent': get_int('follow_ups_sent'),
         'follow_ups_replied': get_int('follow_ups_replied'),
@@ -138,7 +143,7 @@ def _prepare_report_data(report):
 
     # Totales de ventas
     total_sales = (report.pif_count or 0) + (report.split_count or 0) + (report.deposit_count or 0)
-    total_cash = (report.pif_cash_collected or 0) + (report.split_cash_collected or 0) + (report.deposit_cash_collected or 0)
+    total_cash = (report.pif_cash_collected or 0) + (report.split_cash_collected or 0) + (report.deposit_cash_collected or 0) + (report.installment_cash_collected or 0.0)
 
     # Totales de agendas
     total_scheduled = (report.first_call_scheduled or 0) + (report.second_call_scheduled or 0)
@@ -216,10 +221,10 @@ def _prepare_report_data(report):
             "totals": {
                 "count": total_sales,
                 "cash": total_cash,
-                "in_call_count": (report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0),
-                "in_call_cash": (report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0),
-                "out_call_count": total_sales - ((report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0)),
-                "out_call_cash": total_cash - ((report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0)),
+                "in_call_count": (report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0) + (report.installment_in_call_count or 0),
+                "in_call_cash": (report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0) + (report.installment_in_call_cash or 0.0),
+                "out_call_count": total_sales - ((report.pif_in_call_count or 0) + (report.split_in_call_count or 0) + (report.deposit_in_call_count or 0) + (report.installment_in_call_count or 0)),
+                "out_call_cash": total_cash - ((report.pif_in_call_cash or 0) + (report.split_in_call_cash or 0) + (report.deposit_in_call_cash or 0) + (report.installment_in_call_cash or 0.0)),
             },
             "pif": {
                 "count": report.pif_count or 0,
@@ -238,6 +243,12 @@ def _prepare_report_data(report):
                 "cash": report.deposit_cash_collected or 0,
                 "in_call_count": report.deposit_in_call_count or 0,
                 "in_call_cash": report.deposit_in_call_cash or 0,
+            },
+            "installment": {
+                "count": report.installment_count or 0,
+                "cash": report.installment_cash_collected or 0.0,
+                "in_call_count": report.installment_in_call_count or 0,
+                "in_call_cash": report.installment_in_call_cash or 0.0,
             }
         },
         "follow_up": {
@@ -401,6 +412,10 @@ def get_public_closer_reports():
             "deposit_cash_collected": r.deposit_cash_collected,
             "deposit_in_call_count": r.deposit_in_call_count,
             "deposit_in_call_cash": r.deposit_in_call_cash,
+            "installment_count": r.installment_count,
+            "installment_cash_collected": r.installment_cash_collected,
+            "installment_in_call_count": r.installment_in_call_count,
+            "installment_in_call_cash": r.installment_in_call_cash,
             "follow_ups_sent": r.follow_ups_sent,
             "follow_ups_replied": r.follow_ups_replied,
             "follow_ups_hot_sent": r.follow_ups_hot_sent,
@@ -469,6 +484,11 @@ def update_public_closer_report(report_id):
         stat.deposit_cash_collected = get_float('deposit_cash_collected', stat.deposit_cash_collected)
         stat.deposit_in_call_count = get_int('deposit_in_call_count', stat.deposit_in_call_count)
         stat.deposit_in_call_cash = get_float('deposit_in_call_cash', stat.deposit_in_call_cash)
+        
+        stat.installment_count = get_int('installment_count', stat.installment_count)
+        stat.installment_cash_collected = get_float('installment_cash_collected', stat.installment_cash_collected)
+        stat.installment_in_call_count = get_int('installment_in_call_count', stat.installment_in_call_count)
+        stat.installment_in_call_cash = get_float('installment_in_call_cash', stat.installment_in_call_cash)
         
         stat.follow_ups_sent = get_int('follow_ups_sent', stat.follow_ups_sent)
         stat.follow_ups_replied = get_int('follow_ups_replied', stat.follow_ups_replied)

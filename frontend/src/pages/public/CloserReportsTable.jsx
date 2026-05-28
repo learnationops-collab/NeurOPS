@@ -119,7 +119,7 @@ const EditCloserReportModal = ({ report, onClose, onSave }) => {
                         <div className="bg-amber-900/10 p-5 rounded-2xl border border-amber-900/30">
                             <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-amber-500 uppercase mb-4 pb-2 border-b border-amber-900/50"><Flag size={14} /> Ventas (PIF / Split / Señas)</h4>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 <div className="space-y-1">
                                     <p className="text-xs font-black text-amber-500 mb-2">PIF (Pay In Full)</p>
                                     <InputRow label="Cantidad Total" field="pif_count" />
@@ -142,6 +142,14 @@ const EditCloserReportModal = ({ report, onClose, onSave }) => {
                                     <InputRow label="Cash Total" field="deposit_cash_collected" isFloat />
                                     <InputRow label="Cant. En Llamada" field="deposit_in_call_count" />
                                     <InputRow label="Cash En Llamada" field="deposit_in_call_cash" isFloat />
+                                </div>
+
+                                <div className="space-y-1 border-t lg:border-t-0 lg:border-l border-amber-900/30 pt-4 lg:pt-0 lg:pl-6">
+                                    <p className="text-xs font-black text-amber-500 mb-2">Cuotas</p>
+                                    <InputRow label="Cantidad Total" field="installment_count" />
+                                    <InputRow label="Cash Total" field="installment_cash_collected" isFloat />
+                                    <InputRow label="Cant. En Llamada" field="installment_in_call_count" />
+                                    <InputRow label="Cash En Llamada" field="installment_in_call_cash" isFloat />
                                 </div>
                             </div>
                         </div>
@@ -398,8 +406,8 @@ const CloserReportsTable = ({ closers }) => {
                                     <td colSpan="12" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
                                 </tr>
                             ) : reports.map(r => {
-                                const totalSales = (r.pif_count || 0) + (r.split_count || 0) + (r.deposit_count || 0);
-                                const totalCash = (r.pif_cash_collected || 0) + (r.split_cash_collected || 0) + (r.deposit_cash_collected || 0);
+                                const totalSales = (r.pif_count || 0) + (r.split_count || 0) + (r.deposit_count || 0) + (r.installment_count || 0);
+                                const totalCash = (r.pif_cash_collected || 0) + (r.split_cash_collected || 0) + (r.deposit_cash_collected || 0) + (r.installment_cash_collected || 0);
 
                                 return (
                                     <tr key={r.id} className="hover:bg-slate-800/20 transition-colors group">

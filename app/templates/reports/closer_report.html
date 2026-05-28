@@ -493,6 +493,13 @@
                         <td>{{ sales.deposit.in_call_count }}</td>
                         <td>${{ sales.deposit.in_call_cash }}</td>
                     </tr>
+                    <tr>
+                        <td class="col-label">Cuotas</td>
+                        <td>{{ sales.installment.count }}</td>
+                        <td class="val-emerald">${{ sales.installment.cash }}</td>
+                        <td>{{ sales.installment.in_call_count }}</td>
+                        <td>${{ sales.installment.in_call_cash }}</td>
+                    </tr>
                 </tbody>
             </table>
 
