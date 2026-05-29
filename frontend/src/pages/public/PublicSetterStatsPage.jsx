@@ -410,170 +410,119 @@ const PublicSetterStatsPage = () => {
                                 <div className="space-y-6">
                                     <LeadUnifiedKPI stats={stats} />
                                     
-                                    {/* SECCIÓN 1: DESCUBRIMIENTO Y CALIDAD (FILA SUPERIOR - RESUMEN) */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-4 px-2">
-                                            <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 shadow-inner">
-                                                <Target size={18} />
+                                    {/* 1. TOP ROW: 3 PILARES ESTRATÉGICOS DE SETTERS (C-LEVEL VIEW) */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
+                                        
+                                        {/* PILAR 1: ATENCIÓN Y APERTURA (CONTACTABILIDAD) */}
+                                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-300">
+                                            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+                                                <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-indigo-500 group-hover:opacity-20 transition-opacity duration-300" />
                                             </div>
-                                            <h2 className="text-xl font-bold text-white tracking-tight">Discovery & Lead Quality</h2>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <ConfigurableStatCard 
-                                                id="qual_rate_base"
-                                                variant="summary"
-                                                accentColor="#8B5CF6"
-                                                title="Leads Cualificados" 
-                                                value={stats.totals.funnel_qualification} 
-                                                percentage={div(stats.totals.funnel_qualification, stats.totals.entrantes)}
-                                                subValue={`${div(stats.totals.funnel_qualification, stats.totals.entrantes)}% de entrantes`}
-                                                icon={Target}
-                                                tooltipInfo="Cantidad de leads que superaron el filtro inicial de cualificación."
-                                            />
-                                            <ConfigurableStatCard 
-                                                id="pain_evolution"
-                                                variant="summary"
-                                                accentColor="#8B5CF6"
-                                                title="Pasaron a Dolor" 
-                                                value={stats.totals.funnel_pain} 
-                                                percentage={div(stats.totals.funnel_pain, stats.totals.funnel_qualification)}
-                                                subValue={`${div(stats.totals.funnel_pain, stats.totals.funnel_qualification)}% de cualificados`}
-                                                icon={TrendingUp}
-                                                tooltipInfo="Leads que avanzaron a la etapa donde se identifica el punto de dolor."
-                                            />
-                                            <ConfigurableStatCard 
-                                                id="setter_opening_rate"
-                                                variant="summary"
-                                                accentColor="#8B5CF6"
-                                                title="Tasa de Apertura" 
-                                                value={stats.totals.opening_submitted} 
-                                                percentage={div(stats.totals.opening_submitted, (stats.totals.entrantes - stats.totals.not_lead))}
-                                                subValue={`${div(stats.totals.opening_submitted, (stats.totals.entrantes - stats.totals.not_lead))}% de leads reales`}
-                                                icon={MousePointer2}
-                                                tooltipInfo="Calcula cuántos leads contactó el setter del total de leads recibidos (excluyendo descartados automáticos por ManyChat). Fórmula: Aperturas / (Entrantes - No Leads)."
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* SECCIÓN 2: ENGAGEMENT CONVERSACIONAL (FILA MEDIA - ANÁLISIS) */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-4 px-2">
-                                            <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 shadow-inner">
-                                                <MessageSquare size={18} />
-                                            </div>
-                                            <h2 className="text-xl font-bold text-white tracking-tight">Conversational Analysis</h2>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <ConfigurableStatCard 
-                                                id="opening_resp_qual"
-                                                variant="analysis"
-                                                accentColor="#3B82F6"
-                                                title="Resp. Opening (Qual)" 
-                                                value={stats.percentages.rates.qualification_opening_rate}
-                                                percentage={stats.percentages.rates.qualification_opening_rate}
-                                                subValue={`${stats.totals.qualification_opening_responded} resp / ${stats.totals.qualification_opening_submitted} aperturas`}
-                                                icon={MessageSquare}
-                                                tooltipInfo="Tasa de respuesta a mensajes enviados en etapa de cualificación."
-                                            />
-                                            <ConfigurableStatCard 
-                                                id="opening_resp_pain"
-                                                variant="analysis"
-                                                accentColor="#3B82F6"
-                                                title="Resp. Opening (Dolor)" 
-                                                value={stats.percentages.rates.pain_opening_rate}
-                                                percentage={stats.percentages.rates.pain_opening_rate}
-                                                subValue={`${stats.totals.pain_opening_responded} resp / ${stats.totals.pain_opening_submitted} aperturas`}
-                                                icon={Zap}
-                                                tooltipInfo="Tasa de respuesta a mensajes enviados en etapa de dolor."
-                                            />
-                                            <ConfigurableStatCard 
-                                                id="opening_resp_total"
-                                                variant="analysis"
-                                                accentColor="#3B82F6"
-                                                title="Resp. Opening (Total)" 
-                                                value={stats.percentages.rates.opening_response}
-                                                percentage={stats.percentages.rates.opening_response}
-                                                subValue={`${stats.totals.opening_responded} resp / ${stats.totals.opening_submitted} totales`}
-                                                icon={Layers}
-                                                tooltipInfo="Rendimiento global de respuesta a todos los mensajes de apertura."
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* SECCIÓN 3: RESULTADOS Y FOOTER (FILA INFERIOR) */}
-                                    <div className="space-y-8">
-                                        <div className="flex items-center gap-4 px-2">
-                                            <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 shadow-inner">
-                                                <CalendarDays size={18} />
-                                            </div>
-                                            <h2 className="text-xl font-bold text-white tracking-tight">Final Outcomes & Velocity</h2>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <ConfigurableStatCard 
-                                                id="final_agendas"
-                                                variant="summary"
-                                                accentColor="#10B981"
-                                                title="Agendas Generadas" 
-                                                value={stats.totals.funnel_agenda} 
-                                                percentage={div(stats.totals.funnel_agenda, stats.totals.entrantes)}
-                                                subValue={`${div(stats.totals.funnel_agenda, stats.totals.entrantes)}% de conversión total`}
-                                                icon={CalendarDays}
-                                                tooltipInfo="Impacto final en el calendario de ventas."
-                                            />
-                                            <ConfigurableStatCard 
-                                                id="total_fu_response"
-                                                variant="summary"
-                                                accentColor="#10B981"
-                                                title="FU Response Rate" 
-                                                value={stats.totals.total_fur}
-                                                percentage={stats.percentages.rates.total_fur}
-                                                subValue="Efectividad en seguimientos"
-                                                icon={RefreshCw}
-                                                tooltipInfo="Capacidad de recuperar leads mediante follow-ups."
-                                            />
-                                        </div>
-
-                                        {/* FOOTER DE DATOS SECUNDARIOS */}
-                                        <div className="pt-8 border-t border-slate-800/50">
-                                            <div className="flex flex-wrap items-center justify-center gap-4">
-                                                <ConfigurableStatCard variant="footer" icon={Inbox} title="Entrantes" value={stats.totals.entrantes} />
-                                                <ConfigurableStatCard variant="footer" icon={UserX} title="No Leads" value={stats.totals.not_lead} />
-                                                <ConfigurableStatCard variant="footer" icon={MessageSquare} title="Sin Rpta" value={stats.totals.no_response} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-
-
-                                {/* SECCIÓN: INBOX COMPRENSIVO */}
-                                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-8 shadow-xl relative overflow-hidden group">
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6 relative z-10">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 shadow-sm">
-                                                <Activity size={20} />
-                                            </div>
-                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Inbox Analysis</h3>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 relative z-10">
-                                        <MiniRow label="Entrantes" value={stats.totals.entrantes} colorClass="text-white" tooltipInfo="Suma total de leads recibidos en el inbox." />
-                                        <MiniRow label="No Leads" value={stats.totals.not_lead} subValue={`${stats.percentages.inbox.not_lead}%`} colorClass="text-rose-500" tooltipInfo="Leads descartados por no cumplir el perfil ideal." />
-                                        <MiniRow label="In-abribles" value={stats.totals.inabribles} subValue={`${stats.percentages.inbox.inabribles}%`} colorClass="text-amber-500" tooltipInfo="Leads con los que no se pudo iniciar una conversación (mensajes restringidos, bloqueos, etc)." />
-                                        <MiniRow label="Leads Reales" value={stats.totals.leads} subValue={`${stats.percentages.inbox.leads}%`} colorClass="text-indigo-400" tooltipInfo="Leads válidos para prospectar. Cálculo: (Cualificación - No Leads)." />
-                                        <div className="bg-indigo-600 rounded-[2rem] p-6 text-white shadow-xl flex flex-col justify-center relative overflow-visible group/tooltip-conv">
-                                            <div className="absolute top-4 right-4 group-hover/tooltip-conv:opacity-100 opacity-50 transition-opacity">
-                                                <HelpCircle size={14} className="text-white/50 cursor-help" />
-                                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip-conv:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
-                                                    Porcentaje de leads reales que terminan en agenda. Cálculo: (Agendas / Leads Reales).
-                                                    <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div>
+                                            <div className="flex justify-between items-center relative z-10">
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Contacto e Inicio del Embudo</span>
+                                                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                                                    <Inbox size={16} />
                                                 </div>
                                             </div>
-                                            <p className="text-[8px] font-black opacity-60 uppercase tracking-widest mb-1">Conversion Total</p>
-                                            <p className="text-3xl font-black italic tracking-tighter">{div(stats.totals.funnel_agenda, stats.totals.leads)}%</p>
+                                            <div className="space-y-1 relative z-10">
+                                                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">CONTACTABILIDAD TOTAL</h4>
+                                                <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{stats.totals.entrantes}</h2>
+                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Leads Recibidos en Inbox</p>
+                                            </div>
+                                            <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
+                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Leads Reales (Prospectos)</span>
+                                                    <span className="text-sm font-black text-white tabular-nums">{stats.totals.leads}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa de Apertura (Contactados)</span>
+                                                    <span className="text-sm font-black text-indigo-400 tabular-nums">
+                                                        {div(stats.totals.opening_submitted, (stats.totals.entrantes - stats.totals.not_lead))}%
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa de Respuesta General</span>
+                                                    <span className="text-sm font-black text-emerald-400 tabular-nums">{stats.percentages.rates.opening_response}%</span>
+                                                </div>
+                                            </div>
                                         </div>
+
+                                        {/* PILAR 2: CALIDAD Y CUALIFICACIÓN (PROSPECCIÓN EFECTIVA) */}
+                                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-violet-500/30 transition-all duration-300">
+                                            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+                                                <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-violet-500 group-hover:opacity-20 transition-opacity duration-300" />
+                                            </div>
+                                            <div className="flex justify-between items-center relative z-10">
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Cualificación e Interés</span>
+                                                <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-500 border border-violet-500/20">
+                                                    <Target size={16} />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 relative z-10">
+                                                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">LEADS CUALIFICADOS</h4>
+                                                <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{stats.totals.funnel_qualification}</h2>
+                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Cumplen el Perfil Ideal</p>
+                                            </div>
+                                            <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
+                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Identificaron Dolor (Avance)</span>
+                                                    <span className="text-sm font-black text-violet-400 tabular-nums">{stats.totals.funnel_pain}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa Cualificación / Reales</span>
+                                                    <span className="text-sm font-black text-emerald-400 tabular-nums">
+                                                        {div(stats.totals.funnel_qualification, stats.totals.leads)}%
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Leads (Descartados)</span>
+                                                    <span className="text-sm font-black text-rose-400 tabular-nums">{stats.totals.not_lead}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* PILAR 3: RESULTADOS EN CALENDARIO (AGENDAS) */}
+                                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
+                                            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+                                                <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-emerald-500 group-hover:opacity-20 transition-opacity duration-300" />
+                                            </div>
+                                            <div className="flex justify-between items-center relative z-10">
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Cierre del Setter en Calendario</span>
+                                                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                    <CalendarDays size={16} />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 relative z-10">
+                                                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">AGENDAS GENERADAS</h4>
+                                                <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{stats.totals.funnel_agenda}</h2>
+                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Citas Agendadas Confirmadas</p>
+                                            </div>
+                                            <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
+                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conversión Total a Agenda</span>
+                                                    <span className="text-sm font-black text-emerald-400 tabular-nums">
+                                                        {div(stats.totals.funnel_agenda, stats.totals.leads)}%
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa FU (Follow-Up Response)</span>
+                                                    <span className="text-sm font-black text-indigo-400 tabular-nums">{stats.percentages.rates.total_fur}%</span>
+                                                </div>
+                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conversión Cualificados a Cita</span>
+                                                    <span className="text-sm font-black text-white tabular-nums">
+                                                        {div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                     </div>
                                 </div>
+
+
+
+
 
                                  {/* SECCIÓN: FUNNEL (REESTRUCTURADO) */}
                                 <MetricSection title="Funnel" icon={TrendingUp}>

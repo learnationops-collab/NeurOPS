@@ -227,274 +227,215 @@ const CloserPerformanceTab = ({ stats, loading }) => {
 
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
-            {/* 1. TOP ROW: GLOBAL KEY METRICS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                    title="Ingreso Total Cash"
-                    value={fmtCash(totalCashCollected)}
-                    icon={DollarSign}
-                    colorClass="text-emerald-500"
-                    subtitle={`New Cash: ${fmtCash(realSalesCash)}`}
-                    tooltip="Ingreso total en efectivo cobrado. Incluye PIF, Split, Cuotas y Señas (Promesas de venta)."
-                />
-                <StatCard
-                    title="Nuevos Clientes"
-                    value={fmt(realSalesCount)}
-                    icon={Target}
-                    colorClass="text-amber-500"
-                    subtitle={`Tasa Cierre Real: ${fmtNum(calcDiv(realSalesCount, stats.agendas.first_call.attended, true), true)}`}
-                    tooltip="Total de nuevos clientes cerrados en el periodo (PIF + Split). Excluye señas y cuotas."
-                />
-                <StatCard
-                    title="Ticket Promedio"
-                    value={fmtNum(ticketPromedioReal, false, true)}
-                    icon={Activity}
-                    colorClass="text-sky-500"
-                    subtitle={`PIF: ${pifCount ? fmtCash(pifCash / pifCount) : '$0'} | Split: ${splitCount ? fmtCash(splitCash / splitCount) : '$0'}`}
-                    tooltip="Promedio de ingresos generados solo por ventas reales (PIF + Split)."
-                />
-                <StatCard
-                    title="Promesas de Venta"
-                    value={fmt(depositCount)}
-                    icon={DollarSign}
-                    colorClass="text-fuchsia-500"
-                    subtitle={`Cash Señas: ${fmtCash(depositCash)}`}
-                    tooltip={`Total de señas o reservas (Promesas de venta) realizadas en el periodo. Conversión a venta real: ${stats.sales.deposit_conversions?.rate ?? 0}%`}
-                />
-            </div>
-
-            {/* 2. GRÁFICO DE EMBUDO Y SECCIÓN DE CONVERSIONES */}
+            {/* 1. EJECUTIVO DASHBOARD: 3 PILARES ESTRATÉGICOS (C-LEVEL VIEW) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* COL 1: CANTIDADES */}
-                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 flex flex-col">
-                    <div className="flex items-center gap-3">
-                        <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
-                            <List size={20} />
-                        </div>
-                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Cantidades</h3>
+                
+                {/* PILAR 1: INGRESO CONSOLIDADO (CASH COLLECT) */}
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
+                    <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+                        <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-emerald-500 group-hover:opacity-20 transition-opacity duration-300" />
                     </div>
-
-                    <div className="space-y-3 flex-1">
-                        <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                            <span className="text-[10px] font-black text-violet-500 uppercase tracking-widest">Slots</span>
-                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.general.slots)}</span>
+                    <div className="flex justify-between items-center relative z-10">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Facturación y Flujo de Caja</span>
+                        <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                            <DollarSign size={16} />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Agendas 1ra</span>
-                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.first_call.scheduled)}</span>
-                            </div>
-                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                                <span className="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest">Agendas 2da</span>
-                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.second_call.scheduled)}</span>
-                            </div>
+                    </div>
+                    <div className="space-y-1 relative z-10">
+                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT CONSOLIDADO</h4>
+                        <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{fmtCash(totalCashCollected)}</h2>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Total Recaudado en Cuenta</p>
+                    </div>
+                    <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nuevas Ventas (New Cash)</span>
+                            <span className="text-sm font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash)}</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                                <span className="text-[10px] font-black text-sky-500 uppercase tracking-widest">Asist. 1ra</span>
-                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.first_call.attended)}</span>
-                            </div>
-                            <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                                <span className="text-[10px] font-black text-sky-500/80 uppercase tracking-widest">Asist. 2da</span>
-                                <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.agendas.second_call.attended)}</span>
-                            </div>
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cobro de Cuotas (Installments)</span>
+                            <span className="text-sm font-black text-white tabular-nums">{fmtCash(installmentCash)}</span>
                         </div>
-                        <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                            <span className="text-[10px] font-black text-fuchsia-500 uppercase tracking-widest">Ofertas</span>
-                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.general.offers_made)}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Cierres Reales</span>
-                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(realSalesCount)}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                            <span className="text-[10px] font-black text-fuchsia-500 uppercase tracking-widest">Promesas (Señas)</span>
-                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(depositCount)}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-4 bg-rose-500/5 rounded-2xl border border-rose-500/10">
-                            <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Seg. Hot</span>
-                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.follow_ups?.hot_sent)}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-4 bg-sky-500/5 rounded-2xl border border-sky-500/10">
-                            <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">Seg. Cold</span>
-                            <span className="text-xl font-black text-white italic tabular-nums">{fmt(stats.follow_ups?.cold_sent)}</span>
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reservas (Cash Señas)</span>
+                            <span className="text-sm font-black text-fuchsia-400 tabular-nums">{fmtCash(depositCash)}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* COL 2: CONVERSIONES */}
-                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 flex flex-col">
-                    <div className="flex items-center gap-3">
+                {/* PILAR 2: CIERRE Y EFICIENCIA DE VENTAS (NUEVOS CLIENTES) */}
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-amber-500/30 transition-all duration-300">
+                    <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+                        <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-amber-500 group-hover:opacity-20 transition-opacity duration-300" />
+                    </div>
+                    <div className="flex justify-between items-center relative z-10">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Cierre y Eficiencia Comercial</span>
+                        <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            <Target size={16} />
+                        </div>
+                    </div>
+                    <div className="space-y-1 relative z-10">
+                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">NUEVOS CLIENTES (VENTAS)</h4>
+                        <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{fmt(realSalesCount)}</h2>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Contratos PIF + Split Concretados</p>
+                    </div>
+                    <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Close Rate (Asistencias)</span>
+                            <span className="text-sm font-black text-amber-400 tabular-nums">
+                                {fmtNum(calcDiv(realSalesCount, stats.agendas.first_call.attended, true), true)}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ticket Promedio Real</span>
+                            <span className="text-sm font-black text-sky-400 tabular-nums">{fmtNum(ticketPromedioReal, false, true)}</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conversión de Señas</span>
+                            <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.sales.deposit_conversions?.rate ?? 0}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* PILAR 3: PRODUCTIVIDAD Y AGENDA (LLAMADAS Y SHOW RATE) */}
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-sky-500/30 transition-all duration-300">
+                    <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+                        <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-sky-500 group-hover:opacity-20 transition-opacity duration-300" />
+                    </div>
+                    <div className="flex justify-between items-center relative z-10">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Productividad y Agendamiento</span>
+                        <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                            <Phone size={16} />
+                        </div>
+                    </div>
+                    <div className="space-y-1 relative z-10">
+                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">ASISTENCIAS REALES</h4>
+                        <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{fmt(stats.agendas.totals.attended)}</h2>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Reuniones Uno a Uno Completadas</p>
+                    </div>
+                    <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Show Rate (Asistencia %)</span>
+                            <span className="text-sm font-black text-emerald-400 tabular-nums">{stats.percentages.show_rate.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pitch Rate (Presentación)</span>
+                            <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.percentages.pitch_rate.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Shows / Canceladas</span>
+                            <span className="text-sm font-black text-rose-400 tabular-nums">{fmt(totalNoShow + totalCanceled)}</span>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+
+            {/* 2. GRÁFICO DE EMBUDO Y CONVERSIONES CRÍTICAS (EJECUTIVO) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                {/* COL 1: CONVERSIONES CRÍTICAS Y TASAS DE NEGOCIO */}
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 flex flex-col justify-between">
+                    <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
                         <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
                             <TrendingUp size={20} />
                         </div>
-                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Conversiones</h3>
+                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Conversiones de Embudo</h3>
                     </div>
 
                     <div className="space-y-4 flex-1 flex flex-col justify-center">
-                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
-                            <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Agendamiento</p>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-slate-400">Slots → Agendas</span>
-                                <span className="text-lg font-black text-white tabular-nums">
-                                    {stats.general.slots ? ((stats.agendas.totals.scheduled / stats.general.slots) * 100).toFixed(1) : 0}%
-                                </span>
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
+                            <div>
+                                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest leading-none">Agendamiento General</p>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Slots → Agendas Totales</span>
                             </div>
+                            <span className="text-2xl font-black text-white italic tabular-nums">
+                                {stats.general.slots ? ((stats.agendas.totals.scheduled / stats.general.slots) * 100).toFixed(1) : 0}%
+                            </span>
                         </div>
 
-                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
-                            <p className="text-[9px] font-black text-sky-500 uppercase tracking-widest">Show Rate</p>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-slate-400">Agendas → Asistencias</span>
-                                <span className="text-lg font-black text-white tabular-nums">
-                                    {stats.agendas.totals.scheduled ? ((stats.agendas.totals.attended / stats.agendas.totals.scheduled) * 100).toFixed(1) : 0}%
-                                </span>
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
+                            <div>
+                                <p className="text-[9px] font-black text-sky-500 uppercase tracking-widest leading-none">Asistencia (Show Rate)</p>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Agendas → Asistencias</span>
                             </div>
+                            <span className="text-2xl font-black text-white italic tabular-nums">
+                                {stats.agendas.totals.scheduled ? ((stats.agendas.totals.attended / stats.agendas.totals.scheduled) * 100).toFixed(1) : 0}%
+                            </span>
                         </div>
 
-                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
-                            <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest">Pitch Rate</p>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-slate-400">Asistencias → Ofertas</span>
-                                <span className="text-lg font-black text-white tabular-nums">
-                                    {stats.agendas.totals.attended ? ((stats.general.offers_made / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
-                                </span>
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
+                            <div>
+                                <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest leading-none">Presentación (Pitch Rate)</p>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Asistencias → Ofertas</span>
                             </div>
+                            <span className="text-2xl font-black text-white italic tabular-nums">
+                                {stats.agendas.totals.attended ? ((stats.general.offers_made / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
+                            </span>
                         </div>
 
-                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
-                            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Close Rate Real (Asist.)</p>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-slate-400">Asistencias → Ventas Reales</span>
-                                <span className="text-lg font-black text-white tabular-nums">
-                                    {stats.agendas.first_call.attended ? ((realSalesCount / stats.agendas.first_call.attended) * 100).toFixed(1) : 0}%
-                                </span>
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
+                            <div>
+                                <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Cierre Real sobre Asistencia</p>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Asistencias → Ventas</span>
                             </div>
+                            <span className="text-2xl font-black text-white italic tabular-nums">
+                                {stats.agendas.first_call.attended ? ((realSalesCount / stats.agendas.first_call.attended) * 100).toFixed(1) : 0}%
+                            </span>
                         </div>
 
-                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
-                            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Close Rate Real (Oferta)</p>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-slate-400">Ofertas → Ventas Reales</span>
-                                <span className="text-lg font-black text-white tabular-nums">
-                                    {stats.general.offers_made ? ((realSalesCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
-                                </span>
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
+                            <div>
+                                <p className="text-[9px] font-black text-amber-500/80 uppercase tracking-widest leading-none">Cierre Real sobre Propuesta</p>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Ofertas → Ventas</span>
                             </div>
+                            <span className="text-2xl font-black text-white italic tabular-nums">
+                                {stats.general.offers_made ? ((realSalesCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
+                            </span>
                         </div>
 
-                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2">
-                            <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest">Close Rate Promesa</p>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-slate-400">Ofertas → Promesas</span>
-                                <span className="text-lg font-black text-white tabular-nums">
-                                    {stats.general.offers_made ? ((depositCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
-                                </span>
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
+                            <div>
+                                <p className="text-[9px] font-black text-fuchsia-400 uppercase tracking-widest leading-none">Show a Seña (Reserva)</p>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Ofertas → Promesas</span>
                             </div>
+                            <span className="text-2xl font-black text-white italic tabular-nums">
+                                {stats.general.offers_made ? ((depositCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
+                            </span>
                         </div>
 
-                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2 relative group/stat overflow-visible">
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2 relative group overflow-visible">
                             <div className="flex items-center gap-1.5 relative group/tooltip">
-                                <p className="text-[9px] font-black text-fuchsia-400 uppercase tracking-widest">Conversión de Señas</p>
-                                <Info size={10} className="text-fuchsia-400/50 cursor-help" />
+                                <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest leading-none">Efectividad de Cobro Señas</p>
+                                <Info size={10} className="text-emerald-400/50 cursor-help" />
                                 <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl">
                                     Tasa de conversión de señas en ventas reales (PIF o Split Pay). Mide la efectividad del closer para concretar el cobro total posterior a la reserva.
                                     <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
                                 </div>
                             </div>
                             <div className="flex justify-between items-center mt-1">
-                                <span className="text-[10px] font-bold text-slate-400">Señas → Ventas Reales</span>
-                                <span className="text-lg font-black text-white tabular-nums">
+                                <span className="text-[10px] font-bold text-slate-500">Señas → Ventas Reales</span>
+                                <span className="text-lg font-black text-white italic tabular-nums">
                                     {stats.sales.deposit_conversions?.rate ?? 0}%
                                 </span>
                             </div>
-                            <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider mt-1 text-right">
+                            <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider text-right">
                                 {stats.sales.deposit_conversions?.converted ?? 0} de {stats.sales.deposit_conversions?.total ?? 0} señas convertidas
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* COL 3: EMBUDO GRÁFICO */}
-                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 flex flex-col items-center">
-                    <div className="w-full flex items-center gap-3 mb-8">
+                {/* COL 2: EMBUDO GRÁFICO (CON MÁS ESPACIO) */}
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 flex flex-col items-center justify-between">
+                    <div className="w-full flex items-center gap-3 mb-8 border-b border-slate-800 pb-4">
                         <div className="p-3 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-500">
                             <TrendingUp size={20} />
                         </div>
-                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Visualización</h3>
+                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Visualización Gráfica</h3>
                     </div>
-                    <div className="w-full h-[400px]">
+                    <div className="w-full h-[400px] flex items-center justify-center">
                         <FunnelChart data={funnelData} />
                     </div>
-                </div>
-            </div>
-
-            {/* 3. LLAMADAS Y CONVERSIONES (Tarjetas + Progreso) */}
-            <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-500">
-                        <Target size={20} />
-                    </div>
-                    <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Llamadas y Conversiones</h3>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-5 flex items-center justify-between">
-                        <div>
-                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Asistencias</p>
-                            <h4 className="text-2xl font-black text-white italic tracking-tighter mt-1">{fmt(stats.agendas.totals.attended)}</h4>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-500">
-                            <CheckCircle size={16} />
-                        </div>
-                    </div>
-                    <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-5 flex items-center justify-between">
-                        <div>
-                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Presentaciones (Ofertas)</p>
-                            <h4 className="text-2xl font-black text-white italic tracking-tighter mt-1">{fmt(stats.general.offers_made)}</h4>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-500">
-                            <Layers size={16} />
-                        </div>
-                    </div>
-                    <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-5 flex items-center justify-between">
-                        <div>
-                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Decisores</p>
-                            <h4 className="text-2xl font-black text-white italic tracking-tighter mt-1">{fmt(stats.general.decision_makers)}</h4>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500">
-                            <Users size={16} />
-                        </div>
-                    </div>
-                    <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-5 flex items-center justify-between">
-                        <div>
-                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Reagendados</p>
-                            <h4 className="text-2xl font-black text-white italic tracking-tighter mt-1">{fmt(stats.general.rescheduled_calls)}</h4>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
-                            <RefreshCw size={16} />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-800">
-                    <ProgressRow 
-                        label="Pitch Rate (Pres. / Asist.)" 
-                        percentage={stats.percentages.pitch_rate} 
-                        colorClass="text-fuchsia-500" 
-                        absolute={`${fmt(stats.general.offers_made)} / ${fmt(stats.agendas.totals.attended)}`} 
-                    />
-                    <ProgressRow 
-                        label="Decision Maker Rate" 
-                        percentage={stats.percentages.decision_maker_rate} 
-                        colorClass="text-indigo-500" 
-                        absolute={`${fmt(stats.general.decision_makers)} / ${fmt(stats.agendas.totals.attended)}`} 
-                    />
-                    <ProgressRow 
-                        label="Reschedule Rate" 
-                        percentage={stats.percentages.rescheduled_rate} 
-                        colorClass="text-amber-500" 
-                        absolute={`${fmt(stats.general.rescheduled_calls)} / ${fmt(stats.agendas.totals.attended - stats.general.decision_makers)}`} 
-                    />
                 </div>
             </div>
 
