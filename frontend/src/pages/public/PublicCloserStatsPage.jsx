@@ -157,7 +157,7 @@ const PublicCloserStatsPage = () => {
                                 value={filters.closer_id}
                                 onChange={e => setFilters({ ...filters, closer_id: e.target.value })}
                             >
-                                <option value="">Todo el Equipo ({filters.agg_type === 'sum' ? 'Suma' : 'Promedio'})</option>
+                                <option value="">Todo el Equipo</option>
                                 {closers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
@@ -211,23 +211,7 @@ const PublicCloserStatsPage = () => {
                             </>
                         )}
 
-                        <div className="flex flex-col gap-2 ml-auto">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 text-right">Agregación</label>
-                            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
-                                <button
-                                    onClick={() => setFilters({ ...filters, agg_type: 'sum' })}
-                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${filters.agg_type === 'sum' ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30' : 'text-slate-500 hover:text-slate-300'}`}
-                                >
-                                    Suma
-                                </button>
-                                <button
-                                    onClick={() => setFilters({ ...filters, agg_type: 'avg' })}
-                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${filters.agg_type === 'avg' ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30' : 'text-slate-500 hover:text-slate-300'}`}
-                                >
-                                    Promedio
-                                </button>
-                            </div>
-                        </div>
+
                     </div>
                 )}
 
