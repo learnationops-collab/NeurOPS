@@ -16,6 +16,7 @@ class FinancialSale(db.Model):
     instagram = db.Column(db.String(255), nullable=True)
     setter = db.Column(db.String(255), nullable=True)
     marca_temporal = db.Column(db.String(255), nullable=True)
+    estado = db.Column(db.String(255), nullable=True, default="Completada", server_default="Completada")
     # Metadatos
     raw_data = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -36,6 +37,7 @@ class FinancialSale(db.Model):
             "instagram": self.instagram,
             "setter": self.setter,
             "marca_temporal": self.marca_temporal,
+            "estado": self.estado or "Completada",
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "date": self.date.isoformat() if self.date else None
         }

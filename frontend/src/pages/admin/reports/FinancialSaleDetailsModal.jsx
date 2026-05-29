@@ -63,25 +63,25 @@ const FinancialSaleDetailsModal = ({ sale, onClose }) => {
                                     <div className="p-2 rounded-lg bg-white/5 text-muted"><User size={16} /></div>
                                     <div>
                                         <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Nombre Completo</p>
-                                        <p className="text-sm font-medium text-white">{sale.cliente}</p>
+                                        <p className="text-sm font-medium text-white">{sale.cliente || sale.nombre_cliente || 'Desconocido'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <div className="p-2 rounded-lg bg-white/5 text-muted"><Phone size={16} /></div>
                                     <div>
                                         <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Teléfono</p>
-                                        <p className="text-sm font-medium text-white">{getRawValue('telefono')}</p>
+                                        <p className="text-sm font-medium text-white">{getRawValue('telefono') || sale.telefono || 'No especificado'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <div className="p-2 rounded-lg bg-white/5 text-muted"><Mail size={16} /></div>
                                     <div>
                                         <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Email</p>
-                                        <p className="text-sm font-medium text-white break-all">{getRawValue('mail') || getRawValue('email') || 'No especificado'}</p>
+                                        <p className="text-sm font-medium text-white break-all">{getRawValue('mail') || getRawValue('email') || sale.mail_cliente || 'No especificado'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
-                                    <div className="p-2 rounded-lg bg-white/5 text-muted"><Activity size={16} /></div>
+                                    <div className="p-2 rounded-lg bg-white/5 text-muted"><CheckCircle2 size={16} /></div>
                                     <div>
                                         <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Instagram</p>
                                         {sale.instagram && sale.instagram !== 'N/A' ? (
@@ -112,10 +112,10 @@ const FinancialSaleDetailsModal = ({ sale, onClose }) => {
                                         <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Producto / Tipo</p>
                                         <div className="flex gap-2 mt-1">
                                             <Badge variant="indigo" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider">
-                                                {sale.producto}
+                                                {sale.producto || sale.tipo_pago || 'N/A'}
                                             </Badge>
                                             <Badge variant="surface" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider opacity-80">
-                                                {sale.payment_type}
+                                                {sale.payment_type || sale.metodo_pago || 'N/A'}
                                             </Badge>
                                         </div>
                                     </div>
@@ -124,14 +124,26 @@ const FinancialSaleDetailsModal = ({ sale, onClose }) => {
                                     <div className="p-2 rounded-lg bg-white/5 text-success"><DollarSign size={16} /></div>
                                     <div>
                                         <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Monto Abonado</p>
-                                        <p className="text-xl font-black text-success tracking-tighter">${sale.amount.toLocaleString()}</p>
+                                        <p className="text-xl font-black text-success tracking-tighter">${(sale.amount || sale.monto || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <div className="p-2 rounded-lg bg-white/5 text-muted"><Calendar size={16} /></div>
                                     <div>
                                         <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Fecha Original (Google Sheets)</p>
-                                        <p className="text-sm font-medium text-white">{getRawValue('fecha') || getRawValue('date') || new Date(sale.date).toLocaleString()}</p>
+                                        <p className="text-sm font-medium text-white">{getRawValue('fecha') || getRawValue('date') || (sale.date ? new Date(sale.date).toLocaleString() : 'No especificada')}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 rounded-lg bg-white/5 text-primary"><CheckCircle2 size={16} /></div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Estado de la Venta</p>
+                                        <Badge 
+                                            variant={(sale.estado === 'Completada' || !sale.estado) ? 'success' : sale.estado === 'Pendiente' ? 'warning' : 'rose'} 
+                                            className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider mt-1"
+                                        >
+                                            {sale.estado || 'Completada'}
+                                        </Badge>
                                     </div>
                                 </div>
                             </div>

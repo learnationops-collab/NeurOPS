@@ -115,6 +115,7 @@ class SheetsService:
                         instagram=SheetsService._to_str(item.get('instagram')),
                         setter=SheetsService._to_str(item.get('setter')),
                         marca_temporal=SheetsService._to_str(item.get('marca_temporal')),
+                        estado=SheetsService._to_str(item.get('estado') or item.get('status')) or "Completada",
                         date=SheetsService._parse_date(item.get('marca_temporal')),
                         raw_data=item
                     )

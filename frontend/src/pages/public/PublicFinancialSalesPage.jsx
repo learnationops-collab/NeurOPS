@@ -162,7 +162,8 @@ const PublicFinancialSalesPage = () => {
             amount: sale.monto || 0,
             product: sale.tipo_pago || '',
             payment_type: sale.metodo_pago || '',
-            setter_name: sale.setter || ''
+            setter_name: sale.setter || '',
+            estado: sale.estado || 'Completada'
         });
     };
 
@@ -344,6 +345,7 @@ const PublicFinancialSalesPage = () => {
                                     <th className="p-4 font-semibold text-right">Monto</th>
                                     <th className="p-4 font-semibold">Producto/Pago</th>
                                     <th className="p-4 font-semibold">Roles</th>
+                                    <th className="p-4 font-semibold">Estado</th>
                                     <th className="p-4 font-semibold text-center">Acciones</th>
                                 </tr>
                             </thead>
@@ -451,6 +453,29 @@ const PublicFinancialSalesPage = () => {
                                                 )}
                                             </td>
                                             
+                                            <td className="p-4 whitespace-nowrap">
+                                                {isEditing ? (
+                                                    <select 
+                                                        value={editData.estado} 
+                                                        onChange={e => setEditData({...editData, estado: e.target.value})}
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                                    >
+                                                        <option value="Completada">Completada</option>
+                                                        <option value="Pendiente">Pendiente</option>
+                                                        <option value="Reembolsada">Reembolsada</option>
+                                                        <option value="Cancelada">Cancelada</option>
+                                                    </select>
+                                                ) : (
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                                        sale.estado === 'Completada' || !sale.estado ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                                        sale.estado === 'Pendiente' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                                                        'bg-red-500/10 text-red-400 border border-red-500/20'
+                                                    }`}>
+                                                        {sale.estado || 'Completada'}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            
                                             <td className="p-4 text-center">
                                                 {isEditing ? (
                                                     <div className="flex items-center justify-center gap-2">
@@ -472,12 +497,12 @@ const PublicFinancialSalesPage = () => {
                                 })}
                                 
                                 {sales.length === 0 && (
-                                    <tr>
-                                        <td colSpan="7" className="p-8 text-center text-slate-500">
-                                            No se encontraron ventas con esos criterios.
-                                        </td>
-                                    </tr>
-                                )}
+                                     <tr>
+                                         <td colSpan="8" className="p-8 text-center text-slate-500">
+                                             No se encontraron ventas con esos criterios.
+                                         </td>
+                                     </tr>
+                                 )}
                             </tbody>
                         </table>
                         

@@ -209,6 +209,7 @@ const FinancialAnalysisPage = () => {
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Instagram</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Producto</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Monto</th>
+                                    <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Estado</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
                                 </tr>
                             </thead>
@@ -266,6 +267,14 @@ const FinancialAnalysisPage = () => {
                                                 ${(sale.monto || 0).toLocaleString()}
                                             </span>
                                         </td>
+                                        <td className="py-4 px-4">
+                                            <Badge 
+                                                variant={sale.estado === 'Completada' || !sale.estado ? 'success' : sale.estado === 'Pendiente' ? 'warning' : 'rose'} 
+                                                className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider"
+                                            >
+                                                {sale.estado || 'Completada'}
+                                            </Badge>
+                                        </td>
                                         <td className="py-4 px-4 text-right">
                                             {sale.status === 'error' ? (
                                                 <Button variant="surface" size="xs" onClick={() => openResolveModal(sale)} className="bg-rose-500/20 border border-rose-500/30 text-rose-500 hover:bg-rose-500/40">
@@ -282,7 +291,7 @@ const FinancialAnalysisPage = () => {
                                 ))}
                                  {filteredSales.length === 0 && !error && (
                                     <tr>
-                                        <td colSpan="8" className="py-20 text-center">
+                                        <td colSpan="9" className="py-20 text-center">
                                             <div className="flex flex-col items-center gap-3">
                                                 <Search size={24} className="text-muted opacity-20" />
                                                 <p className="text-sm font-bold text-muted uppercase tracking-widest">No se encontraron ventas</p>

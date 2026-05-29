@@ -388,6 +388,7 @@ def receive_financial_sales():
                 nombre_cliente=item.get('nombre_cliente') or item.get('cliente') or 'Desconocido',
                 email_vendedor=item.get('email_vendedor') or item.get('vendedor_mail'),
                 instagram=item.get('instagram') or item.get('ig') or 'N/A',
+                estado=item.get('estado') or item.get('status') or 'Completada',
                 raw_data=item
             )
             db.session.add(sale)
@@ -510,6 +511,8 @@ def update_financial_sale(sale_id):
             sale.nombre_cliente = data['nombre_cliente']
         if 'email_vendedor' in data:
             sale.email_vendedor = data['email_vendedor']
+        if 'estado' in data:
+            sale.estado = data['estado']
         db.session.commit()
         return jsonify({"message": "Venta actualizada correctamente", "sale": sale.to_dict()}), 200
     except Exception as e:
