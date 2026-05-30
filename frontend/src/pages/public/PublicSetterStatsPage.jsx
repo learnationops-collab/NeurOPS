@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { motion } from 'framer-motion';
 import api from '../../services/api';
 import {
     Loader2, TrendingUp, BarChart3, PieChart, Users,
@@ -81,9 +82,11 @@ const PublicSetterStatsPage = () => {
         fetchInitial();
     }, []);
 
+    const [compare, setCompare] = useState(false);
+
     useEffect(() => {
         if (activeTab === 'general') fetchStats();
-    }, [filters, activeTab]);
+    }, [filters, activeTab, compare]);
 
     const fetchStats = async () => {
         setLoading(true);
@@ -93,6 +96,7 @@ const PublicSetterStatsPage = () => {
             if (filters.start_date) params.append('start_date', filters.start_date);
             if (filters.end_date) params.append('end_date', filters.end_date);
             params.append('agg_type', filters.agg_type);
+            if (compare) params.append('compare', 'true');
 
             const res = await api.get(`/public/setter-stats?${params.toString()}`);
             setStats(res.data);
@@ -118,6 +122,58 @@ const PublicSetterStatsPage = () => {
     );
 
     const div = (n, d) => (d > 0 ? Number(((n / d) * 100).toFixed(2)) : 0);
+
+    const renderComparisonSubdata = (current, previous) => {
+        if (!compare || !stats?.comparison) return null;
+        const curVal = Number(current || 0);
+        const prevVal = Number(previous || 0);
+
+        if (prevVal === 0) {
+            return (
+                <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500 justify-end">
+                    <span>Ant: {prevVal}</span>
+                    {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
+                </div>
+            );
+        }
+
+        const diff = ((curVal - prevVal) / prevVal) * 100;
+        const sign = diff > 0 ? '+' : '';
+        const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
+
+        return (
+            <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500 justify-end">
+                <span>Ant: {prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
+            </div>
+        );
+    };
+
+    const renderComparisonSubdataLeft = (current, previous) => {
+        if (!compare || !stats?.comparison) return null;
+        const curVal = Number(current || 0);
+        const prevVal = Number(previous || 0);
+
+        if (prevVal === 0) {
+            return (
+                <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500">
+                    <span>Ant: {prevVal}</span>
+                    {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
+                </div>
+            );
+        }
+
+        const diff = ((curVal - prevVal) / prevVal) * 100;
+        const sign = diff > 0 ? '+' : '';
+        const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
+
+        return (
+            <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500">
+                <span>Ant: {prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
+            </div>
+        );
+    };
 
     const MetricSection = ({ title, icon: Icon, children, colorClass = "text-indigo-600" }) => (
         <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-8 shadow-xl relative overflow-hidden group">
@@ -392,7 +448,27 @@ const PublicSetterStatsPage = () => {
                             </>
                         )}
 
-
+                        {/* Switch de Comparación */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Comparación</label>
+                            <div className="flex items-center gap-2.5 bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 min-h-[38px]">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Comparar</span>
+                                <button
+                                    onClick={() => setCompare(!compare)}
+                                    type="button"
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none ${
+                                        compare ? 'bg-indigo-600 shadow-lg shadow-indigo-600/20' : 'bg-slate-900 border border-slate-750'
+                                    }`}
+                                >
+                                    <motion.span
+                                        layout
+                                        className="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-md"
+                                        animate={{ x: compare ? 16 : 2 }}
+                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                    />
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -424,25 +500,41 @@ const PublicSetterStatsPage = () => {
                                                     <Inbox size={16} />
                                                 </div>
                                             </div>
-                                            <div className="space-y-1 relative z-10">
+                                            <div className="space-y-1 relative z-10 text-left">
                                                 <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">CONTACTABILIDAD TOTAL</h4>
                                                 <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{stats.totals.entrantes}</h2>
-                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Leads Recibidos en Inbox</p>
+                                                {renderComparisonSubdataLeft(stats.totals.entrantes, stats.comparison?.totals?.entrantes)}
+                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Leads Recibidos en Inbox</p>
                                             </div>
                                             <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
                                                 <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Leads Reales (Prospectos)</span>
-                                                    <span className="text-sm font-black text-white tabular-nums">{stats.totals.leads}</span>
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-black text-white tabular-nums">{stats.totals.leads}</span>
+                                                        {renderComparisonSubdata(stats.totals.leads, stats.comparison?.totals?.leads)}
+                                                    </div>
                                                 </div>
                                                 <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa de Apertura (Contactados)</span>
-                                                    <span className="text-sm font-black text-indigo-400 tabular-nums">
-                                                        {div(stats.totals.opening_submitted, (stats.totals.entrantes - stats.totals.not_lead))}%
-                                                    </span>
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-black text-indigo-400 tabular-nums">
+                                                            {div(stats.totals.opening_submitted, (stats.totals.entrantes - stats.totals.not_lead))}%
+                                                        </span>
+                                                        {renderComparisonSubdata(
+                                                            div(stats.totals.opening_submitted, (stats.totals.entrantes - stats.totals.not_lead)),
+                                                            div(stats.comparison?.totals?.opening_submitted, (stats.comparison?.totals?.entrantes - stats.comparison?.totals?.not_lead))
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa de Respuesta General</span>
-                                                    <span className="text-sm font-black text-emerald-400 tabular-nums">{stats.percentages.rates.opening_response}%</span>
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-black text-emerald-400 tabular-nums">{stats.percentages.rates.opening_response}%</span>
+                                                        {renderComparisonSubdata(
+                                                            stats.percentages.rates.opening_response,
+                                                            stats.comparison?.percentages?.rates?.opening_response
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -458,25 +550,38 @@ const PublicSetterStatsPage = () => {
                                                     <Target size={16} />
                                                 </div>
                                             </div>
-                                            <div className="space-y-1 relative z-10">
+                                            <div className="space-y-1 relative z-10 text-left">
                                                 <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">LEADS CUALIFICADOS</h4>
                                                 <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{stats.totals.funnel_qualification}</h2>
-                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Cumplen el Perfil Ideal</p>
+                                                {renderComparisonSubdataLeft(stats.totals.funnel_qualification, stats.comparison?.totals?.funnel_qualification)}
+                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Cumplen el Perfil Ideal</p>
                                             </div>
                                             <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
                                                 <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Identificaron Dolor (Avance)</span>
-                                                    <span className="text-sm font-black text-violet-400 tabular-nums">{stats.totals.funnel_pain}</span>
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-black text-violet-400 tabular-nums">{stats.totals.funnel_pain}</span>
+                                                        {renderComparisonSubdata(stats.totals.funnel_pain, stats.comparison?.totals?.funnel_pain)}
+                                                    </div>
                                                 </div>
                                                 <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa Cualificación / Reales</span>
-                                                    <span className="text-sm font-black text-emerald-400 tabular-nums">
-                                                        {div(stats.totals.funnel_qualification, stats.totals.leads)}%
-                                                    </span>
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-black text-emerald-400 tabular-nums">
+                                                            {div(stats.totals.funnel_qualification, stats.totals.leads)}%
+                                                        </span>
+                                                        {renderComparisonSubdata(
+                                                            div(stats.totals.funnel_qualification, stats.totals.leads),
+                                                            div(stats.comparison?.totals?.funnel_qualification, stats.comparison?.totals?.leads)
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Leads (Descartados)</span>
-                                                    <span className="text-sm font-black text-rose-400 tabular-nums">{stats.totals.not_lead}</span>
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-black text-rose-400 tabular-nums">{stats.totals.not_lead}</span>
+                                                        {renderComparisonSubdata(stats.totals.not_lead, stats.comparison?.totals?.not_lead)}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -492,27 +597,46 @@ const PublicSetterStatsPage = () => {
                                                     <CalendarDays size={16} />
                                                 </div>
                                             </div>
-                                            <div className="space-y-1 relative z-10">
+                                            <div className="space-y-1 relative z-10 text-left">
                                                 <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">AGENDAS GENERADAS</h4>
                                                 <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{stats.totals.funnel_agenda}</h2>
-                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Citas Agendadas Confirmadas</p>
+                                                {renderComparisonSubdataLeft(stats.totals.funnel_agenda, stats.comparison?.totals?.funnel_agenda)}
+                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Citas Agendadas Confirmadas</p>
                                             </div>
                                             <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
                                                 <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conversión Total a Agenda</span>
-                                                    <span className="text-sm font-black text-emerald-400 tabular-nums">
-                                                        {div(stats.totals.funnel_agenda, stats.totals.leads)}%
-                                                    </span>
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-black text-emerald-400 tabular-nums">
+                                                            {div(stats.totals.funnel_agenda, stats.totals.leads)}%
+                                                        </span>
+                                                        {renderComparisonSubdata(
+                                                            div(stats.totals.funnel_agenda, stats.totals.leads),
+                                                            div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.leads)
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa FU (Follow-Up Response)</span>
-                                                    <span className="text-sm font-black text-indigo-400 tabular-nums">{stats.percentages.rates.total_fur}%</span>
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-black text-indigo-400 tabular-nums">{stats.percentages.rates.total_fur}%</span>
+                                                        {renderComparisonSubdata(
+                                                            stats.percentages.rates.total_fur,
+                                                            stats.comparison?.percentages?.rates?.total_fur
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conversión Cualificados a Cita</span>
-                                                    <span className="text-sm font-black text-white tabular-nums">
-                                                        {div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%
-                                                    </span>
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-black text-white tabular-nums">
+                                                            {div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%
+                                                        </span>
+                                                        {renderComparisonSubdata(
+                                                            div(stats.totals.funnel_agenda, stats.totals.funnel_qualification),
+                                                            div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.funnel_qualification)
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -532,6 +656,7 @@ const PublicSetterStatsPage = () => {
                                             <div className="space-y-4">
                                                 <div className="group/f transition-all hover:translate-x-1">
                                                     <MiniRow label="Cualificación" value={stats.totals.funnel_qualification} colorClass="text-violet-500" tooltipInfo="Leads en etapa de Cualificación." />
+                                                    {renderComparisonSubdataLeft(stats.totals.funnel_qualification, stats.comparison?.totals?.funnel_qualification)}
                                                     <div className="h-1 w-full bg-violet-500/20 rounded-full mt-1 overflow-hidden">
                                                         <div className="h-full bg-violet-500" style={{ width: '100%' }} />
                                                     </div>
@@ -539,6 +664,7 @@ const PublicSetterStatsPage = () => {
                                                 
                                                 <div className="group/f transition-all hover:translate-x-1">
                                                     <MiniRow label="Dolor" value={stats.totals.funnel_pain} subValue={`${stats.percentages.funnel_evolution.qual_to_pain}%`} colorClass="text-blue-500" tooltipInfo="Leads avanzados a la etapa de Dolor. Cálculo: (Dolor / Leads Reales)." />
+                                                    {renderComparisonSubdataLeft(stats.totals.funnel_pain, stats.comparison?.totals?.funnel_pain)}
                                                     <div className="h-1 w-full bg-blue-500/20 rounded-full mt-1 overflow-hidden">
                                                         <div className="h-full bg-blue-500" style={{ width: `${stats.percentages.funnel_evolution.qual_to_pain}%` }} />
                                                     </div>
@@ -546,6 +672,7 @@ const PublicSetterStatsPage = () => {
 
                                                 <div className="group/f transition-all hover:translate-x-1">
                                                     <MiniRow label="Oferta" value={stats.totals.funnel_offer} subValue={`${stats.percentages.funnel_evolution.pain_to_offer}%`} colorClass="text-fuchsia-500" tooltipInfo="Leads avanzados a la etapa de Oferta." />
+                                                    {renderComparisonSubdataLeft(stats.totals.funnel_offer, stats.comparison?.totals?.funnel_offer)}
                                                     <div className="h-1 w-full bg-fuchsia-500/20 rounded-full mt-1 overflow-hidden">
                                                         <div className="h-full bg-fuchsia-500" style={{ width: `${stats.percentages.funnel_evolution.pain_to_offer}%` }} />
                                                     </div>
@@ -553,6 +680,7 @@ const PublicSetterStatsPage = () => {
 
                                                 <div className="group/f transition-all hover:translate-x-1">
                                                     <MiniRow label="Link" value={stats.totals.funnel_link} subValue={`${stats.percentages.funnel_evolution.offer_to_link}%`} colorClass="text-indigo-500" tooltipInfo="Leads avanzados a la etapa de Link enviado." />
+                                                    {renderComparisonSubdataLeft(stats.totals.funnel_link, stats.comparison?.totals?.funnel_link)}
                                                     <div className="h-1 w-full bg-indigo-500/20 rounded-full mt-1 overflow-hidden">
                                                         <div className="h-full bg-indigo-500" style={{ width: `${stats.percentages.funnel_evolution.offer_to_link}%` }} />
                                                     </div>
@@ -560,6 +688,7 @@ const PublicSetterStatsPage = () => {
 
                                                 <div className="group/f transition-all hover:translate-x-1">
                                                     <MiniRow label="Agenda" value={stats.totals.funnel_agenda} subValue={`${stats.percentages.funnel_evolution.link_to_agenda}%`} colorClass="text-emerald-500" tooltipInfo="Leads avanzados a la etapa final de Agenda." />
+                                                    {renderComparisonSubdataLeft(stats.totals.funnel_agenda, stats.comparison?.totals?.funnel_agenda)}
                                                     <div className="h-1 w-full bg-emerald-500/20 rounded-full mt-1 overflow-hidden">
                                                         <div className="h-full bg-emerald-500" style={{ width: `${stats.percentages.funnel_evolution.link_to_agenda}%` }} />
                                                     </div>

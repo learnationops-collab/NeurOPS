@@ -340,11 +340,13 @@ def _trigger_closer_report_discord(report):
 def get_public_closer_stats():
     """Retorna estadísticas agregadas de closers con soporte de suma/promedio."""
     from app.services.closer_service import CloserService
+    from datetime import datetime, timedelta
 
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     closer_id = request.args.get('closer_id')
     agg_type = request.args.get('agg_type', 'sum')
+    compare = request.args.get('compare') == 'true'
 
     res = CloserService.get_comprehensive_stats(
         closer_id=closer_id,
@@ -353,7 +355,29 @@ def get_public_closer_stats():
         agg_type=agg_type
     )
 
+    if compare and start_date and end_date:
+        try:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+            duration_days = (end_dt - start_dt).days + 1
+
+            prev_start_date = start_dt - timedelta(days=duration_days)
+            prev_end_date = start_dt - timedelta(days=1)
+
+            prev_start_str = prev_start_date.strftime('%Y-%m-%d')
+            prev_end_str = prev_end_date.strftime('%Y-%m-%d')
+
+            res['comparison'] = CloserService.get_comprehensive_stats(
+                closer_id=closer_id,
+                start_date=prev_start_str,
+                end_date=prev_end_str,
+                agg_type=agg_type
+            )
+        except Exception as e:
+            pass
+
     return jsonify(res), 200
+
 
 @bp.route('/public/closer-reports', methods=['GET'])
 def get_public_closer_reports():

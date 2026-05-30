@@ -186,16 +186,7 @@ def _parse_date_range():
     return start_dt, end_dt
 
 
-@bp.route('/stats/conversational', methods=['GET'])
-def get_conversational_stats():
-    """
-    Retorna KPIs globales y stats por mensaje conversacional.
-    Filtra por período, categoría y ad_id.
-    """
-    start_dt, end_dt = _parse_date_range()
-    category_filter = request.args.get('category')
-    ad_id_filter = request.args.get('ad_id')
-
+def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
     # ── Filtros base sobre LeadAnswer ──
     base_filters = [
         LeadAnswer.created_at >= start_dt,
@@ -240,9 +231,6 @@ def get_conversational_stats():
             return None
         v = val.strip().lstrip('@').lower()
         return v if v and v not in ('n/a', '') else None
-
-    # IGs de leads que tienen id_option_send en el período
-    all_msg_keys = set(sends_map.keys()) | set(resp_map.keys())
 
     # Agendas del período
     agendas_all = FinancialAgenda.query.filter(
@@ -375,8 +363,39 @@ def get_conversational_stats():
         'venta_rate_from_agendas': round((total_ventas_all / total_agendas_all) * 100, 1) if total_agendas_all > 0 else 0
     }
 
-    return jsonify({
+    return kpis, table_rows
+
+
+@bp.route('/stats/conversational', methods=['GET'])
+def get_conversational_stats():
+    """
+    Retorna KPIs globales y stats por mensaje conversacional.
+    Filtra por período, categoría y ad_id.
+    Admite ?compare=true para retornar datos de comparación del período anterior.
+    """
+    start_dt, end_dt = _parse_date_range()
+    category_filter = request.args.get('category')
+    ad_id_filter = request.args.get('ad_id')
+    compare = request.args.get('compare') == 'true'
+
+    kpis, table_rows = _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter)
+
+    response_data = {
         'kpis': kpis,
         'table': table_rows,
         'period': {'start': start_dt.isoformat(), 'end': end_dt.isoformat()}
-    }), 200
+    }
+
+    if compare:
+        days_in_range = max(1, (end_dt - start_dt).days + 1)
+        prev_start_dt = start_dt - timedelta(days=days_in_range)
+        prev_end_dt = start_dt - timedelta(seconds=1)
+        
+        prev_kpis, prev_table_rows = _compute_stats_for_dates(prev_start_dt, prev_end_dt, category_filter, ad_id_filter)
+        response_data['comparison'] = {
+            'kpis': prev_kpis,
+            'table': prev_table_rows,
+            'period': {'start': prev_start_dt.isoformat(), 'end': prev_end_dt.isoformat()}
+        }
+
+    return jsonify(response_data), 200

@@ -8,7 +8,7 @@ import {
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import FunnelChart from '../../components/charts/FunnelChart';
 
-const CloserPerformanceTab = ({ stats, loading }) => {
+const CloserPerformanceTab = ({ stats, loading, compare }) => {
 
     const fmt = (n) => {
         if (n === undefined || n === null || isNaN(n)) return 0;
@@ -34,6 +34,66 @@ const CloserPerformanceTab = ({ stats, loading }) => {
             return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
         return n.toFixed(2);
+    };
+
+    const renderComparisonSubdata = (current, previous, isCurrency = false, isPct = false) => {
+        if (!compare || !stats?.comparison) return null;
+        const curVal = Number(current || 0);
+        const prevVal = Number(previous || 0);
+
+        let fmtPrev = prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 });
+        if (isCurrency) fmtPrev = fmtCash(prevVal);
+        else if (isPct) fmtPrev = `${prevVal.toFixed(1)}%`;
+
+        if (prevVal === 0) {
+            return (
+                <div className="flex items-center justify-end gap-1.5 text-[9px] font-black uppercase text-slate-500 mt-0.5">
+                    <span>Ant: {fmtPrev}</span>
+                    {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
+                </div>
+            );
+        }
+
+        const diff = ((curVal - prevVal) / prevVal) * 100;
+        const sign = diff > 0 ? '+' : '';
+        const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
+
+        return (
+            <div className="flex items-center justify-end gap-1.5 text-[9px] font-black uppercase text-slate-500 mt-0.5 animate-in fade-in duration-300">
+                <span>Ant: {fmtPrev}</span>
+                <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
+            </div>
+        );
+    };
+
+    const renderComparisonSubdataLeft = (current, previous, isCurrency = false, isPct = false) => {
+        if (!compare || !stats?.comparison) return null;
+        const curVal = Number(current || 0);
+        const prevVal = Number(previous || 0);
+
+        let fmtPrev = prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 });
+        if (isCurrency) fmtPrev = fmtCash(prevVal);
+        else if (isPct) fmtPrev = `${prevVal.toFixed(1)}%`;
+
+        if (prevVal === 0) {
+            return (
+                <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500">
+                    <span>Ant: {fmtPrev}</span>
+                    {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
+                </div>
+            );
+        }
+
+        const diff = ((curVal - prevVal) / prevVal) * 100;
+        const sign = diff > 0 ? '+' : '';
+        const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
+
+        return (
+            <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500 animate-in fade-in duration-300">
+                <span>Ant: {fmtPrev}</span>
+                <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
+            </div>
+        );
     };
 
     const StatCard = ({ title, value, icon: Icon, colorClass, subtitle, tooltip }) => (
@@ -184,6 +244,25 @@ const CloserPerformanceTab = ({ stats, loading }) => {
 
     const ticketPromedioReal = realSalesCount > 0 ? (realSalesCash / realSalesCount) : 0;
 
+    // Datos del periodo anterior (Comparison)
+    const compStats = stats.comparison;
+    const compPifCount = compStats?.sales?.pif?.count ?? compStats?.sales?.totals?.pif_count ?? 0;
+    const compSplitCount = compStats?.sales?.split?.count ?? compStats?.sales?.totals?.split_count ?? 0;
+    const compDepositCount = compStats?.sales?.deposit?.count ?? compStats?.sales?.totals?.deposit_count ?? compStats?.sales?.totals?.seña_count ?? 0;
+    const compInstallmentCount = compStats?.sales?.installment?.count ?? compStats?.sales?.totals?.installment_count ?? 0;
+
+    const compPifCash = compStats?.sales?.pif?.cash ?? compStats?.sales?.totals?.pif_cash_collected ?? compStats?.sales?.totals?.pif_cash ?? 0;
+    const compSplitCash = compStats?.sales?.split?.cash ?? compStats?.sales?.totals?.split_cash_collected ?? compStats?.sales?.totals?.split_cash ?? 0;
+    const compDepositCash = compStats?.sales?.deposit?.cash ?? compStats?.sales?.totals?.deposit_cash_collected ?? compStats?.sales?.totals?.deposit_cash ?? compStats?.sales?.totals?.seña_cash ?? 0;
+    const compInstallmentCash = compStats?.sales?.installment?.cash ?? compStats?.sales?.totals?.installment_cash ?? compStats?.sales?.totals?.installment_cash_collected ?? 0;
+
+    const compRealSalesCount = compPifCount + compSplitCount;
+    const compRealSalesCash = compPifCash + compSplitCash;
+    const compTotalCashCollected = compPifCash + compSplitCash + compInstallmentCash + compDepositCash;
+
+    const compTicketPromedioReal = compRealSalesCount > 0 ? (compRealSalesCash / compRealSalesCount) : 0;
+
+
     const salesData = [
         { name: 'PIF', value: pifCount },
         { name: 'Split Pay', value: splitCount },
@@ -244,20 +323,30 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                     <div className="space-y-1 relative z-10">
                         <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT CONSOLIDADO</h4>
                         <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{fmtCash(totalCashCollected)}</h2>
-                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Total Recaudado en Cuenta</p>
+                        {renderComparisonSubdataLeft(totalCashCollected, compTotalCashCollected, true)}
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Total Recaudado en Cuenta</p>
                     </div>
                     <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nuevas Ventas (New Cash)</span>
-                            <span className="text-sm font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash)}</span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash)}</span>
+                                {renderComparisonSubdata(realSalesCash, compRealSalesCash, true)}
+                            </div>
                         </div>
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cobro de Cuotas (Installments)</span>
-                            <span className="text-sm font-black text-white tabular-nums">{fmtCash(installmentCash)}</span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-white tabular-nums">{fmtCash(installmentCash)}</span>
+                                {renderComparisonSubdata(installmentCash, compInstallmentCash, true)}
+                            </div>
                         </div>
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reservas (Cash Señas)</span>
-                            <span className="text-sm font-black text-fuchsia-400 tabular-nums">{fmtCash(depositCash)}</span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-fuchsia-400 tabular-nums">{fmtCash(depositCash)}</span>
+                                {renderComparisonSubdata(depositCash, compDepositCash, true)}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -276,22 +365,42 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                     <div className="space-y-1 relative z-10">
                         <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">NUEVOS CLIENTES (VENTAS)</h4>
                         <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{fmt(realSalesCount)}</h2>
-                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Contratos PIF + Split Concretados</p>
+                        {renderComparisonSubdataLeft(realSalesCount, compRealSalesCount)}
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Contratos PIF + Split Concretados</p>
                     </div>
                     <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Close Rate (Asistencias)</span>
-                            <span className="text-sm font-black text-amber-400 tabular-nums">
-                                {fmtNum(calcDiv(realSalesCount, stats.agendas.first_call.attended, true), true)}
-                            </span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-amber-400 tabular-nums">
+                                    {fmtNum(calcDiv(realSalesCount, stats.agendas.first_call.attended, true), true)}
+                                </span>
+                                {renderComparisonSubdata(
+                                    calcDiv(realSalesCount, stats.agendas.first_call.attended, true),
+                                    calcDiv(compRealSalesCount, compStats?.agendas?.first_call?.attended, true),
+                                    false,
+                                    true
+                                )}
+                            </div>
                         </div>
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ticket Promedio Real</span>
-                            <span className="text-sm font-black text-sky-400 tabular-nums">{fmtNum(ticketPromedioReal, false, true)}</span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-sky-400 tabular-nums">{fmtNum(ticketPromedioReal, false, true)}</span>
+                                {renderComparisonSubdata(ticketPromedioReal, compTicketPromedioReal, true)}
+                            </div>
                         </div>
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conversión de Señas</span>
-                            <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.sales.deposit_conversions?.rate ?? 0}%</span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.sales.deposit_conversions?.rate ?? 0}%</span>
+                                {renderComparisonSubdata(
+                                    stats.sales.deposit_conversions?.rate ?? 0,
+                                    compStats?.sales?.deposit_conversions?.rate ?? 0,
+                                    false,
+                                    true
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -310,20 +419,30 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                     <div className="space-y-1 relative z-10">
                         <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">ASISTENCIAS REALES</h4>
                         <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{fmt(stats.agendas.totals.attended)}</h2>
-                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Reuniones Uno a Uno Completadas</p>
+                        {renderComparisonSubdataLeft(stats.agendas.totals.attended, compStats?.agendas?.totals?.attended)}
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Reuniones Uno a Uno Completadas</p>
                     </div>
                     <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Show Rate (Asistencia %)</span>
-                            <span className="text-sm font-black text-emerald-400 tabular-nums">{stats.percentages.show_rate.toFixed(1)}%</span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-emerald-400 tabular-nums">{stats.percentages.show_rate.toFixed(1)}%</span>
+                                {renderComparisonSubdata(stats.percentages.show_rate, compStats?.percentages?.show_rate, false, true)}
+                            </div>
                         </div>
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pitch Rate (Presentación)</span>
-                            <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.percentages.pitch_rate.toFixed(1)}%</span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.percentages.pitch_rate.toFixed(1)}%</span>
+                                {renderComparisonSubdata(stats.percentages.pitch_rate, compStats?.percentages?.pitch_rate, false, true)}
+                            </div>
                         </div>
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Shows / Canceladas</span>
-                            <span className="text-sm font-black text-rose-400 tabular-nums">{fmt(totalNoShow + totalCanceled)}</span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-rose-400 tabular-nums">{fmt(totalNoShow + totalCanceled)}</span>
+                                {renderComparisonSubdata(totalNoShow + totalCanceled, (compStats?.agendas?.totals?.no_show ?? 0) + (compStats?.agendas?.totals?.canceled ?? 0))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -348,9 +467,17 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                                 <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest leading-none">Agendamiento General</p>
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Slots → Agendas Totales</span>
                             </div>
-                            <span className="text-2xl font-black text-white italic tabular-nums">
-                                {stats.general.slots ? ((stats.agendas.totals.scheduled / stats.general.slots) * 100).toFixed(1) : 0}%
-                            </span>
+                            <div className="text-right">
+                                <span className="text-2xl font-black text-white italic tabular-nums">
+                                    {stats.general.slots ? ((stats.agendas.totals.scheduled / stats.general.slots) * 100).toFixed(1) : 0}%
+                                </span>
+                                {renderComparisonSubdata(
+                                    stats.general.slots ? ((stats.agendas.totals.scheduled / stats.general.slots) * 100) : 0,
+                                    compStats?.general?.slots ? ((compStats?.agendas?.totals?.scheduled / compStats?.general?.slots) * 100) : 0,
+                                    false,
+                                    true
+                                )}
+                            </div>
                         </div>
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
@@ -358,9 +485,17 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                                 <p className="text-[9px] font-black text-sky-500 uppercase tracking-widest leading-none">Asistencia (Show Rate)</p>
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Agendas → Asistencias</span>
                             </div>
-                            <span className="text-2xl font-black text-white italic tabular-nums">
-                                {stats.agendas.totals.scheduled ? ((stats.agendas.totals.attended / stats.agendas.totals.scheduled) * 100).toFixed(1) : 0}%
-                            </span>
+                            <div className="text-right">
+                                <span className="text-2xl font-black text-white italic tabular-nums">
+                                    {stats.agendas.totals.scheduled ? ((stats.agendas.totals.attended / stats.agendas.totals.scheduled) * 100).toFixed(1) : 0}%
+                                </span>
+                                {renderComparisonSubdata(
+                                    stats.agendas.totals.scheduled ? ((stats.agendas.totals.attended / stats.agendas.totals.scheduled) * 100) : 0,
+                                    compStats?.agendas?.totals?.scheduled ? ((compStats?.agendas?.totals?.attended / compStats?.agendas?.totals?.scheduled) * 100) : 0,
+                                    false,
+                                    true
+                                )}
+                            </div>
                         </div>
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
@@ -368,9 +503,17 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                                 <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest leading-none">Presentación (Pitch Rate)</p>
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Asistencias → Ofertas</span>
                             </div>
-                            <span className="text-2xl font-black text-white italic tabular-nums">
-                                {stats.agendas.totals.attended ? ((stats.general.offers_made / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
-                            </span>
+                            <div className="text-right">
+                                <span className="text-2xl font-black text-white italic tabular-nums">
+                                    {stats.agendas.totals.attended ? ((stats.general.offers_made / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
+                                </span>
+                                {renderComparisonSubdata(
+                                    stats.agendas.totals.attended ? ((stats.general.offers_made / stats.agendas.totals.attended) * 100) : 0,
+                                    compStats?.agendas?.totals?.attended ? ((compStats?.general?.offers_made / compStats?.agendas?.totals?.attended) * 100) : 0,
+                                    false,
+                                    true
+                                )}
+                            </div>
                         </div>
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
@@ -378,9 +521,17 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                                 <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Cierre Real sobre Asistencia</p>
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Asistencias → Ventas</span>
                             </div>
-                            <span className="text-2xl font-black text-white italic tabular-nums">
-                                {stats.agendas.first_call.attended ? ((realSalesCount / stats.agendas.first_call.attended) * 100).toFixed(1) : 0}%
-                            </span>
+                            <div className="text-right">
+                                <span className="text-2xl font-black text-white italic tabular-nums">
+                                    {stats.agendas.first_call.attended ? ((realSalesCount / stats.agendas.first_call.attended) * 100).toFixed(1) : 0}%
+                                </span>
+                                {renderComparisonSubdata(
+                                    stats.agendas.first_call.attended ? ((realSalesCount / stats.agendas.first_call.attended) * 100) : 0,
+                                    compStats?.agendas?.first_call?.attended ? ((compRealSalesCount / compStats?.agendas?.first_call?.attended) * 100) : 0,
+                                    false,
+                                    true
+                                )}
+                            </div>
                         </div>
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
@@ -388,9 +539,17 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                                 <p className="text-[9px] font-black text-amber-500/80 uppercase tracking-widest leading-none">Cierre Real sobre Propuesta</p>
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Ofertas → Ventas</span>
                             </div>
-                            <span className="text-2xl font-black text-white italic tabular-nums">
-                                {stats.general.offers_made ? ((realSalesCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
-                            </span>
+                            <div className="text-right">
+                                <span className="text-2xl font-black text-white italic tabular-nums">
+                                    {stats.general.offers_made ? ((realSalesCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
+                                </span>
+                                {renderComparisonSubdata(
+                                    stats.general.offers_made ? ((realSalesCount / stats.general.offers_made) * 100) : 0,
+                                    compStats?.general?.offers_made ? ((compRealSalesCount / compStats?.general?.offers_made) * 100) : 0,
+                                    false,
+                                    true
+                                )}
+                            </div>
                         </div>
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
@@ -398,9 +557,17 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                                 <p className="text-[9px] font-black text-fuchsia-400 uppercase tracking-widest leading-none">Show a Seña (Reserva)</p>
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Ofertas → Promesas</span>
                             </div>
-                            <span className="text-2xl font-black text-white italic tabular-nums">
-                                {stats.general.offers_made ? ((depositCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
-                            </span>
+                            <div className="text-right">
+                                <span className="text-2xl font-black text-white italic tabular-nums">
+                                    {stats.general.offers_made ? ((depositCount / stats.general.offers_made) * 100).toFixed(1) : 0}%
+                                </span>
+                                {renderComparisonSubdata(
+                                    stats.general.offers_made ? ((depositCount / stats.general.offers_made) * 100) : 0,
+                                    compStats?.general?.offers_made ? ((compDepositCount / compStats?.general?.offers_made) * 100) : 0,
+                                    false,
+                                    true
+                                )}
+                            </div>
                         </div>
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2 relative group overflow-visible">
@@ -414,9 +581,17 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                             </div>
                             <div className="flex justify-between items-center mt-1">
                                 <span className="text-[10px] font-bold text-slate-500">Señas → Ventas Reales</span>
-                                <span className="text-lg font-black text-white italic tabular-nums">
-                                    {stats.sales.deposit_conversions?.rate ?? 0}%
-                                </span>
+                                <div className="text-right">
+                                    <span className="text-lg font-black text-white italic tabular-nums">
+                                        {stats.sales.deposit_conversions?.rate ?? 0}%
+                                    </span>
+                                    {renderComparisonSubdata(
+                                        stats.sales.deposit_conversions?.rate ?? 0,
+                                        compStats?.sales?.deposit_conversions?.rate ?? 0,
+                                        false,
+                                        true
+                                    )}
+                                </div>
                             </div>
                             <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider text-right">
                                 {stats.sales.deposit_conversions?.converted ?? 0} de {stats.sales.deposit_conversions?.total ?? 0} señas convertidas
@@ -483,12 +658,15 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
                                     <p className="text-sm font-black text-emerald-400 tabular-nums">{fmt(stats.agendas.first_call[row.key])}</p>
+                                    {renderComparisonSubdata(stats.agendas.first_call[row.key], compStats?.agendas?.first_call?.[row.key])}
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
                                     <p className="text-sm font-black text-sky-400 tabular-nums">{fmt(stats.agendas.second_call[row.key])}</p>
+                                    {renderComparisonSubdata(stats.agendas.second_call[row.key], compStats?.agendas?.second_call?.[row.key])}
                                 </div>
                                 <div className="p-3 text-center">
                                     <p className="text-sm font-black text-white tabular-nums">{fmt(stats.agendas.totals[row.key])}</p>
+                                    {renderComparisonSubdata(stats.agendas.totals[row.key], compStats?.agendas?.totals?.[row.key])}
                                 </div>
                             </div>
                         ))}
@@ -528,10 +706,10 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                         </div>
 
                         {[
-                            { label: 'PIF (Completo)', keyCount: 'pif_count', keyCash: 'pif_cash', keyRecCount: 'rec_pif_count', keyRecCash: 'rec_pif_cash', valCount: pifCount, valCash: pifCash },
-                            { label: 'Split Pay (Inicial)', keyCount: 'split_count', keyCash: 'split_cash', keyRecCount: 'rec_split_count', keyRecCash: 'rec_split_cash', valCount: splitCount, valCash: splitCash },
-                            { label: 'Cuotas Cobradas', keyCount: 'installment_count', keyCash: 'installment_cash', keyRecCount: 'rec_installment_count', keyRecCash: 'rec_installment_cash', valCount: installmentCount, valCash: installmentCash },
-                            { label: 'Promesas (Señas)', keyCount: 'deposit_count', keyCash: 'deposit_cash', keyRecCount: 'rec_seña_count', keyRecCash: 'rec_seña_cash', valCount: depositCount, valCash: depositCash },
+                            { label: 'PIF (Completo)', keyCount: 'pif_count', keyCash: 'pif_cash', keyRecCount: 'rec_pif_count', keyRecCash: 'rec_pif_cash', valCount: pifCount, valCash: pifCash, compCount: compPifCount, compCash: compPifCash },
+                            { label: 'Split Pay (Inicial)', keyCount: 'split_count', keyCash: 'split_cash', keyRecCount: 'rec_split_count', keyRecCash: 'rec_split_cash', valCount: splitCount, valCash: splitCash, compCount: compSplitCount, compCash: compSplitCash },
+                            { label: 'Cuotas Cobradas', keyCount: 'installment_count', keyCash: 'installment_cash', keyRecCount: 'rec_installment_count', keyRecCash: 'rec_installment_cash', valCount: installmentCount, valCash: installmentCash, compCount: compInstallmentCount, compCash: compInstallmentCash },
+                            { label: 'Promesas (Señas)', keyCount: 'deposit_count', keyCash: 'deposit_cash', keyRecCount: 'rec_seña_count', keyRecCash: 'rec_seña_cash', valCount: depositCount, valCash: depositCash, compCount: compDepositCount, compCash: compDepositCash },
                         ].map((row, i) => (
                             <div key={row.label} className={`grid grid-cols-5 gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
                                 <div className="p-3 flex items-center gap-2 border-r border-slate-800/50">
@@ -539,15 +717,19 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
                                     <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(row.valCount)}</p>
+                                    {renderComparisonSubdata(row.valCount, row.compCount)}
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
                                     <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(row.valCash)}</p>
+                                    {renderComparisonSubdata(row.valCash, row.compCash, true)}
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
                                     <p className="text-sm font-black text-blue-400 tabular-nums">{fmt(stats.sales.totals[row.keyRecCount] || 0)}</p>
+                                    {renderComparisonSubdata(stats.sales.totals[row.keyRecCount] || 0, compStats?.sales?.totals?.[row.keyRecCount] || 0)}
                                 </div>
                                 <div className="p-3 text-center">
                                     <p className="text-[11px] font-black text-indigo-400 tabular-nums">{fmtCash(stats.sales.totals[row.keyRecCash] || 0)}</p>
+                                    {renderComparisonSubdata(stats.sales.totals[row.keyRecCash] || 0, compStats?.sales?.totals?.[row.keyRecCash] || 0, true)}
                                 </div>
                             </div>
                         ))}
@@ -558,15 +740,33 @@ const CloserPerformanceTab = ({ stats, loading }) => {
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
                                 <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(realSalesCount + depositCount + installmentCount)}</p>
+                                {renderComparisonSubdata(
+                                    realSalesCount + depositCount + installmentCount,
+                                    compRealSalesCount + compDepositCount + compInstallmentCount
+                                )}
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
                                 <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash + depositCash + installmentCash)}</p>
+                                {renderComparisonSubdata(
+                                    realSalesCash + depositCash + installmentCash,
+                                    compRealSalesCash + compDepositCash + compInstallmentCash,
+                                    true
+                                )}
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
                                 <p className="text-sm font-black text-blue-400 tabular-nums">{fmt(stats.sales.totals.recuperado_count || 0)}</p>
+                                {renderComparisonSubdata(
+                                    stats.sales.totals.recuperado_count || 0,
+                                    compStats?.sales?.totals?.recuperado_count || 0
+                                )}
                             </div>
                             <div className="p-3 text-center">
                                 <p className="text-[11px] font-black text-indigo-400 tabular-nums">{fmtCash(stats.sales.totals.recuperado_cash || 0)}</p>
+                                {renderComparisonSubdata(
+                                    stats.sales.totals.recuperado_cash || 0,
+                                    compStats?.sales?.totals?.recuperado_cash || 0,
+                                    true
+                                )}
                             </div>
                         </div>
                     </div>

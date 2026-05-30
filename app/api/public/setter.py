@@ -176,18 +176,10 @@ def submit_public_setter_report():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@bp.route('/public/setter-stats', methods=['GET'])
-def get_public_setter_stats():
-    """Returns aggregated stats for setters with sum/avg support."""
-    from app.models import SetterDailyStats
+def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
+    from app.models import SetterDailyStats, User
     from sqlalchemy import func
-    
-    # Filter by date range if provided
-    start_date_str = request.args.get('start_date')
-    end_date_str = request.args.get('end_date')
-    setter_id = request.args.get('setter_id')
-    agg_type = request.args.get('agg_type', 'sum') # 'sum' or 'avg'
-    
+
     # Count how many days of reports are in this range to calculate averages correctly
     days_count_query = db.session.query(func.count(SetterDailyStats.id))
     
@@ -364,8 +356,6 @@ def get_public_setter_stats():
 
         breakdown_query = breakdown_query.group_by(User.id)
         
-        # Use days_count as a proxy for the total period if not easily calculable
-        # Or calculate more accurately
         total_period_days = days_count
         if start_date_str and end_date_str:
             s_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -407,6 +397,36 @@ def get_public_setter_stats():
         })
     res["time_series"] = time_series
     
+    return res
+
+
+@bp.route('/public/setter-stats', methods=['GET'])
+def get_public_setter_stats():
+    """Returns aggregated stats for setters with sum/avg support and comparison."""
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    setter_id = request.args.get('setter_id')
+    agg_type = request.args.get('agg_type', 'sum') # 'sum' or 'avg'
+    compare = request.args.get('compare') == 'true'
+
+    res = _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type)
+
+    if compare and start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            duration_days = (end_date - start_date).days + 1
+            
+            prev_start_date = start_date - timedelta(days=duration_days)
+            prev_end_date = start_date - timedelta(days=1)
+            
+            prev_start_str = prev_start_date.strftime('%Y-%m-%d')
+            prev_end_str = prev_end_date.strftime('%Y-%m-%d')
+            
+            res['comparison'] = _compute_setter_stats(prev_start_str, prev_end_str, setter_id, agg_type)
+        except Exception as e:
+            pass
+
     return jsonify(res), 200
 @bp.route('/public/setter-reports', methods=['GET'])
 def get_public_setter_reports():

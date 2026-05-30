@@ -18,10 +18,11 @@ const ConversationalStatsTab = () => {
   const [ads, setAds] = useState([]);
   const [showManager, setShowManager] = useState(false);
 
-  // Filtros principales
+  // Filtros principales y comparación
   const [period, setPeriod] = useState('this_month'); // Default "Mes"
   const [category, setCategory] = useState('all');
   const [adId, setAdId] = useState('');
+  const [compare, setCompare] = useState(false);
   const [customRange, setCustomRange] = useState({
     start: new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -33,7 +34,7 @@ const ConversationalStatsTab = () => {
 
   useEffect(() => {
     fetchStats();
-  }, [period, category, adId, customRange]);
+  }, [period, category, adId, customRange, compare]);
 
   const fetchAds = async () => {
     try {
@@ -52,6 +53,7 @@ const ConversationalStatsTab = () => {
       const params = {};
       if (category !== 'all') params.category = category;
       if (adId) params.ad_id = adId;
+      if (compare) params.compare = 'true';
 
       if (period === 'custom') {
         params.start_date = customRange.start;
@@ -72,6 +74,16 @@ const ConversationalStatsTab = () => {
 
   const kpis = data?.kpis || {};
   const table = data?.table || [];
+
+  // Mapear tabla anterior para las tablas de openings/seguimientos
+  const comparisonMap = useMemo(() => {
+    if (!data?.comparison?.table) return {};
+    const map = {};
+    data.comparison.table.forEach(row => {
+      map[row.message_id] = row;
+    });
+    return map;
+  }, [data]);
 
   // Dividir la tabla en Openings (Cualificación / Dolor) y Seguimientos (Seguimiento)
   const openings = useMemo(() => {
@@ -100,6 +112,31 @@ const ConversationalStatsTab = () => {
   const globalTotalSends = useMemo(() => {
     return table.reduce((acc, curr) => acc + curr.total_sends, 0);
   }, [table]);
+
+  // Helper para variaciones
+  const renderChange = (current, previous) => {
+    if (!compare || previous === undefined || previous === null) return null;
+    const curVal = typeof current === 'number' ? current : parseFloat(String(current).replace(/,/g, '')) || 0;
+    const prevVal = typeof previous === 'number' ? previous : parseFloat(String(previous).replace(/,/g, '')) || 0;
+
+    if (prevVal === 0) {
+      return (
+        <span className={`text-[9px] font-black uppercase ${curVal > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+          {curVal > 0 ? '+100%' : '0%'}
+        </span>
+      );
+    }
+
+    const diff = ((curVal - prevVal) / prevVal) * 100;
+    const sign = diff > 0 ? '+' : '';
+    const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
+
+    return (
+      <span className={`text-[9px] font-black uppercase ${color}`}>
+        {sign}{diff.toFixed(1)}%
+      </span>
+    );
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -189,6 +226,25 @@ const ConversationalStatsTab = () => {
             <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
           </div>
 
+          {/* Switch de Comparación */}
+          <div className="flex items-center gap-2.5 bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Comparar</span>
+            <button
+              onClick={() => setCompare(!compare)}
+              type="button"
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none ${
+                compare ? 'bg-indigo-600 shadow-lg shadow-indigo-500/20' : 'bg-slate-900 border border-slate-800'
+              }`}
+            >
+              <motion.span
+                layout
+                className="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-md"
+                animate={{ x: compare ? 16 : 2 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              />
+            </button>
+          </div>
+
           {/* Botones de acción */}
           <button
             onClick={() => setShowManager(true)}
@@ -230,6 +286,12 @@ const ConversationalStatsTab = () => {
               <div>
                 <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_sends)}</h3>
                 <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Prom. diario: {fmt(kpis.daily_avg_sends)}</p>
+                {compare && data?.comparison?.kpis && (
+                  <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
+                    {renderChange(kpis.total_sends, data.comparison.kpis.total_sends)}
+                    <span className="text-[8px] text-slate-500 font-bold uppercase">Anterior: {fmt(data.comparison.kpis.total_sends)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -244,6 +306,12 @@ const ConversationalStatsTab = () => {
               <div>
                 <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_responses)}</h3>
                 <p className="text-[9px] text-pink-400 font-black uppercase mt-1">Tasa de respuesta: {kpis.global_response_rate}%</p>
+                {compare && data?.comparison?.kpis && (
+                  <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
+                    {renderChange(kpis.total_responses, data.comparison.kpis.total_responses)}
+                    <span className="text-[8px] text-slate-500 font-bold uppercase">Anterior: {fmt(data.comparison.kpis.total_responses)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -260,6 +328,12 @@ const ConversationalStatsTab = () => {
                 <p className="text-[9px] text-blue-400 font-black uppercase mt-1">
                   Tasa de conversión: {pct(kpis.total_responses, kpis.total_sends)}
                 </p>
+                {compare && data?.comparison?.kpis && (
+                  <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
+                    {renderChange(kpis.total_responses, data.comparison.kpis.total_responses)}
+                    <span className="text-[8px] text-slate-500 font-bold uppercase">Anterior: {fmt(data.comparison.kpis.total_responses)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -274,6 +348,12 @@ const ConversationalStatsTab = () => {
               <div>
                 <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_leads)}</h3>
                 <p className="text-[9px] text-violet-400 font-black uppercase mt-1">Tasa de cualificación: {kpis.global_qualification_rate}%</p>
+                {compare && data?.comparison?.kpis && (
+                  <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
+                    {renderChange(kpis.total_leads, data.comparison.kpis.total_leads)}
+                    <span className="text-[8px] text-slate-500 font-bold uppercase">Anterior: {fmt(data.comparison.kpis.total_leads)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -288,6 +368,12 @@ const ConversationalStatsTab = () => {
               <div>
                 <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_agendas)}</h3>
                 <p className="text-[9px] text-emerald-400 font-black uppercase mt-1">Tasa de agenda: {kpis.agenda_rate}%</p>
+                {compare && data?.comparison?.kpis && (
+                  <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
+                    {renderChange(kpis.total_agendas, data.comparison.kpis.total_agendas)}
+                    <span className="text-[8px] text-slate-500 font-bold uppercase">Anterior: {fmt(data.comparison.kpis.total_agendas)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -302,6 +388,12 @@ const ConversationalStatsTab = () => {
               <div>
                 <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_ventas)}</h3>
                 <p className="text-[9px] text-amber-400 font-black uppercase mt-1">Tasa de cierre: {kpis.venta_rate_from_agendas}%</p>
+                {compare && data?.comparison?.kpis && (
+                  <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
+                    {renderChange(kpis.total_ventas, data.comparison.kpis.total_ventas)}
+                    <span className="text-[8px] text-slate-500 font-bold uppercase">Anterior: {fmt(data.comparison.kpis.total_ventas)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -381,9 +473,15 @@ const ConversationalStatsTab = () => {
                               <td className="p-3.5 text-center">
                                 <p className="font-black text-white font-mono">{fmt(row.total_sends)}</p>
                                 <p className="text-[8px] text-slate-500 font-mono mt-0.5">{sendsRel}</p>
+                                {compare && comparisonMap[row.message_id] && (
+                                  <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].total_sends)}</p>
+                                )}
                               </td>
                               <td className="p-3.5 text-center">
                                 <p className="font-black text-white font-mono">{fmt(row.total_responses)}</p>
+                                {compare && comparisonMap[row.message_id] && (
+                                  <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].total_responses)}</p>
+                                )}
                               </td>
                               <td className="p-3.5">
                                 <div className="space-y-1">
@@ -484,9 +582,15 @@ const ConversationalStatsTab = () => {
                               <td className="p-3.5 text-center">
                                 <p className="font-black text-white font-mono">{fmt(row.total_sends)}</p>
                                 <p className="text-[8px] text-slate-500 font-mono mt-0.5">{sendsRel}</p>
+                                {compare && comparisonMap[row.message_id] && (
+                                  <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].total_sends)}</p>
+                                )}
                               </td>
                               <td className="p-3.5 text-center">
                                 <p className="font-black text-white font-mono">{fmt(row.total_responses)}</p>
+                                {compare && comparisonMap[row.message_id] && (
+                                  <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].total_responses)}</p>
+                                )}
                               </td>
                               <td className="p-3.5">
                                 <div className="space-y-1">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { motion } from 'framer-motion';
 import api from '../../services/api';
 import {
     Loader2, BarChart3, DollarSign, CalendarDays, Layers, Users, List, PenTool
@@ -32,7 +33,8 @@ const PublicCloserStatsPage = () => {
         end_date: '',
         agg_type: 'sum',
         time_preset: 'last_days',
-        custom_days: 7
+        custom_days: 7,
+        compare: false
     });
 
     // Cálculo de fechas según preset
@@ -87,6 +89,7 @@ const PublicCloserStatsPage = () => {
             if (filters.start_date) params.append('start_date', filters.start_date);
             if (filters.end_date) params.append('end_date', filters.end_date);
             params.append('agg_type', filters.agg_type);
+            if (filters.compare) params.append('compare', 'true');
 
             const res = await api.get(`/public/closer-stats?${params.toString()}`);
             setStats(res.data);
@@ -211,6 +214,27 @@ const PublicCloserStatsPage = () => {
                             </>
                         )}
 
+                        {/* Switch de Comparación */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Comparación</label>
+                            <div className="flex items-center gap-2.5 bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 min-h-[38px]">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Comparar</span>
+                                <button
+                                    onClick={() => setFilters({ ...filters, compare: !filters.compare })}
+                                    type="button"
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none ${
+                                        filters.compare ? 'bg-violet-600 shadow-lg shadow-violet-600/20' : 'bg-slate-900 border border-slate-750'
+                                    }`}
+                                >
+                                    <motion.span
+                                        layout
+                                        className="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-md"
+                                        animate={{ x: filters.compare ? 16 : 2 }}
+                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                    />
+                                </button>
+                            </div>
+                        </div>
 
                     </div>
                 )}
@@ -224,7 +248,7 @@ const PublicCloserStatsPage = () => {
                 ) : (
                     <>
                         {stats && activeTab === 'performance' && (
-                            <CloserPerformanceTab stats={stats} loading={loading} />
+                            <CloserPerformanceTab stats={stats} loading={loading} compare={filters.compare} />
                         )}
 
                         {/* TAB HISTORIAL DE REPORTES */}
