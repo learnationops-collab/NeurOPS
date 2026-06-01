@@ -23,4 +23,11 @@
     - **Matriz de Tenacidad en Seguimiento (Follow-Up Matrix) [NEW]**:
       - Se implementó una rejilla de alta densidad que resume la tenacidad de los seguimientos (*Qual FU*, *Pain FU*, *Offer FU*, *Link FU*, *Agenda FU*) mostrando los respondidos sobre enviados y una píldora visual con código de colores semafórico (verde para tasas ≥40%, amarillo para ≥15%, rojo para <15%).
     - **Optimización Visual del Funnel**: Se ajustó el layout del gráfico interactivo circular (`FunnelChart`) en un contenedor independiente, unificándolo estéticamente con el tema Dark Glassmorphism.
-
+  - **Reemplazo de Formulario de Google por Formulario Integrado de Ventas para Closers**:
+    - **Frontend (Interfaz Web en React) (`NewSalePage.jsx`) [MODIFY]**:
+      - Se reescribió por completo la página de declaración de ventas manuales de los closers para capturar los datos requeridos exactamente como se reciben en Google Sheets (`Ventas_DB`).
+      - **Autocompletado de Sesión Activa**: Integración de `useAuth` para recuperar de forma automática el correo del Closer logueado y pre-cargar el campo `email_vendedor` de forma predeterminada.
+      - **Carga de Setters Activos**: Se incorporó un llamado asíncrono a `GET /public/active-setters` para poblar un select interactivo dinámico con el listado de Setters del equipo para una atribución de comisiones transparente.
+      - **Autocompletado de Leads Agendados**: Se conservó y optimizó la lista de prospectos agendados recientes de `/closer/sale-metadata` para que, al seleccionarse, autocomplete en caliente el nombre de cliente, Instagram, email de cliente y teléfono del contacto de un solo golpe.
+      - **Sincronización Directa a Google Sheets (Apps Script)**: Modificación de la función `handleSubmit` para realizar un `POST /api/sheets/push?tabla=Ventas_DB` en lugar de la persistencia local heredada anterior. Esto envía los datos de la venta directamente a la hoja de cálculo de Google Sheets de producción y gatilla la sincronización en caliente (`sync_from_sheets`) inmediatamente después, manteniendo toda la base local en perfecta consistencia en tiempo real.
+      - **Estética Dark Glassmorphism Premium**: Rediseño visual adaptado a la paleta de colores del proyecto, incorporando iconos interactivos y transiciones fluidas de enrutamiento con react-hot-toast.

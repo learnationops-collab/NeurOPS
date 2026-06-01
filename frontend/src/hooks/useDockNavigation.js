@@ -15,7 +15,8 @@ import {
     CalendarDays,
     Target,
     Link2Off,
-    Layers
+    Layers,
+    DollarSign
 } from 'lucide-react';
 
 /**
@@ -44,6 +45,7 @@ const useDockNavigation = () => {
             return [
                 { id: 'stats', icon: BarChart3, label: 'Dashboard', path: '/closer/stats' },
                 { id: 'deck', icon: Layers, label: 'Gestión de Leads', path: '/closer/deck' },
+                { id: 'new-sale', icon: DollarSign, label: 'Declarar Venta', path: '/closer/sales/new' },
                 { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/closer/report' },
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' },
                 { id: 'clients', icon: Users, label: 'Clientes', path: '/closer/clients' }

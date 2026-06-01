@@ -219,6 +219,26 @@ function App() {
               }
             />
             <Route
+              path="/closer/sales/new"
+              element={
+                <ProtectedRoute roles={['closer']}>
+                  <MainLayout>
+                    <CloserNewSalePage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/closer/appointments/new"
+              element={
+                <ProtectedRoute roles={['closer']}>
+                  <MainLayout>
+                    <CloserNewAppointmentPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/triage/report"
               element={
                 <ProtectedRoute roles={['triage']}>
