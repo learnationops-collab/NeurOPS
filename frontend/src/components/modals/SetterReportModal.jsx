@@ -57,10 +57,6 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
         // FOLLOW UPS
         follow_up_submitted: '',
         follow_up_responded: '',
-        q1_useful: '',
-        q1_unuseful: '',
-        q2_useful: '',
-        q2_unuseful: '',
         answers: []
     });
 
@@ -134,8 +130,7 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
             'opening_submitted', 'opening_responded', 'funnel_qualification',
             'opening_submitted', 'opening_responded', 'funnel_qualification',
             'funnel_pain', 'funnel_offer', 'funnel_link', 'funnel_agenda',
-            'follow_up_submitted', 'follow_up_responded',
-            'q1_useful', 'q1_unuseful', 'q2_useful', 'q2_unuseful'
+            'follow_up_submitted', 'follow_up_responded'
         ];
 
         let filledFields = 0;
@@ -384,53 +379,7 @@ const SetterReportModal = ({ isOpen, onClose, onSuccess }) => {
 
                             </div>
 
-                            {/* EFICACIA DE PREGUNTAS (REESTRUCTURADO) */}
-                            <div className="space-y-2">
-                                <div className="bg-slate-900 border border-slate-800 shadow-xl rounded-3xl p-6 transition-colors duration-500">
-                                    <SectionHeader icon={HelpCircle} title="Eficacia de Preguntas" colorClass="text-amber-500" isLightMode={false} />
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left border-separate border-spacing-y-2">
-                                            <thead>
-                                                <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                                    <th className="pb-2">Pregunta</th>
-                                                    <th className="pb-2 text-center">Servibles</th>
-                                                    <th className="pb-2 text-center">Inservibles</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {[
-                                                    { label: 'Pregunta 1', keyU: 'q1_useful', keyI: 'q1_unuseful' },
-                                                    { label: 'Pregunta 2', keyU: 'q2_useful', keyI: 'q2_unuseful' }
-                                                ].map((q) => (
-                                                    <tr key={q.label} className="bg-slate-800/20 rounded-2xl overflow-hidden">
-                                                        <td className="p-4 rounded-l-2xl border-y border-l border-slate-700/30">
-                                                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{q.label}</span>
-                                                        </td>
-                                                        <td className="p-4 border-y border-slate-700/30 text-center">
-                                                            <input
-                                                                type="number"
-                                                                className="w-16 bg-slate-800/50 border border-slate-700/50 text-white rounded-xl px-2 py-2 text-center font-black text-amber-500 text-xs focus:ring-2 focus:ring-amber-500 transition-all outline-none"
-                                                                value={formData[q.keyU]}
-                                                                onChange={e => handleFieldChange(q.keyU, e.target.value)}
-                                                                placeholder="0"
-                                                            />
-                                                        </td>
-                                                        <td className="p-4 border-y border-r border-slate-700/30 rounded-r-2xl text-center">
-                                                            <input
-                                                                type="number"
-                                                                className="w-16 bg-slate-800/50 border border-slate-700/50 text-white rounded-xl px-2 py-2 text-center font-black text-slate-400 text-xs focus:ring-2 focus:ring-amber-500 transition-all outline-none"
-                                                                value={formData[q.keyI]}
-                                                                onChange={e => handleFieldChange(q.keyI, e.target.value)}
-                                                                placeholder="0"
-                                                            />
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
+
 
                             {/* QUALITATIVE DATA */}
                             {questions.length > 0 && (

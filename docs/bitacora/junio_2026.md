@@ -23,6 +23,15 @@
     - **Matriz de Tenacidad en Seguimiento (Follow-Up Matrix) [NEW]**:
       - Se implementó una rejilla de alta densidad que resume la tenacidad de los seguimientos (*Qual FU*, *Pain FU*, *Offer FU*, *Link FU*, *Agenda FU*) mostrando los respondidos sobre enviados y una píldora visual con código de colores semafórico (verde para tasas ≥40%, amarillo para ≥15%, rojo para <15%).
     - **Optimización Visual del Funnel**: Se ajustó el layout del gráfico interactivo circular (`FunnelChart`) en un contenedor independiente, unificándolo estéticamente con el tema Dark Glassmorphism.
+  - **Eliminación del Discovery (Preguntas Bot) y Sustitución por KPI de Negocio**:
+    - **Simplificación del Reporte Diario de Setters (`PublicSetterReportPage.jsx`, `SetterReportModal.jsx` y `SetterReportModal.jsx` de components) [MODIFY]**:
+      - Se eliminaron por completo las variables `q1_useful`, `q1_unuseful`, `q2_useful`, `q2_unuseful` y el bloque JSX de *"Eficacia de Preguntas"* del formulario de reporte diario, eliminando esta carga de datos obsoleta e inútil para los Setters.
+    - **KPI Calidad de Tráfico (Cualificación %) (`PublicSetterStatsPage.jsx`) [MODIFY]**:
+      - Se reemplazó la Tarjeta 4 de *"Eficacia Discovery"* (que estaba en 0% por ser obsoleta) por un KPI de enorme valor de negocio: **Calidad de Tráfico**.
+      - Este KPI calcula el ratio de Leads Cualificados sobre Leads Reales del periodo de forma dinámica y visualiza el volumen absoluto en píldoras estilizadas, manteniendo además la comparación con el periodo anterior de forma interactiva.
+      - Se removió también la sección inferior redundante de "Calidad de Preguntas".
+    - **Limpieza de Comparaciones (`SetterComparisonView.jsx`) [MODIFY]**:
+      - Se eliminaron las métricas obsoletas de preguntas Q1/Q2 del comparador de Setters, dejando un panel limpio de redundancias.
   - **Reemplazo de Formulario de Google por Formulario Integrado de Ventas para Closers**:
     - **Frontend (Interfaz Web en React) (`NewSalePage.jsx`) [MODIFY]**:
       - Se reescribió por completo la página de declaración de ventas manuales de los closers para capturar los datos requeridos exactamente como se reciben en Google Sheets (`Ventas_DB`).

@@ -73,10 +73,6 @@ const PublicSetterReportPage = () => {
         qualification_opening_responded: '',
         pain_opening_submitted: '',
         pain_opening_responded: '',
-        q1_useful: '',
-        q1_unuseful: '',
-        q2_useful: '',
-        q2_unuseful: '',
         answers: [],
         reflections: {},
         frequent_questions: [{ number: '', is_good: false }]
@@ -161,10 +157,6 @@ const PublicSetterReportPage = () => {
                 qualification_opening_responded: '',
                 pain_opening_submitted: '',
                 pain_opening_responded: '',
-                q1_useful: '',
-                q1_unuseful: '',
-                q2_useful: '',
-                q2_unuseful: '',
                 answers: [],
                 reflections: {}
             }));
@@ -183,8 +175,7 @@ const PublicSetterReportPage = () => {
             'qualification_fu', 'pain_fu', 'offer_fu', 'link_fu', 'agenda_fu',
             'qualification_fur', 'pain_fur', 'offer_fur', 'link_fur', 'agenda_fur',
             'qualification_opening_submitted', 'qualification_opening_responded',
-            'pain_opening_submitted', 'pain_opening_responded',
-            'q1_useful', 'q1_unuseful', 'q2_useful', 'q2_unuseful'
+            'pain_opening_submitted', 'pain_opening_responded'
         ];
 
         let filledFields = 0;
@@ -537,51 +528,6 @@ const PublicSetterReportPage = () => {
                             </div>
                         </div>
 
-                        {/* EFICACIA DE PREGUNTAS (REESTRUCTURADO) */}
-                        <div className="bg-slate-900/70 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] p-8 md:p-12 shadow-2xl border-t-8 border-t-amber-600">
-                            <SectionHeader icon={HelpCircle} title="Eficacia de Preguntas" colorClass="text-amber-400" />
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-separate border-spacing-y-4">
-                                    <thead>
-                                        <tr className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic">
-                                            <th className="text-left pl-6 pb-2">Pregunta</th>
-                                            <th className="text-center pb-2">Respuestas Servibles</th>
-                                            <th className="text-center pb-2">Respuestas Inservibles</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {[
-                                            { label: 'Pregunta 1', keyU: 'q1_useful', keyI: 'q1_unuseful' },
-                                            { label: 'Pregunta 2', keyU: 'q2_useful', keyI: 'q2_unuseful' }
-                                        ].map((q) => (
-                                            <tr key={q.label} className="bg-slate-800/30 rounded-3xl overflow-hidden">
-                                                <td className="p-6 rounded-l-3xl border-y border-l border-slate-800">
-                                                    <span className="text-sm font-black text-slate-200 uppercase italic">{q.label}</span>
-                                                </td>
-                                                <td className="p-6 border-y border-slate-800 text-center">
-                                                    <input
-                                                        type="number"
-                                                        className="w-24 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-center font-black text-amber-400 outline-none focus:ring-4 focus:ring-amber-500/10 shadow-sm text-lg"
-                                                        value={formData[q.keyU]}
-                                                        onChange={e => handleFieldChange(q.keyU, e.target.value)}
-                                                        placeholder="0"
-                                                    />
-                                                </td>
-                                                <td className="p-6 border-y border-r border-slate-800 rounded-r-3xl text-center">
-                                                    <input
-                                                        type="number"
-                                                        className="w-24 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-center font-black text-slate-400 outline-none focus:ring-4 focus:ring-amber-500/10 shadow-sm text-lg"
-                                                        value={formData[q.keyI]}
-                                                        onChange={e => handleFieldChange(q.keyI, e.target.value)}
-                                                        placeholder="0"
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
 
                         {/* BOTTOM SECTION: QUALITATIVE FEEDBACK (DAILY REFLECTION) */}
                         <div className="bg-slate-900/70 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] p-8 md:p-12 shadow-2xl border-t-8 border-t-teal-600">

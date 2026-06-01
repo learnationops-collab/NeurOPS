@@ -32,12 +32,6 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
     const [fixedStats, setFixedStats] = useState({ not_lead: '' });
     const [funnelStats, setFunnelStats] = useState({});
     const [answers, setAnswers] = useState({});
-    const [extraStats, setExtraStats] = useState({
-        q1_useful: '',
-        q1_unuseful: '',
-        q2_useful: '',
-        q2_unuseful: ''
-    });
 
     useEffect(() => {
         if (isOpen) {
@@ -69,24 +63,11 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
                 });
                 setFunnelStats(updatedFunnel);
                 setAnswers({ ...(existingReport.answers || {}), ...(existingReport.reflections || {}) });
-                
-                setExtraStats({
-                    q1_useful: existingReport.fixed_stats.q1_useful || '',
-                    q1_unuseful: existingReport.fixed_stats.q1_unuseful || '',
-                    q2_useful: existingReport.fixed_stats.q2_useful || '',
-                    q2_unuseful: existingReport.fixed_stats.q2_unuseful || ''
-                });
             } else {
                 setFormData({ date: reportDate || new Date().toISOString().split('T')[0] });
                 setFixedStats({ not_lead: '' });
                 setFunnelStats(initialFunnel);
                 setAnswers({});
-                setExtraStats({
-                    q1_useful: '',
-                    q1_unuseful: '',
-                    q2_useful: '',
-                    q2_unuseful: ''
-                });
             }
         } catch (err) {
             console.error("Error initializing report modal:", err);
@@ -110,10 +91,6 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
 
     const handleAnswerChange = (qId, value) => {
         setAnswers(prev => ({ ...prev, [qId]: value }));
-    };
-
-    const handleExtraChange = (field, value) => {
-        setExtraStats(prev => ({ ...prev, [field]: value }));
     };
 
     const handleSubmit = async (e) => {
@@ -143,7 +120,6 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
             await api.post('/setter/daily-report', {
                 date: formData.date,
                 ...fixedStats,
-                ...extraStats,
                 funnel_metrics: funnelMetricsList,
                 answers: answersList,
                 reflections: reflectionAnswers

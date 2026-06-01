@@ -567,32 +567,32 @@ const PublicSetterStatsPage = () => {
                                             </div>
                                         </div>
 
-                                        {/* TARJETA 4: EFICACIA DEL DISCOVERY (Utilidad Preguntas Bot) */}
+                                        {/* TARJETA 4: CALIDAD DE TRÁFICO (Cualificados sobre Leads Reales) */}
                                         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
                                             <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
                                                 <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-amber-500" />
                                             </div>
                                             <div className="flex items-start justify-between relative z-10">
                                                 <div className="space-y-1 text-left">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Eficacia Discovery</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Calidad de Tráfico</p>
                                                     <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                                                        {((stats.percentages.questions.q1_useful + stats.percentages.questions.q2_useful) / 2).toFixed(1)}%
+                                                        {div(stats.totals.funnel_qualification, stats.totals.leads)}%
                                                     </h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
                                                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30">
-                                                            P1: {stats.percentages.questions.q1_useful.toFixed(0)}%
+                                                            Qual: {stats.totals.funnel_qualification}
                                                         </span>
-                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30">
-                                                            P2: {stats.percentages.questions.q2_useful.toFixed(0)}%
+                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-slate-400 bg-slate-500/10 border border-slate-500/30">
+                                                            Leads: {stats.totals.leads}
                                                         </span>
                                                     </div>
                                                     {renderComparisonSubdataLeft(
-                                                        ((stats.percentages.questions.q1_useful + stats.percentages.questions.q2_useful) / 2),
-                                                        ((stats.comparison?.percentages?.questions?.q1_useful + stats.comparison?.percentages?.questions?.q2_useful) / 2)
+                                                        div(stats.totals.funnel_qualification, stats.totals.leads),
+                                                        div(stats.comparison?.totals?.funnel_qualification, stats.comparison?.totals?.leads)
                                                     )}
                                                 </div>
                                                 <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-amber-400 shrink-0">
-                                                    <Zap size={18} />
+                                                    <Target size={18} />
                                                 </div>
                                             </div>
                                         </div>
@@ -706,35 +706,6 @@ const PublicSetterStatsPage = () => {
 
                                     </div>
 
-                                    {/* MINIMALIST EFFICACY SECTION */}
-                                    <div className="mt-12 pt-10 border-t border-slate-800">
-                                        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
-                                                    <Zap size={16} />
-                                                </div>
-                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Calidad de Preguntas</h4>
-                                            </div>
-                                            
-                                            <div className="flex-1 grid grid-cols-2 gap-4 w-full">
-                                                {[
-                                                    { id: 'q1', label: 'P1', metrics: stats?.percentages?.questions ? { total: stats.percentages.questions.q1_total, pct: stats.percentages.questions.q1_useful } : null },
-                                                    { id: 'q2', label: 'P2', metrics: stats?.percentages?.questions ? { total: stats.percentages.questions.q2_total, pct: stats.percentages.questions.q2_useful } : null }
-                                                ].map((q) => (
-                                                    <div key={q.id} className="flex items-center justify-between px-6 py-4 bg-slate-950/50 rounded-2xl border border-slate-800 group hover:bg-slate-900 hover:shadow-sm transition-all duration-300">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-[10px] font-black text-amber-500 bg-amber-500/10 w-6 h-6 flex items-center justify-center rounded-lg">{q.label}</span>
-                                                            <span className="text-sm font-black text-white italic">{Number(q.metrics?.pct || 0).toFixed(1)}%</span>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <span className="text-[8px] font-black text-slate-600 uppercase tracking-tighter block leading-none mb-1">Total Resp</span>
-                                                            <span className="text-xs font-black text-slate-400 leading-none">{Number(q.metrics?.total || 0).toFixed(0)}</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
 
                                     {/* SECCIÓN: HISTÓRICO DENTRO DE FUNNEL */}
                                     <div className="bg-slate-900 rounded-[2.5rem] p-8 mt-10 border border-slate-800 shadow-2xl relative overflow-hidden">
