@@ -656,17 +656,18 @@ const PeriodSpendTab = ({ campaigns }) => {
             <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between">
                     <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Período de Inversión</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha de Inversión</label>
                         <div className="flex items-center gap-2">
-                            <input type="date" className="px-5 py-3 w-40 bg-slate-900 border border-slate-700/50 rounded-xl text-white font-bold" value={selectedStartDate} onChange={e => setSelectedStartDate(e.target.value)} />
-                            <span className="text-slate-500 font-bold">-</span>
-                            <input type="date" className="px-5 py-3 w-40 bg-slate-900 border border-slate-700/50 rounded-xl text-white font-bold" value={selectedEndDate} onChange={e => setSelectedEndDate(e.target.value)} />
+                            <input type="date" className="px-5 py-3 w-48 bg-slate-900 border border-slate-700/50 rounded-xl text-white font-bold" value={selectedStartDate} onChange={e => {
+                                setSelectedStartDate(e.target.value);
+                                setSelectedEndDate(e.target.value);
+                            }} />
                         </div>
                     </div>
                     <div className="text-right">
                         <div className="flex flex-col items-end gap-2">
                             <div>
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total del Período</p>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total del Día</p>
                                 <p className="text-3xl font-black text-amber-400">${periodTotal.toFixed(2)}</p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -796,7 +797,7 @@ const PeriodSpendTab = ({ campaigns }) => {
 
                     <div className="pt-4">
                         <button onClick={handleSaveAll} disabled={saving} className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white py-4 rounded-2xl font-black uppercase text-sm tracking-[0.15em] transition-all shadow-xl shadow-amber-600/20 flex items-center justify-center gap-3">
-                            {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />} {saving ? 'Guardando...' : 'Guardar Inversión del Período'}
+                            {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />} {saving ? 'Guardando...' : 'Guardar Inversión'}
                         </button>
                     </div>
                 </div>
@@ -924,7 +925,7 @@ const AdManagementPage = () => {
 
     const tabs = [
         { key: 'ads', label: 'Estructura', icon: Layers },
-        { key: 'spend', label: 'Inversión (Períodos)', icon: DollarSign },
+        { key: 'spend', label: 'Inversión', icon: DollarSign },
         { key: 'ads_dashboard', label: 'Rend. por Anuncio', icon: Users },
         { key: 'webhooks', label: 'Webhooks', icon: Radio },
     ];
