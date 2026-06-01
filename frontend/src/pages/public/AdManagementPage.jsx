@@ -512,8 +512,7 @@ const PeriodSpendTab = ({ campaigns }) => {
     const loadHistory = async () => {
         setLoadingHistory(true);
         try {
-            const end = new Date(); const start = new Date(); start.setDate(start.getDate() - 30);
-            const res = await api.get('/public/ads/period-spend', { params: { start_date: start.toISOString().split('T')[0], end_date: end.toISOString().split('T')[0] } });
+            const res = await api.get('/public/ads/period-spend');
             setHistory(res.data);
         } catch (err) {} finally { setLoadingHistory(false); }
     };
