@@ -37,24 +37,30 @@ const PublicFinancialSalesPage = () => {
     const [totalSalesAmount, setTotalSalesAmount] = useState(0);
     const [sourcesBreakdown, setSourcesBreakdown] = useState([]);
     const [customPercentage, setCustomPercentage] = useState(10); // default 10%
+    const [agendaBreakdown, setAgendaBreakdown] = useState(null);
+    const [paymentTypesBreakdown, setPaymentTypesBreakdown] = useState([]);
+    const [uniquePaymentTypes, setUniquePaymentTypes] = useState([]);
     
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_financial_sales', {
         searchTerm: '',
         startDate: getFirstDayOfCurrentMonth(),
-        endDate: getTodayDate()
+        endDate: getTodayDate(),
+        tipoPago: ''
     });
 
-    const { searchTerm, startDate, endDate } = filters;
+    const { searchTerm, startDate, endDate, tipoPago } = filters;
     const setSearchTerm = (val) => setFilters({ searchTerm: val });
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
+    const setTipoPago = (val) => setFilters({ tipoPago: val });
 
     // Forzar inicio en el mes actual si los filtros cargados de localStorage están vacíos
     useEffect(() => {
         if (!startDate || !endDate) {
             setFilters({
                 startDate: startDate || getFirstDayOfCurrentMonth(),
-                endDate: endDate || getTodayDate()
+                endDate: endDate || getTodayDate(),
+                tipoPago: tipoPago || ''
             });
         }
     }, [startDate, endDate]);
@@ -78,7 +84,8 @@ const PublicFinancialSalesPage = () => {
                     limit: 10,
                     search: searchTerm,
                     start_date: startDate,
-                    end_date: endDate
+                    end_date: endDate,
+                    tipo_pago: tipoPago
                 }
             });
             const newSales = res.data.data || [];
@@ -97,6 +104,9 @@ const PublicFinancialSalesPage = () => {
             // Atribuir valores agregados retornados del backend
             setTotalSalesAmount(res.data.total_monto || 0);
             setSourcesBreakdown(res.data.sources_breakdown || []);
+            setAgendaBreakdown(res.data.agenda_breakdown || null);
+            setPaymentTypesBreakdown(res.data.payment_types_breakdown || []);
+            setUniquePaymentTypes(res.data.unique_payment_types || []);
         } catch (error) {
             toast.error('Error al cargar las ventas');
             console.error(error);
@@ -113,7 +123,7 @@ const PublicFinancialSalesPage = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, startDate, endDate]);
+    }, [searchTerm, startDate, endDate, tipoPago]);
 
     // Observador para scroll infinito
     useEffect(() => {
@@ -206,6 +216,25 @@ const PublicFinancialSalesPage = () => {
                         />
                     </div>
 
+                    <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-2 rounded-xl">
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Pago:</span>
+                        <select
+                            value={tipoPago}
+                            onChange={(e) => setTipoPago(e.target.value)}
+                            className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer max-w-[130px] pr-8 focus:ring-0"
+                        >
+                            <option value="" className="bg-slate-900 text-white">Todos</option>
+                            {uniquePaymentTypes
+                                .sort((a, b) => a.localeCompare(b))
+                                .map((type) => (
+                                    <option key={type} value={type} className="bg-slate-900 text-white">
+                                        {type}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                    </div>
+
                     <div className="relative flex-1 md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
@@ -227,6 +256,138 @@ const PublicFinancialSalesPage = () => {
                     </button>
                 </div>
             </div>
+
+            {/* KPIs Panels */}
+            {agendaBreakdown && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* KPI 1: Cash Collect por Agendas */}
+                    <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 space-y-6 relative overflow-hidden bg-slate-900/40 backdrop-blur-md">
+                        <div className="space-y-1">
+                            <h2 className="text-lg font-black text-white italic tracking-tight uppercase flex items-center gap-2">
+                                <Users className="text-indigo-400" size={18} />
+                                Atribución por Agendas
+                            </h2>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wide">
+                                Total del Período: <span className="text-emerald-400 font-black text-sm">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalSalesAmount)} USD</span>
+                            </p>
+                        </div>
+
+                        {(() => {
+                            const total = agendaBreakdown.con_agenda.total_monto + agendaBreakdown.sin_agenda.total_monto;
+                            const pctCon = total > 0 ? (agendaBreakdown.con_agenda.total_monto / total) * 100 : 0;
+                            const pctSin = total > 0 ? (agendaBreakdown.sin_agenda.total_monto / total) * 100 : 0;
+                            return (
+                                <div className="space-y-4">
+                                    <div className="flex h-3.5 w-full rounded-full bg-slate-950 overflow-hidden shadow-inner border border-slate-800/40">
+                                        {pctCon > 0 && (
+                                            <div
+                                                style={{ width: `${pctCon}%` }}
+                                                className="h-full bg-gradient-to-r from-violet-500 to-indigo-600 transition-all duration-500"
+                                                title={`Con Agenda: ${pctCon.toFixed(1)}%`}
+                                            />
+                                        )}
+                                        {pctSin > 0 && (
+                                            <div
+                                                style={{ width: `${pctSin}%` }}
+                                                className="h-full bg-gradient-to-r from-slate-600 to-slate-500 transition-all duration-500"
+                                                title={`Sin Agenda / Orgánico: ${pctSin.toFixed(1)}%`}
+                                            />
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition-all">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <span className="w-2 h-2 rounded-full bg-violet-500" />
+                                                    Con Agenda
+                                                </span>
+                                                <span className="text-[10px] font-black text-slate-500">{pctCon.toFixed(1)}%</span>
+                                            </div>
+                                            <div className="flex justify-between items-baseline mt-1">
+                                                <span className="text-[10px] text-slate-500 font-bold uppercase">{agendaBreakdown.con_agenda.count} {agendaBreakdown.con_agenda.count === 1 ? 'venta' : 'ventas'}</span>
+                                                <span className="text-lg font-black text-violet-400 italic">
+                                                    ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(agendaBreakdown.con_agenda.total_monto)}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition-all">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <span className="w-2 h-2 rounded-full bg-slate-500" />
+                                                    Sin Agenda
+                                                </span>
+                                                <span className="text-[10px] font-black text-slate-500">{pctSin.toFixed(1)}%</span>
+                                            </div>
+                                            <div className="flex justify-between items-baseline mt-1">
+                                                <span className="text-[10px] text-slate-500 font-bold uppercase">{agendaBreakdown.sin_agenda.count} {agendaBreakdown.sin_agenda.count === 1 ? 'venta' : 'ventas'}</span>
+                                                <span className="text-lg font-black text-slate-400 italic">
+                                                    ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(agendaBreakdown.sin_agenda.total_monto)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </Card>
+
+                    {/* KPI 2: Cash Collect por Tipo de Pago */}
+                    <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 space-y-4 relative overflow-hidden bg-slate-900/40 backdrop-blur-md">
+                        <div className="space-y-1">
+                            <h2 className="text-lg font-black text-white italic tracking-tight uppercase flex items-center gap-2">
+                                <DollarSign className="text-emerald-400" size={18} />
+                                Cash Collect por Tipo de Pago
+                            </h2>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wide">
+                                Formatos de Recaudación Activos
+                            </p>
+                        </div>
+
+                        <div className="max-h-[160px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                            {paymentTypesBreakdown
+                                .sort((a, b) => b.total_monto - a.total_monto)
+                                .map((pt) => {
+                                    const pct = totalSalesAmount > 0 ? (pt.total_monto / totalSalesAmount) * 100 : 0;
+                                    
+                                    let payColor = "text-sky-400 bg-sky-500/10 border-sky-500/20";
+                                    const norm = pt.tipo_pago.toLowerCase();
+                                    if (norm.includes("completo") || norm.includes("pif") || norm.includes("learner")) {
+                                        payColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+                                    } else if (norm.includes("seña") || norm.includes("sena")) {
+                                        payColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+                                    } else if (norm.includes("cuota")) {
+                                        payColor = "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20";
+                                    } else if (norm.includes("parcial") || norm.includes("split")) {
+                                        payColor = "text-violet-400 bg-violet-500/10 border-violet-500/20";
+                                    }
+
+                                    return (
+                                        <div key={pt.tipo_pago} className="flex items-center justify-between bg-slate-950/30 border border-slate-900 p-2.5 rounded-xl hover:border-slate-800 transition-all">
+                                            <div className="flex items-center gap-2.5">
+                                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${payColor}`}>
+                                                    {pt.tipo_pago}
+                                                </span>
+                                                <span className="text-[10px] text-slate-500 font-bold uppercase">
+                                                    {pt.count} {pt.count === 1 ? 'Venta' : 'Ventas'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xs text-slate-500 font-black tracking-tighter">
+                                                    {pct.toFixed(0)}%
+                                                </span>
+                                                <span className="text-sm font-black text-white italic">
+                                                    ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(pt.total_monto)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                        </div>
+                    </Card>
+                </div>
+            )}
 
             {/* Sales breakdown by source (setter) */}
             {sourcesBreakdown.length > 0 && (

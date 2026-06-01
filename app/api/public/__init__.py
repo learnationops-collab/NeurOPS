@@ -531,6 +531,7 @@ def get_financial_sales():
     search = request.args.get('search', default='', type=str).strip()
     start_date_str = request.args.get('start_date', default='', type=str).strip()
     end_date_str = request.args.get('end_date', default='', type=str).strip()
+    tipo_pago = request.args.get('tipo_pago', default='', type=str).strip()
     
     query = FinancialSale.query
     if search:
@@ -556,6 +557,9 @@ def get_financial_sales():
             query = query.filter(FinancialSale.date <= end_date)
         except ValueError:
             pass
+
+    if tipo_pago:
+        query = query.filter(FinancialSale.tipo_pago == tipo_pago)
             
     query = query.order_by(FinancialSale.date.desc())
     
@@ -582,6 +586,76 @@ def get_financial_sales():
                 "count": count,
                 "total_monto": float(total_source_monto or 0.0)
             })
+
+        # Calculate Cash Collect by Agendas (Con Setter vs Sin Setter)
+        monto_con_agenda = db.session.query(func.sum(FinancialSale.monto)).filter(
+            FinancialSale.id.in_(subquery),
+            FinancialSale.setter.isnot(None),
+            FinancialSale.setter != '',
+            FinancialSale.setter != 'Sin Setter',
+            FinancialSale.setter != 'Confirmada'
+        ).scalar() or 0.0
+
+        count_con_agenda = db.session.query(func.count(FinancialSale.id)).filter(
+            FinancialSale.id.in_(subquery),
+            FinancialSale.setter.isnot(None),
+            FinancialSale.setter != '',
+            FinancialSale.setter != 'Sin Setter',
+            FinancialSale.setter != 'Confirmada'
+        ).scalar() or 0
+
+        monto_sin_agenda = db.session.query(func.sum(FinancialSale.monto)).filter(
+            FinancialSale.id.in_(subquery),
+            or_(
+                FinancialSale.setter.is_(None),
+                FinancialSale.setter == '',
+                FinancialSale.setter == 'Sin Setter',
+                FinancialSale.setter == 'Confirmada'
+            )
+        ).scalar() or 0.0
+
+        count_sin_agenda = db.session.query(func.count(FinancialSale.id)).filter(
+            FinancialSale.id.in_(subquery),
+            or_(
+                FinancialSale.setter.is_(None),
+                FinancialSale.setter == '',
+                FinancialSale.setter == 'Sin Setter',
+                FinancialSale.setter == 'Confirmada'
+            )
+        ).scalar() or 0
+
+        agenda_breakdown = {
+            "con_agenda": {
+                "total_monto": float(monto_con_agenda),
+                "count": count_con_agenda
+            },
+            "sin_agenda": {
+                "total_monto": float(monto_sin_agenda),
+                "count": count_sin_agenda
+            }
+        }
+
+        # Calculate Cash Collect by Payment Type
+        payment_type_query = db.session.query(
+            FinancialSale.tipo_pago,
+            func.count(FinancialSale.id),
+            func.sum(FinancialSale.monto)
+        ).filter(
+            FinancialSale.id.in_(subquery)
+        ).group_by(FinancialSale.tipo_pago).all()
+
+        payment_types_breakdown = []
+        for tp, count, total_tp_monto in payment_type_query:
+            payment_types_breakdown.append({
+                "tipo_pago": tp or "No Especificado",
+                "count": count,
+                "total_monto": float(total_tp_monto or 0.0)
+            })
+
+        # Fetch unique payment types globally for filter populating
+        unique_payment_types = [
+            r[0] for r in db.session.query(FinancialSale.tipo_pago).distinct().all() if r[0]
+        ]
             
         return jsonify({
             "data": [s.to_dict() for s in sales_pagination.items],
@@ -590,7 +664,10 @@ def get_financial_sales():
             "pages": sales_pagination.pages,
             "has_more": sales_pagination.has_next,
             "total_monto": float(total_monto),
-            "sources_breakdown": sources_breakdown
+            "sources_breakdown": sources_breakdown,
+            "agenda_breakdown": agenda_breakdown,
+            "payment_types_breakdown": payment_types_breakdown,
+            "unique_payment_types": unique_payment_types
         }), 200
     else:
         sales = query.all()

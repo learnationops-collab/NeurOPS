@@ -40,3 +40,13 @@
       - **Autocompletado de Leads Agendados**: Se conservó y optimizó la lista de prospectos agendados recientes de `/closer/sale-metadata` para que, al seleccionarse, autocomplete en caliente el nombre de cliente, Instagram, email de cliente y teléfono del contacto de un solo golpe.
       - **Sincronización Directa a Google Sheets (Apps Script)**: Modificación de la función `handleSubmit` para realizar un `POST /api/sheets/push?tabla=Ventas_DB` en lugar de la persistencia local heredada anterior. Esto envía los datos de la venta directamente a la hoja de cálculo de Google Sheets de producción y gatilla la sincronización en caliente (`sync_from_sheets`) inmediatamente después, manteniendo toda la base local en perfecta consistencia en tiempo real.
       - **Estética Dark Glassmorphism Premium**: Rediseño visual adaptado a la paleta de colores del proyecto, incorporando iconos interactivos y transiciones fluidas de enrutamiento con react-hot-toast.
+  - **KPIs y Filtros del Registro de Ventas para Closers (`PublicFinancialSalesPage.jsx`) [MODIFY]**:
+    - **Filtro Interactivo por Tipo de Pago**:
+      - **API (Backend)**: Modificación del endpoint `GET /public/financial-sales` en `app/api/public/__init__.py` para capturar el parámetro `tipo_pago` y filtrar la consulta de base de datos de manera reactiva por dicho tipo de pago.
+      - **Interfaz (Frontend)**: Integración de un dropdown de selección de alta gama para "Pago" en el panel de filtros superiores. Este dropdown se puebla automáticamente con la lista dinámica de tipos de pago (`unique_payment_types`) devueltos por el backend, permitiendo alternar filtros al instante.
+    - **KPI de Cash Collect por Agendas (Atribución)**:
+      - Implementación de un panel de KPI premium con diseño Dark Glassmorphism que calcula en caliente el dinero recaudado a través de citas generadas por Setters (Con Agenda) vs Ventas Directas Orgánicas (Sin Agenda) sobre todo el período seleccionado.
+      - Integración de una hermosa barra de progreso segmentada de dos tonos que indica el porcentaje y el conteo de ventas por cada tipo de atribución.
+    - **KPI de Cash Collect por Tipo de Pago**:
+      - Creación de un panel de desglose dinámico que agrupa la recaudación según el formato de pago registrado (`Completo`, `Parcial`, `Seña`, `Cuota`, etc.).
+      - Diseñado con píldoras de colores semafóricos HSL que clasifican las transacciones y proporcionan métricas claras sobre la distribución financiera de las ventas.
