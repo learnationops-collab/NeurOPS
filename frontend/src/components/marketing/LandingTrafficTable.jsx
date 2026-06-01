@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
     Activity, 
     RefreshCw, 
@@ -58,6 +58,8 @@ const LandingTrafficTable = () => {
     const [visits, setVisits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [visibleCount, setVisibleCount] = useState(10);
+    const sentinelRef = useRef(null);
     
     // Estados de filtrado por fechas (predeterminado: últimos 7 días)
     const [preset, setPreset] = useState('Últimos 7 días');
@@ -124,6 +126,34 @@ const LandingTrafficTable = () => {
         (v.utm_campaign?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (v.utm_medium?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
+
+    // Restablecer el contador al cambiar filtros o búsqueda
+    useEffect(() => {
+        setVisibleCount(10);
+    }, [searchTerm, startDate, endDate]);
+
+    // Visitas que se muestran actualmente (paginadas)
+    const displayedVisits = useMemo(() => {
+        return filteredVisits.slice(0, visibleCount);
+    }, [filteredVisits, visibleCount]);
+
+    // Lógica del IntersectionObserver para el scroll infinito
+    useEffect(() => {
+        if (loading || filteredVisits.length <= visibleCount) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                setVisibleCount(prev => Math.min(prev + 10, filteredVisits.length));
+            }
+        }, { threshold: 0.1 });
+
+        const currentSentinel = sentinelRef.current;
+        if (currentSentinel) observer.observe(currentSentinel);
+
+        return () => {
+            if (currentSentinel) observer.unobserve(currentSentinel);
+        };
+    }, [filteredVisits.length, visibleCount, loading]);
 
     // Agregación de Top Páginas
     const pageStats = useMemo(() => {
@@ -462,7 +492,7 @@ const LandingTrafficTable = () => {
                                 </td>
                             </tr>
                         ) : (
-                            filteredVisits.map((visit) => (
+                            displayedVisits.map((visit) => (
                                 <tr key={visit.id} className="group hover:translate-x-1 transition-all duration-300">
                                     <td className="px-6 py-4 bg-white/[0.02] border-y border-l border-white/5 rounded-l-2xl whitespace-nowrap">
                                         <div className="flex items-center gap-2 text-muted font-medium">
@@ -520,6 +550,15 @@ const LandingTrafficTable = () => {
                         )}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Centinela e indicador de carga para el scroll infinito */}
+            <div ref={sentinelRef} className="w-full">
+                {filteredVisits.length > displayedVisits.length && (
+                    <div className="text-center py-5 text-[10px] font-black text-muted uppercase tracking-[0.2em] animate-pulse border-t border-white/5 mt-4">
+                        Cargando más registros... (Mostrando {displayedVisits.length} de {filteredVisits.length})
+                    </div>
+                )}
             </div>
         </Card>
     );
