@@ -485,158 +485,114 @@ const PublicSetterStatsPage = () => {
                                 {/* GRID PRINCIPAL */}
                                 <div className="space-y-6">
                                     <LeadUnifiedKPI stats={stats} />
-                                    
-                                    {/* 1. TOP ROW: 3 PILARES ESTRATÉGICOS DE SETTERS (C-LEVEL VIEW) */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
+                                                                   {/* 1. TOP ROW: 4 TARJETAS DE IMPACTO Y RENDIMIENTO OPERACIONAL DEL SETTER */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
                                         
-                                        {/* PILAR 1: ATENCIÓN Y APERTURA (CONTACTABILIDAD) */}
-                                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-300">
-                                            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
-                                                <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-indigo-500 group-hover:opacity-20 transition-opacity duration-300" />
+                                        {/* TARJETA 1: AGENDAS TOTALES (Volumen Final) */}
+                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
+                                            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                                                <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-emerald-500" />
                                             </div>
-                                            <div className="flex justify-between items-center relative z-10">
-                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Contacto e Inicio del Embudo</span>
-                                                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
-                                                    <Inbox size={16} />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 relative z-10 text-left">
-                                                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">CONTACTABILIDAD TOTAL</h4>
-                                                <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{stats.totals.entrantes}</h2>
-                                                {renderComparisonSubdataLeft(stats.totals.entrantes, stats.comparison?.totals?.entrantes)}
-                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Leads Recibidos en Inbox</p>
-                                            </div>
-                                            <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
-                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Leads Reales (Prospectos)</span>
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-black text-white tabular-nums">{stats.totals.leads}</span>
-                                                        {renderComparisonSubdata(stats.totals.leads, stats.comparison?.totals?.leads)}
-                                                    </div>
-                                                </div>
-                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa de Apertura (Contactados)</span>
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-black text-indigo-400 tabular-nums">
-                                                            {div(stats.totals.opening_submitted, (stats.totals.entrantes - stats.totals.not_lead))}%
+                                            <div className="flex items-start justify-between relative z-10">
+                                                <div className="space-y-1 text-left">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Agendas Generadas</p>
+                                                    <h3 className="text-4xl font-black text-white italic tracking-tighter">{stats.totals.funnel_agenda}</h3>
+                                                    <div className="flex items-center gap-1.5 mt-2">
+                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30">
+                                                            {div(stats.totals.funnel_agenda, stats.totals.leads)}% conv.
                                                         </span>
-                                                        {renderComparisonSubdata(
-                                                            div(stats.totals.opening_submitted, (stats.totals.entrantes - stats.totals.not_lead)),
-                                                            div(stats.comparison?.totals?.opening_submitted, (stats.comparison?.totals?.entrantes - stats.comparison?.totals?.not_lead))
-                                                        )}
+                                                        <span className="text-[8px] text-slate-500 font-bold uppercase">sobre leads reales</span>
                                                     </div>
+                                                    {renderComparisonSubdataLeft(stats.totals.funnel_agenda, stats.comparison?.totals?.funnel_agenda)}
                                                 </div>
-                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa de Respuesta General</span>
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-black text-emerald-400 tabular-nums">{stats.percentages.rates.opening_response}%</span>
-                                                        {renderComparisonSubdata(
-                                                            stats.percentages.rates.opening_response,
-                                                            stats.comparison?.percentages?.rates?.opening_response
-                                                        )}
-                                                    </div>
+                                                <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-emerald-400 shrink-0">
+                                                    <CalendarDays size={18} />
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* PILAR 2: CALIDAD Y CUALIFICACIÓN (PROSPECCIÓN EFECTIVA) */}
-                                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-violet-500/30 transition-all duration-300">
-                                            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
-                                                <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-violet-500 group-hover:opacity-20 transition-opacity duration-300" />
+                                        {/* TARJETA 2: EFICACIA A CITA (Conversión de Cualificados) */}
+                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
+                                            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                                                <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-violet-500" />
                                             </div>
-                                            <div className="flex justify-between items-center relative z-10">
-                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Cualificación e Interés</span>
-                                                <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-500 border border-violet-500/20">
-                                                    <Target size={16} />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 relative z-10 text-left">
-                                                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">LEADS CUALIFICADOS</h4>
-                                                <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{stats.totals.funnel_qualification}</h2>
-                                                {renderComparisonSubdataLeft(stats.totals.funnel_qualification, stats.comparison?.totals?.funnel_qualification)}
-                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Cumplen el Perfil Ideal</p>
-                                            </div>
-                                            <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
-                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Identificaron Dolor (Avance)</span>
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-black text-violet-400 tabular-nums">{stats.totals.funnel_pain}</span>
-                                                        {renderComparisonSubdata(stats.totals.funnel_pain, stats.comparison?.totals?.funnel_pain)}
-                                                    </div>
-                                                </div>
-                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa Cualificación / Reales</span>
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-black text-emerald-400 tabular-nums">
-                                                            {div(stats.totals.funnel_qualification, stats.totals.leads)}%
+                                            <div className="flex items-start justify-between relative z-10">
+                                                <div className="space-y-1 text-left">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Eficacia a Cita</p>
+                                                    <h3 className="text-4xl font-black text-white italic tracking-tighter">
+                                                        {div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%
+                                                    </h3>
+                                                    <div className="flex items-center gap-1.5 mt-2">
+                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-violet-400 bg-violet-500/10 border border-violet-500/30">
+                                                            {stats.percentages.conversions_to_agenda.opening_to_agenda}%
                                                         </span>
-                                                        {renderComparisonSubdata(
-                                                            div(stats.totals.funnel_qualification, stats.totals.leads),
-                                                            div(stats.comparison?.totals?.funnel_qualification, stats.comparison?.totals?.leads)
-                                                        )}
+                                                        <span className="text-[8px] text-slate-500 font-bold uppercase">de openings a cita</span>
                                                     </div>
+                                                    {renderComparisonSubdataLeft(
+                                                        div(stats.totals.funnel_agenda, stats.totals.funnel_qualification),
+                                                        div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.funnel_qualification)
+                                                    )}
                                                 </div>
-                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Leads (Descartados)</span>
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-black text-rose-400 tabular-nums">{stats.totals.not_lead}</span>
-                                                        {renderComparisonSubdata(stats.totals.not_lead, stats.comparison?.totals?.not_lead)}
-                                                    </div>
+                                                <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-violet-400 shrink-0">
+                                                    <Target size={18} />
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* PILAR 3: RESULTADOS EN CALENDARIO (AGENDAS) */}
-                                        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
-                                            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
-                                                <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-emerald-500 group-hover:opacity-20 transition-opacity duration-300" />
+                                        {/* TARJETA 3: TASA DE REACTIVACIÓN (Follow-Up Response) */}
+                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
+                                            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                                                <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-indigo-500" />
                                             </div>
-                                            <div className="flex justify-between items-center relative z-10">
-                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Cierre del Setter en Calendario</span>
-                                                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                                                    <CalendarDays size={16} />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 relative z-10 text-left">
-                                                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">AGENDAS GENERADAS</h4>
-                                                <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{stats.totals.funnel_agenda}</h2>
-                                                {renderComparisonSubdataLeft(stats.totals.funnel_agenda, stats.comparison?.totals?.funnel_agenda)}
-                                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Citas Agendadas Confirmadas</p>
-                                            </div>
-                                            <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
-                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conversión Total a Agenda</span>
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-black text-emerald-400 tabular-nums">
-                                                            {div(stats.totals.funnel_agenda, stats.totals.leads)}%
+                                            <div className="flex items-start justify-between relative z-10">
+                                                <div className="space-y-1 text-left">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa Follow-Up</p>
+                                                    <h3 className="text-4xl font-black text-white italic tracking-tighter">
+                                                        {stats.percentages.rates.total_fur}%
+                                                    </h3>
+                                                    <div className="flex items-center gap-1.5 mt-2">
+                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/30">
+                                                            {stats.totals.total_fu_r} / {stats.totals.total_fu_s}
                                                         </span>
-                                                        {renderComparisonSubdata(
-                                                            div(stats.totals.funnel_agenda, stats.totals.leads),
-                                                            div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.leads)
-                                                        )}
+                                                        <span className="text-[8px] text-slate-500 font-bold uppercase">respondidos</span>
                                                     </div>
+                                                    {renderComparisonSubdataLeft(
+                                                        stats.percentages.rates.total_fur,
+                                                        stats.comparison?.percentages?.rates?.total_fur
+                                                    )}
                                                 </div>
-                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa FU (Follow-Up Response)</span>
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-black text-indigo-400 tabular-nums">{stats.percentages.rates.total_fur}%</span>
-                                                        {renderComparisonSubdata(
-                                                            stats.percentages.rates.total_fur,
-                                                            stats.comparison?.percentages?.rates?.total_fur
-                                                        )}
-                                                    </div>
+                                                <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-indigo-400 shrink-0">
+                                                    <RefreshCw size={18} />
                                                 </div>
-                                                <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conversión Cualificados a Cita</span>
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-black text-white tabular-nums">
-                                                            {div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%
+                                            </div>
+                                        </div>
+
+                                        {/* TARJETA 4: EFICACIA DEL DISCOVERY (Utilidad Preguntas Bot) */}
+                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
+                                            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                                                <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-amber-500" />
+                                            </div>
+                                            <div className="flex items-start justify-between relative z-10">
+                                                <div className="space-y-1 text-left">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Eficacia Discovery</p>
+                                                    <h3 className="text-4xl font-black text-white italic tracking-tighter">
+                                                        {((stats.percentages.questions.q1_useful + stats.percentages.questions.q2_useful) / 2).toFixed(1)}%
+                                                    </h3>
+                                                    <div className="flex items-center gap-1.5 mt-2">
+                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30">
+                                                            P1: {stats.percentages.questions.q1_useful.toFixed(0)}%
                                                         </span>
-                                                        {renderComparisonSubdata(
-                                                            div(stats.totals.funnel_agenda, stats.totals.funnel_qualification),
-                                                            div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.funnel_qualification)
-                                                        )}
+                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30">
+                                                            P2: {stats.percentages.questions.q2_useful.toFixed(0)}%
+                                                        </span>
                                                     </div>
+                                                    {renderComparisonSubdataLeft(
+                                                        ((stats.percentages.questions.q1_useful + stats.percentages.questions.q2_useful) / 2),
+                                                        ((stats.comparison?.percentages?.questions?.q1_useful + stats.comparison?.percentages?.questions?.q2_useful) / 2)
+                                                    )}
+                                                </div>
+                                                <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-amber-400 shrink-0">
+                                                    <Zap size={18} />
                                                 </div>
                                             </div>
                                         </div>
@@ -644,98 +600,110 @@ const PublicSetterStatsPage = () => {
                                     </div>
                                 </div>
 
-
-
-
-
-                                 {/* SECCIÓN: FUNNEL (REESTRUCTURADO) */}
-                                <MetricSection title="Funnel" icon={TrendingUp}>
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                        {/* Container 1: Leads by Stage */}
-                                        <FunnelSubContainer title="Standings (Leads)" icon={BarChart}>
-                                            <div className="space-y-4">
-                                                <div className="group/f transition-all hover:translate-x-1">
-                                                    <MiniRow label="Cualificación" value={stats.totals.funnel_qualification} colorClass="text-violet-500" tooltipInfo="Leads en etapa de Cualificación." />
-                                                    {renderComparisonSubdataLeft(stats.totals.funnel_qualification, stats.comparison?.totals?.funnel_qualification)}
-                                                    <div className="h-1 w-full bg-violet-500/20 rounded-full mt-1 overflow-hidden">
-                                                        <div className="h-full bg-violet-500" style={{ width: '100%' }} />
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="group/f transition-all hover:translate-x-1">
-                                                    <MiniRow label="Dolor" value={stats.totals.funnel_pain} subValue={`${stats.percentages.funnel_evolution.qual_to_pain}%`} colorClass="text-blue-500" tooltipInfo="Leads avanzados a la etapa de Dolor. Cálculo: (Dolor / Leads Reales)." />
-                                                    {renderComparisonSubdataLeft(stats.totals.funnel_pain, stats.comparison?.totals?.funnel_pain)}
-                                                    <div className="h-1 w-full bg-blue-500/20 rounded-full mt-1 overflow-hidden">
-                                                        <div className="h-full bg-blue-500" style={{ width: `${stats.percentages.funnel_evolution.qual_to_pain}%` }} />
-                                                    </div>
-                                                </div>
-
-                                                <div className="group/f transition-all hover:translate-x-1">
-                                                    <MiniRow label="Oferta" value={stats.totals.funnel_offer} subValue={`${stats.percentages.funnel_evolution.pain_to_offer}%`} colorClass="text-fuchsia-500" tooltipInfo="Leads avanzados a la etapa de Oferta." />
-                                                    {renderComparisonSubdataLeft(stats.totals.funnel_offer, stats.comparison?.totals?.funnel_offer)}
-                                                    <div className="h-1 w-full bg-fuchsia-500/20 rounded-full mt-1 overflow-hidden">
-                                                        <div className="h-full bg-fuchsia-500" style={{ width: `${stats.percentages.funnel_evolution.pain_to_offer}%` }} />
-                                                    </div>
-                                                </div>
-
-                                                <div className="group/f transition-all hover:translate-x-1">
-                                                    <MiniRow label="Link" value={stats.totals.funnel_link} subValue={`${stats.percentages.funnel_evolution.offer_to_link}%`} colorClass="text-indigo-500" tooltipInfo="Leads avanzados a la etapa de Link enviado." />
-                                                    {renderComparisonSubdataLeft(stats.totals.funnel_link, stats.comparison?.totals?.funnel_link)}
-                                                    <div className="h-1 w-full bg-indigo-500/20 rounded-full mt-1 overflow-hidden">
-                                                        <div className="h-full bg-indigo-500" style={{ width: `${stats.percentages.funnel_evolution.offer_to_link}%` }} />
-                                                    </div>
-                                                </div>
-
-                                                <div className="group/f transition-all hover:translate-x-1">
-                                                    <MiniRow label="Agenda" value={stats.totals.funnel_agenda} subValue={`${stats.percentages.funnel_evolution.link_to_agenda}%`} colorClass="text-emerald-500" tooltipInfo="Leads avanzados a la etapa final de Agenda." />
-                                                    {renderComparisonSubdataLeft(stats.totals.funnel_agenda, stats.comparison?.totals?.funnel_agenda)}
-                                                    <div className="h-1 w-full bg-emerald-500/20 rounded-full mt-1 overflow-hidden">
-                                                        <div className="h-full bg-emerald-500" style={{ width: `${stats.percentages.funnel_evolution.link_to_agenda}%` }} />
-                                                    </div>
-                                                </div>
+                                {/* SECCIÓN: ANÁLISIS PROFUNDO DEL EMBUDO Y PÉRDIDAS */}
+                                <MetricSection title="Análisis del Embudo y Conversión" icon={TrendingUp}>
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                                        
+                                        {/* COLUMNA 1: TABLA DE PÉRDIDA DE PASOS DEL EMBUDO (Ancha) */}
+                                        <div className="lg:col-span-5 bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left relative overflow-hidden">
+                                            <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
+                                                <ListChecks size={16} className="text-indigo-400" />
+                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Matriz de Pérdida de Pasos</h4>
                                             </div>
-                                        </FunnelSubContainer>
-
-                                        {/* Container 2: Engagement & Openings */}
-                                        <FunnelSubContainer title="Engagement & Discovery" icon={RefreshCw}>
-                                            <div className="space-y-4">
-                                                <div className="p-4 bg-slate-900 border border-slate-800 rounded-3xl space-y-3">
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Tasa de Respuesta Openings</p>
-                                                    <div className="flex justify-around items-end gap-2">
-                                                        <div className="text-center">
-                                                            <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Qual</p>
-                                                            <p className="text-lg font-black text-fuchsia-500 italic">{stats.percentages.rates.qualification_opening_rate}%</p>
-                                                        </div>
-                                                        <div className="h-8 w-px bg-slate-800" />
-                                                        <div className="text-center">
-                                                            <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Pain</p>
-                                                            <p className="text-lg font-black text-fuchsia-500 italic">{stats.percentages.rates.pain_opening_rate}%</p>
-                                                        </div>
-                                                        <div className="h-8 w-px bg-slate-800" />
-                                                        <div className="text-center">
-                                                            <p className="text-[8px] font-black text-slate-600 uppercase mb-1">Total</p>
-                                                            <p className="text-lg font-black text-fuchsia-400 italic">{stats.percentages.rates.opening_response}%</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2">Follow Ups (R/S)</p>
-                                                    <MiniRow label="Qual FU" value={`${stats.totals.qualification_fur}/${stats.totals.qualification_fu}`} subValue={`${stats.percentages.rates.qualification_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Cualificación: Respondidos / Enviados." />
-                                                    <MiniRow label="Pain FU" value={`${stats.totals.pain_fur}/${stats.totals.pain_fu}`} subValue={`${stats.percentages.rates.pain_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Dolor: Respondidos / Enviados." />
-                                                    <MiniRow label="Offer FU" value={`${stats.totals.offer_fur}/${stats.totals.offer_fu}`} subValue={`${stats.percentages.rates.offer_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Oferta: Respondidos / Enviados." />
-                                                    <MiniRow label="Link FU" value={`${stats.totals.link_fur}/${stats.totals.link_fu}`} subValue={`${stats.percentages.rates.link_fur}%`} colorClass="text-rose-500" tooltipInfo="Seguimientos en Link: Respondidos / Enviados." />
-                                                    <MiniRow label="Agenda FU" value={`${stats.totals.agenda_fur}/${stats.totals.agenda_fu}`} subValue={`${stats.percentages.rates.agenda_fur}%`} colorClass="text-teal-600" tooltipInfo="Seguimientos post-Agenda: Respondidos / Enviados." />
-                                                </div>
+                                            
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left border-collapse text-[11px]">
+                                                    <thead>
+                                                        <tr className="border-b border-slate-800 text-slate-500 font-black uppercase">
+                                                            <th className="pb-3 tracking-wider">Etapa del Embudo</th>
+                                                            <th className="pb-3 text-center tracking-wider">Leads</th>
+                                                            <th className="pb-3 text-center tracking-wider">Paso a Paso</th>
+                                                            <th className="pb-3 text-right tracking-wider">% Total</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-800/40">
+                                                        {[
+                                                            { label: '1. Entrantes (Inbox)', value: stats.totals.entrantes, conv: '-', pct: 100, color: 'bg-rose-500' },
+                                                            { label: '2. Cualificados', value: stats.totals.funnel_qualification, conv: `${div(stats.totals.funnel_qualification, stats.totals.entrantes)}%`, pct: div(stats.totals.funnel_qualification, stats.totals.entrantes), color: 'bg-violet-500' },
+                                                            { label: '3. Dolor Identificado', value: stats.totals.funnel_pain, conv: `${stats.percentages.funnel_evolution.qual_to_pain}%`, pct: div(stats.totals.funnel_pain, stats.totals.entrantes), color: 'bg-blue-500' },
+                                                            { label: '4. Oferta Presentada', value: stats.totals.funnel_offer, conv: `${stats.percentages.funnel_evolution.pain_to_offer}%`, pct: div(stats.totals.funnel_offer, stats.totals.entrantes), color: 'bg-fuchsia-500' },
+                                                            { label: '5. Link de Calendario', value: stats.totals.funnel_link, conv: `${stats.percentages.funnel_evolution.offer_to_link}%`, pct: div(stats.totals.funnel_link, stats.totals.entrantes), color: 'bg-indigo-500' },
+                                                            { label: '6. Cita Agendada', value: stats.totals.funnel_agenda, conv: `${stats.percentages.funnel_evolution.link_to_agenda}%`, pct: div(stats.totals.funnel_agenda, stats.totals.entrantes), color: 'bg-emerald-500' },
+                                                        ].map((row, idx) => (
+                                                            <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                                                <td className="py-3.5 font-bold text-slate-300 uppercase tracking-wider">{row.label}</td>
+                                                                <td className="py-3.5 text-center font-black text-white tabular-nums italic text-sm">{row.value}</td>
+                                                                <td className="py-3.5 text-center tabular-nums">
+                                                                    <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 font-bold text-slate-400">
+                                                                        {row.conv}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-3.5 text-right">
+                                                                    <div className="flex flex-col items-end gap-1">
+                                                                        <span className="font-black text-white italic">{row.pct}%</span>
+                                                                        <div className="w-16 h-1 bg-slate-900 rounded-full overflow-hidden">
+                                                                            <div className={`h-full ${row.color} rounded-full`} style={{ width: `${row.pct}%` }} />
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                        </FunnelSubContainer>
+                                        </div>
 
-                                        {/* Container 3: Visualización (Chart) */}
-                                        <FunnelSubContainer title="Visualización" icon={TrendingUp}>
-                                            <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
+                                        {/* COLUMNA 2: MATRIZ DE TENACIDAD DE SEGUIMIENTO (Delgada) */}
+                                        <div className="lg:col-span-4 bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left">
+                                            <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
+                                                <RefreshCw size={16} className="text-indigo-400 animate-spin-slow" />
+                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Matriz de Tenacidad en Seguimiento</h4>
+                                            </div>
+                                            
+                                            <div className="space-y-3.5">
+                                                {[
+                                                    { label: "Seguimiento en Cualificación (Qual FU)", s: stats.totals.qualification_fu, r: stats.totals.qualification_fur, rate: stats.percentages.rates.qualification_fur, color: 'text-violet-400' },
+                                                    { label: "Seguimiento en Dolor (Pain FU)", s: stats.totals.pain_fu, r: stats.totals.pain_fur, rate: stats.percentages.rates.pain_fur, color: 'text-blue-400' },
+                                                    { label: "Seguimiento en Oferta (Offer FU)", s: stats.totals.offer_fu, r: stats.totals.offer_fur, rate: stats.percentages.rates.offer_fur, color: 'text-fuchsia-400' },
+                                                    { label: "Seguimiento en Link (Link FU)", s: stats.totals.link_fu, r: stats.totals.link_fur, rate: stats.percentages.rates.link_fur, color: 'text-indigo-400' },
+                                                    { label: "Seguimiento post-Agenda (Agenda FU)", s: stats.totals.agenda_fu, r: stats.totals.agenda_fur, rate: stats.percentages.rates.agenda_fur, color: 'text-emerald-400' },
+                                                ].map((fu, idx) => {
+                                                    const semaphoricColor = fu.rate >= 40 
+                                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                                        : fu.rate >= 15 
+                                                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
+                                                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+
+                                                    return (
+                                                        <div key={idx} className="flex justify-between items-center bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800/80 shadow-sm">
+                                                            <div className="flex flex-col text-left space-y-1">
+                                                                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{fu.label}</span>
+                                                                <span className="text-[10px] font-black text-slate-300">
+                                                                    Env: <span className="text-white tabular-nums">{fu.s}</span> • Resp: <span className="text-white tabular-nums">{fu.r}</span>
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <span className={`px-2 py-1 rounded-xl text-[10px] font-black tabular-nums ${semaphoricColor}`}>
+                                                                    {fu.rate}%
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* COLUMNA 3: VISUALIZACIÓN GRÁFICA DEL EMBUDO */}
+                                        <div className="lg:col-span-3 bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left">
+                                            <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
+                                                <PieChart size={16} className="text-indigo-400" />
+                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gráfico del Embudo</h4>
+                                            </div>
+                                            <div className="flex-1 flex flex-col items-center justify-center min-h-[300px]">
                                                 <FunnelChart data={funnelData} />
                                             </div>
-                                        </FunnelSubContainer>
+                                        </div>
+
                                     </div>
 
                                     {/* MINIMALIST EFFICACY SECTION */}
