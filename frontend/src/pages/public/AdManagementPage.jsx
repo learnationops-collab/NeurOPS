@@ -934,15 +934,7 @@ const AdManagementPage = () => {
         <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col items-center p-4 py-12 relative overflow-hidden">
             <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-emerald-900/15 to-transparent pointer-events-none" />
 
-            <div className="w-full max-w-[98%] z-10 space-y-8">
-                {/* Header */}
-                <div className="text-center space-y-4 mb-2">
-                    <p className="text-emerald-400 font-bold tracking-widest text-xs uppercase">NeurOPS High Performance</p>
-                    <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
-                        Gestor de Marketing
-                    </h1>
-                </div>
-
+            <div className="w-full max-w-[98%] z-10 space-y-6">
                 {/* Tabs */}
                 <div className="flex flex-wrap gap-2 bg-slate-900 border border-slate-800 rounded-2xl p-1.5 shadow-2xl">
                     {tabs.map(tab => {
@@ -952,13 +944,13 @@ const AdManagementPage = () => {
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`flex-1 min-w-[200px] flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all
+                                className={`flex-1 min-w-[180px] flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all
                                     ${isActive
-                                        ? 'bg-slate-800 text-white shadow-lg'
+                                        ? 'bg-slate-800 text-white shadow-lg border border-slate-700/50'
                                         : 'text-slate-500 hover:text-slate-300'
                                     }`}
                             >
-                                <Icon size={18} />
+                                <Icon size={16} />
                                 {tab.label}
                             </button>
                         );

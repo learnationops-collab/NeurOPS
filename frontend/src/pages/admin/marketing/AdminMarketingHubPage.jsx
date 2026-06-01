@@ -15,8 +15,8 @@ const AdminMarketingHubPage = () => {
 
     return (
         <div className="relative bg-background min-h-screen space-y-6">
-            {/* Tab Selector */}
-            <div className="p-8 pb-0">
+            {/* Tab Selector & Title inline */}
+            <div className="p-8 pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex gap-2 p-1 bg-surface border border-base rounded-2xl w-fit">
                     {tabs.map(tab => (
                         <button
@@ -32,6 +32,14 @@ const AdminMarketingHubPage = () => {
                             {tab.label}
                         </button>
                     ))}
+                </div>
+
+                {/* Title on the top-right corner */}
+                <div className="text-right pr-2 hidden md:block">
+                    <p className="text-emerald-400 font-bold tracking-widest text-[9px] uppercase leading-none mb-1">NeurOPS High Performance</p>
+                    <h1 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">
+                        Gestor de Marketing
+                    </h1>
                 </div>
             </div>
 

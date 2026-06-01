@@ -1,0 +1,12 @@
+# Bitácora - Junio 2026
+
+- **1 de Junio de 2026**:
+  - **Optimización y Refinamiento del Dashboard de Rendimiento por Anuncio**: Rediseño integral y reubicación de elementos para maximizar la usabilidad, consistencia y densidad de datos.
+    - **Reposicionamiento del Título (Hub de Marketing)**: Reubicación del título principal *"NeurOPS High Performance - Gestor de Marketing"* al extremo derecho de la barra de pestañas superior del Hub de Ventas (`AdminMarketingHubPage.jsx`). Esto eliminó la cabecera independiente en `AdManagementPage.jsx`, liberando un valioso espacio de pantalla vertical.
+    - **Panel de KPIs de Alta Densidad**: Creación de un bloque de 6 tarjetas de KPIs fijos y estilizados al inicio del panel `AdDashboardTab.jsx` (Inversión, Leads, Costo x Lead/Cualificado, Agendas, Ventas, Cash Collect & ROAS) que consolida los datos del periodo seleccionado.
+    - **Eliminación de la Fila de Totales**: Remoción de la fila de totales generales dentro de la tabla de anuncios (vista lista), centralizando toda la visualización de acumulados de forma limpia únicamente en el nuevo panel superior de KPIs.
+    - **Estructura y Tooltips Interactivos**:
+      - **API (Backend)**: Modificación del endpoint `/manychat-webhook/stats/dashboard` en `app/api/manychat.py` para consultar y devolver directamente los nombres de campaña (`campaign_name`) y conjunto de anuncios (`ad_set_name`) correspondientes a cada anuncio.
+      - **Interfaz (Frontend)**: Integración de tooltips de alta prioridad visual (`z-[100]`) orientados hacia abajo (`top-full`) en el nombre de cada anuncio, tanto en la vista lista como en la vista galería. Esto evita el recorte de tooltips en los bordes superiores de la tabla y proporciona un acceso rápido a la estructura jerárquica del anuncio.
+    - **Filtros y Vistas por Defecto**: Actualización de los valores por defecto en `AdDashboardTab.jsx` para cargar inicialmente en **"Vista Lista"** (tabla) y filtrar automáticamente por el periodo **"Este mes"** (`this_month`).
+    - **Gráficos Minimizables**: Implementación de controles interactivos (*ChevronUp* / *ChevronDown*) en la tarjeta de *"Rendimiento por Fuente"* para colapsar y expandir la gráfica de barras de Setters, optimizando el espacio en pantalla según las necesidades del usuario.

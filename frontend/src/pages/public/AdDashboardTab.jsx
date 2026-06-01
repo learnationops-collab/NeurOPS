@@ -44,7 +44,8 @@ const AdDashboardTab = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedAdId, setSelectedAdId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [viewMode, setViewMode] = useState('gallery'); // 'gallery' | 'list'
+    const [viewMode, setViewMode] = useState('list'); // 'gallery' | 'list'
+    const [showChart, setShowChart] = useState(true);
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
     
     const handleSort = (key) => {
@@ -75,6 +76,29 @@ const AdDashboardTab = () => {
     const activeAdStats = showHiddenAds 
         ? stats.ad_stats 
         : stats.ad_stats.filter(stat => !hiddenAds.includes(stat.ad_id));
+
+    // Calcular totales generales usando activeAdStats (después de su inicialización)
+    const totals = React.useMemo(() => {
+        return activeAdStats.reduce((acc, curr) => {
+            acc.spend += (curr.spend || 0);
+            acc.total_leads += (curr.total_leads || 0);
+            acc.agendas += (curr.agendas || 0);
+            acc.ventas += (curr.ventas || 0);
+            acc.cash_collect += (curr.cash_collect || 0);
+
+            const qual = Math.round(((curr.qualified_percentage || 0) / 100) * (curr.total_leads || 0));
+            acc.total_qualified += qual;
+            return acc;
+        }, { spend: 0, total_leads: 0, agendas: 0, ventas: 0, total_qualified: 0, cash_collect: 0 });
+    }, [activeAdStats]);
+
+    const totalCPL = React.useMemo(() => totals.total_leads > 0 ? (totals.spend / totals.total_leads).toFixed(2) : '0.00', [totals]);
+    const totalCPQL = React.useMemo(() => totals.total_qualified > 0 ? (totals.spend / totals.total_qualified).toFixed(2) : '0.00', [totals]);
+    const totalCPA = React.useMemo(() => totals.agendas > 0 ? (totals.spend / totals.agendas).toFixed(2) : '0.00', [totals]);
+    const totalCPV = React.useMemo(() => totals.ventas > 0 ? (totals.spend / totals.ventas).toFixed(2) : '0.00', [totals]);
+    const totalCashCollect = React.useMemo(() => totals.cash_collect.toFixed(2), [totals]);
+    const totalROAS = React.useMemo(() => totals.spend > 0 ? (totals.cash_collect / totals.spend).toFixed(2) : '0.00', [totals]);
+    const totalQualPercentage = React.useMemo(() => totals.total_leads > 0 ? Math.round((totals.total_qualified / totals.total_leads) * 100) : 0, [totals]);
 
     const getSortedAdStats = () => {
         let sortableData = [...activeAdStats];
@@ -124,7 +148,7 @@ const AdDashboardTab = () => {
 
     
     // Filtros de periodo
-    const [period, setPeriod] = useState('last_month');
+    const [period, setPeriod] = useState('this_month');
     const [customDates, setCustomDates] = useState({
         start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
         end: new Date().toISOString().split('T')[0]
@@ -263,31 +287,147 @@ const AdDashboardTab = () => {
                 </div>
             </div>
 
+            {/* Grid de KPIs Generales */}
+            {!loading && activeAdStats.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {/* Tarjeta 1: Inversión */}
+                    <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl hover:border-slate-700/80 transition-all group duration-300">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Inversión</span>
+                            <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400 group-hover:scale-110 transition-transform">
+                                <DollarSign size={14} />
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-2xl font-black text-white italic tracking-tight">${Number(totals.spend).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Inversión Total</span>
+                        </div>
+                    </div>
+
+                    {/* Tarjeta 2: Leads */}
+                    <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl hover:border-slate-700/80 transition-all group duration-300">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Leads</span>
+                            <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400 group-hover:scale-110 transition-transform">
+                                <Users size={14} />
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-2xl font-black text-white italic tracking-tight">{totals.total_leads}</p>
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                                {totalQualPercentage}% Cualificados
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Tarjeta 3: CPL / CPQL */}
+                    <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl hover:border-slate-700/80 transition-all group duration-300">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Costo x Lead</span>
+                            <div className="p-1.5 bg-emerald-500/10 rounded-lg text-emerald-400 group-hover:scale-110 transition-transform">
+                                <TrendingUp size={14} />
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-xl font-black text-white italic tracking-tight">CPL: ${totalCPL}</p>
+                            <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest block mt-0.5">
+                                CPQL: ${totalCPQL}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Tarjeta 4: Agendas */}
+                    <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl hover:border-slate-700/80 transition-all group duration-300">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Agendas</span>
+                            <div className="p-1.5 bg-emerald-500/10 rounded-lg text-emerald-400 group-hover:scale-110 transition-transform">
+                                <CalendarDays size={14} />
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-2xl font-black text-white italic tracking-tight">{totals.agendas}</p>
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                                CPA: ${totalCPA}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Tarjeta 5: Ventas */}
+                    <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl hover:border-slate-700/80 transition-all group duration-300">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Ventas</span>
+                            <div className="p-1.5 bg-amber-500/10 rounded-lg text-amber-400 group-hover:scale-110 transition-transform">
+                                <Activity size={14} />
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-2xl font-black text-white italic tracking-tight">{totals.ventas}</p>
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                                CPV: ${totalCPV}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Tarjeta 6: Cash & ROAS */}
+                    <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl hover:border-slate-700/80 transition-all group duration-300">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Cash Col.</span>
+                            <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-400 group-hover:scale-110 transition-transform">
+                                <DollarSign size={14} />
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-xl font-black text-emerald-400 italic tracking-tight">${Number(totals.cash_collect).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                            <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest block mt-0.5">
+                                ROAS: {totalROAS}x
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Rendimiento por Fuente (Setter) */}
             {!loading && stats.setter_stats && stats.setter_stats.length > 0 && (
                 <div className="bg-slate-900/40 p-5 rounded-2xl border border-slate-800/50 shadow-xl">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Users className="text-slate-400" size={16} />
-                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Rendimiento por Fuente</h4>
+                    <div className="flex items-center justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-2">
+                            <Users className="text-slate-400" size={16} />
+                            <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Rendimiento por Fuente</h4>
+                        </div>
+                        <button 
+                            onClick={() => setShowChart(!showChart)}
+                            className="p-1.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-400 hover:text-white rounded-lg transition-colors border border-slate-700/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5"
+                        >
+                            {showChart ? (
+                                <>
+                                    <ChevronUp size={12} /> Ocultar Gráfico
+                                </>
+                            ) : (
+                                <>
+                                    <ChevronDown size={12} /> Mostrar Gráfico
+                                </>
+                            )}
+                        </button>
                     </div>
-                    <div className="h-48 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={stats.setter_stats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                                <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', fontSize: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
-                                    itemStyle={{ fontWeight: 'bold' }}
-                                    cursor={{ fill: '#1e293b', opacity: 0.4 }}
-                                />
-                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                                <Bar dataKey="agendas" name="Agendas" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                <Bar dataKey="ventas" name="Ventas" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                            </ComposedChart>
-                        </ResponsiveContainer>
-                    </div>
+                    {showChart && (
+                        <div className="h-48 w-full animate-in fade-in slide-in-from-top-1 duration-200">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={stats.setter_stats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', fontSize: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)' }}
+                                        itemStyle={{ fontWeight: 'bold' }}
+                                        cursor={{ fill: '#1e293b', opacity: 0.4 }}
+                                    />
+                                    <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                                    <Bar dataKey="agendas" name="Agendas" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                    <Bar dataKey="ventas" name="Ventas" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -345,155 +485,118 @@ const AdDashboardTab = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800/50">
-                                    {(() => {
-                                        const totals = activeAdStats.reduce((acc, curr) => {
-                                            acc.spend += (curr.spend || 0);
-                                            acc.total_leads += (curr.total_leads || 0);
-                                            acc.agendas += (curr.agendas || 0);
-                                            acc.ventas += (curr.ventas || 0);
+                                    {getSortedAdStats().map((stat, index, array) => {
+                                        let qualColorStat = "text-slate-400";
+                                        if (stat.qualified_percentage >= 50) qualColorStat = "text-emerald-400";
+                                        else if (stat.qualified_percentage >= 20) qualColorStat = "text-yellow-400";
+                                        else if (stat.total_leads > 0 && stat.qualified_percentage < 20) qualColorStat = "text-red-400";
+
+                                        const zeroRow = isAllZero(stat);
+                                        
+                                        // Determine background based on rank
+                                        const totalValid = array.filter(a => !isAllZero(a)).length;
+                                        let rankColor = "hover:bg-slate-800/40"; // fallback
+                                        
+                                        const colorEmerald = "bg-emerald-500/10 hover:bg-emerald-400/25";
+                                        const colorAmber = "bg-amber-500/10 hover:bg-amber-400/25";
+                                        const colorRed = "bg-red-500/10 hover:bg-red-400/25";
+
+                                        if (zeroRow) {
+                                            rankColor = "bg-red-950/30 hover:bg-red-900/40";
+                                        } else if (sortConfig.key && colorThresholds[sortConfig.key]) {
+                                            const conf = colorThresholds[sortConfig.key];
+                                            const val = parseFloat(stat[sortConfig.key] || 0);
                                             
-                                            // Cash collect sum
-                                            acc.cash_collect += (curr.cash_collect || 0);
-
-                                            const qual = Math.round(((curr.qualified_percentage || 0) / 100) * (curr.total_leads || 0));
-                                            acc.total_qualified += qual;
-                                            return acc;
-                                        }, { spend: 0, total_leads: 0, agendas: 0, ventas: 0, total_qualified: 0, cash_collect: 0 });
-
-                                        const totalCPL = totals.total_leads > 0 ? (totals.spend / totals.total_leads).toFixed(2) : '0';
-                                        const totalCPQL = totals.total_qualified > 0 ? (totals.spend / totals.total_qualified).toFixed(2) : '0';
-                                        const totalCPA = totals.agendas > 0 ? (totals.spend / totals.agendas).toFixed(2) : '0';
-                                        const totalCPV = totals.ventas > 0 ? (totals.spend / totals.ventas).toFixed(2) : '0';
-                                        const totalCashCollect = totals.cash_collect.toFixed(2);
-                                        const totalROAS = totals.spend > 0 ? (totals.cash_collect / totals.spend).toFixed(2) : '0';
-                                        const totalQualPercentage = totals.total_leads > 0 ? Math.round((totals.total_qualified / totals.total_leads) * 100) : 0;
-
-                                        let qualColor = "text-slate-400";
-                                        if (totalQualPercentage >= 50) qualColor = "text-emerald-400";
-                                        else if (totalQualPercentage >= 20) qualColor = "text-yellow-400";
-                                        else if (totals.total_leads > 0 && totalQualPercentage < 20) qualColor = "text-red-400";
+                                            if (conf.mode === 'higher') {
+                                                if (val >= conf.optimal) rankColor = colorEmerald;
+                                                else if (val >= conf.tolerable) rankColor = colorAmber;
+                                                else rankColor = colorRed;
+                                            } else {
+                                                if (val <= conf.optimal) rankColor = colorEmerald;
+                                                else if (val <= conf.tolerable) rankColor = colorAmber;
+                                                else rankColor = colorRed;
+                                            }
+                                        } else if (totalValid > 0) {
+                                            const rankRatio = index / totalValid;
+                                            if (rankRatio <= 0.33) {
+                                                rankColor = colorEmerald;
+                                            } else if (rankRatio <= 0.66) {
+                                                rankColor = colorAmber;
+                                            } else {
+                                                rankColor = colorRed;
+                                            }
+                                        }
 
                                         return (
-                                            <>
-                                                <tr className="bg-slate-800/80 border-b-2 border-slate-700/50 shadow-md relative z-10">
-                                                    {visibleColumns.map(col => {
-                                                        let content;
-                                                        let color = "text-white";
-                                                        
-                                                        if (col.id === 'ad_name') content = <span className="text-sm font-black uppercase tracking-widest">Total General</span>;
-                                                        else if (col.id === 'spend') content = `$${totals.spend.toLocaleString()}`;
-                                                        else if (col.id === 'total_leads') content = totals.total_leads;
-                                                        else if (col.id === 'cpl') { content = `$${totalCPL}`; color = "text-blue-400"; }
-                                                        else if (col.id === 'qualified_percentage') { content = `${totalQualPercentage}%`; color = qualColor; }
-                                                        else if (col.id === 'cpql') { content = `$${totalCPQL}`; color = "text-emerald-400"; }
-                                                        else if (col.id === 'agendas') content = totals.agendas;
-                                                        else if (col.id === 'cpa') { content = `$${totalCPA}`; color = "text-emerald-400"; }
-                                                        else if (col.id === 'ventas') content = totals.ventas;
-                                                        else if (col.id === 'cpv') { content = `$${totalCPV}`; color = "text-amber-400"; }
-                                                        else if (col.id === 'cash_collect') { content = `$${totalCashCollect}`; color = "text-emerald-400"; }
-                                                        else if (col.id === 'roas') { content = `${totalROAS}x`; color = parseFloat(totalROAS) >= 1 ? 'text-emerald-400' : 'text-red-400'; }
+                                            <tr 
+                                                key={stat.ad_id} 
+                                                onClick={() => { if (stat.ad_id !== 0) { setSelectedAdId(stat.ad_id); setIsModalOpen(true); } }}
+                                                className={`group transition-colors ${stat.ad_id !== 0 ? 'cursor-pointer hover:bg-slate-800/40' : 'cursor-default'} ${rankColor} ${zeroRow ? 'opacity-80' : ''}`}
+                                            >
+                                                {visibleColumns.map(col => {
+                                                    let content;
+                                                    let color = "text-white";
 
-                                                        return (
-                                                            <td key={col.id} className={`py-4 px-5 text-xs font-black ${color} ${
-                                                                col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
-                                                            }`}>
-                                                                {content}
-                                                            </td>
-                                                        );
-                                                    })}
-                                                </tr>
-                                                {getSortedAdStats().map((stat, index, array) => {
-                                                    let qualColorStat = "text-slate-400";
-                                                    if (stat.qualified_percentage >= 50) qualColorStat = "text-emerald-400";
-                                                    else if (stat.qualified_percentage >= 20) qualColorStat = "text-yellow-400";
-                                                    else if (stat.total_leads > 0 && stat.qualified_percentage < 20) qualColorStat = "text-red-400";
+                                                    if (col.id === 'ad_name') {
+                                                        const isAdHidden = hiddenAds.includes(stat.ad_id);
+                                                        content = (
+                                                            <div className="flex items-center gap-3">
+                                                                {stat.ad_id !== 0 ? (
+                                                                    <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-400">
+                                                                        {index + 1}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-[9px] font-black text-emerald-400">
+                                                                        ★
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex-1 min-w-0 relative group/tooltip overflow-visible">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <h4 className={`text-sm font-black uppercase tracking-tight max-w-[200px] truncate ${zeroRow ? 'text-red-400' : 'text-white'}`}>{stat.ad_name}</h4>
+                                                                        {stat.ad_id !== 0 && (
+                                                                            <button 
+                                                                                onClick={(e) => handleToggleHideAd(e, stat.ad_id)}
+                                                                                className="p-1 text-slate-500 hover:text-slate-200 transition-colors rounded hover:bg-slate-800"
+                                                                                title={isAdHidden ? "Desarchivar / Mostrar anuncio" : "Archivar / Ocultar anuncio"}
+                                                                            >
+                                                                                {isAdHidden ? <Eye size={12} className="text-indigo-400" /> : <EyeOff size={12} />}
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 ${zeroRow ? 'text-red-500' : 'text-slate-500'}`}>
+                                                                        {stat.ad_id !== 0 ? (
+                                                                            <>
+                                                                                <Activity size={10} className={zeroRow ? 'text-red-400' : 'text-blue-500'} /> #{stat.ad_id}
+                                                                            </>
+                                                                        ) : (
+                                                                            <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Desatribuido</span>
+                                                                        )}
+                                                                        {isAdHidden && <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest ml-1">Archivado</span>}
+                                                                    </p>
 
-                                                    const zeroRow = isAllZero(stat);
-                                                    
-                                                    // Determine background based on rank
-                                                    const totalValid = array.filter(a => !isAllZero(a)).length;
-                                                    let rankColor = "hover:bg-slate-800/40"; // fallback
-                                                    
-                                                    const colorEmerald = "bg-emerald-500/10 hover:bg-emerald-400/25";
-                                                    const colorAmber = "bg-amber-500/10 hover:bg-amber-400/25";
-                                                    const colorRed = "bg-red-500/10 hover:bg-red-400/25";
-
-                                                    if (zeroRow) {
-                                                        rankColor = "bg-red-950/30 hover:bg-red-900/40";
-                                                    } else if (sortConfig.key && colorThresholds[sortConfig.key]) {
-                                                        const conf = colorThresholds[sortConfig.key];
-                                                        const val = parseFloat(stat[sortConfig.key] || 0);
-                                                        
-                                                        if (conf.mode === 'higher') {
-                                                            if (val >= conf.optimal) rankColor = colorEmerald;
-                                                            else if (val >= conf.tolerable) rankColor = colorAmber;
-                                                            else rankColor = colorRed;
-                                                        } else {
-                                                            if (val <= conf.optimal) rankColor = colorEmerald;
-                                                            else if (val <= conf.tolerable) rankColor = colorAmber;
-                                                            else rankColor = colorRed;
-                                                        }
-                                                    } else if (totalValid > 0) {
-                                                        const rankRatio = index / totalValid;
-                                                        if (rankRatio <= 0.33) {
-                                                            rankColor = colorEmerald;
-                                                        } else if (rankRatio <= 0.66) {
-                                                            rankColor = colorAmber;
-                                                        } else {
-                                                            rankColor = colorRed;
-                                                        }
-                                                    }
-
-                                                    return (
-                                                        <tr 
-                                                            key={stat.ad_id} 
-                                                            onClick={() => { if (stat.ad_id !== 0) { setSelectedAdId(stat.ad_id); setIsModalOpen(true); } }}
-                                                            className={`group transition-colors ${stat.ad_id !== 0 ? 'cursor-pointer hover:bg-slate-800/40' : 'cursor-default'} ${rankColor} ${zeroRow ? 'opacity-80' : ''}`}
-                                                        >
-                                                            {visibleColumns.map(col => {
-                                                                let content;
-                                                                let color = "text-white";
-
-                                                                if (col.id === 'ad_name') {
-                                                                    const isAdHidden = hiddenAds.includes(stat.ad_id);
-                                                                    content = (
-                                                                        <div className="flex items-center gap-3">
-                                                                            {stat.ad_id !== 0 ? (
-                                                                                <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-400">
-                                                                                    {index + 1}
-                                                                                </div>
-                                                                            ) : (
-                                                                                <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-[9px] font-black text-emerald-400">
-                                                                                    ★
+                                                                    {/* Tooltip para mostrar Campaña y Conjunto de Anuncios */}
+                                                                    {(stat.campaign_name || stat.ad_set_name) && (
+                                                                        <div className="absolute top-full left-0 mt-1.5 w-64 bg-slate-900 border border-slate-700/80 rounded-xl p-3 shadow-2xl opacity-0 group-hover/tooltip:opacity-100 group-hover/tooltip:pointer-events-auto pointer-events-none transition-all duration-200 z-[100] text-left whitespace-normal leading-normal font-normal normal-case">
+                                                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Estructura del Anuncio</p>
+                                                                            {stat.campaign_name && (
+                                                                                <div className="mb-1.5">
+                                                                                    <span className="text-[8px] font-black text-emerald-400 uppercase tracking-wider block leading-none mb-0.5">Campaña</span>
+                                                                                    <span className="text-xs text-white font-bold block">{stat.campaign_name}</span>
                                                                                 </div>
                                                                             )}
-                                                                            <div className="flex-1 min-w-0">
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <h4 className={`text-sm font-black uppercase tracking-tight max-w-[200px] truncate ${zeroRow ? 'text-red-400' : 'text-white'}`}>{stat.ad_name}</h4>
-                                                                                    {stat.ad_id !== 0 && (
-                                                                                        <button 
-                                                                                            onClick={(e) => handleToggleHideAd(e, stat.ad_id)}
-                                                                                            className="p-1 text-slate-500 hover:text-slate-200 transition-colors rounded hover:bg-slate-800"
-                                                                                            title={isAdHidden ? "Desarchivar / Mostrar anuncio" : "Archivar / Ocultar anuncio"}
-                                                                                        >
-                                                                                            {isAdHidden ? <Eye size={12} className="text-indigo-400" /> : <EyeOff size={12} />}
-                                                                                        </button>
-                                                                                    )}
+                                                                            {stat.ad_set_name && (
+                                                                                <div>
+                                                                                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-wider block leading-none mb-0.5">Conjunto de Anuncios</span>
+                                                                                    <span className="text-xs text-white font-bold block">{stat.ad_set_name}</span>
                                                                                 </div>
-                                                                                <p className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 ${zeroRow ? 'text-red-500' : 'text-slate-500'}`}>
-                                                                                    {stat.ad_id !== 0 ? (
-                                                                                        <>
-                                                                                            <Activity size={10} className={zeroRow ? 'text-red-400' : 'text-blue-500'} /> #{stat.ad_id}
-                                                                                        </>
-                                                                                    ) : (
-                                                                                        <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Desatribuido</span>
-                                                                                    )}
-                                                                                    {isAdHidden && <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest ml-1">Archivado</span>}
-                                                                                </p>
-                                                                            </div>
+                                                                            )}
+                                                                            <div className="absolute bottom-full left-4 border-4 border-transparent border-b-slate-900"></div>
                                                                         </div>
-                                                                    );
-                                                                }
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
                                                                 else if (col.id === 'spend') content = `$${(stat.spend||0).toLocaleString()}`;
                                                                 else if (col.id === 'total_leads') content = stat.total_leads;
                                                                 else if (col.id === 'cpl') { content = `$${stat.cpl || '0'}`; color = "text-blue-400"; }
@@ -517,9 +620,6 @@ const AdDashboardTab = () => {
                                                         </tr>
                                                     );
                                                 })}
-                                            </>
-                                        );
-                                    })()}
                                 </tbody>
                             </table>
                         </div>
@@ -555,7 +655,7 @@ const AdDashboardTab = () => {
                                             <div className="relative">
                                                 {/* Header */}
                                                 <div className="flex items-start justify-between mb-5">
-                                                    <div className="flex-1 min-w-0">
+                                                    <div className="flex-1 min-w-0 relative group/tooltip overflow-visible">
                                                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                                                             {stat.ad_id !== 0 ? (
                                                                 <>
@@ -572,6 +672,26 @@ const AdDashboardTab = () => {
                                                         <h4 className="text-sm font-black text-white italic tracking-tight leading-tight line-clamp-2 uppercase">
                                                             {stat.ad_name}
                                                         </h4>
+
+                                                        {/* Tooltip para mostrar Campaña y Conjunto de Anuncios */}
+                                                        {(stat.campaign_name || stat.ad_set_name) && (
+                                                            <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700/80 rounded-xl p-3 shadow-2xl opacity-0 group-hover/tooltip:opacity-100 group-hover/tooltip:pointer-events-auto pointer-events-none transition-all duration-200 z-[100] text-left whitespace-normal leading-normal font-normal normal-case">
+                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Estructura del Anuncio</p>
+                                                                {stat.campaign_name && (
+                                                                    <div className="mb-1.5">
+                                                                        <span className="text-[8px] font-black text-emerald-400 uppercase tracking-wider block leading-none mb-0.5">Campaña</span>
+                                                                        <span className="text-xs text-white font-bold block">{stat.campaign_name}</span>
+                                                                    </div>
+                                                                )}
+                                                                {stat.ad_set_name && (
+                                                                    <div>
+                                                                        <span className="text-[8px] font-black text-blue-400 uppercase tracking-wider block leading-none mb-0.5">Conjunto de Anuncios</span>
+                                                                        <span className="text-xs text-white font-bold block">{stat.ad_set_name}</span>
+                                                                    </div>
+                                                                )}
+                                                                <div className="absolute bottom-full left-4 border-4 border-transparent border-b-slate-900"></div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                                                         {stat.ad_id !== 0 ? (

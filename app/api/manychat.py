@@ -860,9 +860,22 @@ def get_ad_dashboard_stats():
         # ROAS (Cash Collect / Inversión)
         roas = round(cash_collect / spend, 2) if spend > 0 else 0
 
+        # Obtener nombres de campaña y conjunto de anuncios
+        ad_set_name = None
+        campaign_name = None
+        if ad and ad.ad_set_id:
+            ad_set = adset_map.get(ad.ad_set_id)
+            if ad_set:
+                ad_set_name = ad_set.name
+                campaign = campaign_map_by_id.get(ad_set.campaign_id)
+                if campaign:
+                    campaign_name = campaign.name
+
         result.append({
             'ad_id': ad_id,
             'ad_name': ad_name,
+            'ad_set_name': ad_set_name,
+            'campaign_name': campaign_name,
             'total_leads': total,
             'qualified_leads': qual,
             'qualified_percentage': round((qual / total) * 100, 1) if total > 0 else 0,
@@ -883,6 +896,8 @@ def get_ad_dashboard_stats():
         result.append({
             'ad_id': 0,
             'ad_name': 'Ventas desatribuidas',
+            'ad_set_name': None,
+            'campaign_name': None,
             'total_leads': 0,
             'qualified_leads': 0,
             'qualified_percentage': 0.0,
