@@ -33,7 +33,11 @@
             width: 1200px;
             min-height: 100vh;
             position: relative;
+            {% if is_preview %}
+            overflow-y: auto;
+            {% else %}
             overflow: hidden;
+            {% endif %}
         }
 
         /* Ambient Orbs */

@@ -728,6 +728,7 @@ def preview_setter_report_discord(report_id):
 
     stat = SetterDailyStats.query.get_or_404(report_id)
     img_data = _prepare_setter_report_data(stat)
+    img_data["is_preview"] = True
 
     template_path = os.path.join(current_app.root_path, 'templates', 'reports', 'setter_report.html')
     with open(template_path, 'r', encoding='utf-8') as f:
