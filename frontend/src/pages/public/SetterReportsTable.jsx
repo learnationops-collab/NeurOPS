@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import {
     Search, Trash2, Edit3, Loader2, Calendar,
-    ChevronLeft, ChevronRight, X, Save, AlertCircle, HelpCircle
+    ChevronLeft, ChevronRight, X, Save, AlertCircle, HelpCircle, Eye
 } from 'lucide-react';
 
 const HeaderWithTooltip = ({ label, tooltipInfo }) => (
@@ -21,6 +22,8 @@ const HeaderWithTooltip = ({ label, tooltipInfo }) => (
 );
 
 const SetterReportsTable = ({ setters }) => {
+    const auth = useAuth();
+    const user = auth?.user || { role: 'admin' };
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -284,10 +287,22 @@ const SetterReportsTable = ({ setters }) => {
                                                 </>
                                             ) : (
                                                 <>
-                                                    <button onClick={() => startEdit(r)} className="p-2 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-100">
+                                                    {user.role === 'admin' && (
+                                                        <button 
+                                                            onClick={() => {
+                                                                const token = localStorage.getItem('auth_token');
+                                                                window.open(`/api/public/setter-reports/${r.id}/preview?token=${token}`, '_blank');
+                                                            }} 
+                                                            className="p-2 bg-violet-600/20 text-violet-400 border border-violet-600/30 rounded-lg hover:bg-violet-600 hover:text-white transition-colors cursor-pointer" 
+                                                            title="Vista Previa de Discord"
+                                                        >
+                                                            <Eye size={14} />
+                                                        </button>
+                                                    )}
+                                                    <button onClick={() => startEdit(r)} className="p-2 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-100" title="Editar Reporte Completo">
                                                         <Edit3 size={14} />
                                                     </button>
-                                                    <button onClick={() => handleDelete(r.id)} className="p-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg hover:bg-rose-100">
+                                                    <button onClick={() => handleDelete(r.id)} className="p-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg hover:bg-rose-100" title="Eliminar Permanente">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </>

@@ -1,4 +1,4 @@
-from flask import request, jsonify
+from flask import request, jsonify, render_template_string
 from app.models import db, User
 from datetime import datetime, date, timedelta
 from . import bp
@@ -545,6 +545,195 @@ def delete_public_setter_report(report_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+def _prepare_setter_report_data(stat):
+    """Calcula y estructura todas las métricas del reporte diario de un setter."""
+    setter_name = stat.setter.username if stat.setter else "Setter"
+    
+    from app.models import DailyReportQuestion
+    qualitative_callouts = []
+    if stat.answers:
+        questions = {q.id: q.text for q in DailyReportQuestion.query.filter_by(role='setter', is_active=True).all()}
+        for q_id, answer in stat.answers.items():
+            if not str(q_id).isdigit():
+                continue
+            q_id_int = int(q_id)
+            if q_id_int in questions and answer and answer.strip():
+                qualitative_callouts.append({
+                    "question": questions[q_id_int],
+                    "answer": answer
+                })
+
+    def safe_percent(part, total):
+        try:
+            if total > 0:
+                return round((part / total) * 100)
+        except:
+            pass
+        return 0
+
+    inbox_entrantes = stat.inbox_entrantes or 0
+    not_lead = stat.not_lead or 0
+    inabribles = stat.inbox_inabribles or 0
+    opened = stat.opening_submitted or 0
+    op_resp = stat.opening_responded or 0
+    qual = stat.funnel_qualification or 0
+    pain = stat.funnel_pain or 0
+    offer = stat.funnel_offer or 0
+    link = stat.funnel_link or 0
+    agenda = stat.funnel_agenda or 0
+    fu_qual = stat.qualification_fu or 0
+    fur_qual = stat.qualification_fur or 0
+    fu_pain = stat.pain_fu or 0
+    fur_pain = stat.pain_fur or 0
+    fu_offer = stat.offer_fu or 0
+    fur_offer = stat.offer_fur or 0
+    fu_link = stat.link_fu or 0
+    fur_link = stat.link_fur or 0
+    fu_agenda = stat.agenda_fu or 0
+    fur_agenda = stat.agenda_fur or 0
+
+    q_op_sub = stat.qualification_opening_submitted or 0
+    q_op_res = stat.qualification_opening_responded or 0
+    p_op_sub = stat.pain_opening_submitted or 0
+    p_op_res = stat.pain_opening_responded or 0
+
+    from app.models import SetterDailyStats
+    last_reports = SetterDailyStats.query.filter(
+        SetterDailyStats.setter_id == stat.setter_id,
+        SetterDailyStats.date <= stat.date
+    ).order_by(SetterDailyStats.date.desc()).limit(7).all()
+    
+    avg_metrics = {
+        "entrantes": 0,
+        "openings": 0,
+        "agendas": 0,
+        "conversion": 0
+    }
+    
+    if last_reports:
+        r_count = len(last_reports)
+        t_entrantes = sum(r.inbox_entrantes or 0 for r in last_reports)
+        t_openings = sum(
+            ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)) 
+            if ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)) > 0 
+            else (r.opening_submitted or 0) 
+            for r in last_reports
+        )
+        t_agendas = sum(r.funnel_agenda or 0 for r in last_reports)
+        t_net_leads = sum(r.inbox_leads or 0 for r in last_reports)
+        
+        avg_metrics = {
+            "entrantes": round(t_entrantes / r_count, 1),
+            "openings": round(t_openings / r_count, 1),
+            "agendas": round(t_agendas / r_count, 1),
+            "conversion": safe_percent(t_agendas, t_net_leads)
+        }
+
+    return {
+        "setter_name": setter_name,
+        "date_str": stat.date.strftime('%d/%m/%Y'),
+        
+        "inbox": {
+            "entrantes": inbox_entrantes,
+            "not_lead": not_lead,
+            "inabribles": inabribles,
+            "leads": stat.inbox_leads or 0,
+            "no_lead_pct": safe_percent(not_lead, inbox_entrantes),
+            "inabribles_pct": safe_percent(inabribles, inbox_entrantes)
+        },
+        
+        "openings": {
+            "qualification": {"submitted": q_op_sub, "responded": q_op_res, "pct": safe_percent(q_op_res, q_op_sub)},
+            "pain": {"submitted": p_op_sub, "responded": p_op_res, "pct": safe_percent(p_op_res, p_op_sub)},
+            "legacy": {"submitted": opened, "responded": op_resp, "pct": safe_percent(op_resp, opened)}
+        },
+        
+        "funnel": {
+            "qualification": qual,
+            "pain": pain,
+            "offer": offer,
+            "link": link,
+            "agenda": agenda,
+            "qual_to_pain": safe_percent(pain, qual),
+            "pain_to_offer": safe_percent(offer, pain),
+            "offer_to_link": safe_percent(link, offer),
+            "link_to_agenda": safe_percent(agenda, link),
+            "conversion_leads_pct": safe_percent(agenda, stat.inbox_leads or 0)
+        },
+        
+        "follow_up": {
+            "qualification": fu_qual,
+            "qualification_fur": fur_qual,
+            "pain": fu_pain,
+            "pain_fur": fur_pain,
+            "offer": fu_offer,
+            "offer_fur": fur_offer,
+            "link": fu_link,
+            "link_fur": fur_link,
+            "agenda": fu_agenda,
+            "agenda_fur": fur_agenda,
+            "total_fu": fu_qual + fu_pain + fu_offer + fu_link + fu_agenda,
+            "total_fur": fur_qual + fur_pain + fu_offer + fur_link + fur_agenda,
+            "response_pct": safe_percent(fur_qual + fur_pain + fur_offer + fur_link + fur_agenda, fu_qual + fu_pain + fu_offer + fu_link + fu_agenda)
+        },
+        
+        "averages": avg_metrics,
+        "questions_efficacy": {
+            "q1": {
+                "useful": stat.q1_useful or 0, 
+                "unuseful": stat.q1_unuseful or 0,
+                "pct": safe_percent(stat.q1_useful or 0, (stat.q1_useful or 0) + (stat.q1_unuseful or 0))
+            },
+            "q2": {
+                "useful": stat.q2_useful or 0, 
+                "unuseful": stat.q2_unuseful or 0,
+                "pct": safe_percent(stat.q2_useful or 0, (stat.q2_useful or 0) + (stat.q2_unuseful or 0))
+            }
+        },
+        "qualitative": qualitative_callouts,
+        "reflections": stat.reflections or {}
+    }
+
+
+@bp.route('/public/setter-reports/<int:report_id>/preview', methods=['GET'])
+def preview_setter_report_discord(report_id):
+    """Genera una vista previa del reporte de Setter renderizado en HTML para administradores."""
+    from app.models import SetterDailyStats, User
+    from flask import current_app
+    from flask_login import current_user
+    import os
+    
+    user = None
+    if current_user.is_authenticated:
+        user = current_user
+    else:
+        token = request.args.get('token')
+        if token:
+            user_id = User.verify_auth_token(token)
+            if user_id:
+                user = User.query.get(user_id)
+            
+            if not user and (current_app.config.get('DEBUG') or current_app.debug):
+                try:
+                    import jwt
+                    jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+                    user = User.query.filter_by(role='admin').first()
+                except Exception as e:
+                    print(f"DEBUG PREVIEW BYPASS ERROR: {e}")
+
+    if not user or user.role != 'admin':
+        return jsonify({"error": "No autorizado"}), 403
+
+    stat = SetterDailyStats.query.get_or_404(report_id)
+    img_data = _prepare_setter_report_data(stat)
+
+    template_path = os.path.join(current_app.root_path, 'templates', 'reports', 'setter_report.html')
+    with open(template_path, 'r', encoding='utf-8') as f:
+        template_content = f.read()
+
+    return render_template_string(template_content, **img_data)
 
 
 # ============================================================

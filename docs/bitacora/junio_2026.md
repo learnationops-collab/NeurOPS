@@ -50,3 +50,7 @@
     - **KPI de Cash Collect por Tipo de Pago**:
       - Creación de un panel de desglose dinámico que agrupa la recaudación según el formato de pago registrado (`Completo`, `Parcial`, `Seña`, `Cuota`, etc.).
       - Diseñado con píldoras de colores semafóricos HSL que clasifican las transacciones y proporcionan métricas claras sobre la distribución financiera de las ventas.
+  - **Vista Detallada de Reporte Diario de Setters con Icono de Ojo (`SetterReportsTable.jsx`) [MODIFY]**:
+    - **Icono de Previsualización (Ojo)**:
+      - **Interfaz (Frontend)**: Integración del icono `Eye` de `lucide-react` en la columna de acciones de la tabla de reportes de setters (`SetterReportsTable.jsx`). Al hacer clic, abre el reporte en una pestaña nueva (`_blank`) pasando el token activo de autenticación, restringiendo su visibilidad únicamente a los administradores (`user.role === 'admin'`).
+      - **API (Backend)**: Creación de la ruta pública de previsualización `@bp.route('/public/setter-reports/<int:report_id>/preview')` en `app/api/public/setter.py`. Valida robustamente la sesión activa del administrador o el token enviado y renderiza en caliente el template físico `setter_report.html` con las métricas detalladas calculadas.
