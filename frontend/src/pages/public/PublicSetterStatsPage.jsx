@@ -567,7 +567,7 @@ const PublicSetterStatsPage = () => {
                                             </div>
                                         </div>
 
-                                        {/* TARJETA 4: CALIDAD DE TRÁFICO (Cualificados sobre Leads Reales) */}
+                                        {/* TARJETA 4: CALIDAD DE TRÁFICO (Leads Netos sobre Entrantes) */}
                                         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
                                             <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
                                                 <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-amber-500" />
@@ -576,19 +576,19 @@ const PublicSetterStatsPage = () => {
                                                 <div className="space-y-1 text-left">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Calidad de Tráfico</p>
                                                     <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                                                        {div(stats.totals.funnel_qualification, stats.totals.leads)}%
+                                                        {div(stats.totals.leads, stats.totals.entrantes)}%
                                                     </h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
                                                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30">
-                                                            Qual: {stats.totals.funnel_qualification}
+                                                            Leads: {stats.totals.leads}
                                                         </span>
                                                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-slate-400 bg-slate-500/10 border border-slate-500/30">
-                                                            Leads: {stats.totals.leads}
+                                                            Inbox: {stats.totals.entrantes}
                                                         </span>
                                                     </div>
                                                     {renderComparisonSubdataLeft(
-                                                        div(stats.totals.funnel_qualification, stats.totals.leads),
-                                                        div(stats.comparison?.totals?.funnel_qualification, stats.comparison?.totals?.leads)
+                                                        div(stats.totals.leads, stats.totals.entrantes),
+                                                        div(stats.comparison?.totals?.leads, stats.comparison?.totals?.entrantes)
                                                     )}
                                                 </div>
                                                 <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-amber-400 shrink-0">

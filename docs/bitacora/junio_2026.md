@@ -26,9 +26,9 @@
   - **Eliminación del Discovery (Preguntas Bot) y Sustitución por KPI de Negocio**:
     - **Simplificación del Reporte Diario de Setters (`PublicSetterReportPage.jsx`, `SetterReportModal.jsx` y `SetterReportModal.jsx` de components) [MODIFY]**:
       - Se eliminaron por completo las variables `q1_useful`, `q1_unuseful`, `q2_useful`, `q2_unuseful` y el bloque JSX de *"Eficacia de Preguntas"* del formulario de reporte diario, eliminando esta carga de datos obsoleta e inútil para los Setters.
-    - **KPI Calidad de Tráfico (Cualificación %) (`PublicSetterStatsPage.jsx`) [MODIFY]**:
+    - **KPI Calidad de Tráfico (Leads Netos / Entrantes) (`PublicSetterStatsPage.jsx`) [MODIFY]**:
       - Se reemplazó la Tarjeta 4 de *"Eficacia Discovery"* (que estaba en 0% por ser obsoleta) por un KPI de enorme valor de negocio: **Calidad de Tráfico**.
-      - Este KPI calcula el ratio de Leads Cualificados sobre Leads Reales del periodo de forma dinámica y visualiza el volumen absoluto en píldoras estilizadas, manteniendo además la comparación con el periodo anterior de forma interactiva.
+      - Este KPI calcula el ratio de Leads Netos (Leads Reales) sobre conversaciones totales Entrantes del periodo de forma dinámica. Visualiza el volumen absoluto en píldoras estilizadas, manteniendo además la comparación interactiva con el periodo anterior de forma limpia y coherente.
       - Se removió también la sección inferior redundante de "Calidad de Preguntas".
     - **Limpieza de Comparaciones (`SetterComparisonView.jsx`) [MODIFY]**:
       - Se eliminaron las métricas obsoletas de preguntas Q1/Q2 del comparador de Setters, dejando un panel limpio de redundancias.
