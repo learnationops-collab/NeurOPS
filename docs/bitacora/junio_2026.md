@@ -66,3 +66,11 @@
         4. *Cash fuera de la llamada*.
         5. *Cash total*.
       - Se recalcularon y adaptaron de manera consistente todas las filas individuales de la cuadrícula, así como la fila de **Totales generales**, integrando las correspondientes píldoras visuales y el análisis comparativo con el periodo anterior de forma limpia y transparente.
+    - **Remoción de Redundancias Críticas**: Se removieron los 9 KPI cards que se encontraban en el pie de la tabla Ventas Breakdown, ya que duplicaban datos del flujo de caja, cantidades de ventas y cuotas que ya están cubiertos de manera prominente en los 3 Pilares superiores.
+    - **Nuevo Panel de KPIs Premium de Ticket Promedio**: Se transformaron los indicadores no duplicados y valiosos de ticket promedio en un hermoso grid de 4 tarjetas de alta gama visual posicionadas estratégicamente **arriba de las tablas** y **debajo del embudo de conversión**:
+      1. *Ticket Promedio PIF* (Pago Completo).
+      2. *Ticket Promedio Split* (Pago Inicial Fraccionado).
+      3. *Ticket Promedio Seña* (Reserva / Promesa).
+      4. *Ticket Promedio Cuota* (Pagos de seguimiento).
+      Cada tarjeta incluye tooltips explicativos detallados y el respectivo análisis comparativo con el periodo anterior (`renderComparisonSubdataLeft`), optimizando la densidad de información y mejorando la jerarquía visual del dashboard de closing.
+

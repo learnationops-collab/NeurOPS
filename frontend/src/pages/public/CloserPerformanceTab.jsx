@@ -282,6 +282,16 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
         const totalOutCallCash = totalCashCollected - totalInCallCash;
         const compTotalOutCallCash = compTotalCashCollected - compTotalInCallCash;
 
+        // Calculos de Tickets Promedio
+        const ticketPif = pifCount > 0 ? pifCash / pifCount : 0;
+        const compTicketPif = compPifCount > 0 ? compPifCash / compPifCount : 0;
+        const ticketSplit = splitCount > 0 ? splitCash / splitCount : 0;
+        const compTicketSplit = compSplitCount > 0 ? compSplitCash / compSplitCount : 0;
+        const ticketDeposit = depositCount > 0 ? depositCash / depositCount : 0;
+        const compTicketDeposit = compDepositCount > 0 ? compDepositCash / compDepositCount : 0;
+        const ticketInstallment = installmentCount > 0 ? installmentCash / installmentCount : 0;
+        const compTicketInstallment = compInstallmentCount > 0 ? compInstallmentCash / compInstallmentCount : 0;
+
         return {
             pifCount, splitCount, depositCount, installmentCount,
             pifCash, splitCash, depositCash, installmentCash,
@@ -293,7 +303,11 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
             pifInCall, splitInCall, depositInCall, installmentInCall,
             compPifInCall, compSplitInCall, compDepositInCall, compInstallmentInCall,
             totalInCallCash, compTotalInCallCash,
-            totalOutCallCash, compTotalOutCallCash
+            totalOutCallCash, compTotalOutCallCash,
+            ticketPif, compTicketPif,
+            ticketSplit, compTicketSplit,
+            ticketDeposit, compTicketDeposit,
+            ticketInstallment, compTicketInstallment
         };
     }, [stats]);
 
@@ -308,8 +322,13 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
         pifInCall = 0, splitInCall = 0, depositInCall = 0, installmentInCall = 0,
         compPifInCall = 0, compSplitInCall = 0, compDepositInCall = 0, compInstallmentInCall = 0,
         totalInCallCash = 0, compTotalInCallCash = 0,
-        totalOutCallCash = 0, compTotalOutCallCash = 0
+        totalOutCallCash = 0, compTotalOutCallCash = 0,
+        ticketPif = 0, compTicketPif = 0,
+        ticketSplit = 0, compTicketSplit = 0,
+        ticketDeposit = 0, compTicketDeposit = 0,
+        ticketInstallment = 0, compTicketInstallment = 0
     } = salesMetrics;
+
 
 
 
@@ -664,6 +683,46 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
                 </div>
             </div>
 
+            {/* 3. KPI CARDS: TICKETS PROMEDIO */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                    { title: 'Ticket Promedio PIF', val: ticketPif, compVal: compTicketPif, icon: DollarSign, color: 'text-emerald-400', count: pifCount, label: 'Ventas PIF', tooltip: 'Valor promedio cobrado por venta en un solo pago (PIF completo).' },
+                    { title: 'Ticket Promedio Split', val: ticketSplit, compVal: compTicketSplit, icon: Layers, color: 'text-sky-400', count: splitCount, label: 'Ventas Split', tooltip: 'Valor promedio cobrado en el pago inicial fraccionado (Split Pay).' },
+                    { title: 'Ticket Promedio Seña', val: ticketDeposit, compVal: compTicketDeposit, icon: Activity, color: 'text-fuchsia-400', count: depositCount, label: 'Promesas Seña', tooltip: 'Valor promedio recibido para reservar o comprometer una venta (Señas).' },
+                    { title: 'Ticket Promedio Cuota', val: ticketInstallment, compVal: compTicketInstallment, icon: RefreshCw, color: 'text-violet-400', count: installmentCount, label: 'Cuotas Cobradas', tooltip: 'Valor promedio cobrado en los pagos posteriores (Cuotas de seguimiento).' }
+                ].map((kpi) => (
+                    <div key={kpi.title} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group">
+                        <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                            <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity ${kpi.color.replace('text-', 'bg-')}`} />
+                        </div>
+                        <div className="flex items-start justify-between relative z-10">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{kpi.title}</p>
+                                    {kpi.tooltip && (
+                                        <div className="relative group/tooltip flex items-center">
+                                            <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-slate-300 transition-colors" />
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
+                                                {kpi.tooltip}
+                                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <h3 className="text-3xl font-black text-white italic tracking-tighter">{fmtCash(kpi.val)}</h3>
+                                {renderComparisonSubdataLeft(kpi.val, kpi.compVal, true)}
+                                <p className="text-[9px] text-slate-600 font-bold uppercase mt-2">
+                                    {kpi.count > 0 ? `Sobre ${fmt(kpi.count)} ${kpi.label}` : `Sin ${kpi.label}`}
+                                </p>
+                            </div>
+                            <div className={`p-3 rounded-2xl bg-slate-800 border border-slate-700/50 ${kpi.color}`}>
+                                <kpi.icon size={18} />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
             {/* 4. SECCIÓN DE DESGLOSE (AGENDAS Y VENTAS TABLES) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* AGENDAS BREAKDOWN TABLE */}
@@ -859,67 +918,6 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
                                     true
                                 )}
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-6 border-t border-slate-800">
-                        {/* 1. New Cash Collect */}
-                        <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
-                            <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest text-center">New Cash Collect</p>
-                            <p className="text-xl font-black text-white text-center tabular-nums">{fmtCash(realSalesCash)}</p>
-                            <p className="text-[8px] text-slate-500 text-center uppercase tracking-wider font-bold">PIF + Split Pay (Sin Cuotas/Señas)</p>
-                        </div>
-
-                        {/* 2. New Clients */}
-                        <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
-                            <p className="text-[8px] font-black text-amber-400 uppercase tracking-widest text-center">New Clients (Cant. Ventas)</p>
-                            <p className="text-xl font-black text-white text-center tabular-nums">{fmt(realSalesCount)}</p>
-                            <p className="text-[8px] text-slate-500 text-center uppercase tracking-wider font-bold">Total PIF + Split Pay</p>
-                        </div>
-
-                        {/* 3. Ticket Promedio PIF */}
-                        <div className="p-4 bg-slate-950/40 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-1 relative group overflow-hidden">
-                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">Ticket Promedio PIF</p>
-                            <p className="text-xl font-black text-white text-center tabular-nums">{pifCount ? fmtCash(pifCash / pifCount) : '$0'}</p>
-                        </div>
-
-                        {/* 4. Ticket Promedio Split */}
-                        <div className="p-4 bg-slate-950/40 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-1 relative group overflow-hidden">
-                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">Ticket Promedio Split</p>
-                            <p className="text-xl font-black text-white text-center tabular-nums">{splitCount ? fmtCash(splitCash / splitCount) : '$0'}</p>
-                        </div>
-
-                        {/* 5. Cash Collect por Señas */}
-                        <div className="p-4 bg-fuchsia-500/5 rounded-2xl border border-fuchsia-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
-                            <p className="text-[8px] font-black text-fuchsia-400 uppercase tracking-widest text-center">Cash Collect por Señas</p>
-                            <p className="text-xl font-black text-white text-center tabular-nums">{fmtCash(depositCash)}</p>
-                            <p className="text-[8px] text-slate-500 text-center uppercase tracking-wider font-bold">Total {fmt(depositCount)} Promesas</p>
-                        </div>
-
-                        {/* 6. Ticket Promedio por Señas */}
-                        <div className="p-4 bg-fuchsia-500/5 rounded-2xl border border-fuchsia-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
-                            <p className="text-[8px] font-black text-fuchsia-400 uppercase tracking-widest text-center">Ticket Promedio por Señas</p>
-                            <p className="text-xl font-black text-white text-center tabular-nums">{depositCount ? fmtCash(depositCash / depositCount) : '$0'}</p>
-                        </div>
-
-                        {/* 7. Cantidad de Cuotas */}
-                        <div className="p-4 bg-violet-500/5 rounded-2xl border border-violet-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
-                            <p className="text-[8px] font-black text-violet-400 uppercase tracking-widest text-center">Cantidad de Cuotas</p>
-                            <p className="text-xl font-black text-white text-center tabular-nums">{fmt(installmentCount)}</p>
-                            <p className="text-[8px] text-slate-500 text-center uppercase tracking-wider font-bold">Cuotas de Seguimiento</p>
-                        </div>
-
-                        {/* 8. Cash Collect por Cuotas */}
-                        <div className="p-4 bg-violet-500/5 rounded-2xl border border-violet-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
-                            <p className="text-[8px] font-black text-violet-400 uppercase tracking-widest text-center">Cash Collect por Cuotas</p>
-                            <p className="text-xl font-black text-white text-center tabular-nums">{fmtCash(installmentCash)}</p>
-                            <p className="text-[8px] text-slate-500 text-center uppercase tracking-wider font-bold">Total Cobrado de Cuotas</p>
-                        </div>
-
-                        {/* 9. Ticket Promedio por Cuotas */}
-                        <div className="p-4 bg-violet-500/5 rounded-2xl border border-violet-500/10 flex flex-col justify-center space-y-1 relative group overflow-hidden">
-                            <p className="text-[8px] font-black text-violet-400 uppercase tracking-widest text-center">Ticket Promedio por Cuotas</p>
-                            <p className="text-xl font-black text-white text-center tabular-nums">{installmentCount ? fmtCash(installmentCash / installmentCount) : '$0'}</p>
                         </div>
                     </div>
                 </div>
