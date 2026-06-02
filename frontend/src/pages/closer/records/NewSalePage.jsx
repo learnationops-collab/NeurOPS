@@ -5,7 +5,8 @@ import api from '../../../services/api';
 import { 
     DollarSign, User, CreditCard, Save, 
     AlertCircle, CheckCircle2, Mail, Phone, 
-    Instagram, Users, PenTool, Calendar, MessageSquare
+    Instagram, Users, PenTool, Calendar, MessageSquare,
+    Search, Loader2, X
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -23,6 +24,12 @@ const CloserNewSalePage = () => {
     const [metadata, setMetadata] = useState({ leads: [] });
     // Lista de Setters del equipo
     const [setters, setSetters] = useState([]);
+
+    // Estados para la búsqueda autocompletable interactiva por múltiples campos
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [searching, setSearching] = useState(false);
+    const [linkedAppointment, setLinkedAppointment] = useState(null);
 
     const [form, setForm] = useState({
         lead_id: '',
@@ -66,31 +73,80 @@ const CloserNewSalePage = () => {
         }
     }, [user]);
 
-    const handleSelectLead = (leadId) => {
-        if (!leadId) {
+    // Debounce de búsqueda de leads en la API por instagram, nombre, email o teléfono
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (searchTerm.trim().length >= 2) {
+                setSearching(true);
+                try {
+                    const res = await api.get(`/closer/leads/search?q=${searchTerm}`);
+                    setSearchResults(res.data || []);
+                } catch (err) {
+                    console.error("Error al buscar leads:", err);
+                } finally {
+                    setSearching(false);
+                }
+            } else {
+                setSearchResults([]);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
+
+    const handleSelectLead = (lead) => {
+        if (!lead) {
             setForm(prev => ({
                 ...prev,
                 lead_id: '',
                 nombre_cliente: '',
                 instagram: '',
                 mail_cliente: '',
-                telefono: ''
+                telefono: '',
+                setter: ''
             }));
+            setLinkedAppointment(null);
             return;
         }
 
-        const selectedLead = metadata.leads.find(l => l.id === parseInt(leadId));
-        if (selectedLead) {
-            setForm(prev => ({
-                ...prev,
-                lead_id: leadId,
-                nombre_cliente: selectedLead.username || '',
-                instagram: selectedLead.instagram || '',
-                mail_cliente: selectedLead.email || '',
-                telefono: selectedLead.phone || ''
-            }));
-            toast.success(`Datos cargados de: ${selectedLead.username || 'Lead'}`);
+        const igUser = lead.instagram ? (lead.instagram.startsWith('@') ? lead.instagram : `@${lead.instagram}`) : '';
+
+        setForm(prev => ({
+            ...prev,
+            lead_id: lead.id || '',
+            nombre_cliente: lead.username || '',
+            instagram: igUser,
+            mail_cliente: lead.email || '',
+            telefono: lead.phone || '',
+            setter: lead.appointment?.setter_name || ''
+        }));
+        
+        if (lead.appointment) {
+            setLinkedAppointment(lead.appointment);
+            toast.success("Agenda vinculada y datos autocompletados correctamente");
+        } else {
+            setLinkedAppointment(null);
+            toast.success("Lead vinculado (Sin agenda previa en el sistema)");
         }
+        
+        setSearchTerm('');
+        setSearchResults([]);
+    };
+
+    const handleUnlink = () => {
+        setForm(prev => ({
+            ...prev,
+            lead_id: '',
+            nombre_cliente: '',
+            instagram: '',
+            mail_cliente: '',
+            telefono: '',
+            setter: ''
+        }));
+        setLinkedAppointment(null);
+        setSearchTerm('');
+        setSearchResults([]);
+        toast.success("Agenda desvinculada");
     };
 
     const handleSubmit = async (e) => {
@@ -175,27 +231,136 @@ const CloserNewSalePage = () => {
                     
                     {/* SECCIÓN 1: ASIGNACIÓN DE LEAD EN PANTALLA */}
                     <div className="bg-slate-950/40 p-6 rounded-3xl border border-slate-800 space-y-4">
-                        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-3">
-                            <Users className="text-indigo-400" size={16} />
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest italic">Vincular Prospecto de Agenda</h3>
+                        <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                            <div className="flex items-center gap-2">
+                                <Users className="text-indigo-400" size={16} />
+                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest italic">Vincular Prospecto de Agenda</h3>
+                            </div>
+                            {(form.lead_id || linkedAppointment) && (
+                                <span className="text-[8px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-black uppercase tracking-wider animate-pulse">
+                                    Vinculado
+                                </span>
+                            )}
                         </div>
                         
-                        <div className="space-y-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Seleccionar Lead Reciente</label>
-                            <select
-                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
-                                value={form.lead_id}
-                                onChange={e => handleSelectLead(e.target.value)}
-                            >
-                                <option value="">Ingreso manual (Sin Lead de Agenda)...</option>
-                                {metadata.leads.map(l => (
-                                    <option key={l.id} value={l.id}>
-                                        {l.username || 'Sin Nombre'} ({l.email || 'Sin Email'})
-                                    </option>
-                                ))}
-                            </select>
-                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wide ml-1">* Autocompleta automáticamente los datos del contacto</p>
-                        </div>
+                        {(form.lead_id || linkedAppointment) ? (
+                            // Vista de Lead Vinculado
+                            <div className="bg-slate-900/60 border border-indigo-500/30 rounded-2xl p-5 animate-in fade-in zoom-in duration-300 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                            <Users size={18} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-black text-white">{form.nombre_cliente}</h4>
+                                            <p className="text-[10px] text-pink-400 font-bold flex items-center gap-1 mt-0.5">
+                                                <Instagram size={10} />
+                                                {form.instagram || 'Sin Instagram'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleUnlink}
+                                        className="p-2 bg-slate-800 hover:bg-rose-500/20 border border-slate-700 hover:border-rose-500/30 rounded-xl text-slate-400 hover:text-rose-400 transition-all duration-200"
+                                        title="Desvincular lead"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-800/80 text-[10px] uppercase font-black tracking-wider text-slate-500 text-left">
+                                    <div>
+                                        <span className="block text-[8px] text-slate-600">Setter Asignado</span>
+                                        <span className="text-indigo-400 font-bold">{form.setter || 'Sin Asignar'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-[8px] text-slate-600">Fecha de Agenda</span>
+                                        <span className="text-slate-300">
+                                            {linkedAppointment?.start_time ? new Date(linkedAppointment.start_time).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Sin agenda registrada'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            // Buscador Interactivo Autocompletable
+                            <div className="space-y-2 relative">
+                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 block text-left">Buscar Prospecto o Agenda</label>
+                                <div className="relative group/search">
+                                    <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${searching ? 'text-indigo-400 animate-pulse' : 'text-slate-500 group-focus-within/search:text-indigo-400'}`} />
+                                    <input
+                                        type="text"
+                                        placeholder="Escribe el Instagram, nombre, correo o número de teléfono..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3.5 pl-11 pr-10 text-sm font-bold text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all duration-200"
+                                    />
+                                    {searchTerm && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSearchTerm('');
+                                                setSearchResults([]);
+                                            }}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-white rounded-full hover:bg-slate-700 transition-colors"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Dropdown Flotante Absoluto */}
+                                {searchTerm.trim().length >= 2 && (
+                                    <div className="absolute top-full left-0 right-0 z-[100] mt-2 max-h-60 overflow-y-auto custom-scrollbar bg-slate-900/95 border border-slate-700 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-md divide-y divide-slate-800/80 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        {searching ? (
+                                            <div className="p-4 flex items-center justify-center gap-2 text-slate-500">
+                                                <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Buscando prospectos...</span>
+                                            </div>
+                                        ) : searchResults.length === 0 ? (
+                                            <div className="p-4 text-center text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                                No se encontraron coincidencias
+                                            </div>
+                                        ) : (
+                                            searchResults.map(l => {
+                                                const igDisplay = l.instagram ? (l.instagram.startsWith('@') ? l.instagram : `@${l.instagram}`) : '';
+                                                return (
+                                                    <button
+                                                        key={l.id}
+                                                        type="button"
+                                                        onClick={() => handleSelectLead(l)}
+                                                        className="w-full p-4 flex items-center justify-between hover:bg-indigo-500/10 transition-all text-left group/item"
+                                                    >
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-xs font-black text-slate-200 group-hover/item:text-white transition-colors">{l.username || 'Sin Nombre'}</p>
+                                                                {l.appointment && (
+                                                                    <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-black uppercase">
+                                                                        Con Agenda
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-slate-500 font-bold uppercase">
+                                                                {igDisplay && (
+                                                                    <span className="text-pink-400/80 flex items-center gap-0.5">
+                                                                        <Instagram size={9} />
+                                                                        {igDisplay}
+                                                                    </span>
+                                                                )}
+                                                                {l.email && <span>{l.email}</span>}
+                                                                {l.phone && <span>{l.phone}</span>}
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-[8px] font-black uppercase tracking-wider text-slate-500 group-hover/item:text-indigo-400 border border-slate-700 group-hover/item:border-indigo-500/30 px-2 py-1.5 rounded-lg transition-all duration-200 bg-slate-800/40 shrink-0">
+                                                            Seleccionar
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* SECCIÓN 2: DATOS DEL CLIENTE Y REGISTRO */}

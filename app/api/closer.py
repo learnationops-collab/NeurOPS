@@ -99,16 +99,120 @@ def search_closer_leads():
     if len(query_str) < 2: return jsonify([]), 200
     
     term = f"%{query_str}%"
-    # Allow searching ALL clients so they can sell to anyone in DB
-    leads = Client.query.filter(or_(Client.full_name.ilike(term), Client.email.ilike(term))).limit(20).all()
+    # Buscar clientes por nombre completo, email, instagram o teléfono
+    leads = Client.query.filter(or_(
+        Client.full_name.ilike(term), 
+        Client.email.ilike(term),
+        Client.instagram.ilike(term),
+        Client.phone.ilike(term)
+    )).limit(20).all()
     
-    return jsonify([{
-        "id": l.id, 
-        "username": l.full_name or l.email, 
-        "email": l.email,
-        "phone": l.phone
-    } for l in leads]), 200
+    results = []
+    for l in leads:
+        # Buscar cita más reciente en Appointment local
+        appt = Appointment.query.filter_by(client_id=l.id).order_by(Appointment.start_time.desc()).first()
+        appt_data = None
+        if appt:
+            setter_name = ""
+            if appt.setter:
+                setter_name = appt.setter.username or appt.setter.name or ""
+            appt_data = {
+                "start_time": appt.start_time.isoformat(),
+                "setter_name": setter_name
+            }
+        else:
+            # Buscar en agendas de Google Sheets (FinancialAgenda) por instagram o email
+            from app.models.financial import FinancialAgenda
+            ig_clean = l.instagram.strip().replace('@', '').lower() if l.instagram else None
+            
+            fin_filters = []
+            if ig_clean:
+                fin_filters.append(db.func.lower(db.func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
+            if l.email:
+                fin_filters.append(db.func.lower(FinancialAgenda.mail) == l.email.strip().lower())
+                
+            if fin_filters:
+                fin_agenda = FinancialAgenda.query.filter(or_(*fin_filters)).order_by(FinancialAgenda.date.desc()).first()
+                if fin_agenda:
+                    appt_data = {
+                        "start_time": fin_agenda.date.isoformat() if fin_agenda.date else None,
+                        "setter_name": fin_agenda.lead or ""
+                    }
+                    
+        results.append({
+            "id": l.id,
+            "username": l.full_name or l.email,
+            "email": l.email,
+            "phone": l.phone,
+            "instagram": l.instagram,
+            "appointment": appt_data
+        })
+        
+    return jsonify(results), 200
+
+
+@bp.route('/appointments/by-instagram', methods=['GET'])
+@login_required
+def get_appointment_by_instagram():
+    if current_user.role not in ['closer', 'admin', 'setter']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    instagram = request.args.get('instagram', '').strip().replace('@', '')
+    if not instagram:
+        return jsonify({"error": "Instagram es requerido"}), 400
+        
+    # 1. Buscar en la base de datos de clientes (Client) local
+    client = Client.query.filter(db.func.lower(Client.instagram) == instagram.lower()).first()
     
+    appointment_data = None
+    if client:
+        # Buscar la cita más reciente (Appointment)
+        appt = Appointment.query.filter_by(client_id=client.id).order_by(Appointment.start_time.desc()).first()
+        if appt:
+            # Obtener nombre del setter
+            setter_name = ""
+            if appt.setter:
+                setter_name = appt.setter.username or appt.setter.name or ""
+            appointment_data = {
+                "id": appt.id,
+                "start_time": appt.start_time.isoformat(),
+                "setter_name": setter_name,
+                "client": {
+                    "id": client.id,
+                    "username": client.full_name or client.email,
+                    "email": client.email,
+                    "phone": client.phone,
+                    "instagram": client.instagram
+                }
+            }
+            
+    # 2. Si no se encontró en las citas locales, buscar en la base de datos de agendas de Google Sheets (FinancialAgenda)
+    if not appointment_data:
+        from app.models.financial import FinancialAgenda
+        fin_agenda = FinancialAgenda.query.filter(
+            db.func.lower(db.func.replace(FinancialAgenda.instagram, '@', '')) == instagram.lower()
+        ).order_by(FinancialAgenda.date.desc()).first()
+        
+        if fin_agenda:
+            # En la base de datos de Sheets, el campo lead suele ser el setter
+            appointment_data = {
+                "id": f"financial-{fin_agenda.id}",
+                "start_time": fin_agenda.date.isoformat() if fin_agenda.date else None,
+                "setter_name": fin_agenda.lead or "",
+                "client": {
+                    "id": None, # No tiene ID de Client local aún
+                    "username": fin_agenda.nombre or "",
+                    "email": fin_agenda.mail or "",
+                    "phone": fin_agenda.whatsapp or "",
+                    "instagram": fin_agenda.instagram
+                }
+            }
+            
+    if appointment_data:
+        return jsonify(appointment_data), 200
+    else:
+        return jsonify({"error": "No se encontró ninguna agenda para este usuario de Instagram"}), 404
+
 @bp.route('/customers', methods=['GET'])
 @login_required
 def get_customers():

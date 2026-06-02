@@ -93,5 +93,9 @@
   - **Implementación de Ticket Promedio y Recaudación Promedio por Agenda**:
     - **API (Backend) (`__init__.py`) [MODIFY]**: Modificación del endpoint `GET /public/financial-sales` para calcular el número total de llamadas agendadas (`total_agendas`) en el rango de fechas seleccionado utilizando `FinancialAgenda.query` con filtros de fecha idénticos a los de ventas. Este valor se inyecta en el campo `total_agendas` dentro de `"con_agenda"` en `agenda_breakdown` para consumo dinámico.
     - **Interfaz (Frontend) (`PublicFinancialSalesPage.jsx`) [MODIFY]**: Rediseño de la tarjeta *"Atribución por Agendas"* del Registro de Ventas. Se calcula en caliente el **Ticket Promedio** para ventas con agenda y sin agenda, así como el ratio **Recibido x Agenda (Cita)** (recaudación total con agenda / total de citas agendadas). Se renderizan elegantemente en la base de cada columna con simetría visual y píldoras estilizadas para ofrecer un reporte premium limpio.
+  - **Búsqueda Autocompletable Interactiva por Múltiples Campos en Formulario de Ventas**:
+    - **API (Backend) (`closer.py`) [MODIFY]**: Modificación de la ruta `/leads/search` para buscar prospectos por coincidencia parcial en nombre, email, instagram o teléfono. Se cruzó cada cliente encontrado para adjuntar su agenda más reciente (`Appointment` local o `FinancialAgenda` de Sheets) incluyendo fecha y setter, para agilizar el autocompletado en un solo llamado.
+    - **Interfaz (Frontend) (`NewSalePage.jsx`) [MODIFY]**: Implementación de una barra de búsqueda inteligente que autocompleta en un dropdown flotante absoluto a medida que el closer escribe. Al seleccionar una coincidencia, se autocompleta el formulario entero (nombre, email, teléfono, instagram y atribución de setter) y se vincula la agenda en una hermosa tarjeta informativa.
+
 
 
