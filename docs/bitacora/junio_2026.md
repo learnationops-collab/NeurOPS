@@ -54,3 +54,15 @@
     - **Icono de Previsualización (Ojo)**:
       - **Interfaz (Frontend)**: Integración del icono `Eye` de `lucide-react` en la columna de acciones de la tabla de reportes de setters (`SetterReportsTable.jsx`). Al hacer clic, abre el reporte en una pestaña nueva (`_blank`) pasando el token activo de autenticación, restringiendo su visibilidad únicamente a los administradores (`user.role === 'admin'`).
       - **API (Backend)**: Creación de la ruta pública de previsualización `@bp.route('/public/setter-reports/<int:report_id>/preview')` en `app/api/public/setter.py`. Valida robustamente la sesión activa del administrador o el token enviado y renderiza en caliente el template físico `setter_report.html` con las métricas detalladas calculadas.
+  - **Optimización y Reestructuración de la Tabla de Ventas Breakdown en Dashboard de Closing (`CloserPerformanceTab.jsx`) [MODIFY]**:
+    - **Optimización de Rendimiento (React useMemo)**: Se encapsuló todo el bloque de procesamiento y cálculo de métricas financieras de ventas y periodos comparativos en un hook `useMemo` consolidado (`salesMetrics`). Esto previene recálculos redundantes e innecesarios durante los re-renders del componente, acelerando significativamente la fluidez y velocidad del dashboard.
+    - **Reestructuración y Nuevas Columnas en la Tabla "Ventas Breakdown"**:
+      - Se eliminaron por completo las columnas antiguas de *"Recup. Cants"* y *"Recup. Cash"*.
+      - Se implementaron e integraron las nuevas columnas **"Cash en llamada"** (dinero ingresado de forma inmediata en la videollamada comercial) y **"Cash fuera de llamada"** (calculado restando dinámicamente el cash en llamada al cash collect total recolectado de cada categoría).
+      - Se reordenaron las columnas respetando la secuencia exacta solicitada:
+        1. *Tipo de Pago* (PIF, Split Pay, Cuotas Cobradas, Promesas/Señas).
+        2. *Cantidad*.
+        3. *Cash en llamada*.
+        4. *Cash fuera de la llamada*.
+        5. *Cash total*.
+      - Se recalcularon y adaptaron de manera consistente todas las filas individuales de la cuadrícula, así como la fila de **Totales generales**, integrando las correspondientes píldoras visuales y el análisis comparativo con el periodo anterior de forma limpia y transparente.

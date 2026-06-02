@@ -227,40 +227,90 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
         );
     }
 
-    // Chart Data Configs
-    const pifCount = stats.sales.pif?.count ?? stats.sales.totals?.pif_count ?? 0;
-    const splitCount = stats.sales.split?.count ?? stats.sales.totals?.split_count ?? 0;
-    const depositCount = stats.sales.deposit?.count ?? stats.sales.totals?.deposit_count ?? stats.sales.totals?.seña_count ?? 0;
-    const installmentCount = stats.sales.installment?.count ?? stats.sales.totals?.installment_count ?? 0;
-    
-    const pifCash = stats.sales.pif?.cash ?? stats.sales.totals?.pif_cash_collected ?? stats.sales.totals?.pif_cash ?? 0;
-    const splitCash = stats.sales.split?.cash ?? stats.sales.totals?.split_cash_collected ?? stats.sales.totals?.split_cash ?? 0;
-    const depositCash = stats.sales.deposit?.cash ?? stats.sales.totals?.deposit_cash_collected ?? stats.sales.totals?.deposit_cash ?? stats.sales.totals?.seña_cash ?? 0;
-    const installmentCash = stats.sales.installment?.cash ?? stats.sales.totals?.installment_cash ?? stats.sales.totals?.installment_cash_collected ?? 0;
+    // Optimizacion de Rendimiento: Calculo unificado con useMemo
+    const salesMetrics = useMemo(() => {
+        if (!stats) return {};
 
-    const realSalesCount = pifCount + splitCount;
-    const realSalesCash = pifCash + splitCash;
-    const totalCashCollected = pifCash + splitCash + installmentCash + depositCash;
+        const pifCount = stats.sales.pif?.count ?? stats.sales.totals?.pif_count ?? 0;
+        const splitCount = stats.sales.split?.count ?? stats.sales.totals?.split_count ?? 0;
+        const depositCount = stats.sales.deposit?.count ?? stats.sales.totals?.deposit_count ?? stats.sales.totals?.seña_count ?? 0;
+        const installmentCount = stats.sales.installment?.count ?? stats.sales.totals?.installment_count ?? 0;
+        
+        const pifCash = stats.sales.pif?.cash ?? stats.sales.totals?.pif_cash_collected ?? stats.sales.totals?.pif_cash ?? 0;
+        const splitCash = stats.sales.split?.cash ?? stats.sales.totals?.split_cash_collected ?? stats.sales.totals?.split_cash ?? 0;
+        const depositCash = stats.sales.deposit?.cash ?? stats.sales.totals?.deposit_cash_collected ?? stats.sales.totals?.deposit_cash ?? stats.sales.totals?.seña_cash ?? 0;
+        const installmentCash = stats.sales.installment?.cash ?? stats.sales.totals?.installment_cash ?? stats.sales.totals?.installment_cash_collected ?? 0;
 
-    const ticketPromedioReal = realSalesCount > 0 ? (realSalesCash / realSalesCount) : 0;
+        const realSalesCount = pifCount + splitCount;
+        const realSalesCash = pifCash + splitCash;
+        const totalCashCollected = pifCash + splitCash + installmentCash + depositCash;
 
-    // Datos del periodo anterior (Comparison)
-    const compStats = stats.comparison;
-    const compPifCount = compStats?.sales?.pif?.count ?? compStats?.sales?.totals?.pif_count ?? 0;
-    const compSplitCount = compStats?.sales?.split?.count ?? compStats?.sales?.totals?.split_count ?? 0;
-    const compDepositCount = compStats?.sales?.deposit?.count ?? compStats?.sales?.totals?.deposit_count ?? compStats?.sales?.totals?.seña_count ?? 0;
-    const compInstallmentCount = compStats?.sales?.installment?.count ?? compStats?.sales?.totals?.installment_count ?? 0;
+        const ticketPromedioReal = realSalesCount > 0 ? (realSalesCash / realSalesCount) : 0;
 
-    const compPifCash = compStats?.sales?.pif?.cash ?? compStats?.sales?.totals?.pif_cash_collected ?? compStats?.sales?.totals?.pif_cash ?? 0;
-    const compSplitCash = compStats?.sales?.split?.cash ?? compStats?.sales?.totals?.split_cash_collected ?? compStats?.sales?.totals?.split_cash ?? 0;
-    const compDepositCash = compStats?.sales?.deposit?.cash ?? compStats?.sales?.totals?.deposit_cash_collected ?? compStats?.sales?.totals?.deposit_cash ?? compStats?.sales?.totals?.seña_cash ?? 0;
-    const compInstallmentCash = compStats?.sales?.installment?.cash ?? compStats?.sales?.totals?.installment_cash ?? compStats?.sales?.totals?.installment_cash_collected ?? 0;
+        // Datos del periodo anterior (Comparison)
+        const compStats = stats.comparison;
+        const compPifCount = compStats?.sales?.pif?.count ?? compStats?.sales?.totals?.pif_count ?? 0;
+        const compSplitCount = compStats?.sales?.split?.count ?? compStats?.sales?.totals?.split_count ?? 0;
+        const compDepositCount = compStats?.sales?.deposit?.count ?? compStats?.sales?.totals?.deposit_count ?? compStats?.sales?.totals?.seña_count ?? 0;
+        const compInstallmentCount = compStats?.sales?.installment?.count ?? compStats?.sales?.totals?.installment_count ?? 0;
 
-    const compRealSalesCount = compPifCount + compSplitCount;
-    const compRealSalesCash = compPifCash + compSplitCash;
-    const compTotalCashCollected = compPifCash + compSplitCash + compInstallmentCash + compDepositCash;
+        const compPifCash = compStats?.sales?.pif?.cash ?? compStats?.sales?.totals?.pif_cash_collected ?? compStats?.sales?.totals?.pif_cash ?? 0;
+        const compSplitCash = compStats?.sales?.split?.cash ?? compStats?.sales?.totals?.split_cash_collected ?? compStats?.sales?.totals?.split_cash ?? 0;
+        const compDepositCash = compStats?.sales?.deposit?.cash ?? compStats?.sales?.totals?.deposit_cash_collected ?? compStats?.sales?.totals?.deposit_cash ?? compStats?.sales?.totals?.seña_cash ?? 0;
+        const compInstallmentCash = compStats?.sales?.installment?.cash ?? compStats?.sales?.totals?.installment_cash ?? compStats?.sales?.totals?.installment_cash_collected ?? 0;
 
-    const compTicketPromedioReal = compRealSalesCount > 0 ? (compRealSalesCash / compRealSalesCount) : 0;
+        const compRealSalesCount = compPifCount + compSplitCount;
+        const compRealSalesCash = compPifCash + compSplitCash;
+        const compTotalCashCollected = compPifCash + compSplitCash + compInstallmentCash + compDepositCash;
+
+        const compTicketPromedioReal = compRealSalesCount > 0 ? (compRealSalesCash / compRealSalesCount) : 0;
+
+        // Metricas de in-call / out-call cash
+        const pifInCall = stats.sales.pif?.in_call_cash ?? 0;
+        const splitInCall = stats.sales.split?.in_call_cash ?? 0;
+        const depositInCall = stats.sales.deposit?.in_call_cash ?? 0;
+        const installmentInCall = stats.sales.installment?.in_call_cash ?? 0;
+
+        const compPifInCall = compStats?.sales?.pif?.in_call_cash ?? 0;
+        const compSplitInCall = compStats?.sales?.split?.in_call_cash ?? 0;
+        const compDepositInCall = compStats?.sales?.deposit?.in_call_cash ?? 0;
+        const compInstallmentInCall = compStats?.sales?.installment?.in_call_cash ?? 0;
+
+        const totalInCallCash = pifInCall + splitInCall + depositInCall + installmentInCall;
+        const compTotalInCallCash = compPifInCall + compSplitInCall + compDepositInCall + compInstallmentInCall;
+
+        const totalOutCallCash = totalCashCollected - totalInCallCash;
+        const compTotalOutCallCash = compTotalCashCollected - compTotalInCallCash;
+
+        return {
+            pifCount, splitCount, depositCount, installmentCount,
+            pifCash, splitCash, depositCash, installmentCash,
+            realSalesCount, realSalesCash, totalCashCollected, ticketPromedioReal,
+            compStats,
+            compPifCount, compSplitCount, compDepositCount, compInstallmentCount,
+            compPifCash, compSplitCash, compDepositCash, compInstallmentCash,
+            compRealSalesCount, compRealSalesCash, compTotalCashCollected, compTicketPromedioReal,
+            pifInCall, splitInCall, depositInCall, installmentInCall,
+            compPifInCall, compSplitInCall, compDepositInCall, compInstallmentInCall,
+            totalInCallCash, compTotalInCallCash,
+            totalOutCallCash, compTotalOutCallCash
+        };
+    }, [stats]);
+
+    const {
+        pifCount = 0, splitCount = 0, depositCount = 0, installmentCount = 0,
+        pifCash = 0, splitCash = 0, depositCash = 0, installmentCash = 0,
+        realSalesCount = 0, realSalesCash = 0, totalCashCollected = 0, ticketPromedioReal = 0,
+        compStats,
+        compPifCount = 0, compSplitCount = 0, compDepositCount = 0, compInstallmentCount = 0,
+        compPifCash = 0, compSplitCash = 0, compDepositCash = 0, compInstallmentCash = 0,
+        compRealSalesCount = 0, compRealSalesCash = 0, compTotalCashCollected = 0, compTicketPromedioReal = 0,
+        pifInCall = 0, splitInCall = 0, depositInCall = 0, installmentInCall = 0,
+        compPifInCall = 0, compSplitInCall = 0, compDepositInCall = 0, compInstallmentInCall = 0,
+        totalInCallCash = 0, compTotalInCallCash = 0,
+        totalOutCallCash = 0, compTotalOutCallCash = 0
+    } = salesMetrics;
+
 
 
     const salesData = [
@@ -692,24 +742,64 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
                         <div className="grid grid-cols-5 gap-0">
                             <div className="p-3 bg-slate-700/50" />
                             <div className="p-3 text-center bg-amber-900/20">
-                                <p className="text-[8px] font-black text-amber-400 uppercase tracking-wider">Cants</p>
+                                <p className="text-[8px] font-black text-amber-400 uppercase tracking-wider">Cantidad</p>
                             </div>
                             <div className="p-3 text-center bg-emerald-900/20">
-                                <p className="text-[8px] font-black text-emerald-400 uppercase tracking-wider">Cash Collected</p>
+                                <p className="text-[8px] font-black text-emerald-400 uppercase tracking-wider">Cash en llamada</p>
                             </div>
                             <div className="p-3 text-center bg-blue-900/20">
-                                <p className="text-[8px] font-black text-blue-400 uppercase tracking-wider">Recup. Cants</p>
+                                <p className="text-[8px] font-black text-blue-400 uppercase tracking-wider">Cash fuera de llamada</p>
                             </div>
                             <div className="p-3 text-center bg-indigo-900/20">
-                                <p className="text-[8px] font-black text-indigo-400 uppercase tracking-wider">Recup. Cash</p>
+                                <p className="text-[8px] font-black text-indigo-400 uppercase tracking-wider">Cash Total</p>
                             </div>
                         </div>
 
                         {[
-                            { label: 'PIF (Completo)', keyCount: 'pif_count', keyCash: 'pif_cash', keyRecCount: 'rec_pif_count', keyRecCash: 'rec_pif_cash', valCount: pifCount, valCash: pifCash, compCount: compPifCount, compCash: compPifCash },
-                            { label: 'Split Pay (Inicial)', keyCount: 'split_count', keyCash: 'split_cash', keyRecCount: 'rec_split_count', keyRecCash: 'rec_split_cash', valCount: splitCount, valCash: splitCash, compCount: compSplitCount, compCash: compSplitCash },
-                            { label: 'Cuotas Cobradas', keyCount: 'installment_count', keyCash: 'installment_cash', keyRecCount: 'rec_installment_count', keyRecCash: 'rec_installment_cash', valCount: installmentCount, valCash: installmentCash, compCount: compInstallmentCount, compCash: compInstallmentCash },
-                            { label: 'Promesas (Señas)', keyCount: 'deposit_count', keyCash: 'deposit_cash', keyRecCount: 'rec_seña_count', keyRecCash: 'rec_seña_cash', valCount: depositCount, valCash: depositCash, compCount: compDepositCount, compCash: compDepositCash },
+                            { 
+                                label: 'PIF (Completo)', 
+                                valCount: pifCount, 
+                                compCount: compPifCount,
+                                inCall: pifInCall,
+                                compInCall: compPifInCall,
+                                outCall: pifCash - pifInCall,
+                                compOutCall: compPifCash - compPifInCall,
+                                total: pifCash,
+                                compTotal: compPifCash
+                            },
+                            { 
+                                label: 'Split Pay (Inicial)', 
+                                valCount: splitCount, 
+                                compCount: compSplitCount,
+                                inCall: splitInCall,
+                                compInCall: compSplitInCall,
+                                outCall: splitCash - splitInCall,
+                                compOutCall: compSplitCash - compSplitInCall,
+                                total: splitCash,
+                                compTotal: compSplitCash
+                            },
+                            { 
+                                label: 'Cuotas Cobradas', 
+                                valCount: installmentCount, 
+                                compCount: compInstallmentCount,
+                                inCall: installmentInCall,
+                                compInCall: compInstallmentInCall,
+                                outCall: installmentCash - installmentInCall,
+                                compOutCall: compInstallmentCash - compInstallmentInCall,
+                                total: installmentCash,
+                                compTotal: compInstallmentCash
+                            },
+                            { 
+                                label: 'Promesas (Señas)', 
+                                valCount: depositCount, 
+                                compCount: compDepositCount,
+                                inCall: depositInCall,
+                                compInCall: compDepositInCall,
+                                outCall: depositCash - depositInCall,
+                                compOutCall: compDepositCash - compDepositInCall,
+                                total: depositCash,
+                                compTotal: compDepositCash
+                            },
                         ].map((row, i) => (
                             <div key={row.label} className={`grid grid-cols-5 gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
                                 <div className="p-3 flex items-center gap-2 border-r border-slate-800/50">
@@ -720,16 +810,16 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
                                     {renderComparisonSubdata(row.valCount, row.compCount)}
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
-                                    <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(row.valCash)}</p>
-                                    {renderComparisonSubdata(row.valCash, row.compCash, true)}
+                                    <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(row.inCall)}</p>
+                                    {renderComparisonSubdata(row.inCall, row.compInCall, true)}
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
-                                    <p className="text-sm font-black text-blue-400 tabular-nums">{fmt(stats.sales.totals[row.keyRecCount] || 0)}</p>
-                                    {renderComparisonSubdata(stats.sales.totals[row.keyRecCount] || 0, compStats?.sales?.totals?.[row.keyRecCount] || 0)}
+                                    <p className="text-[11px] font-black text-blue-400 tabular-nums">{fmtCash(row.outCall)}</p>
+                                    {renderComparisonSubdata(row.outCall, row.compOutCall, true)}
                                 </div>
                                 <div className="p-3 text-center">
-                                    <p className="text-[11px] font-black text-indigo-400 tabular-nums">{fmtCash(stats.sales.totals[row.keyRecCash] || 0)}</p>
-                                    {renderComparisonSubdata(stats.sales.totals[row.keyRecCash] || 0, compStats?.sales?.totals?.[row.keyRecCash] || 0, true)}
+                                    <p className="text-[11px] font-black text-indigo-400 tabular-nums">{fmtCash(row.total)}</p>
+                                    {renderComparisonSubdata(row.total, row.compTotal, true)}
                                 </div>
                             </div>
                         ))}
@@ -746,25 +836,26 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
                                 )}
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
-                                <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash + depositCash + installmentCash)}</p>
+                                <p className="text-[11px] font-black text-emerald-400 tabular-nums">{fmtCash(totalInCallCash)}</p>
                                 {renderComparisonSubdata(
-                                    realSalesCash + depositCash + installmentCash,
-                                    compRealSalesCash + compDepositCash + compInstallmentCash,
+                                    totalInCallCash,
+                                    compTotalInCallCash,
                                     true
                                 )}
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
-                                <p className="text-sm font-black text-blue-400 tabular-nums">{fmt(stats.sales.totals.recuperado_count || 0)}</p>
+                                <p className="text-[11px] font-black text-blue-400 tabular-nums">{fmtCash(totalOutCallCash)}</p>
                                 {renderComparisonSubdata(
-                                    stats.sales.totals.recuperado_count || 0,
-                                    compStats?.sales?.totals?.recuperado_count || 0
+                                    totalOutCallCash,
+                                    compTotalOutCallCash,
+                                    true
                                 )}
                             </div>
                             <div className="p-3 text-center">
-                                <p className="text-[11px] font-black text-indigo-400 tabular-nums">{fmtCash(stats.sales.totals.recuperado_cash || 0)}</p>
+                                <p className="text-[11px] font-black text-indigo-400 tabular-nums">{fmtCash(totalCashCollected)}</p>
                                 {renderComparisonSubdata(
-                                    stats.sales.totals.recuperado_cash || 0,
-                                    compStats?.sales?.totals?.recuperado_cash || 0,
+                                    totalCashCollected,
+                                    compTotalCashCollected,
                                     true
                                 )}
                             </div>
