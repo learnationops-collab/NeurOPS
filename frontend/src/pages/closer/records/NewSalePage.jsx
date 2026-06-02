@@ -489,9 +489,10 @@ const CloserNewSalePage = () => {
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><Mail size={14} /></span>
                                 <input
                                     type="email"
-                                    className="w-full bg-slate-800/40 border border-slate-700/50 rounded-xl pl-11 pr-4 py-3 text-sm font-bold text-slate-400 outline-none cursor-not-allowed"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500 transition-all"
                                     value={form.email_vendedor}
-                                    disabled
+                                    onChange={e => setForm({ ...form, email_vendedor: e.target.value })}
+                                    placeholder="ej. closer@neurops.com"
                                     required
                                 />
                             </div>
