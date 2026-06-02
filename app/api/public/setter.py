@@ -554,14 +554,15 @@ def _prepare_setter_report_data(stat):
     from app.models import DailyReportQuestion
     qualitative_callouts = []
     if stat.answers:
-        questions = {q.id: q.text for q in DailyReportQuestion.query.filter_by(role='setter', is_active=True).all()}
+        questions = {q.id: q.text for q in DailyReportQuestion.query.filter_by(role='setter').all()}
         for q_id, answer in stat.answers.items():
             if not str(q_id).isdigit():
                 continue
             q_id_int = int(q_id)
-            if q_id_int in questions and answer and answer.strip():
+            if answer and answer.strip():
+                question_text = questions.get(q_id_int, f"Pregunta Cualitativa #{q_id_int}")
                 qualitative_callouts.append({
-                    "question": questions[q_id_int],
+                    "question": question_text,
                     "answer": answer
                 })
 
