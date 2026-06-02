@@ -22,8 +22,6 @@ const CloserNewSalePage = () => {
     
     // Metadatos locales de la base de datos
     const [metadata, setMetadata] = useState({ leads: [] });
-    // Lista de Setters del equipo
-    const [setters, setSetters] = useState([]);
 
     // Estados para la búsqueda autocompletable interactiva por múltiples campos
     const [searchTerm, setSearchTerm] = useState('');
@@ -52,10 +50,6 @@ const CloserNewSalePage = () => {
                 // 1. Cargar leads agendados recientes
                 const metaRes = await api.get('/closer/sale-metadata');
                 setMetadata(metaRes.data || { leads: [] });
-                
-                // 2. Cargar setters del equipo
-                const setterRes = await api.get('/public/active-setters');
-                setSetters(setterRes.data || []);
             } catch (err) {
                 console.error("Error al cargar inicialización del formulario:", err);
                 setError("Error al cargar los metadatos de configuración.");
@@ -502,18 +496,12 @@ const CloserNewSalePage = () => {
                             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Setter que Prospectó (Atribución)</label>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><Users size={14} /></span>
-                                <select
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
-                                    value={form.setter}
-                                    onChange={e => setForm({ ...form, setter: e.target.value })}
-                                >
-                                    <option value="">Sin Setter / Orgánico (ManyChat)...</option>
-                                    {setters.map(s => (
-                                        <option key={s.id} value={s.name}>
-                                            {s.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-900 border border-slate-800 text-slate-400 rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none cursor-not-allowed"
+                                    value={form.setter || 'Sin Setter / Orgánico (ManyChat)'}
+                                    readOnly
+                                />
                             </div>
                         </div>
 

@@ -65,6 +65,7 @@ def get_me():
             "id": current_user.id,
             "username": current_user.username,
             "role": current_user.role,
+            "email": current_user.email,
             "is_impersonating": is_impersonating,
             "original_user_role": original_user_role
         }
@@ -113,6 +114,7 @@ def impersonate():
             "id": target_user.id,
             "username": target_user.username,
             "role": target_user.role,
+            "email": target_user.email,
             "is_impersonating": True,
             "original_user_role": session.get('original_user_role')
         }
@@ -154,7 +156,8 @@ def revert_impersonation():
         "user": {
             "id": original_user.id,
             "username": original_user.username,
-            "role": original_user.role
+            "role": original_user.role,
+            "email": original_user.email
         }
     }), 200
 
