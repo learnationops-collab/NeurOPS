@@ -477,7 +477,7 @@ const CloserNewSalePage = () => {
                     {/* SECCIÓN 4: ATRIBUCIÓN E INFORMACIÓN ADICIONAL */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         
-                        <div className="space-y-2">
+                        <div className="space-y-2 md:col-span-2">
                             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Email del Vendedor (Closer) *</label>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><Mail size={14} /></span>
@@ -488,19 +488,6 @@ const CloserNewSalePage = () => {
                                     onChange={e => setForm({ ...form, email_vendedor: e.target.value })}
                                     placeholder="ej. closer@neurops.com"
                                     required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Setter que Prospectó (Atribución)</label>
-                            <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><Users size={14} /></span>
-                                <input
-                                    type="text"
-                                    className="w-full bg-slate-900 border border-slate-800 text-slate-400 rounded-xl pl-11 pr-4 py-3 text-sm font-bold outline-none cursor-not-allowed"
-                                    value={form.setter || 'Sin Setter / Orgánico (ManyChat)'}
-                                    readOnly
                                 />
                             </div>
                         </div>
