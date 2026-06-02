@@ -73,4 +73,16 @@
       3. *Ticket Promedio Seña* (Reserva / Promesa).
       4. *Ticket Promedio Cuota* (Pagos de seguimiento).
       Cada tarjeta incluye tooltips explicativos detallados y el respectivo análisis comparativo con el periodo anterior (`renderComparisonSubdataLeft`), optimizando la densidad de información y mejorando la jerarquía visual del dashboard de closing.
+    - **Ratios y Gráficos Circulares para Primera y Segunda Llamada**:
+      - Se eliminaron las barras de progreso genéricas y lineales de la parte inferior de la tabla de **Agenda Breakdown**.
+      - Se implementó un componente helper especializado e interactivo llamado `CallPieChart` que separa y visualiza con absoluta precisión los ratios de **Primera Llamada** y **Segunda Llamada** mediante dos hermosos gráficos circulares interactivos colocados en una cuadrícula responsiva lado a lado.
+      - Cada gráfico distribuye el volumen y porcentaje de **Asistencia** (Show Rate), **No Show** y **Llamadas Canceladas**, acompañados de leyendas e indicadores numéricos con un diseño premium y consistente con la estética Dark Glassmorphism del proyecto.
+    - **Gráficos Circulares para el Desglose de Ventas Breakdown**:
+      - Se implementó un componente helper especializado e interactivo llamado `SalesPieChart` para graficar de forma granular el desglose financiero al pie de la tabla **Ventas Breakdown**.
+      - Incorpora dos hermosos gráficos circulares interactivos colocados en una cuadrícula responsiva lado a lado: **Distribución de Cierres (Cantidad)** y **Distribución de Recaudación (Cash)**.
+      - Cada gráfico segmenta las transacciones por tipo de pago (PIF, Split Pay, Cuotas Cobradas y Señas), indicando el volumen/cash absoluto y la variación porcentual con leyendas de alta gama visual.
+    - **Simplificación y Eliminación de Gráficos Redundantes en el Pie de Página**:
+      - Al integrarse los gráficos circulares directamente en las tablas correspondientes, se eliminaron los gráficos duplicados de *"Tipo de Cierre"* y *"Estado de Agendas"* de la fila inferior general.
+      - Se reorganizó la fila inferior (`BOTTOM ROW`) en un grid de 2 columnas centrado exclusivamente en la distribución de la tenacidad de los seguimientos: **Re-engagement (Hot)** y **Re-engagement (Cold)**, logrando un dashboard sumamente limpio, simétrico y de altísimo valor analítico.
+
 

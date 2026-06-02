@@ -204,6 +204,159 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
         </div>
     );
 
+    const CallPieChart = ({ title, attended, noShow, canceled, scheduled }) => {
+        const pieData = [
+            { name: 'Asistencias', value: attended },
+            { name: 'No Show', value: noShow },
+            { name: 'Cancelado', value: canceled }
+        ].filter(d => d.value > 0);
+
+        if (pieData.length === 0) {
+            pieData.push({ name: 'Sin Agendas', value: 1 });
+        }
+
+        const colors = pieData[0].name === 'Sin Agendas' ? ['#334155'] : ['#10b981', '#f43f5e', '#f59e0b'];
+
+        const showRate = scheduled > 0 ? (attended / scheduled) * 100 : 0;
+        const noShowRate = scheduled > 0 ? (noShow / scheduled) * 100 : 0;
+        const cancelRate = scheduled > 0 ? (canceled / scheduled) * 100 : 0;
+
+        return (
+            <div className="bg-slate-950/40 p-4 rounded-3xl border border-slate-800/50 flex flex-col items-center space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{title}</h4>
+                <div className="h-32 w-full flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={30}
+                                outerRadius={40}
+                                paddingAngle={3}
+                                dataKey="value"
+                            >
+                                {pieData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} className="stroke-slate-950 stroke-2" />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '1rem', color: '#fff', fontSize: '10px', fontWeight: 'bold' }}
+                                itemStyle={{ color: '#e2e8f0' }}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="w-full space-y-2 text-[9px] font-bold text-slate-300">
+                    <div className="flex justify-between items-center bg-slate-950/60 p-2 rounded-xl border border-slate-900">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span>Show Rate:</span>
+                        </div>
+                        <span className="text-emerald-400 font-black tabular-nums">{showRate.toFixed(1)}% <span className="text-slate-600 font-bold">({attended})</span></span>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-950/60 p-2 rounded-xl border border-slate-900">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                            <span>No Show Rate:</span>
+                        </div>
+                        <span className="text-rose-400 font-black tabular-nums">{noShowRate.toFixed(1)}% <span className="text-slate-600 font-bold">({noShow})</span></span>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-950/60 p-2 rounded-xl border border-slate-900">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            <span>Cancel Rate:</span>
+                        </div>
+                        <span className="text-amber-400 font-black tabular-nums">{cancelRate.toFixed(1)}% <span className="text-slate-600 font-bold">({canceled})</span></span>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const SalesPieChart = ({ title, pifVal, splitVal, installmentVal, depositVal, isCurrency = false }) => {
+        const pieData = [
+            { name: 'PIF', value: pifVal },
+            { name: 'Split Pay', value: splitVal },
+            { name: 'Cuotas', value: installmentVal },
+            { name: 'Señas', value: depositVal }
+        ].filter(d => d.value > 0);
+
+        if (pieData.length === 0) {
+            pieData.push({ name: 'Sin Ventas', value: 1 });
+        }
+
+        const colors = pieData[0].name === 'Sin Ventas' ? ['#334155'] : ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'];
+        const total = pifVal + splitVal + installmentVal + depositVal;
+
+        const fmtVal = (val) => {
+            return isCurrency ? fmtCash(val) : fmt(val);
+        };
+
+        const getPct = (val) => {
+            return total > 0 ? (val / total) * 100 : 0;
+        };
+
+        return (
+            <div className="bg-slate-950/40 p-4 rounded-3xl border border-slate-800/50 flex flex-col items-center space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{title}</h4>
+                <div className="h-32 w-full flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={30}
+                                outerRadius={40}
+                                paddingAngle={3}
+                                dataKey="value"
+                            >
+                                {pieData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} className="stroke-slate-950 stroke-2" />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '1rem', color: '#fff', fontSize: '10px', fontWeight: 'bold' }}
+                                itemStyle={{ color: '#e2e8f0' }}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="w-full space-y-2 text-[9px] font-bold text-slate-300">
+                    <div className="flex justify-between items-center bg-slate-950/60 p-2 rounded-xl border border-slate-900">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span>PIF:</span>
+                        </div>
+                        <span className="text-emerald-400 font-black tabular-nums">{getPct(pifVal).toFixed(1)}% <span className="text-slate-600 font-bold">({fmtVal(pifVal)})</span></span>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-950/60 p-2 rounded-xl border border-slate-900">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            <span>Split Pay:</span>
+                        </div>
+                        <span className="text-blue-400 font-black tabular-nums">{getPct(splitVal).toFixed(1)}% <span className="text-slate-600 font-bold">({fmtVal(splitVal)})</span></span>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-950/60 p-2 rounded-xl border border-slate-900">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                            <span>Cuotas:</span>
+                        </div>
+                        <span className="text-violet-400 font-black tabular-nums">{getPct(installmentVal).toFixed(1)}% <span className="text-slate-600 font-bold">({fmtVal(installmentVal)})</span></span>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-950/60 p-2 rounded-xl border border-slate-900">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            <span>Señas:</span>
+                        </div>
+                        <span className="text-amber-400 font-black tabular-nums">{getPct(depositVal).toFixed(1)}% <span className="text-slate-600 font-bold">({fmtVal(depositVal)})</span></span>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const funnelData = useMemo(() => {
         if (!stats) return [];
         const pif = stats.sales.pif?.count ?? stats.sales.totals?.pif_count ?? 0;
@@ -781,10 +934,21 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
                         ))}
                     </div>
 
-                    <div className="space-y-4 pt-4 border-t border-slate-800">
-                        <ProgressRow label="Show Rate (1ra/2da)" percentage={stats.percentages.show_rate} colorClass="text-emerald-500" absolute={`${fmt(stats.agendas.totals.attended)} / ${fmt(stats.agendas.totals.scheduled)}`} tooltip="Porcentaje de asistencias (Total Asistencias / Total Agendados)." />
-                        <ProgressRow label="No Show Rate" percentage={stats.percentages.no_show_rate} colorClass="text-rose-500" absolute={fmt(stats.agendas.totals.no_show)} tooltip="Porcentaje de prospectos agendados que no se presentaron." />
-                        <ProgressRow label="Cancel Rate" percentage={stats.percentages.cancel_rate} colorClass="text-amber-500" absolute={fmt(stats.agendas.totals.canceled)} tooltip="Porcentaje de llamadas que fueron canceladas." />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
+                        <CallPieChart 
+                            title="1ra Llamada (Ratios)" 
+                            attended={stats.agendas.first_call.attended}
+                            noShow={stats.agendas.first_call.no_show}
+                            canceled={stats.agendas.first_call.canceled}
+                            scheduled={stats.agendas.first_call.scheduled}
+                        />
+                        <CallPieChart 
+                            title="2da Llamada (Ratios)" 
+                            attended={stats.agendas.second_call.attended}
+                            noShow={stats.agendas.second_call.no_show}
+                            canceled={stats.agendas.second_call.canceled}
+                            scheduled={stats.agendas.second_call.scheduled}
+                        />
                     </div>
                 </div>
 
@@ -920,6 +1084,25 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
                             </div>
                         </div>
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
+                        <SalesPieChart 
+                            title="Distribución de Cierres (Cantidad)" 
+                            pifVal={pifCount}
+                            splitVal={splitCount}
+                            installmentVal={installmentCount}
+                            depositVal={depositCount}
+                            isCurrency={false}
+                        />
+                        <SalesPieChart 
+                            title="Distribución de Recaudación (Cash)" 
+                            pifVal={pifCash}
+                            splitVal={splitCash}
+                            installmentVal={installmentCash}
+                            depositVal={depositCash}
+                            isCurrency={true}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -998,22 +1181,8 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
                 </div>
             </div>
 
-            {/* 6. BOTTOM ROW: DISTRIBUTION CHARTS (FUSIONADO DESDE % RENDIMIENTO) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Sales Type Distribution */}
-                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center">
-                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Tipo de Cierre</h4>
-                    <SimplePieChart data={salesData} colors={salesColors} />
-                    <ChartTable data={salesData} colors={salesColors} />
-                </div>
-
-                {/* Attendance Distribution */}
-                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center">
-                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Estado de Agendas</h4>
-                    <SimplePieChart data={attendanceData} colors={attendanceColors} />
-                    <ChartTable data={attendanceData} colors={attendanceColors} />
-                </div>
-
+            {/* 6. BOTTOM ROW: DISTRIBUTION CHARTS (FOLLOW-UPS RE-ENGAGEMENT) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Hot Follow Ups Distribution */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center relative group">
                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Re-engagement (Hot)</h4>
