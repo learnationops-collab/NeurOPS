@@ -646,10 +646,28 @@ def get_financial_sales():
             })
         sources_breakdown.sort(key=lambda x: x["total_monto"], reverse=True)
         
+        # Calcular total de llamadas agendadas en el rango de fechas
+        agenda_query = FinancialAgenda.query
+        if start_date_str:
+            try:
+                start_date_val = datetime.strptime(start_date_str, '%Y-%m-%d')
+                agenda_query = agenda_query.filter(FinancialAgenda.date >= start_date_val)
+            except ValueError:
+                pass
+        if end_date_str:
+            try:
+                end_date_val = datetime.strptime(end_date_str, '%Y-%m-%d')
+                end_date_val = end_date_val.replace(hour=23, minute=59, second=59, microsecond=999999)
+                agenda_query = agenda_query.filter(FinancialAgenda.date <= end_date_val)
+            except ValueError:
+                pass
+        total_agendas = agenda_query.with_entities(func.count(FinancialAgenda.id)).scalar() or 0
+
         agenda_breakdown = {
             "con_agenda": {
                 "total_monto": round(monto_con_agenda, 2),
-                "count": count_con_agenda
+                "count": count_con_agenda,
+                "total_agendas": total_agendas
             },
             "sin_agenda": {
                 "total_monto": round(monto_sin_agenda, 2),

@@ -276,6 +276,17 @@ const PublicFinancialSalesPage = () => {
                             const total = agendaBreakdown.con_agenda.total_monto + agendaBreakdown.sin_agenda.total_monto;
                             const pctCon = total > 0 ? (agendaBreakdown.con_agenda.total_monto / total) * 100 : 0;
                             const pctSin = total > 0 ? (agendaBreakdown.sin_agenda.total_monto / total) * 100 : 0;
+                            
+                            const conCount = agendaBreakdown.con_agenda.count || 0;
+                            const conMonto = agendaBreakdown.con_agenda.total_monto || 0;
+                            const totalAgendas = agendaBreakdown.con_agenda.total_agendas || 0;
+                            const ticketCon = conCount > 0 ? conMonto / conCount : 0;
+                            const promCita = totalAgendas > 0 ? conMonto / totalAgendas : 0;
+
+                            const sinCount = agendaBreakdown.sin_agenda.count || 0;
+                            const sinMonto = agendaBreakdown.sin_agenda.total_monto || 0;
+                            const ticketSin = sinCount > 0 ? sinMonto / sinCount : 0;
+
                             return (
                                 <div className="space-y-4">
                                     <div className="flex h-3.5 w-full rounded-full bg-slate-950 overflow-hidden shadow-inner border border-slate-800/40">
@@ -297,34 +308,63 @@ const PublicFinancialSalesPage = () => {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition-all">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                    <span className="w-2 h-2 rounded-full bg-violet-500" />
-                                                    Con Agenda
-                                                </span>
-                                                <span className="text-[10px] font-black text-slate-500">{pctCon.toFixed(1)}%</span>
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                        <span className="w-2 h-2 rounded-full bg-violet-500" />
+                                                        Con Agenda
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-slate-500">{pctCon.toFixed(1)}%</span>
+                                                </div>
+                                                <div className="flex justify-between items-baseline mt-1">
+                                                    <span className="text-[10px] text-slate-500 font-bold uppercase">{conCount} {conCount === 1 ? 'venta' : 'ventas'}</span>
+                                                    <span className="text-lg font-black text-violet-400 italic">
+                                                        ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(conMonto)}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="flex justify-between items-baseline mt-1">
-                                                <span className="text-[10px] text-slate-500 font-bold uppercase">{agendaBreakdown.con_agenda.count} {agendaBreakdown.con_agenda.count === 1 ? 'venta' : 'ventas'}</span>
-                                                <span className="text-lg font-black text-violet-400 italic">
-                                                    ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(agendaBreakdown.con_agenda.total_monto)}
-                                                </span>
+
+                                            <div className="mt-3 pt-3 border-t border-slate-900/60 space-y-1.5">
+                                                <div className="flex justify-between items-center text-[10px]">
+                                                    <span className="text-slate-500 font-semibold uppercase">Tkt Promedio</span>
+                                                    <span className="text-indigo-300 font-black">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(ticketCon)} USD</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-[10px]">
+                                                    <span className="text-slate-500 font-semibold uppercase flex items-center gap-1">
+                                                        Rec. x Agenda
+                                                        <span className="text-[9px] lowercase text-slate-600">({totalAgendas})</span>
+                                                    </span>
+                                                    <span className="text-emerald-400 font-black">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(promCita)} USD</span>
+                                                </div>
                                             </div>
                                         </div>
 
                                         <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition-all">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                    <span className="w-2 h-2 rounded-full bg-slate-500" />
-                                                    Sin Agenda
-                                                </span>
-                                                <span className="text-[10px] font-black text-slate-500">{pctSin.toFixed(1)}%</span>
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                        <span className="w-2 h-2 rounded-full bg-slate-500" />
+                                                        Sin Agenda
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-slate-500">{pctSin.toFixed(1)}%</span>
+                                                </div>
+                                                <div className="flex justify-between items-baseline mt-1">
+                                                    <span className="text-[10px] text-slate-500 font-bold uppercase">{sinCount} {sinCount === 1 ? 'venta' : 'ventas'}</span>
+                                                    <span className="text-lg font-black text-slate-400 italic">
+                                                        ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(sinMonto)}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="flex justify-between items-baseline mt-1">
-                                                <span className="text-[10px] text-slate-500 font-bold uppercase">{agendaBreakdown.sin_agenda.count} {agendaBreakdown.sin_agenda.count === 1 ? 'venta' : 'ventas'}</span>
-                                                <span className="text-lg font-black text-slate-400 italic">
-                                                    ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(agendaBreakdown.sin_agenda.total_monto)}
-                                                </span>
+
+                                            <div className="mt-3 pt-3 border-t border-slate-900/60 space-y-1.5">
+                                                <div className="flex justify-between items-center text-[10px]">
+                                                    <span className="text-slate-500 font-semibold uppercase">Tkt Promedio</span>
+                                                    <span className="text-slate-300 font-black">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(ticketSin)} USD</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-[10px] opacity-0 pointer-events-none select-none">
+                                                    <span className="text-slate-500 font-semibold uppercase">Placeholder</span>
+                                                    <span className="font-black">$0 USD</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
