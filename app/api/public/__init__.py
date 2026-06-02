@@ -599,22 +599,39 @@ def get_financial_sales():
         
         for s in subquery_sales:
             ig_norm = normalize_ig(s.instagram)
+            resolved_setter = None
             has_agenda_match = False
             
             if ig_norm and ig_norm in agenda_map:
+                agenda = agenda_map[ig_norm]
                 has_agenda_match = True
                 
-            s_setter = s.setter
-            is_valid_setter = s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada'
+                # Validar si el lead de la agenda es una fuente/setter de marketing válida
+                is_valid_lead_source = (
+                    agenda.lead and 
+                    agenda.lead.strip() and 
+                    agenda.lead.lower() not in ('s/f', 'n/a', '') and 
+                    'entrevista' not in agenda.lead.lower() and 
+                    'diagnostica' not in agenda.lead.lower() and
+                    'diagnóstica' not in agenda.lead.lower()
+                )
+                if is_valid_lead_source:
+                    resolved_setter = agenda.lead
                     
-            if has_agenda_match or is_valid_setter:
+            # Si no se pudo resolver desde la agenda, usar el setter original de la venta
+            if not resolved_setter:
+                s_setter = s.setter
+                if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
+                    resolved_setter = s_setter
+                    
+            if has_agenda_match or resolved_setter:
                 monto_con_agenda += (s.monto or 0.0)
                 count_con_agenda += 1
             else:
                 monto_sin_agenda += (s.monto or 0.0)
                 count_sin_agenda += 1
                 
-            final_setter = s_setter if is_valid_setter else "Sin Setter"
+            final_setter = resolved_setter or "Sin Setter"
             if final_setter not in setter_stats:
                 setter_stats[final_setter] = {"count": 0, "total_monto": 0.0}
             setter_stats[final_setter]["count"] += 1
@@ -662,13 +679,32 @@ def get_financial_sales():
             r[0] for r in db.session.query(FinancialSale.tipo_pago).distinct().all() if r[0]
         ]
             
-        # Inyectar el setter original en los items paginados devueltos
+        # Inyectar el setter resuelto dinámicamente en los items paginados devueltos
         sales_data = []
         for s in sales_pagination.items:
             s_dict = s.to_dict()
-            s_setter = s.setter
-            is_valid_setter = s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada'
-            s_dict["setter"] = s_setter if is_valid_setter else "Sin Setter"
+            ig_norm = normalize_ig(s.instagram)
+            resolved_setter = None
+            
+            if ig_norm and ig_norm in agenda_map:
+                agenda = agenda_map[ig_norm]
+                is_valid_lead_source = (
+                    agenda.lead and 
+                    agenda.lead.strip() and 
+                    agenda.lead.lower() not in ('s/f', 'n/a', '') and 
+                    'entrevista' not in agenda.lead.lower() and 
+                    'diagnostica' not in agenda.lead.lower() and
+                    'diagnóstica' not in agenda.lead.lower()
+                )
+                if is_valid_lead_source:
+                    resolved_setter = agenda.lead
+                    
+            if not resolved_setter:
+                s_setter = s.setter
+                if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
+                    resolved_setter = s_setter
+                    
+            s_dict["setter"] = resolved_setter or "Sin Setter"
             sales_data.append(s_dict)
 
         return jsonify({
@@ -685,7 +721,33 @@ def get_financial_sales():
         }), 200
     else:
         sales = query.all()
-        return jsonify([s.to_dict() for s in sales]), 200
+        
+        # Resolver setters dinámicamente también para la respuesta no paginada
+        sales_data = []
+        for s in sales:
+            s_dict = s.to_dict()
+            ig_norm = normalize_ig(s.instagram)
+            resolved_setter = None
+            if ig_norm and ig_norm in agenda_map:
+                agenda = agenda_map[ig_norm]
+                is_valid_lead_source = (
+                    agenda.lead and 
+                    agenda.lead.strip() and 
+                    agenda.lead.lower() not in ('s/f', 'n/a', '') and 
+                    'entrevista' not in agenda.lead.lower() and 
+                    'diagnostica' not in agenda.lead.lower() and
+                    'diagnóstica' not in agenda.lead.lower()
+                )
+                if is_valid_lead_source:
+                    resolved_setter = agenda.lead
+            if not resolved_setter:
+                s_setter = s.setter
+                if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
+                    resolved_setter = s_setter
+            s_dict["setter"] = resolved_setter or "Sin Setter"
+            sales_data.append(s_dict)
+            
+        return jsonify(sales_data), 200
 
 
 # --- Financial Agendas Sync (Similar to Sales) ---
