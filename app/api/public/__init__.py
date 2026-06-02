@@ -570,67 +570,72 @@ def get_financial_sales():
         subquery = query.with_entities(FinancialSale.id)
         total_monto = db.session.query(func.sum(FinancialSale.monto)).filter(FinancialSale.id.in_(subquery)).scalar() or 0.0
         
-        # Calculate breakdown by setter (source)
-        breakdown_query = db.session.query(
-            FinancialSale.setter,
-            func.count(FinancialSale.id),
-            func.sum(FinancialSale.monto)
-        ).filter(
-            FinancialSale.id.in_(subquery)
-        ).group_by(FinancialSale.setter).all()
+        # 1. Resolver atribución y setter de manera robusta cruzando por Instagram con FinancialAgenda
+        from app.models import FinancialAgenda
+        all_agendas = FinancialAgenda.query.all()
         
+        def normalize_ig(ig_str):
+            if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
+                return None
+            return ig_str.strip().lstrip('@').lower()
+
+        # Construir mapa de agendas por instagram normalizado
+        agenda_map = {}
+        for a in all_agendas:
+            ig_norm = normalize_ig(a.instagram)
+            if ig_norm:
+                if ig_norm not in agenda_map or (a.date and agenda_map[ig_norm].date and a.date > agenda_map[ig_norm].date):
+                    agenda_map[ig_norm] = a
+
+        # Obtener todas las ventas del subquery
+        subquery_sales = query.all()
+        
+        monto_con_agenda = 0.0
+        count_con_agenda = 0
+        monto_sin_agenda = 0.0
+        count_sin_agenda = 0
+        
+        setter_stats = {} # setter_name -> {"count": 0, "total_monto": 0.0}
+        
+        for s in subquery_sales:
+            ig_norm = normalize_ig(s.instagram)
+            has_agenda_match = False
+            
+            if ig_norm and ig_norm in agenda_map:
+                has_agenda_match = True
+                
+            s_setter = s.setter
+            is_valid_setter = s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada'
+                    
+            if has_agenda_match or is_valid_setter:
+                monto_con_agenda += (s.monto or 0.0)
+                count_con_agenda += 1
+            else:
+                monto_sin_agenda += (s.monto or 0.0)
+                count_sin_agenda += 1
+                
+            final_setter = s_setter if is_valid_setter else "Sin Setter"
+            if final_setter not in setter_stats:
+                setter_stats[final_setter] = {"count": 0, "total_monto": 0.0}
+            setter_stats[final_setter]["count"] += 1
+            setter_stats[final_setter]["total_monto"] += (s.monto or 0.0)
+            
         sources_breakdown = []
-        for setter, count, total_source_monto in breakdown_query:
+        for setter_name, stats in setter_stats.items():
             sources_breakdown.append({
-                "source": setter or "Sin Setter",
-                "count": count,
-                "total_monto": float(total_source_monto or 0.0)
+                "source": setter_name,
+                "count": stats["count"],
+                "total_monto": round(stats["total_monto"], 2)
             })
-
-        # Calculate Cash Collect by Agendas (Con Setter vs Sin Setter)
-        monto_con_agenda = db.session.query(func.sum(FinancialSale.monto)).filter(
-            FinancialSale.id.in_(subquery),
-            FinancialSale.setter.isnot(None),
-            FinancialSale.setter != '',
-            FinancialSale.setter != 'Sin Setter',
-            FinancialSale.setter != 'Confirmada'
-        ).scalar() or 0.0
-
-        count_con_agenda = db.session.query(func.count(FinancialSale.id)).filter(
-            FinancialSale.id.in_(subquery),
-            FinancialSale.setter.isnot(None),
-            FinancialSale.setter != '',
-            FinancialSale.setter != 'Sin Setter',
-            FinancialSale.setter != 'Confirmada'
-        ).scalar() or 0
-
-        monto_sin_agenda = db.session.query(func.sum(FinancialSale.monto)).filter(
-            FinancialSale.id.in_(subquery),
-            or_(
-                FinancialSale.setter.is_(None),
-                FinancialSale.setter == '',
-                FinancialSale.setter == 'Sin Setter',
-                FinancialSale.setter == 'Confirmada'
-            )
-        ).scalar() or 0.0
-
-        count_sin_agenda = db.session.query(func.count(FinancialSale.id)).filter(
-            FinancialSale.id.in_(subquery),
-            or_(
-                FinancialSale.setter.is_(None),
-                FinancialSale.setter == '',
-                FinancialSale.setter == 'Sin Setter',
-                FinancialSale.setter == 'Confirmada'
-            )
-        ).scalar() or 0
-
+        sources_breakdown.sort(key=lambda x: x["total_monto"], reverse=True)
+        
         agenda_breakdown = {
             "con_agenda": {
-                "total_monto": float(monto_con_agenda),
+                "total_monto": round(monto_con_agenda, 2),
                 "count": count_con_agenda
             },
             "sin_agenda": {
-                "total_monto": float(monto_sin_agenda),
+                "total_monto": round(monto_sin_agenda, 2),
                 "count": count_sin_agenda
             }
         }
@@ -657,8 +662,17 @@ def get_financial_sales():
             r[0] for r in db.session.query(FinancialSale.tipo_pago).distinct().all() if r[0]
         ]
             
+        # Inyectar el setter original en los items paginados devueltos
+        sales_data = []
+        for s in sales_pagination.items:
+            s_dict = s.to_dict()
+            s_setter = s.setter
+            is_valid_setter = s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada'
+            s_dict["setter"] = s_setter if is_valid_setter else "Sin Setter"
+            sales_data.append(s_dict)
+
         return jsonify({
-            "data": [s.to_dict() for s in sales_pagination.items],
+            "data": sales_data,
             "total": sales_pagination.total,
             "page": sales_pagination.page,
             "pages": sales_pagination.pages,

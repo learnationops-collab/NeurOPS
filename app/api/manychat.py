@@ -728,7 +728,7 @@ def get_ad_dashboard_stats():
         ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
         ig_c = normalize_ig(ig_val)
         if ig_c:
-            # Usar 'lead' como la fuente/setter
+            # Usar 'lead' como la fuente/setter (es el tipo de llamada/evento en la DB real del usuario)
             source = ag.lead or 'S/F'
             agenda_igs_map.setdefault(ig_c, []).append(source)
 
@@ -924,9 +924,11 @@ def get_ad_dashboard_stats():
             global_setters[sname] = {'agendas': 0, 'ventas': 0}
         global_setters[sname]['agendas'] += 1
         
-    # Ventas por Setter
+    # Ventas por Setter/Fuente
     for sale in sales_in_period:
-        sname = sale.setter or 'S/S'
+        s_setter = sale.setter
+        is_valid_setter = s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada'
+        sname = s_setter if is_valid_setter else 'Sin Setter'
         if sname not in global_setters:
             global_setters[sname] = {'agendas': 0, 'ventas': 0}
         global_setters[sname]['ventas'] += 1
