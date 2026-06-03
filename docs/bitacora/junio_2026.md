@@ -181,4 +181,8 @@
       - Se implementó un formulario interactivo completo (`CreateSaleModal`) que permite registrar nombre de cliente, instagram, email, teléfono, programa, tipo de pago, monto, método de pago, estado, fecha de la venta, closer, setter y observaciones.
       - Se pre-completa por defecto la fecha de hoy y se valida que los campos requeridos (nombre del cliente y monto) estén presentes antes de enviar la información, refrescando en caliente la vista principal al registrar exitosamente.
       - **Buscador de Agendas en el Modal**: Se integró un input buscador de agendas que llama con debounce al endpoint público `/public/financial-agendas` para obtener agendas coincidentes (por nombre, email, instagram o whatsapp). Al seleccionar una agenda, autocompleta en caliente la información de cliente, instagram, email, teléfono, setter, closer y fecha de cita en el formulario de la venta, con un botón para limpiar/desvincular de forma interactiva.
+  - **Mejoras en el Tablero de Agendas (`FinancialAgendasPage.jsx`)**:
+    - **Formato de Fecha**: Se modificó la columna de Fecha en el historial para renderizar la propiedad `agenda.date` formateada en un formato legible en español (día, mes, año, hora y minutos) con fallback al texto original `fecha_meet`.
+    - **Visibilidad y Usabilidad del Modal de Edición**: Se corrigió el problema de visibilidad del texto escrito en los inputs del modal de edición reemplazando las clases no estándar de Tailwind (`bg-slate-850 border-slate-750`) por clases de alta gama y alta compatibilidad (`bg-slate-950 border-slate-800`), y se forzó la alineación a la izquierda (`text-left`) en las etiquetas del formulario.
+
 

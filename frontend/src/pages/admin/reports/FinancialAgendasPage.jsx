@@ -388,8 +388,17 @@ const FinancialAgendasPage = () => {
                                             <td className="py-4 px-4">
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon size={14} className="text-muted" />
-                                                    <span className="text-sm font-bold text-base">
-                                                        {agenda.fecha_meet}
+                                                    <span className="text-sm font-bold text-slate-200">
+                                                        {agenda.date 
+                                                            ? new Date(agenda.date).toLocaleDateString('es-ES', { 
+                                                                day: '2-digit', 
+                                                                month: 'short', 
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                              }) 
+                                                            : agenda.fecha_meet
+                                                        }
                                                     </span>
                                                 </div>
                                             </td>
@@ -492,72 +501,72 @@ const FinancialAgendasPage = () => {
                             <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Modificar datos de la cita</p>
                         </div>
                         
-                        <form onSubmit={handleEditSubmit} className="space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
-                                <input 
-                                    type="text"
-                                    className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
-                                    value={editForm.lead}
-                                    onChange={e => setEditForm({...editForm, lead: e.target.value})}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fuente</label>
-                                <input 
-                                    type="text"
-                                    className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
-                                    value={editForm.nombre}
-                                    onChange={e => setEditForm({...editForm, nombre: e.target.value})}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Closer</label>
-                                <input 
-                                    type="text"
-                                    className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
-                                    value={editForm.closer}
-                                    onChange={e => setEditForm({...editForm, closer: e.target.value})}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Meet (Texto)</label>
-                                <input 
-                                    type="text"
-                                    className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
-                                    value={editForm.fecha_meet}
-                                    onChange={e => setEditForm({...editForm, fecha_meet: e.target.value})}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Instagram</label>
-                                <input 
-                                    type="text"
-                                    className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
-                                    value={editForm.instagram}
-                                    onChange={e => setEditForm({...editForm, instagram: e.target.value})}
-                                />
-                            </div>
-                            
-                            <div className="flex gap-3 pt-4">
-                                <button 
-                                    type="button"
-                                    onClick={() => setEditingAgenda(null)}
-                                    className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-400 rounded-xl hover:text-white transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
-                                >
-                                    Guardar
-                                </button>
-                            </div>
+                        <form onSubmit={handleEditSubmit} className="space-y-4 text-left">
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                        value={editForm.lead}
+                                        onChange={e => setEditForm({...editForm, lead: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fuente</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                        value={editForm.nombre}
+                                        onChange={e => setEditForm({...editForm, nombre: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Closer</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                        value={editForm.closer}
+                                        onChange={e => setEditForm({...editForm, closer: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Meet (Texto)</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                        value={editForm.fecha_meet}
+                                        onChange={e => setEditForm({...editForm, fecha_meet: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Instagram</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                        value={editForm.instagram}
+                                        onChange={e => setEditForm({...editForm, instagram: e.target.value})}
+                                    />
+                                </div>
+                                
+                                <div className="flex gap-3 pt-4">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setEditingAgenda(null)}
+                                        className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-400 rounded-xl hover:text-white transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        type="submit"
+                                        className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
+                                    >
+                                        Guardar
+                                    </button>
+                                </div>
                         </form>
                     </div>
                 </div>
