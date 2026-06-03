@@ -161,7 +161,6 @@ const CloserNewSalePage = () => {
         setError(null);
 
         // Formatear payload exactamente para Google Sheets (Ventas_DB)
-        // Nota: Intercambiamos setter y estado debido al mapeo de columnas físicas en Google Sheets (L = Estado, M = Setter)
         const payload = {
             email_vendedor: form.email_vendedor,
             nombre_cliente: form.nombre_cliente,
@@ -173,10 +172,8 @@ const CloserNewSalePage = () => {
             metodo_pago: form.metodo_pago,
             examen: form.examen_lead + (form.notas ? ` | ${form.notas}` : ''),
             instagram: form.instagram ? form.instagram.replace(/@/g, '').trim() : '',
-            setter: form.estado, // Columna L (Estado de la Venta)
-            estado: form.setter || '', // Columna M (Setter que Prospectó)
-            status: form.setter || '', // Respaldo para Apps Script que usa status para la columna M
-            setter_name: form.setter || '', // Respaldo adicional
+            estado: form.estado, // Columna L (Estado de la Venta)
+            setter: form.setter || '', // Columna M (Setter que Prospectó)
             marca_temporal: new Date().toLocaleString("es-ES") // Fecha/hora del registro
         };
 
