@@ -432,33 +432,39 @@ def parse_financial_data(item):
     producto = 'N/A'
     tipo_de_pago = 'N/A'
     
-    if "seña" in tipo_pago.lower() or "sena" in tipo_pago.lower():
-        producto = "Seña"
-        tipo_de_pago = "Seña"
-    else:
-        parts = [p.strip() for p in tipo_pago.split('-')]
-        if len(parts) >= 2:
-            code = parts[0].upper()
-            pay_type = parts[1].title()
+    # Procesar formato {programa} - {tipo_de_pago}
+    parts = [p.strip() for p in tipo_pago.split('-')]
+    if len(parts) >= 2:
+        code = parts[0].upper()
+        pay_type = parts[1]
+        
+        if code == "RR":
+            producto = "Residency Roadmap"
+        elif code == "AL":
+            producto = "Ace Learners"
+        elif code == "SI":
+            producto = "Specialist Iniciative"
+        else:
+            producto = parts[0]
+            errors.append(f"Código de producto desconocido: {code}")
             
-            if code == "RR":
-                producto = "Residency Roadmap"
-            elif code == "AL":
-                producto = "Ace Learners"
-            elif code == "SI":
-                producto = "Specialist Iniciative"
-            else:
-                producto = parts[0]
-                errors.append(f"Código de producto desconocido: {code}")
-                
-            if "completo" in pay_type.lower():
-                tipo_de_pago = "Completo"
-            elif "cuota" in pay_type.lower() or "parcial" in pay_type.lower() or "primer pago" in pay_type.lower():
-                tipo_de_pago = "Cuota / Primer Pago"
-            else:
-                tipo_de_pago = pay_type
-                if not ("seña" in pay_type.lower() or "sena" in pay_type.lower()):
-                    errors.append(f"Tipo de pago desconocido: {pay_type}")
+        pay_type_lower = pay_type.lower()
+        if "completo" in pay_type_lower or "pif" in pay_type_lower:
+            tipo_de_pago = "Completo"
+        elif "cuota" in pay_type_lower or "parcial" in pay_type_lower or "primer pago" in pay_type_lower:
+            tipo_de_pago = "Cuota / Primer Pago"
+        elif "seña" in pay_type_lower or "sena" in pay_type_lower:
+            tipo_de_pago = "Seña"
+        elif "renovacion" in pay_type_lower or "renovación" in pay_type_lower:
+            tipo_de_pago = "Renovacion"
+        else:
+            tipo_de_pago = pay_type.title()
+            errors.append(f"Tipo de pago desconocido: {pay_type}")
+    else:
+        # Fallback para registros sin el guión (ej. registros antiguos que solo dicen "Seña" o "Seña / Depósito")
+        if "seña" in tipo_pago.lower() or "sena" in tipo_pago.lower():
+            producto = "Seña"
+            tipo_de_pago = "Seña"
         else:
             if tipo_pago:
                 errors.append(f"Formato de tipo de pago inválido: {tipo_pago}")

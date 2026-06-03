@@ -35,7 +35,8 @@ const CloserNewSalePage = () => {
         nombre_cliente: '',
         telefono: '',
         mail_cliente: '',
-        tipo_pago: 'PIF',
+        programa: 'RR',
+        tipo_pago_simple: 'completo',
         monto: '',
         segundo_pago: '',
         metodo_pago: 'Stripe',
@@ -160,7 +161,7 @@ const CloserNewSalePage = () => {
             nombre_cliente: form.nombre_cliente,
             telefono: form.telefono,
             mail_cliente: form.mail_cliente,
-            tipo_pago: form.tipo_pago,
+            tipo_pago: `${form.programa} - ${form.tipo_pago_simple}`,
             monto: parseFloat(form.monto) || 0.0,
             segundo_pago: form.segundo_pago || '',
             metodo_pago: form.metodo_pago,
@@ -422,20 +423,35 @@ const CloserNewSalePage = () => {
                     </div>
 
                     {/* SECCIÓN 3: TRANSACCIÓN Y MÉTODO DE PAGO */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-950/20 p-6 rounded-3xl border border-slate-800/80">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-950/20 p-6 rounded-3xl border border-slate-800/80">
                         
+                        <div className="space-y-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Programa *</label>
+                            <select
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                value={form.programa}
+                                onChange={e => setForm({ ...form, programa: e.target.value })}
+                                required
+                            >
+                                <option value="RR">Residency Roadmap (RR)</option>
+                                <option value="AL">Ace Learner (AL)</option>
+                                <option value="SI">Specialist Initiative (SI)</option>
+                            </select>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Tipo de Pago *</label>
                             <select
                                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
-                                value={form.tipo_pago}
-                                onChange={e => setForm({ ...form, tipo_pago: e.target.value })}
+                                value={form.tipo_pago_simple}
+                                onChange={e => setForm({ ...form, tipo_pago_simple: e.target.value })}
                                 required
                             >
-                                <option value="PIF">Pago Completo (PIF)</option>
-                                <option value="Split Pay">Pago Fraccionado (Split Pay)</option>
-                                <option value="Seña / Depósito">Seña / Depósito</option>
-                                <option value="Cuota">Cuota de Seguimiento</option>
+                                <option value="completo">Completo (PIF)</option>
+                                <option value="parcial">Parcial (Primer Pago)</option>
+                                <option value="Seña">Seña (Promesa de Venta)</option>
+                                <option value="Cuota">Cuotas</option>
+                                <option value="Renovacion">Renovación</option>
                             </select>
                         </div>
 
