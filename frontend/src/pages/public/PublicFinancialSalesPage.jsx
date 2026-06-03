@@ -445,7 +445,7 @@ const PublicFinancialSalesPage = () => {
                             </p>
                         </div>
 
-                        <div className="max-h-[160px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                        <div className="grid grid-cols-2 gap-2">
                             {paymentTypesBreakdown
                                 .sort((a, b) => b.total_monto - a.total_monto)
                                 .map((pt) => {
@@ -464,17 +464,17 @@ const PublicFinancialSalesPage = () => {
                                     }
 
                                     return (
-                                        <div key={pt.tipo_pago} className="flex items-center justify-between bg-slate-950/30 border border-slate-900 p-2.5 rounded-xl hover:border-slate-800 transition-all">
-                                            <div className="flex items-center gap-2.5">
+                                        <div key={pt.tipo_pago} className="flex flex-col justify-between bg-slate-950/40 border border-slate-900/80 p-2.5 rounded-xl hover:border-slate-800 transition-all space-y-1.5">
+                                            <div className="flex items-center justify-between">
                                                 <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${payColor}`}>
                                                     {pt.tipo_pago}
                                                 </span>
-                                                <span className="text-[10px] text-slate-500 font-bold uppercase">
-                                                    {pt.count} {pt.count === 1 ? 'Venta' : 'Ventas'}
+                                                <span className="text-[9px] text-slate-500 font-bold uppercase">
+                                                    {pt.count} {pt.count === 1 ? 'Vta' : 'Vtas'}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-xs text-slate-500 font-black tracking-tighter">
+                                            <div className="flex items-baseline justify-between pt-1">
+                                                <span className="text-[9px] text-slate-500 font-black tracking-tighter">
                                                     {pct.toFixed(0)}%
                                                 </span>
                                                 <span className="text-sm font-black text-white italic">
@@ -499,7 +499,7 @@ const PublicFinancialSalesPage = () => {
                             </p>
                         </div>
 
-                        <div className="max-h-[160px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                        <div className="grid grid-cols-2 gap-2">
                             {paymentMethodsBreakdown
                                 .sort((a, b) => b.total_monto - a.total_monto)
                                 .map((pm) => {
@@ -520,17 +520,17 @@ const PublicFinancialSalesPage = () => {
                                     }
 
                                     return (
-                                        <div key={pm.metodo_pago} className="flex items-center justify-between bg-slate-950/30 border border-slate-900 p-2.5 rounded-xl hover:border-slate-800 transition-all">
-                                            <div className="flex items-center gap-2.5">
+                                        <div key={pm.metodo_pago} className="flex flex-col justify-between bg-slate-950/40 border border-slate-900/80 p-2.5 rounded-xl hover:border-slate-800 transition-all space-y-1.5">
+                                            <div className="flex items-center justify-between">
                                                 <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${payColor}`}>
                                                     {pm.metodo_pago}
                                                 </span>
-                                                <span className="text-[10px] text-slate-500 font-bold uppercase">
-                                                    {pm.count} {pm.count === 1 ? 'Venta' : 'Ventas'}
+                                                <span className="text-[9px] text-slate-500 font-bold uppercase">
+                                                    {pm.count} {pm.count === 1 ? 'Vta' : 'Vtas'}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-xs text-slate-500 font-black tracking-tighter">
+                                            <div className="flex items-baseline justify-between pt-1">
+                                                <span className="text-[9px] text-slate-500 font-black tracking-tighter">
                                                     {pct.toFixed(0)}%
                                                 </span>
                                                 <span className="text-sm font-black text-white italic">
