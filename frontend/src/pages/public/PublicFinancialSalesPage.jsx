@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp } from 'lucide-react';
+import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp, AlertCircle, Plus } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
+import AttributionModal from '../../components/modals/AttributionModal';
 
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
@@ -50,16 +51,18 @@ const PublicFinancialSalesPage = () => {
         endDate: getTodayDate(),
         programa: '',
         tipoPagoSimple: '',
-        metodoPago: ''
+        metodoPago: '',
+        sinAtribucion: false
     });
 
-    const { searchTerm, startDate, endDate, programa, tipoPagoSimple, metodoPago } = filters;
+    const { searchTerm, startDate, endDate, programa, tipoPagoSimple, metodoPago, sinAtribucion } = filters;
     const setSearchTerm = (val) => setFilters({ searchTerm: val });
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
     const setPrograma = (val) => setFilters({ programa: val });
     const setTipoPagoSimple = (val) => setFilters({ tipoPagoSimple: val });
     const setMetodoPago = (val) => setFilters({ metodoPago: val });
+    const setSinAtribucion = (val) => setFilters({ sinAtribucion: val });
 
     // Forzar inicio en el mes actual si los filtros cargados de localStorage están vacíos
     useEffect(() => {
@@ -69,7 +72,8 @@ const PublicFinancialSalesPage = () => {
                 endDate: endDate || getTodayDate(),
                 programa: programa || '',
                 tipoPagoSimple: tipoPagoSimple || '',
-                metodoPago: metodoPago || ''
+                metodoPago: metodoPago || '',
+                sinAtribucion: sinAtribucion || false
             });
         }
     }, [startDate, endDate]);
@@ -77,6 +81,7 @@ const PublicFinancialSalesPage = () => {
     // Estado del modal de edición
     const [editingSale, setEditingSale] = useState(null);
     const [editData, setEditData] = useState({});
+    const [attributionSale, setAttributionSale] = useState(null);
     
     const loaderRef = useRef(null);
 
@@ -96,7 +101,8 @@ const PublicFinancialSalesPage = () => {
                     end_date: endDate,
                     programa: programa,
                     tipo_pago_simple: tipoPagoSimple,
-                    metodo_pago: metodoPago
+                    metodo_pago: metodoPago,
+                    sin_atribucion: sinAtribucion
                 }
             });
             const newSales = res.data.data || [];
@@ -137,7 +143,7 @@ const PublicFinancialSalesPage = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, startDate, endDate, programa, tipoPagoSimple, metodoPago]);
+    }, [searchTerm, startDate, endDate, programa, tipoPagoSimple, metodoPago, sinAtribucion]);
 
     // Observador para scroll infinito
     useEffect(() => {
@@ -315,6 +321,18 @@ const PublicFinancialSalesPage = () => {
                     </div>
                     
                     <button
+                        onClick={() => setSinAtribucion(!sinAtribucion)}
+                        className={`flex items-center justify-center gap-2 px-4 py-2 border rounded-xl text-sm font-semibold transition-all shadow-lg ${
+                            sinAtribucion 
+                            ? 'bg-rose-600 border-rose-500 hover:bg-rose-700 text-white font-black' 
+                            : 'bg-slate-850 border-slate-700 hover:bg-slate-800 text-slate-300'
+                        }`}
+                    >
+                        <Users className="w-4 h-4" />
+                        <span>{sinAtribucion ? 'Ver Todas' : 'Atribuir (Sin Agenda)'}</span>
+                    </button>
+
+                    <button
                         onClick={handleSync}
                         disabled={syncing}
                         className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-white text-sm font-semibold transition-all shadow-lg"
@@ -328,113 +346,71 @@ const PublicFinancialSalesPage = () => {
             {/* KPIs Panels */}
             {agendaBreakdown && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* KPI 1: Cash Collect por Agendas */}
-                    <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 space-y-6 relative overflow-hidden bg-slate-900/40 backdrop-blur-md">
+                    {/* KPI 1: Atribución por Agendas Simplificado */}
+                    <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 space-y-5 relative overflow-hidden bg-slate-900/40 backdrop-blur-md">
                         <div className="space-y-1">
                             <h2 className="text-lg font-black text-white italic tracking-tight uppercase flex items-center gap-2">
                                 <Users className="text-indigo-400" size={18} />
                                 Atribución por Agendas
                             </h2>
                             <p className="text-xs text-slate-400 font-bold uppercase tracking-wide">
-                                Total del Período: <span className="text-emerald-400 font-black text-sm">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalSalesAmount)} USD</span>
+                                Resumen de Atribución del Período
                             </p>
                         </div>
 
                         {(() => {
-                            const total = agendaBreakdown.con_agenda.total_monto + agendaBreakdown.sin_agenda.total_monto;
-                            const pctCon = total > 0 ? (agendaBreakdown.con_agenda.total_monto / total) * 100 : 0;
-                            const pctSin = total > 0 ? (agendaBreakdown.sin_agenda.total_monto / total) * 100 : 0;
-                            
                             const conCount = agendaBreakdown.con_agenda.count || 0;
                             const conMonto = agendaBreakdown.con_agenda.total_monto || 0;
                             const totalAgendas = agendaBreakdown.con_agenda.total_agendas || 0;
                             const ticketCon = conCount > 0 ? conMonto / conCount : 0;
                             const promCita = totalAgendas > 0 ? conMonto / totalAgendas : 0;
-
                             const sinCount = agendaBreakdown.sin_agenda.count || 0;
-                            const sinMonto = agendaBreakdown.sin_agenda.total_monto || 0;
-                            const ticketSin = sinCount > 0 ? sinMonto / sinCount : 0;
 
                             return (
                                 <div className="space-y-4">
-                                    <div className="flex h-3.5 w-full rounded-full bg-slate-950 overflow-hidden shadow-inner border border-slate-800/40">
-                                        {pctCon > 0 && (
-                                            <div
-                                                style={{ width: `${pctCon}%` }}
-                                                className="h-full bg-gradient-to-r from-violet-500 to-indigo-600 transition-all duration-500"
-                                                title={`Con Agenda: ${pctCon.toFixed(1)}%`}
-                                            />
-                                        )}
-                                        {pctSin > 0 && (
-                                            <div
-                                                style={{ width: `${pctSin}%` }}
-                                                className="h-full bg-gradient-to-r from-slate-600 to-slate-500 transition-all duration-500"
-                                                title={`Sin Agenda / Orgánico: ${pctSin.toFixed(1)}%`}
-                                            />
-                                        )}
+                                    {/* Promedio por Agenda */}
+                                    <div className="flex items-center justify-between p-3.5 bg-slate-950/40 border border-slate-850 rounded-2xl hover:border-slate-700 transition-all">
+                                        <div className="space-y-0.5">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                                                Promedio por Agenda
+                                            </span>
+                                            <span className="text-[10px] text-slate-500 font-bold uppercase">
+                                                {conCount} {conCount === 1 ? 'venta' : 'ventas'} con agenda
+                                            </span>
+                                        </div>
+                                        <span className="text-xl font-black text-violet-400 italic">
+                                            ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(ticketCon)} USD
+                                        </span>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition-all">
-                                            <div>
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                        <span className="w-2 h-2 rounded-full bg-violet-500" />
-                                                        Con Agenda
-                                                    </span>
-                                                    <span className="text-[10px] font-black text-slate-500">{pctCon.toFixed(1)}%</span>
-                                                </div>
-                                                <div className="flex justify-between items-baseline mt-1">
-                                                    <span className="text-[10px] text-slate-500 font-bold uppercase">{conCount} {conCount === 1 ? 'venta' : 'ventas'}</span>
-                                                    <span className="text-lg font-black text-violet-400 italic">
-                                                        ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(conMonto)}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-3 pt-3 border-t border-slate-900/60 space-y-1.5">
-                                                <div className="flex justify-between items-center text-[10px]">
-                                                    <span className="text-slate-500 font-semibold uppercase">Tkt Promedio</span>
-                                                    <span className="text-indigo-300 font-black">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(ticketCon)} USD</span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-[10px]">
-                                                    <span className="text-slate-500 font-semibold uppercase flex items-center gap-1">
-                                                        Rec. x Agenda
-                                                        <span className="text-[9px] lowercase text-slate-600">({totalAgendas})</span>
-                                                    </span>
-                                                    <span className="text-emerald-400 font-black">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(promCita)} USD</span>
-                                                </div>
-                                            </div>
+                                    {/* Promedio por Llamada (Show Up) */}
+                                    <div className="flex items-center justify-between p-3.5 bg-slate-950/40 border border-slate-850 rounded-2xl hover:border-slate-700 transition-all">
+                                        <div className="space-y-0.5">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                                                Promedio por Llamada (Show Up)
+                                            </span>
+                                            <span className="text-[10px] text-slate-500 font-bold uppercase">
+                                                {totalAgendas} {totalAgendas === 1 ? 'llamada' : 'llamadas'}
+                                            </span>
                                         </div>
+                                        <span className="text-xl font-black text-emerald-400 italic">
+                                            ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(promCita)} USD
+                                        </span>
+                                    </div>
 
-                                        <div className="bg-slate-950/40 border border-slate-850 p-4 rounded-2xl flex flex-col justify-between hover:border-slate-700 transition-all">
-                                            <div>
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                        <span className="w-2 h-2 rounded-full bg-slate-500" />
-                                                        Sin Agenda
-                                                    </span>
-                                                    <span className="text-[10px] font-black text-slate-500">{pctSin.toFixed(1)}%</span>
-                                                </div>
-                                                <div className="flex justify-between items-baseline mt-1">
-                                                    <span className="text-[10px] text-slate-500 font-bold uppercase">{sinCount} {sinCount === 1 ? 'venta' : 'ventas'}</span>
-                                                    <span className="text-lg font-black text-slate-400 italic">
-                                                        ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(sinMonto)}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-3 pt-3 border-t border-slate-900/60 space-y-1.5">
-                                                <div className="flex justify-between items-center text-[10px]">
-                                                    <span className="text-slate-500 font-semibold uppercase">Tkt Promedio</span>
-                                                    <span className="text-slate-300 font-black">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(ticketSin)} USD</span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-[10px] opacity-0 pointer-events-none select-none">
-                                                    <span className="text-slate-500 font-semibold uppercase">Placeholder</span>
-                                                    <span className="font-black">$0 USD</span>
-                                                </div>
-                                            </div>
+                                    {/* Ventas sin Agenda */}
+                                    <div className="flex items-center justify-between p-3.5 bg-slate-950/40 border border-slate-850 rounded-2xl hover:border-slate-700 transition-all">
+                                        <div className="space-y-0.5">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                                                Ventas sin Agenda
+                                            </span>
+                                            <span className="text-[10px] text-slate-500 font-bold uppercase">
+                                                Requieren atribución
+                                            </span>
                                         </div>
+                                        <span className="text-xl font-black text-rose-400 italic">
+                                            {sinCount}
+                                        </span>
                                     </div>
                                 </div>
                             );
@@ -671,6 +647,7 @@ const PublicFinancialSalesPage = () => {
                                     <th className="p-4 font-semibold">Programa</th>
                                     <th className="p-4 font-semibold">Pago</th>
                                     <th className="p-4 font-semibold">Roles</th>
+                                    <th className="p-4 font-semibold text-center">Atribución</th>
                                     <th className="p-4 font-semibold">Estado</th>
                                     <th className="p-4 font-semibold text-center">Acciones</th>
                                 </tr>
@@ -792,6 +769,26 @@ const PublicFinancialSalesPage = () => {
                                                     </>
                                                 )}
                                             </td>
+
+                                            <td className="p-4 text-center whitespace-nowrap">
+                                                {sale.has_agenda ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                                        <Check size={10} className="text-indigo-405" /> Con Agenda
+                                                    </span>
+                                                ) : (
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                                            <AlertCircle size={10} className="text-rose-405" /> Sin Agenda
+                                                        </span>
+                                                        <button
+                                                            onClick={() => setAttributionSale(sale)}
+                                                            className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[9px] font-black uppercase tracking-wider transition-all"
+                                                        >
+                                                            Atribuir
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </td>
                                             
                                             <td className="p-4 whitespace-nowrap">
                                                 {isEditing ? (
@@ -838,7 +835,7 @@ const PublicFinancialSalesPage = () => {
                                 
                                 {sales.length === 0 && (
                                      <tr>
-                                         <td colSpan="9" className="p-8 text-center text-slate-500">
+                                         <td colSpan="10" className="p-8 text-center text-slate-500">
                                              No se encontraron ventas con esos criterios.
                                          </td>
                                      </tr>
@@ -859,6 +856,14 @@ const PublicFinancialSalesPage = () => {
                     </div>
                 )}
             </Card>
+
+            {attributionSale && (
+                <AttributionModal 
+                    sale={attributionSale}
+                    onClose={() => setAttributionSale(null)}
+                    onSuccess={() => fetchSales(1)}
+                />
+            )}
         </div>
     );
 };

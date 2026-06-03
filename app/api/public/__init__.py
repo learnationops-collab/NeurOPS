@@ -549,6 +549,7 @@ def get_financial_sales():
     programa = request.args.get('programa', default='', type=str).strip()
     tipo_pago_simple = request.args.get('tipo_pago_simple', default='', type=str).strip()
     metodo_pago = request.args.get('metodo_pago', default='', type=str).strip()
+    sin_atribucion = request.args.get('sin_atribucion', default='false', type=str).lower() == 'true'
     
     query = FinancialSale.query
     if search:
@@ -592,219 +593,207 @@ def get_financial_sales():
             
     query = query.order_by(FinancialSale.date.desc())
     
-    if page is not None:
-        sales_pagination = query.paginate(page=page, per_page=limit, error_out=False)
-        
-        # Calculate aggregations on the filtered set
-        subquery = query.with_entities(FinancialSale.id)
-        total_monto = db.session.query(func.sum(FinancialSale.monto)).filter(FinancialSale.id.in_(subquery)).scalar() or 0.0
-        
-        # 1. Resolver atribución y setter de manera robusta cruzando por Instagram con FinancialAgenda
-        from app.models import FinancialAgenda
-        all_agendas = FinancialAgenda.query.all()
-        
-        def normalize_ig(ig_str):
-            if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-                return None
-            return ig_str.strip().lstrip('@').lower()
+    # Obtener todas las ventas del subquery que cumplen con los filtros de base de datos
+    subquery_sales = query.all()
+    
+    # Calculate aggregations on the filtered set
+    subquery = query.with_entities(FinancialSale.id)
+    total_monto = db.session.query(func.sum(FinancialSale.monto)).filter(FinancialSale.id.in_(subquery)).scalar() or 0.0
+    
+    # 1. Resolver atribución y setter de manera robusta cruzando por Instagram con FinancialAgenda
+    from app.models import FinancialAgenda
+    all_agendas = FinancialAgenda.query.all()
+    
+    def normalize_ig(ig_str):
+        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
+            return None
+        return ig_str.strip().lstrip('@').lower()
 
-        # Construir mapa de agendas por instagram normalizado
-        agenda_map = {}
-        for a in all_agendas:
-            ig_norm = normalize_ig(a.instagram)
-            if ig_norm:
-                if ig_norm not in agenda_map or (a.date and agenda_map[ig_norm].date and a.date > agenda_map[ig_norm].date):
-                    agenda_map[ig_norm] = a
+    # Construir mapa de agendas por instagram normalizado
+    agenda_map = {}
+    for a in all_agendas:
+        ig_norm = normalize_ig(a.instagram)
+        if ig_norm:
+            if ig_norm not in agenda_map or (a.date and agenda_map[ig_norm].date and a.date > agenda_map[ig_norm].date):
+                agenda_map[ig_norm] = a
 
-        # Obtener todas las ventas del subquery
-        subquery_sales = query.all()
+    monto_con_agenda = 0.0
+    count_con_agenda = 0
+    monto_sin_agenda = 0.0
+    count_sin_agenda = 0
+    
+    setter_stats = {} # setter_name -> {"count": 0, "total_monto": 0.0}
+    
+    # Procesar todas las ventas para resolver setter, atribución, KPIs y breakdowns
+    processed_sales = []
+    for s in subquery_sales:
+        s_dict = s.to_dict()
+        ig_norm = normalize_ig(s.instagram)
+        resolved_setter = None
+        has_agenda_match = False
         
-        monto_con_agenda = 0.0
-        count_con_agenda = 0
-        monto_sin_agenda = 0.0
-        count_sin_agenda = 0
-        
-        setter_stats = {} # setter_name -> {"count": 0, "total_monto": 0.0}
-        
-        for s in subquery_sales:
-            ig_norm = normalize_ig(s.instagram)
-            resolved_setter = None
-            has_agenda_match = False
+        if ig_norm and ig_norm in agenda_map:
+            agenda = agenda_map[ig_norm]
+            has_agenda_match = True
             
-            if ig_norm and ig_norm in agenda_map:
-                agenda = agenda_map[ig_norm]
-                has_agenda_match = True
+            # Validar si el setter de la agenda es una fuente de marketing válida
+            is_valid_lead_source = (
+                agenda.nombre and 
+                agenda.nombre.strip() and 
+                agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
+                'entrevista' not in agenda.nombre.lower() and 
+                'diagnostica' not in agenda.nombre.lower() and
+                'diagnóstica' not in agenda.nombre.lower()
+            )
+            if is_valid_lead_source:
+                resolved_setter = agenda.nombre
                 
-                # Validar si el setter de la agenda es una fuente de marketing válida
-                is_valid_lead_source = (
-                    agenda.nombre and 
-                    agenda.nombre.strip() and 
-                    agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
-                    'entrevista' not in agenda.nombre.lower() and 
-                    'diagnostica' not in agenda.nombre.lower() and
-                    'diagnóstica' not in agenda.nombre.lower()
-                )
-                if is_valid_lead_source:
-                    resolved_setter = agenda.nombre
-                    
-            # Si no se pudo resolver desde la agenda, usar el setter original de la venta
-            if not resolved_setter:
-                s_setter = s.setter
-                if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
-                    resolved_setter = s_setter
-                    
-            if has_agenda_match or resolved_setter:
-                monto_con_agenda += (s.monto or 0.0)
-                count_con_agenda += 1
-            else:
-                monto_sin_agenda += (s.monto or 0.0)
-                count_sin_agenda += 1
+        # Si no se pudo resolver desde la agenda, usar el setter original de la venta
+        if not resolved_setter:
+            s_setter = s.setter
+            if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
+                resolved_setter = s_setter
                 
-            final_setter = resolved_setter or "Sin Setter"
-            if final_setter not in setter_stats:
-                setter_stats[final_setter] = {"count": 0, "total_monto": 0.0}
-            setter_stats[final_setter]["count"] += 1
-            setter_stats[final_setter]["total_monto"] += (s.monto or 0.0)
+        if has_agenda_match or resolved_setter:
+            monto_con_agenda += (s.monto or 0.0)
+            count_con_agenda += 1
+        else:
+            monto_sin_agenda += (s.monto or 0.0)
+            count_sin_agenda += 1
             
-        sources_breakdown = []
-        for setter_name, stats in setter_stats.items():
-            sources_breakdown.append({
-                "source": setter_name,
-                "count": stats["count"],
-                "total_monto": round(stats["total_monto"], 2)
-            })
-        sources_breakdown.sort(key=lambda x: x["total_monto"], reverse=True)
+        final_setter = resolved_setter or "Sin Setter"
+        if final_setter not in setter_stats:
+            setter_stats[final_setter] = {"count": 0, "total_monto": 0.0}
+        setter_stats[final_setter]["count"] += 1
+        setter_stats[final_setter]["total_monto"] += (s.monto or 0.0)
         
-        # Calcular total de llamadas agendadas en el rango de fechas
-        agenda_query = FinancialAgenda.query
-        if start_date_str:
-            try:
-                start_date_val = datetime.strptime(start_date_str, '%Y-%m-%d')
-                agenda_query = agenda_query.filter(FinancialAgenda.date >= start_date_val)
-            except ValueError:
-                pass
-        if end_date_str:
-            try:
-                end_date_val = datetime.strptime(end_date_str, '%Y-%m-%d')
-                end_date_val = end_date_val.replace(hour=23, minute=59, second=59, microsecond=999999)
-                agenda_query = agenda_query.filter(FinancialAgenda.date <= end_date_val)
-            except ValueError:
-                pass
-        total_agendas = agenda_query.with_entities(func.count(FinancialAgenda.id)).scalar() or 0
+        # Inyectar datos en el dict
+        s_dict["setter"] = final_setter
+        s_dict["has_agenda"] = has_agenda_match
+        prog, simple_tp = split_tipo_pago(s.tipo_pago)
+        s_dict["programa"] = prog
+        s_dict["tipo_pago_simple"] = simple_tp
+        processed_sales.append(s_dict)
+        
+    sources_breakdown = []
+    for setter_name, stats in setter_stats.items():
+        sources_breakdown.append({
+            "source": setter_name,
+            "count": stats["count"],
+            "total_monto": round(stats["total_monto"], 2)
+        })
+    sources_breakdown.sort(key=lambda x: x["total_monto"], reverse=True)
+    
+    # Calcular total de llamadas agendadas en el rango de fechas
+    agenda_query = FinancialAgenda.query
+    if start_date_str:
+        try:
+            start_date_val = datetime.strptime(start_date_str, '%Y-%m-%d')
+            agenda_query = agenda_query.filter(FinancialAgenda.date >= start_date_val)
+        except ValueError:
+            pass
+    if end_date_str:
+        try:
+            end_date_val = datetime.strptime(end_date_str, '%Y-%m-%d')
+            end_date_val = end_date_val.replace(hour=23, minute=59, second=59, microsecond=999999)
+            agenda_query = agenda_query.filter(FinancialAgenda.date <= end_date_val)
+        except ValueError:
+            pass
+    total_agendas = agenda_query.with_entities(func.count(FinancialAgenda.id)).scalar() or 0
 
-        agenda_breakdown = {
-            "con_agenda": {
-                "total_monto": round(monto_con_agenda, 2),
-                "count": count_con_agenda,
-                "total_agendas": total_agendas
-            },
-            "sin_agenda": {
-                "total_monto": round(monto_sin_agenda, 2),
-                "count": count_sin_agenda
-            }
+    agenda_breakdown = {
+        "con_agenda": {
+            "total_monto": round(monto_con_agenda, 2),
+            "count": count_con_agenda,
+            "total_agendas": total_agendas
+        },
+        "sin_agenda": {
+            "total_monto": round(monto_sin_agenda, 2),
+            "count": count_sin_agenda
         }
+    }
 
-        # Calculate Cash Collect by Payment Type Simple (agrupado en Python)
-        payment_type_query = db.session.query(
-            FinancialSale.tipo_pago,
-            func.count(FinancialSale.id),
-            func.sum(FinancialSale.monto)
-        ).filter(
-            FinancialSale.id.in_(subquery)
-        ).group_by(FinancialSale.tipo_pago).all()
+    # Calculate Cash Collect by Payment Type Simple (agrupado en Python)
+    payment_type_query = db.session.query(
+        FinancialSale.tipo_pago,
+        func.count(FinancialSale.id),
+        func.sum(FinancialSale.monto)
+    ).filter(
+        FinancialSale.id.in_(subquery)
+    ).group_by(FinancialSale.tipo_pago).all()
 
-        payment_types_simple_map = {}
-        for tp, count, total_tp_monto in payment_type_query:
-            _, simple_tp = split_tipo_pago(tp)
-            if simple_tp not in payment_types_simple_map:
-                payment_types_simple_map[simple_tp] = {"count": 0, "total_monto": 0.0}
-            payment_types_simple_map[simple_tp]["count"] += count
-            payment_types_simple_map[simple_tp]["total_monto"] += float(total_tp_monto or 0.0)
+    payment_types_simple_map = {}
+    for tp, count, total_tp_monto in payment_type_query:
+        _, simple_tp = split_tipo_pago(tp)
+        if simple_tp not in payment_types_simple_map:
+            payment_types_simple_map[simple_tp] = {"count": 0, "total_monto": 0.0}
+        payment_types_simple_map[simple_tp]["count"] += count
+        payment_types_simple_map[simple_tp]["total_monto"] += float(total_tp_monto or 0.0)
 
-        payment_types_breakdown = []
-        for tp_simple, stats in payment_types_simple_map.items():
-            payment_types_breakdown.append({
-                "tipo_pago": tp_simple,
-                "count": stats["count"],
-                "total_monto": round(stats["total_monto"], 2)
-            })
+    payment_types_breakdown = []
+    for tp_simple, stats in payment_types_simple_map.items():
+        payment_types_breakdown.append({
+            "tipo_pago": tp_simple,
+            "count": stats["count"],
+            "total_monto": round(stats["total_monto"], 2)
+        })
 
-        # Calculate Cash Collect by Payment Method (agrupado en SQL)
-        payment_method_query = db.session.query(
-            FinancialSale.metodo_pago,
-            func.count(FinancialSale.id),
-            func.sum(FinancialSale.monto)
-        ).filter(
-            FinancialSale.id.in_(subquery)
-        ).group_by(FinancialSale.metodo_pago).all()
+    # Calculate Cash Collect by Payment Method (agrupado en SQL)
+    payment_method_query = db.session.query(
+        FinancialSale.metodo_pago,
+        func.count(FinancialSale.id),
+        func.sum(FinancialSale.monto)
+    ).filter(
+        FinancialSale.id.in_(subquery)
+    ).group_by(FinancialSale.metodo_pago).all()
 
-        payment_methods_breakdown = []
-        for mp, count, total_mp_monto in payment_method_query:
-            payment_methods_breakdown.append({
-                "metodo_pago": mp or "No Especificado",
-                "count": count,
-                "total_monto": round(total_mp_monto or 0.0, 2)
-            })
+    payment_methods_breakdown = []
+    for pm_method, count, total_mp_monto in payment_method_query:
+        payment_methods_breakdown.append({
+            "metodo_pago": pm_method or "No Especificado",
+            "count": count,
+            "total_monto": round(total_mp_monto or 0.0, 2)
+        })
 
-        # Fetch unique programs, payment types and payment methods globally for filter populating
-        all_tps = [
-            r[0] for r in db.session.query(FinancialSale.tipo_pago).distinct().all() if r[0]
-        ]
-        unique_programs_set = set()
-        unique_payment_types_simple_set = set()
-        for tp in all_tps:
-            prog, simple_tp = split_tipo_pago(tp)
-            if prog and prog != "Desconocido":
-                unique_programs_set.add(prog)
-            if simple_tp:
-                unique_payment_types_simple_set.add(simple_tp)
-        
-        unique_programs = sorted(list(unique_programs_set))
-        unique_payment_types = sorted(list(unique_payment_types_simple_set))
-        
-        all_methods = [
-            r[0] for r in db.session.query(FinancialSale.metodo_pago).distinct().all() if r[0]
-        ]
-        unique_payment_methods = sorted(list(set(all_methods)))
-            
-        # Inyectar el setter y datos parseados en los items paginados devueltos
-        sales_data = []
-        for s in sales_pagination.items:
-            s_dict = s.to_dict()
-            ig_norm = normalize_ig(s.instagram)
-            resolved_setter = None
-            
-            if ig_norm and ig_norm in agenda_map:
-                agenda = agenda_map[ig_norm]
-                is_valid_lead_source = (
-                    agenda.nombre and 
-                    agenda.nombre.strip() and 
-                    agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
-                    'entrevista' not in agenda.nombre.lower() and 
-                    'diagnostica' not in agenda.nombre.lower() and
-                    'diagnóstica' not in agenda.nombre.lower()
-                )
-                if is_valid_lead_source:
-                    resolved_setter = agenda.nombre
-                    
-            if not resolved_setter:
-                s_setter = s.setter
-                if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
-                    resolved_setter = s_setter
-                    
-            s_dict["setter"] = resolved_setter or "Sin Setter"
-            # Inyectar programa y tipo de pago simple
-            prog, simple_tp = split_tipo_pago(s.tipo_pago)
-            s_dict["programa"] = prog
-            s_dict["tipo_pago_simple"] = simple_tp
-            sales_data.append(s_dict)
+    # Fetch unique programs, payment types and payment methods globally for filter populating
+    all_tps = [
+        r[0] for r in db.session.query(FinancialSale.tipo_pago).distinct().all() if r[0]
+    ]
+    unique_programs_set = set()
+    unique_payment_types_simple_set = set()
+    for tp in all_tps:
+        prog, simple_tp = split_tipo_pago(tp)
+        if prog and prog != "Desconocido":
+            unique_programs_set.add(prog)
+        if simple_tp:
+            unique_payment_types_simple_set.add(simple_tp)
+    
+    unique_programs = sorted(list(unique_programs_set))
+    unique_payment_types = sorted(list(unique_payment_types_simple_set))
+    
+    all_methods = [
+        r[0] for r in db.session.query(FinancialSale.metodo_pago).distinct().all() if r[0]
+    ]
+    unique_payment_methods = sorted(list(set(all_methods)))
+
+    # Filtrar en memoria si se solicitan solo las ventas sin atribución
+    if sin_atribucion:
+        processed_sales = [s for s in processed_sales if not s["has_agenda"]]
+
+    if page is not None:
+        total_items = len(processed_sales)
+        start_idx = (page - 1) * limit
+        end_idx = start_idx + limit
+        paginated_sales = processed_sales[start_idx:end_idx]
+        has_more = end_idx < total_items
+        pages = (total_items + limit - 1) // limit
 
         return jsonify({
-            "data": sales_data,
-            "total": sales_pagination.total,
-            "page": sales_pagination.page,
-            "pages": sales_pagination.pages,
-            "has_more": sales_pagination.has_next,
+            "data": paginated_sales,
+            "total": total_items,
+            "page": page,
+            "pages": pages,
+            "has_more": has_more,
             "total_monto": float(total_monto),
             "sources_breakdown": sources_breakdown,
             "agenda_breakdown": agenda_breakdown,
@@ -815,38 +804,7 @@ def get_financial_sales():
             "unique_payment_methods": unique_payment_methods
         }), 200
     else:
-        sales = query.all()
-        
-        # Resolver setters y datos parseados también para la respuesta no paginada
-        sales_data = []
-        for s in sales:
-            s_dict = s.to_dict()
-            ig_norm = normalize_ig(s.instagram)
-            resolved_setter = None
-            if ig_norm and ig_norm in agenda_map:
-                agenda = agenda_map[ig_norm]
-                is_valid_lead_source = (
-                    agenda.nombre and 
-                    agenda.nombre.strip() and 
-                    agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
-                    'entrevista' not in agenda.nombre.lower() and 
-                    'diagnostica' not in agenda.nombre.lower() and
-                    'diagnóstica' not in agenda.nombre.lower()
-                )
-                if is_valid_lead_source:
-                    resolved_setter = agenda.nombre
-            if not resolved_setter:
-                s_setter = s.setter
-                if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
-                    resolved_setter = s_setter
-            s_dict["setter"] = resolved_setter or "Sin Setter"
-            # Inyectar programa y tipo de pago simple
-            prog, simple_tp = split_tipo_pago(s.tipo_pago)
-            s_dict["programa"] = prog
-            s_dict["tipo_pago_simple"] = simple_tp
-            sales_data.append(s_dict)
-            
-        return jsonify(sales_data), 200
+        return jsonify(processed_sales), 200
 
 
 # --- Financial Agendas Sync (Similar to Sales) ---
@@ -896,6 +854,8 @@ def receive_financial_agendas():
             fecha_meet=dt_str or str(agenda_date),
             date=agenda_date,
             instagram=item.get('instagram') or item.get('ig') or 'N/A',
+            whatsapp=item.get('whatsapp') or item.get('phone') or 'N/A',
+            mail=item.get('mail') or item.get('email') or 'N/A',
             raw_data=item
         )
         db.session.add(agenda)
@@ -928,7 +888,9 @@ def get_financial_agendas():
         query = query.filter(or_(
             FinancialAgenda.lead.ilike(search_pattern),
             FinancialAgenda.nombre.ilike(search_pattern),
-            FinancialAgenda.closer.ilike(search_pattern)
+            FinancialAgenda.closer.ilike(search_pattern),
+            FinancialAgenda.mail.ilike(search_pattern),
+            FinancialAgenda.whatsapp.ilike(search_pattern)
         ))
         
     if start_date_str:

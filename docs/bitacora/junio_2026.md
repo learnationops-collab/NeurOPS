@@ -144,6 +144,15 @@
     - **Interfaz (Frontend) (`FinancialAgendasPage.jsx`) [VALIDATION]**:
       - Se renombró la columna "Setter" a "Fuente" en la tabla, el placeholder de búsqueda superior y las etiquetas del modal de edición para reflejar el cambio en Google Sheets y n8n.
       - Se verificó y validó el correcto funcionamiento de las acciones de edición (`PUT`) y eliminación (`DELETE`) de agendas directamente en el tablero, y se comprobó que el empaquetado final (`npm run build`) compile al 100% de forma correcta.
-
-
-
+  - **Mejora de la Atribución por Agendas y Resolución de Ventas sin Agenda**:
+    - **Backend (API) (`__init__.py`) [MODIFY]**:
+      - Se implementó el parámetro de filtro `sin_atribucion` en `GET /public/financial-sales` para retornar únicamente ventas que no tienen agendas asociadas.
+      - Se inyectó el flag `"has_agenda"` en la respuesta JSON de cada venta, calculando el match de Instagram en memoria.
+      - Se amplió la búsqueda en `GET /public/financial-agendas` para permitir localizar agendas por `mail` y `whatsapp`.
+      - Se corrigió la creación de agendas en `POST /public/financial-agendas` para guardar explícitamente los campos `mail` y `whatsapp` recibidos.
+    - **Componente Modal Atómico (`AttributionModal.jsx`) [NEW]**:
+      - Se creó un modal interactivo que guía la atribución manual: 1) Permite corregir el Instagram de la venta. 2) Permite buscar agendas existentes por nombre/correo/teléfono y vincularlas actualizando el Instagram de la agenda. 3) Permite crear una nueva agenda desde cero si no existe en el sistema.
+    - **Interfaz (Frontend) (`PublicFinancialSalesPage.jsx`) [MODIFY]**:
+      - Se simplificó la tarjeta de KPI "Atribución por Agendas" para visualizar únicamente el Ticket Promedio por Agenda, el Cash Collect Promedio por Llamada (Show Up), y la cantidad de ventas sin agenda.
+      - Se agregó el botón/filtro global "Atribuir (Sin Agenda)" en la cabecera para filtrar la lista al instante.
+      - Se implementó la columna "Atribución" en la tabla para ver el estado y abrir el modal interactivo de atribución.
