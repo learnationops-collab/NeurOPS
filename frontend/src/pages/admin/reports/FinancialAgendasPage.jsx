@@ -236,7 +236,7 @@ const FinancialAgendasPage = () => {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
                         <input
                             type="text"
-                            placeholder="Buscar setter o cliente..."
+                            placeholder="Buscar fuente o cliente..."
                             className="bg-surface border border-base rounded-2xl pl-12 pr-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-64 text-white"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -376,7 +376,7 @@ const FinancialAgendasPage = () => {
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Fecha</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Cliente</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
-                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Setter</th>
+                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Fuente</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Instagram</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Estado</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
@@ -504,7 +504,7 @@ const FinancialAgendasPage = () => {
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Setter</label>
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fuente</label>
                                 <input 
                                     type="text"
                                     className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
