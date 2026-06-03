@@ -41,21 +41,25 @@ const PublicFinancialSalesPage = () => {
     const [paymentTypesBreakdown, setPaymentTypesBreakdown] = useState([]);
     const [uniquePrograms, setUniquePrograms] = useState([]);
     const [uniquePaymentTypes, setUniquePaymentTypes] = useState([]);
+    const [paymentMethodsBreakdown, setPaymentMethodsBreakdown] = useState([]);
+    const [uniquePaymentMethods, setUniquePaymentMethods] = useState([]);
     
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_financial_sales', {
         searchTerm: '',
         startDate: getFirstDayOfCurrentMonth(),
         endDate: getTodayDate(),
         programa: '',
-        tipoPagoSimple: ''
+        tipoPagoSimple: '',
+        metodoPago: ''
     });
 
-    const { searchTerm, startDate, endDate, programa, tipoPagoSimple } = filters;
+    const { searchTerm, startDate, endDate, programa, tipoPagoSimple, metodoPago } = filters;
     const setSearchTerm = (val) => setFilters({ searchTerm: val });
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
     const setPrograma = (val) => setFilters({ programa: val });
     const setTipoPagoSimple = (val) => setFilters({ tipoPagoSimple: val });
+    const setMetodoPago = (val) => setFilters({ metodoPago: val });
 
     // Forzar inicio en el mes actual si los filtros cargados de localStorage están vacíos
     useEffect(() => {
@@ -64,7 +68,8 @@ const PublicFinancialSalesPage = () => {
                 startDate: startDate || getFirstDayOfCurrentMonth(),
                 endDate: endDate || getTodayDate(),
                 programa: programa || '',
-                tipoPagoSimple: tipoPagoSimple || ''
+                tipoPagoSimple: tipoPagoSimple || '',
+                metodoPago: metodoPago || ''
             });
         }
     }, [startDate, endDate]);
@@ -90,7 +95,8 @@ const PublicFinancialSalesPage = () => {
                     start_date: startDate,
                     end_date: endDate,
                     programa: programa,
-                    tipo_pago_simple: tipoPagoSimple
+                    tipo_pago_simple: tipoPagoSimple,
+                    metodo_pago: metodoPago
                 }
             });
             const newSales = res.data.data || [];
@@ -111,8 +117,10 @@ const PublicFinancialSalesPage = () => {
             setSourcesBreakdown(res.data.sources_breakdown || []);
             setAgendaBreakdown(res.data.agenda_breakdown || null);
             setPaymentTypesBreakdown(res.data.payment_types_breakdown || []);
+            setPaymentMethodsBreakdown(res.data.payment_methods_breakdown || []);
             setUniquePrograms(res.data.unique_programs || []);
             setUniquePaymentTypes(res.data.unique_payment_types || []);
+            setUniquePaymentMethods(res.data.unique_payment_methods || []);
         } catch (error) {
             toast.error('Error al cargar las ventas');
             console.error(error);
@@ -129,7 +137,7 @@ const PublicFinancialSalesPage = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, startDate, endDate, programa, tipoPagoSimple]);
+    }, [searchTerm, startDate, endDate, programa, tipoPagoSimple, metodoPago]);
 
     // Observador para scroll infinito
     useEffect(() => {
@@ -276,6 +284,25 @@ const PublicFinancialSalesPage = () => {
                         </select>
                     </div>
 
+                    <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-2 rounded-xl">
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Método:</span>
+                        <select
+                            value={metodoPago}
+                            onChange={(e) => setMetodoPago(e.target.value)}
+                            className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer max-w-[130px] pr-8 focus:ring-0"
+                        >
+                            <option value="" className="bg-slate-900 text-white">Todos</option>
+                            {uniquePaymentMethods
+                                .sort((a, b) => a.localeCompare(b))
+                                .map((method) => (
+                                    <option key={method} value={method} className="bg-slate-900 text-white">
+                                        {method}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                    </div>
+
                     <div className="relative flex-1 md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
@@ -300,7 +327,7 @@ const PublicFinancialSalesPage = () => {
 
             {/* KPIs Panels */}
             {agendaBreakdown && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* KPI 1: Cash Collect por Agendas */}
                     <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 space-y-6 relative overflow-hidden bg-slate-900/40 backdrop-blur-md">
                         <div className="space-y-1">
@@ -460,6 +487,62 @@ const PublicFinancialSalesPage = () => {
                                                 </span>
                                                 <span className="text-sm font-black text-white italic">
                                                     ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(pt.total_monto)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                        </div>
+                    </Card>
+
+                    {/* KPI 3: Cash Collect por Método de Pago */}
+                    <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 space-y-4 relative overflow-hidden bg-slate-900/40 backdrop-blur-md">
+                        <div className="space-y-1">
+                            <h2 className="text-lg font-black text-white italic tracking-tight uppercase flex items-center gap-2">
+                                <DollarSign className="text-sky-400" size={18} />
+                                Cash Collect por Método de Pago
+                            </h2>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wide">
+                                Métodos de Recaudación Activos
+                            </p>
+                        </div>
+
+                        <div className="max-h-[160px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                            {paymentMethodsBreakdown
+                                .sort((a, b) => b.total_monto - a.total_monto)
+                                .map((pm) => {
+                                    const pct = totalSalesAmount > 0 ? (pm.total_monto / totalSalesAmount) * 100 : 0;
+                                    
+                                    let payColor = "text-sky-400 bg-sky-500/10 border-sky-500/20";
+                                    const norm = pm.metodo_pago.toLowerCase();
+                                    if (norm.includes("stripe")) {
+                                        payColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+                                    } else if (norm.includes("wise")) {
+                                        payColor = "text-sky-400 bg-sky-500/10 border-sky-500/20";
+                                    } else if (norm.includes("paypal")) {
+                                        payColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+                                    } else if (norm.includes("transferencia") || norm.includes("banco")) {
+                                        payColor = "text-violet-400 bg-violet-500/10 border-violet-500/20";
+                                    } else if (norm.includes("hotmart")) {
+                                        payColor = "text-rose-400 bg-rose-500/10 border-rose-500/20";
+                                    }
+
+                                    return (
+                                        <div key={pm.metodo_pago} className="flex items-center justify-between bg-slate-950/30 border border-slate-900 p-2.5 rounded-xl hover:border-slate-800 transition-all">
+                                            <div className="flex items-center gap-2.5">
+                                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${payColor}`}>
+                                                    {pm.metodo_pago}
+                                                </span>
+                                                <span className="text-[10px] text-slate-500 font-bold uppercase">
+                                                    {pm.count} {pm.count === 1 ? 'Venta' : 'Ventas'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xs text-slate-500 font-black tracking-tighter">
+                                                    {pct.toFixed(0)}%
+                                                </span>
+                                                <span className="text-sm font-black text-white italic">
+                                                    ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(pm.total_monto)}
                                                 </span>
                                             </div>
                                         </div>

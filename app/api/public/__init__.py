@@ -548,6 +548,7 @@ def get_financial_sales():
     end_date_str = request.args.get('end_date', default='', type=str).strip()
     programa = request.args.get('programa', default='', type=str).strip()
     tipo_pago_simple = request.args.get('tipo_pago_simple', default='', type=str).strip()
+    metodo_pago = request.args.get('metodo_pago', default='', type=str).strip()
     
     query = FinancialSale.query
     if search:
@@ -585,6 +586,9 @@ def get_financial_sales():
             FinancialSale.tipo_pago.like(f"% - {tipo_pago_simple}"),
             FinancialSale.tipo_pago == tipo_pago_simple
         ))
+        
+    if metodo_pago:
+        query = query.filter(FinancialSale.metodo_pago == metodo_pago)
             
     query = query.order_by(FinancialSale.date.desc())
     
@@ -725,7 +729,24 @@ def get_financial_sales():
                 "total_monto": round(stats["total_monto"], 2)
             })
 
-        # Fetch unique programs and payment types globally for filter populating
+        # Calculate Cash Collect by Payment Method (agrupado en SQL)
+        payment_method_query = db.session.query(
+            FinancialSale.metodo_pago,
+            func.count(FinancialSale.id),
+            func.sum(FinancialSale.monto)
+        ).filter(
+            FinancialSale.id.in_(subquery)
+        ).group_by(FinancialSale.metodo_pago).all()
+
+        payment_methods_breakdown = []
+        for mp, count, total_mp_monto in payment_method_query:
+            payment_methods_breakdown.append({
+                "metodo_pago": mp or "No Especificado",
+                "count": count,
+                "total_monto": round(total_mp_monto or 0.0, 2)
+            })
+
+        # Fetch unique programs, payment types and payment methods globally for filter populating
         all_tps = [
             r[0] for r in db.session.query(FinancialSale.tipo_pago).distinct().all() if r[0]
         ]
@@ -740,6 +761,11 @@ def get_financial_sales():
         
         unique_programs = sorted(list(unique_programs_set))
         unique_payment_types = sorted(list(unique_payment_types_simple_set))
+        
+        all_methods = [
+            r[0] for r in db.session.query(FinancialSale.metodo_pago).distinct().all() if r[0]
+        ]
+        unique_payment_methods = sorted(list(set(all_methods)))
             
         # Inyectar el setter y datos parseados en los items paginados devueltos
         sales_data = []
@@ -783,8 +809,10 @@ def get_financial_sales():
             "sources_breakdown": sources_breakdown,
             "agenda_breakdown": agenda_breakdown,
             "payment_types_breakdown": payment_types_breakdown,
+            "payment_methods_breakdown": payment_methods_breakdown,
             "unique_programs": unique_programs,
-            "unique_payment_types": unique_payment_types
+            "unique_payment_types": unique_payment_types,
+            "unique_payment_methods": unique_payment_methods
         }), 200
     else:
         sales = query.all()

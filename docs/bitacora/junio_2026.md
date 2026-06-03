@@ -111,7 +111,13 @@
       - Se dividió el filtro selector de Pago en dos selectores independientes: "Programa" y "Pago", enviando los nuevos parámetros a la API.
       - Se separó la columna "Producto/Pago" en la tabla en dos columnas: "Programa" y "Pago" (que muestra el tipo de pago simple y método de pago).
       - Se adaptó la edición en línea en la tabla para inicializar y editar Programa y Tipo de Pago Simple por separado, combinándolos de vuelta en el formato original `{programa} - {tipo_pago_simple}` al guardar para mantener consistencia con Google Sheets y la base local.
-
-
-
-
+- **3 de Junio de 2026**:
+  - **Filtro y Cash Collect por Método de Pago en Registro de Ventas**:
+    - **API (Backend) (`__init__.py`) [MODIFY]**:
+      - Modificación del endpoint `GET /public/financial-sales` para capturar el parámetro `metodo_pago` y filtrar la consulta de base de datos por dicho método de manera reactiva.
+      - Implementación de la agregación por método de pago (`payment_methods_breakdown`) agrupando el volumen de ventas y el cash total recaudado por cada método de pago.
+      - Retorno dinámico de la lista de métodos de pago únicos (`unique_payment_methods`) en la respuesta JSON global.
+    - **Interfaz (Frontend) (`PublicFinancialSalesPage.jsx`) [MODIFY]**:
+      - Integración de `metodoPago` en el estado de filtros persistentes mediante el hook `usePersistentFilters` y envío del parámetro `metodo_pago` a la API.
+      - Inclusión de un nuevo dropdown selector "Método:" en la barra superior de filtros que se puebla dinámicamente con los métodos únicos recibidos del backend.
+      - Rediseño de la cuadrícula de KPIs a 3 columnas (`lg:grid-cols-3`) para alojar una nueva tarjeta premium: **Cash Collect por Método de Pago**, la cual detalla de forma ordenada la recaudación, cantidad de ventas y porcentajes correspondientes a cada método (Stripe, Paypal, Wise, Banco, etc.) con píldoras de colores estilizadas.
