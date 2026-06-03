@@ -42,7 +42,7 @@ const CloserNewSalePage = () => {
         metodo_pago: 'Stripe',
         examen_lead: '',
         notas: '',
-        estado: 'completo',
+        estado: 'Confirmada',
         instagram: '',
         setter: ''
     });
@@ -517,9 +517,9 @@ const CloserNewSalePage = () => {
                                 onChange={e => setForm({ ...form, estado: e.target.value })}
                                 required
                             >
-                                <option value="completo">Completo</option>
-                                <option value="pendiente">Pendiente</option>
-                                <option value="cancelado">Cancelado</option>
+                                <option value="Confirmada">Confirmada</option>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Cancelada">Cancelada</option>
                             </select>
                         </div>
 

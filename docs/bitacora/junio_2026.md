@@ -101,7 +101,7 @@
     - **Sincronización (`sheets_service.py`) [MODIFY]**: Modificación de la función `_rebuild_sales` para propagar automáticamente a la cita (`Appointment`) local más reciente del cliente el examen extraído de la venta sincronizada de Sheets. Adicionalmente, se corrigió el cruce de las columnas físicas L (Estado) y M (Setter) mapeando `setter` a la columna M (`item.get('estado')`) y `estado` a la columna L (`item.get('setter')`).
     - **Formulario de Declarar Venta (`NewSalePage.jsx`) [MODIFY]**:
       - Corrección de error de sintaxis JSX cerrando los tags abiertos del campo de teléfono.
-      - Inclusión del selector para el **Estado de la Venta** con opciones: `completo`, `pendiente`, `cancelado`.
+      - Inclusión del selector para el **Estado de la Venta** con opciones: `Confirmada`, `Pendiente`, `Cancelada`.
       - Incorporación del campo **Examen del Lead** (autocompletado dinámicamente desde la agenda/cita).
       - Vinculación correcta del textarea de observaciones al estado `form.notas` en lugar de `form.examen`.
       - Inversión de campos en el payload (`setter: form.estado`, `estado: form.setter`) para escribir correctamente en las columnas físicas L (Estado) y M (Setter) en Google Sheets.
