@@ -138,8 +138,9 @@
     - **Backend (API) (`__init__.py`, `marketing.py`, `closer.py`) [MODIFY]**:
       - Se corrigió el mapeo en `POST /public/financial-agendas` para que, cuando no se envíe `setter` explícito en el JSON pero vengan `nombre` y `lead` (de n8n), asigne `lead` como el Setter y `nombre` como el Cliente/Lead, almacenándolos correctamente en las columnas de la BD correspondientes.
       - Se actualizó la resolución del Setter de agendas de `agenda.lead` a `agenda.nombre` en la atribución de ventas (`get_financial_sales`), standings de marketing (`get_unattributed_leads`) y endpoints del closer (`/leads/search` y `/appointments/by-instagram`), asegurando que todos los flujos lean del campo correcto.
+      - Se añadió el endpoint `POST /public/financial-agendas/repair-db` para posibilitar la normalización automática y selectiva de la base de datos de producción (PostgreSQL) tras el despliegue.
     - **Base de Datos (SQLite) (`local.db`) [MIGRATION]**:
-      - Se creó y ejecutó el script `migrate_agendas.py` que detectó y corrigió 2317 registros históricos que estaban invertidos en la base de datos local de SQLite.
+      - Se creó y ejecutó el script `repair_agendas.py` que realizó una corrección y restauración selectiva y exitosa de 1549 agendas sincronizadas de Google Sheets en la base de datos local (corrigiendo la inversión errónea del script de migración inicial), dejando todos los registros en su formato correcto.
     - **Interfaz (Frontend) (`FinancialAgendasPage.jsx`) [VALIDATION]**:
       - Se verificó y validó el correcto funcionamiento de las acciones de edición (`PUT`) y eliminación (`DELETE`) de agendas directamente en el tablero, y se comprobó que el empaquetado final (`npm run build`) compile al 100% de forma correcta.
 

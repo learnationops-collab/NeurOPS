@@ -1031,6 +1031,70 @@ def delete_financial_agenda(agenda_id):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@bp.route('/public/financial-agendas/repair-db', methods=['POST'])
+def repair_financial_agendas_db():
+    """Corrige de forma definitiva y selectiva los registros históricos de agendas financieras."""
+    from app.models import FinancialAgenda
+    
+    setters_known = {
+        'elias', 'workshop', 'vsl', 'marketing', 'organico', 'orgánico',
+        'sin asignar', 'sin_asignar', 'facebook', 'instagram', 'youtube',
+        'tiktok', 'manychat', 'workshop manychat'
+    }
+    
+    try:
+        agendas = FinancialAgenda.query.all()
+        corrected_n8n = 0
+        restored_sheets = 0
+        
+        for agenda in agendas:
+            if agenda.raw_data and isinstance(agenda.raw_data, dict):
+                raw = agenda.raw_data
+                raw_lead = raw.get('lead')
+                raw_nombre = raw.get('nombre')
+                
+                lead_str = str(raw_lead).strip() if raw_lead else ""
+                nombre_str = str(raw_nombre).strip() if raw_nombre else ""
+                
+                orig_nombre = agenda.nombre
+                orig_lead = agenda.lead
+                
+                # Caso 1: raw_lead es un setter conocido -> Caso n8n (lead=setter, nombre=cliente)
+                if lead_str.lower() in setters_known:
+                    agenda.nombre = lead_str
+                    agenda.lead = nombre_str
+                    if agenda.nombre != orig_nombre or agenda.lead != orig_lead:
+                        corrected_n8n += 1
+                # Caso 2: raw_nombre es un setter conocido -> Caso Sheets (nombre=setter, lead=cliente)
+                elif nombre_str.lower() in setters_known:
+                    agenda.nombre = nombre_str
+                    agenda.lead = lead_str
+                    if agenda.nombre != orig_nombre or agenda.lead != orig_lead:
+                        restored_sheets += 1
+                # Caso 3: Fallback si raw_lead es un tipo de evento (Sheets original)
+                elif 'entrevista' in lead_str.lower() or 'consultor' in lead_str.lower() or 'sesi' in lead_str.lower() or 'reagenda' in lead_str.lower() or 'referido' in lead_str.lower():
+                    agenda.nombre = nombre_str
+                    agenda.lead = lead_str
+                    if agenda.nombre != orig_nombre or agenda.lead != orig_lead:
+                        restored_sheets += 1
+                # Caso 4: Restaurar por defecto a la estructura original de Sheets
+                else:
+                    agenda.nombre = nombre_str if raw_nombre else None
+                    agenda.lead = lead_str if raw_lead else None
+                    if agenda.nombre != orig_nombre or agenda.lead != orig_lead:
+                        restored_sheets += 1
+
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "message": "Reparación completada",
+            "corrected_n8n": corrected_n8n,
+            "restored_sheets": restored_sheets
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 
 
 from . import triage
