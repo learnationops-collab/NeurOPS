@@ -46,15 +46,13 @@ class SheetsService:
     @staticmethod
     def post_to_sheets(tabla, payload):
         """
-        Escritura (POST): Envía datos y si tiene éxito, dispara un GET.
+        Escritura (POST): Envía datos con acción 'insert' y si tiene éxito, dispara un GET.
         """
         try:
-            # El nuevo Apps Script espera { "tabla": "...", "datos": { ... } }
-            body = {"tabla": tabla, "datos": payload}
+            body = {"accion": "insert", "tabla": tabla, "datos": payload}
             response = requests.post(SheetsService.BASE_URL, json=body, timeout=30)
 
             if response.status_code in (200, 201, 302):
-                # Disparar sincronización automática para refrescar localmente
                 SheetsService.sync_from_sheets(tabla)
                 return {"status": "success", "message": "Datos enviados y sincronizados"}
             
@@ -63,6 +61,31 @@ class SheetsService:
 
         except Exception as e:
             logger.error(f"[SHEETS POST] Excepción during POST ({tabla}): {str(e)}")
+            return {"status": "error", "message": str(e)}
+
+    @staticmethod
+    def update_in_sheets(tabla, marca_temporal, payload):
+        """
+        Actualización (POST): Modifica una fila existente en Google Sheets identificada por su marca_temporal.
+        """
+        try:
+            body = {
+                "accion": "update",
+                "tabla": tabla,
+                "marca_temporal": marca_temporal,
+                "datos": payload
+            }
+            response = requests.post(SheetsService.BASE_URL, json=body, timeout=30)
+
+            if response.status_code in (200, 201, 302):
+                logger.info(f"[SHEETS UPDATE] Venta con marca_temporal {marca_temporal} actualizada en Google Sheets.")
+                return {"status": "success", "message": "Fila actualizada correctamente en Google Sheets"}
+            
+            logger.error(f"[SHEETS UPDATE] Error en respuesta: {response.status_code} - {response.text}")
+            return {"status": "error", "message": f"Error al actualizar fila en Google Sheets: {response.status_code}"}
+
+        except Exception as e:
+            logger.error(f"[SHEETS UPDATE] Excepción during UPDATE ({tabla}): {str(e)}")
             return {"status": "error", "message": str(e)}
 
     @staticmethod

@@ -184,6 +184,26 @@ def update_financial_sale(sale_id):
         if 'estado' in data:
             sale.estado = data['estado']
         db.session.commit()
+
+        # Propagar actualización en caliente a Google Sheets
+        if sale.marca_temporal:
+            from app.services.sheets_service import SheetsService
+            update_payload = {
+                "email_vendedor": sale.email_vendedor,
+                "nombre_cliente": sale.nombre_cliente,
+                "telefono": sale.telefono,
+                "mail_cliente": sale.mail_cliente,
+                "tipo_pago": sale.tipo_pago,
+                "monto": sale.monto,
+                "segundo_pago": sale.segundo_pago,
+                "metodo_pago": sale.metodo_pago,
+                "examen": sale.examen,
+                "instagram": sale.instagram,
+                "setter": sale.setter,
+                "estado": sale.estado
+            }
+            SheetsService.update_in_sheets("Ventas_DB", sale.marca_temporal, update_payload)
+
         return jsonify({"message": "Venta actualizada correctamente", "sale": sale.to_dict()}), 200
     except Exception as e:
         db.session.rollback()
