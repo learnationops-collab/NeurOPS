@@ -175,6 +175,8 @@ const CloserNewSalePage = () => {
             instagram: form.instagram || '',
             setter: form.estado, // Columna L (Estado de la Venta)
             estado: form.setter || '', // Columna M (Setter que Prospectó)
+            status: form.setter || '', // Respaldo para Apps Script que usa status para la columna M
+            setter_name: form.setter || '', // Respaldo adicional
             marca_temporal: new Date().toLocaleString("es-ES") // Fecha/hora del registro
         };
 

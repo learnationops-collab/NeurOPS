@@ -113,9 +113,9 @@ class SheetsService:
                         metodo_pago=SheetsService._to_str(item.get('metodo_pago')),
                         examen=SheetsService._to_str(item.get('examen')),
                         instagram=SheetsService._to_str(item.get('instagram')),
-                        setter=SheetsService._to_str(item.get('estado')), # Columna M en Sheets
+                        setter=SheetsService._to_str(item.get('estado') or item.get('status') or item.get('setter_name')), # Columna M en Sheets
                         marca_temporal=SheetsService._to_str(item.get('marca_temporal')),
-                        estado=SheetsService._to_str(item.get('setter') or item.get('status')) or "Completada", # Columna L en Sheets
+                        estado=SheetsService._to_str(item.get('setter')) or "Completada", # Columna L en Sheets
                         date=SheetsService._parse_date(item.get('marca_temporal')),
                         raw_data=item
                     )
