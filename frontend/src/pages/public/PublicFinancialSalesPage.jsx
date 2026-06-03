@@ -254,7 +254,7 @@ const PublicFinancialSalesPage = () => {
         tipo_pago_simple: 'completo',
         monto: '',
         metodo_pago: 'Stripe',
-        estado: 'Confirmada',
+        estado: 'Completada',
         email_vendedor: '',
         setter_name: '',
         examen: '',
@@ -331,7 +331,7 @@ const PublicFinancialSalesPage = () => {
             tipo_pago_simple: 'completo',
             monto: '',
             metodo_pago: 'Stripe',
-            estado: 'Confirmada',
+            estado: 'Completada',
             email_vendedor: '',
             setter_name: '',
             examen: '',
@@ -1243,8 +1243,9 @@ const PublicFinancialSalesPage = () => {
                                         onChange={e => setCreateData({...createData, estado: e.target.value})}
                                         className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
                                     >
-                                        <option value="Confirmada">Confirmada</option>
+                                        <option value="Completada">Completada</option>
                                         <option value="Pendiente">Pendiente</option>
+                                        <option value="Reembolsada">Reembolsada</option>
                                         <option value="Cancelada">Cancelada</option>
                                     </select>
                                 </div>
