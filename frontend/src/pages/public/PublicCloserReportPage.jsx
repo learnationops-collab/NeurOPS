@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headphones, BarChart } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headphones, BarChart, ArrowLeftCircle } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import DailyReflectionSection from '../../components/reports/DailyReflectionSection';
 
 // Componente reutilizable para inputs numéricos
-const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly = false, isLightMode = false, type = "number", step, placeholder }) => {
+const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly = false, type = "number", step, placeholder }) => {
     const isFilled = value > 0 || value !== '';
     return (
         <div className="space-y-1.5">
-            {label && <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isLightMode ? 'text-slate-500' : 'text-slate-400'}`}>{label}</label>}
+            {label && <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400">{label}</label>}
             <input
                 type={type}
                 step={step}
@@ -18,10 +18,8 @@ const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly
                 readOnly={readOnly}
                 placeholder={placeholder}
                 className={`w-full px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-${color}-500 transition-all font-bold text-sm text-center
-                    ${isLightMode
-                        ? (isFilled && !readOnly ? 'bg-white border-slate-200 text-slate-900 border shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-900 border shadow-inner')
-                        : (isFilled && !readOnly ? 'bg-slate-800 border-slate-600 text-white border' : 'bg-slate-800/50 border border-slate-700/50 text-white')
-                    }`}
+                    ${isFilled && !readOnly ? 'bg-slate-800 border-slate-600 text-white border' : 'bg-slate-800/50 border border-slate-700/50 text-white'}
+                `}
                 value={value}
                 onChange={e => onChange(field, e.target.value)}
             />
@@ -34,27 +32,33 @@ const CollapsibleSection = ({ id, currentOpen, setOpen, title, icon: Icon, isCom
     const isOpen = currentOpen === id;
 
     return (
-        <div className={`${isComplete ? 'bg-slate-200 border-slate-300 shadow-md' : 'bg-slate-900 border-slate-800 shadow-xl'} border rounded-3xl overflow-hidden transition-all duration-500 border-t-4 ${borderColorClass}`}>
+        <div className={`bg-slate-900 border border-slate-800 shadow-xl rounded-3xl overflow-hidden transition-all duration-500 border-t-4 ${borderColorClass} relative`}>
+            {isComplete && (
+                <div className="absolute top-0 right-0 w-2 h-2 bg-emerald-500 rounded-full m-4 animate-pulse" title="Sección Completada" />
+            )}
             <div
                 className="p-5 md:p-6 cursor-pointer flex items-center justify-between select-none"
                 onClick={() => setOpen(isOpen ? null : id)}
             >
                 <div className="flex items-center gap-3">
-                    <div className={`p-2.5 ${isComplete ? 'bg-slate-100 text-slate-700' : 'bg-slate-800/50'} rounded-xl`}>
+                    <div className="p-2.5 bg-slate-800/50 rounded-xl">
                         <Icon className={colorClass} size={22} />
                     </div>
-                    <h2 className={`text-lg font-black italic tracking-tighter uppercase ${isComplete ? 'text-slate-800' : 'text-white'}`}>{title}</h2>
+                    <h2 className="text-lg font-black italic tracking-tighter uppercase text-white flex items-center gap-2">
+                        {title}
+                        {isComplete && <span className="text-emerald-500 text-xs font-bold lowercase normal-case tracking-normal">(completado)</span>}
+                    </h2>
                 </div>
                 <div>
                     <div className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isComplete ? "text-slate-500" : "text-slate-400"}><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </div>
                 </div>
             </div>
             <div
                 className={`transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}
             >
-                <div className={`p-5 md:p-6 pt-0 ${isComplete ? 'border-t border-slate-300/50' : 'border-t border-slate-800/50'}`}>
+                <div className="p-5 md:p-6 pt-0 border-t border-slate-800/50">
                     {children}
                 </div>
             </div>
@@ -66,6 +70,8 @@ const PublicCloserReportPage = () => {
     const auth = useAuth();
     const user = auth?.user || { role: 'admin' };
     const navigate = useNavigate();
+    const location = useLocation();
+    const editReport = location.state?.editReport;
     const [closers, setClosers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -145,8 +151,8 @@ const PublicCloserReportPage = () => {
             const res = await api.get('/public/active-closers');
             setClosers(res.data);
             
-            // Si el usuario es closer, auto-seleccionarlo
-            if (user.role === 'closer' && user.id) {
+            // Si el usuario es closer y no estamos editando, auto-seleccionarlo
+            if (user.role === 'closer' && user.id && !editReport) {
                 setFormData(prev => ({ ...prev, closer_id: user.id.toString() }));
             }
         } catch (err) {
@@ -156,6 +162,20 @@ const PublicCloserReportPage = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (editReport) {
+            const newFormData = {};
+            Object.keys(initialFormData).forEach(key => {
+                newFormData[key] = (editReport[key] !== undefined && editReport[key] !== null) ? editReport[key] : '';
+            });
+            if (newFormData.closer_id) {
+                newFormData.closer_id = newFormData.closer_id.toString();
+            }
+            newFormData.reflections = editReport.reflections || {};
+            setFormData(newFormData);
+        }
+    }, [editReport]);
 
     const handleFieldChange = (field, value) => {
         // Campos monetarios aceptan decimales
@@ -193,16 +213,22 @@ const PublicCloserReportPage = () => {
                 follow_ups_replied: (parseInt(formData.follow_ups_hot_replied) || 0) + (parseInt(formData.follow_ups_cold_replied) || 0)
             };
 
-            await api.post('/public/closer-report', finalData);
-            alert('¡Reporte enviado correctamente! Buen trabajo.');
+            if (editReport) {
+                await api.put(`/public/closer-reports/${editReport.id}`, finalData);
+                alert('¡Reporte actualizado correctamente!');
+                navigate(-1);
+            } else {
+                await api.post('/public/closer-report', finalData);
+                alert('¡Reporte enviado correctamente! Buen trabajo.');
 
-            // Reset pero mantener closer y fecha
-            setFormData(prev => ({
-                ...initialFormData,
-                closer_id: prev.closer_id,
-                date: prev.date,
-            }));
-            setOpenSection('agendas');
+                // Reset pero mantener closer y fecha
+                setFormData(prev => ({
+                    ...initialFormData,
+                    closer_id: prev.closer_id,
+                    date: prev.date,
+                }));
+                setOpenSection('agendas');
+            }
         } catch (err) {
             alert(err.response?.data?.message || err.response?.data?.error || 'Error al enviar el reporte.');
         } finally {
@@ -338,20 +364,31 @@ const PublicCloserReportPage = () => {
                 <div className="text-center space-y-4 mb-2 relative">
                     <p className="text-violet-400 font-bold tracking-widest text-xs uppercase">NeurOPS High Performance</p>
                     <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
-                        Reporte Diario Closer
+                        {editReport ? 'Editar Reporte Diario' : 'Reporte Diario Closer'}
                     </h1>
                     
-                    {user.role === 'closer' && (
-                        <div className="flex justify-center mt-6">
+                    <div className="flex justify-center gap-4 mt-6">
+                        {editReport && (
                             <button
+                                type="button"
+                                onClick={() => navigate(-1)}
+                                className="flex items-center gap-2 bg-slate-900 border border-rose-950 text-rose-400 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:text-white hover:border-rose-500 hover:bg-rose-950/20 transition-all group shadow-xl cursor-pointer"
+                            >
+                                <ArrowLeftCircle size={16} className="group-hover:text-rose-500" />
+                                Cancelar Edición
+                            </button>
+                        )}
+                        {user.role === 'closer' && !editReport && (
+                            <button
+                                type="button"
                                 onClick={() => navigate('/closer/stats')}
-                                className="flex items-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:text-white hover:border-violet-500 transition-all group shadow-xl"
+                                className="flex items-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:text-white hover:border-violet-500 transition-all group shadow-xl cursor-pointer"
                             >
                                 <BarChart3 size={16} className="group-hover:text-violet-500" />
                                 Ver Mis Estadísticas
                             </button>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 {loading ? (
@@ -425,38 +462,36 @@ const PublicCloserReportPage = () => {
                                             color="emerald"
                                             value={formData.slots}
                                             onChange={handleFieldChange}
-                                            isLightMode={agendaComplete}
                                         />
                                     </div>
 
                                     {/* Tabla de doble entrada */}
-                                    <div className={`${agendaComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl overflow-hidden transition-colors duration-500`}>
+                                    <div className="bg-slate-800/30 rounded-2xl overflow-hidden">
                                         {/* Header de la tabla */}
                                         <div className="grid grid-cols-3 gap-0">
-                                            <div className={`p-3 ${agendaComplete ? 'bg-slate-200' : 'bg-slate-700/50'}`}>
-                                                <p className={`text-[10px] font-black uppercase tracking-wider ${agendaComplete ? 'text-slate-500' : 'text-slate-400'}`}></p>
+                                            <div className="p-3 bg-slate-700/50">
+                                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400"></p>
                                             </div>
-                                            <div className={`p-3 text-center ${agendaComplete ? 'bg-emerald-100' : 'bg-emerald-900/30'}`}>
-                                                <p className={`text-[10px] font-black uppercase tracking-wider ${agendaComplete ? 'text-emerald-700' : 'text-emerald-400'}`}>1ra Llamada</p>
+                                            <div className="p-3 text-center bg-emerald-900/30">
+                                                <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400">1ra Llamada</p>
                                             </div>
-                                            <div className={`p-3 text-center ${agendaComplete ? 'bg-sky-100' : 'bg-sky-900/30'}`}>
-                                                <p className={`text-[10px] font-black uppercase tracking-wider ${agendaComplete ? 'text-sky-700' : 'text-sky-400'}`}>2da Llamada</p>
+                                            <div className="p-3 text-center bg-sky-900/30">
+                                                <p className="text-[10px] font-black uppercase tracking-wider text-sky-400">2da Llamada</p>
                                             </div>
                                         </div>
 
                                         {/* Filas de datos */}
                                         {agendaRows.map((row, i) => (
-                                            <div key={row.label} className={`grid grid-cols-3 gap-0 ${i % 2 === 0 ? '' : (agendaComplete ? 'bg-slate-100/50' : 'bg-slate-800/20')}`}>
-                                                <div className={`p-3 flex items-center ${agendaComplete ? 'border-r border-slate-200' : 'border-r border-slate-700/30'}`}>
-                                                    <p className={`text-xs font-bold ${agendaComplete ? 'text-slate-700' : 'text-slate-300'}`}>{row.label}</p>
+                                            <div key={row.label} className={`grid grid-cols-3 gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
+                                                <div className="p-3 flex items-center border-r border-slate-700/30">
+                                                    <p className="text-xs font-bold text-slate-300">{row.label}</p>
                                                 </div>
-                                                <div className={`p-2 ${agendaComplete ? 'border-r border-slate-200' : 'border-r border-slate-700/30'}`}>
+                                                <div className="p-2 border-r border-slate-700/30">
                                                     <MetricInput
                                                         field={row.firstField}
                                                         color="emerald"
                                                         value={formData[row.firstField]}
                                                         onChange={handleFieldChange}
-                                                        isLightMode={agendaComplete}
                                                         placeholder="0"
                                                     />
                                                 </div>
@@ -466,7 +501,6 @@ const PublicCloserReportPage = () => {
                                                         color="sky"
                                                         value={formData[row.secondField]}
                                                         onChange={handleFieldChange}
-                                                        isLightMode={agendaComplete}
                                                         placeholder="0"
                                                     />
                                                 </div>
@@ -475,7 +509,7 @@ const PublicCloserReportPage = () => {
                                     </div>
 
                                     {/* Totales en vivo */}
-                                    <div className={`mt-4 ${agendaComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
+                                    <div className="mt-4 bg-slate-800/30 rounded-2xl p-4">
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Agendas</p>
@@ -566,10 +600,10 @@ const PublicCloserReportPage = () => {
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
                                         {/* Flujo Caliente */}
-                                        <div className={`p-5 rounded-2xl border ${followUpsComplete ? 'bg-white/60 border-rose-200' : 'bg-rose-950/20 border-rose-900/50'}`}>
+                                        <div className="p-5 rounded-2xl border bg-rose-950/20 border-rose-900/50">
                                             <div className="flex items-center gap-2 mb-4">
                                                 <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
-                                                <span className={`text-[10px] font-black uppercase tracking-widest ${followUpsComplete ? 'text-rose-600' : 'text-rose-400'}`}>Flujo Caliente</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-400">Flujo Caliente</span>
                                             </div>
                                             <div className="space-y-4">
                                                 <MetricInput
@@ -578,7 +612,6 @@ const PublicCloserReportPage = () => {
                                                     color="rose"
                                                     value={formData.follow_ups_hot_sent}
                                                     onChange={handleFieldChange}
-                                                    isLightMode={followUpsComplete}
                                                     placeholder="0"
                                                 />
                                                 <MetricInput
@@ -587,17 +620,16 @@ const PublicCloserReportPage = () => {
                                                     color="rose"
                                                     value={formData.follow_ups_hot_replied}
                                                     onChange={handleFieldChange}
-                                                    isLightMode={followUpsComplete}
                                                     placeholder="0"
                                                 />
                                             </div>
                                         </div>
 
                                         {/* Flujo Frío */}
-                                        <div className={`p-5 rounded-2xl border ${followUpsComplete ? 'bg-white/60 border-blue-200' : 'bg-blue-950/20 border-blue-900/50'}`}>
+                                        <div className="p-5 rounded-2xl border bg-blue-950/20 border-blue-900/50">
                                             <div className="flex items-center gap-2 mb-4">
                                                 <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                                <span className={`text-[10px] font-black uppercase tracking-widest ${followUpsComplete ? 'text-blue-600' : 'text-blue-400'}`}>Flujo Frío</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Flujo Frío</span>
                                             </div>
                                             <div className="space-y-4">
                                                 <MetricInput
@@ -606,7 +638,6 @@ const PublicCloserReportPage = () => {
                                                     color="blue"
                                                     value={formData.follow_ups_cold_sent}
                                                     onChange={handleFieldChange}
-                                                    isLightMode={followUpsComplete}
                                                     placeholder="0"
                                                 />
                                                 <MetricInput
@@ -615,14 +646,13 @@ const PublicCloserReportPage = () => {
                                                     color="blue"
                                                     value={formData.follow_ups_cold_replied}
                                                     onChange={handleFieldChange}
-                                                    isLightMode={followUpsComplete}
                                                     placeholder="0"
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className={`mt-4 ${followUpsComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
+                                    <div className="mt-4 bg-slate-800/30 rounded-2xl p-4">
                                         <div className="grid grid-cols-2 gap-4 text-center">
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Enviados</p>
@@ -660,8 +690,8 @@ const PublicCloserReportPage = () => {
                                 >
                                     <div className="space-y-4 mt-2">
                                         {salesRows.map(row => (
-                                            <div key={row.label} className={`${salesComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
-                                                <p className={`text-xs font-black uppercase tracking-wider mb-3 ${salesComplete ? 'text-slate-700' : 'text-white'}`}>{row.label}</p>
+                                            <div key={row.label} className="bg-slate-800/30 rounded-2xl p-4">
+                                                <p className="text-xs font-black uppercase tracking-wider mb-3 text-white">{row.label}</p>
                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                                     <MetricInput
                                                         label="Cantidad"
@@ -669,7 +699,6 @@ const PublicCloserReportPage = () => {
                                                         color="amber"
                                                         value={formData[row.countField]}
                                                         onChange={handleFieldChange}
-                                                        isLightMode={salesComplete}
                                                     />
                                                     <MetricInput
                                                         label="Cash Collected"
@@ -677,7 +706,6 @@ const PublicCloserReportPage = () => {
                                                         color="amber"
                                                         value={formData[row.cashField]}
                                                         onChange={handleFieldChange}
-                                                        isLightMode={salesComplete}
                                                         type="number"
                                                         step="0.01"
                                                     />
@@ -687,7 +715,6 @@ const PublicCloserReportPage = () => {
                                                         color="amber"
                                                         value={formData[row.inCallField]}
                                                         onChange={handleFieldChange}
-                                                        isLightMode={salesComplete}
                                                     />
                                                     <MetricInput
                                                         label="Cash En Llamada"
@@ -695,7 +722,6 @@ const PublicCloserReportPage = () => {
                                                         color="amber"
                                                         value={formData[row.inCallCashField]}
                                                         onChange={handleFieldChange}
-                                                        isLightMode={salesComplete}
                                                         type="number"
                                                         step="0.01"
                                                     />
@@ -705,7 +731,7 @@ const PublicCloserReportPage = () => {
                                     </div>
 
                                     {/* Totales en vivo */}
-                                    <div className={`mt-5 ${salesComplete ? 'bg-white/60' : 'bg-slate-800/30'} rounded-2xl p-4 transition-colors duration-500`}>
+                                    <div className="mt-5 bg-slate-800/30 rounded-2xl p-4">
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Ventas</p>
@@ -765,7 +791,7 @@ const PublicCloserReportPage = () => {
                                         className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-5 rounded-3xl font-black uppercase text-base tracking-[0.2em] transition-all shadow-2xl shadow-violet-600/30 flex items-center justify-center gap-3 active:scale-[0.98]"
                                     >
                                         {submitting ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}
-                                        {submitting ? 'Procesando Envío...' : 'ENVIAR REPORTE AL SISTEMA'}
+                                        {submitting ? 'Procesando Envío...' : editReport ? 'GUARDAR CAMBIOS' : 'ENVIAR REPORTE AL SISTEMA'}
                                     </button>
                                 </div>
                             </form>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import {
@@ -6,211 +7,15 @@ import {
     ChevronLeft, ChevronRight, X, Save, AlertCircle, PhoneCall, Flag, Activity, Users, Eye
 } from 'lucide-react';
 
-// Modal de Edición Compleja para Closers
-const EditCloserReportModal = ({ report, onClose, onSave }) => {
-    const [form, setForm] = useState({ ...report });
-    const [saving, setSaving] = useState(false);
-
-    const handleChange = (field, value) => {
-        setForm(prev => ({ ...prev, [field]: value === '' ? '' : Number(value) }));
-    };
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await api.put(`/public/closer-reports/${report.id}`, form);
-            onSave();
-        } catch (err) {
-            alert("Error al guardar el reporte");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const InputRow = ({ label, field, isFloat = false }) => (
-        <div className="flex items-center justify-between py-2 border-b border-slate-800/50 last:border-0 hover:bg-slate-800/20 px-2 rounded-lg transition-colors">
-            <label className="text-xs font-bold text-slate-300">{label}</label>
-            <input
-                type="number"
-                step={isFloat ? "0.01" : "1"}
-                value={form[field]}
-                onChange={e => handleChange(field, e.target.value)}
-                className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-center font-black text-indigo-400 focus:border-indigo-500 outline-none"
-            />
-        </div>
-    );
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-
-                {/* Header */}
-                <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-800/20">
-                    <div>
-                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Editar Reporte</h3>
-                        <p className="text-sm font-bold text-indigo-400">{report.closer_name} - {report.date}</p>
-                    </div>
-                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors">
-                        <X size={20} />
-                    </button>
-                </div>
-
-                {/* Body (Scrollable) */}
-                <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-8">
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* MÉTRICAS GENERALES */}
-                        <div className="bg-slate-800/40 p-5 rounded-2xl border border-slate-700/50">
-                            <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-400 uppercase mb-4 pb-2 border-b border-slate-700"><Activity size={14} /> General</h4>
-                            <div className="space-y-1">
-                                <InputRow label="Slots Disponibles" field="slots" />
-                                <InputRow label="Ofertas Hechas" field="offers_made" />
-                            </div>
-                        </div>
-
-                        {/* SEGUIMIENTOS */}
-                        <div className="bg-blue-900/10 p-5 rounded-2xl border border-blue-900/30">
-                            <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-blue-400 uppercase mb-4 pb-2 border-b border-blue-900/50"><Users size={14} /> Seguimientos</h4>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase text-rose-400 mt-2 mb-1">Flujo Caliente</p>
-                                <InputRow label="Enviados (Hot)" field="follow_ups_hot_sent" />
-                                <InputRow label="Respuestas (Hot)" field="follow_ups_hot_replied" />
-
-                                <p className="text-[10px] font-black uppercase text-sky-400 mt-4 mb-1">Flujo Frío</p>
-                                <InputRow label="Enviados (Cold)" field="follow_ups_cold_sent" />
-                                <InputRow label="Respuestas (Cold)" field="follow_ups_cold_replied" />
-
-                                <div className="mt-4 pt-3 border-t border-blue-900/40 opacity-70">
-                                    <InputRow label="Total Total Enviados" field="follow_ups_sent" />
-                                    <InputRow label="Total Total Respuestas" field="follow_ups_replied" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* PRIMERA LLAMADA */}
-                        <div className="bg-emerald-900/10 p-5 rounded-2xl border border-emerald-900/30">
-                            <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-emerald-400 uppercase mb-4 pb-2 border-b border-emerald-900/50"><PhoneCall size={14} /> Primera Llamada</h4>
-                            <div className="space-y-1">
-                                <InputRow label="Agendas" field="first_call_scheduled" />
-                                <InputRow label="Asistencias" field="first_call_attended" />
-                                <InputRow label="No Shows" field="first_call_no_show" />
-                                <InputRow label="Reprogramaciones" field="first_call_rescheduled" />
-                                <InputRow label="Cancelaciones" field="first_call_canceled" />
-                            </div>
-                        </div>
-
-                        {/* SEGUNDA LLAMADA */}
-                        <div className="bg-emerald-900/10 p-5 rounded-2xl border border-emerald-900/30">
-                            <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-emerald-400 uppercase mb-4 pb-2 border-b border-emerald-900/50"><PhoneCall size={14} /> Segunda Llamada</h4>
-                            <div className="space-y-1">
-                                <InputRow label="Agendas" field="second_call_scheduled" />
-                                <InputRow label="Asistencias" field="second_call_attended" />
-                                <InputRow label="No Shows" field="second_call_no_show" />
-                                <InputRow label="Reprogramaciones" field="second_call_rescheduled" />
-                                <InputRow label="Cancelaciones" field="second_call_canceled" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-6">
-                        {/* VENTAS PIF / SPLIT / SEÑAS */}
-                        <div className="bg-amber-900/10 p-5 rounded-2xl border border-amber-900/30">
-                            <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-amber-500 uppercase mb-4 pb-2 border-b border-amber-900/50"><Flag size={14} /> Ventas (PIF / Split / Señas)</h4>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <div className="space-y-1">
-                                    <p className="text-xs font-black text-amber-500 mb-2">PIF (Pay In Full)</p>
-                                    <InputRow label="Cantidad Total" field="pif_count" />
-                                    <InputRow label="Cash Total" field="pif_cash_collected" isFloat />
-                                    <InputRow label="Cant. En Llamada" field="pif_in_call_count" />
-                                    <InputRow label="Cash En Llamada" field="pif_in_call_cash" isFloat />
-                                </div>
-
-                                <div className="space-y-1 border-t md:border-t-0 md:border-l border-amber-900/30 pt-4 md:pt-0 md:pl-6">
-                                    <p className="text-xs font-black text-amber-500 mb-2">Split Pay</p>
-                                    <InputRow label="Cantidad Total" field="split_count" />
-                                    <InputRow label="Cash Total" field="split_cash_collected" isFloat />
-                                    <InputRow label="Cant. En Llamada" field="split_in_call_count" />
-                                    <InputRow label="Cash En Llamada" field="split_in_call_cash" isFloat />
-                                </div>
-
-                                <div className="space-y-1 border-t md:border-t-0 md:border-l border-amber-900/30 pt-4 md:pt-0 md:pl-6">
-                                    <p className="text-xs font-black text-amber-500 mb-2">Señas</p>
-                                    <InputRow label="Cantidad Total" field="deposit_count" />
-                                    <InputRow label="Cash Total" field="deposit_cash_collected" isFloat />
-                                    <InputRow label="Cant. En Llamada" field="deposit_in_call_count" />
-                                    <InputRow label="Cash En Llamada" field="deposit_in_call_cash" isFloat />
-                                </div>
-
-                                <div className="space-y-1 border-t lg:border-t-0 lg:border-l border-amber-900/30 pt-4 lg:pt-0 lg:pl-6">
-                                    <p className="text-xs font-black text-amber-500 mb-2">Cuotas</p>
-                                    <InputRow label="Cantidad Total" field="installment_count" />
-                                    <InputRow label="Cash Total" field="installment_cash_collected" isFloat />
-                                    <InputRow label="Cant. En Llamada" field="installment_in_call_count" />
-                                    <InputRow label="Cash En Llamada" field="installment_in_call_cash" isFloat />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* REFLEXIÓN CUALITATIVA */}
-                        <div className="bg-violet-900/10 p-5 rounded-2xl border border-violet-900/30">
-                            <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-violet-400 uppercase mb-4 pb-2 border-b border-violet-900/50">Reflexión Cualitativa</h4>
-                            <div className="space-y-4">
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-xs font-bold text-violet-300">Victoria del Día</label>
-                                    <textarea
-                                        value={form.reflection_victory || ''}
-                                        onChange={e => setForm({ ...form, reflection_victory: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 min-h-[80px] focus:border-violet-500 outline-none"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-xs font-bold text-violet-300">Oportunidad de Mejora</label>
-                                    <textarea
-                                        value={form.reflection_opportunity || ''}
-                                        onChange={e => setForm({ ...form, reflection_opportunity: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 min-h-[80px] focus:border-violet-500 outline-none"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className="p-6 border-t border-slate-800 bg-slate-900 flex justify-end gap-3 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-                    <button
-                        onClick={onClose}
-                        className="px-6 py-3 font-bold text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
-                        disabled={saving}
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className={`px-8 py-3 font-black text-sm rounded-xl transition-all flex items-center gap-2 ${saving ? 'bg-indigo-600/50 text-indigo-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20'}`}
-                    >
-                        {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                        GUARDAR CAMBIOS
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 // Componente Principal de la Tabla
 const CloserReportsTable = ({ closers }) => {
     const auth = useAuth();
     const user = auth?.user || { role: 'admin' };
+    const navigate = useNavigate();
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [editingReport, setEditingReport] = useState(null);
 
     // Filters
     const [filters, setFilters] = useState({
@@ -281,15 +86,6 @@ const CloserReportsTable = ({ closers }) => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 relative">
-
-            {/* Modal superpuesto */}
-            {editingReport && (
-                <EditCloserReportModal
-                    report={editingReport}
-                    onClose={() => setEditingReport(null)}
-                    onSave={() => { setEditingReport(null); fetchReports(); }}
-                />
-            )}
 
             {/* FILTERS */}
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-[2rem] flex flex-wrap items-end gap-6">
@@ -445,7 +241,7 @@ const CloserReportsTable = ({ closers }) => {
                                                         <Eye size={14} />
                                                     </button>
                                                 )}
-                                                <button onClick={() => setEditingReport(r)} className="p-2 bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer" title="Editar Reporte Completo">
+                                                <button onClick={() => navigate('/closer/report', { state: { editReport: r } })} className="p-2 bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer" title="Editar Reporte Completo">
                                                     <Edit3 size={14} />
                                                 </button>
                                                 <button onClick={() => handleDelete(r.id)} className="p-2 bg-rose-600/20 text-rose-400 border border-rose-600/30 rounded-lg hover:bg-rose-600 hover:text-white transition-colors cursor-pointer" title="Eliminar Permanente">
