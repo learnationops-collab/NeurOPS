@@ -244,6 +244,91 @@ const PublicFinancialSalesPage = () => {
         }
     };
 
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [createData, setCreateData] = useState({
+        nombre_cliente: '',
+        instagram: '',
+        mail_cliente: '',
+        telefono: '',
+        programa: 'RR',
+        tipo_pago_simple: 'completo',
+        monto: '',
+        metodo_pago: 'Stripe',
+        estado: 'Confirmada',
+        email_vendedor: '',
+        setter_name: '',
+        examen: '',
+        segundo_pago: '',
+        notas: '',
+        date: new Date().toISOString().split('T')[0]
+    });
+
+    const handleCreateSubmit = async (e) => {
+        e.preventDefault();
+        if (!createData.nombre_cliente || !createData.monto) {
+            toast.error('Nombre y monto son obligatorios');
+            return;
+        }
+
+        try {
+            const combinedProduct = createData.programa && createData.tipo_pago_simple
+                ? `${createData.programa.trim()} - ${createData.tipo_pago_simple.trim()}`
+                : (createData.programa || createData.tipo_pago_simple || '').trim();
+
+            const combinedExamen = createData.examen + (createData.notas ? ` | ${createData.notas}` : '');
+
+            const selectedDate = new Date(createData.date);
+            const now = new Date();
+            selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+            const marcaTemporalStr = selectedDate.toLocaleString("es-ES");
+
+            const payload = {
+                nombre_cliente: createData.nombre_cliente,
+                instagram: createData.instagram.replace(/@/g, '').trim(),
+                mail_cliente: createData.mail_cliente,
+                telefono: createData.telefono,
+                tipo_pago: combinedProduct,
+                monto: parseFloat(createData.monto) || 0.0,
+                metodo_pago: createData.metodo_pago,
+                estado: createData.estado,
+                email_vendedor: createData.email_vendedor,
+                setter: createData.setter_name,
+                examen: combinedExamen,
+                segundo_pago: createData.segundo_pago,
+                marca_temporal: marcaTemporalStr
+            };
+
+            const res = await api.post('/public/financial-sales/new', payload);
+            if (res.data.status === 'success') {
+                toast.success('Venta registrada con éxito');
+                setShowCreateModal(false);
+                setCreateData({
+                    nombre_cliente: '',
+                    instagram: '',
+                    mail_cliente: '',
+                    telefono: '',
+                    programa: 'RR',
+                    tipo_pago_simple: 'completo',
+                    monto: '',
+                    metodo_pago: 'Stripe',
+                    estado: 'Confirmada',
+                    email_vendedor: '',
+                    setter_name: '',
+                    examen: '',
+                    segundo_pago: '',
+                    notas: '',
+                    date: new Date().toISOString().split('T')[0]
+                });
+                fetchSales(1);
+            } else {
+                toast.error(res.data.error || 'Error al registrar venta');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Error de comunicación al registrar venta');
+            console.error(error);
+        }
+    };
+
     return (
         <div className="w-full p-4 lg:p-8 space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -348,6 +433,14 @@ const PublicFinancialSalesPage = () => {
                     >
                         <Users className="w-4 h-4" />
                         <span>{sinAtribucion ? 'Ver Todas' : 'Atribuir (Sin Agenda)'}</span>
+                    </button>
+
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Registrar Venta</span>
                     </button>
                 </div>
             </div>
@@ -886,6 +979,216 @@ const PublicFinancialSalesPage = () => {
                     onClose={() => setAttributionSale(null)}
                     onSuccess={() => fetchSales(1)}
                 />
+            )}
+
+            {showCreateModal && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-300">
+                        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-xl font-black text-white italic tracking-tight uppercase">Registrar Nueva Venta</h2>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Ingresa los datos para registrar la venta en la app y Google Sheets</p>
+                            </div>
+                            <button onClick={() => setShowCreateModal(false)} className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-all">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar text-left">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Nombre del Cliente *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={createData.nombre_cliente}
+                                        onChange={e => setCreateData({...createData, nombre_cliente: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                        placeholder="ej. Juan Pérez"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Instagram (@ usuario)</label>
+                                    <input
+                                        type="text"
+                                        value={createData.instagram}
+                                        onChange={e => setCreateData({...createData, instagram: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                        placeholder="ej. juan_perez"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Email del Cliente</label>
+                                    <input
+                                        type="email"
+                                        value={createData.mail_cliente}
+                                        onChange={e => setCreateData({...createData, mail_cliente: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-855 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                        placeholder="ej. juan@gmail.com"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Teléfono del Cliente</label>
+                                    <input
+                                        type="text"
+                                        value={createData.telefono}
+                                        onChange={e => setCreateData({...createData, telefono: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                        placeholder="ej. +34 600 000 000"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Programa *</label>
+                                    <select
+                                        value={createData.programa}
+                                        onChange={e => setCreateData({...createData, programa: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                    >
+                                        <option value="RR">Residency Roadmap (RR)</option>
+                                        <option value="AL">Ace Learner (AL)</option>
+                                        <option value="SI">Specialist Initiative (SI)</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Tipo de Pago *</label>
+                                    <select
+                                        value={createData.tipo_pago_simple}
+                                        onChange={e => setCreateData({...createData, tipo_pago_simple: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                    >
+                                        <option value="completo">Completo (PIF)</option>
+                                        <option value="parcial">Parcial (Primer Pago)</option>
+                                        <option value="Seña">Seña (Reserva)</option>
+                                        <option value="Cuota">Cuota</option>
+                                        <option value="Renovacion">Renovación</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Monto Cobrado (USD) *</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        required
+                                        value={createData.monto}
+                                        onChange={e => setCreateData({...createData, monto: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-655 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Método de Pago *</label>
+                                    <select
+                                        value={createData.metodo_pago}
+                                        onChange={e => setCreateData({...createData, metodo_pago: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                    >
+                                        <option value="Stripe">Stripe</option>
+                                        <option value="PayPal">PayPal</option>
+                                        <option value="Wise">Wise</option>
+                                        <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+                                        <option value="Binance / USDT">Binance / USDT</option>
+                                        <option value="Hotmart">Hotmart</option>
+                                        <option value="Otro">Otro Método</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Estado *</label>
+                                    <select
+                                        value={createData.estado}
+                                        onChange={e => setCreateData({...createData, estado: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                    >
+                                        <option value="Confirmada">Confirmada</option>
+                                        <option value="Pendiente">Pendiente</option>
+                                        <option value="Cancelada">Cancelada</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Fecha de la Venta *</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={createData.date}
+                                        onChange={e => setCreateData({...createData, date: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 outline-none transition-all font-semibold cursor-pointer"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Closer (Email del Vendedor)</label>
+                                    <input
+                                        type="email"
+                                        value={createData.email_vendedor}
+                                        onChange={e => setCreateData({...createData, email_vendedor: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                        placeholder="ej. closer@neurops.com"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Setter (Nombre del Setter)</label>
+                                    <input
+                                        type="text"
+                                        value={createData.setter_name}
+                                        onChange={e => setCreateData({...createData, setter_name: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                        placeholder="ej. elias"
+                                    />
+                                </div>
+
+                                <div className="space-y-1 md:col-span-2">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Examen (ej. USMLE Step 1)</label>
+                                    <input
+                                        type="text"
+                                        value={createData.examen}
+                                        onChange={e => setCreateData({...createData, examen: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                        placeholder="ej. USMLE Step 1"
+                                    />
+                                </div>
+
+                                <div className="space-y-1 md:col-span-2">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Fecha o Info Siguientes Pagos (segundo_pago)</label>
+                                    <input
+                                        type="text"
+                                        value={createData.segundo_pago}
+                                        onChange={e => setCreateData({...createData, segundo_pago: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                        placeholder="ej. Cobro de $500 programado para el 15/06"
+                                    />
+                                </div>
+
+                                <div className="space-y-1 md:col-span-2">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Notas / Observaciones</label>
+                                    <textarea
+                                        value={createData.notas}
+                                        onChange={e => setCreateData({...createData, notas: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold min-h-[80px] resize-none"
+                                        placeholder="Observaciones de la venta..."
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-4 flex justify-end gap-3 border-t border-slate-805">
+                                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all">
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20">
+                                    Registrar Venta
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
         </div>
     );

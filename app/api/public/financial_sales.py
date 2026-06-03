@@ -146,6 +146,40 @@ def receive_financial_sales():
         current_app.logger.error(f"[FINANCIAL] Database commit error: {e}")
         return jsonify({"error": str(e)}), 500
 
+@bp.route('/public/financial-sales/new', methods=['POST'])
+def create_new_financial_sale():
+    # Registra manualmente una nueva venta en la DB local y la propaga a Google Sheets
+    from app.services.sheets_service import SheetsService
+    data = request.get_json() or {}
+    
+    if not data.get('nombre_cliente') or not data.get('monto'):
+        return jsonify({"error": "Nombre del cliente y monto son requeridos"}), 400
+        
+    try:
+        # Formatear el payload para SheetsService.post_to_sheets
+        payload = {
+            "email_vendedor": data.get('email_vendedor') or 'Sin asignar',
+            "nombre_cliente": data.get('nombre_cliente'),
+            "telefono": data.get('telefono') or '',
+            "mail_cliente": data.get('mail_cliente') or '',
+            "tipo_pago": data.get('tipo_pago') or 'No Especificado',
+            "monto": float(data.get('monto') or 0.0),
+            "segundo_pago": data.get('segundo_pago') or '',
+            "metodo_pago": data.get('metodo_pago') or 'No Especificado',
+            "examen": data.get('examen') or '',
+            "instagram": data.get('instagram') or 'N/A',
+            "setter": data.get('setter') or '',
+            "estado": data.get('estado') or 'Confirmada',
+            "marca_temporal": data.get('marca_temporal') or datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S')
+        }
+        
+        result = SheetsService.post_to_sheets("Ventas_DB", payload)
+        if result["status"] == "success":
+            return jsonify({"message": "Venta registrada con éxito", "status": "success"}), 201
+        return jsonify({"error": result.get("message") or "Error al propagar a Sheets"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @bp.route('/public/financial-sales/sync', methods=['POST'])
 def sync_financial_sales_from_sheets():
     # Obtiene datos de Google Sheets y reconstruye registros

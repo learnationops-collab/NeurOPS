@@ -172,3 +172,11 @@
       - **Edición de Fecha de Ventas (`financial_sales.py` y `PublicFinancialSalesPage.jsx`) [MODIFY]**:
         - **API Backend**: Se modificó `PUT /public/financial-sales/<int:sale_id>` para que intercepte el parámetro `date` y actualice el campo `sale.date` en SQLite/PostgreSQL de producción.
         - **Frontend**: Se integró un selector de tipo fecha (`<input type="date">`) en la primera columna al editar una fila de venta en caliente. Se modificaron `handleEditClick` para inicializarla a partir de la venta (`split('T')[0]`) y `handleSave` para enviarla en el payload de actualización, recalculando en caliente todos los dashboards y KPIs filtrados.
+  - **Botón y Formulario para Registrar Ventas No Registradas**:
+    - **API (Backend) (`financial_sales.py`) [NEW ROUTE]**:
+      - Se implementó la ruta `POST /public/financial-sales/new` para procesar el registro manual de una venta no registrada.
+      - Construye un payload robusto con toda la información requerida e invoca `SheetsService.post_to_sheets` para guardarlo localmente en la base de datos (SQLite/Postgres) de forma inmediata y propagarlo síncronamente al archivo de Google Sheets.
+    - **Interfaz (Frontend) (`PublicFinancialSalesPage.jsx`) [MODIFY]**:
+      - Se incorporó un botón premium "+ Registrar Venta" en el panel superior de filtros que abre un modal con diseño Glassmorphism.
+      - Se implementó un formulario interactivo completo (`CreateSaleModal`) que permite registrar nombre de cliente, instagram, email, teléfono, programa, tipo de pago, monto, método de pago, estado, fecha de la venta, closer, setter y observaciones.
+      - Se pre-completa por defecto la fecha de hoy y se valida que los campos requeridos (nombre del cliente y monto) estén presentes antes de enviar la información, refrescando en caliente la vista principal al registrar exitosamente.
