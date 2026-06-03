@@ -142,6 +142,7 @@
     - **Base de Datos (SQLite) (`local.db`) [MIGRATION]**:
       - Se creó y ejecutó el script `repair_agendas.py` que realizó una corrección y restauración selectiva y exitosa de 1549 agendas sincronizadas de Google Sheets en la base de datos local (corrigiendo la inversión errónea del script de migración inicial), dejando todos los registros en su formato correcto.
     - **Interfaz (Frontend) (`FinancialAgendasPage.jsx`) [VALIDATION]**:
+      - Se renombró la columna "Setter" a "Fuente" en la tabla, el placeholder de búsqueda superior y las etiquetas del modal de edición para reflejar el cambio en Google Sheets y n8n.
       - Se verificó y validó el correcto funcionamiento de las acciones de edición (`PUT`) y eliminación (`DELETE`) de agendas directamente en el tablero, y se comprobó que el empaquetado final (`npm run build`) compile al 100% de forma correcta.
 
 
