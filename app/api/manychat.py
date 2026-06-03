@@ -935,7 +935,7 @@ def get_ad_dashboard_stats():
             )
             if is_valid_lead_source:
                 if ig_c not in agenda_setter_map or (ag.date and agenda_setter_map[ig_c].date and ag.date > agenda_setter_map[ig_c].date):
-                    agenda_setter_map[ig_c] = ag.lead
+                    agenda_setter_map[ig_c] = ag
     
     # Agendas por Setter/Fuente
     for ag in agendas_all:
@@ -951,7 +951,7 @@ def get_ad_dashboard_stats():
         
         resolved_setter = None
         if ig_n and ig_n in agenda_setter_map:
-            resolved_setter = agenda_setter_map[ig_n]
+            resolved_setter = agenda_setter_map[ig_n].lead
             
         if not resolved_setter:
             s_setter = sale.setter
