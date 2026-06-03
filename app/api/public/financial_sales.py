@@ -329,7 +329,11 @@ def get_financial_sales():
     subquery_sales = query.all()
     
     subquery = query.with_entities(FinancialSale.id)
-    total_monto = db.session.query(func.sum(FinancialSale.monto)).filter(FinancialSale.id.in_(subquery)).scalar() or 0.0
+    # Sumar solo los montos de ventas completadas
+    total_monto = db.session.query(func.sum(FinancialSale.monto))\
+        .filter(FinancialSale.id.in_(subquery))\
+        .filter(or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == ''))\
+        .scalar() or 0.0
     
     all_agendas = FinancialAgenda.query.all()
     
@@ -379,18 +383,24 @@ def get_financial_sales():
             if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
                 resolved_setter = s_setter
                 
+        # Una venta está completada si no tiene estado o su estado es "Completada"
+        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() == "completada"
+
         if has_agenda_match or resolved_setter:
-            monto_con_agenda += (s.monto or 0.0)
+            if sale_is_completed:
+                monto_con_agenda += (s.monto or 0.0)
             count_con_agenda += 1
         else:
-            monto_sin_agenda += (s.monto or 0.0)
+            if sale_is_completed:
+                monto_sin_agenda += (s.monto or 0.0)
             count_sin_agenda += 1
             
         final_setter = resolved_setter or "Sin Setter"
         if final_setter not in setter_stats:
             setter_stats[final_setter] = {"count": 0, "total_monto": 0.0}
         setter_stats[final_setter]["count"] += 1
-        setter_stats[final_setter]["total_monto"] += (s.monto or 0.0)
+        if sale_is_completed:
+            setter_stats[final_setter]["total_monto"] += (s.monto or 0.0)
         
         s_dict["setter"] = final_setter
         s_dict["has_agenda"] = has_agenda_match
@@ -442,6 +452,8 @@ def get_financial_sales():
         func.sum(FinancialSale.monto)
     ).filter(
         FinancialSale.id.in_(subquery)
+    ).filter(
+        or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
     ).group_by(FinancialSale.tipo_pago).all()
 
     payment_types_simple_map = {}
@@ -466,6 +478,8 @@ def get_financial_sales():
         func.sum(FinancialSale.monto)
     ).filter(
         FinancialSale.id.in_(subquery)
+    ).filter(
+        or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
     ).group_by(FinancialSale.metodo_pago).all()
 
     payment_methods_breakdown = []
