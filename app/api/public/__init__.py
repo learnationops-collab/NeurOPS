@@ -864,9 +864,11 @@ def receive_financial_agendas():
     saved = 0
     for item in items:
         # Priorizar la asignación del setter y del lead/cliente de forma robusta e inteligente
-        # Si el JSON trae 'nombre' y 'lead' pero no trae la clave explícita 'setter',
-        # 'lead' representa al Setter y 'nombre' representa al Cliente/Lead.
-        if 'setter' in item or 'setter_name' in item or 'vendedor' in item:
+        # Si el JSON trae 'fuente' (nueva configuración de n8n/Sheets), representa al Setter.
+        if 'fuente' in item:
+            setter = item.get('fuente')
+            lead_val = item.get('nombre') or item.get('cliente') or item.get('lead') or 'Desconocido'
+        elif 'setter' in item or 'setter_name' in item or 'vendedor' in item:
             setter = item.get('setter') or item.get('setter_name') or item.get('vendedor')
             lead_val = item.get('lead') or item.get('cliente') or item.get('nombre') or 'Desconocido'
         elif 'lead' in item and 'nombre' in item:
