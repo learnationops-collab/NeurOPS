@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, date
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app import db
 from app.models import (
     Campaign, AdSet, Ad, LeadAnswer, ManychatLead,
@@ -229,7 +229,8 @@ class MarketingService:
         # 5. Ventas, Cash Collect atribuidos y sin asignar
         sales_in_period = FinancialSale.query.filter(
             FinancialSale.date >= start_dt,
-            FinancialSale.date <= end_dt
+            FinancialSale.date <= end_dt,
+            or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ).all()
 
         ventas_por_ad = {}
@@ -240,6 +241,10 @@ class MarketingService:
         for sale in sales_in_period:
             ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
             ig_norm = normalize_ig(ig_val)
+
+            # Aplicar descuento de Stripe de 4.5% si corresponde
+            monto_original = float(sale.monto or 0.0)
+            monto_ajustado = monto_original * 0.955 if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe' else monto_original
 
             matched_lead = None
             if ig_norm:
@@ -256,7 +261,7 @@ class MarketingService:
 
             if not matched_lead:
                 ventas_sin_asignar += 1
-                monto_sin_asignar += float(sale.monto or 0.0)
+                monto_sin_asignar += monto_ajustado
                 continue
 
             closest = LeadAnswer.query.filter(
@@ -267,10 +272,10 @@ class MarketingService:
 
             if closest and closest.ad_id:
                 ventas_por_ad[closest.ad_id] = ventas_por_ad.get(closest.ad_id, 0) + 1
-                monto_por_ad[closest.ad_id] = monto_por_ad.get(closest.ad_id, 0.0) + float(sale.monto or 0.0)
+                monto_por_ad[closest.ad_id] = monto_por_ad.get(closest.ad_id, 0.0) + monto_ajustado
             else:
                 ventas_sin_asignar += 1
-                monto_sin_asignar += float(sale.monto or 0.0)
+                monto_sin_asignar += monto_ajustado
 
         # 6. Construir resultado final
         result = []

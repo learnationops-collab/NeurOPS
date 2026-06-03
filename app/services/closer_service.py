@@ -974,12 +974,22 @@ class CloserService:
 
         # Query official sales from FinancialSale to match Sales Log exactly
         from app.models import FinancialSale
+        from sqlalchemy import case, func, or_
+        
+        adjusted_monto_expr = case(
+            (func.lower(func.trim(FinancialSale.metodo_pago)) == 'stripe', FinancialSale.monto * 0.955),
+            else_=FinancialSale.monto
+        )
+        
         sales_query = db.session.query(
             FinancialSale.tipo_pago,
             func.count(FinancialSale.id).label('count'),
-            func.sum(FinancialSale.monto).label('cash')
+            func.sum(adjusted_monto_expr).label('cash')
         )
-        sales_filters = []
+        
+        sales_filters = [
+            or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
+        ]
         if start_date:
             sales_filters.append(FinancialSale.date >= (datetime.strptime(start_date, '%Y-%m-%d') if isinstance(start_date, str) else datetime.combine(start_date, datetime.min.time())))
         if end_date:

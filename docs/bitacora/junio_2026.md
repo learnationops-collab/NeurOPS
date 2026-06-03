@@ -187,5 +187,10 @@
   - **Mejoras en el Tablero de Agendas (`FinancialAgendasPage.jsx`)**:
     - **Formato de Fecha**: Se modificó la columna de Fecha en el historial para renderizar la propiedad `agenda.date` formateada en un formato legible en español (día, mes, año, hora y minutos) con fallback al texto original `fecha_meet`.
     - **Visibilidad y Usabilidad del Modal de Edición**: Se corrigió el problema de visibilidad del texto escrito en los inputs del modal de edición reemplazando las clases no estándar de Tailwind (`bg-slate-850 border-slate-750`) por clases de alta gama y alta compatibilidad (`bg-slate-950 border-slate-800`), y se forzó la alineación a la izquierda (`text-left`) en las etiquetas del formulario.
+  - **Deducción de Comisión de Stripe del 4.5% y Consistencia de Ventas Completadas**:
+    - **API Backend (Ventas Financieras) (`financial_sales.py`)**: Implementación del descuento del 4.5% en caliente para montos de transacciones pagadas con Stripe, afectando el listado, acumulados y breakdowns del panel de ventas.
+    - **API Backend (Estadísticas de Closers) (`closer_service.py`)**: Integración del descuento del 4.5% en la recaudación de closers (`CloserService.get_comprehensive_stats`) usando expresiones condicionales de SQL (`case`). Además, se acotó la consulta oficial para considerar únicamente transacciones en estado `"Completada"` (o sin estado).
+    - **API Backend (Marketing y Atribución) (`marketing_service.py` y `public/marketing.py`)**: Adaptación del dashboard de rendimiento de anuncios, reporte de atribución e historial de desatribuidos para aplicar en caliente el descuento a montos pagados con Stripe, y restringir todos los cálculos financieros únicamente a ventas completadas.
+
 
 

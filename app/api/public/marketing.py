@@ -482,9 +482,12 @@ def get_sales_attribution_report():
         return jsonify({"error": "Formato de fecha inválido, usar YYYY-MM-DD"}), 400
 
     # 1. Obtener ventas del periodo que tengan instagram definido
+    # Filtrar solo ventas completadas
+    from sqlalchemy import or_
     sales = FinancialSale.query.filter(
         FinancialSale.date >= start_dt,
-        FinancialSale.date <= end_dt
+        FinancialSale.date <= end_dt,
+        or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
     ).order_by(FinancialSale.date.asc()).all()
 
     # 2. Pre-cargar mapa de anuncios para evitar N+1 queries
@@ -494,6 +497,10 @@ def get_sales_attribution_report():
     report_rows = []
 
     for sale in sales:
+        # Aplicar el descuento del 4.5% si el método de pago es Stripe
+        monto_original = float(sale.monto or 0.0)
+        monto_ajustado = monto_original * 0.955 if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe' else monto_original
+
         row = {
             "sale_id": sale.id,
             "fecha_venta": sale.date.isoformat() if sale.date else sale.created_at.isoformat(),
@@ -501,7 +508,7 @@ def get_sales_attribution_report():
             "setter": sale.setter,
             "closer": (sale.raw_data or {}).get('vendedor') or (sale.raw_data or {}).get('closer') or 'Sin asignar',
             "producto": (sale.raw_data or {}).get('tipo_pago') or 'N/A',
-            "monto": sale.monto,
+            "monto": round(monto_ajustado, 2),
             "instagram": sale.instagram,
             # Datos de atribución (se rellena abajo)
             "ad_id": None,
@@ -726,15 +733,21 @@ def get_unattributed_leads():
 
     # 1. Buscar ventas sin anuncio
     if lead_type in ('all', 'sales'):
+        from sqlalchemy import or_
         sales = FinancialSale.query.filter(
             FinancialSale.date >= start_dt,
-            FinancialSale.date <= end_dt
+            FinancialSale.date <= end_dt,
+            or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ).order_by(FinancialSale.date.desc()).all()
 
         for sale in sales:
             ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
             ig_norm = normalize_ig(ig_val)
             nombre_norm = (sale.nombre_cliente or '').strip().lower()
+
+            # Aplicar descuento de Stripe del 4.5% si corresponde
+            monto_original = float(sale.monto or 0.0)
+            monto_ajustado = monto_original * 0.955 if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe' else monto_original
 
             lead_key = None
             if ig_norm:
@@ -746,7 +759,7 @@ def get_unattributed_leads():
 
             # Si ya validamos a este lead y se determinó que no está atribuido, sumamos al acumulado
             if lead_key in unattributed_sales_map:
-                unattributed_sales_map[lead_key]["monto"] += (sale.monto or 0.0)
+                unattributed_sales_map[lead_key]["monto"] += monto_ajustado
                 # Mantener la fecha de la venta más antigua (primer pago)
                 sale_date_str = sale.date.isoformat() if sale.date else sale.created_at.isoformat()
                 if sale_date_str < unattributed_sales_map[lead_key]["date"]:
@@ -787,7 +800,7 @@ def get_unattributed_leads():
                     "instagram": sale.instagram or 'N/A',
                     "setter": setter,
                     "closer": closer,
-                    "monto": sale.monto or 0.0
+                    "monto": monto_ajustado
                 }
 
         # Redondear y aplicar filtros de búsqueda

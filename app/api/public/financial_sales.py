@@ -2,7 +2,7 @@ from flask import request, jsonify
 from app.models import db, FinancialSale, ExcludedSale, FinancialAgenda
 from datetime import datetime
 from . import bp
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, case
 
 def split_tipo_pago(tp):
     # Separa el programa del tipo de pago simple
@@ -329,8 +329,13 @@ def get_financial_sales():
     subquery_sales = query.all()
     
     subquery = query.with_entities(FinancialSale.id)
-    # Sumar solo los montos de ventas completadas
-    total_monto = db.session.query(func.sum(FinancialSale.monto))\
+    # Expresión de monto ajustado: si metodo_pago es 'Stripe', restar 4.5% de comisión
+    adjusted_monto_expr = case(
+        (func.lower(func.trim(FinancialSale.metodo_pago)) == 'stripe', FinancialSale.monto * 0.955),
+        else_=FinancialSale.monto
+    )
+    # Sumar solo los montos de ventas completadas (con descuento de Stripe si aplica)
+    total_monto = db.session.query(func.sum(adjusted_monto_expr))\
         .filter(FinancialSale.id.in_(subquery))\
         .filter(or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == ''))\
         .scalar() or 0.0
@@ -386,13 +391,17 @@ def get_financial_sales():
         # Una venta está completada si no tiene estado o su estado es "Completada"
         sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() == "completada"
 
+        # Aplicar el descuento del 4.5% si el método de pago es Stripe
+        monto_original = float(s.monto or 0.0)
+        monto_ajustado = monto_original * 0.955 if s.metodo_pago and s.metodo_pago.strip().lower() == 'stripe' else monto_original
+
         if has_agenda_match or resolved_setter:
             if sale_is_completed:
-                monto_con_agenda += (s.monto or 0.0)
+                monto_con_agenda += monto_ajustado
             count_con_agenda += 1
         else:
             if sale_is_completed:
-                monto_sin_agenda += (s.monto or 0.0)
+                monto_sin_agenda += monto_ajustado
             count_sin_agenda += 1
             
         final_setter = resolved_setter or "Sin Setter"
@@ -400,8 +409,9 @@ def get_financial_sales():
             setter_stats[final_setter] = {"count": 0, "total_monto": 0.0}
         setter_stats[final_setter]["count"] += 1
         if sale_is_completed:
-            setter_stats[final_setter]["total_monto"] += (s.monto or 0.0)
+            setter_stats[final_setter]["total_monto"] += monto_ajustado
         
+        s_dict["monto"] = round(monto_ajustado, 2)
         s_dict["setter"] = final_setter
         s_dict["has_agenda"] = has_agenda_match
         prog, simple_tp = split_tipo_pago(s.tipo_pago)
@@ -449,7 +459,7 @@ def get_financial_sales():
     payment_type_query = db.session.query(
         FinancialSale.tipo_pago,
         func.count(FinancialSale.id),
-        func.sum(FinancialSale.monto)
+        func.sum(adjusted_monto_expr)
     ).filter(
         FinancialSale.id.in_(subquery)
     ).filter(
@@ -475,7 +485,7 @@ def get_financial_sales():
     payment_method_query = db.session.query(
         FinancialSale.metodo_pago,
         func.count(FinancialSale.id),
-        func.sum(FinancialSale.monto)
+        func.sum(adjusted_monto_expr)
     ).filter(
         FinancialSale.id.in_(subquery)
     ).filter(
