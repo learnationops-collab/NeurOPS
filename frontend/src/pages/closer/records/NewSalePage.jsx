@@ -159,7 +159,7 @@ const CloserNewSalePage = () => {
         const payload = {
             email_vendedor: form.email_vendedor,
             nombre_cliente: form.nombre_cliente,
-            telefono: form.telefono,
+            telefono: form.telefono ? form.telefono.replace(/\+/g, '').trim() : '',
             mail_cliente: form.mail_cliente,
             tipo_pago: `${form.programa} - ${form.tipo_pago_simple}`,
             monto: parseFloat(form.monto) || 0.0,
