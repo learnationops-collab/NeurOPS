@@ -172,7 +172,7 @@ const CloserNewSalePage = () => {
             segundo_pago: form.segundo_pago || '',
             metodo_pago: form.metodo_pago,
             examen: form.examen_lead + (form.notas ? ` | ${form.notas}` : ''),
-            instagram: form.instagram || '',
+            instagram: form.instagram ? form.instagram.replace(/@/g, '').trim() : '',
             setter: form.estado, // Columna L (Estado de la Venta)
             estado: form.setter || '', // Columna M (Setter que Prospectó)
             status: form.setter || '', // Respaldo para Apps Script que usa status para la columna M
