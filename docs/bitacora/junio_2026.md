@@ -96,6 +96,16 @@
   - **Búsqueda Autocompletable Interactiva por Múltiples Campos en Formulario de Ventas**:
     - **API (Backend) (`closer.py` y `auth.py`) [MODIFY]**: Modificación de la ruta `/leads/search` para buscar prospectos por coincidencia parcial en nombre, email, instagram o teléfono, cruzando la agenda más reciente para su autocompletado inmediato. Además, se modificaron los endpoints `/auth/me`, `/auth/impersonate` y `/auth/revert` para inyectar el campo `email` del usuario en la sesión del frontend.
     - **Interfaz (Frontend) (`NewSalePage.jsx`) [MODIFY]**: Implementación de una barra de búsqueda inteligente con dropdown flotante absoluto. Al seleccionar una coincidencia, se autocompleta el formulario entero. El input del `email_vendedor` se inicializa con el correo del Closer logueado en la sesión (corrigiendo la persistencia al simular o refrescar) pero manteniéndose editable. Se removió por completo de la interfaz el campo visual de Setter, asegurando que la atribución se asocie internamente en el formulario de forma exclusiva al vincular el lead con su agenda correspondiente.
+  - **Campo de Examen del Lead, Estado de la Venta e Intercambio de Columnas con Google Sheets**:
+    - **Base de Datos local (SQLite/PostgreSQL)**: Se añadió la columna `examen` al modelo `Appointment` y se ejecutaron las migraciones locales correspondientes (`add_examen_to_appointment`).
+    - **Sincronización (`sheets_service.py`) [MODIFY]**: Modificación de la función `_rebuild_sales` para propagar automáticamente a la cita (`Appointment`) local más reciente del cliente el examen extraído de la venta sincronizada de Sheets. Adicionalmente, se corrigió el cruce de las columnas físicas L (Estado) y M (Setter) mapeando `setter` a la columna M (`item.get('estado')`) y `estado` a la columna L (`item.get('setter')`).
+    - **Formulario de Declarar Venta (`NewSalePage.jsx`) [MODIFY]**:
+      - Corrección de error de sintaxis JSX cerrando los tags abiertos del campo de teléfono.
+      - Inclusión del selector para el **Estado de la Venta** con opciones: `completo`, `pendiente`, `cancelado`.
+      - Incorporación del campo **Examen del Lead** (autocompletado dinámicamente desde la agenda/cita).
+      - Vinculación correcta del textarea de observaciones al estado `form.notas` en lugar de `form.examen`.
+      - Inversión de campos en el payload (`setter: form.estado`, `estado: form.setter`) para escribir correctamente en las columnas físicas L (Estado) y M (Setter) en Google Sheets.
+
 
 
 

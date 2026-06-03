@@ -113,9 +113,9 @@ class SheetsService:
                         metodo_pago=SheetsService._to_str(item.get('metodo_pago')),
                         examen=SheetsService._to_str(item.get('examen')),
                         instagram=SheetsService._to_str(item.get('instagram')),
-                        setter=SheetsService._to_str(item.get('setter')),
+                        setter=SheetsService._to_str(item.get('estado')), # Columna M en Sheets
                         marca_temporal=SheetsService._to_str(item.get('marca_temporal')),
-                        estado=SheetsService._to_str(item.get('estado') or item.get('status')) or "Completada",
+                        estado=SheetsService._to_str(item.get('setter') or item.get('status')) or "Completada", # Columna L en Sheets
                         date=SheetsService._parse_date(item.get('marca_temporal')),
                         raw_data=item
                     )
@@ -124,6 +124,42 @@ class SheetsService:
                     logger.warning(f"[SHEETS SYNC] Fila venta {idx} omitida: {row_err}")
             db.session.add_all(objects)
             db.session.commit()
+
+            # Sincronizar el examen de las ventas a los Appointment locales correspondientes
+            try:
+                from app.models.booking import Appointment
+                from app.models.client import Client
+                from sqlalchemy import or_
+                
+                for sale in objects:
+                    if sale.examen:
+                        # Limpiar el examen (extraer la parte antes del pipe si está combinado con notas)
+                        examen_clean = sale.examen.split('|')[0].strip() if '|' in sale.examen else sale.examen.strip()
+                        if not examen_clean:
+                            continue
+                            
+                        # Buscar el cliente por instagram o email
+                        ig_norm = sale.instagram.strip().lstrip('@').lower() if sale.instagram else None
+                        email_norm = sale.mail_cliente.strip().lower() if sale.mail_cliente else None
+                        
+                        client = None
+                        if ig_norm or email_norm:
+                            client_filters = []
+                            if ig_norm:
+                                client_filters.append(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_norm)
+                            if email_norm:
+                                client_filters.append(db.func.lower(Client.email) == email_norm)
+                            client = Client.query.filter(or_(*client_filters)).first()
+                            
+                        if client:
+                            # Buscar su cita más reciente
+                            appt = Appointment.query.filter_by(client_id=client.id).order_by(Appointment.start_time.desc()).first()
+                            if appt:
+                                appt.examen = examen_clean
+                db.session.commit()
+            except Exception as sync_err:
+                logger.warning(f"[SHEETS SYNC] Error al propagar exámenes a las agendas: {sync_err}")
+
             logger.info(f"[SHEETS SYNC] Ventas_DB reconstruida: {len(objects)}/{len(data_list)} registros.")
         except Exception as e:
             db.session.rollback()

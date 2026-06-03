@@ -23,6 +23,7 @@ class Appointment(db.Model):
     closer_notes = db.Column(db.Text, nullable=True)
     ig_chat_link = db.Column(db.String(500), nullable=True)
     keyword = db.Column(db.String(100), nullable=True)
+    examen = db.Column(db.String(255), nullable=True)
 
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')

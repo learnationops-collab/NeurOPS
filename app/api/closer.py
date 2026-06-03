@@ -118,7 +118,8 @@ def search_closer_leads():
                 setter_name = appt.setter.username or appt.setter.name or ""
             appt_data = {
                 "start_time": appt.start_time.isoformat(),
-                "setter_name": setter_name
+                "setter_name": setter_name,
+                "examen": appt.examen or ""
             }
         else:
             # Buscar en agendas de Google Sheets (FinancialAgenda) por instagram o email
@@ -136,7 +137,8 @@ def search_closer_leads():
                 if fin_agenda:
                     appt_data = {
                         "start_time": fin_agenda.date.isoformat() if fin_agenda.date else None,
-                        "setter_name": fin_agenda.lead or ""
+                        "setter_name": fin_agenda.lead or "",
+                        "examen": ""
                     }
                     
         results.append({

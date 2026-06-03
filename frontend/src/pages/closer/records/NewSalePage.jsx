@@ -40,7 +40,9 @@ const CloserNewSalePage = () => {
         monto: '',
         segundo_pago: '',
         metodo_pago: 'Stripe',
-        examen: '',
+        examen_lead: '',
+        notas: '',
+        estado: 'completo',
         instagram: '',
         setter: ''
     });
@@ -98,7 +100,8 @@ const CloserNewSalePage = () => {
                 instagram: '',
                 mail_cliente: '',
                 telefono: '',
-                setter: ''
+                setter: '',
+                examen_lead: ''
             }));
             setLinkedAppointment(null);
             return;
@@ -113,7 +116,8 @@ const CloserNewSalePage = () => {
             instagram: igUser,
             mail_cliente: lead.email || '',
             telefono: lead.phone || '',
-            setter: lead.appointment?.setter_name || ''
+            setter: lead.appointment?.setter_name || '',
+            examen_lead: lead.appointment?.examen || ''
         }));
         
         if (lead.appointment) {
@@ -136,7 +140,8 @@ const CloserNewSalePage = () => {
             instagram: '',
             mail_cliente: '',
             telefono: '',
-            setter: ''
+            setter: '',
+            examen_lead: ''
         }));
         setLinkedAppointment(null);
         setSearchTerm('');
@@ -156,6 +161,7 @@ const CloserNewSalePage = () => {
         setError(null);
 
         // Formatear payload exactamente para Google Sheets (Ventas_DB)
+        // Nota: Intercambiamos setter y estado debido al mapeo de columnas físicas en Google Sheets (L = Estado, M = Setter)
         const payload = {
             email_vendedor: form.email_vendedor,
             nombre_cliente: form.nombre_cliente,
@@ -165,9 +171,10 @@ const CloserNewSalePage = () => {
             monto: parseFloat(form.monto) || 0.0,
             segundo_pago: form.segundo_pago || '',
             metodo_pago: form.metodo_pago,
-            examen: form.examen || '',
+            examen: form.examen_lead + (form.notas ? ` | ${form.notas}` : ''),
             instagram: form.instagram || '',
-            setter: form.setter || '',
+            setter: form.estado, // Columna L (Estado de la Venta)
+            estado: form.setter || '', // Columna M (Setter que Prospectó)
             marca_temporal: new Date().toLocaleString("es-ES") // Fecha/hora del registro
         };
 
@@ -420,10 +427,24 @@ const CloserNewSalePage = () => {
                             </div>
                         </div>
 
+                        <div className="space-y-2 md:col-span-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Examen del Lead (ej. USMLE Step 1, Step 2 CK)</label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><PenTool size={14} /></span>
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-sm font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                    placeholder="ej. USMLE Step 1"
+                                    value={form.examen_lead}
+                                    onChange={e => setForm({ ...form, examen_lead: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
                     </div>
 
                     {/* SECCIÓN 3: TRANSACCIÓN Y MÉTODO DE PAGO */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-950/20 p-6 rounded-3xl border border-slate-800/80">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6 bg-slate-950/20 p-6 rounded-3xl border border-slate-800/80">
                         
                         <div className="space-y-2">
                             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Programa *</label>
@@ -488,6 +509,20 @@ const CloserNewSalePage = () => {
                             </select>
                         </div>
 
+                        <div className="space-y-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Estado de la Venta *</label>
+                            <select
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                value={form.estado}
+                                onChange={e => setForm({ ...form, estado: e.target.value })}
+                                required
+                            >
+                                <option value="completo">Completo</option>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="cancelado">Cancelado</option>
+                            </select>
+                        </div>
+
                     </div>
 
                     {/* SECCIÓN 4: ATRIBUCIÓN E INFORMACIÓN ADICIONAL */}
@@ -529,8 +564,8 @@ const CloserNewSalePage = () => {
                                 <textarea
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-sm font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all min-h-[100px] resize-none"
                                     placeholder="Detalles sobre el cliente, objeciones rebasadas o notas de la venta..."
-                                    value={form.examen}
-                                    onChange={e => setForm({ ...form, examen: e.target.value })}
+                                    value={form.notas}
+                                    onChange={e => setForm({ ...form, notas: e.target.value })}
                                 />
                             </div>
                         </div>
