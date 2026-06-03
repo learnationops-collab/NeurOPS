@@ -412,6 +412,7 @@ def get_financial_sales():
             setter_stats[final_setter]["total_monto"] += monto_ajustado
         
         s_dict["monto"] = round(monto_ajustado, 2)
+        s_dict["monto_bruto"] = round(monto_original, 2)
         s_dict["setter"] = final_setter
         s_dict["has_agenda"] = has_agenda_match
         prog, simple_tp = split_tipo_pago(s.tipo_pago)

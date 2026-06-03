@@ -509,6 +509,7 @@ def get_sales_attribution_report():
             "closer": (sale.raw_data or {}).get('vendedor') or (sale.raw_data or {}).get('closer') or 'Sin asignar',
             "producto": (sale.raw_data or {}).get('tipo_pago') or 'N/A',
             "monto": round(monto_ajustado, 2),
+            "monto_bruto": round(monto_original, 2),
             "instagram": sale.instagram,
             # Datos de atribución (se rellena abajo)
             "ad_id": None,

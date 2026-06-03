@@ -198,7 +198,7 @@ const PublicFinancialSalesPage = () => {
             instagram: sale.instagram || '',
             nombre_cliente: sale.nombre_cliente || '',
             email_vendedor: sale.email_vendedor || '',
-            amount: sale.monto || 0,
+            amount: sale.monto_bruto || sale.monto || 0,
             programa: sale.programa || '',
             tipo_pago_simple: sale.tipo_pago_simple || '',
             payment_type: sale.metodo_pago || '',
@@ -881,7 +881,14 @@ const PublicFinancialSalesPage = () => {
                                                         className="w-20 bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs text-right"
                                                     />
                                                 ) : (
-                                                    <span className="text-emerald-400 font-bold">${sale.monto}</span>
+                                                    <div className="flex flex-col items-end gap-0.5">
+                                                        <span className="text-emerald-400 font-bold">${sale.monto} <span className="text-[9px] text-slate-500 font-normal uppercase tracking-wider">neto</span></span>
+                                                        {sale.metodo_pago && sale.metodo_pago.toLowerCase().trim() === 'stripe' && sale.monto_bruto && sale.monto_bruto !== sale.monto && (
+                                                            <span className="text-[10px] text-slate-400 font-medium">
+                                                                Bruto: ${sale.monto_bruto}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </td>
                                             
