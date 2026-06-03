@@ -25,13 +25,13 @@ def sync_sheets():
     if tabla not in ('Llamadas_DB', 'Ventas_DB'):
         return jsonify({"status": "error", "message": "Tabla no válida"}), 400
 
-    result = SheetsService.sync_from_sheets(tabla)
+    force = request.args.get('force', 'false').lower() == 'true'
+    result = SheetsService.sync_from_sheets(tabla, force=force)
     if result["status"] == "success":
-        logger.info(f"[SHEETS] Sync successful for {tabla}")
+        logger.info(f"[SHEETS] Sync successful for {tabla} (force={force})")
         return jsonify(result), 200
     else:
         logger.error(f"[SHEETS] Sync failed for {tabla}: {result.get('message')}")
-        # Return 500 but include the message for the frontend to show
         return jsonify(result), 500
 
 @bp.route('/cron-sync', methods=['GET'])

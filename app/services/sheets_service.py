@@ -11,12 +11,12 @@ class SheetsService:
     BASE_URL = "https://script.google.com/macros/s/AKfycbx5Dedw8MTavNQbzgpdWLmRyFPIVeDiuaKIB-j6NsaIS1wbegR4xpHq8BXs-QR2_Fr_/exec"
 
     @staticmethod
-    def sync_from_sheets(tabla):
+    def sync_from_sheets(tabla, force=False):
         """
         Lectura (GET): Borra por completo los datos locales y reconstruye la tabla.
         Maneja redireccionamientos 302 automáticamente con requests.
         """
-        if tabla == "Ventas_DB":
+        if tabla == "Ventas_DB" and not force:
             return {"status": "disabled", "message": "La sincronización destructiva desde Google Sheets ha sido deshabilitada en favor de la base de datos local permanente."}
 
         try:

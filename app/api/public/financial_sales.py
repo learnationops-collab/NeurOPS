@@ -150,7 +150,8 @@ def receive_financial_sales():
 def sync_financial_sales_from_sheets():
     # Obtiene datos de Google Sheets y reconstruye registros
     from app.services.sheets_service import SheetsService
-    result = SheetsService.sync_from_sheets("Ventas_DB")
+    force = request.args.get('force', 'false').lower() == 'true'
+    result = SheetsService.sync_from_sheets("Ventas_DB", force=force)
     if result["status"] == "success":
         return jsonify({"message": "Base de datos reconstruida con éxito", "added": result["count"]}), 200
     return jsonify({"error": result["message"]}), 500
