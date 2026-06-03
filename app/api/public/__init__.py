@@ -893,11 +893,7 @@ def receive_financial_agendas():
 @bp.route('/public/financial-agendas/sync', methods=['POST'])
 def sync_financial_agendas_from_sheets():
     """Fetches agendas from Google Sheets and recreates all records using the new service."""
-    from app.services.sheets_service import SheetsService
-    result = SheetsService.sync_from_sheets("Llamadas_DB")
-    if result["status"] == "success":
-        return jsonify({"message": "Sincronización de agendas completa", "added": result["count"]}), 200
-    return jsonify({"error": result["message"]}), 500
+    return jsonify({"message": "La sincronización de agendas desde Google Sheets ha sido deshabilitada en favor de n8n."}), 200
 
 @bp.route('/public/financial-agendas', methods=['GET'])
 def get_financial_agendas():

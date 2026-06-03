@@ -19,6 +19,9 @@ def sync_sheets():
     if not tabla:
         return jsonify({"status": "error", "message": "Parámetro 'tabla' es requerido"}), 400
     
+    if tabla == 'Llamadas_DB':
+        return jsonify({"status": "disabled", "message": "La sincronización de agendas desde Google Sheets ha sido deshabilitada en favor de n8n."}), 200
+        
     if tabla not in ('Llamadas_DB', 'Ventas_DB'):
         return jsonify({"status": "error", "message": "Tabla no válida"}), 400
 
@@ -45,7 +48,8 @@ def cron_sync():
         
     logger.info("[CRON] Iniciando sincronización automática")
     res_ventas = SheetsService.sync_from_sheets('Ventas_DB')
-    res_agendas = SheetsService.sync_from_sheets('Llamadas_DB')
+    # res_agendas = SheetsService.sync_from_sheets('Llamadas_DB')
+    res_agendas = {"status": "disabled", "message": "Deshabilitado en favor de n8n."}
     
     return jsonify({
         "status": "success",
