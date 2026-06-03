@@ -525,6 +525,15 @@ def update_financial_sale(sale_id):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+def split_tipo_pago(tp):
+    """Separa el programa del tipo de pago simple."""
+    if not tp:
+        return "Desconocido", "No Especificado"
+    if " - " in tp:
+        parts = tp.split(" - ", 1)
+        return parts[0].strip(), parts[1].strip()
+    return "Desconocido", tp.strip()
+
 @bp.route('/public/financial-sales', methods=['GET'])
 def get_financial_sales():
     """Returns all financial sales records with pagination, search, and date range options."""
@@ -537,7 +546,8 @@ def get_financial_sales():
     search = request.args.get('search', default='', type=str).strip()
     start_date_str = request.args.get('start_date', default='', type=str).strip()
     end_date_str = request.args.get('end_date', default='', type=str).strip()
-    tipo_pago = request.args.get('tipo_pago', default='', type=str).strip()
+    programa = request.args.get('programa', default='', type=str).strip()
+    tipo_pago_simple = request.args.get('tipo_pago_simple', default='', type=str).strip()
     
     query = FinancialSale.query
     if search:
@@ -564,8 +574,17 @@ def get_financial_sales():
         except ValueError:
             pass
 
-    if tipo_pago:
-        query = query.filter(FinancialSale.tipo_pago == tipo_pago)
+    if programa:
+        query = query.filter(or_(
+            FinancialSale.tipo_pago.like(f"{programa} - %"),
+            FinancialSale.tipo_pago == programa
+        ))
+        
+    if tipo_pago_simple:
+        query = query.filter(or_(
+            FinancialSale.tipo_pago.like(f"% - {tipo_pago_simple}"),
+            FinancialSale.tipo_pago == tipo_pago_simple
+        ))
             
     query = query.order_by(FinancialSale.date.desc())
     
@@ -681,7 +700,7 @@ def get_financial_sales():
             }
         }
 
-        # Calculate Cash Collect by Payment Type
+        # Calculate Cash Collect by Payment Type Simple (agrupado en Python)
         payment_type_query = db.session.query(
             FinancialSale.tipo_pago,
             func.count(FinancialSale.id),
@@ -690,20 +709,39 @@ def get_financial_sales():
             FinancialSale.id.in_(subquery)
         ).group_by(FinancialSale.tipo_pago).all()
 
-        payment_types_breakdown = []
+        payment_types_simple_map = {}
         for tp, count, total_tp_monto in payment_type_query:
+            _, simple_tp = split_tipo_pago(tp)
+            if simple_tp not in payment_types_simple_map:
+                payment_types_simple_map[simple_tp] = {"count": 0, "total_monto": 0.0}
+            payment_types_simple_map[simple_tp]["count"] += count
+            payment_types_simple_map[simple_tp]["total_monto"] += float(total_tp_monto or 0.0)
+
+        payment_types_breakdown = []
+        for tp_simple, stats in payment_types_simple_map.items():
             payment_types_breakdown.append({
-                "tipo_pago": tp or "No Especificado",
-                "count": count,
-                "total_monto": float(total_tp_monto or 0.0)
+                "tipo_pago": tp_simple,
+                "count": stats["count"],
+                "total_monto": round(stats["total_monto"], 2)
             })
 
-        # Fetch unique payment types globally for filter populating
-        unique_payment_types = [
+        # Fetch unique programs and payment types globally for filter populating
+        all_tps = [
             r[0] for r in db.session.query(FinancialSale.tipo_pago).distinct().all() if r[0]
         ]
+        unique_programs_set = set()
+        unique_payment_types_simple_set = set()
+        for tp in all_tps:
+            prog, simple_tp = split_tipo_pago(tp)
+            if prog and prog != "Desconocido":
+                unique_programs_set.add(prog)
+            if simple_tp:
+                unique_payment_types_simple_set.add(simple_tp)
+        
+        unique_programs = sorted(list(unique_programs_set))
+        unique_payment_types = sorted(list(unique_payment_types_simple_set))
             
-        # Inyectar el setter resuelto dinámicamente en los items paginados devueltos
+        # Inyectar el setter y datos parseados en los items paginados devueltos
         sales_data = []
         for s in sales_pagination.items:
             s_dict = s.to_dict()
@@ -729,6 +767,10 @@ def get_financial_sales():
                     resolved_setter = s_setter
                     
             s_dict["setter"] = resolved_setter or "Sin Setter"
+            # Inyectar programa y tipo de pago simple
+            prog, simple_tp = split_tipo_pago(s.tipo_pago)
+            s_dict["programa"] = prog
+            s_dict["tipo_pago_simple"] = simple_tp
             sales_data.append(s_dict)
 
         return jsonify({
@@ -741,12 +783,13 @@ def get_financial_sales():
             "sources_breakdown": sources_breakdown,
             "agenda_breakdown": agenda_breakdown,
             "payment_types_breakdown": payment_types_breakdown,
+            "unique_programs": unique_programs,
             "unique_payment_types": unique_payment_types
         }), 200
     else:
         sales = query.all()
         
-        # Resolver setters dinámicamente también para la respuesta no paginada
+        # Resolver setters y datos parseados también para la respuesta no paginada
         sales_data = []
         for s in sales:
             s_dict = s.to_dict()
@@ -769,6 +812,10 @@ def get_financial_sales():
                 if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
                     resolved_setter = s_setter
             s_dict["setter"] = resolved_setter or "Sin Setter"
+            # Inyectar programa y tipo de pago simple
+            prog, simple_tp = split_tipo_pago(s.tipo_pago)
+            s_dict["programa"] = prog
+            s_dict["tipo_pago_simple"] = simple_tp
             sales_data.append(s_dict)
             
         return jsonify(sales_data), 200

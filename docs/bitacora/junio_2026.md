@@ -105,6 +105,12 @@
       - Incorporación del campo **Examen del Lead** (autocompletado dinámicamente desde la agenda/cita).
       - Vinculación correcta del textarea de observaciones al estado `form.notas` en lugar de `form.examen`.
       - Inversión de campos en el payload (`setter: form.estado`, `estado: form.setter`) para escribir correctamente en las columnas físicas L (Estado) y M (Setter) en Google Sheets.
+  - **Separación de Programa y Tipo de Pago en Registro de Ventas**:
+    - **API (Backend) (`__init__.py`) [MODIFY]**: Creación de la función utilitaria `split_tipo_pago` que separa el programa (ej: `RR`) del tipo de pago simple (ej: `completo`). Se actualizó `get_financial_sales` para inyectar `"programa"` y `"tipo_pago_simple"` en el JSON de las ventas, agrupar `payment_types_breakdown` por tipo de pago simple, y recolectar conjuntos globales de `unique_programs` y `unique_payment_types` (simples).
+    - **Interfaz (Frontend) (`PublicFinancialSalesPage.jsx`) [MODIFY]**:
+      - Se dividió el filtro selector de Pago en dos selectores independientes: "Programa" y "Pago", enviando los nuevos parámetros a la API.
+      - Se separó la columna "Producto/Pago" en la tabla en dos columnas: "Programa" y "Pago" (que muestra el tipo de pago simple y método de pago).
+      - Se adaptó la edición en línea en la tabla para inicializar y editar Programa y Tipo de Pago Simple por separado, combinándolos de vuelta en el formato original `{programa} - {tipo_pago_simple}` al guardar para mantener consistencia con Google Sheets y la base local.
 
 
 

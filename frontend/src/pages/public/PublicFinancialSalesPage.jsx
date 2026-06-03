@@ -39,20 +39,23 @@ const PublicFinancialSalesPage = () => {
     const [customPercentage, setCustomPercentage] = useState(10); // default 10%
     const [agendaBreakdown, setAgendaBreakdown] = useState(null);
     const [paymentTypesBreakdown, setPaymentTypesBreakdown] = useState([]);
+    const [uniquePrograms, setUniquePrograms] = useState([]);
     const [uniquePaymentTypes, setUniquePaymentTypes] = useState([]);
     
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_financial_sales', {
         searchTerm: '',
         startDate: getFirstDayOfCurrentMonth(),
         endDate: getTodayDate(),
-        tipoPago: ''
+        programa: '',
+        tipoPagoSimple: ''
     });
 
-    const { searchTerm, startDate, endDate, tipoPago } = filters;
+    const { searchTerm, startDate, endDate, programa, tipoPagoSimple } = filters;
     const setSearchTerm = (val) => setFilters({ searchTerm: val });
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
-    const setTipoPago = (val) => setFilters({ tipoPago: val });
+    const setPrograma = (val) => setFilters({ programa: val });
+    const setTipoPagoSimple = (val) => setFilters({ tipoPagoSimple: val });
 
     // Forzar inicio en el mes actual si los filtros cargados de localStorage están vacíos
     useEffect(() => {
@@ -60,7 +63,8 @@ const PublicFinancialSalesPage = () => {
             setFilters({
                 startDate: startDate || getFirstDayOfCurrentMonth(),
                 endDate: endDate || getTodayDate(),
-                tipoPago: tipoPago || ''
+                programa: programa || '',
+                tipoPagoSimple: tipoPagoSimple || ''
             });
         }
     }, [startDate, endDate]);
@@ -85,7 +89,8 @@ const PublicFinancialSalesPage = () => {
                     search: searchTerm,
                     start_date: startDate,
                     end_date: endDate,
-                    tipo_pago: tipoPago
+                    programa: programa,
+                    tipo_pago_simple: tipoPagoSimple
                 }
             });
             const newSales = res.data.data || [];
@@ -106,6 +111,7 @@ const PublicFinancialSalesPage = () => {
             setSourcesBreakdown(res.data.sources_breakdown || []);
             setAgendaBreakdown(res.data.agenda_breakdown || null);
             setPaymentTypesBreakdown(res.data.payment_types_breakdown || []);
+            setUniquePrograms(res.data.unique_programs || []);
             setUniquePaymentTypes(res.data.unique_payment_types || []);
         } catch (error) {
             toast.error('Error al cargar las ventas');
@@ -123,7 +129,7 @@ const PublicFinancialSalesPage = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, startDate, endDate, tipoPago]);
+    }, [searchTerm, startDate, endDate, programa, tipoPagoSimple]);
 
     // Observador para scroll infinito
     useEffect(() => {
@@ -170,7 +176,8 @@ const PublicFinancialSalesPage = () => {
             nombre_cliente: sale.nombre_cliente || '',
             email_vendedor: sale.email_vendedor || '',
             amount: sale.monto || 0,
-            product: sale.tipo_pago || '',
+            programa: sale.programa || '',
+            tipo_pago_simple: sale.tipo_pago_simple || '',
             payment_type: sale.metodo_pago || '',
             setter_name: sale.setter || '',
             estado: sale.estado || 'Completada'
@@ -179,7 +186,22 @@ const PublicFinancialSalesPage = () => {
 
     const handleSave = async (id) => {
         try {
-            const res = await api.put(`/public/financial-sales/${id}`, editData);
+            const combinedProduct = editData.programa && editData.tipo_pago_simple
+                ? `${editData.programa.trim()} - ${editData.tipo_pago_simple.trim()}`
+                : (editData.programa || editData.tipo_pago_simple || '').trim();
+
+            const payload = {
+                instagram: editData.instagram,
+                nombre_cliente: editData.nombre_cliente,
+                email_vendedor: editData.email_vendedor,
+                amount: editData.amount,
+                product: combinedProduct,
+                payment_type: editData.payment_type,
+                setter_name: editData.setter_name,
+                estado: editData.estado
+            };
+
+            const res = await api.put(`/public/financial-sales/${id}`, payload);
             toast.success('Venta actualizada correctamente');
             
             setSales(sales.map(s => s.id === id ? { ...s, ...res.data.sale } : s));
@@ -217,10 +239,29 @@ const PublicFinancialSalesPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-2 rounded-xl">
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Programa:</span>
+                        <select
+                            value={programa}
+                            onChange={(e) => setPrograma(e.target.value)}
+                            className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer max-w-[130px] pr-8 focus:ring-0"
+                        >
+                            <option value="" className="bg-slate-900 text-white">Todos</option>
+                            {uniquePrograms
+                                .sort((a, b) => a.localeCompare(b))
+                                .map((p) => (
+                                    <option key={p} value={p} className="bg-slate-900 text-white">
+                                        {p}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-2 rounded-xl">
                         <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Pago:</span>
                         <select
-                            value={tipoPago}
-                            onChange={(e) => setTipoPago(e.target.value)}
+                            value={tipoPagoSimple}
+                            onChange={(e) => setTipoPagoSimple(e.target.value)}
                             className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer max-w-[130px] pr-8 focus:ring-0"
                         >
                             <option value="" className="bg-slate-900 text-white">Todos</option>
@@ -544,7 +585,8 @@ const PublicFinancialSalesPage = () => {
                                     <th className="p-4 font-semibold">Cliente</th>
                                     <th className="p-4 font-semibold">Instagram</th>
                                     <th className="p-4 font-semibold text-right">Monto</th>
-                                    <th className="p-4 font-semibold">Producto/Pago</th>
+                                    <th className="p-4 font-semibold">Programa</th>
+                                    <th className="p-4 font-semibold">Pago</th>
                                     <th className="p-4 font-semibold">Roles</th>
                                     <th className="p-4 font-semibold">Estado</th>
                                     <th className="p-4 font-semibold text-center">Acciones</th>
@@ -602,27 +644,41 @@ const PublicFinancialSalesPage = () => {
                                                 )}
                                             </td>
                                             
+                                            <td className="p-4 whitespace-nowrap">
+                                                {isEditing ? (
+                                                    <input 
+                                                        type="text" 
+                                                        value={editData.programa} 
+                                                        onChange={e => setEditData({...editData, programa: e.target.value})}
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                                        placeholder="Prog (ej: RR)"
+                                                    />
+                                                ) : (
+                                                    <span className="font-medium text-slate-200">{sale.programa || 'N/A'}</span>
+                                                )}
+                                            </td>
+                                            
                                             <td className="p-4 space-y-1">
                                                 {isEditing ? (
                                                     <>
                                                         <input 
                                                             type="text" 
-                                                            value={editData.product} 
-                                                            onChange={e => setEditData({...editData, product: e.target.value})}
+                                                            value={editData.tipo_pago_simple} 
+                                                            onChange={e => setEditData({...editData, tipo_pago_simple: e.target.value})}
                                                             className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs mb-1"
-                                                            placeholder="Producto"
+                                                            placeholder="Pago (ej: completo)"
                                                         />
                                                         <input 
                                                             type="text" 
                                                             value={editData.payment_type} 
                                                             onChange={e => setEditData({...editData, payment_type: e.target.value})}
                                                             className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
-                                                            placeholder="Tipo Pago"
+                                                            placeholder="Método (ej: Stripe)"
                                                         />
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <div className="font-medium text-slate-200">{sale.tipo_pago || 'N/A'}</div>
+                                                        <div className="font-medium text-slate-300">{sale.tipo_pago_simple || 'N/A'}</div>
                                                         <div className="text-xs text-slate-500">{sale.metodo_pago || 'N/A'}</div>
                                                     </>
                                                 )}
@@ -699,7 +755,7 @@ const PublicFinancialSalesPage = () => {
                                 
                                 {sales.length === 0 && (
                                      <tr>
-                                         <td colSpan="8" className="p-8 text-center text-slate-500">
+                                         <td colSpan="9" className="p-8 text-center text-slate-500">
                                              No se encontraron ventas con esos criterios.
                                          </td>
                                      </tr>
