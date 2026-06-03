@@ -191,6 +191,12 @@
     - **API Backend (Ventas Financieras) (`financial_sales.py`)**: Implementación del descuento del 4.5% en caliente para montos de transacciones pagadas con Stripe, afectando el listado, acumulados y breakdowns del panel de ventas.
     - **API Backend (Estadísticas de Closers) (`closer_service.py`)**: Integración del descuento del 4.5% en la recaudación de closers (`CloserService.get_comprehensive_stats`) usando expresiones condicionales de SQL (`case`). Además, se acotó la consulta oficial para considerar únicamente transacciones en estado `"Completada"` (o sin estado).
     - **API Backend (Marketing y Atribución) (`marketing_service.py` y `public/marketing.py`)**: Adaptación del dashboard de rendimiento de anuncios, reporte de atribución e historial de desatribuidos para aplicar en caliente el descuento a montos pagados con Stripe, y restringir todos los cálculos financieros únicamente a ventas completadas.
+  - **Visualización de Totales Neto/Bruto y Ajuste de Título en Ventas por Fuente**:
+    - **API Backend (`financial_sales.py`)**: Se calcula y devuelve el campo `total_monto_bruto` (sin comisiones) en el endpoint de listado de ventas.
+    - **Frontend (`PublicFinancialSalesPage.jsx`)**:
+      - Se renombró la sección principal *"Ventas por Fuente (Setter)"* a *"Ventas por Fuente"*.
+      - Se actualizó el indicador de *"Total Acumulado"* en el panel para mostrar tanto el total Neto (con comisiones descontadas) como el total Bruto original (si difieren).
+
 
 
 

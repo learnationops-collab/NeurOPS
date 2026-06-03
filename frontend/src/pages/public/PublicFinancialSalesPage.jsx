@@ -45,6 +45,7 @@ const PublicFinancialSalesPage = () => {
     const [hasMore, setHasMore] = useState(true);
 
     const [totalSalesAmount, setTotalSalesAmount] = useState(0);
+    const [totalSalesAmountBruto, setTotalSalesAmountBruto] = useState(0);
     const [sourcesBreakdown, setSourcesBreakdown] = useState([]);
     const [customPercentage, setCustomPercentage] = useState(10); // default 10%
     const [agendaBreakdown, setAgendaBreakdown] = useState(null);
@@ -129,6 +130,7 @@ const PublicFinancialSalesPage = () => {
             
             // Atribuir valores agregados retornados del backend
             setTotalSalesAmount(res.data.total_monto || 0);
+            setTotalSalesAmountBruto(res.data.total_monto_bruto || 0);
             setSourcesBreakdown(res.data.sources_breakdown || []);
             setAgendaBreakdown(res.data.agenda_breakdown || null);
             setPaymentTypesBreakdown(res.data.payment_types_breakdown || []);
@@ -708,10 +710,15 @@ const PublicFinancialSalesPage = () => {
                         <div className="space-y-1">
                             <h2 className="text-lg font-black text-white italic tracking-tight uppercase flex items-center gap-2">
                                 <TrendingUp className="text-violet-500" size={18} />
-                                Ventas por Fuente (Setter)
+                                Ventas por Fuente
                             </h2>
-                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wide">
-                                Total Acumulado: <span className="text-emerald-400 font-black text-sm">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalSalesAmount)} USD</span>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wide flex flex-wrap items-baseline gap-1">
+                                Total Acumulado: <span className="text-emerald-400 font-black text-sm">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalSalesAmount)} USD <span className="text-[10px] text-slate-500 font-normal uppercase tracking-wider">neto</span></span>
+                                {totalSalesAmountBruto && totalSalesAmountBruto !== totalSalesAmount && (
+                                    <span className="text-slate-400 font-medium text-xs ml-2">
+                                        (Bruto: ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalSalesAmountBruto)} USD)
+                                    </span>
+                                )}
                             </p>
                         </div>
 

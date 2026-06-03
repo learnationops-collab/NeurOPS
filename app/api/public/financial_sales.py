@@ -339,6 +339,12 @@ def get_financial_sales():
         .filter(FinancialSale.id.in_(subquery))\
         .filter(or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == ''))\
         .scalar() or 0.0
+
+    # Sumar los montos brutos originales de ventas completadas
+    total_monto_bruto = db.session.query(func.sum(FinancialSale.monto))\
+        .filter(FinancialSale.id.in_(subquery))\
+        .filter(or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == ''))\
+        .scalar() or 0.0
     
     all_agendas = FinancialAgenda.query.all()
     
@@ -539,6 +545,7 @@ def get_financial_sales():
             "pages": pages,
             "has_more": has_more,
             "total_monto": float(total_monto),
+            "total_monto_bruto": float(total_monto_bruto),
             "sources_breakdown": sources_breakdown,
             "agenda_breakdown": agenda_breakdown,
             "payment_types_breakdown": payment_types_breakdown,
