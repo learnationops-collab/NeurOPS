@@ -263,6 +263,84 @@ const PublicFinancialSalesPage = () => {
         date: new Date().toISOString().split('T')[0]
     });
 
+    const [agendaSearchQuery, setAgendaSearchQuery] = useState('');
+    const [agendaSearchResults, setAgendaSearchResults] = useState([]);
+    const [searchingAgendas, setSearchingAgendas] = useState(false);
+    const [selectedAgenda, setSelectedAgenda] = useState(null);
+
+    const handleAgendaSearch = async (query) => {
+        setAgendaSearchQuery(query);
+        if (query.trim().length < 2) {
+            setAgendaSearchResults([]);
+            return;
+        }
+        setSearchingAgendas(true);
+        try {
+            const res = await api.get('/public/financial-agendas', {
+                params: { search: query, limit: 10, page: 1 }
+            });
+            const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+            setAgendaSearchResults(data);
+        } catch (error) {
+            console.error("Error al buscar agendas", error);
+        } finally {
+            setSearchingAgendas(false);
+        }
+    };
+
+    const handleSelectAgenda = (agenda) => {
+        setSelectedAgenda(agenda);
+        setCreateData(prev => ({
+            ...prev,
+            nombre_cliente: agenda.lead || '',
+            instagram: agenda.instagram && agenda.instagram !== 'N/A' ? agenda.instagram : '',
+            mail_cliente: agenda.mail && agenda.mail !== 'N/A' ? agenda.mail : '',
+            telefono: agenda.whatsapp && agenda.whatsapp !== 'N/A' ? agenda.whatsapp : '',
+            setter_name: agenda.nombre || '',
+            email_vendedor: agenda.closer && agenda.closer !== 'Sin asignar' ? agenda.closer : prev.email_vendedor,
+            date: agenda.date ? agenda.date.split('T')[0] : prev.date
+        }));
+        setAgendaSearchResults([]);
+        setAgendaSearchQuery('');
+    };
+
+    const handleClearSelectedAgenda = () => {
+        setSelectedAgenda(null);
+        setCreateData(prev => ({
+            ...prev,
+            nombre_cliente: '',
+            instagram: '',
+            mail_cliente: '',
+            telefono: '',
+            setter_name: '',
+            date: new Date().toISOString().split('T')[0]
+        }));
+    };
+
+    const handleCloseCreateModal = () => {
+        setShowCreateModal(false);
+        setAgendaSearchQuery('');
+        setAgendaSearchResults([]);
+        setSelectedAgenda(null);
+        setCreateData({
+            nombre_cliente: '',
+            instagram: '',
+            mail_cliente: '',
+            telefono: '',
+            programa: 'RR',
+            tipo_pago_simple: 'completo',
+            monto: '',
+            metodo_pago: 'Stripe',
+            estado: 'Confirmada',
+            email_vendedor: '',
+            setter_name: '',
+            examen: '',
+            segundo_pago: '',
+            notas: '',
+            date: new Date().toISOString().split('T')[0]
+        });
+    };
+
     const handleCreateSubmit = async (e) => {
         e.preventDefault();
         if (!createData.nombre_cliente || !createData.monto) {
@@ -301,24 +379,7 @@ const PublicFinancialSalesPage = () => {
             const res = await api.post('/public/financial-sales/new', payload);
             if (res.data.status === 'success') {
                 toast.success('Venta registrada con éxito');
-                setShowCreateModal(false);
-                setCreateData({
-                    nombre_cliente: '',
-                    instagram: '',
-                    mail_cliente: '',
-                    telefono: '',
-                    programa: 'RR',
-                    tipo_pago_simple: 'completo',
-                    monto: '',
-                    metodo_pago: 'Stripe',
-                    estado: 'Confirmada',
-                    email_vendedor: '',
-                    setter_name: '',
-                    examen: '',
-                    segundo_pago: '',
-                    notas: '',
-                    date: new Date().toISOString().split('T')[0]
-                });
+                handleCloseCreateModal();
                 fetchSales(1);
             } else {
                 toast.error(res.data.error || 'Error al registrar venta');
@@ -989,12 +1050,88 @@ const PublicFinancialSalesPage = () => {
                                 <h2 className="text-xl font-black text-white italic tracking-tight uppercase">Registrar Nueva Venta</h2>
                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Ingresa los datos para registrar la venta en la app y Google Sheets</p>
                             </div>
-                            <button onClick={() => setShowCreateModal(false)} className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-all">
+                            <button onClick={handleCloseCreateModal} className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-all">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         <form onSubmit={handleCreateSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar text-left">
+                            {/* Buscador de Agenda del Cliente */}
+                            <div className="relative space-y-2 p-4 bg-slate-950/40 border border-slate-800 rounded-2xl">
+                                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block">
+                                    Buscar Agenda del Cliente para Autocompletar
+                                </label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        value={agendaSearchQuery}
+                                        onChange={(e) => handleAgendaSearch(e.target.value)}
+                                        placeholder="Buscar por nombre, email, instagram o teléfono..."
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
+                                    />
+                                    {searchingAgendas && (
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-500 border-t-transparent"></div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Resultados de la Búsqueda */}
+                                {agendaSearchResults.length > 0 && (
+                                    <div className="absolute left-0 right-0 z-50 top-full mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-h-48 overflow-y-auto custom-scrollbar">
+                                        {agendaSearchResults.map((agenda) => (
+                                            <button
+                                                key={agenda.id}
+                                                type="button"
+                                                onClick={() => handleSelectAgenda(agenda)}
+                                                className="w-full text-left px-4 py-3 hover:bg-slate-800/65 border-b border-slate-850/50 transition-colors flex flex-col gap-0.5"
+                                            >
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-bold text-white text-sm">{agenda.lead}</span>
+                                                    <span className="text-[10px] text-slate-405 font-bold uppercase">
+                                                        {agenda.date ? new Date(agenda.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'S/F'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs text-slate-400">
+                                                    <span>IG: @{agenda.instagram || 'N/A'}</span>
+                                                    <span>Setter: {agenda.nombre || 'N/A'}</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Mensaje de Sin Resultados */}
+                                {agendaSearchQuery.trim().length >= 2 && !searchingAgendas && agendaSearchResults.length === 0 && (
+                                    <div className="text-xs text-slate-500 italic mt-1 pl-1">
+                                        No se encontraron agendas coincidentes.
+                                    </div>
+                                )}
+
+                                {/* Indicador de Agenda Seleccionada */}
+                                {selectedAgenda && (
+                                    <div className="flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 px-3.5 py-2 rounded-xl mt-2 animate-in fade-in duration-200">
+                                        <div className="space-y-0.5">
+                                            <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest block">
+                                                Agenda Vinculada
+                                            </span>
+                                            <span className="text-xs font-semibold text-slate-200">
+                                                {selectedAgenda.lead} • @{selectedAgenda.instagram || 'N/A'}
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleClearSelectedAgenda}
+                                            className="p-1 text-slate-405 hover:text-white bg-slate-850/50 hover:bg-slate-800 rounded-lg transition-all"
+                                            title="Desvincular Agenda"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Nombre del Cliente *</label>
@@ -1179,7 +1316,7 @@ const PublicFinancialSalesPage = () => {
                             </div>
 
                             <div className="pt-4 flex justify-end gap-3 border-t border-slate-805">
-                                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all">
+                                <button type="button" onClick={handleCloseCreateModal} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all">
                                     Cancelar
                                 </button>
                                 <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20">

@@ -180,3 +180,5 @@
       - Se incorporó un botón premium "+ Registrar Venta" en el panel superior de filtros que abre un modal con diseño Glassmorphism.
       - Se implementó un formulario interactivo completo (`CreateSaleModal`) que permite registrar nombre de cliente, instagram, email, teléfono, programa, tipo de pago, monto, método de pago, estado, fecha de la venta, closer, setter y observaciones.
       - Se pre-completa por defecto la fecha de hoy y se valida que los campos requeridos (nombre del cliente y monto) estén presentes antes de enviar la información, refrescando en caliente la vista principal al registrar exitosamente.
+      - **Buscador de Agendas en el Modal**: Se integró un input buscador de agendas que llama con debounce al endpoint público `/public/financial-agendas` para obtener agendas coincidentes (por nombre, email, instagram o whatsapp). Al seleccionar una agenda, autocompleta en caliente la información de cliente, instagram, email, teléfono, setter, closer y fecha de cita en el formulario de la venta, con un botón para limpiar/desvincular de forma interactiva.
+
