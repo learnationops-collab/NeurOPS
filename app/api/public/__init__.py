@@ -635,17 +635,17 @@ def get_financial_sales():
                 agenda = agenda_map[ig_norm]
                 has_agenda_match = True
                 
-                # Validar si el lead de la agenda es una fuente/setter de marketing válida
+                # Validar si el setter de la agenda es una fuente de marketing válida
                 is_valid_lead_source = (
-                    agenda.lead and 
-                    agenda.lead.strip() and 
-                    agenda.lead.lower() not in ('s/f', 'n/a', '') and 
-                    'entrevista' not in agenda.lead.lower() and 
-                    'diagnostica' not in agenda.lead.lower() and
-                    'diagnóstica' not in agenda.lead.lower()
+                    agenda.nombre and 
+                    agenda.nombre.strip() and 
+                    agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
+                    'entrevista' not in agenda.nombre.lower() and 
+                    'diagnostica' not in agenda.nombre.lower() and
+                    'diagnóstica' not in agenda.nombre.lower()
                 )
                 if is_valid_lead_source:
-                    resolved_setter = agenda.lead
+                    resolved_setter = agenda.nombre
                     
             # Si no se pudo resolver desde la agenda, usar el setter original de la venta
             if not resolved_setter:
@@ -777,15 +777,15 @@ def get_financial_sales():
             if ig_norm and ig_norm in agenda_map:
                 agenda = agenda_map[ig_norm]
                 is_valid_lead_source = (
-                    agenda.lead and 
-                    agenda.lead.strip() and 
-                    agenda.lead.lower() not in ('s/f', 'n/a', '') and 
-                    'entrevista' not in agenda.lead.lower() and 
-                    'diagnostica' not in agenda.lead.lower() and
-                    'diagnóstica' not in agenda.lead.lower()
+                    agenda.nombre and 
+                    agenda.nombre.strip() and 
+                    agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
+                    'entrevista' not in agenda.nombre.lower() and 
+                    'diagnostica' not in agenda.nombre.lower() and
+                    'diagnóstica' not in agenda.nombre.lower()
                 )
                 if is_valid_lead_source:
-                    resolved_setter = agenda.lead
+                    resolved_setter = agenda.nombre
                     
             if not resolved_setter:
                 s_setter = s.setter
@@ -826,15 +826,15 @@ def get_financial_sales():
             if ig_norm and ig_norm in agenda_map:
                 agenda = agenda_map[ig_norm]
                 is_valid_lead_source = (
-                    agenda.lead and 
-                    agenda.lead.strip() and 
-                    agenda.lead.lower() not in ('s/f', 'n/a', '') and 
-                    'entrevista' not in agenda.lead.lower() and 
-                    'diagnostica' not in agenda.lead.lower() and
-                    'diagnóstica' not in agenda.lead.lower()
+                    agenda.nombre and 
+                    agenda.nombre.strip() and 
+                    agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
+                    'entrevista' not in agenda.nombre.lower() and 
+                    'diagnostica' not in agenda.nombre.lower() and
+                    'diagnóstica' not in agenda.nombre.lower()
                 )
                 if is_valid_lead_source:
-                    resolved_setter = agenda.lead
+                    resolved_setter = agenda.nombre
             if not resolved_setter:
                 s_setter = s.setter
                 if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
@@ -863,9 +863,21 @@ def receive_financial_agendas():
     
     saved = 0
     for item in items:
-        # Based on new layout: "nombre" is usually the setter, "lead" is client, etc.
-        setter = item.get('nombre') or item.get('setter') or item.get('setter_name') or item.get('vendedor')
-        if not setter: continue
+        # Priorizar la asignación del setter y del lead/cliente de forma robusta e inteligente
+        # Si el JSON trae 'nombre' y 'lead' pero no trae la clave explícita 'setter',
+        # 'lead' representa al Setter y 'nombre' representa al Cliente/Lead.
+        if 'setter' in item or 'setter_name' in item or 'vendedor' in item:
+            setter = item.get('setter') or item.get('setter_name') or item.get('vendedor')
+            lead_val = item.get('lead') or item.get('cliente') or item.get('nombre') or 'Desconocido'
+        elif 'lead' in item and 'nombre' in item:
+            setter = item.get('lead')
+            lead_val = item.get('nombre')
+        else:
+            setter = item.get('nombre') or item.get('setter') or 'Sin asignar'
+            lead_val = item.get('lead') or item.get('cliente') or 'Desconocido'
+
+        if not setter:
+            setter = 'Sin asignar'
 
         dt_str = item.get('fecha') or item.get('date') or item.get('registro')
         agenda_date = datetime.utcnow()
@@ -877,7 +889,7 @@ def receive_financial_agendas():
 
         agenda = FinancialAgenda(
             nombre=str(setter).strip(),
-            lead=item.get('lead') or item.get('cliente') or item.get('nombre') or 'Desconocido',
+            lead=str(lead_val).strip(),
             closer=item.get('closer') or item.get('vendedor') or 'Sin asignar',
             fecha_meet=dt_str or str(agenda_date),
             date=agenda_date,
@@ -963,6 +975,62 @@ def get_financial_agendas():
     else:
         agendas = query.all()
         return jsonify([a.to_dict() for a in agendas]), 200
+
+@bp.route('/public/financial-agendas/<int:agenda_id>', methods=['PUT', 'OPTIONS'])
+def update_financial_agenda(agenda_id):
+    """Actualiza un registro de agenda financiera."""
+    from app.models import FinancialAgenda
+    if request.method == 'OPTIONS':
+        return '', 204
+        
+    data = request.json or {}
+    agenda = FinancialAgenda.query.get(agenda_id)
+    if not agenda:
+        return jsonify({"error": "Agenda no encontrada"}), 404
+        
+    try:
+        if 'nombre' in data:
+            agenda.nombre = data['nombre']
+        if 'lead' in data:
+            agenda.lead = data['lead']
+        if 'closer' in data:
+            agenda.closer = data['closer']
+        if 'fecha_meet' in data:
+            agenda.fecha_meet = data['fecha_meet']
+        if 'instagram' in data:
+            agenda.instagram = data['instagram']
+        if 'whatsapp' in data:
+            agenda.whatsapp = data['whatsapp']
+        if 'mail' in data:
+            agenda.mail = data['mail']
+        if 'date' in data:
+            try:
+                from dateutil import parser
+                agenda.date = parser.parse(str(data['date']))
+            except: pass
+            
+        db.session.commit()
+        return jsonify({"message": "Agenda actualizada correctamente", "agenda": agenda.to_dict()}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/public/financial-agendas/<int:agenda_id>', methods=['DELETE'])
+def delete_financial_agenda(agenda_id):
+    """Elimina permanentemente un registro de agenda financiera."""
+    from app.models import FinancialAgenda
+    agenda = FinancialAgenda.query.get(agenda_id)
+    if not agenda:
+        return jsonify({"error": "Agenda no encontrada"}), 404
+        
+    try:
+        db.session.delete(agenda)
+        db.session.commit()
+        return jsonify({"message": "Agenda eliminada correctamente"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 
 
 from . import triage

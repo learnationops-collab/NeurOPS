@@ -7,7 +7,9 @@ import {
     Table,
     Users,
     Instagram,
-    Copy
+    Copy,
+    Edit,
+    Trash2
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -36,6 +38,58 @@ const FinancialAgendasPage = () => {
     const [totalAgendados, setTotalAgendados] = useState(0);
     const [proximasCitas, setProximasCitas] = useState(0);
     const [sortedClosers, setSortedClosers] = useState([]);
+
+    // Estados para edición
+    const [editingAgenda, setEditingAgenda] = useState(null);
+    const [editForm, setEditForm] = useState({
+        nombre: '',
+        lead: '',
+        closer: '',
+        fecha_meet: '',
+        instagram: '',
+        whatsapp: '',
+        mail: ''
+    });
+
+    const handleEditClick = (agenda) => {
+        setEditingAgenda(agenda);
+        setEditForm({
+            nombre: agenda.nombre || '',
+            lead: agenda.lead || '',
+            closer: agenda.closer || '',
+            fecha_meet: agenda.fecha_meet || '',
+            instagram: agenda.instagram || '',
+            whatsapp: agenda.whatsapp || '',
+            mail: agenda.mail || ''
+        });
+    };
+
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await api.put(`/public/financial-agendas/${editingAgenda.id}`, editForm);
+            const updated = response.data.agenda;
+            setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
+            setEditingAgenda(null);
+            alert("Agenda actualizada correctamente");
+        } catch (err) {
+            console.error("Error updating agenda:", err);
+            alert("Error al actualizar la agenda");
+        }
+    };
+
+    const handleDeleteClick = async (id) => {
+        if (!window.confirm("¿Seguro que quieres eliminar este registro de agenda permanentemente?")) return;
+        try {
+            await api.delete(`/public/financial-agendas/${id}`);
+            setAgendas(prev => prev.filter(a => a.id !== id));
+            setTotalAgendados(prev => Math.max(0, prev - 1));
+            alert("Agenda eliminada correctamente");
+        } catch (err) {
+            console.error("Error deleting agenda:", err);
+            alert("Error al eliminar la agenda");
+        }
+    };
     
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_financial_agendas', {
         searchTerm: '',
@@ -324,7 +378,8 @@ const FinancialAgendasPage = () => {
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Setter</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Instagram</th>
-                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Estado</th>
+                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Estado</th>
+                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-base/50">
@@ -339,7 +394,7 @@ const FinancialAgendasPage = () => {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-4">
-                                                <span className="text-sm font-bold text-white">{agenda.nombre}</span>
+                                                <span className="text-sm font-bold text-white">{agenda.lead}</span>
                                             </td>
                                             <td className="py-4 px-4">
                                                 <Badge variant="amber" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider border-amber-500/30">
@@ -348,7 +403,7 @@ const FinancialAgendasPage = () => {
                                             </td>
                                             <td className="py-4 px-4">
                                                 <Badge variant="indigo" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider">
-                                                    {agenda.lead}
+                                                    {agenda.nombre}
                                                 </Badge>
                                             </td>
                                             <td className="py-4 px-4 text-center">
@@ -378,16 +433,34 @@ const FinancialAgendasPage = () => {
                                                     <span className="text-xs text-muted">No IG</span>
                                                 )}
                                             </td>
-                                            <td className="py-4 px-4 text-right">
+                                            <td className="py-4 px-4 text-center">
                                                 <Badge variant="success" className="rounded-lg">
                                                     Sincronizado
                                                 </Badge>
+                                            </td>
+                                            <td className="py-4 px-4 text-right">
+                                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button 
+                                                        onClick={() => handleEditClick(agenda)}
+                                                        className="p-2 bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer"
+                                                        title="Editar Agenda"
+                                                    >
+                                                        <Edit size={12} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteClick(agenda.id)}
+                                                        className="p-2 bg-rose-600/20 text-rose-400 border border-rose-600/30 rounded-lg hover:bg-rose-600 hover:text-white transition-colors cursor-pointer"
+                                                        title="Eliminar Agenda"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
                                     {agendas.length === 0 && (
                                         <tr>
-                                            <td colSpan="6" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
+                                            <td colSpan="7" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
                                                 No se encontraron agendas
                                             </td>
                                         </tr>
@@ -409,6 +482,86 @@ const FinancialAgendasPage = () => {
                     </div>
                 )}
             </Card>
+
+            {/* Modal de Edición de Agenda */}
+            {editingAgenda && (
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 max-w-md w-full space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-black text-white italic uppercase">Editar Registro de Agenda</h3>
+                            <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Modificar datos de la cita</p>
+                        </div>
+                        
+                        <form onSubmit={handleEditSubmit} className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
+                                <input 
+                                    type="text"
+                                    className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
+                                    value={editForm.lead}
+                                    onChange={e => setEditForm({...editForm, lead: e.target.value})}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Setter</label>
+                                <input 
+                                    type="text"
+                                    className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
+                                    value={editForm.nombre}
+                                    onChange={e => setEditForm({...editForm, nombre: e.target.value})}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Closer</label>
+                                <input 
+                                    type="text"
+                                    className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
+                                    value={editForm.closer}
+                                    onChange={e => setEditForm({...editForm, closer: e.target.value})}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Meet (Texto)</label>
+                                <input 
+                                    type="text"
+                                    className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
+                                    value={editForm.fecha_meet}
+                                    onChange={e => setEditForm({...editForm, fecha_meet: e.target.value})}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Instagram</label>
+                                <input 
+                                    type="text"
+                                    className="w-full px-4 py-2.5 bg-slate-850 border border-slate-750 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-bold"
+                                    value={editForm.instagram}
+                                    onChange={e => setEditForm({...editForm, instagram: e.target.value})}
+                                />
+                            </div>
+                            
+                            <div className="flex gap-3 pt-4">
+                                <button 
+                                    type="button"
+                                    onClick={() => setEditingAgenda(null)}
+                                    className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-400 rounded-xl hover:text-white transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    type="submit"
+                                    className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

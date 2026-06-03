@@ -137,7 +137,7 @@ def search_closer_leads():
                 if fin_agenda:
                     appt_data = {
                         "start_time": fin_agenda.date.isoformat() if fin_agenda.date else None,
-                        "setter_name": fin_agenda.lead or "",
+                        "setter_name": fin_agenda.nombre or "",
                         "examen": ""
                     }
                     
@@ -196,14 +196,14 @@ def get_appointment_by_instagram():
         ).order_by(FinancialAgenda.date.desc()).first()
         
         if fin_agenda:
-            # En la base de datos de Sheets, el campo lead suele ser el setter
+            # nombre es el setter, lead es el cliente
             appointment_data = {
                 "id": f"financial-{fin_agenda.id}",
                 "start_time": fin_agenda.date.isoformat() if fin_agenda.date else None,
-                "setter_name": fin_agenda.lead or "",
+                "setter_name": fin_agenda.nombre or "",
                 "client": {
                     "id": None, # No tiene ID de Client local aún
-                    "username": fin_agenda.nombre or "",
+                    "username": fin_agenda.lead or "",
                     "email": fin_agenda.mail or "",
                     "phone": fin_agenda.whatsapp or "",
                     "instagram": fin_agenda.instagram

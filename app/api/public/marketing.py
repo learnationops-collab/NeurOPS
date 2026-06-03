@@ -854,13 +854,13 @@ def get_unattributed_leads():
                 if lead_key:
                     seen_agenda_leads.add(lead_key)
 
-                setter = agenda.lead or 'Sin asignar'
+                setter = agenda.nombre or 'Sin asignar'
                 closer = agenda.closer or 'Sin asignar'
                 
                 agenda_data = {
                     "id": agenda.id,
                     "date": agenda.date.isoformat() if agenda.date else agenda.created_at.isoformat(),
-                    "cliente": agenda.nombre or 'Desconocido',
+                    "cliente": agenda.lead or 'Desconocido',
                     "instagram": agenda.instagram or 'N/A',
                     "setter": setter,
                     "closer": closer,

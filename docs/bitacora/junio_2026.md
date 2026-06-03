@@ -134,5 +134,14 @@
     - **Backend (API) (`sheets.py` y `public/__init__.py`) [MODIFY]**:
       - Se deshabilitó la reconstrucción y vaciado de la tabla de agendas (`Llamadas_DB`) desde Google Sheets en el endpoint de sincronización manual `/api/sheets/sync` y en el endpoint automático del cronjob `/api/sheets/cron-sync` en [sheets.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/sheets.py). Esto evita que el cron o las solicitudes manuales borren las agendas enviadas en tiempo real por n8n directamente a la base de datos local.
       - Se deshabilitó la sincronización manual en el endpoint público `/api/public/financial-agendas/sync` en [__init__.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/__init__.py). Ambos endpoints retornan ahora un mensaje informativo confirmando que la sincronización ha sido deshabilitada en favor del flujo directo con n8n/Calendly.
+  - **Corrección de Inversión de Campos en Agendas Financieras y Funcionalidades**:
+    - **Backend (API) (`__init__.py`, `marketing.py`, `closer.py`) [MODIFY]**:
+      - Se corrigió el mapeo en `POST /public/financial-agendas` para que, cuando no se envíe `setter` explícito en el JSON pero vengan `nombre` y `lead` (de n8n), asigne `lead` como el Setter y `nombre` como el Cliente/Lead, almacenándolos correctamente en las columnas de la BD correspondientes.
+      - Se actualizó la resolución del Setter de agendas de `agenda.lead` a `agenda.nombre` en la atribución de ventas (`get_financial_sales`), standings de marketing (`get_unattributed_leads`) y endpoints del closer (`/leads/search` y `/appointments/by-instagram`), asegurando que todos los flujos lean del campo correcto.
+    - **Base de Datos (SQLite) (`local.db`) [MIGRATION]**:
+      - Se creó y ejecutó el script `migrate_agendas.py` que detectó y corrigió 2317 registros históricos que estaban invertidos en la base de datos local de SQLite.
+    - **Interfaz (Frontend) (`FinancialAgendasPage.jsx`) [VALIDATION]**:
+      - Se verificó y validó el correcto funcionamiento de las acciones de edición (`PUT`) y eliminación (`DELETE`) de agendas directamente en el tablero, y se comprobó que el empaquetado final (`npm run build`) compile al 100% de forma correcta.
+
 
 
