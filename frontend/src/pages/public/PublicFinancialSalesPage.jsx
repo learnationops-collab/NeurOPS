@@ -16,6 +16,15 @@ const getTodayDate = () => {
     return now.toISOString().split('T')[0];
 };
 
+const formatSaleDate = (dateStr) => {
+    if (!dateStr) return 'Sin Fecha';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) {
+        return dateStr;
+    }
+    return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
 const getSourceColors = (name) => {
     const norm = name ? name.toLowerCase() : '';
     if (norm === 'elias') return { gradient: 'from-violet-500 to-indigo-600', dot: 'bg-violet-500', text: 'text-violet-400', bg: 'bg-violet-500/10' };
@@ -195,7 +204,7 @@ const PublicFinancialSalesPage = () => {
             payment_type: sale.metodo_pago || '',
             setter_name: sale.setter || '',
             estado: sale.estado || 'Completada',
-            date: sale.date ? sale.date.split('T')[0] : ''
+            date: sale.date && typeof sale.date === 'string' ? sale.date.split('T')[0] : ''
         });
     };
 
@@ -599,7 +608,7 @@ const PublicFinancialSalesPage = () => {
                                     const pct = totalSalesAmount > 0 ? (pt.total_monto / totalSalesAmount) * 100 : 0;
                                     
                                     let payColor = "text-sky-400 bg-sky-500/10 border-sky-500/20";
-                                    const norm = pt.tipo_pago.toLowerCase();
+                                    const norm = (pt.tipo_pago || '').toLowerCase();
                                     if (norm.includes("completo") || norm.includes("pif") || norm.includes("learner")) {
                                         payColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
                                     } else if (norm.includes("seña") || norm.includes("sena")) {
@@ -653,7 +662,7 @@ const PublicFinancialSalesPage = () => {
                                     const pct = totalSalesAmount > 0 ? (pm.total_monto / totalSalesAmount) * 100 : 0;
                                     
                                     let payColor = "text-sky-400 bg-sky-500/10 border-sky-500/20";
-                                    const norm = pm.metodo_pago.toLowerCase();
+                                    const norm = (pm.metodo_pago || '').toLowerCase();
                                     if (norm.includes("stripe")) {
                                         payColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
                                     } else if (norm.includes("wise")) {
@@ -830,7 +839,7 @@ const PublicFinancialSalesPage = () => {
                                                         className="bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs cursor-pointer focus:border-indigo-500 focus:outline-none"
                                                     />
                                                 ) : (
-                                                    new Date(sale.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                                                    formatSaleDate(sale.date)
                                                 )}
                                             </td>
                                             
