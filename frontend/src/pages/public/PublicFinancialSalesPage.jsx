@@ -194,7 +194,8 @@ const PublicFinancialSalesPage = () => {
             tipo_pago_simple: sale.tipo_pago_simple || '',
             payment_type: sale.metodo_pago || '',
             setter_name: sale.setter || '',
-            estado: sale.estado || 'Completada'
+            estado: sale.estado || 'Completada',
+            date: sale.date ? sale.date.split('T')[0] : ''
         });
     };
 
@@ -212,7 +213,8 @@ const PublicFinancialSalesPage = () => {
                 product: combinedProduct,
                 payment_type: editData.payment_type,
                 setter_name: editData.setter_name,
-                estado: editData.estado
+                estado: editData.estado,
+                date: editData.date
             };
 
             const res = await api.put(`/public/financial-sales/${id}`, payload);
@@ -666,7 +668,16 @@ const PublicFinancialSalesPage = () => {
                                     return (
                                         <tr key={sale.id} className="hover:bg-slate-800/30 transition-colors">
                                             <td className="p-4 whitespace-nowrap">
-                                                {new Date(sale.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                {isEditing ? (
+                                                    <input 
+                                                        type="date" 
+                                                        value={editData.date} 
+                                                        onChange={e => setEditData({...editData, date: e.target.value})}
+                                                        className="bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs cursor-pointer focus:border-indigo-500 focus:outline-none"
+                                                    />
+                                                ) : (
+                                                    new Date(sale.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                                                )}
                                             </td>
                                             
                                             <td className="p-4">

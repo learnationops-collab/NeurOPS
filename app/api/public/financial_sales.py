@@ -184,6 +184,13 @@ def update_financial_sale(sale_id):
             sale.email_vendedor = data['email_vendedor']
         if 'estado' in data:
             sale.estado = data['estado']
+        if 'date' in data and data['date']:
+            try:
+                from dateutil import parser
+                # Parsear la fecha enviada desde el frontend
+                sale.date = parser.parse(str(data['date']))
+            except Exception as e:
+                pass
         db.session.commit()
 
         # Propagar actualización en caliente a Google Sheets
