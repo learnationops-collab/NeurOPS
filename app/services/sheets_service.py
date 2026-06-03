@@ -16,6 +16,9 @@ class SheetsService:
         Lectura (GET): Borra por completo los datos locales y reconstruye la tabla.
         Maneja redireccionamientos 302 automáticamente con requests.
         """
+        if tabla == "Ventas_DB":
+            return {"status": "disabled", "message": "La sincronización destructiva desde Google Sheets ha sido deshabilitada en favor de la base de datos local permanente."}
+
         try:
             params = {"tabla": tabla}
             # allow_redirects=True is default in requests
@@ -46,22 +49,59 @@ class SheetsService:
     @staticmethod
     def post_to_sheets(tabla, payload):
         """
-        Escritura (POST): Envía datos con acción 'insert' y si tiene éxito, dispara un GET.
+        Escritura (POST): Envía datos con acción 'insert', los guarda localmente y los propaga a Google Sheets.
         """
+        # Si es Ventas_DB, guardamos en la base de datos local de forma inmediata
+        if tabla == "Ventas_DB":
+            try:
+                from app.models.financial import FinancialSale
+                from datetime import datetime
+                
+                sale_date = datetime.utcnow()
+                marca_temp = payload.get('marca_temporal')
+                if marca_temp:
+                    try:
+                        from dateutil import parser
+                        sale_date = parser.parse(str(marca_temp))
+                    except: pass
+                    
+                sale = FinancialSale(
+                    email_vendedor=SheetsService._to_str(payload.get('email_vendedor')),
+                    nombre_cliente=SheetsService._to_str(payload.get('nombre_cliente')),
+                    telefono=SheetsService._to_str(payload.get('telefono')),
+                    mail_cliente=SheetsService._to_str(payload.get('mail_cliente')),
+                    tipo_pago=SheetsService._to_str(payload.get('tipo_pago')),
+                    monto=SheetsService._parse_float(payload.get('monto')),
+                    segundo_pago=SheetsService._to_str(payload.get('segundo_pago')),
+                    metodo_pago=SheetsService._to_str(payload.get('metodo_pago')),
+                    examen=SheetsService._to_str(payload.get('examen')),
+                    instagram=SheetsService._to_str(payload.get('instagram')),
+                    setter=SheetsService._to_str(payload.get('setter')),
+                    marca_temporal=SheetsService._to_str(marca_temp),
+                    estado=SheetsService._to_str(payload.get('estado')) or "Completada",
+                    date=sale_date
+                )
+                db.session.add(sale)
+                db.session.commit()
+                logger.info("[SHEETS POST] Venta registrada exitosamente en base de datos local.")
+            except Exception as db_err:
+                db.session.rollback()
+                logger.error(f"[SHEETS POST] Error al guardar venta local: {db_err}")
+                return {"status": "error", "message": f"Error local de base de datos: {str(db_err)}"}
+
         try:
             body = {"accion": "insert", "tabla": tabla, "datos": payload}
             response = requests.post(SheetsService.BASE_URL, json=body, timeout=30)
 
             if response.status_code in (200, 201, 302):
-                SheetsService.sync_from_sheets(tabla)
-                return {"status": "success", "message": "Datos enviados y sincronizados"}
+                return {"status": "success", "message": "Venta registrada localmente y en Google Sheets"}
             
             logger.error(f"[SHEETS POST] Error en respuesta: {response.status_code} - {response.text}")
-            return {"status": "error", "message": f"Error al enviar datos: {response.status_code}"}
+            return {"status": "success", "message": "Venta registrada localmente, pero falló el envío a Google Sheets."}
 
         except Exception as e:
             logger.error(f"[SHEETS POST] Excepción during POST ({tabla}): {str(e)}")
-            return {"status": "error", "message": str(e)}
+            return {"status": "success", "message": "Venta registrada localmente. Google Sheets inaccesible."}
 
     @staticmethod
     def update_in_sheets(tabla, marca_temporal, payload):

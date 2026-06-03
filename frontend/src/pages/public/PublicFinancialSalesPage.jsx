@@ -347,15 +347,6 @@ const PublicFinancialSalesPage = () => {
                         <Users className="w-4 h-4" />
                         <span>{sinAtribucion ? 'Ver Todas' : 'Atribuir (Sin Agenda)'}</span>
                     </button>
-
-                    <button
-                        onClick={handleSync}
-                        disabled={syncing}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-white text-sm font-semibold transition-all shadow-lg"
-                    >
-                        <RefreshCcw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                        <span className="hidden sm:inline">{syncing ? 'Sincronizando...' : 'Sincronizar Sheets'}</span>
-                    </button>
                 </div>
             </div>
 
