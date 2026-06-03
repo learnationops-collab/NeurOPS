@@ -98,10 +98,19 @@ class SheetsService:
     @staticmethod
     def _rebuild_sales(data_list):
         try:
+            from app.models.financial import ExcludedSale
+            # Obtener el conjunto de marca_temporal excluidas para omitirlas
+            excluded_timestamps = {e.marca_temporal for e in ExcludedSale.query.all() if e.marca_temporal}
+
             db.session.query(FinancialSale).delete()
             objects = []
             for idx, item in enumerate(data_list):
                 try:
+                    marca_temp = SheetsService._to_str(item.get('marca_temporal'))
+                    if marca_temp and marca_temp in excluded_timestamps:
+                        logger.info(f"[SHEETS SYNC] Venta con marca_temporal {marca_temp} omitida por exclusión manual.")
+                        continue
+
                     sale = FinancialSale(
                         email_vendedor=SheetsService._to_str(item.get('email_vendedor')),
                         nombre_cliente=SheetsService._to_str(item.get('nombre_cliente')),
@@ -114,7 +123,7 @@ class SheetsService:
                         examen=SheetsService._to_str(item.get('examen')),
                         instagram=SheetsService._to_str(item.get('instagram')),
                         setter=SheetsService._to_str(item.get('setter')), # Columna M en Sheets (Setter)
-                        marca_temporal=SheetsService._to_str(item.get('marca_temporal')),
+                        marca_temporal=marca_temp,
                         estado=SheetsService._to_str(item.get('estado') or item.get('status')) or "Completada", # Columna L en Sheets (Estado)
                         date=SheetsService._parse_date(item.get('marca_temporal')),
                         raw_data=item

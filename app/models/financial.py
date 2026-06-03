@@ -75,3 +75,17 @@ class FinancialAgenda(db.Model):
             "date": self.date.isoformat() if self.date else None
         }
 
+class ExcludedSale(db.Model):
+    __tablename__ = 'excluded_sales'
+    id = db.Column(db.Integer, primary_key=True)
+    marca_temporal = db.Column(db.String(255), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "marca_temporal": self.marca_temporal,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+

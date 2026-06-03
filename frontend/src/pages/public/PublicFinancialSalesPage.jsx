@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp, AlertCircle, Plus } from 'lucide-react';
+import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import AttributionModal from '../../components/modals/AttributionModal';
@@ -222,6 +222,22 @@ const PublicFinancialSalesPage = () => {
             setEditingSale(null);
         } catch (error) {
             toast.error('Error al actualizar venta');
+            console.error(error);
+        }
+    };
+
+    const handleDelete = async (sale) => {
+        const confirmDelete = window.confirm(
+            `¿Deseas eliminar la venta de "${sale.nombre_cliente}" por $${sale.monto}? Se ocultará localmente pero seguirá en Google Sheets.`
+        );
+        if (!confirmDelete) return;
+
+        try {
+            await api.delete(`/public/financial-sales/${sale.id}`);
+            toast.success('Venta eliminada localmente');
+            fetchSales(1);
+        } catch (error) {
+            toast.error('Error al eliminar la venta');
             console.error(error);
         }
     };
@@ -824,9 +840,14 @@ const PublicFinancialSalesPage = () => {
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <button onClick={() => handleEditClick(sale)} className="p-1.5 text-slate-400 hover:text-white bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button onClick={() => handleEditClick(sale)} className="p-1.5 text-slate-400 hover:text-white bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button onClick={() => handleDelete(sale)} className="p-1.5 text-rose-450 hover:text-white bg-rose-950/40 border border-rose-900/30 hover:bg-rose-900 rounded-lg transition-colors" title="Eliminar Venta (Ocultar localmente)">
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </td>
                                         </tr>

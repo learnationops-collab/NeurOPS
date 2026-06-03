@@ -10,7 +10,7 @@ from .closer_report import CloserDailyReport
 from .crm import Pipeline, PipelineStage, UserViewSetting, Notification, Comment, LeadEventLog
 from .integration import Integration
 from .public_registration import PublicRegistration
-from .financial import FinancialSale, FinancialAgenda
+from .financial import FinancialSale, FinancialAgenda, ExcludedSale
 from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
 from .workshop import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction
@@ -26,7 +26,7 @@ __all__ = [
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdPeriodSpend', 'ManychatAdLead', 'ManychatLead', 'LeadAnswer', 'UTMLog', 'LandingTracking', 'ConversationalMessage',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment', 'LeadEventLog',
-    'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'TriageDailyReport', 'TriageTrackerReport',
+    'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport',
     'WorkshopTemplate', 'WorkshopButton', 'WorkshopTemplateSent', 'WorkshopInteraction'
 
 
