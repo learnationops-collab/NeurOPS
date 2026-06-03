@@ -242,9 +242,14 @@ class MarketingService:
             ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
             ig_norm = normalize_ig(ig_val)
 
-            # Aplicar descuento de Stripe de 4.5% si corresponde
+            # Aplicar descuento de Stripe de 4.5% o Hotmart de 8.9% si corresponde
             monto_original = float(sale.monto or 0.0)
-            monto_ajustado = monto_original * 0.955 if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe' else monto_original
+            if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe':
+                monto_ajustado = monto_original * 0.955
+            elif sale.metodo_pago and sale.metodo_pago.strip().lower() == 'hotmart':
+                monto_ajustado = monto_original * 0.911
+            else:
+                monto_ajustado = monto_original
 
             matched_lead = None
             if ig_norm:

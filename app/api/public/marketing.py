@@ -497,9 +497,14 @@ def get_sales_attribution_report():
     report_rows = []
 
     for sale in sales:
-        # Aplicar el descuento del 4.5% si el método de pago es Stripe
+        # Aplicar el descuento de comisión si el método de pago es Stripe (4.5%) o Hotmart (8.9%)
         monto_original = float(sale.monto or 0.0)
-        monto_ajustado = monto_original * 0.955 if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe' else monto_original
+        if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe':
+            monto_ajustado = monto_original * 0.955
+        elif sale.metodo_pago and sale.metodo_pago.strip().lower() == 'hotmart':
+            monto_ajustado = monto_original * 0.911
+        else:
+            monto_ajustado = monto_original
 
         row = {
             "sale_id": sale.id,
@@ -746,9 +751,14 @@ def get_unattributed_leads():
             ig_norm = normalize_ig(ig_val)
             nombre_norm = (sale.nombre_cliente or '').strip().lower()
 
-            # Aplicar descuento de Stripe del 4.5% si corresponde
+            # Aplicar descuento de comisión si el método de pago es Stripe (4.5%) o Hotmart (8.9%)
             monto_original = float(sale.monto or 0.0)
-            monto_ajustado = monto_original * 0.955 if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe' else monto_original
+            if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe':
+                monto_ajustado = monto_original * 0.955
+            elif sale.metodo_pago and sale.metodo_pago.strip().lower() == 'hotmart':
+                monto_ajustado = monto_original * 0.911
+            else:
+                monto_ajustado = monto_original
 
             lead_key = None
             if ig_norm:

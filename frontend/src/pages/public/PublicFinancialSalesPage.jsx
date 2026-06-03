@@ -889,8 +889,13 @@ const PublicFinancialSalesPage = () => {
                                                     />
                                                 ) : (
                                                     <div className="flex flex-col items-end gap-0.5">
-                                                        <span className="text-emerald-400 font-bold">${sale.monto} <span className="text-[9px] text-slate-500 font-normal uppercase tracking-wider">neto</span></span>
-                                                        {sale.metodo_pago && sale.metodo_pago.toLowerCase().trim() === 'stripe' && sale.monto_bruto && sale.monto_bruto !== sale.monto && (
+                                                        <span className="text-emerald-400 font-bold">
+                                                            ${sale.monto}
+                                                            {sale.monto_bruto && sale.monto_bruto !== sale.monto && (
+                                                                <span className="text-[9px] text-slate-500 font-normal uppercase tracking-wider ml-1">neto</span>
+                                                            )}
+                                                        </span>
+                                                        {sale.monto_bruto && sale.monto_bruto !== sale.monto && (
                                                             <span className="text-[10px] text-slate-400 font-medium">
                                                                 Bruto: ${sale.monto_bruto}
                                                             </span>

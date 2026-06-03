@@ -377,7 +377,12 @@ const SalesAttributionPage = () => {
 
                                             <td className="py-3 px-3 font-black text-emerald-400 whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span>${(row.monto || 0).toLocaleString()} <span className="text-[8px] text-slate-500 font-normal uppercase tracking-wider">neto</span></span>
+                                                    <span>
+                                                        ${(row.monto || 0).toLocaleString()}
+                                                        {row.monto_bruto && row.monto_bruto !== row.monto && (
+                                                            <span className="text-[8px] text-slate-500 font-normal uppercase tracking-wider ml-1">neto</span>
+                                                        )}
+                                                    </span>
                                                     {row.monto_bruto && row.monto_bruto !== row.monto && (
                                                         <span className="text-[9px] text-slate-400 font-medium">
                                                             Bruto: ${(row.monto_bruto || 0).toLocaleString()}

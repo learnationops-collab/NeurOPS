@@ -329,9 +329,10 @@ def get_financial_sales():
     subquery_sales = query.all()
     
     subquery = query.with_entities(FinancialSale.id)
-    # Expresión de monto ajustado: si metodo_pago es 'Stripe', restar 4.5% de comisión
+    # Expresión de monto ajustado: si metodo_pago es 'Stripe', restar 4.5% de comisión; si es 'Hotmart', restar 8.9%
     adjusted_monto_expr = case(
         (func.lower(func.trim(FinancialSale.metodo_pago)) == 'stripe', FinancialSale.monto * 0.955),
+        (func.lower(func.trim(FinancialSale.metodo_pago)) == 'hotmart', FinancialSale.monto * 0.911),
         else_=FinancialSale.monto
     )
     # Sumar solo los montos de ventas completadas (con descuento de Stripe si aplica)
@@ -397,9 +398,14 @@ def get_financial_sales():
         # Una venta está completada si no tiene estado o su estado es "Completada"
         sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() == "completada"
 
-        # Aplicar el descuento del 4.5% si el método de pago es Stripe
+        # Aplicar el descuento de comisión si el método de pago es Stripe (4.5%) o Hotmart (8.9%)
         monto_original = float(s.monto or 0.0)
-        monto_ajustado = monto_original * 0.955 if s.metodo_pago and s.metodo_pago.strip().lower() == 'stripe' else monto_original
+        if s.metodo_pago and s.metodo_pago.strip().lower() == 'stripe':
+            monto_ajustado = monto_original * 0.955
+        elif s.metodo_pago and s.metodo_pago.strip().lower() == 'hotmart':
+            monto_ajustado = monto_original * 0.911
+        else:
+            monto_ajustado = monto_original
 
         if has_agenda_match or resolved_setter:
             if sale_is_completed:

@@ -196,6 +196,10 @@
     - **Frontend (`PublicFinancialSalesPage.jsx`)**:
       - Se renombró la sección principal *"Ventas por Fuente (Setter)"* a *"Ventas por Fuente"*.
       - Se actualizó el indicador de *"Total Acumulado"* en el panel para mostrar tanto el total Neto (con comisiones descontadas) como el total Bruto original (si difieren).
+  - **Deducción de Comisión de Hotmart del 8.9%**:
+    - **API Backend (`financial_sales.py`, `closer_service.py`, `marketing_service.py`, `public/marketing.py`)**: Extensión de la lógica de comisiones del backend para restar en caliente un **8.9%** a todas las transacciones cuyo método de pago sea **"Hotmart"** (monto neto resultante: `monto * 0.911`), afectando a todos los listados, reportes de atribución, desatribuidos y KPIs generales de closers/marketing.
+    - **Frontend (`PublicFinancialSalesPage.jsx` y `SalesAttributionPage.jsx`)**: Se modificó la renderización del sufijo *"neto"* y del valor bruto original para que reaccione dinámicamente ante cualquier diferencia numérica entre el neto y el bruto, haciéndola compatible automáticamente con Stripe, Hotmart y futuros métodos con comisión.
+
 
 
 

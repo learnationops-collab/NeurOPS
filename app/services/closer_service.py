@@ -978,6 +978,7 @@ class CloserService:
         
         adjusted_monto_expr = case(
             (func.lower(func.trim(FinancialSale.metodo_pago)) == 'stripe', FinancialSale.monto * 0.955),
+            (func.lower(func.trim(FinancialSale.metodo_pago)) == 'hotmart', FinancialSale.monto * 0.911),
             else_=FinancialSale.monto
         )
         
