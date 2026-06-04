@@ -723,13 +723,13 @@ def get_ad_dashboard_stats():
 
     # Agendas
     agendas_all = FinancialAgenda.query.filter(FinancialAgenda.date >= start_dt, FinancialAgenda.date <= end_dt).all()
-    agenda_igs_map = {} # IG -> source/setter (lead field)
+    agenda_igs_map = {} # IG -> source/setter (nombre field)
     for ag in agendas_all:
         ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
         ig_c = normalize_ig(ig_val)
         if ig_c:
-            # Usar 'lead' como la fuente/setter (es el tipo de llamada/evento en la DB real del usuario)
-            source = ag.lead or 'S/F'
+            # Usar 'nombre' como la fuente/setter
+            source = ag.nombre or 'S/F'
             agenda_igs_map.setdefault(ig_c, []).append(source)
 
     # Ventas
@@ -924,14 +924,14 @@ def get_ad_dashboard_stats():
         ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
         ig_c = normalize_ig(ig_val)
         if ig_c:
-            # Validar si el lead de la agenda es una fuente/setter de marketing válida
+            # Validar si el nombre (fuente/setter) de la agenda es una fuente/setter de marketing válida
             is_valid_lead_source = (
-                ag.lead and 
-                ag.lead.strip() and 
-                ag.lead.lower() not in ('s/f', 'n/a', '') and 
-                'entrevista' not in ag.lead.lower() and 
-                'diagnostica' not in ag.lead.lower() and
-                'diagnóstica' not in ag.lead.lower()
+                ag.nombre and 
+                ag.nombre.strip() and 
+                ag.nombre.lower() not in ('s/f', 'n/a', '') and 
+                'entrevista' not in ag.nombre.lower() and 
+                'diagnostica' not in ag.nombre.lower() and
+                'diagnóstica' not in ag.nombre.lower()
             )
             if is_valid_lead_source:
                 if ig_c not in agenda_setter_map or (ag.date and agenda_setter_map[ig_c].date and ag.date > agenda_setter_map[ig_c].date):
@@ -939,7 +939,7 @@ def get_ad_dashboard_stats():
     
     # Agendas por Setter/Fuente
     for ag in agendas_all:
-        sname = ag.lead or 'S/F'
+        sname = ag.nombre or 'S/F'
         if sname not in global_setters:
             global_setters[sname] = {'agendas': 0, 'ventas': 0}
         global_setters[sname]['agendas'] += 1
@@ -951,7 +951,7 @@ def get_ad_dashboard_stats():
         
         resolved_setter = None
         if ig_n and ig_n in agenda_setter_map:
-            resolved_setter = agenda_setter_map[ig_n].lead
+            resolved_setter = agenda_setter_map[ig_n].nombre
             
         if not resolved_setter:
             s_setter = sale.setter
@@ -1082,7 +1082,7 @@ def get_ad_details(ad_id):
             ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
             if normalize_ig(ig_val) in ad_igs:
                 ag_count += 1
-                sname = ag.lead or 'S/F'
+                sname = ag.nombre or 'S/F'
                 setter_breakdown[sname] = setter_breakdown.get(sname, 0) + 1
 
         # Ventas: Filtro similar

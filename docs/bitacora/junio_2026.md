@@ -203,6 +203,10 @@
     - **API Backend (`financial_sales.py`)**: Implementación del helper `resolve_closer_name` para mapear correos a nombres de closers limpios, y la acumulación y retorno de la recaudación neta agrupada en `closers_breakdown`.
     - **Frontend (`PublicFinancialSalesPage.jsx`)**: Incorporación de la tarjeta premium *"Ventas por Closer"* con barra segmentada, desglose por closer y simulador interactivo de comisiones de closers (por defecto al 10%). Se actualizó además la columna de Roles en la tabla de ventas para mostrar el nombre legible del closer.
 
+- **4 de Junio de 2026**:
+  - **Corrección en la Gráfica de Rendimiento por Fuente (Marketing Hub)**:
+    - **API Backend (`manychat.py`) [MODIFY]**: Se modificó el endpoint `/manychat-webhook/stats/dashboard` y `/manychat-webhook/ad-details/<int:ad_id>` para resolver correctamente la fuente/setter de las agendas y ventas. Se actualizó el acceso de `agenda.lead` a `agenda.nombre`, de acuerdo con la convención de normalización de la base de datos de agendas financieras, evitando que se muestren nombres de clientes en el eje horizontal del gráfico de barras de rendimiento por fuente.
+
 
 
 
