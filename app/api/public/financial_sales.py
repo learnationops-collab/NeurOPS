@@ -43,6 +43,12 @@ def split_tipo_pago(tp):
         return parts[0].strip(), parts[1].strip()
     return "Desconocido", tp.strip()
 
+def normalize_ig(ig_str):
+    # Normaliza el usuario de Instagram removiendo @ y espacios
+    if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
+        return None
+    return ig_str.strip().lstrip('@').lower()
+
 def parse_financial_data(item):
     errors = []
     
@@ -237,7 +243,16 @@ def update_financial_sale(sale_id):
         if 'payment_type' in data:
             sale.metodo_pago = data['payment_type']
         if 'setter_name' in data:
-            sale.setter = data['setter_name']
+            new_setter = data['setter_name']
+            sale.setter = new_setter
+            # Sincronizar con la agenda asociada si existe
+            ig_norm = normalize_ig(sale.instagram)
+            if ig_norm:
+                agenda = FinancialAgenda.query.filter(
+                    func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm
+                ).order_by(FinancialAgenda.date.desc()).first()
+                if agenda:
+                    agenda.nombre = new_setter
         if 'amount' in data:
             sale.monto = float(data['amount'])
         if 'instagram' in data:
@@ -363,11 +378,6 @@ def get_financial_sales():
     subquery_sales = query.all()
     
     all_agendas = FinancialAgenda.query.all()
-    
-    def normalize_ig(ig_str):
-        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-            return None
-        return ig_str.strip().lstrip('@').lower()
 
     agenda_map = {}
     for a in all_agendas:
@@ -644,11 +654,6 @@ def get_financial_sales_payroll():
     sales = query.all()
     
     all_agendas = FinancialAgenda.query.all()
-    
-    def normalize_ig(ig_str):
-        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
-            return None
-        return ig_str.strip().lstrip('@').lower()
         
     agenda_map = {}
     for a in all_agendas:

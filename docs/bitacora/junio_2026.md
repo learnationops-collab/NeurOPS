@@ -208,6 +208,8 @@
     - **API Backend (`manychat.py`) [MODIFY]**: Se modificó el endpoint `/manychat-webhook/stats/dashboard` y `/manychat-webhook/ad-details/<int:ad_id>` para resolver correctamente la fuente/setter de las agendas y ventas. Se actualizó el acceso de `agenda.lead` a `agenda.nombre`, de acuerdo con la convención de normalización de la base de datos de agendas financieras, evitando que se muestren nombres de clientes en el eje horizontal del gráfico de barras de rendimiento por fuente.
   - **Optimización de Logs de Chromium en Entorno Headless (Railway)**:
     - **API Backend (`image_service.py`) [MODIFY]**: Se unificaron y ampliaron los flags de Chromium (`custom_flags`) pasados a `Html2Image` en Linux. Se agregaron `--disable-gpu`, `--disable-software-rasterizer`, `--log-level=3` y se aseguró el uso de `--disable-dbus` y `--disable-extensions` en todos los métodos de generación de tarjetas de reporte. Esto elimina el ruido masivo de advertencias del motor gráfico y de conexión a bus de sistema en los logs de despliegue en Railway.
+  - **Persistencia en la Edición de Setter de Ventas con Agenda**:
+    - **API Backend (`financial_sales.py`) [MODIFY]**: Se refactorizó la función helper `normalize_ig` a nivel de módulo (removiendo sus definiciones internas duplicadas en `get_financial_sales` y `get_financial_sales_payroll`). Se modificó el endpoint `PUT /public/financial-sales/<int:sale_id>` para que, al editar el `setter_name` de una venta, si existe una agenda asociada a la misma vía Instagram, actualice también automáticamente la fuente de la agenda (`agenda.nombre = setter_name`). Esto previene que el cambio se revierta al refrescar la página debido a la atribución dinámica de agendas.
 
 
 
