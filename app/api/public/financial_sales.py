@@ -315,6 +315,10 @@ def get_financial_sales():
     metodo_pago = request.args.get('metodo_pago', default='', type=str).strip()
     sin_atribucion = request.args.get('sin_atribucion', default='false', type=str).lower() == 'true'
     
+    # Nuevos parámetros de consulta
+    closer_filter = request.args.get('closer', default='', type=str).strip()
+    source_filter = request.args.get('source', default='', type=str).strip()
+    
     query = FinancialSale.query
     if search:
         search_pattern = f"%{search}%"
@@ -358,25 +362,6 @@ def get_financial_sales():
     query = query.order_by(FinancialSale.date.desc())
     subquery_sales = query.all()
     
-    subquery = query.with_entities(FinancialSale.id)
-    # Expresión de monto ajustado: si metodo_pago es 'Stripe', restar 4.5% de comisión; si es 'Hotmart', restar 8.9%
-    adjusted_monto_expr = case(
-        (func.lower(func.trim(FinancialSale.metodo_pago)) == 'stripe', FinancialSale.monto * 0.955),
-        (func.lower(func.trim(FinancialSale.metodo_pago)) == 'hotmart', FinancialSale.monto * 0.911),
-        else_=FinancialSale.monto
-    )
-    # Sumar solo los montos de ventas completadas (con descuento de Stripe si aplica)
-    total_monto = db.session.query(func.sum(adjusted_monto_expr))\
-        .filter(FinancialSale.id.in_(subquery))\
-        .filter(or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == ''))\
-        .scalar() or 0.0
-
-    # Sumar los montos brutos originales de ventas completadas
-    total_monto_bruto = db.session.query(func.sum(FinancialSale.monto))\
-        .filter(FinancialSale.id.in_(subquery))\
-        .filter(or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == ''))\
-        .scalar() or 0.0
-    
     all_agendas = FinancialAgenda.query.all()
     
     def normalize_ig(ig_str):
@@ -391,6 +376,9 @@ def get_financial_sales():
             if ig_norm not in agenda_map or (a.date and agenda_map[ig_norm].date and a.date > agenda_map[ig_norm].date):
                 agenda_map[ig_norm] = a
 
+    # Métricas y totales in-memory
+    total_monto = 0.0
+    total_monto_bruto = 0.0
     monto_con_agenda = 0.0
     count_con_agenda = 0
     monto_sin_agenda = 0.0
@@ -398,6 +386,16 @@ def get_financial_sales():
     
     setter_stats = {}
     closer_stats = {}
+    payment_types_simple_map = {}
+    payment_methods_map = {}
+    
+    # Conjuntos para recopilar los filtros dinámicos disponibles en el rango
+    all_closers_set = set()
+    all_setters_set = set()
+    all_programs_set = set()
+    all_payment_types_set = set()
+    all_payment_methods_set = set()
+    
     processed_sales = []
     
     for s in subquery_sales:
@@ -426,6 +424,38 @@ def get_financial_sales():
             if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
                 resolved_setter = s_setter
                 
+        final_setter = resolved_setter or "Sin Setter"
+        final_closer = resolve_closer_name(s.email_vendedor)
+        
+        # Recolectar valores únicos del rango seleccionado (antes de aplicar filtros cruzados de closer y source)
+        all_closers_set.add(final_closer)
+        all_setters_set.add(final_setter)
+        prog, simple_tp = split_tipo_pago(s.tipo_pago)
+        if prog and prog != "Desconocido":
+            all_programs_set.add(prog)
+        if simple_tp:
+            all_payment_types_set.add(simple_tp)
+        if s.metodo_pago:
+            all_payment_methods_set.add(s.metodo_pago)
+
+        # Aplicar el filtro de closer in-memory
+        if closer_filter:
+            if closer_filter.lower() == 'sin closer':
+                if final_closer != 'Sin Closer':
+                    continue
+            else:
+                if final_closer.lower() != closer_filter.lower():
+                    continue
+
+        # Aplicar el filtro de fuente (setter) in-memory
+        if source_filter:
+            if source_filter.lower() == 'sin setter':
+                if final_setter != 'Sin Setter':
+                    continue
+            else:
+                if final_setter.lower() != source_filter.lower():
+                    continue
+                    
         # Una venta está completada si no tiene estado o su estado es "Completada"
         sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() == "completada"
 
@@ -447,27 +477,43 @@ def get_financial_sales():
                 monto_sin_agenda += monto_ajustado
             count_sin_agenda += 1
             
-        final_setter = resolved_setter or "Sin Setter"
         if final_setter not in setter_stats:
             setter_stats[final_setter] = {"count": 0, "total_monto": 0.0}
         setter_stats[final_setter]["count"] += 1
         if sale_is_completed:
             setter_stats[final_setter]["total_monto"] += monto_ajustado
             
-        # Agrupación por closer
-        final_closer = resolve_closer_name(s.email_vendedor)
         if final_closer not in closer_stats:
             closer_stats[final_closer] = {"count": 0, "total_monto": 0.0}
         closer_stats[final_closer]["count"] += 1
         if sale_is_completed:
             closer_stats[final_closer]["total_monto"] += monto_ajustado
+            
+        if sale_is_completed:
+            total_monto += monto_ajustado
+            total_monto_bruto += monto_original
+
+        # Acumular breakdowns in-memory
+        # Para payment_types
+        if simple_tp not in payment_types_simple_map:
+            payment_types_simple_map[simple_tp] = {"count": 0, "total_monto": 0.0}
+        payment_types_simple_map[simple_tp]["count"] += 1
+        if sale_is_completed:
+            payment_types_simple_map[simple_tp]["total_monto"] += monto_ajustado
+            
+        # Para payment_methods
+        method_name = s.metodo_pago or "No Especificado"
+        if method_name not in payment_methods_map:
+            payment_methods_map[method_name] = {"count": 0, "total_monto": 0.0}
+        payment_methods_map[method_name]["count"] += 1
+        if sale_is_completed:
+            payment_methods_map[method_name]["total_monto"] += monto_ajustado
         
         s_dict["monto"] = round(monto_ajustado, 2)
         s_dict["monto_bruto"] = round(monto_original, 2)
         s_dict["setter"] = final_setter
         s_dict["closer_name"] = final_closer
         s_dict["has_agenda"] = has_agenda_match
-        prog, simple_tp = split_tipo_pago(s.tipo_pago)
         s_dict["programa"] = prog
         s_dict["tipo_pago_simple"] = simple_tp
         processed_sales.append(s_dict)
@@ -489,6 +535,24 @@ def get_financial_sales():
             "total_monto": round(stats["total_monto"], 2)
         })
     closers_breakdown.sort(key=lambda x: x["total_monto"], reverse=True)
+
+    payment_types_breakdown = []
+    for tp_simple, stats in payment_types_simple_map.items():
+        payment_types_breakdown.append({
+            "tipo_pago": tp_simple,
+            "count": stats["count"],
+            "total_monto": round(stats["total_monto"], 2)
+        })
+    payment_types_breakdown.sort(key=lambda x: x["total_monto"], reverse=True)
+        
+    payment_methods_breakdown = []
+    for pm_method, stats in payment_methods_map.items():
+        payment_methods_breakdown.append({
+            "metodo_pago": pm_method,
+            "count": stats["count"],
+            "total_monto": round(stats["total_monto"], 2)
+        })
+    payment_methods_breakdown.sort(key=lambda x: x["total_monto"], reverse=True)
     
     agenda_query = FinancialAgenda.query
     if start_date_str:
@@ -518,69 +582,11 @@ def get_financial_sales():
         }
     }
 
-    payment_type_query = db.session.query(
-        FinancialSale.tipo_pago,
-        func.count(FinancialSale.id),
-        func.sum(adjusted_monto_expr)
-    ).filter(
-        FinancialSale.id.in_(subquery)
-    ).filter(
-        or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
-    ).group_by(FinancialSale.tipo_pago).all()
-
-    payment_types_simple_map = {}
-    for tp, count, total_tp_monto in payment_type_query:
-        _, simple_tp = split_tipo_pago(tp)
-        if simple_tp not in payment_types_simple_map:
-            payment_types_simple_map[simple_tp] = {"count": 0, "total_monto": 0.0}
-        payment_types_simple_map[simple_tp]["count"] += count
-        payment_types_simple_map[simple_tp]["total_monto"] += float(total_tp_monto or 0.0)
-
-    payment_types_breakdown = []
-    for tp_simple, stats in payment_types_simple_map.items():
-        payment_types_breakdown.append({
-            "tipo_pago": tp_simple,
-            "count": stats["count"],
-            "total_monto": round(stats["total_monto"], 2)
-        })
-
-    payment_method_query = db.session.query(
-        FinancialSale.metodo_pago,
-        func.count(FinancialSale.id),
-        func.sum(adjusted_monto_expr)
-    ).filter(
-        FinancialSale.id.in_(subquery)
-    ).filter(
-        or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
-    ).group_by(FinancialSale.metodo_pago).all()
-
-    payment_methods_breakdown = []
-    for pm_method, count, total_mp_monto in payment_method_query:
-        payment_methods_breakdown.append({
-            "metodo_pago": pm_method or "No Especificado",
-            "count": count,
-            "total_monto": round(total_mp_monto or 0.0, 2)
-        })
-
-    all_tps = [
-        r[0] for r in db.session.query(FinancialSale.tipo_pago).distinct().all() if r[0]
-    ]
-    unique_programs_set = set()
-    unique_payment_types_simple_set = set()
-    for tp in all_tps:
-        prog, simple_tp = split_tipo_pago(tp)
-        if prog and prog != "Desconocido":
-            unique_programs_set.add(prog)
-        if simple_tp:
-            unique_payment_types_simple_set.add(simple_tp)
-    
-    unique_programs = sorted(list(unique_programs_set))
-    unique_payment_types = sorted(list(unique_payment_types_simple_set))
-    
-    all_methods = [
-        r[0] for r in db.session.query(FinancialSale.metodo_pago).distinct().all() if r[0]
-    ]
-    unique_payment_methods = sorted(list(set(all_methods)))
+    unique_programs = sorted(list(all_programs_set))
+    unique_payment_types = sorted(list(all_payment_types_set))
+    unique_payment_methods = sorted(list(all_payment_methods_set))
+    unique_closers = sorted(list(all_closers_set))
+    unique_setters = sorted(list(all_setters_set))
 
     if sin_atribucion:
         processed_sales = [s for s in processed_sales if not s["has_agenda"]]
@@ -608,7 +614,9 @@ def get_financial_sales():
             "payment_methods_breakdown": payment_methods_breakdown,
             "unique_programs": unique_programs,
             "unique_payment_types": unique_payment_types,
-            "unique_payment_methods": unique_payment_methods
+            "unique_payment_methods": unique_payment_methods,
+            "unique_closers": unique_closers,
+            "unique_setters": unique_setters
         }), 200
     else:
         return jsonify(processed_sales), 200
