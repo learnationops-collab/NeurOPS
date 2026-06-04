@@ -323,7 +323,7 @@ const AdminPayrollPage = () => {
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-1">
                                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                                            <Compass size={10} /> Setter (Atribución)
+                                            <Compass size={10} /> Setter
                                         </span>
                                         <h2 className="text-lg font-black text-white uppercase group-hover:text-indigo-400 transition-colors">Elias</h2>
                                     </div>
@@ -359,7 +359,7 @@ const AdminPayrollPage = () => {
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-1">
                                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                                            <UserCheck size={10} /> Closer (Cierres)
+                                            <UserCheck size={10} /> Closer
                                         </span>
                                         <h2 className="text-lg font-black text-white uppercase group-hover:text-violet-400 transition-colors">Jean Carlo</h2>
                                     </div>
@@ -395,7 +395,7 @@ const AdminPayrollPage = () => {
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-1">
                                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                                            <UserCheck size={10} /> Líder (5% de Jean Carlo sin Renovaciones)
+                                            <UserCheck size={10} /> Director de ventas
                                         </span>
                                         <h2 className="text-lg font-black text-white uppercase group-hover:text-rose-400 transition-colors">Marlon</h2>
                                     </div>
