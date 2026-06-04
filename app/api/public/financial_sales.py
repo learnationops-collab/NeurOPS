@@ -4,6 +4,36 @@ from datetime import datetime
 from . import bp
 from sqlalchemy import or_, func, case
 
+def resolve_closer_name(email_or_name):
+    # Convierte correos oficiales a nombres limpios de closers
+    if not email_or_name:
+        return "Sin Closer"
+    val_norm = str(email_or_name).strip().lower()
+    
+    mapping = {
+        'Jean Carlo': ['jeancarlo@thelearnation.com'],
+        'Marlon': ['marlon@thelearnation.com', 'marlongarcia27948@gmail.com'],
+        'Guillermo': ['guillermo@thelearnation.com'],
+        'Tomas': ['tomas@thelearnation.com', 'tomaszetaaa@gmail.com'],
+        'Mario': ['mario@neurocogniciones.com', 'mario@thelearnation.com'],
+        'Mercari': ['mercaricc@gmail.com', 'mírcari', 'mircari', 'mercari'],
+        'Iñaki': ['iñaki', 'inaki'],
+        'Rafael': ['rafael'],
+        'Mateo': ['mateo'],
+        'Belén': ['mbelenamerise@gmail.com', 'belen'],
+        'Valery': ['valeryjohana.cabrera@gmail.com', 'valery'],
+        'Gabriel': ['gabriel@thelearnation.com', 'gabriel']
+    }
+    
+    for name, list_vals in mapping.items():
+        for val in list_vals:
+            if val in val_norm:
+                return name
+                
+    if '@' in email_or_name:
+        return email_or_name.split('@')[0].replace('.', ' ').title()
+    return email_or_name.title()
+
 def split_tipo_pago(tp):
     # Separa el programa del tipo de pago simple
     if not tp:
@@ -367,6 +397,7 @@ def get_financial_sales():
     count_sin_agenda = 0
     
     setter_stats = {}
+    closer_stats = {}
     processed_sales = []
     
     for s in subquery_sales:
@@ -422,10 +453,19 @@ def get_financial_sales():
         setter_stats[final_setter]["count"] += 1
         if sale_is_completed:
             setter_stats[final_setter]["total_monto"] += monto_ajustado
+            
+        # Agrupación por closer
+        final_closer = resolve_closer_name(s.email_vendedor)
+        if final_closer not in closer_stats:
+            closer_stats[final_closer] = {"count": 0, "total_monto": 0.0}
+        closer_stats[final_closer]["count"] += 1
+        if sale_is_completed:
+            closer_stats[final_closer]["total_monto"] += monto_ajustado
         
         s_dict["monto"] = round(monto_ajustado, 2)
         s_dict["monto_bruto"] = round(monto_original, 2)
         s_dict["setter"] = final_setter
+        s_dict["closer_name"] = final_closer
         s_dict["has_agenda"] = has_agenda_match
         prog, simple_tp = split_tipo_pago(s.tipo_pago)
         s_dict["programa"] = prog
@@ -440,6 +480,15 @@ def get_financial_sales():
             "total_monto": round(stats["total_monto"], 2)
         })
     sources_breakdown.sort(key=lambda x: x["total_monto"], reverse=True)
+    
+    closers_breakdown = []
+    for closer_name, stats in closer_stats.items():
+        closers_breakdown.append({
+            "closer": closer_name,
+            "count": stats["count"],
+            "total_monto": round(stats["total_monto"], 2)
+        })
+    closers_breakdown.sort(key=lambda x: x["total_monto"], reverse=True)
     
     agenda_query = FinancialAgenda.query
     if start_date_str:
@@ -553,6 +602,7 @@ def get_financial_sales():
             "total_monto": float(total_monto),
             "total_monto_bruto": float(total_monto_bruto),
             "sources_breakdown": sources_breakdown,
+            "closers_breakdown": closers_breakdown,
             "agenda_breakdown": agenda_breakdown,
             "payment_types_breakdown": payment_types_breakdown,
             "payment_methods_breakdown": payment_methods_breakdown,

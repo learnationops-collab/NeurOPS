@@ -36,6 +36,23 @@ const getSourceColors = (name) => {
     return { gradient: 'from-slate-500 to-slate-600', dot: 'bg-slate-500', text: 'text-slate-400', bg: 'bg-slate-500/10' };
 };
 
+const getCloserColors = (name) => {
+    const norm = name ? name.toLowerCase() : '';
+    if (norm.includes('marlon')) return { gradient: 'from-blue-500 to-sky-600', dot: 'bg-blue-500', text: 'text-blue-400', bg: 'bg-blue-500/10' };
+    if (norm.includes('jean carlo') || norm.includes('jeancarlo')) return { gradient: 'from-amber-400 to-yellow-500', dot: 'bg-amber-400', text: 'text-amber-400', bg: 'bg-amber-500/10' };
+    if (norm.includes('guillermo')) return { gradient: 'from-emerald-400 to-teal-500', dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10' };
+    if (norm.includes('tomas')) return { gradient: 'from-rose-500 to-fuchsia-600', dot: 'bg-rose-500', text: 'text-rose-400', bg: 'bg-rose-500/10' };
+    if (norm.includes('mario')) return { gradient: 'from-violet-500 to-purple-600', dot: 'bg-violet-500', text: 'text-violet-400', bg: 'bg-violet-500/10' };
+    if (norm.includes('mercari')) return { gradient: 'from-pink-400 to-rose-400', dot: 'bg-pink-400', text: 'text-pink-400', bg: 'bg-pink-500/10' };
+    if (norm.includes('iñaki') || norm.includes('inaki')) return { gradient: 'from-cyan-400 to-blue-500', dot: 'bg-cyan-400', text: 'text-cyan-400', bg: 'bg-cyan-500/10' };
+    if (norm.includes('rafael')) return { gradient: 'from-orange-400 to-red-500', dot: 'bg-orange-400', text: 'text-orange-400', bg: 'bg-orange-500/10' };
+    if (norm.includes('mateo')) return { gradient: 'from-indigo-400 to-purple-500', dot: 'bg-indigo-400', text: 'text-indigo-400', bg: 'bg-indigo-500/10' };
+    if (norm.includes('belen') || norm.includes('belén')) return { gradient: 'from-teal-400 to-emerald-500', dot: 'bg-teal-400', text: 'text-teal-400', bg: 'bg-teal-500/10' };
+    if (norm.includes('valery')) return { gradient: 'from-fuchsia-400 to-pink-500', dot: 'bg-fuchsia-400', text: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' };
+    if (norm.includes('gabriel')) return { gradient: 'from-lime-400 to-green-500', dot: 'bg-lime-400', text: 'text-lime-400', bg: 'bg-lime-500/10' };
+    return { gradient: 'from-slate-500 to-slate-600', dot: 'bg-slate-500', text: 'text-slate-400', bg: 'bg-slate-500/10' };
+};
+
 const PublicFinancialSalesPage = () => {
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -47,7 +64,9 @@ const PublicFinancialSalesPage = () => {
     const [totalSalesAmount, setTotalSalesAmount] = useState(0);
     const [totalSalesAmountBruto, setTotalSalesAmountBruto] = useState(0);
     const [sourcesBreakdown, setSourcesBreakdown] = useState([]);
+    const [closersBreakdown, setClosersBreakdown] = useState([]);
     const [customPercentage, setCustomPercentage] = useState(10); // default 10%
+    const [closerPercentage, setCloserPercentage] = useState(10); // default 10%
     const [agendaBreakdown, setAgendaBreakdown] = useState(null);
     const [paymentTypesBreakdown, setPaymentTypesBreakdown] = useState([]);
     const [uniquePrograms, setUniquePrograms] = useState([]);
@@ -132,6 +151,7 @@ const PublicFinancialSalesPage = () => {
             setTotalSalesAmount(res.data.total_monto || 0);
             setTotalSalesAmountBruto(res.data.total_monto_bruto || 0);
             setSourcesBreakdown(res.data.sources_breakdown || []);
+            setClosersBreakdown(res.data.closers_breakdown || []);
             setAgendaBreakdown(res.data.agenda_breakdown || null);
             setPaymentTypesBreakdown(res.data.payment_types_breakdown || []);
             setPaymentMethodsBreakdown(res.data.payment_methods_breakdown || []);
@@ -809,6 +829,112 @@ const PublicFinancialSalesPage = () => {
                 </Card>
             )}
 
+            {/* Sales breakdown by closer */}
+            {closersBreakdown.length > 0 && (
+                <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 space-y-6 relative overflow-hidden bg-slate-900/40">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div className="space-y-1">
+                            <h2 className="text-lg font-black text-white italic tracking-tight uppercase flex items-center gap-2">
+                                <Users className="text-violet-500" size={18} />
+                                Ventas por Closer
+                            </h2>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wide flex flex-wrap items-baseline gap-1">
+                                Total Acumulado: <span className="text-emerald-400 font-black text-sm">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalSalesAmount)} USD <span className="text-[10px] text-slate-500 font-normal uppercase tracking-wider">neto</span></span>
+                                {totalSalesAmountBruto && totalSalesAmountBruto !== totalSalesAmount && (
+                                    <span className="text-slate-400 font-medium text-xs ml-2">
+                                        (Bruto: ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(totalSalesAmountBruto)} USD)
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+
+                        {/* Interactive Commission Input */}
+                        <div className="flex items-center gap-3 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                            <Percent className="text-violet-400 w-4 h-4" />
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Calcular % Comisión:</span>
+                            <div className="flex items-center gap-1">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={closerPercentage}
+                                    onChange={(e) => setCloserPercentage(parseFloat(e.target.value) || 0)}
+                                    className="w-12 bg-white border border-slate-300 text-xs font-black text-black rounded-lg px-2 py-1 text-center focus:outline-none focus:border-violet-500 font-bold"
+                                />
+                                <span className="text-xs font-black text-slate-400">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Visual Segmented Progress Bar */}
+                    <div className="flex h-3 w-full rounded-full bg-slate-950 overflow-hidden shadow-inner border border-slate-800/40">
+                        {closersBreakdown
+                            .sort((a, b) => b.total_monto - a.total_monto)
+                            .map((item) => {
+                                const pct = totalSalesAmount > 0 ? (item.total_monto / totalSalesAmount) * 100 : 0;
+                                if (pct <= 0) return null;
+                                const colors = getCloserColors(item.closer);
+                                return (
+                                    <div
+                                        key={item.closer}
+                                        style={{ width: `${pct}%` }}
+                                        className={`h-full bg-gradient-to-r ${colors.gradient} transition-all duration-500`}
+                                        title={`${item.closer}: ${pct.toFixed(1)}%`}
+                                    />
+                                );
+                            })}
+                    </div>
+
+                    {/* Breakdown Closers Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {closersBreakdown
+                            .sort((a, b) => b.total_monto - a.total_monto)
+                            .map((item) => {
+                                const pct = totalSalesAmount > 0 ? (item.total_monto / totalSalesAmount) * 100 : 0;
+                                const colors = getCloserColors(item.closer);
+                                const customShare = (item.total_monto * closerPercentage) / 100;
+                                
+                                return (
+                                    <div key={item.closer} className="bg-slate-950/50 border border-slate-800/60 p-4 rounded-2xl flex flex-col justify-between hover:border-slate-700/80 transition-all group">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2.5 h-2.5 rounded-full ${colors.dot}`} />
+                                                <span className="text-xs font-black text-white uppercase tracking-tight">
+                                                    {item.closer}
+                                                </span>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                                {pct.toFixed(1)}%
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <div className="flex justify-between items-baseline">
+                                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Recaudado</span>
+                                                <span className="text-base font-black text-emerald-400 italic">
+                                                    ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(item.total_monto)}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[10px] text-slate-400">
+                                                <span>{item.count} {item.count === 1 ? 'venta' : 'ventas'}</span>
+                                                <span className="text-[9px] font-bold text-slate-500 uppercase">Volumen</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Dynamic commission box */}
+                                        <div className="mt-3 pt-3 border-t border-slate-900 flex justify-between items-center bg-slate-950/80 p-2 rounded-xl">
+                                            <span className="text-[9px] font-bold text-violet-400 uppercase tracking-widest">{closerPercentage}% Calc</span>
+                                            <span className="text-xs font-black text-white italic">
+                                                ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(customShare)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                    </div>
+                </Card>
+            )}
+
             <Card className="overflow-x-auto">
                 {loading ? (
                     <div className="flex justify-center p-12">
@@ -964,7 +1090,7 @@ const PublicFinancialSalesPage = () => {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <div className="text-xs text-slate-300">C: {sale.email_vendedor?.split('@')[0] || 'N/A'}</div>
+                                                        <div className="text-xs text-slate-300">C: {sale.closer_name || sale.email_vendedor?.split('@')[0] || 'N/A'}</div>
                                                         <div className="text-xs text-slate-400">S: {sale.setter || 'N/A'}</div>
                                                     </>
                                                 )}
