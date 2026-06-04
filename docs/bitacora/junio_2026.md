@@ -210,6 +210,8 @@
     - **API Backend (`image_service.py`) [MODIFY]**: Se unificaron y ampliaron los flags de Chromium (`custom_flags`) pasados a `Html2Image` en Linux. Se agregaron `--disable-gpu`, `--disable-software-rasterizer`, `--log-level=3` y se aseguró el uso de `--disable-dbus` y `--disable-extensions` en todos los métodos de generación de tarjetas de reporte. Esto elimina el ruido masivo de advertencias del motor gráfico y de conexión a bus de sistema en los logs de despliegue en Railway.
   - **Persistencia en la Edición de Setter de Ventas con Agenda**:
     - **API Backend (`financial_sales.py`) [MODIFY]**: Se refactorizó la función helper `normalize_ig` a nivel de módulo (removiendo sus definiciones internas duplicadas en `get_financial_sales` y `get_financial_sales_payroll`). Se modificó el endpoint `PUT /public/financial-sales/<int:sale_id>` para que, al editar el `setter_name` de una venta, si existe una agenda asociada a la misma vía Instagram, actualice también automáticamente la fuente de la agenda (`agenda.nombre = setter_name`). Esto previene que el cambio se revierta al refrescar la página debido a la atribución dinámica de agendas.
+  - **Filtro por Usuario en Consolidado de Nómina (PayRoll)**:
+    - **Interfaz (Frontend) (`AdminPayrollPage.jsx`) [MODIFY]**: Se implementó un filtro de selección de alta gama para filtrar por usuario en el panel superior (Todos, Elias, Jean Carlo, Marlon). El filtro es reactivo; al seleccionar un usuario en particular, se ocultan las tarjetas de los demás y se establece automáticamente la pestaña de auditoría en el usuario seleccionado. Asimismo, se adaptó el grid para reajustar el layout de forma responsiva al ocultar tarjetas y se integró con la función de restablecer filtros.
 
 
 

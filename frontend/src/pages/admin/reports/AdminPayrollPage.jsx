@@ -38,12 +38,20 @@ const formatSaleDate = (dateStr) => {
 const AdminPayrollPage = () => {
     const [startDate, setStartDate] = useState(getFirstDayOfCurrentMonth());
     const [endDate, setEndDate] = useState(getTodayDate());
+    const [selectedUserFilter, setSelectedUserFilter] = useState('all');
     const [payroll, setPayroll] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('elias');
 
     const startDateRef = useRef(null);
     const endDateRef = useRef(null);
+
+    const handleUserFilterChange = (filterId) => {
+        setSelectedUserFilter(filterId);
+        if (filterId !== 'all') {
+            setActiveTab(filterId);
+        }
+    };
 
     const applyDatePreset = (preset) => {
         const today = new Date();
@@ -89,12 +97,13 @@ const AdminPayrollPage = () => {
     };
 
     const isFiltered = () => {
-        return startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate();
+        return startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate() || selectedUserFilter !== 'all';
     };
 
     const handleClearFilters = () => {
         setStartDate(getFirstDayOfCurrentMonth());
         setEndDate(getTodayDate());
+        setSelectedUserFilter('all');
     };
 
     const fetchPayroll = async () => {
@@ -217,6 +226,37 @@ const AdminPayrollPage = () => {
                         })}
                     </div>
                 </div>
+
+                <div className="pt-3 border-t border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 text-violet-400">
+                        <Users size={16} />
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-300">Usuario</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {[
+                            { id: 'all', label: 'Todos' },
+                            { id: 'elias', label: 'Elias' },
+                            { id: 'jeancarlo', label: 'Jean Carlo' },
+                            { id: 'marlon', label: 'Marlon' }
+                        ].map((userOpt) => {
+                            const isActive = selectedUserFilter === userOpt.id;
+                            return (
+                                <button
+                                    key={userOpt.id}
+                                    type="button"
+                                    onClick={() => handleUserFilterChange(userOpt.id)}
+                                    className={`text-[9px] font-black uppercase tracking-wider px-3.5 py-2 rounded-lg border transition-all ${
+                                        isActive
+                                            ? 'bg-violet-500/15 border-violet-550/40 text-violet-300 shadow-sm'
+                                            : 'bg-slate-950/40 border-slate-900 text-slate-500 hover:text-slate-350 hover:border-slate-800'
+                                    }`}
+                                >
+                                    {userOpt.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
             </Card>
 
             {loading ? (
@@ -227,108 +267,118 @@ const AdminPayrollPage = () => {
             ) : payroll ? (
                 <>
                     {/* Tarjetas KPI de comisiones */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className={`grid grid-cols-1 gap-6 ${
+                        selectedUserFilter === 'all' 
+                            ? 'lg:grid-cols-3' 
+                            : 'max-w-md lg:grid-cols-1'
+                    }`}>
                         {/* Elias */}
-                        <div 
-                            onClick={() => setActiveTab('elias')}
-                            className={`p-6 rounded-[2rem] border transition-all cursor-pointer relative overflow-hidden bg-slate-900/40 backdrop-blur-md group ${
-                                activeTab === 'elias'
-                                    ? 'border-indigo-500/40 shadow-xl shadow-indigo-500/5 bg-indigo-950/10'
-                                    : 'border-slate-800 hover:border-slate-700'
-                            }`}
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                                        <Compass size={10} /> Setter (Atribución)
-                                    </span>
-                                    <h2 className="text-lg font-black text-white uppercase group-hover:text-indigo-400 transition-colors">Elias</h2>
+                        {(selectedUserFilter === 'all' || selectedUserFilter === 'elias') && (
+                            <div 
+                                onClick={() => setActiveTab('elias')}
+                                className={`p-6 rounded-[2rem] border transition-all cursor-pointer relative overflow-hidden bg-slate-900/40 backdrop-blur-md group ${
+                                    activeTab === 'elias'
+                                        ? 'border-indigo-500/40 shadow-xl shadow-indigo-500/5 bg-indigo-950/10'
+                                        : 'border-slate-800 hover:border-slate-700'
+                                }`}
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div className="space-y-1">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                            <Compass size={10} /> Setter (Atribución)
+                                        </span>
+                                        <h2 className="text-lg font-black text-white uppercase group-hover:text-indigo-400 transition-colors">Elias</h2>
+                                    </div>
+                                    <span className="text-xs font-black text-slate-500 group-hover:text-slate-300 uppercase tracking-widest">{payroll.elias.porcentaje_comision}% Comisión</span>
                                 </div>
-                                <span className="text-xs font-black text-slate-500 group-hover:text-slate-300 uppercase tracking-widest">{payroll.elias.porcentaje_comision}% Comisión</span>
-                            </div>
 
-                            <div className="mt-6 space-y-2">
-                                <div className="flex items-baseline justify-between">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comisión Generada</span>
-                                    <span className="text-2xl font-black text-emerald-400 italic">
-                                        ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(payroll.elias.comision_total)}
-                                    </span>
-                                </div>
-                                <div className="w-full bg-slate-950/60 h-px" />
-                                <div className="flex justify-between text-xs text-slate-400">
-                                    <span>Ventas Atribuidas: <strong className="text-white">{payroll.elias.total_ventas}</strong></span>
-                                    <span>Neto: <strong>${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(payroll.elias.total_recaudado_neto)}</strong></span>
+                                <div className="mt-6 space-y-2">
+                                    <div className="flex items-baseline justify-between">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comisión Generada</span>
+                                        <span className="text-2xl font-black text-emerald-400 italic">
+                                            ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(payroll.elias.comision_total)}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-slate-950/60 h-px" />
+                                    <div className="flex justify-between text-xs text-slate-400">
+                                        <span>Ventas Atribuidas: <strong className="text-white">{payroll.elias.total_ventas}</strong></span>
+                                        <span>Neto: <strong>${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(payroll.elias.total_recaudado_neto)}</strong></span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Jean Carlo */}
-                        <div 
-                            onClick={() => setActiveTab('jeancarlo')}
-                            className={`p-6 rounded-[2rem] border transition-all cursor-pointer relative overflow-hidden bg-slate-900/40 backdrop-blur-md group ${
-                                activeTab === 'jeancarlo'
-                                    ? 'border-indigo-500/40 shadow-xl shadow-indigo-500/5 bg-indigo-950/10'
-                                    : 'border-slate-800 hover:border-slate-700'
-                            }`}
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                                        <UserCheck size={10} /> Closer (Cierres)
-                                    </span>
-                                    <h2 className="text-lg font-black text-white uppercase group-hover:text-violet-400 transition-colors">Jean Carlo</h2>
+                        {(selectedUserFilter === 'all' || selectedUserFilter === 'jeancarlo') && (
+                            <div 
+                                onClick={() => setActiveTab('jeancarlo')}
+                                className={`p-6 rounded-[2rem] border transition-all cursor-pointer relative overflow-hidden bg-slate-900/40 backdrop-blur-md group ${
+                                    activeTab === 'jeancarlo'
+                                        ? 'border-indigo-500/40 shadow-xl shadow-indigo-500/5 bg-indigo-950/10'
+                                        : 'border-slate-800 hover:border-slate-700'
+                                }`}
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div className="space-y-1">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                                            <UserCheck size={10} /> Closer (Cierres)
+                                        </span>
+                                        <h2 className="text-lg font-black text-white uppercase group-hover:text-violet-400 transition-colors">Jean Carlo</h2>
+                                    </div>
+                                    <span className="text-xs font-black text-slate-500 group-hover:text-slate-300 uppercase tracking-widest">{payroll.jeancarlo.porcentaje_comision}% Comisión</span>
                                 </div>
-                                <span className="text-xs font-black text-slate-500 group-hover:text-slate-300 uppercase tracking-widest">{payroll.jeancarlo.porcentaje_comision}% Comisión</span>
-                            </div>
 
-                            <div className="mt-6 space-y-2">
-                                <div className="flex items-baseline justify-between">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comisión Generada</span>
-                                    <span className="text-2xl font-black text-emerald-400 italic">
-                                        ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(payroll.jeancarlo.comision_total)}
-                                    </span>
-                                </div>
-                                <div className="w-full bg-slate-950/60 h-px" />
-                                <div className="flex justify-between text-xs text-slate-400">
-                                    <span>Ventas Cerradas: <strong className="text-white">{payroll.jeancarlo.total_ventas}</strong></span>
-                                    <span>Neto: <strong>${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(payroll.jeancarlo.total_recaudado_neto)}</strong></span>
+                                <div className="mt-6 space-y-2">
+                                    <div className="flex items-baseline justify-between">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comisión Generada</span>
+                                        <span className="text-2xl font-black text-emerald-400 italic">
+                                            ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(payroll.jeancarlo.comision_total)}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-slate-950/60 h-px" />
+                                    <div className="flex justify-between text-xs text-slate-400">
+                                        <span>Ventas Cerradas: <strong className="text-white">{payroll.jeancarlo.total_ventas}</strong></span>
+                                        <span>Neto: <strong>${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(payroll.jeancarlo.total_recaudado_neto)}</strong></span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Marlon */}
-                        <div 
-                            onClick={() => setActiveTab('marlon')}
-                            className={`p-6 rounded-[2rem] border transition-all cursor-pointer relative overflow-hidden bg-slate-900/40 backdrop-blur-md group ${
-                                activeTab === 'marlon'
-                                    ? 'border-indigo-500/40 shadow-xl shadow-indigo-500/5 bg-indigo-950/10'
-                                    : 'border-slate-800 hover:border-slate-700'
-                            }`}
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                                        <UserCheck size={10} /> Líder (5% de Jean Carlo sin Renovaciones)
-                                    </span>
-                                    <h2 className="text-lg font-black text-white uppercase group-hover:text-rose-400 transition-colors">Marlon</h2>
+                        {(selectedUserFilter === 'all' || selectedUserFilter === 'marlon') && (
+                            <div 
+                                onClick={() => setActiveTab('marlon')}
+                                className={`p-6 rounded-[2rem] border transition-all cursor-pointer relative overflow-hidden bg-slate-900/40 backdrop-blur-md group ${
+                                    activeTab === 'marlon'
+                                        ? 'border-indigo-500/40 shadow-xl shadow-indigo-500/5 bg-indigo-950/10'
+                                        : 'border-slate-800 hover:border-slate-700'
+                                }`}
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div className="space-y-1">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                            <UserCheck size={10} /> Líder (5% de Jean Carlo sin Renovaciones)
+                                        </span>
+                                        <h2 className="text-lg font-black text-white uppercase group-hover:text-rose-400 transition-colors">Marlon</h2>
+                                    </div>
+                                    <span className="text-xs font-black text-slate-500 group-hover:text-slate-300 uppercase tracking-widest">{payroll.marlon.porcentaje_comision}% Comisión</span>
                                 </div>
-                                <span className="text-xs font-black text-slate-500 group-hover:text-slate-300 uppercase tracking-widest">{payroll.marlon.porcentaje_comision}% Comisión</span>
-                            </div>
 
-                            <div className="mt-6 space-y-2">
-                                <div className="flex items-baseline justify-between">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comisión Generada</span>
-                                    <span className="text-2xl font-black text-emerald-400 italic">
-                                        ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(payroll.marlon.comision_total)}
-                                    </span>
-                                </div>
-                                <div className="w-full bg-slate-950/60 h-px" />
-                                <div className="flex justify-between text-xs text-slate-400">
-                                    <span>Ventas JC Calificadas: <strong className="text-white">{payroll.marlon.total_ventas}</strong></span>
-                                    <span>Neto JC: <strong>${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(payroll.marlon.total_recaudado_neto)}</strong></span>
+                                <div className="mt-6 space-y-2">
+                                    <div className="flex items-baseline justify-between">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Comisión Generada</span>
+                                        <span className="text-2xl font-black text-emerald-400 italic">
+                                            ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(payroll.marlon.comision_total)}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-slate-950/60 h-px" />
+                                    <div className="flex justify-between text-xs text-slate-400">
+                                        <span>Ventas JC Calificadas: <strong className="text-white">{payroll.marlon.total_ventas}</strong></span>
+                                        <span>Neto JC: <strong>${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(payroll.marlon.total_recaudado_neto)}</strong></span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* Desglose de Auditoría */}
