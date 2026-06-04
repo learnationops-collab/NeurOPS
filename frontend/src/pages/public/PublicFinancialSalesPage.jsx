@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp, AlertCircle, Plus, Trash2, BookOpen, CreditCard, Wallet, UserCheck, Compass, ChevronDown, Filter } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import AttributionModal from '../../components/modals/AttributionModal';
@@ -119,6 +119,63 @@ const PublicFinancialSalesPage = () => {
     const [attributionSale, setAttributionSale] = useState(null);
     
     const loaderRef = useRef(null);
+    const startDateRef = useRef(null);
+    const endDateRef = useRef(null);
+
+    const applyDatePreset = (preset) => {
+        const today = new Date();
+        let start = '';
+        let end = today.toISOString().split('T')[0];
+
+        if (preset === 'today') {
+            start = end;
+        } else if (preset === 'this_month') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        } else if (preset === 'last_month') {
+            const firstOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+            start = firstOfLastMonth.toISOString().split('T')[0];
+            end = lastOfLastMonth.toISOString().split('T')[0];
+        } else if (preset === 'last_30_days') {
+            const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+            start = thirtyDaysAgo.toISOString().split('T')[0];
+        }
+
+        setFilters({ startDate: start, endDate: end });
+    };
+
+    const getActiveDatePreset = () => {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        
+        const lastMonthFirst = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthLast = new Date(today.getFullYear(), today.getMonth(), 0);
+        const lastMonthStartStr = lastMonthFirst.toISOString().split('T')[0];
+        const lastMonthEndStr = lastMonthLast.toISOString().split('T')[0];
+        
+        const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        if (startDate === todayStr && endDate === todayStr) return 'today';
+        if (startDate === thisMonthStart && endDate === todayStr) return 'this_month';
+        if (startDate === lastMonthStartStr && endDate === lastMonthEndStr) return 'last_month';
+        if (startDate === thirtyDaysAgo && endDate === todayStr) return 'last_30_days';
+        return 'custom';
+    };
+
+    const getActiveFiltersCount = () => {
+        let count = 0;
+        if (searchTerm) count++;
+        if (startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate()) count++;
+        if (programa) count++;
+        if (tipoPagoSimple) count++;
+        if (metodoPago) count++;
+        if (closer) count++;
+        if (source) count++;
+        if (sinAtribucion) count++;
+        return count;
+    };
 
     const handleClearFilters = () => {
         setFilters({
@@ -477,152 +534,269 @@ const PublicFinancialSalesPage = () => {
             </div>
 
             {/* Panel de Filtros Reorganizado */}
-            <Card variant="surface" className="p-5 rounded-[2rem] border-slate-800 bg-slate-900/20 backdrop-blur-md space-y-4">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2 text-violet-400">
-                        <Search size={16} />
-                        <span className="text-xs font-black uppercase tracking-wider text-slate-300">Filtros de Búsqueda</span>
+            <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 bg-slate-900/20 backdrop-blur-md space-y-5 shadow-2xl relative overflow-hidden">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div className="flex items-center gap-2 text-violet-405">
+                        <Filter size={16} className="text-violet-400" />
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-200">Filtros Inteligentes</span>
                     </div>
-                    {(searchTerm || programa || tipoPagoSimple || metodoPago || closer || source) && (
+                    {getActiveFiltersCount() > 0 && (
                         <button
                             onClick={handleClearFilters}
-                            className="text-xs text-rose-400 hover:text-rose-300 font-bold transition-colors uppercase tracking-wider flex items-center gap-1 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20"
+                            className="text-xs text-rose-400 hover:text-rose-300 font-bold transition-all uppercase tracking-wider flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 px-3.5 py-1.5 rounded-full border border-rose-500/20 hover:scale-[1.02]"
                         >
-                            <X size={12} /> Limpiar Filtros
+                            <X size={12} /> Limpiar Filtros ({getActiveFiltersCount()})
                         </button>
                     )}
                 </div>
 
                 {/* Fila Principal: Búsqueda y Rango de Fechas */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     {/* Barra de Búsqueda */}
-                    <div className="relative md:col-span-6 lg:col-span-7">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <div className="relative lg:col-span-6">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                         <input
                             type="text"
                             placeholder="Buscar por cliente, instagram, email o setter..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500 focus:outline-none placeholder:text-slate-500"
+                            className="w-full bg-slate-950/80 border border-slate-850 hover:border-slate-700 focus:border-violet-500 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white focus:outline-none placeholder:text-slate-555 transition-all focus:ring-1 focus:ring-violet-500/30"
                         />
+                        {searchTerm && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-450 hover:text-white hover:bg-slate-800 rounded-full transition-all"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        )}
                     </div>
 
-                    {/* Rango de Fechas */}
-                    <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl md:col-span-6 lg:col-span-5">
-                        <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-wider shrink-0">Fecha:</span>
-                        <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-full"
-                        />
-                        <span className="text-slate-500 text-xs shrink-0">-</span>
-                        <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-full"
-                        />
+                    {/* Rango de Fechas y Presets */}
+                    <div className="flex flex-col gap-2 lg:col-span-6">
+                        <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-850 hover:border-slate-700 px-3.5 py-2.5 rounded-xl transition-all focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500/30">
+                            <Calendar 
+                                className="w-4 h-4 text-slate-450 hover:text-white cursor-pointer shrink-0 transition-colors" 
+                                onClick={() => {
+                                    try {
+                                        startDateRef.current?.showPicker();
+                                    } catch (e) {
+                                        startDateRef.current?.focus();
+                                    }
+                                }}
+                            />
+                            <span 
+                                className="text-[9px] text-slate-400 hover:text-white cursor-pointer font-black uppercase tracking-wider shrink-0 transition-colors"
+                                onClick={() => {
+                                    try {
+                                        startDateRef.current?.showPicker();
+                                    } catch (e) {
+                                        startDateRef.current?.focus();
+                                    }
+                                }}
+                            >
+                                Fecha:
+                            </span>
+                            <input
+                                ref={startDateRef}
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-full text-center"
+                            />
+                            <span className="text-slate-650 text-xs shrink-0">-</span>
+                            <input
+                                ref={endDateRef}
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-full text-center"
+                            />
+                        </div>
+                        
+                        {/* Atajos de Fecha */}
+                        <div className="flex flex-wrap items-center gap-1.5 justify-end">
+                            {[
+                                { id: 'today', label: 'Hoy' },
+                                { id: 'this_month', label: 'Este Mes' },
+                                { id: 'last_month', label: 'Mes Anterior' },
+                                { id: 'last_30_days', label: 'Últimos 30 días' }
+                            ].map((preset) => {
+                                const isActive = getActiveDatePreset() === preset.id;
+                                return (
+                                    <button
+                                        key={preset.id}
+                                        type="button"
+                                        onClick={() => applyDatePreset(preset.id)}
+                                        className={`text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border transition-all ${
+                                            isActive
+                                                ? 'bg-violet-500/15 border-violet-550/40 text-violet-300 shadow-sm shadow-violet-500/5'
+                                                : 'bg-slate-950/40 border-slate-900 text-slate-500 hover:text-slate-350 hover:border-slate-800 hover:scale-[1.01]'
+                                        }`}
+                                    >
+                                        {preset.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
-                {/* Fila Secundaria: Selectores de Filtro Avanzado */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 pt-2 border-t border-slate-900/60">
+                <div className="w-full bg-gradient-to-r from-transparent via-slate-800/40 to-transparent h-px" />
+
+                {/* Fila Secundaria: Selectores de Filtro Avanzado Iconográficos */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {/* Programa */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa</span>
-                        <select
-                            value={programa}
-                            onChange={(e) => setPrograma(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer"
-                        >
-                            <option value="">Todos los Programas</option>
-                            {uniquePrograms
-                                .sort((a, b) => a.localeCompare(b))
-                                .map((p) => (
-                                    <option key={p} value={p}>{p}</option>
-                                ))
-                            }
-                        </select>
+                        <div className="relative">
+                            <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <select
+                                value={programa}
+                                onChange={(e) => setPrograma(e.target.value)}
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
+                            >
+                                <option value="">Todos los Programas</option>
+                                {uniquePrograms
+                                    .sort((a, b) => a.localeCompare(b))
+                                    .map((p) => (
+                                        <option key={p} value={p}>{p}</option>
+                                    ))
+                                }
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
+                        </div>
                     </div>
 
                     {/* Tipo de Pago */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Tipo de Pago</span>
-                        <select
-                            value={tipoPagoSimple}
-                            onChange={(e) => setTipoPagoSimple(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer"
-                        >
-                            <option value="">Todos los Pagos</option>
-                            {uniquePaymentTypes
-                                .sort((a, b) => a.localeCompare(b))
-                                .map((type) => (
-                                    <option key={type} value={type}>{type}</option>
-                                ))
-                            }
-                        </select>
+                        <div className="relative">
+                            <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <select
+                                value={tipoPagoSimple}
+                                onChange={(e) => setTipoPagoSimple(e.target.value)}
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
+                            >
+                                <option value="">Todos los Pagos</option>
+                                {uniquePaymentTypes
+                                    .sort((a, b) => a.localeCompare(b))
+                                    .map((type) => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))
+                                }
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
+                        </div>
                     </div>
 
-                    {/* Método */}
-                    <div className="flex flex-col gap-1">
+                    {/* Método de Pago */}
+                    <div className="flex flex-col gap-1.5">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Método</span>
-                        <select
-                            value={metodoPago}
-                            onChange={(e) => setMetodoPago(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer"
-                        >
-                            <option value="">Todos los Métodos</option>
-                            {uniquePaymentMethods
-                                .sort((a, b) => a.localeCompare(b))
-                                .map((method) => (
-                                    <option key={method} value={method}>{method}</option>
-                                ))
-                            }
-                        </select>
+                        <div className="relative">
+                            <Wallet className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <select
+                                value={metodoPago}
+                                onChange={(e) => setMetodoPago(e.target.value)}
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
+                            >
+                                <option value="">Todos los Métodos</option>
+                                {uniquePaymentMethods
+                                    .sort((a, b) => a.localeCompare(b))
+                                    .map((method) => (
+                                        <option key={method} value={method}>{method}</option>
+                                    ))
+                                }
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
+                        </div>
                     </div>
 
                     {/* Closer */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Closer</span>
-                        <select
-                            value={closer}
-                            onChange={(e) => setCloser(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer"
-                        >
-                            <option value="">Todos los Closers</option>
-                            <option value="Sin Closer">Sin Closer</option>
-                            {uniqueClosers
-                                .filter(c => c !== "Sin Closer")
-                                .sort((a, b) => a.localeCompare(b))
-                                .map((c) => (
-                                    <option key={c} value={c}>{c}</option>
-                                ))
-                            }
-                        </select>
+                        <div className="relative">
+                            <UserCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <select
+                                value={closer}
+                                onChange={(e) => setCloser(e.target.value)}
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
+                            >
+                                <option value="">Todos los Closers</option>
+                                <option value="Sin Closer">Sin Closer</option>
+                                {uniqueClosers
+                                    .filter(c => c !== "Sin Closer")
+                                    .sort((a, b) => a.localeCompare(b))
+                                    .map((c) => (
+                                        <option key={c} value={c}>{c}</option>
+                                    ))
+                                }
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
+                        </div>
                     </div>
 
                     {/* Fuente (Setter) */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Fuente (Setter)</span>
-                        <select
-                            value={source}
-                            onChange={(e) => setSource(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer"
-                        >
-                            <option value="">Todas las Fuentes</option>
-                            <option value="Sin Setter">Sin Setter</option>
-                            {uniqueSetters
-                                .filter(s => s !== "Sin Setter")
-                                .sort((a, b) => a.localeCompare(b))
-                                .map((s) => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))
-                            }
-                        </select>
+                        <div className="relative">
+                            <Compass className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <select
+                                value={source}
+                                onChange={(e) => setSource(e.target.value)}
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
+                            >
+                                <option value="">Todas las Fuentes</option>
+                                <option value="Sin Setter">Sin Setter</option>
+                                {uniqueSetters
+                                    .filter(s => s !== "Sin Setter")
+                                    .sort((a, b) => a.localeCompare(b))
+                                    .map((s) => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))
+                                }
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
+                        </div>
                     </div>
                 </div>
+
+                {/* Pills/Badges de Filtros Activos */}
+                {(() => {
+                    const activeFilters = [];
+                    if (programa) activeFilters.push({ key: 'programa', label: `Programa: ${programa}`, clear: () => setPrograma('') });
+                    if (tipoPagoSimple) activeFilters.push({ key: 'tipoPagoSimple', label: `Pago: ${tipoPagoSimple}`, clear: () => setTipoPagoSimple('') });
+                    if (metodoPago) activeFilters.push({ key: 'metodoPago', label: `Método: ${metodoPago}`, clear: () => setMetodoPago('') });
+                    if (closer) activeFilters.push({ key: 'closer', label: `Closer: ${closer}`, clear: () => setCloser('') });
+                    if (source) activeFilters.push({ key: 'source', label: `Fuente: ${source}`, clear: () => setSource('') });
+                    if (sinAtribucion) activeFilters.push({ key: 'sinAtribucion', label: 'Sin Atribución', clear: () => setSinAtribucion(false) });
+
+                    if (activeFilters.length === 0) return null;
+
+                    return (
+                        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-900/60 animate-in fade-in duration-200">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                                <Filter size={10} className="text-violet-405" /> Filtros Activos:
+                            </span>
+                            {activeFilters.map((f) => (
+                                <div
+                                    key={f.key}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-violet-500/10 text-violet-300 border border-violet-500/20 shadow-sm"
+                                >
+                                    <span className="text-[10px] font-bold">{f.label}</span>
+                                    <button
+                                        type="button"
+                                        onClick={f.clear}
+                                        className="p-0.5 hover:bg-violet-500/20 hover:text-white rounded-full transition-colors"
+                                    >
+                                        <X size={10} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })()}
             </Card>
 
             {/* KPIs Panels */}
