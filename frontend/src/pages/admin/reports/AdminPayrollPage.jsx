@@ -28,10 +28,28 @@ const getTodayDate = () => {
 
 const formatSaleDate = (dateStr) => {
     if (!dateStr) return 'Sin Fecha';
+    
+    // Evitar desfase de zona horaria UTC para cadenas simples de fecha YYYY-MM-DD
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [year, month, day] = dateStr.split('-');
+        const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+    
+    // Fallback para fechas completas ISO u otros objetos fecha
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) {
         return dateStr;
     }
+    
+    // Si la fecha fue interpretada como UTC a medianoche, forzar zona local si no tiene horas significativas
+    if (typeof dateStr === 'string' && dateStr.includes('T00:00:00')) {
+        const justDate = dateStr.split('T')[0];
+        const [year, month, day] = justDate.split('-');
+        const localD = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return localD.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
     return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
@@ -135,7 +153,7 @@ const AdminPayrollPage = () => {
                 <div>
                     <h1 className="text-2xl font-black text-white italic tracking-tight uppercase flex items-center gap-2 print:text-slate-900">
                         <DollarSign className="text-indigo-400 print:text-indigo-600" size={24} />
-                        Consolidado de Nómina (PayRoll)
+                        Consolidado de Nómina
                     </h1>
                     <p className="text-sm text-slate-400 font-bold uppercase tracking-wide print:text-slate-500">Cálculo exacto de comisiones asignadas para el equipo.</p>
                 </div>
@@ -151,10 +169,9 @@ const AdminPayrollPage = () => {
 
             {/* Período de Impresión (Solo visible al imprimir/PDF) */}
             <div className="hidden print:block border-b border-slate-350 pb-4 mb-4">
-                <p className="text-xs text-slate-500 font-black uppercase tracking-wider">Período de Nómina</p>
-                <div className="flex justify-between items-center mt-1">
-                    <span className="text-sm font-semibold text-slate-800">
-                        Desde: <span className="font-bold text-slate-900">{formatSaleDate(startDate)}</span> | Hasta: <span className="font-bold text-slate-900">{formatSaleDate(endDate)}</span>
+                <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-slate-900">
+                        Período: <span className="font-medium text-slate-700">{formatSaleDate(startDate)} al {formatSaleDate(endDate)}</span>
                     </span>
                     <span className="text-xs font-bold text-slate-450 uppercase">
                         Generado el: {new Date().toLocaleDateString('es-ES')}
@@ -456,9 +473,8 @@ const AdminPayrollPage = () => {
                                                         ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(sale.monto_bruto)}
                                                     </td>
                                                 )}
-                                                <td className="p-4 text-right font-black text-emerald-400 italic flex flex-col items-end">
-                                                    <span>${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(comisionVal)}</span>
-                                                    <span className="text-[10px] text-slate-500 font-bold block not-italic">({rate}%)</span>
+                                                <td className="p-4 text-right font-black text-emerald-400 italic">
+                                                    ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(comisionVal)}
                                                 </td>
                                             </tr>
                                         );
