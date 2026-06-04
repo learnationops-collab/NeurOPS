@@ -199,6 +199,10 @@
   - **Deducción de Comisión de Hotmart del 8.9%**:
     - **API Backend (`financial_sales.py`, `closer_service.py`, `marketing_service.py`, `public/marketing.py`)**: Extensión de la lógica de comisiones del backend para restar en caliente un **8.9%** a todas las transacciones cuyo método de pago sea **"Hotmart"** (monto neto resultante: `monto * 0.911`), afectando a todos los listados, reportes de atribución, desatribuidos y KPIs generales de closers/marketing.
     - **Frontend (`PublicFinancialSalesPage.jsx` y `SalesAttributionPage.jsx`)**: Se modificó la renderización del sufijo *"neto"* y del valor bruto original para que reaccione dinámicamente ante cualquier diferencia numérica entre el neto y el bruto, haciéndola compatible automáticamente con Stripe, Hotmart y futuros métodos con comisión.
+  - **Sección de Ventas por Closer**:
+    - **API Backend (`financial_sales.py`)**: Implementación del helper `resolve_closer_name` para mapear correos a nombres de closers limpios, y la acumulación y retorno de la recaudación neta agrupada en `closers_breakdown`.
+    - **Frontend (`PublicFinancialSalesPage.jsx`)**: Incorporación de la tarjeta premium *"Ventas por Closer"* con barra segmentada, desglose por closer y simulador interactivo de comisiones de closers (por defecto al 10%). Se actualizó además la columna de Roles en la tabla de ventas para mostrar el nombre legible del closer.
+
 
 
 
