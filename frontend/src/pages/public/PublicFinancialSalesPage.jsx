@@ -1003,23 +1003,6 @@ const PublicFinancialSalesPage = () => {
                                 )}
                             </p>
                         </div>
-
-                        {/* Interactive Commission Input */}
-                        <div className="flex items-center gap-3 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                            <Percent className="text-violet-400 w-4 h-4" />
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Calcular % Atribución:</span>
-                            <div className="flex items-center gap-1">
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    value={customPercentage}
-                                    onChange={(e) => setCustomPercentage(parseFloat(e.target.value) || 0)}
-                                    className="w-12 bg-white border border-slate-300 text-xs font-black text-black rounded-lg px-2 py-1 text-center focus:outline-none focus:border-violet-500 font-bold"
-                                />
-                                <span className="text-xs font-black text-slate-400">%</span>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Visual Segmented Progress Bar */}
@@ -1048,7 +1031,6 @@ const PublicFinancialSalesPage = () => {
                             .map((source) => {
                                 const pct = totalSalesAmount > 0 ? (source.total_monto / totalSalesAmount) * 100 : 0;
                                 const colors = getSourceColors(source.source);
-                                const customShare = (source.total_monto * customPercentage) / 100;
                                 
                                 return (
                                     <div key={source.source} className="bg-slate-950/50 border border-slate-800/60 p-4 rounded-2xl flex flex-col justify-between hover:border-slate-700/80 transition-all group">
@@ -1075,14 +1057,6 @@ const PublicFinancialSalesPage = () => {
                                                 <span>{source.count} {source.count === 1 ? 'venta' : 'ventas'}</span>
                                                 <span className="text-[9px] font-bold text-slate-500 uppercase">Volumen</span>
                                             </div>
-                                        </div>
-
-                                        {/* Dynamic commission box */}
-                                        <div className="mt-3 pt-3 border-t border-slate-900 flex justify-between items-center bg-slate-950/80 p-2 rounded-xl">
-                                            <span className="text-[9px] font-bold text-violet-400 uppercase tracking-widest">{customPercentage}% Calc</span>
-                                            <span className="text-xs font-black text-white italic">
-                                                ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(customShare)}
-                                            </span>
                                         </div>
                                     </div>
                                 );

@@ -51,6 +51,7 @@ import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage
 import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
 import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
+import AdminPayrollPage from './pages/admin/reports/AdminPayrollPage';
 
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
@@ -112,6 +113,16 @@ function App() {
                 <ProtectedRoute roles={['admin']}>
                   <MainLayout>
                     <AdminSalesHubPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/payroll"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <MainLayout>
+                    <AdminPayrollPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

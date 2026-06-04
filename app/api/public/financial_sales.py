@@ -620,3 +620,140 @@ def get_financial_sales():
         }), 200
     else:
         return jsonify(processed_sales), 200
+
+@bp.route('/public/financial-sales/payroll', methods=['GET'])
+def get_financial_sales_payroll():
+    start_date_str = request.args.get('start_date', default='', type=str).strip()
+    end_date_str = request.args.get('end_date', default='', type=str).strip()
+    
+    query = FinancialSale.query
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            query = query.filter(FinancialSale.date >= start_date)
+        except ValueError:
+            pass
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            query = query.filter(FinancialSale.date <= end_date)
+        except ValueError:
+            pass
+            
+    sales = query.all()
+    
+    all_agendas = FinancialAgenda.query.all()
+    
+    def normalize_ig(ig_str):
+        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
+            return None
+        return ig_str.strip().lstrip('@').lower()
+        
+    agenda_map = {}
+    for a in all_agendas:
+        ig_norm = normalize_ig(a.instagram)
+        if ig_norm:
+            if ig_norm not in agenda_map or (a.date and agenda_map[ig_norm].date and a.date > agenda_map[ig_norm].date):
+                agenda_map[ig_norm] = a
+                
+    elias_sales = []
+    jeancarlo_sales = []
+    marlon_sales = []
+    
+    elias_recaudado = 0.0
+    jeancarlo_recaudado = 0.0
+    marlon_recaudado = 0.0
+    
+    for s in sales:
+        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() == "completada"
+        if not sale_is_completed:
+            continue
+            
+        ig_norm = normalize_ig(s.instagram)
+        resolved_setter = None
+        
+        if ig_norm and ig_norm in agenda_map:
+            agenda = agenda_map[ig_norm]
+            is_valid_lead_source = (
+                agenda.nombre and 
+                agenda.nombre.strip() and 
+                agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
+                'entrevista' not in agenda.nombre.lower() and 
+                'diagnostica' not in agenda.nombre.lower() and
+                'diagnóstica' not in agenda.nombre.lower()
+            )
+            if is_valid_lead_source:
+                resolved_setter = agenda.nombre
+                
+        if not resolved_setter:
+            s_setter = s.setter
+            if s_setter and s_setter.strip() and s_setter != 'Sin Setter' and s_setter != 'Confirmada':
+                resolved_setter = s_setter
+                
+        final_setter = resolved_setter or "Sin Setter"
+        final_closer = resolve_closer_name(s.email_vendedor)
+        
+        monto_original = float(s.monto or 0.0)
+        if s.metodo_pago and s.metodo_pago.strip().lower() == 'stripe':
+            monto_ajustado = monto_original * 0.955
+        elif s.metodo_pago and s.metodo_pago.strip().lower() == 'hotmart':
+            monto_ajustado = monto_original * 0.911
+        else:
+            monto_ajustado = monto_original
+            
+        sale_data = {
+            "id": s.id,
+            "date": s.date.isoformat() if s.date else None,
+            "nombre_cliente": s.nombre_cliente,
+            "instagram": s.instagram,
+            "monto_neto": round(monto_ajustado, 2),
+            "monto_bruto": round(monto_original, 2),
+            "metodo_pago": s.metodo_pago,
+            "tipo_pago": s.tipo_pago,
+            "closer": final_closer,
+            "setter": final_setter
+        }
+        
+        if final_setter.lower() == 'elias':
+            elias_sales.append(sale_data)
+            elias_recaudado += monto_ajustado
+            
+        if final_closer.lower() == 'jean carlo':
+            jeancarlo_sales.append(sale_data)
+            jeancarlo_recaudado += monto_ajustado
+            
+            # Marlon cobra el 5% del cash collect de Jean Carlo sin renovaciones
+            prog, simple_tp = split_tipo_pago(s.tipo_pago)
+            is_renovacion = simple_tp and ("renovacion" in simple_tp.lower() or "renovación" in simple_tp.lower())
+            if not is_renovacion:
+                marlon_sales.append(sale_data)
+                marlon_recaudado += monto_ajustado
+                
+    elias_comision = elias_recaudado * 0.08
+    jeancarlo_comision = jeancarlo_recaudado * 0.10
+    marlon_comision = marlon_recaudado * 0.05
+    
+    return jsonify({
+        "elias": {
+            "sales": elias_sales,
+            "total_recaudado_neto": round(elias_recaudado, 2),
+            "porcentaje_comision": 8.0,
+            "comision_total": round(elias_comision, 2),
+            "total_ventas": len(elias_sales)
+        },
+        "jeancarlo": {
+            "sales": jeancarlo_sales,
+            "total_recaudado_neto": round(jeancarlo_recaudado, 2),
+            "porcentaje_comision": 10.0,
+            "comision_total": round(jeancarlo_comision, 2),
+            "total_ventas": len(jeancarlo_sales)
+        },
+        "marlon": {
+            "sales": marlon_sales,
+            "total_recaudado_neto": round(marlon_recaudado, 2),
+            "porcentaje_comision": 5.0,
+            "comision_total": round(marlon_comision, 2),
+            "total_ventas": len(marlon_sales)
+        }
+    }), 200
