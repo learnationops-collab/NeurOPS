@@ -206,6 +206,8 @@
 - **4 de Junio de 2026**:
   - **Corrección en la Gráfica de Rendimiento por Fuente (Marketing Hub)**:
     - **API Backend (`manychat.py`) [MODIFY]**: Se modificó el endpoint `/manychat-webhook/stats/dashboard` y `/manychat-webhook/ad-details/<int:ad_id>` para resolver correctamente la fuente/setter de las agendas y ventas. Se actualizó el acceso de `agenda.lead` a `agenda.nombre`, de acuerdo con la convención de normalización de la base de datos de agendas financieras, evitando que se muestren nombres de clientes en el eje horizontal del gráfico de barras de rendimiento por fuente.
+  - **Optimización de Logs de Chromium en Entorno Headless (Railway)**:
+    - **API Backend (`image_service.py`) [MODIFY]**: Se unificaron y ampliaron los flags de Chromium (`custom_flags`) pasados a `Html2Image` en Linux. Se agregaron `--disable-gpu`, `--disable-software-rasterizer`, `--log-level=3` y se aseguró el uso de `--disable-dbus` y `--disable-extensions` en todos los métodos de generación de tarjetas de reporte. Esto elimina el ruido masivo de advertencias del motor gráfico y de conexión a bus de sistema en los logs de despliegue en Railway.
 
 
 

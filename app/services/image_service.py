@@ -39,7 +39,17 @@ class ImageService:
         custom_flags = []
         browser_executable = None
         if os.name != 'nt':
-            custom_flags = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--headless']
+            custom_flags = [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage', 
+                '--headless',
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--disable-dbus',
+                '--disable-extensions',
+                '--log-level=3'
+            ]
             for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
                 if os.path.exists(path):
                     browser_executable = path
@@ -201,7 +211,17 @@ class ImageService:
         browser_executable = None
         
         if os.name != 'nt': # Not Windows
-            custom_flags = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--headless', '--disable-dbus', '--disable-extensions']
+            custom_flags = [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage', 
+                '--headless', 
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--disable-dbus', 
+                '--disable-extensions',
+                '--log-level=3'
+            ]
             # Common paths for chromium in linux
             for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
                 if os.path.exists(path):
@@ -268,7 +288,17 @@ class ImageService:
         browser_executable = None
         
         if os.name != 'nt': # Not Windows
-            custom_flags = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--headless', '--disable-dbus', '--disable-extensions']
+            custom_flags = [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage', 
+                '--headless', 
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--disable-dbus', 
+                '--disable-extensions',
+                '--log-level=3'
+            ]
             for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
                 if os.path.exists(path):
                     browser_executable = path
@@ -329,7 +359,17 @@ class ImageService:
         custom_flags = []
         browser_executable = None
         if os.name != 'nt':
-            custom_flags = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--headless', '--disable-dbus', '--disable-extensions']
+            custom_flags = [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage', 
+                '--headless', 
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--disable-dbus', 
+                '--disable-extensions',
+                '--log-level=3'
+            ]
             for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
                 if os.path.exists(path):
                     browser_executable = path
@@ -382,7 +422,17 @@ class ImageService:
         custom_flags = []
         browser_executable = None
         if os.name != 'nt':
-            custom_flags = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--headless', '--disable-dbus', '--disable-extensions']
+            custom_flags = [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage', 
+                '--headless', 
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--disable-dbus', 
+                '--disable-extensions',
+                '--log-level=3'
+            ]
             for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
                 if os.path.exists(path):
                     browser_executable = path
@@ -434,7 +484,17 @@ class ImageService:
         custom_flags = []
         browser_executable = None
         if os.name != 'nt':
-            custom_flags = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--headless', '--disable-dbus', '--disable-extensions']
+            custom_flags = [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage', 
+                '--headless', 
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--disable-dbus', 
+                '--disable-extensions',
+                '--log-level=3'
+            ]
             for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
                 if os.path.exists(path):
                     browser_executable = path
