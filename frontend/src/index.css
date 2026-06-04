@@ -495,6 +495,26 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
         display: none !important;
     }
 
+    /* Desactivar scrolls y alturas fijas en la estructura del layout para permitir múltiples páginas */
+    html, 
+    body, 
+    #root, 
+    div[class*="h-screen"],
+    div[class*="h-full"],
+    div[class*="overflow-hidden"],
+    div[class*="overflow-y-auto"],
+    main,
+    #app-main-scroll,
+    .relative.z-10.flex.w-full.h-full {
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        overflow-y: visible !important;
+        position: static !important;
+        padding-bottom: 0 !important;
+    }
+
     /* Ajustar layout y forzar fondo blanco con texto negro */
     body, 
     #root,
