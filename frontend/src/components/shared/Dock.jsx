@@ -1,10 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, Bell } from 'lucide-react';
+import { LogOut, Bell, Palette, Check } from 'lucide-react';
 import useDockNavigation from '../../hooks/useDockNavigation';
+import { useTheme } from '../../context/ThemeContext';
 
 const Dock = ({ unreadNotificationsCount = 0, onNotificationsClick }) => {
     const { user, logout } = useAuth();
+    const { theme, setTheme } = useTheme();
     const {
         pages,
         activePageIndex,
@@ -149,6 +151,46 @@ const Dock = ({ unreadNotificationsCount = 0, onNotificationsClick }) => {
                                 )}
                             </button>
                         )}
+
+                        {/* Selector de Tema Rápido */}
+                        <div className="relative group">
+                            <button className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted/60 hover:text-white hover:bg-white/10 transition-all cursor-pointer">
+                                <Palette size={18} />
+                            </button>
+
+                            {/* Dropdown de Temas */}
+                            <div className="absolute bottom-full right-0 pb-5 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-300 translate-y-2 group-hover:translate-y-0 z-50">
+                                <div className="bg-[#1a1c23]/95 backdrop-blur-2xl border border-white/5 rounded-3xl p-4 shadow-2xl min-w-[200px] text-left space-y-2">
+                                    <p className="text-[10px] font-black text-muted uppercase tracking-widest px-2 mb-1">Apariencia / Tema</p>
+                                    {[
+                                        { id: 'elegant', label: 'Elegant Blue', desc: 'Glass & Light' },
+                                        { id: 'clean', label: 'Clean Mac', desc: 'Solid & Light' },
+                                        { id: 'custom', label: 'Custom Pro', desc: 'Dark & Dynamic' }
+                                    ].map((t) => {
+                                        const isActive = theme === t.id;
+                                        return (
+                                            <button
+                                                key={t.id}
+                                                onClick={() => setTheme(t.id)}
+                                                className={`w-full flex items-center justify-between px-3 py-2 rounded-2xl transition-all text-left ${
+                                                    isActive 
+                                                        ? 'bg-[#1534ff]/10 text-white border border-[#1534ff]/25 shadow-sm' 
+                                                        : 'hover:bg-white/5 text-muted hover:text-white border border-transparent'
+                                                }`}
+                                            >
+                                                <div>
+                                                    <p className="text-xs font-black uppercase tracking-wider">{t.label}</p>
+                                                    <p className="text-[8px] font-bold text-muted/60 uppercase">{t.desc}</p>
+                                                </div>
+                                                {isActive && (
+                                                    <Check size={14} className="text-[#1534ff]" strokeWidth={3} />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
 
                         <div className="relative group">
                             <button className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted font-bold text-sm hover:bg-white/10 transition-all">
