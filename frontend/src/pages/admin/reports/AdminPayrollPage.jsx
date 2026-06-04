@@ -424,12 +424,12 @@ const AdminPayrollPage = () => {
                                     <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-500">
                                         <th className="p-4 font-semibold">Fecha</th>
                                         <th className="p-4 font-semibold">Cliente</th>
-                                        <th className="p-4 font-semibold">Producto / Tipo</th>
+                                        <th className="p-4 font-semibold">Programa</th>
                                         <th className="p-4 font-semibold">Método</th>
-                                        <th className="p-4 font-semibold text-center">Closer / Setter</th>
-                                        <th className="p-4 font-semibold text-right">Monto Bruto</th>
-                                        <th className="p-4 font-semibold text-right">Monto Individual</th>
-                                        <th className="p-4 font-semibold text-right text-indigo-400">Comisión Individual</th>
+                                        {selectedUserFilter === 'all' && (
+                                            <th className="p-4 font-semibold text-right">Monto Bruto</th>
+                                        )}
+                                        <th className="p-4 font-semibold text-right text-indigo-400">Comisión</th>
                                     </tr>
                                 </thead>
                                 <tbody className="text-sm text-slate-350 divide-y divide-slate-800/40">
@@ -451,16 +451,11 @@ const AdminPayrollPage = () => {
                                                 <td className="p-4 text-xs">
                                                     {sale.metodo_pago}
                                                 </td>
-                                                <td className="p-4 text-center text-xs space-y-0.5">
-                                                    <div>C: <span className="font-semibold text-white">{sale.closer}</span></div>
-                                                    <div>S: <span className="font-semibold text-slate-400">{sale.setter}</span></div>
-                                                </td>
-                                                <td className="p-4 text-right font-medium">
-                                                    ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(sale.monto_bruto)}
-                                                </td>
-                                                <td className="p-4 text-right font-bold text-slate-200">
-                                                    ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(sale.monto_neto)}
-                                                </td>
+                                                {selectedUserFilter === 'all' && (
+                                                    <td className="p-4 text-right font-medium">
+                                                        ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0 }).format(sale.monto_bruto)}
+                                                    </td>
+                                                )}
                                                 <td className="p-4 text-right font-black text-emerald-400 italic flex flex-col items-end">
                                                     <span>${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(comisionVal)}</span>
                                                     <span className="text-[10px] text-slate-500 font-bold block not-italic">({rate}%)</span>
@@ -471,7 +466,7 @@ const AdminPayrollPage = () => {
 
                                     {payroll[activeTab].sales.length === 0 && (
                                         <tr>
-                                            <td colSpan="8" className="p-12 text-center text-slate-500 italic">
+                                            <td colSpan={selectedUserFilter === 'all' ? 6 : 5} className="p-12 text-center text-slate-500 italic">
                                                 No se encontraron ventas calificadas en este rango de fecha.
                                             </td>
                                         </tr>
