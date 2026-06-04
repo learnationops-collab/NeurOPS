@@ -476,4 +476,88 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 input[type="date"]::-webkit-calendar-picker-indicator:hover {
     opacity: 1;
+}
+
+/* ===== Print Media Styles ===== */
+@media print {
+    /* Ocultar elementos de navegación, menús y filtros */
+    .print-hidden,
+    .print\:hidden,
+    aside,
+    nav,
+    header,
+    .sidebar,
+    .dock-navigation,
+    button,
+    input,
+    select,
+    .no-print {
+        display: none !important;
+    }
+
+    /* Ajustar layout y forzar fondo blanco con texto negro */
+    body, 
+    #root,
+    main,
+    .bg-main,
+    .glass-panel,
+    .bg-slate-900\/20,
+    .bg-slate-900\/10,
+    .bg-slate-950\/80,
+    .bg-slate-900\/40,
+    .bg-indigo-950\/10,
+    table,
+    thead,
+    tbody,
+    tr,
+    td,
+    th {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    /* Ajuste de tarjetas de KPI visibles en la impresión */
+    .border-indigo-500\/40,
+    .border-slate-800,
+    .border-violet-500\/20,
+    .border-rose-500\/20 {
+        border: 1px solid #94a3b8 !important;
+        background: #f8fafc !important;
+        border-radius: 1rem !important;
+    }
+
+    /* Colores para montos y comisiones en escala de grises de alto contraste */
+    .text-emerald-400,
+    .text-emerald-500,
+    .text-emerald-600 {
+        color: #047857 !important; /* Verde oscuro legible en fondo blanco */
+    }
+
+    .text-slate-400,
+    .text-slate-500 {
+        color: #475569 !important;
+    }
+
+    .text-white {
+        color: #0f172a !important;
+    }
+
+    /* Forzar márgenes y layout de página */
+    @page {
+        margin: 1.5cm;
+        size: portrait;
+    }
+
+    /* Evitar saltos de página huérfanos */
+    tr, 
+    .card,
+    td, 
+    th {
+        page-break-inside: avoid;
+    }
 }

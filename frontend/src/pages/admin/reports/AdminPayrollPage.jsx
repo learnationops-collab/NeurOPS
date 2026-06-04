@@ -133,16 +133,37 @@ const AdminPayrollPage = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-white italic tracking-tight uppercase flex items-center gap-2">
-                        <DollarSign className="text-indigo-400" size={24} />
+                    <h1 className="text-2xl font-black text-white italic tracking-tight uppercase flex items-center gap-2 print:text-slate-900">
+                        <DollarSign className="text-indigo-400 print:text-indigo-600" size={24} />
                         Consolidado de Nómina (PayRoll)
                     </h1>
-                    <p className="text-sm text-slate-400 font-bold uppercase tracking-wide">Cálculo exacto de comisiones asignadas para el equipo.</p>
+                    <p className="text-sm text-slate-400 font-bold uppercase tracking-wide print:text-slate-500">Cálculo exacto de comisiones asignadas para el equipo.</p>
+                </div>
+                {payroll && (
+                    <button
+                        onClick={() => window.print()}
+                        className="print:hidden text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-wider px-4 py-2.5 rounded-xl border border-indigo-500/30 flex items-center gap-2 transition-all shadow-md hover:shadow-indigo-500/10 cursor-pointer"
+                    >
+                        <ArrowUpRight size={14} /> Exportar PDF
+                    </button>
+                )}
+            </div>
+
+            {/* Período de Impresión (Solo visible al imprimir/PDF) */}
+            <div className="hidden print:block border-b border-slate-350 pb-4 mb-4">
+                <p className="text-xs text-slate-500 font-black uppercase tracking-wider">Período de Nómina</p>
+                <div className="flex justify-between items-center mt-1">
+                    <span className="text-sm font-semibold text-slate-800">
+                        Desde: <span className="font-bold text-slate-900">{formatSaleDate(startDate)}</span> | Hasta: <span className="font-bold text-slate-900">{formatSaleDate(endDate)}</span>
+                    </span>
+                    <span className="text-xs font-bold text-slate-450 uppercase">
+                        Generado el: {new Date().toLocaleDateString('es-ES')}
+                    </span>
                 </div>
             </div>
 
             {/* Panel de Filtro Rango de Fechas */}
-            <Card variant="surface" className="p-5 rounded-[2rem] border-slate-800 bg-slate-900/20 backdrop-blur-md space-y-4">
+            <Card variant="surface" className="p-5 rounded-[2rem] border-slate-800 bg-slate-900/20 backdrop-blur-md space-y-4 print:hidden">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2 text-violet-400">
                         <Calendar size={16} />
