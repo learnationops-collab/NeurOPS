@@ -1149,11 +1149,23 @@ class CloserService:
 
             # Solo cuentan pagos PIF y Split Pays
             if is_pif or (not is_deposit and not is_installment):
-                prog_name = "Sin Programa"
-                if sale.examen:
-                    prog_name = sale.examen.split('|')[0].strip() if '|' in sale.examen else sale.examen.strip()
-                    if not prog_name:
-                        prog_name = "Sin Programa"
+                prog_raw = (sale.tipo_pago or '').upper()
+                examen_raw = (sale.examen or '').upper()
+
+                if "RR" in prog_raw or "RESIDENCY" in prog_raw or "ROADMAP" in prog_raw:
+                    prog_name = "Residency Roadmap"
+                elif "AL" in prog_raw or "ACE" in prog_raw or "LEARNERS" in prog_raw:
+                    prog_name = "Ace Learners"
+                elif "SI" in prog_raw or "SPECIALIST" in prog_raw or "INITIATIVE" in prog_raw or "INICIATIVE" in prog_raw:
+                    prog_name = "Specialist Initiative"
+                elif "RR" in examen_raw or "RESIDENCY" in examen_raw or "ROADMAP" in examen_raw:
+                    prog_name = "Residency Roadmap"
+                elif "AL" in examen_raw or "ACE" in examen_raw or "LEARNERS" in examen_raw:
+                    prog_name = "Ace Learners"
+                elif "SI" in examen_raw or "SPECIALIST" in examen_raw or "INITIATIVE" in examen_raw or "INICIATIVE" in examen_raw:
+                    prog_name = "Specialist Initiative"
+                else:
+                    prog_name = "Sin Programa"
 
                 if prog_name not in program_data:
                     program_data[prog_name] = {"cash": 0.0, "count": 0}
