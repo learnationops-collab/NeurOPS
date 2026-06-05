@@ -475,15 +475,6 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         ];
     }, [stats]);
 
-    if (loading || !stats) {
-        return (
-            <div className="flex flex-col items-center justify-center py-40 space-y-4">
-                <Loader2 className="animate-spin text-violet-500" size={48} />
-                <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Sincronizando datos...</p>
-            </div>
-        );
-    }
-
     // Optimizacion de Rendimiento: Calculo unificado con useMemo
     const salesMetrics = useMemo(() => {
         if (!stats) return {};
@@ -577,6 +568,15 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
             discrepancies
         };
     }, [stats]);
+
+    if (loading || !stats) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40 space-y-4">
+                <Loader2 className="animate-spin text-violet-500" size={48} />
+                <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Sincronizando datos...</p>
+            </div>
+        );
+    }
 
     const {
         pifCount = 0, splitCount = 0, depositCount = 0, installmentCount = 0,
