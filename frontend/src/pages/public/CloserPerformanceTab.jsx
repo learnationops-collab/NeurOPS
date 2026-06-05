@@ -445,6 +445,12 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
         const ticketInstallment = installmentCount > 0 ? installmentCash / installmentCount : 0;
         const compTicketInstallment = compInstallmentCount > 0 ? compInstallmentCash / compInstallmentCount : 0;
 
+        const programTickets = stats.sales.program_tickets || [];
+        const generalAverageTicket = stats.sales.general_average_ticket || 0;
+
+        const compProgramTickets = compStats?.sales?.program_tickets || [];
+        const compGeneralAverageTicket = compStats?.sales?.general_average_ticket || 0;
+
         return {
             pifCount, splitCount, depositCount, installmentCount,
             pifCash, splitCash, depositCash, installmentCash,
@@ -460,7 +466,9 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
             ticketPif, compTicketPif,
             ticketSplit, compTicketSplit,
             ticketDeposit, compTicketDeposit,
-            ticketInstallment, compTicketInstallment
+            ticketInstallment, compTicketInstallment,
+            programTickets, generalAverageTicket,
+            compProgramTickets, compGeneralAverageTicket
         };
     }, [stats]);
 
@@ -479,7 +487,9 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
         ticketPif = 0, compTicketPif = 0,
         ticketSplit = 0, compTicketSplit = 0,
         ticketDeposit = 0, compTicketDeposit = 0,
-        ticketInstallment = 0, compTicketInstallment = 0
+        ticketInstallment = 0, compTicketInstallment = 0,
+        programTickets = [], generalAverageTicket = 0,
+        compProgramTickets = [], compGeneralAverageTicket = 0
     } = salesMetrics;
 
 
@@ -838,42 +848,70 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
 
             {/* 3. KPI CARDS: TICKETS PROMEDIO */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                    { title: 'Ticket Promedio PIF', val: ticketPif, compVal: compTicketPif, icon: DollarSign, color: 'text-emerald-400', count: pifCount, label: 'Ventas PIF', tooltip: 'Valor promedio cobrado por venta en un solo pago (PIF completo).' },
-                    { title: 'Ticket Promedio Split', val: ticketSplit, compVal: compTicketSplit, icon: Layers, color: 'text-sky-400', count: splitCount, label: 'Ventas Split', tooltip: 'Valor promedio cobrado en el pago inicial fraccionado (Split Pay).' },
-                    { title: 'Ticket Promedio Seña', val: ticketDeposit, compVal: compTicketDeposit, icon: Activity, color: 'text-fuchsia-400', count: depositCount, label: 'Promesas Seña', tooltip: 'Valor promedio recibido para reservar o comprometer una venta (Señas).' },
-                    { title: 'Ticket Promedio Cuota', val: ticketInstallment, compVal: compTicketInstallment, icon: RefreshCw, color: 'text-violet-400', count: installmentCount, label: 'Cuotas Cobradas', tooltip: 'Valor promedio cobrado en los pagos posteriores (Cuotas de seguimiento).' }
-                ].map((kpi) => (
-                    <div key={kpi.title} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group">
-                        <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-                            <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity ${kpi.color.replace('text-', 'bg-')}`} />
-                        </div>
-                        <div className="flex items-start justify-between relative z-10">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-1.5">
-                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{kpi.title}</p>
-                                    {kpi.tooltip && (
-                                        <div className="relative group/tooltip flex items-center">
-                                            <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-slate-300 transition-colors" />
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
-                                                {kpi.tooltip}
-                                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                {(() => {
+                    const colors = ['text-sky-400', 'text-fuchsia-400', 'text-violet-400', 'text-amber-400', 'text-indigo-400'];
+                    const icons = [Layers, Activity, RefreshCw, Target, CheckCircle];
+
+                    const kpis = [
+                        {
+                            title: 'Ticket Promedio General',
+                            val: generalAverageTicket,
+                            compVal: compGeneralAverageTicket,
+                            icon: DollarSign,
+                            color: 'text-emerald-400',
+                            count: pifCount + splitCount,
+                            label: 'Ventas PIF + Split',
+                            tooltip: 'Valor promedio cobrado en nuevos cierres (incluye solo pagos completos y split pays).'
+                        }
+                    ];
+
+                    programTickets.forEach((pt, idx) => {
+                        const compPt = compProgramTickets.find(c => c.program === pt.program);
+                        const compVal = compPt ? compPt.average_ticket : 0;
+                        kpis.push({
+                            title: `T. Promedio ${pt.program}`,
+                            val: pt.average_ticket,
+                            compVal: compVal,
+                            icon: icons[idx % icons.length],
+                            color: colors[idx % colors.length],
+                            count: pt.count,
+                            label: `Ventas ${pt.program}`,
+                            tooltip: `Valor promedio de cierres para el programa ${pt.program} (incluye solo pagos completos y split pays).`
+                        });
+                    });
+
+                    return kpis.map((kpi) => (
+                        <div key={kpi.title} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group">
+                            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                                <div className={`absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity ${kpi.color.replace('text-', 'bg-')}`} />
+                            </div>
+                            <div className="flex items-start justify-between relative z-10">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5">
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{kpi.title}</p>
+                                        {kpi.tooltip && (
+                                            <div className="relative group/tooltip flex items-center">
+                                                <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-slate-300 transition-colors" />
+                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
+                                                    {kpi.tooltip}
+                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
+                                    <h3 className="text-3xl font-black text-white italic tracking-tighter">{fmtCash(kpi.val)}</h3>
+                                    {renderComparisonSubdataLeft(kpi.val, kpi.compVal, true)}
+                                    <p className="text-[9px] text-slate-600 font-bold uppercase mt-2">
+                                        {kpi.count > 0 ? `Sobre ${fmt(kpi.count)} ${kpi.label}` : `Sin ${kpi.label}`}
+                                    </p>
                                 </div>
-                                <h3 className="text-3xl font-black text-white italic tracking-tighter">{fmtCash(kpi.val)}</h3>
-                                {renderComparisonSubdataLeft(kpi.val, kpi.compVal, true)}
-                                <p className="text-[9px] text-slate-600 font-bold uppercase mt-2">
-                                    {kpi.count > 0 ? `Sobre ${fmt(kpi.count)} ${kpi.label}` : `Sin ${kpi.label}`}
-                                </p>
-                            </div>
-                            <div className={`p-3 rounded-2xl bg-slate-800 border border-slate-700/50 ${kpi.color}`}>
-                                <kpi.icon size={18} />
+                                <div className={`p-3 rounded-2xl bg-slate-800 border border-slate-700/50 ${kpi.color}`}>
+                                    <kpi.icon size={18} />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    ));
+                })()}
             </div>
 
             {/* 4. SECCIÓN DE DESGLOSE (AGENDAS Y VENTAS TABLES) */}

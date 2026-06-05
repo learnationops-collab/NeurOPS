@@ -1114,6 +1114,84 @@ class CloserService:
         total_ic_sales = val(stats.pif_ic_count) + val(stats.split_ic_count) + val(stats.deposit_ic_count)
         total_ic_cash = val(stats.pif_ic_cash) + val(stats.split_ic_cash) + val(stats.deposit_ic_cash)
 
+        # Calculo de ticket promedio general y por programa (solo PIF y Split Pays)
+        all_sales = FinancialSale.query.filter(*sales_filters).all()
+        program_data = {}
+        total_pif_split_cash = 0.0
+        total_pif_split_count = 0.0
+
+        for sale in all_sales:
+            tipo_lower = (sale.tipo_pago or '').lower()
+            monto_val = float(sale.monto or 0.0)
+
+            # Ajuste de comisiones para Stripe y Hotmart
+            metodo_lower = (sale.metodo_pago or '').lower().strip()
+            if metodo_lower == 'stripe':
+                monto_val *= 0.955
+            elif metodo_lower == 'hotmart':
+                monto_val *= 0.911
+
+            is_pif = 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower
+            is_deposit = 'seña' in tipo_lower or 'deposito' in tipo_lower or 'deposit' in tipo_lower
+            is_installment = 'cuota' in tipo_lower or 'installment' in tipo_lower or 'pago 2' in tipo_lower or 'pago 3' in tipo_lower or 'pago 4' in tipo_lower
+
+            is_subsequent = False
+            if not is_pif and not is_deposit and not is_installment:
+                import re
+                match = re.search(r'pago\s*(\d+)', tipo_lower)
+                if match:
+                    num = int(match.group(1))
+                    if num > 1:
+                        is_subsequent = True
+
+            if is_installment or is_subsequent:
+                is_installment = True
+
+            # Solo cuentan pagos PIF y Split Pays
+            if is_pif or (not is_deposit and not is_installment):
+                prog_name = "Sin Programa"
+                if sale.examen:
+                    prog_name = sale.examen.split('|')[0].strip() if '|' in sale.examen else sale.examen.strip()
+                    if not prog_name:
+                        prog_name = "Sin Programa"
+
+                if prog_name not in program_data:
+                    program_data[prog_name] = {"cash": 0.0, "count": 0}
+
+                program_data[prog_name]["cash"] += monto_val
+                program_data[prog_name]["count"] += 1
+
+                total_pif_split_cash += monto_val
+                total_pif_split_count += 1
+
+        general_average_ticket = round(total_pif_split_cash / total_pif_split_count, 2) if total_pif_split_count > 0 else 0.0
+
+        program_tickets = []
+        for prog_name, p_info in program_data.items():
+            avg = round(p_info["cash"] / p_info["count"], 2) if p_info["count"] > 0 else 0.0
+            program_tickets.append({
+                "program": prog_name,
+                "average_ticket": avg,
+                "count": p_info["count"]
+            })
+
+        program_tickets.sort(key=lambda x: x["count"], reverse=True)
+
+        # Escalar metricas por tipo de agregacion (promedio de dias en dashboard)
+        if agg_type == 'avg':
+            scaled_general_avg = round(general_average_ticket / days_count, 2)
+            scaled_program_tickets = [
+                {
+                    "program": pt["program"],
+                    "average_ticket": round(pt["average_ticket"] / days_count, 2),
+                    "count": round(pt["count"] / days_count, 2)
+                }
+                for pt in program_tickets
+            ]
+        else:
+            scaled_general_avg = general_average_ticket
+            scaled_program_tickets = program_tickets
+
         return {
             "metadata": {
                 "days_analyzed": days_count,
@@ -1149,6 +1227,8 @@ class CloserService:
                 "deposit": {"count": final_deposit_count, "cash": final_deposit_cash, "in_call_count": val(stats.deposit_ic_count), "in_call_cash": val(stats.deposit_ic_cash)},
                 "installment": {"count": final_installment_count, "cash": final_installment_cash, "in_call_count": 0, "in_call_cash": 0},
                 "deposit_conversions": {"total": total_señas, "converted": señas_convertidas, "rate": conversion_señas_rate},
+                "general_average_ticket": scaled_general_avg,
+                "program_tickets": scaled_program_tickets,
                 "totals": {"count": total_sales, "cash": total_cash, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}
             },
             "follow_ups": {
