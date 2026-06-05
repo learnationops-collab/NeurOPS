@@ -45,24 +45,28 @@ const normalizeStats = (s) => {
             pif: {
                 count: s.sales?.pif?.count ?? 0,
                 cash: s.sales?.pif?.cash ?? 0,
+                cash_neto: s.sales?.pif?.cash_neto ?? 0,
                 in_call_count: s.sales?.pif?.in_call_count ?? 0,
                 in_call_cash: s.sales?.pif?.in_call_cash ?? 0,
             },
             split: {
                 count: s.sales?.split?.count ?? 0,
                 cash: s.sales?.split?.cash ?? 0,
+                cash_neto: s.sales?.split?.cash_neto ?? 0,
                 in_call_count: s.sales?.split?.in_call_count ?? 0,
                 in_call_cash: s.sales?.split?.in_call_cash ?? 0,
             },
             deposit: {
                 count: s.sales?.deposit?.count ?? 0,
                 cash: s.sales?.deposit?.cash ?? 0,
+                cash_neto: s.sales?.deposit?.cash_neto ?? 0,
                 in_call_count: s.sales?.deposit?.in_call_count ?? 0,
                 in_call_cash: s.sales?.deposit?.in_call_cash ?? 0,
             },
             installment: {
                 count: s.sales?.installment?.count ?? 0,
                 cash: s.sales?.installment?.cash ?? 0,
+                cash_neto: s.sales?.installment?.cash_neto ?? 0,
                 in_call_count: s.sales?.installment?.in_call_count ?? 0,
                 in_call_cash: s.sales?.installment?.in_call_cash ?? 0,
             },
@@ -77,6 +81,7 @@ const normalizeStats = (s) => {
             totals: {
                 count: s.sales?.totals?.count ?? 0,
                 cash: s.sales?.totals?.cash ?? 0,
+                cash_neto: s.sales?.totals?.cash_neto ?? 0,
                 in_call_count: s.sales?.totals?.in_call_count ?? 0,
                 in_call_cash: s.sales?.totals?.in_call_cash ?? 0,
             }
@@ -489,9 +494,15 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         const depositCash = stats.sales.deposit?.cash ?? stats.sales.totals?.deposit_cash_collected ?? stats.sales.totals?.deposit_cash ?? stats.sales.totals?.seña_cash ?? 0;
         const installmentCash = stats.sales.installment?.cash ?? stats.sales.totals?.installment_cash ?? stats.sales.totals?.installment_cash_collected ?? 0;
 
+        const pifCashNeto = stats.sales.pif?.cash_neto ?? 0;
+        const splitCashNeto = stats.sales.split?.cash_neto ?? 0;
+        const depositCashNeto = stats.sales.deposit?.cash_neto ?? 0;
+        const installmentCashNeto = stats.sales.installment?.cash_neto ?? 0;
+
         const realSalesCount = pifCount + splitCount;
         const realSalesCash = pifCash + splitCash;
         const totalCashCollected = pifCash + splitCash + installmentCash + depositCash;
+        const totalCashCollectedNeto = pifCashNeto + splitCashNeto + installmentCashNeto + depositCashNeto;
 
         const ticketPromedioReal = realSalesCount > 0 ? (realSalesCash / realSalesCount) : 0;
 
@@ -507,9 +518,15 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         const compDepositCash = compStats?.sales?.deposit?.cash ?? compStats?.sales?.totals?.deposit_cash_collected ?? compStats?.sales?.totals?.deposit_cash ?? compStats?.sales?.totals?.seña_cash ?? 0;
         const compInstallmentCash = compStats?.sales?.installment?.cash ?? compStats?.sales?.totals?.installment_cash ?? compStats?.sales?.totals?.installment_cash_collected ?? 0;
 
+        const compPifCashNeto = compStats?.sales?.pif?.cash_neto ?? 0;
+        const compSplitCashNeto = compStats?.sales?.split?.cash_neto ?? 0;
+        const compDepositCashNeto = compStats?.sales?.deposit?.cash_neto ?? 0;
+        const compInstallmentCashNeto = compStats?.sales?.installment?.cash_neto ?? 0;
+
         const compRealSalesCount = compPifCount + compSplitCount;
         const compRealSalesCash = compPifCash + compSplitCash;
         const compTotalCashCollected = compPifCash + compSplitCash + compInstallmentCash + compDepositCash;
+        const compTotalCashCollectedNeto = compPifCashNeto + compSplitCashNeto + compInstallmentCashNeto + compDepositCashNeto;
 
         const compTicketPromedioReal = compRealSalesCount > 0 ? (compRealSalesCash / compRealSalesCount) : 0;
 
@@ -550,11 +567,11 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         return {
             pifCount, splitCount, depositCount, installmentCount,
             pifCash, splitCash, depositCash, installmentCash,
-            realSalesCount, realSalesCash, totalCashCollected, ticketPromedioReal,
+            realSalesCount, realSalesCash, totalCashCollected, totalCashCollectedNeto, ticketPromedioReal,
             compStats,
             compPifCount, compSplitCount, compDepositCount, compInstallmentCount,
             compPifCash, compSplitCash, compDepositCash, compInstallmentCash,
-            compRealSalesCount, compRealSalesCash, compTotalCashCollected, compTicketPromedioReal,
+            compRealSalesCount, compRealSalesCash, compTotalCashCollected, compTotalCashCollectedNeto, compTicketPromedioReal,
             pifInCall, splitInCall, depositInCall, installmentInCall,
             compPifInCall, compSplitInCall, compDepositInCall, compInstallmentInCall,
             totalInCallCash, compTotalInCallCash,
@@ -581,11 +598,11 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
     const {
         pifCount = 0, splitCount = 0, depositCount = 0, installmentCount = 0,
         pifCash = 0, splitCash = 0, depositCash = 0, installmentCash = 0,
-        realSalesCount = 0, realSalesCash = 0, totalCashCollected = 0, ticketPromedioReal = 0,
+        realSalesCount = 0, realSalesCash = 0, totalCashCollected = 0, totalCashCollectedNeto = 0, ticketPromedioReal = 0,
         compStats,
         compPifCount = 0, compSplitCount = 0, compDepositCount = 0, compInstallmentCount = 0,
         compPifCash = 0, compSplitCash = 0, compDepositCash = 0, compInstallmentCash = 0,
-        compRealSalesCount = 0, compRealSalesCash = 0, compTotalCashCollected = 0, compTicketPromedioReal = 0,
+        compRealSalesCount = 0, compRealSalesCash = 0, compTotalCashCollected = 0, compTotalCashCollectedNeto = 0, compTicketPromedioReal = 0,
         pifInCall = 0, splitInCall = 0, depositInCall = 0, installmentInCall = 0,
         compPifInCall = 0, compSplitInCall = 0, compDepositInCall = 0, compInstallmentInCall = 0,
         totalInCallCash = 0, compTotalInCallCash = 0,
@@ -659,11 +676,17 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             <DollarSign size={16} />
                         </div>
                     </div>
-                    <div className="space-y-1 relative z-10">
-                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT CONSOLIDADO</h4>
-                        <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{fmtCash(totalCashCollected)}</h2>
-                        {renderComparisonSubdataLeft(totalCashCollected, compTotalCashCollected, true)}
-                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Total Recaudado en Cuenta</p>
+                    <div className="space-y-4 relative z-10">
+                        <div>
+                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT BRUTO</h4>
+                            <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none mt-1">{fmtCash(totalCashCollected)}</h2>
+                            {renderComparisonSubdataLeft(totalCashCollected, compTotalCashCollected, true)}
+                        </div>
+                        <div className="pt-3 border-t border-slate-800/60">
+                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT NETO</h4>
+                            <h2 className="text-4xl font-black text-emerald-400 italic tracking-tighter leading-none mt-1">{fmtCash(totalCashCollectedNeto)}</h2>
+                            {renderComparisonSubdataLeft(totalCashCollectedNeto, compTotalCashCollectedNeto, true)}
+                        </div>
                     </div>
                     <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">

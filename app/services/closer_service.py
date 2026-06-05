@@ -1012,12 +1012,17 @@ class CloserService:
         from app.models import FinancialSale
         from sqlalchemy import case, func, or_
         
-        adjusted_monto_expr = FinancialSale.monto
+        neto_monto_expr = case(
+            (func.lower(func.trim(FinancialSale.metodo_pago)) == 'stripe', FinancialSale.monto * 0.955),
+            (func.lower(func.trim(FinancialSale.metodo_pago)) == 'hotmart', FinancialSale.monto * 0.911),
+            else_=FinancialSale.monto
+        )
         
         sales_query = db.session.query(
             FinancialSale.tipo_pago,
             func.count(FinancialSale.id).label('count'),
-            func.sum(adjusted_monto_expr).label('cash')
+            func.sum(FinancialSale.monto).label('cash'),
+            func.sum(neto_monto_expr).label('cash_neto')
         )
         
         sales_filters = [
@@ -1042,30 +1047,39 @@ class CloserService:
         
         official_pif_count = 0.0
         official_pif_cash = 0.0
+        official_pif_cash_neto = 0.0
         official_split_count = 0.0
         official_split_cash = 0.0
+        official_split_cash_neto = 0.0
         official_deposit_count = 0.0
         official_deposit_cash = 0.0
+        official_deposit_cash_neto = 0.0
         official_installment_count = 0.0
         official_installment_cash = 0.0
+        official_installment_cash_neto = 0.0
         
-        for tipo, count, cash in sales_rows:
+        for tipo, count, cash, cash_neto in sales_rows:
             tipo_lower = (tipo or '').lower()
             cash_val = float(cash or 0.0)
+            cash_neto_val = float(cash_neto or 0.0)
             count_val = float(count or 0.0)
             
             if 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower:
                 official_pif_count += count_val
                 official_pif_cash += cash_val
+                official_pif_cash_neto += cash_neto_val
             elif 'seña' in tipo_lower or 'deposito' in tipo_lower or 'deposit' in tipo_lower:
                 official_deposit_count += count_val
                 official_deposit_cash += cash_val
+                official_deposit_cash_neto += cash_neto_val
             elif 'primer pago' in tipo_lower or 'split' in tipo_lower:
                 official_split_count += count_val
                 official_split_cash += cash_val
+                official_split_cash_neto += cash_neto_val
             elif 'cuota' in tipo_lower or 'installment' in tipo_lower or 'pago 2' in tipo_lower or 'pago 3' in tipo_lower or 'pago 4' in tipo_lower:
                 official_installment_count += count_val
                 official_installment_cash += cash_val
+                official_installment_cash_neto += cash_neto_val
             else:
                 # Si no matchea palabras clave de cuota pero es un pago fraccionado, verificar si es posterior
                 is_subsequent = False
@@ -1079,19 +1093,28 @@ class CloserService:
                 if is_subsequent:
                     official_installment_count += count_val
                     official_installment_cash += cash_val
+                    official_installment_cash_neto += cash_neto_val
                 else:
                     official_split_count += count_val
                     official_split_cash += cash_val
+                    official_split_cash_neto += cash_neto_val
 
         # Scale official sales metrics by aggregation type
         final_pif_count = round(official_pif_count / days_count, 2) if agg_type == 'avg' else official_pif_count
         final_pif_cash = round(official_pif_cash / days_count, 2) if agg_type == 'avg' else official_pif_cash
+        final_pif_cash_neto = round(official_pif_cash_neto / days_count, 2) if agg_type == 'avg' else official_pif_cash_neto
+        
         final_split_count = round(official_split_count / days_count, 2) if agg_type == 'avg' else official_split_count
         final_split_cash = round(official_split_cash / days_count, 2) if agg_type == 'avg' else official_split_cash
+        final_split_cash_neto = round(official_split_cash_neto / days_count, 2) if agg_type == 'avg' else official_split_cash_neto
+        
         final_deposit_count = round(official_deposit_count / days_count, 2) if agg_type == 'avg' else official_deposit_count
         final_deposit_cash = round(official_deposit_cash / days_count, 2) if agg_type == 'avg' else official_deposit_cash
+        final_deposit_cash_neto = round(official_deposit_cash_neto / days_count, 2) if agg_type == 'avg' else official_deposit_cash_neto
+        
         final_installment_count = round(official_installment_count / days_count, 2) if agg_type == 'avg' else official_installment_count
         final_installment_cash = round(official_installment_cash / days_count, 2) if agg_type == 'avg' else official_installment_cash
+        final_installment_cash_neto = round(official_installment_cash_neto / days_count, 2) if agg_type == 'avg' else official_installment_cash_neto
 
         # Calcular conversión de señas en venta real (PIF o Split)
         señas_convertidas = 0
@@ -1150,6 +1173,7 @@ class CloserService:
         total_sales = final_pif_count + final_split_count + final_deposit_count
         # Efectivo total recaudado incluye las cuotas
         total_cash = final_pif_cash + final_split_cash + final_deposit_cash + final_installment_cash
+        total_cash_neto = final_pif_cash_neto + final_split_cash_neto + final_deposit_cash_neto + final_installment_cash_neto
         total_ic_sales = val(stats.pif_ic_count) + val(stats.split_ic_count) + val(stats.deposit_ic_count)
         total_ic_cash = val(stats.pif_ic_cash) + val(stats.split_ic_cash) + val(stats.deposit_ic_cash)
 
@@ -1309,15 +1333,15 @@ class CloserService:
                 }
             },
             "sales": {
-                "pif": {"count": final_pif_count, "cash": final_pif_cash, "in_call_count": val(stats.pif_ic_count), "in_call_cash": val(stats.pif_ic_cash)},
-                "split": {"count": final_split_count, "cash": final_split_cash, "in_call_count": val(stats.split_ic_count), "in_call_cash": val(stats.split_ic_cash)},
-                "deposit": {"count": final_deposit_count, "cash": final_deposit_cash, "in_call_count": val(stats.deposit_ic_count), "in_call_cash": val(stats.deposit_ic_cash)},
-                "installment": {"count": final_installment_count, "cash": final_installment_cash, "in_call_count": 0, "in_call_cash": 0},
+                "pif": {"count": final_pif_count, "cash": final_pif_cash, "cash_neto": final_pif_cash_neto, "in_call_count": val(stats.pif_ic_count), "in_call_cash": val(stats.pif_ic_cash)},
+                "split": {"count": final_split_count, "cash": final_split_cash, "cash_neto": final_split_cash_neto, "in_call_count": val(stats.split_ic_count), "in_call_cash": val(stats.split_ic_cash)},
+                "deposit": {"count": final_deposit_count, "cash": final_deposit_cash, "cash_neto": final_deposit_cash_neto, "in_call_count": val(stats.deposit_ic_count), "in_call_cash": val(stats.deposit_ic_cash)},
+                "installment": {"count": final_installment_count, "cash": final_installment_cash, "cash_neto": final_installment_cash_neto, "in_call_count": 0, "in_call_cash": 0},
                 "deposit_conversions": {"total": total_señas, "converted": señas_convertidas, "rate": conversion_señas_rate},
                 "general_average_ticket": scaled_general_avg,
                 "program_tickets": scaled_program_tickets,
                 "discrepancies": discrepancies,
-                "totals": {"count": total_sales, "cash": total_cash, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}
+                "totals": {"count": total_sales, "cash": total_cash, "cash_neto": total_cash_neto, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}
             },
             "follow_ups": {
                 "sent": val(stats.fu_sent), "replied": val(stats.fu_replied),
