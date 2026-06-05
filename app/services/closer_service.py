@@ -976,11 +976,7 @@ class CloserService:
         from app.models import FinancialSale
         from sqlalchemy import case, func, or_
         
-        adjusted_monto_expr = case(
-            (func.lower(func.trim(FinancialSale.metodo_pago)) == 'stripe', FinancialSale.monto * 0.955),
-            (func.lower(func.trim(FinancialSale.metodo_pago)) == 'hotmart', FinancialSale.monto * 0.911),
-            else_=FinancialSale.monto
-        )
+        adjusted_monto_expr = FinancialSale.monto
         
         sales_query = db.session.query(
             FinancialSale.tipo_pago,
@@ -1124,13 +1120,6 @@ class CloserService:
             tipo_lower = (sale.tipo_pago or '').lower()
             monto_val = float(sale.monto or 0.0)
 
-            # Ajuste de comisiones para Stripe y Hotmart
-            metodo_lower = (sale.metodo_pago or '').lower().strip()
-            if metodo_lower == 'stripe':
-                monto_val *= 0.955
-            elif metodo_lower == 'hotmart':
-                monto_val *= 0.911
-
             is_pif = 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower
             is_deposit = 'seña' in tipo_lower or 'deposito' in tipo_lower or 'deposit' in tipo_lower
             is_installment = 'cuota' in tipo_lower or 'installment' in tipo_lower or 'pago 2' in tipo_lower or 'pago 3' in tipo_lower or 'pago 4' in tipo_lower
@@ -1189,6 +1178,49 @@ class CloserService:
 
         program_tickets.sort(key=lambda x: x["count"], reverse=True)
 
+        # Obtener reportes diarios en el rango para discrepancias
+        reports_in_period = CloserDailyReport.query.filter(*filters).all()
+        
+        # Agrupar cash en llamada reportado por dia
+        reports_by_day = {}
+        for r in reports_in_period:
+            d_str = r.date.strftime('%Y-%m-%d') if r.date else None
+            if not d_str:
+                continue
+            in_call_cash = (
+                float(r.pif_in_call_cash or 0.0) +
+                float(r.split_in_call_cash or 0.0) +
+                float(r.deposit_in_call_cash or 0.0) +
+                float(r.installment_in_call_cash or 0.0)
+            )
+            reports_by_day[d_str] = reports_by_day.get(d_str, 0.0) + in_call_cash
+
+        # Agrupar cash total registrado (ventas brutos) por dia
+        sales_by_day = {}
+        for sale in all_sales:
+            d_str = sale.date.strftime('%Y-%m-%d') if sale.date else None
+            if not d_str:
+                continue
+            monto_val = float(sale.monto or 0.0)
+            sales_by_day[d_str] = sales_by_day.get(d_str, 0.0) + monto_val
+
+        # Detectar discrepancias diarias (donde el cash reportado en llamada supere a las ventas registradas)
+        discrepancies = []
+        all_dates = sorted(list(set(list(reports_by_day.keys()) + list(sales_by_day.keys()))))
+        
+        for d_str in all_dates:
+            rep_ic = reports_by_day.get(d_str, 0.0)
+            reg_total = sales_by_day.get(d_str, 0.0)
+            diff = reg_total - rep_ic
+            
+            if diff < -0.01:
+                discrepancies.append({
+                    "date": d_str,
+                    "reported_in_call": round(rep_ic, 2),
+                    "registered_total": round(reg_total, 2),
+                    "difference": round(diff, 2)
+                })
+
         # Escalar metricas por tipo de agregacion (promedio de dias en dashboard)
         if agg_type == 'avg':
             scaled_general_avg = round(general_average_ticket / days_count, 2)
@@ -1241,6 +1273,7 @@ class CloserService:
                 "deposit_conversions": {"total": total_señas, "converted": señas_convertidas, "rate": conversion_señas_rate},
                 "general_average_ticket": scaled_general_avg,
                 "program_tickets": scaled_program_tickets,
+                "discrepancies": discrepancies,
                 "totals": {"count": total_sales, "cash": total_cash, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}
             },
             "follow_ups": {

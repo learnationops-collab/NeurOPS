@@ -248,7 +248,13 @@ const PublicCloserStatsPage = () => {
                 ) : (
                     <>
                         {stats && activeTab === 'performance' && (
-                            <CloserPerformanceTab stats={stats} loading={loading} compare={filters.compare} />
+                            <CloserPerformanceTab 
+                                stats={stats} 
+                                loading={loading} 
+                                compare={filters.compare} 
+                                setActiveTab={setActiveTab}
+                                setFilters={setFilters}
+                            />
                         )}
 
                         {/* TAB HISTORIAL DE REPORTES */}

@@ -8,7 +8,9 @@ import {
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import FunnelChart from '../../components/charts/FunnelChart';
 
-const CloserPerformanceTab = ({ stats, loading, compare }) => {
+const CloserPerformanceTab = ({ stats, loading, compare, setActiveTab, setFilters }) => {
+
+    const [showDiscrepanciesModal, setShowDiscrepanciesModal] = React.useState(false);
 
     const fmt = (n) => {
         if (n === undefined || n === null || isNaN(n)) return 0;
@@ -447,6 +449,7 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
 
         const programTickets = stats.sales.program_tickets || [];
         const generalAverageTicket = stats.sales.general_average_ticket || 0;
+        const discrepancies = stats.sales.discrepancies || [];
 
         const compProgramTickets = compStats?.sales?.program_tickets || [];
         const compGeneralAverageTicket = compStats?.sales?.general_average_ticket || 0;
@@ -468,7 +471,8 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
             ticketDeposit, compTicketDeposit,
             ticketInstallment, compTicketInstallment,
             programTickets, generalAverageTicket,
-            compProgramTickets, compGeneralAverageTicket
+            compProgramTickets, compGeneralAverageTicket,
+            discrepancies
         };
     }, [stats]);
 
@@ -489,7 +493,8 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
         ticketDeposit = 0, compTicketDeposit = 0,
         ticketInstallment = 0, compTicketInstallment = 0,
         programTickets = [], generalAverageTicket = 0,
-        compProgramTickets = [], compGeneralAverageTicket = 0
+        compProgramTickets = [], compGeneralAverageTicket = 0,
+        discrepancies = []
     } = salesMetrics;
 
 
@@ -992,11 +997,22 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
 
                 {/* VENTAS BREAKDOWN TABLE */}
                 <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6">
-                    <div className="flex items-center gap-3">
-                        <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
-                            <DollarSign size={20} />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/50 pb-4 mb-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                                <DollarSign size={20} />
+                            </div>
+                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Ventas Breakdown</h3>
                         </div>
-                        <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Ventas Breakdown</h3>
+                        {discrepancies.length > 0 && (
+                            <button
+                                onClick={() => setShowDiscrepanciesModal(true)}
+                                className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 px-4 py-2 rounded-2xl font-black uppercase text-[9px] tracking-widest transition-all cursor-pointer shadow-lg shadow-amber-500/5"
+                            >
+                                <Activity size={12} className="animate-pulse text-amber-500" />
+                                {discrepancies.length} {discrepancies.length === 1 ? 'Discrepancia' : 'Discrepancias'}
+                            </button>
+                        )}
                     </div>
 
                     <div className="bg-slate-800/30 rounded-2xl overflow-hidden border border-slate-800/40">
@@ -1247,6 +1263,88 @@ const CloserPerformanceTab = ({ stats, loading, compare }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Discrepancias Diarias */}
+            {showDiscrepanciesModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 max-w-2xl w-full shadow-2xl space-y-6 relative overflow-hidden text-left">
+                        <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+                            <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-amber-500" />
+                        </div>
+                        <div className="flex justify-between items-center relative z-10 border-b border-slate-800 pb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                    <Activity size={16} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-white italic uppercase tracking-tight">Discrepancias Diarias</h3>
+                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Reportes de llamadas vs Ventas registradas</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowDiscrepanciesModal(false)}
+                                className="text-slate-500 hover:text-white transition-colors text-[9px] font-black uppercase tracking-widest px-3 py-1.5 bg-slate-800 hover:bg-slate-750 rounded-xl border border-slate-750 cursor-pointer"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+
+                        <div className="text-[10px] text-slate-400 font-medium leading-relaxed bg-slate-950/60 p-4 rounded-2xl border border-slate-850">
+                            <p className="font-bold text-amber-400 mb-1">¿Por qué ocurre esto?</p>
+                            Estas discrepancias ocurren cuando el **Cash en Llamada** declarado por el closer en su reporte diario supera al **Cash Total** bruto de ventas registradas oficialmente en un mismo día. Indica que pueden faltar ventas por declarar o registrar en la planilla.
+                        </div>
+
+                        <div className="max-h-[300px] overflow-y-auto bg-slate-950/40 rounded-2xl border border-slate-800/60">
+                            <table className="w-full text-left text-[10px] text-slate-300">
+                                <thead className="bg-slate-950 text-slate-400 uppercase tracking-widest sticky top-0 z-10">
+                                    <tr>
+                                        <th className="px-4 py-3 font-black">Fecha</th>
+                                        <th className="px-4 py-3 text-right font-black">Reportado (Llamada)</th>
+                                        <th className="px-4 py-3 text-right font-black">Registrado (Ventas)</th>
+                                        <th className="px-4 py-3 text-right font-black">Diferencia</th>
+                                        <th className="px-4 py-3 text-center font-black">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-850">
+                                    {discrepancies.map((d) => (
+                                        <tr key={d.date} className="hover:bg-slate-800/10 transition-colors">
+                                            <td className="px-4 py-3.5 font-bold text-white tabular-nums">
+                                                {d.date.split('-').reverse().join('/')}
+                                            </td>
+                                            <td className="px-4 py-3.5 text-right font-black text-amber-400 tabular-nums">
+                                                {fmtCash(d.reported_in_call)}
+                                            </td>
+                                            <td className="px-4 py-3.5 text-right font-black text-white tabular-nums">
+                                                {fmtCash(d.registered_total)}
+                                            </td>
+                                            <td className="px-4 py-3.5 text-right font-black text-rose-400 tabular-nums">
+                                                {fmtCash(d.difference)}
+                                            </td>
+                                            <td className="px-4 py-2.5 text-center">
+                                                <button
+                                                    onClick={() => {
+                                                        setFilters(prev => ({
+                                                            ...prev,
+                                                            time_preset: 'custom',
+                                                            start_date: d.date,
+                                                            end_date: d.date
+                                                        }));
+                                                        setActiveTab('sales_log');
+                                                        setShowDiscrepanciesModal(false);
+                                                    }}
+                                                    className="bg-violet-600 hover:bg-violet-700 text-white font-black uppercase text-[8px] tracking-widest px-3 py-1.5 rounded-xl cursor-pointer transition-colors shadow-md shadow-violet-600/10"
+                                                >
+                                                    Ir a Ventas
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
