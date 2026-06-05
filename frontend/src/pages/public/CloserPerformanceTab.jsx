@@ -8,9 +8,111 @@ import {
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import FunnelChart from '../../components/charts/FunnelChart';
 
-const CloserPerformanceTab = ({ stats, loading, compare, setActiveTab, setFilters }) => {
+const normalizeStats = (s) => {
+    if (!s) return null;
+    return {
+        ...s,
+        general: {
+            slots: s.general?.slots ?? 0,
+            offers_made: s.general?.offers_made ?? 0,
+            decision_makers: s.general?.decision_makers ?? 0,
+            rescheduled_calls: s.general?.rescheduled_calls ?? 0,
+        },
+        agendas: {
+            first_call: {
+                scheduled: s.agendas?.first_call?.scheduled ?? 0,
+                attended: s.agendas?.first_call?.attended ?? 0,
+                no_show: s.agendas?.first_call?.no_show ?? 0,
+                rescheduled: s.agendas?.first_call?.rescheduled ?? 0,
+                canceled: s.agendas?.first_call?.canceled ?? 0,
+            },
+            second_call: {
+                scheduled: s.agendas?.second_call?.scheduled ?? 0,
+                attended: s.agendas?.second_call?.attended ?? 0,
+                no_show: s.agendas?.second_call?.no_show ?? 0,
+                rescheduled: s.agendas?.second_call?.rescheduled ?? 0,
+                canceled: s.agendas?.second_call?.canceled ?? 0,
+            },
+            totals: {
+                scheduled: s.agendas?.totals?.scheduled ?? 0,
+                attended: s.agendas?.totals?.attended ?? 0,
+                no_show: s.agendas?.totals?.no_show ?? 0,
+                rescheduled: s.agendas?.totals?.rescheduled ?? 0,
+                canceled: s.agendas?.totals?.canceled ?? 0,
+            }
+        },
+        sales: {
+            pif: {
+                count: s.sales?.pif?.count ?? 0,
+                cash: s.sales?.pif?.cash ?? 0,
+                in_call_count: s.sales?.pif?.in_call_count ?? 0,
+                in_call_cash: s.sales?.pif?.in_call_cash ?? 0,
+            },
+            split: {
+                count: s.sales?.split?.count ?? 0,
+                cash: s.sales?.split?.cash ?? 0,
+                in_call_count: s.sales?.split?.in_call_count ?? 0,
+                in_call_cash: s.sales?.split?.in_call_cash ?? 0,
+            },
+            deposit: {
+                count: s.sales?.deposit?.count ?? 0,
+                cash: s.sales?.deposit?.cash ?? 0,
+                in_call_count: s.sales?.deposit?.in_call_count ?? 0,
+                in_call_cash: s.sales?.deposit?.in_call_cash ?? 0,
+            },
+            installment: {
+                count: s.sales?.installment?.count ?? 0,
+                cash: s.sales?.installment?.cash ?? 0,
+                in_call_count: s.sales?.installment?.in_call_count ?? 0,
+                in_call_cash: s.sales?.installment?.in_call_cash ?? 0,
+            },
+            deposit_conversions: {
+                total: s.sales?.deposit_conversions?.total ?? 0,
+                converted: s.sales?.deposit_conversions?.converted ?? 0,
+                rate: s.sales?.deposit_conversions?.rate ?? 0,
+            },
+            general_average_ticket: s.sales?.general_average_ticket ?? 0,
+            program_tickets: s.sales?.program_tickets || [],
+            discrepancies: s.sales?.discrepancies || [],
+            totals: {
+                count: s.sales?.totals?.count ?? 0,
+                cash: s.sales?.totals?.cash ?? 0,
+                in_call_count: s.sales?.totals?.in_call_count ?? 0,
+                in_call_cash: s.sales?.totals?.in_call_cash ?? 0,
+            }
+        },
+        follow_ups: {
+            sent: s.follow_ups?.sent ?? 0,
+            replied: s.follow_ups?.replied ?? 0,
+            hot_sent: s.follow_ups?.hot_sent ?? 0,
+            hot_replied: s.follow_ups?.hot_replied ?? 0,
+            cold_sent: s.follow_ups?.cold_sent ?? 0,
+            cold_replied: s.follow_ups?.cold_replied ?? 0,
+        },
+        percentages: {
+            show_rate: s.percentages?.show_rate ?? 0,
+            no_show_rate: s.percentages?.no_show_rate ?? 0,
+            cancel_rate: s.percentages?.cancel_rate ?? 0,
+            close_rate: s.percentages?.close_rate ?? 0,
+            offer_to_sale: s.percentages?.offer_to_sale ?? 0,
+            respond_rate: s.percentages?.respond_rate ?? 0,
+            pitch_rate: s.percentages?.pitch_rate ?? 0,
+            decision_maker_rate: s.percentages?.decision_maker_rate ?? 0,
+            rescheduled_rate: s.percentages?.rescheduled_rate ?? 0,
+            deposit_conversion_rate: s.percentages?.deposit_conversion_rate ?? 0,
+        },
+        metadata: {
+            days_analyzed: s.metadata?.days_analyzed ?? 1,
+            agg_type: s.metadata?.agg_type ?? 'sum',
+        },
+        comparison: s.comparison ? normalizeStats(s.comparison) : null
+    };
+};
+
+const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab, setFilters }) => {
 
     const [showDiscrepanciesModal, setShowDiscrepanciesModal] = React.useState(false);
+    const stats = useMemo(() => normalizeStats(rawStats), [rawStats]);
 
     const fmt = (n) => {
         if (n === undefined || n === null || isNaN(n)) return 0;
@@ -1302,7 +1404,7 @@ const CloserPerformanceTab = ({ stats, loading, compare, setActiveTab, setFilter
                                         <th className="px-4 py-3 text-right font-black">Reportado (Llamada)</th>
                                         <th className="px-4 py-3 text-right font-black">Registrado (Ventas)</th>
                                         <th className="px-4 py-3 text-right font-black">Diferencia</th>
-                                        <th className="px-4 py-3 text-center font-black">Acción</th>
+                                        {setFilters && setActiveTab && <th className="px-4 py-3 text-center font-black">Acción</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-850">
@@ -1320,23 +1422,25 @@ const CloserPerformanceTab = ({ stats, loading, compare, setActiveTab, setFilter
                                             <td className="px-4 py-3.5 text-right font-black text-rose-400 tabular-nums">
                                                 {fmtCash(d.difference)}
                                             </td>
-                                            <td className="px-4 py-2.5 text-center">
-                                                <button
-                                                    onClick={() => {
-                                                        setFilters(prev => ({
-                                                            ...prev,
-                                                            time_preset: 'custom',
-                                                            start_date: d.date,
-                                                            end_date: d.date
-                                                        }));
-                                                        setActiveTab('sales_log');
-                                                        setShowDiscrepanciesModal(false);
-                                                    }}
-                                                    className="bg-violet-600 hover:bg-violet-700 text-white font-black uppercase text-[8px] tracking-widest px-3 py-1.5 rounded-xl cursor-pointer transition-colors shadow-md shadow-violet-600/10"
-                                                >
-                                                    Ir a Ventas
-                                                </button>
-                                            </td>
+                                            {setFilters && setActiveTab && (
+                                                <td className="px-4 py-2.5 text-center">
+                                                    <button
+                                                        onClick={() => {
+                                                            setFilters(prev => ({
+                                                                ...prev,
+                                                                time_preset: 'custom',
+                                                                start_date: d.date,
+                                                                end_date: d.date
+                                                            }));
+                                                            setActiveTab('sales_log');
+                                                            setShowDiscrepanciesModal(false);
+                                                        }}
+                                                        className="bg-violet-600 hover:bg-violet-700 text-white font-black uppercase text-[8px] tracking-widest px-3 py-1.5 rounded-xl cursor-pointer transition-colors shadow-md shadow-violet-600/10"
+                                                    >
+                                                        Ir a Ventas
+                                                    </button>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
