@@ -13,7 +13,7 @@ const FunnelChart = ({ data }) => {
     }
 
     return (
-        <div className="w-full h-[400px]">
+        <div className="w-full h-full">
             <ResponsiveContainer width="100%" height="100%">
                 <RechartsFunnelChart>
                     <Tooltip

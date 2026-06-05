@@ -963,14 +963,14 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                 </div>
 
                 {/* COL 2: EMBUDO GRÁFICO (CON MÁS ESPACIO) */}
-                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 flex flex-col items-center justify-between">
-                    <div className="w-full flex items-center gap-3 mb-8 border-b border-slate-800 pb-4">
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 flex flex-col justify-between h-full group hover:border-fuchsia-500/30 transition-all duration-300">
+                    <div className="w-full flex items-center gap-3 mb-6 border-b border-slate-800 pb-4">
                         <div className="p-3 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-500">
                             <TrendingUp size={20} />
                         </div>
                         <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Visualización Gráfica</h3>
                     </div>
-                    <div className="w-full h-[400px] flex items-center justify-center">
+                    <div className="w-full flex-1 min-h-[460px]">
                         <FunnelChart data={funnelData} />
                     </div>
                 </div>
