@@ -29,12 +29,18 @@ class CloserService:
             query = query.join(Enrollment).filter(Enrollment.program_id == program_filter)
 
         if start_date_str:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            query = query.filter(Client.created_at >= start_date)
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                query = query.filter(Client.created_at >= start_date)
+            except ValueError:
+                pass
         
         if end_date_str:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
-            query = query.filter(Client.created_at < end_date)
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+                query = query.filter(Client.created_at < end_date)
+            except ValueError:
+                pass
 
         if search:
             search_term = f"%{search}%"
@@ -103,8 +109,16 @@ class CloserService:
         end_date_str = filters.get('end_date')
 
         def apply_lead_filters(q):
-            if start_date_str: q = q.filter(Client.created_at >= datetime.strptime(start_date_str, '%Y-%m-%d'))
-            if end_date_str: q = q.filter(Client.created_at < datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1))
+            if start_date_str:
+                try:
+                    q = q.filter(Client.created_at >= datetime.strptime(start_date_str, '%Y-%m-%d'))
+                except ValueError:
+                    pass
+            if end_date_str:
+                try:
+                    q = q.filter(Client.created_at < datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1))
+                except ValueError:
+                    pass
             if search: q = q.filter(or_(Client.full_name.ilike(f"%{search}%"), Client.email.ilike(f"%{search}%")))
             return q
 
@@ -802,11 +816,17 @@ class CloserService:
         base_filter = [Appointment.closer_id == closer_id]
         
         if start_date:
-            base_filter.append(Appointment.start_time >= datetime.strptime(start_date, '%Y-%m-%d'))
+            try:
+                base_filter.append(Appointment.start_time >= datetime.strptime(start_date, '%Y-%m-%d'))
+            except ValueError:
+                pass
         if end_date:
-            # Include the full end date
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
-            base_filter.append(Appointment.start_time < end_dt)
+            try:
+                # Include the full end date
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+                base_filter.append(Appointment.start_time < end_dt)
+            except ValueError:
+                pass
 
         # 1. Agendas Pendientes (Sin resultado definido)
         # Note: Pending might be future or past, usually we care about past pending but let's stick to standard definition
@@ -904,9 +924,17 @@ class CloserService:
 
         filters = []
         if start_date:
-            filters.append(CloserDailyReport.date >= (datetime.strptime(start_date, '%Y-%m-%d').date() if isinstance(start_date, str) else start_date))
+            try:
+                dt_val = datetime.strptime(start_date, '%Y-%m-%d').date() if isinstance(start_date, str) else start_date
+                filters.append(CloserDailyReport.date >= dt_val)
+            except ValueError:
+                pass
         if end_date:
-            filters.append(CloserDailyReport.date <= (datetime.strptime(end_date, '%Y-%m-%d').date() if isinstance(end_date, str) else end_date))
+            try:
+                dt_val = datetime.strptime(end_date, '%Y-%m-%d').date() if isinstance(end_date, str) else end_date
+                filters.append(CloserDailyReport.date <= dt_val)
+            except ValueError:
+                pass
         if closer_id:
             filters.append(CloserDailyReport.closer_id == closer_id)
 
@@ -925,10 +953,18 @@ class CloserService:
         # Reusing parts of get_agenda_stats logic
         base_appt_filter = []
         if closer_id: base_appt_filter.append(Appointment.closer_id == closer_id)
-        if start_date: base_appt_filter.append(Appointment.start_time >= datetime.strptime(start_date, '%Y-%m-%d') if isinstance(start_date, str) else datetime.combine(start_date, datetime.min.time()))
+        if start_date:
+            try:
+                dt_val = datetime.strptime(start_date, '%Y-%m-%d') if isinstance(start_date, str) else datetime.combine(start_date, datetime.min.time())
+                base_appt_filter.append(Appointment.start_time >= dt_val)
+            except ValueError:
+                pass
         if end_date:
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d') if isinstance(end_date, str) else datetime.combine(end_date, datetime.min.time())
-            base_appt_filter.append(Appointment.start_time < (end_dt + timedelta(days=1)))
+            try:
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d') if isinstance(end_date, str) else datetime.combine(end_date, datetime.min.time())
+                base_appt_filter.append(Appointment.start_time < (end_dt + timedelta(days=1)))
+            except ValueError:
+                pass
 
         pending_count = Appointment.query.filter(*base_appt_filter, or_(Appointment.result == None, Appointment.result == '')).count()
         outcomes_q = db.session.query(Appointment.result, func.count(Appointment.id)).filter(*base_appt_filter, Appointment.result != None, Appointment.result != '').group_by(Appointment.result).all()
@@ -988,10 +1024,17 @@ class CloserService:
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ]
         if start_date:
-            sales_filters.append(FinancialSale.date >= (datetime.strptime(start_date, '%Y-%m-%d') if isinstance(start_date, str) else datetime.combine(start_date, datetime.min.time())))
+            try:
+                dt_val = datetime.strptime(start_date, '%Y-%m-%d') if isinstance(start_date, str) else datetime.combine(start_date, datetime.min.time())
+                sales_filters.append(FinancialSale.date >= dt_val)
+            except ValueError:
+                pass
         if end_date:
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d') if isinstance(end_date, str) else datetime.combine(end_date, datetime.min.time())
-            sales_filters.append(FinancialSale.date < (end_dt + timedelta(days=1)))
+            try:
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d') if isinstance(end_date, str) else datetime.combine(end_date, datetime.min.time())
+                sales_filters.append(FinancialSale.date < (end_dt + timedelta(days=1)))
+            except ValueError:
+                pass
         if closer_identifiers:
             sales_filters.append(FinancialSale.email_vendedor.in_(closer_identifiers))
             

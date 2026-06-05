@@ -13,6 +13,16 @@ import PublicFinancialSalesPage from './PublicFinancialSalesPage';
 import CloserClientsPage from '../closer/clients/ClientsPage';
 import FinancialAgendasPage from '../admin/reports/FinancialAgendasPage';
 
+const getFirstDayOfCurrentMonth = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+};
+
+const getTodayDate = () => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+};
+
 const PublicCloserStatsPage = () => {
     const auth = useAuth();
     const user = auth?.user || { role: 'admin' };
@@ -29,37 +39,73 @@ const PublicCloserStatsPage = () => {
 
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_closer_stats', {
         closer_id: user.role === 'closer' && user.id ? user.id.toString() : '3',
-        start_date: '',
-        end_date: '',
+        start_date: getFirstDayOfCurrentMonth(),
+        end_date: getTodayDate(),
         agg_type: 'sum',
-        time_preset: 'last_days',
-        custom_days: 7,
         compare: false
     });
 
-    // Cálculo de fechas según preset
-    useEffect(() => {
-        if (filters.time_preset === 'custom') return;
-        const now = new Date();
+    const applyDatePreset = (preset) => {
+        const today = new Date();
         let start = '';
-        let end = now.toISOString().split('T')[0];
+        let end = today.toISOString().split('T')[0];
 
-        if (filters.time_preset === 'yesterday') {
+        if (preset === 'today') {
+            start = end;
+        } else if (preset === 'yesterday') {
             const yesterday = new Date();
-            yesterday.setDate(now.getDate() - 1);
+            yesterday.setDate(today.getDate() - 1);
             start = yesterday.toISOString().split('T')[0];
             end = start;
-        } else if (filters.time_preset === 'last_days') {
-            const d = new Date();
-            d.setDate(now.getDate() - parseInt(filters.custom_days || 7));
-            start = d.toISOString().split('T')[0];
-        } else if (filters.time_preset === 'all_time') {
-            start = '';
-            end = '';
+        } else if (preset === 'this_month') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        } else if (preset === 'last_month') {
+            const firstOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+            start = firstOfLastMonth.toISOString().split('T')[0];
+            end = lastOfLastMonth.toISOString().split('T')[0];
+        } else if (preset === 'last_30_days') {
+            const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+            start = thirtyDaysAgo.toISOString().split('T')[0];
         }
 
-        setFilters(prev => ({ ...prev, start_date: start, end_date: end }));
-    }, [filters.time_preset, filters.custom_days]);
+        setFilters({ start_date: start, end_date: end });
+    };
+
+    const getActiveDatePreset = () => {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        
+        const lastMonthFirst = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthLast = new Date(today.getFullYear(), today.getMonth(), 0);
+        const lastMonthStartStr = lastMonthFirst.toISOString().split('T')[0];
+        const lastMonthEndStr = lastMonthLast.toISOString().split('T')[0];
+        
+        const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        if (filters.start_date === todayStr && filters.end_date === todayStr) return 'today';
+        if (filters.start_date === yesterdayStr && filters.end_date === yesterdayStr) return 'yesterday';
+        if (filters.start_date === thisMonthStart && filters.end_date === todayStr) return 'this_month';
+        if (filters.start_date === lastMonthStartStr && filters.end_date === lastMonthEndStr) return 'last_month';
+        if (filters.start_date === thirtyDaysAgo && filters.end_date === todayStr) return 'last_30_days';
+        return 'custom';
+    };
+
+    // Asegurar fechas válidas al inicio
+    useEffect(() => {
+        if (!filters.start_date || !filters.end_date) {
+            setFilters({
+                start_date: filters.start_date || getFirstDayOfCurrentMonth(),
+                end_date: filters.end_date || getTodayDate()
+            });
+        }
+    }, [filters.start_date, filters.end_date]);
 
     // Fetch closers
     useEffect(() => {
@@ -153,66 +199,68 @@ const PublicCloserStatsPage = () => {
                 {/* FILTROS (Comunes para vista rendimiento) */}
                 {activeTab === 'performance' && (
                     <div className="flex flex-wrap items-center gap-6 bg-slate-900/80 p-6 rounded-[2rem] border border-slate-800 shadow-2xl">
+                        {/* Closer Selector */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Closer / Equipo</label>
                             <select
                                 className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all cursor-pointer min-w-[200px]"
                                 value={filters.closer_id}
-                                onChange={e => setFilters({ ...filters, closer_id: e.target.value })}
+                                onChange={e => setFilters({ closer_id: e.target.value })}
                             >
                                 <option value="">Todo el Equipo</option>
                                 {closers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
 
+                        {/* Date Range Selector */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo</label>
-                            <select
-                                className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all cursor-pointer min-w-[150px]"
-                                value={filters.time_preset}
-                                onChange={e => setFilters({ ...filters, time_preset: e.target.value })}
-                            >
-                                <option value="yesterday">Ayer</option>
-                                <option value="last_days">Últimos X días</option>
-                                <option value="all_time">Todo el tiempo</option>
-                                <option value="custom">Personalizado</option>
-                            </select>
-                        </div>
-
-                        {filters.time_preset === 'last_days' && (
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Días</label>
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Rango de Fechas</label>
+                            <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-xs text-white">
                                 <input
-                                    type="number"
-                                    className="w-16 bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black text-center"
-                                    value={filters.custom_days}
-                                    onChange={e => setFilters({ ...filters, custom_days: parseInt(e.target.value) || 0 })}
+                                    type="date"
+                                    value={filters.start_date}
+                                    onChange={e => setFilters({ start_date: e.target.value })}
+                                    className="bg-transparent border-none text-xs text-slate-200 focus:outline-none cursor-pointer w-28 text-center font-bold"
+                                />
+                                <span className="text-slate-500 text-xs">-</span>
+                                <input
+                                    type="date"
+                                    value={filters.end_date}
+                                    onChange={e => setFilters({ end_date: e.target.value })}
+                                    className="bg-transparent border-none text-xs text-slate-200 focus:outline-none cursor-pointer w-28 text-center font-bold"
                                 />
                             </div>
-                        )}
+                        </div>
 
-                        {filters.time_preset === 'custom' && (
-                            <>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Desde</label>
-                                    <input
-                                        type="date"
-                                        className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black"
-                                        value={filters.start_date}
-                                        onChange={e => setFilters({ ...filters, start_date: e.target.value })}
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Hasta</label>
-                                    <input
-                                        type="date"
-                                        className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all font-black"
-                                        value={filters.end_date}
-                                        onChange={e => setFilters({ ...filters, end_date: e.target.value })}
-                                    />
-                                </div>
-                            </>
-                        )}
+                        {/* Quick Preset Buttons */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodos Rápidos</label>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                {[
+                                    { id: 'today', label: 'Hoy' },
+                                    { id: 'yesterday', label: 'Ayer' },
+                                    { id: 'last_month', label: 'Mes anterior' },
+                                    { id: 'this_month', label: 'Este mes' },
+                                    { id: 'last_30_days', label: 'Últimos 30 días' }
+                                ].map((preset) => {
+                                    const isActive = getActiveDatePreset() === preset.id;
+                                    return (
+                                        <button
+                                            key={preset.id}
+                                            type="button"
+                                            onClick={() => applyDatePreset(preset.id)}
+                                            className={`text-[9px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all ${
+                                                isActive
+                                                    ? 'bg-violet-650/30 border-violet-500/50 text-violet-300 shadow-lg shadow-violet-600/10'
+                                                    : 'bg-slate-850/40 border-slate-800 text-slate-500 hover:text-slate-300 hover:border-slate-700'
+                                            }`}
+                                        >
+                                            {preset.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
                         {/* Switch de Comparación */}
                         <div className="flex flex-col gap-2">
@@ -220,7 +268,7 @@ const PublicCloserStatsPage = () => {
                             <div className="flex items-center gap-2.5 bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 min-h-[38px]">
                                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Comparar</span>
                                 <button
-                                    onClick={() => setFilters({ ...filters, compare: !filters.compare })}
+                                    onClick={() => setFilters({ compare: !filters.compare })}
                                     type="button"
                                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none ${
                                         filters.compare ? 'bg-violet-600 shadow-lg shadow-violet-600/20' : 'bg-slate-900 border border-slate-750'
