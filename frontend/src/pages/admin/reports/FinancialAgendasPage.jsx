@@ -102,15 +102,68 @@ const FinancialAgendasPage = () => {
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
 
+    const applyDatePreset = (preset) => {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        let start = '';
+        let end = todayStr;
+
+        if (preset === 'today') {
+            start = todayStr;
+            end = todayStr;
+        } else if (preset === 'yesterday') {
+            const yesterday = new Date();
+            yesterday.setDate(today.getDate() - 1);
+            start = yesterday.toISOString().split('T')[0];
+            end = start;
+        } else if (preset === 'this_month') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            end = todayStr;
+        } else if (preset === 'last_month') {
+            const firstOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+            start = firstOfLastMonth.toISOString().split('T')[0];
+            end = lastOfLastMonth.toISOString().split('T')[0];
+        } else if (preset === 'upcoming') {
+            start = todayStr;
+            end = '';
+        }
+
+        setFilters({ startDate: start, endDate: end });
+    };
+
+    const getActiveDatePreset = () => {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        
+        const lastMonthFirst = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthLast = new Date(today.getFullYear(), today.getMonth(), 0);
+        const lastMonthStartStr = lastMonthFirst.toISOString().split('T')[0];
+        const lastMonthEndStr = lastMonthLast.toISOString().split('T')[0];
+        
+        if (startDate === todayStr && endDate === todayStr) return 'today';
+        if (startDate === yesterdayStr && endDate === yesterdayStr) return 'yesterday';
+        if (startDate === thisMonthStart && endDate === todayStr) return 'this_month';
+        if (startDate === lastMonthStartStr && endDate === lastMonthEndStr) return 'last_month';
+        if (startDate === todayStr && endDate === '') return 'upcoming';
+        return 'custom';
+    };
+
     // Forzar inicio en el mes actual si los filtros cargados de localStorage están vacíos
     useEffect(() => {
-        if (!startDate || !endDate) {
+        if (!startDate && !endDate) {
             setFilters({
-                startDate: startDate || getFirstDayOfCurrentMonth(),
-                endDate: endDate || getTodayDate()
+                startDate: getFirstDayOfCurrentMonth(),
+                endDate: getTodayDate()
             });
         }
-    }, [startDate, endDate]);
+    }, []);
 
     const loaderRef = useRef(null);
 
@@ -205,19 +258,46 @@ const FinancialAgendasPage = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
+                    {/* Botones de Presets Rápidos */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {[
+                            { id: 'today', label: 'Hoy' },
+                            { id: 'yesterday', label: 'Ayer' },
+                            { id: 'this_month', label: 'Este mes' },
+                            { id: 'last_month', label: 'Mes pasado' },
+                            { id: 'upcoming', label: 'Próximas Agendas' }
+                        ].map((preset) => {
+                            const isActive = getActiveDatePreset() === preset.id;
+                            return (
+                                <button
+                                    key={preset.id}
+                                    type="button"
+                                    onClick={() => applyDatePreset(preset.id)}
+                                    className={`text-[9px] font-black uppercase tracking-wider px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer ${
+                                        isActive
+                                            ? 'bg-primary/25 border-primary/50 text-white shadow-lg shadow-primary/10'
+                                            : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                                    }`}
+                                >
+                                    {preset.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     <div className="flex items-center gap-2 bg-surface p-2 rounded-2xl border border-base">
                         <input
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0"
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer"
                         />
                         <span className="text-muted text-xs">-</span>
                         <input
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0"
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer"
                         />
                     </div>
                     <div className="relative group">
