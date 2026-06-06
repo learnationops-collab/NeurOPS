@@ -253,9 +253,13 @@
           - Se añadieron **acciones de contacto alternativo** mediante botones premium de WhatsApp (con mensaje personalizado) y Email al lado del link de Instagram.
           - Se implementó la visualización del **Historial de Eventos** (Línea de tiempo) y Comentarios en la barra lateral derecha a través de pestañas deslizables.
           - Se agregó el botón **Registrar Venta** dinámico (visible si result es "Asistió"). Al hacer clic, abre `QuickSaleModal` pre-completando los datos de este lead (id, nombre, email) de forma transparente y sin fricciones operativas.
-  - **Integración de Webhook de Ventas a n8n**:
-    - **API Backend (`sheets_service.py`) [MODIFY]**: Implementación de un flujo no bloqueante (mediante un subhilo en segundo plano `threading.Thread`) en `SheetsService.post_to_sheets`. Cada vez que se registra y confirma una nueva venta local en `Ventas_DB` (a través de Closers o Administradores), se disparará un POST HTTP a la URL definida en la variable de entorno `N8N_WEBHOOK_URL` o `VENTAS_WEBHOOK`.
+  - **Integración de Webhook de Ventas a n8n y Toggle de Automatización**:
+    - **API Backend (`sheets_service.py` y `financial_sales.py`) [MODIFY]**: 
+      - Implementación de un flujo no bloqueante (mediante un subhilo en segundo plano `threading.Thread`) en `SheetsService.post_to_sheets`. Cada vez que se registra y confirma una nueva venta local en `Ventas_DB` (a través de Closers o Administradores), se disparará un POST HTTP a la URL definida en la variable de entorno `N8N_WEBHOOK_URL` o `VENTAS_WEBHOOK`.
+      - Se modificaron `SheetsService.post_to_sheets` y la ruta intermedia de creación de venta en `/public/financial-sales/new` para capturar el parámetro boolean `enviar_webhook` en el payload de la venta y así omitir el envío a n8n si el usuario lo desactiva.
     - **Formato Compatible**: Los datos se envían en un payload JSON que incluye tanto las claves originales en inglés como las claves en español solicitadas (`Nombre`, `Monto abonado`, `Setter`, `Instagram`, etc.), garantizando compatibilidad inmediata en el nodo de n8n.
+    - **Frontend (`NewSalePage.jsx` y `PublicFinancialSalesPage.jsx`) [MODIFY]**: Se diseñó e integró un switch deslizable interactivo con el label *"Automatización (n8n)"* en los formularios de registro de ventas del Closer y del Administrador. Por defecto se inicializa en `true` para asegurar el flujo automatizado habitual, pero permite al vendedor desactivarlo manualmente antes de enviar los datos a la base local y Google Sheets.
+
 
 
 

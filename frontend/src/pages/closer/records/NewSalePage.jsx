@@ -44,7 +44,8 @@ const CloserNewSalePage = () => {
         notas: '',
         estado: 'Confirmada',
         instagram: '',
-        setter: ''
+        setter: '',
+        enviar_webhook: true
     });
 
     useEffect(() => {
@@ -174,7 +175,8 @@ const CloserNewSalePage = () => {
             instagram: form.instagram ? form.instagram.replace(/@/g, '').trim() : '',
             estado: form.estado, // Columna L (Estado de la Venta)
             setter: form.setter || '', // Columna M (Setter que Prospectó)
-            marca_temporal: new Date().toLocaleString("es-ES") // Fecha/hora del registro
+            marca_temporal: new Date().toLocaleString("es-ES"), // Fecha/hora del registro
+            enviar_webhook: form.enviar_webhook
         };
 
         try {
@@ -567,6 +569,27 @@ const CloserNewSalePage = () => {
                                     onChange={e => setForm({ ...form, notas: e.target.value })}
                                 />
                             </div>
+                        </div>
+
+                        {/* Switch de Automatización */}
+                        <div className="space-y-2 md:col-span-2 flex items-center justify-between bg-slate-950/20 p-4 rounded-2xl border border-slate-800/80">
+                            <div className="space-y-0.5">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Automatización (n8n)</label>
+                                <span className="text-[10px] text-slate-500 font-bold uppercase">Enviar datos de venta al webhook tras registrar</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setForm({ ...form, enviar_webhook: !form.enviar_webhook })}
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                    form.enviar_webhook ? 'bg-indigo-600' : 'bg-slate-700'
+                                }`}
+                            >
+                                <span
+                                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                        form.enviar_webhook ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                />
+                            </button>
                         </div>
 
                     </div>

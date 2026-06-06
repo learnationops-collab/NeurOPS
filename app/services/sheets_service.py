@@ -84,8 +84,12 @@ class SheetsService:
                 db.session.add(sale)
                 db.session.commit()
                 logger.info("[SHEETS POST] Venta registrada exitosamente en base de datos local.")
-                # Enviar webhook a n8n en segundo plano
-                SheetsService._trigger_n8n_webhook(payload)
+                # Enviar webhook a n8n en segundo plano si está activo
+                enviar_webhook = payload.get('enviar_webhook', True)
+                if enviar_webhook in (True, 'true', 'True', 1, '1', 'on'):
+                    SheetsService._trigger_n8n_webhook(payload)
+                else:
+                    logger.info("[N8N WEBHOOK] Envío omitido por petición del usuario/payload.")
             except Exception as db_err:
                 db.session.rollback()
                 logger.error(f"[SHEETS POST] Error al guardar venta local: {db_err}")

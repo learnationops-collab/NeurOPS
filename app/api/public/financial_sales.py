@@ -206,7 +206,8 @@ def create_new_financial_sale():
             "instagram": data.get('instagram') or 'N/A',
             "setter": data.get('setter') or '',
             "estado": data.get('estado') or 'Confirmada',
-            "marca_temporal": data.get('marca_temporal') or datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S')
+            "marca_temporal": data.get('marca_temporal') or datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S'),
+            "enviar_webhook": data.get('enviar_webhook', True)
         }
         
         result = SheetsService.post_to_sheets("Ventas_DB", payload)

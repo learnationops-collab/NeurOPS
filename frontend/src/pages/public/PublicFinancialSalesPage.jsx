@@ -370,7 +370,8 @@ const PublicFinancialSalesPage = () => {
         examen: '',
         segundo_pago: '',
         notas: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        enviar_webhook: true
     });
 
     const [agendaSearchQuery, setAgendaSearchQuery] = useState('');
@@ -447,7 +448,8 @@ const PublicFinancialSalesPage = () => {
             examen: '',
             segundo_pago: '',
             notas: '',
-            date: new Date().toISOString().split('T')[0]
+            date: new Date().toISOString().split('T')[0],
+            enviar_webhook: true
         });
     };
 
@@ -483,7 +485,8 @@ const PublicFinancialSalesPage = () => {
                 setter: createData.setter_name,
                 examen: combinedExamen,
                 segundo_pago: createData.segundo_pago,
-                marca_temporal: marcaTemporalStr
+                marca_temporal: marcaTemporalStr,
+                enviar_webhook: createData.enviar_webhook
             };
 
             const res = await api.post('/public/financial-sales/new', payload);
@@ -1675,6 +1678,27 @@ const PublicFinancialSalesPage = () => {
                                         className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold min-h-[80px] resize-none"
                                         placeholder="Observaciones de la venta..."
                                     />
+                                </div>
+
+                                {/* Switch de Automatización */}
+                                <div className="space-y-2 md:col-span-2 flex items-center justify-between bg-slate-950/20 p-4 rounded-2xl border border-slate-850/80">
+                                    <div className="space-y-0.5 text-left">
+                                        <label className="text-[10px] font-black text-slate-405 uppercase tracking-widest block">Automatización (n8n)</label>
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase">Enviar datos de venta al webhook tras registrar</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCreateData({ ...createData, enviar_webhook: !createData.enviar_webhook })}
+                                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                            createData.enviar_webhook ? 'bg-indigo-600' : 'bg-slate-700'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                                createData.enviar_webhook ? 'translate-x-5' : 'translate-x-0'
+                                            }`}
+                                        />
+                                    </button>
                                 </div>
                             </div>
 
