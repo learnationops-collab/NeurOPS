@@ -588,11 +588,35 @@ const FinancialAgendasPage = () => {
                                                     <span className="text-xs text-muted">No IG</span>
                                                 )}
                                             </td>
-                                            <td className="py-4 px-4 text-center">
-                                                <Badge variant={getEstadoBadgeVariant(agenda.estado)} className="rounded-lg">
-                                                    {agenda.estado || 'Pendiente'}
-                                                </Badge>
-                                            </td>
+                                             <td className="py-4 px-4 text-center">
+                                                 <select
+                                                     value={agenda.estado || 'Pendiente'}
+                                                     onChange={async (e) => {
+                                                         const nuevoEstado = e.target.value;
+                                                         try {
+                                                             const response = await api.put(`/public/financial-agendas/${agenda.id}`, { estado: nuevoEstado });
+                                                             const updated = response.data.agenda;
+                                                             setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
+                                                         } catch (err) {
+                                                             console.error("Error updating agenda status in-line:", err);
+                                                             alert("Error al actualizar el estado de la agenda");
+                                                         }
+                                                     }}
+                                                     className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border cursor-pointer outline-none focus:ring-1 focus:ring-primary/50 transition-all text-center border-box
+                                                         ${agenda.estado === 'Show Up' ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : ''}
+                                                         ${agenda.estado === 'Completada' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : ''}
+                                                         ${agenda.estado === 'Reagendada' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : ''}
+                                                         ${agenda.estado === 'Cancelada' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20' : ''}
+                                                         ${!agenda.estado || agenda.estado === 'Pendiente' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
+                                                     `}
+                                                 >
+                                                     {['Pendiente', 'Show Up', 'Completada', 'Reagendada', 'Cancelada'].map(st => (
+                                                         <option key={st} value={st} className="bg-slate-900 text-white font-semibold">
+                                                             {st}
+                                                         </option>
+                                                     ))}
+                                                 </select>
+                                             </td>
                                             <td className="py-4 px-4 text-right">
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button 

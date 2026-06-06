@@ -240,7 +240,7 @@
       - Se añadieron estados para almacenar los arrays de valores únicos del backend.
       - Se expandió `usePersistentFilters` para almacenar y persistir los filtros `estado`, `closer` y `fuente`.
       - Se incorporaron tres dropdowns de selección premium con estilo Dark Glassmorphism a la barra superior de filtros en la cabecera.
-      - Se actualizó el listado en la tabla para renderizar un Badge con código de colores según el estado actual de la cita (`Completada` -> success/verde, `Show Up` -> primary/azul, `Reagendada` -> warning/amarillo, `Cancelada` -> rose/rojo y `Pendiente` -> neutral/gris).
+      - Se actualizó el listado en la tabla reemplazando el Badge estático por un selector dropdown interactivo (`select`) en línea. Este selector aplica estilos CSS reactivos de acuerdo con el estado seleccionado (respetando la paleta HSL del tema) y ejecuta de forma asíncrona un llamado `PUT /public/financial-agendas/<id>` para actualizar el estado del registro en caliente al instante al cambiar la opción.
       - Se integró el selector dropdown de estado en el modal de edición de agenda, garantizando la sincronización bidireccional y recálculo instantáneo al guardar cambios.
 
 
