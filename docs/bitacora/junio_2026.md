@@ -246,6 +246,14 @@
       - **Desglose de KPIs de Agendas por Closer y Fuente [NEW FEATURE]**:
         - **Backend (API)**: El endpoint `GET /public/financial-agendas` ahora agrupa y retorna la cantidad de agendas por cada estado y combinación Closer-Estado/Fuente-Estado (`by_closer_state` y `by_source_state`) y calcula valores únicos dinámicamente de forma sanitizada.
         - **Frontend**: Se integró un grid de dos columnas de diseño Glassmorphism con tablas interactivas de desglose por Closer y por Fuente. Muestran para cada entidad los conteos de agendas en cada estado (Pendiente, Show Up, No show, Reagendada, Cancelada), el total, y calcula dinámicamente el **Show Rate** (porcentaje de Show Up respecto al total de citas atendidas: Show Up + No show) para una rápida toma de decisiones.
+      - **Mejoras de CEO en el Mazo de Closers (/closer/deck) [NEW FEATURE]**:
+        - **Backend (API) (`closer.py`) [MODIFY]**: Se modificaron las rutas `/deck` y `/deck/card/<appt_id>` para inyectar mediante el helper `_format_appointment_for_deck` la lista de respuestas de encuestas (`survey_answers`), `client_id`, `setter_id` y `setter_name` directamente en el payload de las citas.
+        - **Frontend (UI) (`CloserDeckPage.jsx` y `QuickSaleModal.jsx`) [MODIFY]**:
+          - Se integró el panel colapsable del **Perfil de Triage** para ver las respuestas de calificación del lead al instante.
+          - Se añadieron **acciones de contacto alternativo** mediante botones premium de WhatsApp (con mensaje personalizado) y Email al lado del link de Instagram.
+          - Se implementó la visualización del **Historial de Eventos** (Línea de tiempo) y Comentarios en la barra lateral derecha a través de pestañas deslizables.
+          - Se agregó el botón **Registrar Venta** dinámico (visible si result es "Asistió"). Al hacer clic, abre `QuickSaleModal` pre-completando los datos de este lead (id, nombre, email) de forma transparente y sin fricciones operativas.
+
 
 
 

@@ -21,12 +21,14 @@ import {
     Tag,
     Video,
     MessageCircle,
-    X
+    X,
+    DollarSign
 } from 'lucide-react';
 import api from '../../services/api';
 import MazoCartas from '../../components/deck/MazoCartas';
 import BuscadorGlobalDeck from '../../components/deck/BuscadorGlobalDeck';
 import Button from '../../components/ui/Button';
+import QuickSaleModal from '../../components/modals/QuickSaleModal';
 
 // Estilos de comentarios en español cortos
 const CloserDeckPage = () => {
@@ -87,6 +89,12 @@ const CloserDeckPage = () => {
     const [replyToName, setReplyToName] = useState('');
     const [loadingComments, setLoadingComments] = useState(false);
 
+    // Nuevos estados para pestañas derecha, historial y registro de venta
+    const [rightPanelTab, setRightPanelTab] = useState('comments');
+    const [eventLogs, setEventLogs] = useState([]);
+    const [loadingLogs, setLoadingLogs] = useState(false);
+    const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+
     const activeCard = cards[currentIndex];
 
     // Cargar comentarios
@@ -102,11 +110,26 @@ const CloserDeckPage = () => {
         }
     };
 
+    // Cargar historial de actividad del lead
+    const fetchEventLogs = async (apptId) => {
+        setLoadingLogs(true);
+        try {
+            const res = await api.get(`/closer/deck/events/${apptId}`);
+            setEventLogs(res.data || []);
+        } catch (err) {
+            console.error("Error al cargar historial del lead:", err);
+        } finally {
+            setLoadingLogs(false);
+        }
+    };
+
     useEffect(() => {
         if (activeCard?.id) {
             fetchComments(activeCard.id);
+            fetchEventLogs(activeCard.id);
         } else {
             setComments([]);
+            setEventLogs([]);
         }
     }, [activeCard?.id]);
 
@@ -263,57 +286,123 @@ const CloserDeckPage = () => {
                                     </div>
                                 )}
                                 <MazoCartas cards={cards} currentIndex={currentIndex}>
-                                    {activeCard && (
-                                        <div className="flex flex-col justify-between h-full space-y-6">
-                                            
-                                            {/* Cabecera de la carta */}
-                                            <div className="space-y-4">
-                                                <div className="flex justify-between items-start gap-4">
-                                                    <span className="text-[10px] font-black uppercase bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-xl tracking-widest flex items-center gap-1.5">
-                                                        <Clock size={12} />
-                                                        {formatTime(activeCard.start_time)}
-                                                    </span>
-                                                    <span className="text-[10px] font-black uppercase bg-white/5 border border-white/10 text-slate-400 px-3 py-1.5 rounded-xl tracking-widest flex items-center gap-1.5">
-                                                        <Tag size={12} />
-                                                        {activeCard.origin || 'Sin Origen'}
-                                                    </span>
-                                                </div>
+                                    {activeCard && (() => {
+                                        const cleanPhone = activeCard.phone ? activeCard.phone.replace(/\D/g, '') : '';
+                                        const waLink = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Hola ${activeCard.lead_name}, te saluda tu asesor de NeurOPS. ¿Cómo estás?`)}` : '';
+                                        const mailLink = activeCard.email ? `mailto:${activeCard.email}` : '';
 
-                                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                                    <div className="space-y-1">
-                                                        <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">
-                                                            {activeCard.lead_name}
-                                                        </h2>
-                                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                                                            Lead ID: #{activeCard.id} • {activeCard.instagram ? `@${activeCard.instagram}` : 'Sin Instagram'}
+                                        return (
+                                            <div className="flex flex-col justify-between h-full space-y-6">
+                                                
+                                                {/* Cabecera de la carta */}
+                                                <div className="space-y-4">
+                                                    <div className="flex justify-between items-start gap-4">
+                                                        <span className="text-[10px] font-black uppercase bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-xl tracking-widest flex items-center gap-1.5">
+                                                            <Clock size={12} />
+                                                            {formatTime(activeCard.start_time)}
+                                                        </span>
+                                                        <span className="text-[10px] font-black uppercase bg-white/5 border border-white/10 text-slate-400 px-3 py-1.5 rounded-xl tracking-widest flex items-center gap-1.5">
+                                                            <Tag size={12} />
+                                                            {activeCard.origin || 'Sin Origen'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800/60 pb-3">
+                                                        <div className="space-y-1.5 text-left">
+                                                            <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">
+                                                                {activeCard.lead_name}
+                                                            </h2>
+                                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] text-slate-400 font-bold">
+                                                                <span>Lead ID: #{activeCard.id}</span>
+                                                                {activeCard.instagram && activeCard.instagram !== 'N/A' && (
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Instagram size={11} className="text-pink-500" />
+                                                                        @{activeCard.instagram}
+                                                                    </span>
+                                                                )}
+                                                                {activeCard.phone && activeCard.phone !== 'N/A' && (
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Phone size={11} className="text-emerald-500" />
+                                                                        {activeCard.phone}
+                                                                    </span>
+                                                                )}
+                                                                {activeCard.email && activeCard.email !== 'N/A' && (
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Mail size={11} className="text-sky-500" />
+                                                                        {activeCard.email}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Acciones Rápidas de Contacto */}
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            {activeCard.ig_chat_link && (
+                                                                <a
+                                                                    href={activeCard.ig_chat_link}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center gap-1.5 bg-[#1534ff] hover:bg-[#1534ff]/90 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-xl transition-all shadow-sm"
+                                                                    title="Abrir Chat IG"
+                                                                >
+                                                                    Chat IG
+                                                                    <ExternalLink size={10} />
+                                                                </a>
+                                                            )}
+                                                            {cleanPhone && (
+                                                                <a
+                                                                    href={waLink}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-xl transition-all shadow-sm animate-pulse"
+                                                                    title="WhatsApp Rápido"
+                                                                >
+                                                                    WhatsApp
+                                                                    <MessageCircle size={10} />
+                                                                </a>
+                                                            )}
+                                                            {activeCard.email && activeCard.email !== 'N/A' && (
+                                                                <a
+                                                                    href={mailLink}
+                                                                    className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-xl transition-all border border-slate-700"
+                                                                    title="Enviar Email"
+                                                                >
+                                                                    Email
+                                                                    <Mail size={10} />
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Info del Setter (Notas del Setter en estilo chat bubble) */}
+                                                    <div className="bg-[#1534ff]/5 border border-[#1534ff]/10 p-5 rounded-3xl space-y-2 text-left relative overflow-hidden">
+                                                        <div className="flex items-center gap-2 text-[9px] font-black text-primary uppercase tracking-widest">
+                                                            <MessageCircle size={14} />
+                                                            Instrucciones del Setter
+                                                        </div>
+                                                        <p className="text-xs font-bold text-slate-300 italic">
+                                                            "{activeCard.setter_notes || 'El Setter no dejó notas adicionales para esta cita.'}"
                                                         </p>
                                                     </div>
-                                                    
-                                                    {/* Enlace al chat directo */}
-                                                    {activeCard.ig_chat_link && (
-                                                        <a
-                                                            href={activeCard.ig_chat_link}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-2 bg-[#1534ff] hover:bg-[#1534ff]/90 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl shadow-lg shadow-blue-600/10 transition-all shrink-0"
-                                                        >
-                                                            Abrir Chat IG
-                                                            <ExternalLink size={12} />
-                                                        </a>
+
+                                                    {/* Triage / Respuestas de Encuesta colapsables */}
+                                                    {activeCard.survey_answers && activeCard.survey_answers.length > 0 && (
+                                                        <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-5 space-y-3 text-left">
+                                                            <div className="flex items-center gap-2 text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+                                                                <Layers size={14} />
+                                                                Perfil de Triage (Calificación)
+                                                            </div>
+                                                            <div className="max-h-[180px] overflow-y-auto custom-scrollbar space-y-3.5 pr-2">
+                                                                {activeCard.survey_answers.map((ans, idx) => (
+                                                                    <div key={idx} className="space-y-0.5 border-l-2 border-emerald-500/20 pl-3">
+                                                                        <p className="text-[10px] font-bold text-slate-400 leading-tight">{ans.question}</p>
+                                                                        <p className="text-xs font-black text-white leading-normal">{ans.answer || 'Sin respuesta'}</p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
                                                     )}
                                                 </div>
-
-                                                {/* Info del Setter (Notas del Setter en estilo chat bubble) */}
-                                                <div className="bg-[#1534ff]/5 border border-[#1534ff]/10 p-5 rounded-3xl space-y-2 text-left relative overflow-hidden">
-                                                    <div className="flex items-center gap-2 text-[9px] font-black text-primary uppercase tracking-widest">
-                                                        <MessageCircle size={14} />
-                                                        Instrucciones del Setter
-                                                    </div>
-                                                    <p className="text-xs font-bold text-slate-300 italic">
-                                                        "{activeCard.setter_notes || 'El Setter no dejó notas adicionales para esta cita.'}"
-                                                    </p>
-                                                </div>
-                                            </div>
 
                                             {/* Formulario Secuencial Closer */}
                                             <form onSubmit={handleSubmit} className="space-y-5 flex-1 overflow-y-auto pr-1 py-1 custom-scrollbar">
@@ -401,24 +490,37 @@ const CloserDeckPage = () => {
                                                 </div>
                                             </form>
 
-                                            {/* Botón de envío */}
-                                            <button
-                                                type="button"
-                                                onClick={handleSubmit}
-                                                disabled={submitting}
-                                                className="w-full bg-[#1534ff] hover:bg-[#1534ff]/90 text-white font-black text-[10px] uppercase tracking-widest py-4 rounded-2xl transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 group disabled:opacity-50"
-                                            >
-                                                {submitting ? (
-                                                    <Loader2 className="animate-spin" size={14} />
-                                                ) : (
-                                                    <>
-                                                        Completar Seguimiento y Cierre
-                                                        <Check size={14} className="group-hover:scale-110 transition-transform" />
-                                                    </>
+                                            {/* Botones de acción inferiores */}
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                {result === 'Asistió' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsSaleModalOpen(true)}
+                                                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest py-4 rounded-2xl transition-all shadow-lg shadow-emerald-600/10 flex items-center justify-center gap-2 cursor-pointer"
+                                                    >
+                                                        <DollarSign size={14} />
+                                                        Registrar Venta
+                                                    </button>
                                                 )}
-                                            </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSubmit}
+                                                    disabled={submitting}
+                                                    className={`${result === 'Asistió' ? 'flex-1' : 'w-full'} bg-[#1534ff] hover:bg-[#1534ff]/90 text-white font-black text-[10px] uppercase tracking-widest py-4 rounded-2xl transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 group disabled:opacity-50 cursor-pointer`}
+                                                >
+                                                    {submitting ? (
+                                                        <Loader2 className="animate-spin" size={14} />
+                                                    ) : (
+                                                        <>
+                                                            Completar Seguimiento
+                                                            <Check size={14} className="group-hover:scale-110 transition-transform" />
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
-                                    )}
+                                        );
+                                    })()}
                                 </MazoCartas>
                             </div>
 
@@ -447,113 +549,176 @@ const CloserDeckPage = () => {
                                     </div>
                                 </div>
 
-                                {/* Sección de Comentarios e Intercambio de Leads (Closer) */}
+                                {/* Sección de Comentarios e Historial de Leads (Closer) */}
                                 {activeCard && (
                                     <div className="bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-8 shadow-2xl space-y-6 text-left relative overflow-hidden">
-                                        <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-                                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                                <MessageSquare size={16} className="text-primary" />
-                                                Intercambio de Leads
-                                            </h3>
-                                            <span className="text-[10px] font-black uppercase bg-[#1534ff]/10 text-primary border border-[#1534ff]/20 px-2.5 py-1 rounded-xl">
-                                                {comments.length} Mensajes
-                                            </span>
+                                        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                                            <div className="flex gap-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRightPanelTab('comments')}
+                                                    className={`text-xs font-black uppercase tracking-[0.2em] transition-colors ${rightPanelTab === 'comments' ? 'text-primary border-b-2 border-primary pb-1' : 'text-slate-500 hover:text-slate-300'}`}
+                                                >
+                                                    Mensajes
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRightPanelTab('history')}
+                                                    className={`text-xs font-black uppercase tracking-[0.2em] transition-colors ${rightPanelTab === 'history' ? 'text-primary border-b-2 border-primary pb-1' : 'text-slate-500 hover:text-slate-300'}`}
+                                                >
+                                                    Historial
+                                                </button>
+                                            </div>
+                                            {rightPanelTab === 'comments' ? (
+                                                <span className="text-[10px] font-black uppercase bg-[#1534ff]/10 text-primary border border-[#1534ff]/20 px-2.5 py-1 rounded-xl">
+                                                    {comments.length} Mensajes
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-xl">
+                                                    {eventLogs.length} Eventos
+                                                </span>
+                                            )}
                                         </div>
 
-                                        {/* Historial de Comentarios con Scroll */}
-                                        <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
-                                            {loadingComments ? (
-                                                <div className="flex justify-center py-6">
-                                                    <Loader2 className="animate-spin text-primary" size={20} />
-                                                </div>
-                                            ) : comments.length === 0 ? (
-                                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider text-center py-6">
-                                                    Sin comentarios en este lead aún.
-                                                </p>
-                                            ) : (
-                                                comments.filter(c => !c.parent_id).map(comment => (
-                                                    <div key={comment.id} className="space-y-3">
-                                                        {/* Comentario Principal */}
-                                                        <div className="bg-black/35 border border-slate-850/80 p-4 rounded-3xl relative group">
-                                                            <div className="flex justify-between items-start mb-1.5">
-                                                                <span className="text-[10px] font-black text-primary uppercase tracking-wider">
-                                                                    {comment.author_name}
-                                                                </span>
-                                                                <span className="text-[9px] text-slate-500 font-bold">
-                                                                    {new Date(comment.created_at).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}
-                                                                </span>
+                                        {/* Vista de Mensajes/Comentarios */}
+                                        {rightPanelTab === 'comments' && (
+                                            <>
+                                                {/* Historial de Comentarios con Scroll */}
+                                                <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                                                    {loadingComments ? (
+                                                        <div className="flex justify-center py-6">
+                                                            <Loader2 className="animate-spin text-primary" size={20} />
+                                                        </div>
+                                                    ) : comments.length === 0 ? (
+                                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider text-center py-6">
+                                                            Sin comentarios en este lead aún.
+                                                        </p>
+                                                    ) : (
+                                                        comments.filter(c => !c.parent_id).map(comment => (
+                                                            <div key={comment.id} className="space-y-3">
+                                                                {/* Comentario Principal */}
+                                                                <div className="bg-black/35 border border-slate-850/80 p-4 rounded-3xl relative group">
+                                                                    <div className="flex justify-between items-start mb-1.5">
+                                                                        <span className="text-[10px] font-black text-primary uppercase tracking-wider">
+                                                                            {comment.author_name}
+                                                                        </span>
+                                                                        <span className="text-[9px] text-slate-500 font-bold">
+                                                                            {new Date(comment.created_at).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                                                        {comment.text}
+                                                                    </p>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setReplyToId(comment.id);
+                                                                            setReplyToName(comment.author_name);
+                                                                        }}
+                                                                        className="mt-2 text-[9px] font-black text-slate-500 hover:text-white uppercase tracking-wider transition-colors block"
+                                                                    >
+                                                                        Responder
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Respuestas Identadas */}
+                                                                {comments.filter(c => c.parent_id === comment.id).map(reply => (
+                                                                    <div key={reply.id} className="ml-6 bg-[#1d1e26]/50 border border-slate-800/40 p-4 rounded-3xl relative">
+                                                                        <div className="flex justify-between items-start mb-1.5">
+                                                                            <span className="text-[10px] font-black text-violet-400 uppercase tracking-wider">
+                                                                                {reply.author_name}
+                                                                            </span>
+                                                                            <span className="text-[9px] text-slate-500 font-bold">
+                                                                                {new Date(reply.created_at).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                                                            {reply.text}
+                                                                        </p>
+                                                                    </div>
+                                                                ))}
                                                             </div>
-                                                            <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                                                                {comment.text}
-                                                            </p>
+                                                        ))
+                                                    )}
+                                                </div>
+
+                                                {/* Input de Nuevo Comentario */}
+                                                <form onSubmit={handleSendComment} className="space-y-3">
+                                                    {replyToId && (
+                                                        <div className="flex justify-between items-center bg-violet-500/10 border border-violet-500/20 px-4 py-2.5 rounded-2xl">
+                                                            <span className="text-[9px] font-black text-violet-400 uppercase tracking-wider">
+                                                                Respondiendo a {replyToName}
+                                                            </span>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
-                                                                    setReplyToId(comment.id);
-                                                                    setReplyToName(comment.author_name);
+                                                                    setReplyToId(null);
+                                                                    setReplyToName('');
                                                                 }}
-                                                                className="mt-2 text-[9px] font-black text-slate-500 hover:text-white uppercase tracking-wider transition-colors block"
+                                                                className="text-slate-400 hover:text-white"
                                                             >
-                                                                Responder
+                                                                <X size={12} />
                                                             </button>
                                                         </div>
+                                                    )}
+                                                    <div className="relative flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            placeholder={replyToId ? "Escribe tu respuesta..." : "Escribe un comentario..."}
+                                                            value={newCommentText}
+                                                            onChange={(e) => setNewCommentText(e.target.value)}
+                                                            className="flex-1 bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all"
+                                                        />
+                                                        <button
+                                                            type="submit"
+                                                            className="bg-[#1534ff] hover:bg-[#1534ff]/90 text-white font-black text-[9px] uppercase tracking-widest px-4 rounded-2xl transition-all shadow-lg shadow-blue-600/10 flex items-center justify-center"
+                                                        >
+                                                            Enviar
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </>
+                                        )}
 
-                                                        {/* Respuestas Identadas */}
-                                                        {comments.filter(c => c.parent_id === comment.id).map(reply => (
-                                                            <div key={reply.id} className="ml-6 bg-[#1d1e26]/50 border border-slate-800/40 p-4 rounded-3xl relative">
-                                                                <div className="flex justify-between items-start mb-1.5">
-                                                                    <span className="text-[10px] font-black text-violet-400 uppercase tracking-wider">
-                                                                        {reply.author_name}
-                                                                    </span>
-                                                                    <span className="text-[9px] text-slate-500 font-bold">
-                                                                        {new Date(reply.created_at).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}
-                                                                    </span>
+                                        {/* Vista de Historial / Eventos en Línea de Tiempo */}
+                                        {rightPanelTab === 'history' && (
+                                            <div className="max-h-[360px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                                                {loadingLogs ? (
+                                                    <div className="flex justify-center py-6">
+                                                        <Loader2 className="animate-spin text-primary" size={20} />
+                                                    </div>
+                                                ) : eventLogs.length === 0 ? (
+                                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider text-center py-6">
+                                                        Sin eventos registrados para este lead.
+                                                    </p>
+                                                ) : (
+                                                    <div className="relative border-l-2 border-slate-800 ml-3 pl-5 space-y-5 py-2">
+                                                        {eventLogs.map((log) => (
+                                                            <div key={log.id} className="relative">
+                                                                {/* Punto de la línea de tiempo */}
+                                                                <div className="absolute -left-[27px] top-1.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-slate-900 shadow-sm" />
+                                                                <div className="space-y-0.5">
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+                                                                            {log.event_type || 'Acción'}
+                                                                        </span>
+                                                                        <span className="text-[8px] text-slate-500 font-bold">
+                                                                            {new Date(log.created_at).toLocaleDateString('es-ES', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'})}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-xs text-slate-200 font-bold leading-normal">{log.description}</p>
+                                                                    {log.user_name && (
+                                                                        <p className="text-[9px] text-slate-500 font-semibold uppercase">
+                                                                            Por: {log.user_name}
+                                                                        </p>
+                                                                    )}
                                                                 </div>
-                                                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                                                                    {reply.text}
-                                                                </p>
                                                             </div>
                                                         ))}
                                                     </div>
-                                                ))
-                                            )}
-                                        </div>
-
-                                        {/* Input de Nuevo Comentario */}
-                                        <form onSubmit={handleSendComment} className="space-y-3">
-                                            {replyToId && (
-                                                <div className="flex justify-between items-center bg-violet-500/10 border border-violet-500/20 px-4 py-2.5 rounded-2xl">
-                                                    <span className="text-[9px] font-black text-violet-400 uppercase tracking-wider">
-                                                        Respondiendo a {replyToName}
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setReplyToId(null);
-                                                            setReplyToName('');
-                                                        }}
-                                                        className="text-slate-400 hover:text-white"
-                                                    >
-                                                        <X size={12} />
-                                                    </button>
-                                                </div>
-                                            )}
-                                            <div className="relative flex gap-2">
-                                                <input
-                                                    type="text"
-                                                    placeholder={replyToId ? "Escribe tu respuesta..." : "Escribe un comentario..."}
-                                                    value={newCommentText}
-                                                    onChange={(e) => setNewCommentText(e.target.value)}
-                                                    className="flex-1 bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all"
-                                                />
-                                                <button
-                                                    type="submit"
-                                                    className="bg-[#1534ff] hover:bg-[#1534ff]/90 text-white font-black text-[9px] uppercase tracking-widest px-4 rounded-2xl transition-all shadow-lg shadow-blue-600/10 flex items-center justify-center"
-                                                >
-                                                    Enviar
-                                                </button>
+                                                )}
                                             </div>
-                                        </form>
+                                        )}
                                     </div>
                                 )}
 
@@ -584,6 +749,21 @@ const CloserDeckPage = () => {
                     )}
                 </div>
             </div>
+            
+            {/* Modal de Registro Rápido de Venta */}
+            <QuickSaleModal
+                isOpen={isSaleModalOpen}
+                onClose={() => setIsSaleModalOpen(false)}
+                onSuccess={() => {
+                    toast.success("Venta registrada con éxito");
+                    fetchQueue();
+                }}
+                preselectedLead={activeCard ? {
+                    id: activeCard.client_id,
+                    username: activeCard.lead_name,
+                    email: activeCard.email
+                } : null}
+            />
         </div>
     );
 };

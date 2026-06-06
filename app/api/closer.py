@@ -1071,6 +1071,40 @@ def get_client_details(client_id):
     })
 
 
+def _format_appointment_for_deck(a):
+    # Formatear cita para el mazo Closer con datos de contacto y triage
+    from app.models import SurveyAnswer, SurveyQuestion
+    survey_answers = []
+    if a.client_id:
+        answers_query = db.session.query(SurveyAnswer, SurveyQuestion).join(SurveyQuestion).filter(SurveyAnswer.client_id == a.client_id).all()
+        for answer, question in answers_query:
+            survey_answers.append({
+                "question": question.text,
+                "answer": answer.answer
+            })
+            
+    return {
+        "id": a.id,
+        "client_id": a.client_id,
+        "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
+        "email": a.client.email if a.client else "",
+        "phone": a.client.phone if a.client else "",
+        "instagram": a.client.instagram if a.client else "",
+        "start_time": a.start_time.isoformat() if a.start_time else None,
+        "origin": a.origin,
+        "result": a.result or "Pendiente",
+        "ig_chat_link": a.ig_chat_link or "",
+        "keyword": a.keyword or "",
+        "setter_notes": a.setter_notes or "",
+        "closer_notes": a.closer_notes or "",
+        "linked_call": a.linked_call or "",
+        "setter_id": a.setter_id,
+        "setter_name": a.setter.username if a.setter else "Sin Setter",
+        "survey_answers": survey_answers,
+        "setter_processed": a.setter_processed,
+        "closer_processed": a.closer_processed
+    }
+
 @bp.route('/deck', methods=['GET'])
 @login_required
 def get_closer_deck():
@@ -1099,21 +1133,7 @@ def get_closer_deck():
 
     appointments = query.order_by(Appointment.start_time.asc()).all()
 
-    return jsonify([{
-        "id": a.id,
-        "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
-        "email": a.client.email if a.client else "",
-        "phone": a.client.phone if a.client else "",
-        "instagram": a.client.instagram if a.client else "",
-        "start_time": a.start_time.isoformat(),
-        "origin": a.origin,
-        "result": a.result or "Pendiente",
-        "ig_chat_link": a.ig_chat_link or "",
-        "keyword": a.keyword or "",
-        "setter_notes": a.setter_notes or "",
-        "closer_notes": a.closer_notes or "",
-        "linked_call": a.linked_call or ""
-    } for a in appointments]), 200
+    return jsonify([_format_appointment_for_deck(a) for a in appointments]), 200
 
 
 @bp.route('/deck/<int:appt_id>', methods=['POST'])
@@ -1204,23 +1224,7 @@ def get_closer_deck_card(appt_id):
         else:
             return jsonify({"message": "Forbidden"}), 403
         
-    return jsonify({
-        "id": appt.id,
-        "lead_name": appt.client.full_name or "Sin Nombre" if appt.client else "Sin Cliente",
-        "email": appt.client.email if appt.client else "",
-        "phone": appt.client.phone if appt.client else "",
-        "instagram": appt.client.instagram if appt.client else "",
-        "start_time": appt.start_time.isoformat(),
-        "origin": appt.origin,
-        "result": appt.result or "Pendiente",
-        "ig_chat_link": appt.ig_chat_link or "",
-        "keyword": appt.keyword or "",
-        "setter_notes": appt.setter_notes or "",
-        "closer_notes": appt.closer_notes or "",
-        "linked_call": appt.linked_call or "",
-        "setter_processed": appt.setter_processed,
-        "closer_processed": appt.closer_processed
-    }), 200
+    return jsonify(_format_appointment_for_deck(appt)), 200
 
 
 @bp.route('/deck/comments/<int:appt_id>', methods=['GET'])

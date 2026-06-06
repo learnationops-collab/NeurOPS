@@ -5,7 +5,7 @@ import { X, User, DollarSign, Wallet, CheckCircle2, Save, Loader2, AlertCircle, 
 import Button from '../ui/Button';
 import { motion } from 'framer-motion';
 
-const QuickSaleModal = ({ isOpen, onClose, onSuccess }) => {
+const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
@@ -25,10 +25,15 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess }) => {
     useEffect(() => {
         if (isOpen) {
             fetchMetadata();
-            setSearchTerm('');
-            setForm(prev => ({ ...prev, lead_id: '' }));
+            if (preselectedLead) {
+                setForm(prev => ({ ...prev, lead_id: preselectedLead.id }));
+                setSearchTerm(preselectedLead.username || preselectedLead.lead_name || preselectedLead.email || '');
+            } else {
+                setSearchTerm('');
+                setForm(prev => ({ ...prev, lead_id: '' }));
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, preselectedLead]);
 
 
     const fetchMetadata = async () => {
