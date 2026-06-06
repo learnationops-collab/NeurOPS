@@ -367,3 +367,173 @@ class BookingService:
             db.session.rollback()
             print(f"[LeadEventLog Error] {err}")
             return None
+
+    @staticmethod
+    def resolve_user_by_name(name_str, default_role=None):
+        """Resuelve un usuario por nombre/username de forma flexible."""
+        if not name_str:
+            return None
+        name_clean = str(name_str).strip().lower()
+        if name_clean in ('n/a', 'none', 'undefined', 'sin asignar', 'sin_asignar', 'equipo', ''):
+            return None
+        
+        # 1. Coincidencia exacta por username
+        user = User.query.filter(User.username.ilike(name_clean)).first()
+        if user:
+            return user
+            
+        # 2. Coincidencia sin espacios
+        name_no_spaces = name_clean.replace(' ', '')
+        user = User.query.filter(User.username.ilike(name_no_spaces)).first()
+        if user:
+            return user
+            
+        # 3. Coincidencia parcial priorizando rol
+        users = User.query.all()
+        for u in users:
+            u_name = u.username.lower()
+            if u_name in name_no_spaces or name_no_spaces in u_name:
+                if default_role and u.role == default_role:
+                    return u
+                    
+        # 4. Fallback de coincidencia parcial simple
+        for u in users:
+            u_name = u.username.lower()
+            if u_name in name_no_spaces or name_no_spaces in u_name:
+                return u
+                
+        return None
+
+    @staticmethod
+    def find_or_create_client(nombre, email, instagram, phone):
+        """Busca o crea un cliente usando cruzado inteligente de campos."""
+        email_clean = str(email).strip().lower() if email and '@' in str(email) else None
+        ig_clean = str(instagram).strip().replace('@', '').lower() if instagram and str(instagram).lower() not in ('n/a', 'none', '') else None
+        phone_clean = str(phone).strip() if phone and str(phone).lower() not in ('n/a', 'none', '') else None
+        
+        client = None
+        
+        # 1. Buscar por email
+        if email_clean:
+            client = Client.query.filter_by(email=email_clean).first()
+            
+        # 2. Buscar por instagram normalizado
+        if not client and ig_clean:
+            client = Client.query.filter(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_clean).first()
+            
+        # 3. Buscar por teléfono (últimos 8 dígitos)
+        if not client and phone_clean and len(phone_clean) >= 8:
+            client = Client.query.filter(Client.phone.like(f"%{phone_clean[-8:]}%")).first()
+            
+        # 4. Crear si no existe
+        if not client:
+            client = Client(
+                full_name=nombre or (email_clean.split('@')[0] if email_clean else "Cliente Nuevo"),
+                email=email_clean or f"no-email-{int(datetime.utcnow().timestamp())}@neurops.com",
+                phone=phone_clean,
+                instagram=ig_clean
+            )
+            db.session.add(client)
+            db.session.flush()
+        else:
+            # Actualizar datos vacíos
+            if nombre and not client.full_name:
+                client.full_name = nombre
+            if email_clean and not client.email:
+                client.email = email_clean
+            if phone_clean and not client.phone:
+                client.phone = phone_clean
+            if ig_clean and not client.instagram:
+                client.instagram = ig_clean
+                
+        return client
+
+    @staticmethod
+    def sync_financial_agenda_to_appointment(agenda):
+        """Sincroniza un registro de agenda financiera con la tabla de citas."""
+        if not agenda:
+            return None
+            
+        # 1. Obtener o crear Cliente
+        client = BookingService.find_or_create_client(
+            nombre=agenda.lead,
+            email=agenda.mail,
+            instagram=agenda.instagram,
+            phone=agenda.whatsapp
+        )
+        
+        # 2. Resolver Closer
+        closer_user = BookingService.resolve_user_by_name(agenda.closer, default_role='closer')
+        if not closer_user:
+            # Fallback al primer closer/admin del sistema
+            closer_user = User.query.filter_by(role='closer').first() or User.query.filter_by(role='admin').first()
+            
+        if not closer_user:
+            print("[SYNC ERROR] No se encontró Closer ni Admin en la base de datos.")
+            return None
+            
+        # 3. Resolver Setter
+        setter_user = BookingService.resolve_user_by_name(agenda.nombre, default_role='setter')
+        setter_id = setter_user.id if setter_user else None
+        
+        # 4. Buscar cita del mismo día
+        start_of_day = datetime.combine(agenda.date.date(), datetime.min.time())
+        end_of_day = datetime.combine(agenda.date.date(), datetime.max.time())
+        
+        appt = Appointment.query.filter(
+            Appointment.client_id == client.id,
+            Appointment.start_time >= start_of_day,
+            Appointment.start_time <= end_of_day
+        ).first()
+        
+        # 5. Mapear estado
+        estado_clean = str(agenda.estado).strip().lower() if agenda.estado else ""
+        
+        if estado_clean in ('pendiente', 'agendado', ''):
+            result = 'Agendado'
+            closer_processed = False
+            setter_processed = False
+        else:
+            # Estado procesado (No show, Show Up, Cancelada, Reagendada)
+            if estado_clean == 'no show':
+                result = 'No show'
+            elif estado_clean == 'show up':
+                result = 'Show Up'
+            elif estado_clean == 'cancelada':
+                result = 'Cancelada'
+            elif estado_clean == 'reagendada':
+                result = 'Reagendada'
+            else:
+                result = agenda.estado
+            closer_processed = True
+            setter_processed = True
+            
+        if not appt:
+            appt = Appointment(
+                closer_id=closer_user.id,
+                setter_id=setter_id,
+                client_id=client.id,
+                start_time=agenda.date,
+                origin=agenda.nombre or 'n8n',
+                result=result,
+                closer_processed=closer_processed,
+                setter_processed=setter_processed
+            )
+            db.session.add(appt)
+        else:
+            appt.closer_id = closer_user.id
+            appt.setter_id = setter_id
+            appt.start_time = agenda.date
+            appt.origin = agenda.nombre or appt.origin
+            appt.result = result
+            appt.closer_processed = closer_processed
+            appt.setter_processed = setter_processed
+            
+        try:
+            db.session.commit()
+            return appt
+        except Exception as e:
+            db.session.rollback()
+            print(f"[SYNC ERROR] No se pudo guardar el Appointment: {e}")
+            return None
+

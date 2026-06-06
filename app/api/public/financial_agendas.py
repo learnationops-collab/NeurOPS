@@ -13,6 +13,7 @@ def receive_financial_agendas():
     items = data if isinstance(data, list) else [data]
     
     saved = 0
+    agendas_created = []
     for item in items:
         if 'fuente' in item:
             setter = item.get('fuente')
@@ -51,9 +52,19 @@ def receive_financial_agendas():
             raw_data=item
         )
         db.session.add(agenda)
+        agendas_created.append(agenda)
         saved += 1
         
     db.session.commit()
+
+    # Sincronización en tiempo real con Appointments
+    try:
+        from app.services.booking_service import BookingService
+        for agenda in agendas_created:
+            BookingService.sync_financial_agenda_to_appointment(agenda)
+    except Exception as sync_err:
+        current_app.logger.error(f"[SYNC ERROR] No se pudo sincronizar cita: {sync_err}")
+
     return jsonify({"message": f"{saved} agenda records saved", "saved": saved}), 201
 
 @bp.route('/public/financial-agendas/sync', methods=['POST'])
@@ -278,6 +289,14 @@ def update_financial_agenda(agenda_id):
             except: pass
             
         db.session.commit()
+
+        # Sincronizar la agenda editada
+        try:
+            from app.services.booking_service import BookingService
+            BookingService.sync_financial_agenda_to_appointment(agenda)
+        except Exception as sync_err:
+            pass
+
         return jsonify({"message": "Agenda actualizada correctamente", "agenda": agenda.to_dict()}), 200
     except Exception as e:
         db.session.rollback()
@@ -291,6 +310,31 @@ def delete_financial_agenda(agenda_id):
         return jsonify({"error": "Agenda no encontrada"}), 404
         
     try:
+        # Buscar y eliminar cita asociada si existe
+        try:
+            from app.models import Appointment, Client
+            # Buscar el cliente asociado
+            ig_norm = agenda.instagram.strip().lstrip('@').lower() if agenda.instagram else None
+            email_norm = agenda.mail.strip().lower() if agenda.mail else None
+            client = None
+            if ig_norm or email_norm:
+                client_filters = []
+                if ig_norm: client_filters.append(db.func.lower(db.func.replace(Client.instagram, '@', '')) == ig_norm)
+                if email_norm: client_filters.append(db.func.lower(Client.email) == email_norm)
+                client = Client.query.filter(or_(*client_filters)).first()
+            if client:
+                start_of_day = datetime.combine(agenda.date.date(), datetime.min.time())
+                end_of_day = datetime.combine(agenda.date.date(), datetime.max.time())
+                appt = Appointment.query.filter(
+                    Appointment.client_id == client.id,
+                    Appointment.start_time >= start_of_day,
+                    Appointment.start_time <= end_of_day
+                ).first()
+                if appt:
+                    db.session.delete(appt)
+        except Exception as appt_err:
+            print(f"[DELETE SYNC ERROR] {appt_err}")
+
         db.session.delete(agenda)
         db.session.commit()
         return jsonify({"message": "Agenda eliminada correctamente"}), 200
@@ -354,4 +398,24 @@ def repair_financial_agendas_db():
         }), 200
     except Exception as e:
         db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/public/financial-agendas/sync-appointments', methods=['POST'])
+def sync_all_financial_agendas():
+    """Sincroniza masivamente todas las agendas financieras con Appointments."""
+    try:
+        from app.services.booking_service import BookingService
+        agendas = FinancialAgenda.query.all()
+        synced_count = 0
+        for agenda in agendas:
+            appt = BookingService.sync_financial_agenda_to_appointment(agenda)
+            if appt:
+                synced_count += 1
+        return jsonify({
+            "status": "success",
+            "message": f"Sincronización masiva completada. {synced_count} agendas sincronizadas con Appointments.",
+            "total_agendas": len(agendas),
+            "synced": synced_count
+        }), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
