@@ -253,6 +253,10 @@
           - Se añadieron **acciones de contacto alternativo** mediante botones premium de WhatsApp (con mensaje personalizado) y Email al lado del link de Instagram.
           - Se implementó la visualización del **Historial de Eventos** (Línea de tiempo) y Comentarios en la barra lateral derecha a través de pestañas deslizables.
           - Se agregó el botón **Registrar Venta** dinámico (visible si result es "Asistió"). Al hacer clic, abre `QuickSaleModal` pre-completando los datos de este lead (id, nombre, email) de forma transparente y sin fricciones operativas.
+  - **Integración de Webhook de Ventas a n8n**:
+    - **API Backend (`sheets_service.py`) [MODIFY]**: Implementación de un flujo no bloqueante (mediante un subhilo en segundo plano `threading.Thread`) en `SheetsService.post_to_sheets`. Cada vez que se registra y confirma una nueva venta local en `Ventas_DB` (a través de Closers o Administradores), se disparará un POST HTTP a la URL definida en la variable de entorno `N8N_WEBHOOK_URL` o `VENTAS_WEBHOOK`.
+    - **Formato Compatible**: Los datos se envían en un payload JSON que incluye tanto las claves originales en inglés como las claves en español solicitadas (`Nombre`, `Monto abonado`, `Setter`, `Instagram`, etc.), garantizando compatibilidad inmediata en el nodo de n8n.
+
 
 
 

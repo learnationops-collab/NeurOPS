@@ -84,6 +84,8 @@ class SheetsService:
                 db.session.add(sale)
                 db.session.commit()
                 logger.info("[SHEETS POST] Venta registrada exitosamente en base de datos local.")
+                # Enviar webhook a n8n en segundo plano
+                SheetsService._trigger_n8n_webhook(payload)
             except Exception as db_err:
                 db.session.rollback()
                 logger.error(f"[SHEETS POST] Error al guardar venta local: {db_err}")
@@ -302,3 +304,55 @@ class SheetsService:
             return float(s_val)
         except (ValueError, TypeError):
             return 0.0
+
+    @staticmethod
+    def _trigger_n8n_webhook(payload):
+        # Envia los datos de la venta a n8n de forma asincrona
+        import os
+        import threading
+
+        n8n_url = os.environ.get('N8N_WEBHOOK_URL') or os.environ.get('VENTAS_WEBHOOK')
+        if not n8n_url:
+            logger.info("[N8N WEBHOOK] No se configuró N8N_WEBHOOK_URL o VENTAS_WEBHOOK, omitiendo envío.")
+            return
+
+        # Mapear datos a claves en español y conservar las originales
+        webhook_data = {
+            "Marca temporal": payload.get('marca_temporal'),
+            "Dirección de correo electrónico": payload.get('email_vendedor'),
+            "Nombre": payload.get('nombre_cliente'),
+            "Teléfono": payload.get('telefono'),
+            "Mail": payload.get('mail_cliente'),
+            "Tipo de pago": payload.get('tipo_pago'),
+            "Monto abonado": payload.get('monto'),
+            "Segundo Pago": payload.get('segundo_pago'),
+            "Método de Pago": payload.get('metodo_pago'),
+            "Examen al que se presenta": payload.get('examen'),
+            "Instagram": payload.get('instagram'),
+            "Setter": payload.get('setter'),
+            "Estado": payload.get('estado'),
+
+            "marca_temporal": payload.get('marca_temporal'),
+            "email_vendedor": payload.get('email_vendedor'),
+            "nombre_cliente": payload.get('nombre_cliente'),
+            "telefono": payload.get('telefono'),
+            "mail_cliente": payload.get('mail_cliente'),
+            "tipo_pago": payload.get('tipo_pago'),
+            "monto": payload.get('monto'),
+            "segundo_pago": payload.get('segundo_pago'),
+            "metodo_pago": payload.get('metodo_pago'),
+            "examen": payload.get('examen'),
+            "instagram": payload.get('instagram'),
+            "setter": payload.get('setter'),
+            "estado": payload.get('estado')
+        }
+
+        def send_request():
+            try:
+                response = requests.post(n8n_url, json=webhook_data, timeout=10)
+                logger.info(f"[N8N WEBHOOK] Datos enviados con éxito a n8n. Estado: {response.status_code}")
+            except Exception as e:
+                logger.error(f"[N8N WEBHOOK] Error al enviar peticion a n8n: {e}")
+
+        threading.Thread(target=send_request, daemon=True).start()
+
