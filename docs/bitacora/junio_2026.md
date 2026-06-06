@@ -239,7 +239,8 @@
     - **Interfaz (Frontend) (`FinancialAgendasPage.jsx`) [MODIFY]**:
       - Se añadieron estados para almacenar los arrays de valores únicos del backend.
       - Se expandió `usePersistentFilters` para almacenar y persistir los filtros `estado`, `closer` y `fuente`.
-      - Se incorporaron tres dropdowns de selección premium con estilo Dark Glassmorphism a la barra superior de filtros en la cabecera.
+      - **Rediseño de Layout de Filtros (Ergonomía)**: Se reestructuró la cabecera integrando los paneles de KPIs globales (`Total Agendados` y `Próximas Citas`) directamente al lado del título principal para optimizar espacio vertical. El input de búsqueda textual se reubicó a la derecha de la cabecera.
+      - **Barra de Control Unificada**: Se diseñó una barra de filtros unificada y dedicada (`Control Bar`) posicionada justo debajo del header principal con estética Glassmorphism, que agrupa por bloques los presets rápidos, los inputs de fecha (desde/hasta) y los tres selectores dropdowns (`Estado`, `Closer`, `Fuente`), incorporando además un botón "Limpiar" para resetear los filtros activos al instante.
       - Se actualizó el listado en la tabla reemplazando el Badge estático por un selector dropdown interactivo (`select`) en línea. Este selector aplica estilos CSS reactivos de acuerdo con el estado seleccionado (respetando la paleta HSL del tema) y ejecuta de forma asíncrona un llamado `PUT /public/financial-agendas/<id>` para actualizar el estado del registro en caliente al instante al cambiar la opción.
       - Se integró el selector dropdown de estado en el modal de edición de agenda, garantizando la sincronización bidireccional y recálculo instantáneo al guardar cambios.
 

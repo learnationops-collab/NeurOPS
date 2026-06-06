@@ -286,21 +286,52 @@ const FinancialAgendasPage = () => {
 
     return (
         <div className="p-8 pt-24 max-w-[98%] mx-auto space-y-10 animate-in fade-in duration-700">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="space-y-1">
-                    <h1 className="text-4xl font-black text-white italic tracking-tighter text-balance">Tablero de Agendas</h1>
-                    <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Registro de Citas Externas (Sheets)</p>
+            <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                <div className="flex flex-wrap items-center gap-6">
+                    <div className="space-y-1">
+                        <h1 className="text-4xl font-black text-white italic tracking-tighter text-balance">Tablero de Agendas</h1>
+                        <p className="text-muted font-medium uppercase text-xs tracking-[0.2em]">Registro de Citas Externas (Sheets)</p>
+                    </div>
+
+                    {/* KPI Section integrada en la cabecera */}
+                    <div className="flex flex-wrap gap-2.5 items-center">
+                        <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl py-2.5 px-4 hover:bg-white/10 transition-colors">
+                            <Users className="text-slate-400" size={13} />
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Agendados</span>
+                            <span className="text-base font-black text-white italic tracking-tight">{totalAgendados}</span>
+                        </div>
+
+                        <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-2xl py-2.5 px-4 hover:bg-primary/10 transition-colors shadow-sm">
+                            <CalendarIcon className="text-primary" size={13} />
+                            <span className="text-[9px] font-black text-primary/80 uppercase tracking-widest">Próximas Citas</span>
+                            <span className="text-base font-black text-white italic tracking-tight">{proximasCitas}</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4">
-                    {/* Botones de Presets Rápidos */}
-                    <div className="flex flex-wrap items-center gap-1.5">
+                <div className="relative group w-full lg:w-auto">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
+                    <input
+                        type="text"
+                        placeholder="Buscar fuente o cliente..."
+                        className="bg-surface border border-base rounded-2xl pl-12 pr-6 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full lg:w-64 text-white"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </header>
+
+            {/* Barra de Filtros y Control Unificada */}
+            <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-[1.8rem] p-4 flex flex-wrap items-center justify-between gap-4">
+                {/* Controles de Rango de Fecha */}
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-1 bg-white/5 border border-white/10 p-1.5 rounded-2xl">
                         {[
                             { id: 'today', label: 'Hoy' },
                             { id: 'yesterday', label: 'Ayer' },
                             { id: 'this_month', label: 'Este mes' },
                             { id: 'last_month', label: 'Mes pasado' },
-                            { id: 'upcoming', label: 'Próximas Agendas' }
+                            { id: 'upcoming', label: 'Próximas' }
                         ].map((preset) => {
                             const isActive = getActiveDatePreset() === preset.id;
                             return (
@@ -308,10 +339,10 @@ const FinancialAgendasPage = () => {
                                     key={preset.id}
                                     type="button"
                                     onClick={() => applyDatePreset(preset.id)}
-                                    className={`text-[9px] font-black uppercase tracking-wider px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer ${
+                                    className={`text-[9px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
                                         isActive
-                                            ? 'bg-primary/25 border-primary/50 text-white shadow-lg shadow-primary/10'
-                                            : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                                            ? 'bg-primary/20 text-white shadow-md border border-primary/30'
+                                            : 'border border-transparent text-slate-400 hover:text-white hover:bg-white/5'
                                     }`}
                                 >
                                     {preset.label}
@@ -320,92 +351,87 @@ const FinancialAgendasPage = () => {
                         })}
                     </div>
 
-                    <div className="flex items-center gap-2 bg-surface p-2 rounded-2xl border border-base">
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
                         <input
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer"
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer p-0 w-[100px] font-semibold"
                         />
-                        <span className="text-muted text-xs">-</span>
+                        <span className="text-muted text-xs font-bold">-</span>
                         <input
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer"
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer p-0 w-[100px] font-semibold"
                         />
                     </div>
+                </div>
 
+                {/* Filtros de Clasificación (Estado, Closer, Fuente) */}
+                <div className="flex flex-wrap items-center gap-3">
                     {/* Selector de Estado */}
-                    <div className="flex items-center gap-2 bg-surface p-2 rounded-2xl border border-base">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Estado:</span>
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Estado</span>
                         <select
                             value={estado}
                             onChange={(e) => setEstado(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-semibold uppercase tracking-wider"
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
                         >
-                            <option value="" className="bg-slate-900 text-white">Todos</option>
+                            <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
                             {['Pendiente', 'Show Up', 'Completada', 'Reagendada', 'Cancelada'].map(st => (
-                                <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
+                                <option key={st} value={st} className="bg-slate-900 text-white font-semibold">{st}</option>
                             ))}
                         </select>
                     </div>
 
                     {/* Selector de Closer */}
-                    <div className="flex items-center gap-2 bg-surface p-2 rounded-2xl border border-base">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Closer:</span>
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Closer</span>
                         <select
                             value={closer}
                             onChange={(e) => setCloser(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-semibold uppercase tracking-wider"
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
                         >
-                            <option value="" className="bg-slate-900 text-white">Todos</option>
+                            <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
                             {uniqueClosers.map(cl => (
-                                <option key={cl} value={cl} className="bg-slate-900 text-white">{cl}</option>
+                                <option key={cl} value={cl} className="bg-slate-900 text-white font-semibold">{cl}</option>
                             ))}
                         </select>
                     </div>
 
                     {/* Selector de Fuente */}
-                    <div className="flex items-center gap-2 bg-surface p-2 rounded-2xl border border-base">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Fuente:</span>
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Fuente</span>
                         <select
                             value={fuente}
                             onChange={(e) => setFuente(e.target.value)}
-                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-semibold uppercase tracking-wider"
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
                         >
-                            <option value="" className="bg-slate-900 text-white">Todas</option>
+                            <option value="" className="bg-slate-900 text-white font-semibold">Todas</option>
                             {uniqueSources.map(src => (
-                                <option key={src} value={src} className="bg-slate-900 text-white">{src}</option>
+                                <option key={src} value={src} className="bg-slate-900 text-white font-semibold">{src}</option>
                             ))}
                         </select>
                     </div>
 
-                    <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
-                        <input
-                            type="text"
-                            placeholder="Buscar fuente o cliente..."
-                            className="bg-surface border border-base rounded-2xl pl-12 pr-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-64 text-white"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                </div>
-            </header>
-
-            {/* KPI Section */}
-            <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl py-2 px-4 hover:bg-white/10 transition-colors">
-                    <Users className="text-slate-400" size={14} />
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Agendados</span>
-                    <span className="text-lg font-black text-white italic tracking-tight">{totalAgendados}</span>
-                </div>
-
-                <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-2xl py-2 px-4 hover:bg-primary/10 transition-colors shadow-sm">
-                    <CalendarIcon className="text-primary" size={14} />
-                    <span className="text-[9px] font-black text-primary/80 uppercase tracking-widest font-black">Próximas Citas</span>
-                    <span className="text-lg font-black text-white italic tracking-tight">{proximasCitas}</span>
+                    {/* Botón para Limpiar todos los Filtros */}
+                    {(estado || closer || fuente || searchTerm || startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate()) && (
+                        <button
+                            type="button"
+                            onClick={() => setFilters({
+                                searchTerm: '',
+                                startDate: getFirstDayOfCurrentMonth(),
+                                endDate: getTodayDate(),
+                                estado: '',
+                                closer: '',
+                                fuente: ''
+                            })}
+                            className="text-[9px] font-black uppercase tracking-wider bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 px-4.5 py-3 rounded-2xl transition-all cursor-pointer shadow-sm shadow-rose-950/20"
+                        >
+                            Limpiar
+                        </button>
+                    )}
                 </div>
             </div>
 
