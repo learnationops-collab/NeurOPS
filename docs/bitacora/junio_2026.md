@@ -243,5 +243,9 @@
       - **Barra de Control Unificada**: Se diseñó una barra de filtros unificada y dedicada (`Control Bar`) posicionada justo debajo del header principal con estética Glassmorphism, que agrupa por bloques los presets rápidos, los inputs de fecha (desde/hasta) y los tres selectores dropdowns (`Estado`, `Closer`, `Fuente`), incorporando además un botón interactivo representado por el icono `FilterX` de lucide-react para resetear todos los filtros activos al instante.
       - Se actualizó el listado en la tabla reemplazando el Badge estático por un selector dropdown interactivo (`select`) en línea. Este selector aplica estilos CSS reactivos de acuerdo con el estado seleccionado (respetando la paleta HSL del tema) y ejecuta de forma asíncrona un llamado `PUT /public/financial-agendas/<id>` para actualizar el estado del registro en caliente al instante al cambiar la opción.
       - Se integró el selector dropdown de estado en el modal de edición de agenda, garantizando la sincronización bidireccional y recálculo instantáneo al guardar cambios.
+      - **Desglose de KPIs de Agendas por Closer y Fuente [NEW FEATURE]**:
+        - **Backend (API)**: El endpoint `GET /public/financial-agendas` ahora agrupa y retorna la cantidad de agendas por cada estado y combinación Closer-Estado/Fuente-Estado (`by_closer_state` y `by_source_state`) y calcula valores únicos dinámicamente de forma sanitizada.
+        - **Frontend**: Se integró un grid de dos columnas de diseño Glassmorphism con tablas interactivas de desglose por Closer y por Fuente. Muestran para cada entidad los conteos de agendas en cada estado (Pendiente, Show Up, No show, Reagendada, Cancelada), el total, y calcula dinámicamente el **Show Rate** (porcentaje de Show Up respecto al total de citas atendidas: Show Up + No show) para una rápida toma de decisiones.
+
 
 

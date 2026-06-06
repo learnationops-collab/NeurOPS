@@ -129,6 +129,24 @@ def get_financial_agendas():
         ).group_by(FinancialAgenda.closer).all()
         
         by_closer = {closer or 'Sin Asignar': count for closer, count in closer_counts}
+
+        # Agrupación por Closer y Estado
+        closer_state_counts = db.session.query(
+            FinancialAgenda.closer,
+            FinancialAgenda.estado,
+            func.count(FinancialAgenda.id)
+        ).filter(
+            FinancialAgenda.id.in_(query.with_entities(FinancialAgenda.id))
+        ).group_by(FinancialAgenda.closer, FinancialAgenda.estado).all()
+
+        # Agrupación por Fuente y Estado
+        source_state_counts = db.session.query(
+            FinancialAgenda.nombre,
+            FinancialAgenda.estado,
+            func.count(FinancialAgenda.id)
+        ).filter(
+            FinancialAgenda.id.in_(query.with_entities(FinancialAgenda.id))
+        ).group_by(FinancialAgenda.nombre, FinancialAgenda.estado).all()
         
         # Obtener closers y fuentes únicas para el periodo de fechas seleccionado
         closers_query = db.session.query(FinancialAgenda.closer).distinct().filter(
@@ -163,12 +181,57 @@ def get_financial_agendas():
                     unique_sources.append(src)
                     
         unique_sources = sorted(list(set(unique_sources)))
+
+        # Estructurar desglose por closer y por estado
+        by_closer_state = {}
+        for closer_name, state, count in closer_state_counts:
+            c_name = closer_name or 'Sin Asignar'
+            st_name = state or 'Pendiente'
+            if c_name not in by_closer_state:
+                by_closer_state[c_name] = {
+                    "total": 0,
+                    "Pendiente": 0,
+                    "Show Up": 0,
+                    "No show": 0,
+                    "Reagendada": 0,
+                    "Cancelada": 0
+                }
+            by_closer_state[c_name][st_name] = count
+            by_closer_state[c_name]["total"] += count
+
+        # Estructurar desglose por fuente y por estado (aplicando la misma sanitización)
+        by_source_state = {}
+        for source_name, state, count in source_state_counts:
+            s_name = source_name or 'Sin Asignar'
+            # Evitar nombres de clientes en fuentes agregadas
+            if len(s_name.split()) > 2:
+                continue
+            s_name_lower = s_name.lower()
+            if s_name_lower not in known_setters_lower and len(s_name.split()) == 2:
+                words = [w.lower() for w in s_name.split()]
+                if not any(w in known_setters_lower for w in words):
+                    continue
+            
+            st_name = state or 'Pendiente'
+            if s_name not in by_source_state:
+                by_source_state[s_name] = {
+                    "total": 0,
+                    "Pendiente": 0,
+                    "Show Up": 0,
+                    "No show": 0,
+                    "Reagendada": 0,
+                    "Cancelada": 0
+                }
+            by_source_state[s_name][st_name] = count
+            by_source_state[s_name]["total"] += count
         
         return jsonify({
             "data": [a.to_dict() for a in agendas_pagination.items],
             "total": total_count,
             "upcoming_count": upcoming_count,
             "by_closer": by_closer,
+            "by_closer_state": by_closer_state,
+            "by_source_state": by_source_state,
             "unique_states": ['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'],
             "unique_closers": unique_closers,
             "unique_sources": unique_sources,

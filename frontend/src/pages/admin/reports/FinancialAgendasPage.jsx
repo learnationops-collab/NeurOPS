@@ -55,6 +55,8 @@ const FinancialAgendasPage = () => {
     const [totalAgendados, setTotalAgendados] = useState(0);
     const [proximasCitas, setProximasCitas] = useState(0);
     const [sortedClosers, setSortedClosers] = useState([]);
+    const [byCloserState, setByCloserState] = useState({});
+    const [bySourceState, setBySourceState] = useState({});
 
     const [uniqueStates, setUniqueStates] = useState([]);
     const [uniqueClosers, setUniqueClosers] = useState([]);
@@ -228,6 +230,9 @@ const FinancialAgendasPage = () => {
                 const byCloser = resData.by_closer || {};
                 const sorted = Object.entries(byCloser).sort((a, b) => b[1] - a[1]);
                 setSortedClosers(sorted);
+
+                setByCloserState(resData.by_closer_state || {});
+                setBySourceState(resData.by_source_state || {});
 
                 setUniqueStates(resData.unique_states || []);
                 setUniqueClosers(resData.unique_closers || []);
@@ -438,94 +443,124 @@ const FinancialAgendasPage = () => {
             </div>
 
             {/* Summary by Closer Section */}
-            <Card variant="surface" className="p-8 space-y-6 rounded-[2.5rem] border-base relative overflow-hidden">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
-                        <Users className="text-primary" size={16} />
-                        Agendas por Closer
-                    </h3>
-                </div>
-                
-                {sortedClosers.length > 0 ? (
-                    <div className="space-y-6">
-                        {/* Stacked/Segmented bar chart */}
-                        <div className="h-6 w-full bg-slate-900 border border-slate-700/30 rounded-full flex overflow-hidden shadow-inner">
-                            {(() => {
-                                const totalCloserAgendas = sortedClosers.reduce((acc, [_, count]) => acc + count, 0);
-                                const SEGMENT_COLORS = [
-                                    'from-indigo-500 to-purple-500 shadow-indigo-500/20',
-                                    'from-pink-500 to-rose-500 shadow-pink-500/20',
-                                    'from-amber-400 to-orange-500 shadow-amber-500/20',
-                                    'from-cyan-400 to-blue-500 shadow-cyan-500/20',
-                                    'from-emerald-400 to-teal-500 shadow-emerald-500/20',
-                                    'from-violet-500 to-fuchsia-500 shadow-violet-500/20',
-                                ];
-                                
-                                return sortedClosers.map(([closerName, count], idx) => {
-                                    const pct = totalCloserAgendas > 0 ? (count / totalCloserAgendas) * 100 : 0;
-                                    if (pct <= 0) return null;
-                                    const colorClass = SEGMENT_COLORS[idx % SEGMENT_COLORS.length];
-                                    
-                                    return (
-                                        <div 
-                                            key={closerName}
-                                            style={{ width: `${pct}%` }}
-                                            className={`h-full bg-gradient-to-r ${colorClass} hover:opacity-90 transition-all duration-300 relative group cursor-pointer border-r border-slate-950/20 last:border-0`}
-                                            title={`${closerName}: ${count} agendas (${pct.toFixed(1)}%)`}
-                                        >
-                                            {pct >= 8 && (
-                                                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-white italic tracking-tighter drop-shadow-sm select-none">
-                                                    {count}
-                                                </span>
-                                            )}
-                                        </div>
-                                    );
-                                });
-                            })()}
-                        </div>
-
-                        {/* Premium dynamic legend */}
-                        <div className="flex flex-wrap gap-x-6 gap-y-3 justify-center">
-                            {(() => {
-                                const totalCloserAgendas = sortedClosers.reduce((acc, [_, count]) => acc + count, 0);
-                                const SEGMENT_COLORS = [
-                                    'from-indigo-500 to-purple-500 shadow-indigo-500/20',
-                                    'from-pink-500 to-rose-500 shadow-pink-500/20',
-                                    'from-amber-400 to-orange-500 shadow-amber-500/20',
-                                    'from-cyan-400 to-blue-500 shadow-cyan-500/20',
-                                    'from-emerald-400 to-teal-500 shadow-emerald-500/20',
-                                    'from-violet-500 to-fuchsia-500 shadow-violet-500/20',
-                                ];
-                                
-                                return sortedClosers.map(([closerName, count], idx) => {
-                                    const pct = totalCloserAgendas > 0 ? ((count / totalCloserAgendas) * 100).toFixed(1) : 0;
-                                    const colorClass = SEGMENT_COLORS[idx % SEGMENT_COLORS.length];
-                                    
-                                    return (
-                                        <div 
-                                            key={closerName} 
-                                            className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-white/5 border border-white/10 hover:border-white/20 transition-all rounded-full px-3 py-1.5 shadow-sm hover:bg-white/10 cursor-pointer"
-                                        >
-                                            <span className={`w-2.5 h-2.5 rounded-full bg-gradient-to-tr ${colorClass.split(' ')[0]} ${colorClass.split(' ')[1]}`} />
-                                            <span className="uppercase text-[9px] tracking-widest text-slate-400 font-black">{closerName}</span>
-                                            <span className="text-white font-black italic">
-                                                {count} 
-                                                <span className="text-[9px] text-muted normal-case font-medium ml-1">({pct}%)</span>
-                                            </span>
-                                        </div>
-                                    );
-                                });
-                            })()}
-                        </div>
+            {/* Grid de Desgloses por Closer y por Fuente */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Desglose por Closer */}
+                <Card variant="surface" className="p-6 space-y-6 rounded-[2rem] border-base relative overflow-hidden">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
+                            <Users className="text-primary" size={16} />
+                            Desglose por Closer
+                        </h3>
                     </div>
-                ) : (
-                    !loading && (
-                        <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
-                            No hay agendas en el rango seleccionado
+                    
+                    {Object.keys(byCloserState).length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr className="border-b border-base/60">
+                                        <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Closer</th>
+                                        <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
+                                        <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
+                                        <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
+                                        <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
+                                        <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
+                                        <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
+                                        <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-base/40">
+                                    {Object.entries(byCloserState).map(([closerName, stats]) => {
+                                        const showUp = stats["Show Up"] || 0;
+                                        const noShow = stats["No show"] || 0;
+                                        const totalAttended = showUp + noShow;
+                                        const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
+                                        
+                                        return (
+                                            <tr key={closerName} className="hover:bg-white/5 transition-colors">
+                                                <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{closerName}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-slate-400">{stats["Pendiente"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-bold text-primary">{stats["Show Up"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-rose-400">{stats["No show"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-amber-400">{stats["Reagendada"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-slate-500">{stats["Cancelada"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-black text-white italic">{stats["total"] || 0}</td>
+                                                <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
+                                                    {showRate}%
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
-                    )
-                )}
-            </Card>
+                    ) : (
+                        !loading && (
+                            <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
+                                Sin datos en el periodo
+                            </div>
+                        )
+                    )}
+                </Card>
+
+                {/* Desglose por Fuente */}
+                <Card variant="surface" className="p-6 space-y-6 rounded-[2rem] border-base relative overflow-hidden">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
+                            <Activity className="text-primary" size={16} />
+                            Desglose por Fuente
+                        </h3>
+                    </div>
+                    
+                    {Object.keys(bySourceState).length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr className="border-b border-base/60">
+                                        <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Fuente</th>
+                                        <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
+                                        <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
+                                        <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
+                                        <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
+                                        <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
+                                        <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
+                                        <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-base/40">
+                                    {Object.entries(bySourceState).map(([sourceName, stats]) => {
+                                        const showUp = stats["Show Up"] || 0;
+                                        const noShow = stats["No show"] || 0;
+                                        const totalAttended = showUp + noShow;
+                                        const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
+                                        
+                                        return (
+                                            <tr key={sourceName} className="hover:bg-white/5 transition-colors">
+                                                <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{sourceName}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-slate-400">{stats["Pendiente"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-bold text-primary">{stats["Show Up"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-rose-400">{stats["No show"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-amber-400">{stats["Reagendada"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-slate-500">{stats["Cancelada"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-black text-white italic">{stats["total"] || 0}</td>
+                                                <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
+                                                    {showRate}%
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        !loading && (
+                            <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
+                                Sin datos en el periodo
+                            </div>
+                        )
+                    )}
+                </Card>
+            </div>
 
             {/* List Section */}
             <Card variant="surface" className="p-8 space-y-6 rounded-[2.5rem] border-base relative">
