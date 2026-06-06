@@ -9,7 +9,8 @@ import {
     Instagram,
     Copy,
     Edit,
-    Trash2
+    Trash2,
+    FilterX
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -427,9 +428,10 @@ const FinancialAgendasPage = () => {
                                 closer: '',
                                 fuente: ''
                             })}
-                            className="text-[9px] font-black uppercase tracking-wider bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 px-4.5 py-3 rounded-2xl transition-all cursor-pointer shadow-sm shadow-rose-950/20"
+                            className="p-3 bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 rounded-2xl transition-all cursor-pointer shadow-sm shadow-rose-950/20"
+                            title="Limpiar Filtros"
                         >
-                            Limpiar
+                            <FilterX size={14} />
                         </button>
                     )}
                 </div>
