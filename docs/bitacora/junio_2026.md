@@ -235,6 +235,7 @@
       - Se adaptó `receive_financial_agendas` (POST) para persistir el estado proveniente del payload o usar `'Pendiente'`.
       - Se adaptó `update_financial_agenda` (PUT) para permitir la actualización de la propiedad `estado`.
       - Se modificó `get_financial_agendas` (GET) para soportar filtros combinados por `estado`, `closer` y `fuente` (que mapea a `nombre` en base de datos), consultando además listas ordenadas de valores únicos (`unique_states`, `unique_closers`, `unique_sources`) para poblar dinámicamente los selectores en el frontend.
+      - **Corrección de Filtros (Restricción por Periodo y Sanitización)**: Se modificaron las consultas de `unique_closers` y `unique_sources` para restringirlas estrictamente al subconjunto del periodo de fechas seleccionado (`date_query`). Adicionalmente, se implementó un algoritmo heurístico en la API que analiza y descarta registros con múltiples palabras largas en el campo de fuente (identificando nombres propios de clientes reales para eliminarlos del dropdown selector).
     - **Interfaz (Frontend) (`FinancialAgendasPage.jsx`) [MODIFY]**:
       - Se añadieron estados para almacenar los arrays de valores únicos del backend.
       - Se expandió `usePersistentFilters` para almacenar y persistir los filtros `estado`, `closer` y `fuente`.

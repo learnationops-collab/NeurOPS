@@ -86,17 +86,13 @@ def get_financial_agendas():
             FinancialAgenda.whatsapp.ilike(search_pattern)
         ))
         
-    if estado:
-        query = query.filter(FinancialAgenda.estado == estado)
-    if closer:
-        query = query.filter(FinancialAgenda.closer == closer)
-    if fuente:
-        query = query.filter(FinancialAgenda.nombre == fuente)
-        
+    # Consulta base filtrada únicamente por fechas
+    date_query = FinancialAgenda.query
+    
     if start_date_str:
         try:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            query = query.filter(FinancialAgenda.date >= start_date)
+            date_query = date_query.filter(FinancialAgenda.date >= start_date)
         except ValueError:
             pass
             
@@ -104,10 +100,20 @@ def get_financial_agendas():
         try:
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
             end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
-            query = query.filter(FinancialAgenda.date <= end_date)
+            date_query = date_query.filter(FinancialAgenda.date <= end_date)
         except ValueError:
             pass
-            
+
+    # La consulta principal aplica además los filtros específicos de estado, closer y fuente
+    query = date_query
+    
+    if estado:
+        query = query.filter(FinancialAgenda.estado == estado)
+    if closer:
+        query = query.filter(FinancialAgenda.closer == closer)
+    if fuente:
+        query = query.filter(FinancialAgenda.nombre == fuente)
+        
     query = query.order_by(FinancialAgenda.date.desc())
     
     if page is not None:
@@ -124,11 +130,39 @@ def get_financial_agendas():
         
         by_closer = {closer or 'Sin Asignar': count for closer, count in closer_counts}
         
-        # Obtener todos los closers y fuentes unicas para los filtros
-        closers_query = db.session.query(FinancialAgenda.closer).distinct().all()
-        sources_query = db.session.query(FinancialAgenda.nombre).distinct().all()
+        # Obtener closers y fuentes únicas para el periodo de fechas seleccionado
+        closers_query = db.session.query(FinancialAgenda.closer).distinct().filter(
+            FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
+        ).all()
+        sources_query = db.session.query(FinancialAgenda.nombre).distinct().filter(
+            FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
+        ).all()
+        
         unique_closers = sorted(list(set([c[0].strip() for c in closers_query if c[0] and c[0].strip()])))
-        unique_sources = sorted(list(set([s[0].strip() for s in sources_query if s[0] and s[0].strip()])))
+        
+        # Filtrar fuentes para evitar nombres de clientes obvios
+        known_setters_lower = {
+            'elias', 'workshop', 'vsl', 'marketing', 'organico', 'orgánico',
+            'sin asignar', 'sin_asignar', 'facebook', 'instagram', 'youtube',
+            'tiktok', 'manychat', 'workshop manychat', 'ads', 'setter', 'organica'
+        }
+        
+        raw_sources = [s[0].strip() for s in sources_query if s[0] and s[0].strip()]
+        unique_sources = []
+        for src in raw_sources:
+            if len(src.split()) > 2:
+                continue
+            src_lower = src.lower()
+            if src_lower in known_setters_lower:
+                unique_sources.append(src)
+            elif len(src.split()) == 1:
+                unique_sources.append(src)
+            elif len(src.split()) == 2:
+                words = [w.lower() for w in src.split()]
+                if any(w in known_setters_lower for w in words):
+                    unique_sources.append(src)
+                    
+        unique_sources = sorted(list(set(unique_sources)))
         
         return jsonify({
             "data": [a.to_dict() for a in agendas_pagination.items],
