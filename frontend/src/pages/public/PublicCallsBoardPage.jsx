@@ -42,23 +42,7 @@ const PublicCallsBoardPage = () => {
         }
     };
 
-    const handleSync = async () => {
-        try {
-            setLoading(true);
-            setSyncing(true);
-            setError(null);
-            // 1. Sync new data from sheets
-            const res = await api.post('/public/financial-agendas/sync', { tabla: 'Llamadas_DB' });
-            toast.success(`Sincronización exitosa: ${res.data.added || 0} agendas actualizadas`);
-        } catch (err) {
-            const msg = err.response?.data?.message || err.message || 'Error desconocido';
-            console.warn('Sync failed:', err);
-            toast.error(`Error de sincronización: ${msg}`, { duration: 6000 });
-        } finally {
-            setSyncing(false);
-            await fetchAgendas();
-        }
-    };
+
 
     const filteredAgendas = agendas.filter(agenda => 
         (agenda.lead || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -90,9 +74,6 @@ const PublicCallsBoardPage = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <Button onClick={handleSync} variant="surface" size="md" icon={Activity} className="rounded-2xl border-base hover:border-primary/50" disabled={loading}>
-                            {loading && syncing ? 'Sincronizando...' : 'Actualizar Agendas'}
-                        </Button>
                     </div>
                 </header>
 

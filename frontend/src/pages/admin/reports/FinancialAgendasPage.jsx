@@ -194,19 +194,7 @@ const FinancialAgendasPage = () => {
         };
     }, [loading, loadingMore, hasMore, page]);
 
-    const handleSync = async () => {
-        try {
-            setLoading(true);
-            setSyncing(true);
-            setError(null);
-            await api.get('/sheets/sync', { params: { tabla: 'Llamadas_DB' } });
-        } catch (err) {
-            console.warn('Sync failed:', err);
-        } finally {
-            setSyncing(false);
-            await fetchAgendas(1);
-        }
-    };
+
 
     return (
         <div className="p-8 pt-24 max-w-[98%] mx-auto space-y-10 animate-in fade-in duration-700">
@@ -232,7 +220,7 @@ const FinancialAgendasPage = () => {
                             className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0"
                         />
                     </div>
-                     <div className="relative group">
+                    <div className="relative group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
                         <input
                             type="text"
@@ -242,9 +230,6 @@ const FinancialAgendasPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button onClick={handleSync} variant="surface" size="md" icon={Activity} className="rounded-2xl border-base hover:border-primary/50" disabled={loading}>
-                        {loading && syncing ? 'Sincronizando...' : 'Actualizar Agendas'}
-                    </Button>
                 </div>
             </header>
 
