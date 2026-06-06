@@ -26,6 +26,22 @@ const getTodayDate = () => {
     return now.toISOString().split('T')[0];
 };
 
+const getEstadoBadgeVariant = (estado) => {
+    switch (estado) {
+        case 'Show Up':
+            return 'primary';
+        case 'Completada':
+            return 'success';
+        case 'Reagendada':
+            return 'warning';
+        case 'Cancelada':
+            return 'rose';
+        case 'Pendiente':
+        default:
+            return 'neutral';
+    }
+};
+
 const FinancialAgendasPage = () => {
     const [agendas, setAgendas] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -39,6 +55,10 @@ const FinancialAgendasPage = () => {
     const [proximasCitas, setProximasCitas] = useState(0);
     const [sortedClosers, setSortedClosers] = useState([]);
 
+    const [uniqueStates, setUniqueStates] = useState([]);
+    const [uniqueClosers, setUniqueClosers] = useState([]);
+    const [uniqueSources, setUniqueSources] = useState([]);
+
     // Estados para edición
     const [editingAgenda, setEditingAgenda] = useState(null);
     const [editForm, setEditForm] = useState({
@@ -48,7 +68,8 @@ const FinancialAgendasPage = () => {
         fecha_meet: '',
         instagram: '',
         whatsapp: '',
-        mail: ''
+        mail: '',
+        estado: ''
     });
 
     const handleEditClick = (agenda) => {
@@ -60,7 +81,8 @@ const FinancialAgendasPage = () => {
             fecha_meet: agenda.fecha_meet || '',
             instagram: agenda.instagram || '',
             whatsapp: agenda.whatsapp || '',
-            mail: agenda.mail || ''
+            mail: agenda.mail || '',
+            estado: agenda.estado || 'Pendiente'
         });
     };
 
@@ -94,13 +116,19 @@ const FinancialAgendasPage = () => {
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_financial_agendas', {
         searchTerm: '',
         startDate: getFirstDayOfCurrentMonth(),
-        endDate: getTodayDate()
+        endDate: getTodayDate(),
+        estado: '',
+        closer: '',
+        fuente: ''
     });
 
-    const { searchTerm, startDate, endDate } = filters;
+    const { searchTerm, startDate, endDate, estado, closer, fuente } = filters;
     const setSearchTerm = (val) => setFilters({ searchTerm: val });
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
+    const setEstado = (val) => setFilters({ estado: val });
+    const setCloser = (val) => setFilters({ closer: val });
+    const setFuente = (val) => setFilters({ fuente: val });
 
     const applyDatePreset = (preset) => {
         const today = new Date();
@@ -181,7 +209,10 @@ const FinancialAgendasPage = () => {
                     limit: 10,
                     search: searchTerm,
                     start_date: startDate,
-                    end_date: endDate
+                    end_date: endDate,
+                    estado: estado,
+                    closer: closer,
+                    fuente: fuente
                 }
             });
             const resData = response.data;
@@ -196,6 +227,10 @@ const FinancialAgendasPage = () => {
                 const byCloser = resData.by_closer || {};
                 const sorted = Object.entries(byCloser).sort((a, b) => b[1] - a[1]);
                 setSortedClosers(sorted);
+
+                setUniqueStates(resData.unique_states || []);
+                setUniqueClosers(resData.unique_closers || []);
+                setUniqueSources(resData.unique_sources || []);
             } else {
                 setAgendas(prev => {
                     const existingIds = new Set(prev.map(a => a.id));
@@ -221,7 +256,7 @@ const FinancialAgendasPage = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, startDate, endDate]);
+    }, [searchTerm, startDate, endDate, estado, closer, fuente]);
 
     // Observador para scroll infinito
     useEffect(() => {
@@ -300,6 +335,52 @@ const FinancialAgendasPage = () => {
                             className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer"
                         />
                     </div>
+
+                    {/* Selector de Estado */}
+                    <div className="flex items-center gap-2 bg-surface p-2 rounded-2xl border border-base">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Estado:</span>
+                        <select
+                            value={estado}
+                            onChange={(e) => setEstado(e.target.value)}
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-semibold uppercase tracking-wider"
+                        >
+                            <option value="" className="bg-slate-900 text-white">Todos</option>
+                            {['Pendiente', 'Show Up', 'Completada', 'Reagendada', 'Cancelada'].map(st => (
+                                <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Selector de Closer */}
+                    <div className="flex items-center gap-2 bg-surface p-2 rounded-2xl border border-base">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Closer:</span>
+                        <select
+                            value={closer}
+                            onChange={(e) => setCloser(e.target.value)}
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-semibold uppercase tracking-wider"
+                        >
+                            <option value="" className="bg-slate-900 text-white">Todos</option>
+                            {uniqueClosers.map(cl => (
+                                <option key={cl} value={cl} className="bg-slate-900 text-white">{cl}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Selector de Fuente */}
+                    <div className="flex items-center gap-2 bg-surface p-2 rounded-2xl border border-base">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Fuente:</span>
+                        <select
+                            value={fuente}
+                            onChange={(e) => setFuente(e.target.value)}
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-semibold uppercase tracking-wider"
+                        >
+                            <option value="" className="bg-slate-900 text-white">Todas</option>
+                            {uniqueSources.map(src => (
+                                <option key={src} value={src} className="bg-slate-900 text-white">{src}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div className="relative group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
                         <input
@@ -508,8 +589,8 @@ const FinancialAgendasPage = () => {
                                                 )}
                                             </td>
                                             <td className="py-4 px-4 text-center">
-                                                <Badge variant="success" className="rounded-lg">
-                                                    Sincronizado
+                                                <Badge variant={getEstadoBadgeVariant(agenda.estado)} className="rounded-lg">
+                                                    {agenda.estado || 'Pendiente'}
                                                 </Badge>
                                             </td>
                                             <td className="py-4 px-4 text-right">
@@ -615,6 +696,19 @@ const FinancialAgendasPage = () => {
                                         value={editForm.instagram}
                                         onChange={e => setEditForm({...editForm, instagram: e.target.value})}
                                     />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
+                                    <select 
+                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
+                                        value={editForm.estado}
+                                        onChange={e => setEditForm({...editForm, estado: e.target.value})}
+                                        required
+                                    >
+                                        {['Pendiente', 'Show Up', 'Completada', 'Reagendada', 'Cancelada'].map(st => (
+                                            <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 
                                 <div className="flex gap-3 pt-4">

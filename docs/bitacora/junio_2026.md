@@ -228,3 +228,18 @@
     - **Interfaz (Frontend) (`PublicCloserStatsPage.jsx`) [MODIFY]**: Se eliminó el `useEffect` dependiente que calculaba las fechas en base a un selector de preset, el cual causaba renders innecesarios y estados conflictivos. Se refactorizó la lógica para almacenar las fechas iniciales directamente en el estado y actualizarlas en caliente. Se añadieron botones premium para filtrado rápido por periodos (**Hoy**, **Ayer**, **Mes anterior**, **Este mes**, **Últimos 30 días**) alineados con el diseño Dark Glassmorphism del dashboard de ventas financieras, resolviendo la pantalla en blanco y haciendo el flujo de filtros 100% estable sin necesidad de recargar la página.
     - **API Backend (`closer_service.py`) [MODIFY]**: Se blindó la lógica de parseo de fechas en `CloserService` (`get_comprehensive_stats`, `get_closer_clients`, `get_leads_kpis` y `get_agenda_stats`) envolviendo los llamados a `datetime.strptime` en bloques `try/except ValueError`. Esto garantiza que los valores vacíos, nulos o parcialmente escritos del selector de fechas en el frontend no provoquen un error 500 en el servidor y sean ignorados silenciosamente de forma segura.
 
+- **6 de Junio de 2026**:
+  - **Mejora del Registro de Agendas (Nuevos Estados y Filtros)**:
+    - **Base de Datos local (SQLite/PostgreSQL) (`financial.py`) [MODIFY / MIGRATION]**: Se añadió el campo `estado` al modelo `FinancialAgenda` con valor por defecto `'Pendiente'` y se aplicaron las migraciones correspondientes (`add_estado_to_financial_agenda`). Se actualizó además el método `to_dict` para serializar la nueva columna.
+    - **Backend (API) (`financial_agendas.py`) [MODIFY]**:
+      - Se adaptó `receive_financial_agendas` (POST) para persistir el estado proveniente del payload o usar `'Pendiente'`.
+      - Se adaptó `update_financial_agenda` (PUT) para permitir la actualización de la propiedad `estado`.
+      - Se modificó `get_financial_agendas` (GET) para soportar filtros combinados por `estado`, `closer` y `fuente` (que mapea a `nombre` en base de datos), consultando además listas ordenadas de valores únicos (`unique_states`, `unique_closers`, `unique_sources`) para poblar dinámicamente los selectores en el frontend.
+    - **Interfaz (Frontend) (`FinancialAgendasPage.jsx`) [MODIFY]**:
+      - Se añadieron estados para almacenar los arrays de valores únicos del backend.
+      - Se expandió `usePersistentFilters` para almacenar y persistir los filtros `estado`, `closer` y `fuente`.
+      - Se incorporaron tres dropdowns de selección premium con estilo Dark Glassmorphism a la barra superior de filtros en la cabecera.
+      - Se actualizó el listado en la tabla para renderizar un Badge con código de colores según el estado actual de la cita (`Completada` -> success/verde, `Show Up` -> primary/azul, `Reagendada` -> warning/amarillo, `Cancelada` -> rose/rojo y `Pendiente` -> neutral/gris).
+      - Se integró el selector dropdown de estado en el modal de edición de agenda, garantizando la sincronización bidireccional y recálculo instantáneo al guardar cambios.
+
+

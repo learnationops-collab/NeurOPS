@@ -47,6 +47,7 @@ def receive_financial_agendas():
             instagram=item.get('instagram') or item.get('ig') or 'N/A',
             whatsapp=item.get('whatsapp') or item.get('phone') or 'N/A',
             mail=item.get('mail') or item.get('email') or 'N/A',
+            estado=item.get('estado') or 'Pendiente',
             raw_data=item
         )
         db.session.add(agenda)
@@ -69,6 +70,10 @@ def get_financial_agendas():
     start_date_str = request.args.get('start_date', default='', type=str).strip()
     end_date_str = request.args.get('end_date', default='', type=str).strip()
     
+    estado = request.args.get('estado', default='', type=str).strip()
+    closer = request.args.get('closer', default='', type=str).strip()
+    fuente = request.args.get('fuente', default='', type=str).strip()
+    
     query = FinancialAgenda.query
     
     if search:
@@ -80,6 +85,13 @@ def get_financial_agendas():
             FinancialAgenda.mail.ilike(search_pattern),
             FinancialAgenda.whatsapp.ilike(search_pattern)
         ))
+        
+    if estado:
+        query = query.filter(FinancialAgenda.estado == estado)
+    if closer:
+        query = query.filter(FinancialAgenda.closer == closer)
+    if fuente:
+        query = query.filter(FinancialAgenda.nombre == fuente)
         
     if start_date_str:
         try:
@@ -112,11 +124,20 @@ def get_financial_agendas():
         
         by_closer = {closer or 'Sin Asignar': count for closer, count in closer_counts}
         
+        # Obtener todos los closers y fuentes unicas para los filtros
+        closers_query = db.session.query(FinancialAgenda.closer).distinct().all()
+        sources_query = db.session.query(FinancialAgenda.nombre).distinct().all()
+        unique_closers = sorted(list(set([c[0].strip() for c in closers_query if c[0] and c[0].strip()])))
+        unique_sources = sorted(list(set([s[0].strip() for s in sources_query if s[0] and s[0].strip()])))
+        
         return jsonify({
             "data": [a.to_dict() for a in agendas_pagination.items],
             "total": total_count,
             "upcoming_count": upcoming_count,
             "by_closer": by_closer,
+            "unique_states": ['Pendiente', 'Show Up', 'Completada', 'Reagendada', 'Cancelada'],
+            "unique_closers": unique_closers,
+            "unique_sources": unique_sources,
             "page": agendas_pagination.page,
             "pages": agendas_pagination.pages,
             "has_more": agendas_pagination.has_next
@@ -151,6 +172,8 @@ def update_financial_agenda(agenda_id):
             agenda.whatsapp = data['whatsapp']
         if 'mail' in data:
             agenda.mail = data['mail']
+        if 'estado' in data:
+            agenda.estado = data['estado']
         if 'date' in data:
             try:
                 from dateutil import parser
