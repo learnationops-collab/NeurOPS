@@ -259,6 +259,12 @@
       - Se modificaron `SheetsService.post_to_sheets` y la ruta intermedia de creación de venta en `/public/financial-sales/new` para capturar el parámetro boolean `enviar_webhook` en el payload de la venta y así omitir el envío a n8n si el usuario lo desactiva.
     - **Formato Compatible**: Los datos se envían en un payload JSON que incluye tanto las claves originales en inglés como las claves en español solicitadas (`Nombre`, `Monto abonado`, `Setter`, `Instagram`, etc.), garantizando compatibilidad inmediata en el nodo de n8n.
     - **Frontend (`NewSalePage.jsx` y `PublicFinancialSalesPage.jsx`) [MODIFY]**: Se diseñó e integró un switch deslizable interactivo con el label *"Automatización (n8n)"* en los formularios de registro de ventas del Closer y del Administrador. Por defecto se inicializa en `true` para asegurar el flujo automatizado habitual, pero permite al vendedor desactivarlo manualmente antes de enviar los datos a la base local y Google Sheets.
+  - **Optimización y Refinamiento de la Barra de Filtros en el Registro de Ventas**:
+    - **Interfaz (Frontend) (`PublicFinancialSalesPage.jsx`) [MODIFY]**:
+      - **Redistribución y Simetría**: Se rediseñó la Fila Principal de filtros para compactar el Buscador (`Search`), el selector de rango de fecha (`Calendar`/`input[type="date"]`) y los presets rápidos de fecha (`Hoy`, `Este Mes`, `Mes Anterior`, `30 días`) en una sola línea responsiva de alta densidad (`grid-cols-12`). Esto elimina la fila independiente de presets que causaba asimetría visual y consumía valioso espacio en pantalla.
+      - **Dimensiones y Proporciones Finas**: Se redujo la altura y paddings de los elementos de control (`py-2`, `text-xs`) y se acotaron los márgenes para lograr una integración armoniosa que requiere el mínimo espacio vertical pero mantiene total funcionalidad y legibilidad táctil/de ratón.
+      - **Filtros Avanzados Compactados**: Se refinó la cuadrícula de los 5 selects de control avanzados (`Programa`, `Tipo de Pago`, `Método`, `Closer`, `Fuente`) reduciendo su padding lateral e interno, disminuyendo los iconos a `w-3.5 h-3.5` y reduciendo el espaciado vertical (`gap-1`) para mantener coherencia geométrica de alta gama visual.
+
 
 
 

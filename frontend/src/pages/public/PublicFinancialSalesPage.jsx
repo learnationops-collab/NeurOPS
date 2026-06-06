@@ -552,33 +552,33 @@ const PublicFinancialSalesPage = () => {
                 </div>
 
                 {/* Fila Principal: Búsqueda y Rango de Fechas */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
                     {/* Barra de Búsqueda */}
-                    <div className="relative lg:col-span-6">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <div className="relative lg:col-span-4">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
                         <input
                             type="text"
-                            placeholder="Buscar por cliente, instagram, email o setter..."
+                            placeholder="Buscar cliente, IG, email o setter..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-slate-950/80 border border-slate-850 hover:border-slate-700 focus:border-violet-500 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white focus:outline-none placeholder:text-slate-555 transition-all focus:ring-1 focus:ring-violet-500/30"
+                            className="w-full bg-slate-950/80 border border-slate-850 hover:border-slate-700 focus:border-violet-500 rounded-xl pl-9 pr-9 py-2 text-xs text-white focus:outline-none placeholder:text-slate-500 transition-all focus:ring-1 focus:ring-violet-500/30"
                         />
                         {searchTerm && (
                             <button
                                 type="button"
                                 onClick={() => setSearchTerm('')}
-                                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-450 hover:text-white hover:bg-slate-800 rounded-full transition-all"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-450 hover:text-white hover:bg-slate-800 rounded-full transition-all"
                             >
                                 <X className="w-3 h-3" />
                             </button>
                         )}
                     </div>
 
-                    {/* Rango de Fechas y Presets */}
-                    <div className="flex flex-col gap-2 lg:col-span-6">
-                        <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-850 hover:border-slate-700 px-3.5 py-2.5 rounded-xl transition-all focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500/30">
+                    {/* Rango de Fechas */}
+                    <div className="lg:col-span-4">
+                        <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-850 hover:border-slate-700 px-3 py-2 rounded-xl transition-all focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500/30">
                             <Calendar 
-                                className="w-4 h-4 text-slate-450 hover:text-white cursor-pointer shrink-0 transition-colors" 
+                                className="w-3.5 h-3.5 text-slate-450 hover:text-white cursor-pointer shrink-0 transition-colors" 
                                 onClick={() => {
                                     try {
                                         startDateRef.current?.showPicker();
@@ -587,76 +587,64 @@ const PublicFinancialSalesPage = () => {
                                     }
                                 }}
                             />
-                            <span 
-                                className="text-[9px] text-slate-400 hover:text-white cursor-pointer font-black uppercase tracking-wider shrink-0 transition-colors"
-                                onClick={() => {
-                                    try {
-                                        startDateRef.current?.showPicker();
-                                    } catch (e) {
-                                        startDateRef.current?.focus();
-                                    }
-                                }}
-                            >
-                                Fecha:
-                            </span>
                             <input
                                 ref={startDateRef}
                                 type="date"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
-                                className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-full text-center"
+                                className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-full text-center p-0"
                             />
-                            <span className="text-slate-650 text-xs shrink-0">-</span>
+                            <span className="text-slate-600 text-xs shrink-0">-</span>
                             <input
                                 ref={endDateRef}
                                 type="date"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
-                                className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-full text-center"
+                                className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-full text-center p-0"
                             />
                         </div>
-                        
-                        {/* Atajos de Fecha */}
-                        <div className="flex flex-wrap items-center gap-1.5 justify-end">
-                            {[
-                                { id: 'today', label: 'Hoy' },
-                                { id: 'this_month', label: 'Este Mes' },
-                                { id: 'last_month', label: 'Mes Anterior' },
-                                { id: 'last_30_days', label: 'Últimos 30 días' }
-                            ].map((preset) => {
-                                const isActive = getActiveDatePreset() === preset.id;
-                                return (
-                                    <button
-                                        key={preset.id}
-                                        type="button"
-                                        onClick={() => applyDatePreset(preset.id)}
-                                        className={`text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border transition-all ${
-                                            isActive
-                                                ? 'bg-violet-500/15 border-violet-550/40 text-violet-300 shadow-sm shadow-violet-500/5'
-                                                : 'bg-slate-950/40 border-slate-900 text-slate-500 hover:text-slate-350 hover:border-slate-800 hover:scale-[1.01]'
-                                        }`}
-                                    >
-                                        {preset.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                    </div>
+
+                    {/* Atajos de Fecha (Presets compactos y alineados) */}
+                    <div className="flex flex-wrap items-center gap-1.5 lg:col-span-4 justify-start lg:justify-end">
+                        {[
+                            { id: 'today', label: 'Hoy' },
+                            { id: 'this_month', label: 'Este Mes' },
+                            { id: 'last_month', label: 'Mes Anterior' },
+                            { id: 'last_30_days', label: '30 días' }
+                        ].map((preset) => {
+                            const isActive = getActiveDatePreset() === preset.id;
+                            return (
+                                <button
+                                    key={preset.id}
+                                    type="button"
+                                    onClick={() => applyDatePreset(preset.id)}
+                                    className={`text-[9px] font-black uppercase tracking-wider px-2 py-1.5 rounded-lg border transition-all ${
+                                        isActive
+                                            ? 'bg-violet-500/15 border-violet-550/40 text-violet-300 shadow-sm shadow-violet-550/5'
+                                            : 'bg-slate-950/40 border-slate-900 text-slate-500 hover:text-slate-350 hover:border-slate-800 hover:scale-[1.01]'
+                                    }`}
+                                >
+                                    {preset.label}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
                 <div className="w-full bg-gradient-to-r from-transparent via-slate-800/40 to-transparent h-px" />
 
                 {/* Fila Secundaria: Selectores de Filtro Avanzado Iconográficos */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                     {/* Programa */}
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa</span>
                         <div className="relative">
-                            <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
                             <select
                                 value={programa}
                                 onChange={(e) => setPrograma(e.target.value)}
-                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
                             >
                                 <option value="">Todos los Programas</option>
                                 {uniquePrograms
@@ -666,19 +654,19 @@ const PublicFinancialSalesPage = () => {
                                     ))
                                 }
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
                         </div>
                     </div>
 
                     {/* Tipo de Pago */}
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Tipo de Pago</span>
                         <div className="relative">
-                            <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
                             <select
                                 value={tipoPagoSimple}
                                 onChange={(e) => setTipoPagoSimple(e.target.value)}
-                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
                             >
                                 <option value="">Todos los Pagos</option>
                                 {uniquePaymentTypes
@@ -688,19 +676,19 @@ const PublicFinancialSalesPage = () => {
                                     ))
                                 }
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
                         </div>
                     </div>
 
                     {/* Método de Pago */}
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Método</span>
                         <div className="relative">
-                            <Wallet className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
                             <select
                                 value={metodoPago}
                                 onChange={(e) => setMetodoPago(e.target.value)}
-                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
                             >
                                 <option value="">Todos los Métodos</option>
                                 {uniquePaymentMethods
@@ -710,19 +698,19 @@ const PublicFinancialSalesPage = () => {
                                     ))
                                 }
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
                         </div>
                     </div>
 
                     {/* Closer */}
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Closer</span>
                         <div className="relative">
-                            <UserCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
                             <select
                                 value={closer}
                                 onChange={(e) => setCloser(e.target.value)}
-                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
                             >
                                 <option value="">Todos los Closers</option>
                                 <option value="Sin Closer">Sin Closer</option>
@@ -734,19 +722,19 @@ const PublicFinancialSalesPage = () => {
                                     ))
                                 }
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
                         </div>
                     </div>
 
                     {/* Fuente (Setter) */}
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Fuente (Setter)</span>
                         <div className="relative">
-                            <Compass className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <Compass className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
                             <select
                                 value={source}
                                 onChange={(e) => setSource(e.target.value)}
-                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-10 pr-8 py-2.5 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30"
                             >
                                 <option value="">Todas las Fuentes</option>
                                 <option value="Sin Setter">Sin Setter</option>
@@ -758,7 +746,7 @@ const PublicFinancialSalesPage = () => {
                                     ))
                                 }
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-550 pointer-events-none" />
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
                         </div>
                     </div>
                 </div>
