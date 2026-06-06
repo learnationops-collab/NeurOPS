@@ -169,7 +169,7 @@ def get_financial_agendas():
             "total": total_count,
             "upcoming_count": upcoming_count,
             "by_closer": by_closer,
-            "unique_states": ['Pendiente', 'Show Up', 'Completada', 'Reagendada', 'Cancelada'],
+            "unique_states": ['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'],
             "unique_closers": unique_closers,
             "unique_sources": unique_sources,
             "page": agendas_pagination.page,

@@ -31,12 +31,12 @@ const getEstadoBadgeVariant = (estado) => {
     switch (estado) {
         case 'Show Up':
             return 'primary';
-        case 'Completada':
-            return 'success';
+        case 'No show':
+            return 'rose';
         case 'Reagendada':
             return 'warning';
         case 'Cancelada':
-            return 'rose';
+            return 'neutral';
         case 'Pendiente':
         default:
             return 'neutral';
@@ -380,7 +380,7 @@ const FinancialAgendasPage = () => {
                             className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
                         >
                             <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
-                            {['Pendiente', 'Show Up', 'Completada', 'Reagendada', 'Cancelada'].map(st => (
+                            {['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'].map(st => (
                                 <option key={st} value={st} className="bg-slate-900 text-white font-semibold">{st}</option>
                             ))}
                         </select>
@@ -632,13 +632,13 @@ const FinancialAgendasPage = () => {
                                                      }}
                                                      className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border cursor-pointer outline-none focus:ring-1 focus:ring-primary/50 transition-all text-center border-box
                                                          ${agenda.estado === 'Show Up' ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : ''}
-                                                         ${agenda.estado === 'Completada' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : ''}
+                                                         ${agenda.estado === 'No show' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20' : ''}
                                                          ${agenda.estado === 'Reagendada' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : ''}
-                                                         ${agenda.estado === 'Cancelada' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20' : ''}
+                                                         ${agenda.estado === 'Cancelada' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
                                                          ${!agenda.estado || agenda.estado === 'Pendiente' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
                                                      `}
                                                  >
-                                                     {['Pendiente', 'Show Up', 'Completada', 'Reagendada', 'Cancelada'].map(st => (
+                                                     {['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'].map(st => (
                                                          <option key={st} value={st} className="bg-slate-900 text-white font-semibold">
                                                              {st}
                                                          </option>
@@ -757,7 +757,7 @@ const FinancialAgendasPage = () => {
                                         onChange={e => setEditForm({...editForm, estado: e.target.value})}
                                         required
                                     >
-                                        {['Pendiente', 'Show Up', 'Completada', 'Reagendada', 'Cancelada'].map(st => (
+                                        {['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'].map(st => (
                                             <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
                                         ))}
                                     </select>
