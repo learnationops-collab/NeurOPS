@@ -279,6 +279,9 @@
       - Reescritura del flujo: la tabla de clientes de la cartera sigue sirviendo como buscador principal. Al hacer clic en un cliente, el listado cambia fluidamente a la espectacular vista del Roadmap de Lead del cliente con herramientas para editar perfil o asociar ventas/agendas, incluyendo botón para volver al listado general.
     - **Llamado a Modal en Registros de Agendas y Ventas (`PublicFinancialSalesPage.jsx` y `FinancialAgendasPage.jsx`) [MODIFY]**:
       - Modificación de las tablas de Registro de Ventas y Registro de Agendas para que al hacer clic en el nombre del prospecto (el cual ahora se renderiza de color indigo/underline al hacer hover) se abra el modal interactivo de Lead Roadmap para ver sus detalles en caliente y corregir datos incorrectos o faltantes.
+    - **Refinamiento de Eventos de la Línea de Tiempo (`lead_roadmap.py`) [MODIFY]**:
+      - Se eliminó el evento redundante `"Cita Local Agendada"` para evitar duplicaciones en el historial de eventos del CRM.
+      - Se formateó la fecha en el evento `"Agenda Creada"` usando una función utilitaria en español (`format_datetime_es`) para mejorar drásticamente la legibilidad (ej: `"08 jun 2026, 14:00 hs"`).
   - **Actualización y Sincronización de Base de Datos Local**:
     - **Refactorización de Sincronizador (`actualizar_db.py`) [MODIFY]**: Se actualizaron las importaciones y la lista ordenada de modelos `modelos` para incluir todos los modelos del proyecto (incluyendo `ClientComment`, `event_closers`, `Availability`, `WeeklyAvailability`, `SurveyQuestion`, `PaymentMethod` y `ManychatAdLead`) ordenados adecuadamente por jerarquía de claves foráneas.
     - **Limpieza y Carga Bidireccional de Asociación Many-to-Many**: Se agregaron de manera explícita procesos específicos para vaciar y repoblar la tabla de asociación Many-to-Many `event_closers` respetando la integridad referencial en SQLite.

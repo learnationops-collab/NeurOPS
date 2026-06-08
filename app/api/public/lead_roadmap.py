@@ -13,6 +13,13 @@ def normalize_ig(ig_str):
         return None
     return ig_str.strip().lstrip('@').lower()
 
+def format_datetime_es(dt):
+    # Formatea un objeto datetime a string legible en español
+    if not dt:
+        return ""
+    months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+    return f"{dt.day:02d} {months[dt.month - 1]} {dt.year}, {dt.hour:02d}:{dt.minute:02d} hs"
+
 @bp.route('/public/lead-roadmap', methods=['GET'])
 def get_lead_roadmap():
     client_id = request.args.get('client_id', type=int)
@@ -315,21 +322,16 @@ def get_lead_roadmap():
 
     # 3. Agendas
     for fa in financial_agendas:
+        fecha_formateada = format_datetime_es(fa.date) if fa.date else fa.fecha_meet
         activity.append({
             "date": fa.created_at.isoformat() if fa.created_at else (fa.date.isoformat() if fa.date else lead_profile["created_at"]),
             "event": "Agenda Creada",
-            "detail": f"Cita programada para {fa.fecha_meet} con closer: {fa.closer or 'Sin asignar'} (Fuente: {fa.lead})",
+            "detail": f"Cita programada para {fecha_formateada} con closer: {fa.closer or 'Sin asignar'} (Fuente: {fa.lead})",
             "origin": "Calendly / Webhook"
         })
 
-    # 4. Appointments locales
+    # 4. Appointments locales (filtrando el evento de agendamiento local directo)
     for appt in appointments:
-        activity.append({
-            "date": appt.created_at.isoformat() if appt.created_at else lead_profile["created_at"],
-            "event": "Cita Local Agendada",
-            "detail": f"Reunión programada para {appt.start_time.isoformat()} con closer: {appt.closer.username if appt.closer else 'Desconocido'}",
-            "origin": "Sistema"
-        })
         # Si ocurrió, agregar la llamada realizada
         if appt.result or appt.start_time < datetime.utcnow():
             activity.append({
