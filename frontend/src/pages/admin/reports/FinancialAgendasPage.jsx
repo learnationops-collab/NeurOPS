@@ -16,6 +16,8 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
+import LeadRoadmapModal from '../../../components/modals/LeadRoadmapModal';
+
 
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
@@ -45,6 +47,8 @@ const getEstadoBadgeVariant = (estado) => {
 
 const FinancialAgendasPage = () => {
     const [agendas, setAgendas] = useState([]);
+    const [selectedRoadmapLead, setSelectedRoadmapLead] = useState(null);
+
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [syncing, setSyncing] = useState(false);
@@ -612,7 +616,17 @@ const FinancialAgendasPage = () => {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-4">
-                                                <span className="text-sm font-bold text-white">{agenda.lead}</span>
+                                                <span 
+                                                    className="text-sm font-bold text-white hover:text-indigo-400 hover:underline cursor-pointer"
+                                                    onClick={() => setSelectedRoadmapLead({
+                                                        instagram: agenda.instagram,
+                                                        email: agenda.mail,
+                                                        phone: agenda.whatsapp,
+                                                        full_name: agenda.lead
+                                                    })}
+                                                >
+                                                    {agenda.lead}
+                                                </span>
                                             </td>
                                             <td className="py-4 px-4">
                                                 <Badge variant="amber" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider border-amber-500/30">
@@ -817,6 +831,15 @@ const FinancialAgendasPage = () => {
                     </div>
                 </div>
             )}
+
+            <LeadRoadmapModal 
+                isOpen={!!selectedRoadmapLead}
+                instagram={selectedRoadmapLead?.instagram}
+                email={selectedRoadmapLead?.email}
+                phone={selectedRoadmapLead?.phone}
+                onClose={() => setSelectedRoadmapLead(null)}
+                onSuccess={() => fetchAgendas(1)}
+            />
         </div>
     );
 };

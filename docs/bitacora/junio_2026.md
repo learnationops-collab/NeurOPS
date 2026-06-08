@@ -264,10 +264,19 @@
       - **Redistribución y Simetría**: Se rediseñó la Fila Principal de filtros para compactar el Buscador (`Search`), el selector de rango de fecha (`Calendar`/`input[type="date"]`) y los presets rápidos de fecha (`Hoy`, `Este Mes`, `Mes Anterior`, `30 días`) en una sola línea responsiva de alta densidad (`grid-cols-12`). Esto elimina la fila independiente de presets que causaba asimetría visual y consumía valioso espacio en pantalla.
       - **Dimensiones y Proporciones Finas**: Se redujo la altura y paddings de los elementos de control (`py-2`, `text-xs`) y se acotaron los márgenes para lograr una integración armoniosa que requiere el mínimo espacio vertical pero mantiene total funcionalidad y legibilidad táctil/de ratón.
       - **Filtros Avanzados Compactados**: Se refinó la cuadrícula de los 5 selects de control avanzados (`Programa`, `Tipo de Pago`, `Método`, `Closer`, `Fuente`) reduciendo su padding lateral e interno, disminuyendo los iconos a `w-3.5 h-3.5` y reduciendo el espaciado vertical (`gap-1`) para mantener coherencia geométrica de alta gama visual.
-
-
-
-
-
-
+- **8 de Junio de 2026**:
+  - **Diseño e Implementación del CRM Lead Roadmap Unificado**:
+    - **API Backend (Agregación Multi-fuente) (`lead_roadmap.py`) [NEW MODULE]**: 
+      - Creación del nuevo controlador de API `@bp.route('/public/lead-roadmap')` que reúne y consolida en un solo JSON estructurado de 6 etapas la trayectoria del lead: 1) *Llegó* (ManyChat creation/keywords), 2) *Contactó* (primeras interacciones de bot o citas), 3) *Dolor* (calificaciones y encuestas de dolor), 4) *Agenda* (citas de sheets o locales), 5) *Llamada* (resultado y notas de closer), y 6) *Venta* (desglose financiero, métodos y cuotas).
+      - Módulo registrado en `app/api/public/__init__.py`.
+      - Incorporación de la ruta `POST /public/lead-roadmap/update-client` para crear o actualizar en caliente perfiles de `Client`.
+      - Incorporación de la ruta `POST /public/lead-roadmap/relate-event` para vincular manualmente por Instagram una agenda (`FinancialAgenda`) o venta (`FinancialSale`) específica a un Lead.
+    - **Interfaz de Línea de Tiempo Premium (`LeadRoadmapDetail.jsx`) [NEW COMPONENT]**:
+      - Diseño Glassmorphism Dark de alta gama con iconos y colores HSL. Muestra un avatar de perfil del lead, metadatos del anuncio, una línea de tiempo interactiva de 6 etapas, tabla cronológica de todos los micro-eventos (actividad), y desgloses de recaudación, dolores e historial de comentarios con funcionalidad de añadir comentarios en caliente.
+    - **Modal Global Reactivo (`LeadRoadmapModal.jsx`) [NEW COMPONENT]**:
+      - Modal animado con `framer-motion` que carga de manera dinámica `LeadRoadmapDetail` pasándole el Instagram, email, teléfono o client_id del prospecto.
+    - **Modificaciones en la Cartera de Clientes (`ClientsPage.jsx`) [MODIFY]**:
+      - Reescritura del flujo: la tabla de clientes de la cartera sigue sirviendo como buscador principal. Al hacer clic en un cliente, el listado cambia fluidamente a la espectacular vista del Roadmap de Lead del cliente con herramientas para editar perfil o asociar ventas/agendas, incluyendo botón para volver al listado general.
+    - **Llamado a Modal en Registros de Agendas y Ventas (`PublicFinancialSalesPage.jsx` y `FinancialAgendasPage.jsx`) [MODIFY]**:
+      - Modificación de las tablas de Registro de Ventas y Registro de Agendas para que al hacer clic en el nombre del prospecto (el cual ahora se renderiza de color indigo/underline al hacer hover) se abra el modal interactivo de Lead Roadmap para ver sus detalles en caliente y corregir datos incorrectos o faltantes.
 

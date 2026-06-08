@@ -23,6 +23,7 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import SaleDetailModal from '../../../components/modals/SaleDetailModal';
 import MultiSelectFilter from '../../../components/shared/MultiSelectFilter';
+import LeadRoadmapDetail from '../../../components/leads/LeadRoadmapDetail';
 
 const CloserClientsPage = () => {
     const [data, setData] = useState([]);
@@ -33,6 +34,7 @@ const CloserClientsPage = () => {
     const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [programFilter, setProgramFilter] = useState([]);
+    const [selectedLead, setSelectedLead] = useState(null);
 
     useEffect(() => {
         fetchCustomers();
@@ -69,6 +71,21 @@ const CloserClientsPage = () => {
         { value: '3', label: 'NeuroOps Masterclass' },
         { value: '4', label: 'Residency Roadmap v1' }
     ];
+
+    if (selectedLead) {
+        return (
+            <div className="p-8 max-w-[1800px] mx-auto space-y-8 pb-32">
+                <LeadRoadmapDetail 
+                    instagram={selectedLead.instagram}
+                    clientId={selectedLead.clientId}
+                    email={selectedLead.email}
+                    phone={selectedLead.phone}
+                    onBack={() => setSelectedLead(null)}
+                    onUpdate={fetchCustomers}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="p-8 max-w-[1800px] mx-auto space-y-8 pb-32">
@@ -135,7 +152,11 @@ const CloserClientsPage = () => {
                             </thead>
                             <tbody className="divide-y divide-base">
                                 {data.map((customer) => (
-                                    <tr key={customer.id} className="hover:bg-surface-hover/30 transition-all group">
+                                    <tr 
+                                        key={customer.id} 
+                                        className="hover:bg-surface-hover/30 transition-all group cursor-pointer"
+                                        onClick={() => setSelectedLead({ clientId: customer.id, instagram: customer.instagram, email: customer.email, phone: customer.phone })}
+                                    >
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl flex items-center justify-center text-primary font-black text-lg border border-primary/10 shadow-inner">
@@ -160,7 +181,7 @@ const CloserClientsPage = () => {
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <div className="space-y-3 max-w-xs">
+                                            <div className="space-y-3 max-w-xs" onClick={(e) => e.stopPropagation()}>
                                                 {customer.enrollments.map((enr) => (
                                                     <div key={enr.id} className="space-y-1">
                                                         <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-tighter">
@@ -188,7 +209,7 @@ const CloserClientsPage = () => {
                                                 <span className="text-[11px] font-bold italic">{new Date(customer.created_at).toLocaleDateString()}</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6 text-right">
+                                        <td className="px-8 py-6 text-right" onClick={(e) => e.stopPropagation()}>
                                             <button 
                                                 onClick={() => {
                                                     if (customer.enrollments.length > 0) {

@@ -5,6 +5,8 @@ import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Perce
 import Card from '../../components/ui/Card';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import AttributionModal from '../../components/modals/AttributionModal';
+import LeadRoadmapModal from '../../components/modals/LeadRoadmapModal';
+
 
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
@@ -55,6 +57,8 @@ const getCloserColors = (name) => {
 
 const PublicFinancialSalesPage = () => {
     const [sales, setSales] = useState([]);
+    const [selectedRoadmapLead, setSelectedRoadmapLead] = useState(null);
+
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [syncing, setSyncing] = useState(false);
@@ -1184,7 +1188,17 @@ const PublicFinancialSalesPage = () => {
                                                         className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
                                                     />
                                                 ) : (
-                                                    <span className="font-medium text-white">{sale.nombre_cliente || 'N/A'}</span>
+                                                    <span 
+                                                        className="font-medium text-white hover:text-indigo-400 hover:underline cursor-pointer"
+                                                        onClick={() => setSelectedRoadmapLead({ 
+                                                            instagram: sale.instagram, 
+                                                            email: sale.mail_cliente, 
+                                                            phone: sale.telefono,
+                                                            full_name: sale.nombre_cliente
+                                                        })}
+                                                    >
+                                                        {sale.nombre_cliente || 'N/A'}
+                                                    </span>
                                                 )}
                                             </td>
                                             
@@ -1702,9 +1716,17 @@ const PublicFinancialSalesPage = () => {
                     </div>
                 </div>
             )}
+
+            <LeadRoadmapModal 
+                isOpen={!!selectedRoadmapLead}
+                instagram={selectedRoadmapLead?.instagram}
+                email={selectedRoadmapLead?.email}
+                phone={selectedRoadmapLead?.phone}
+                onClose={() => setSelectedRoadmapLead(null)}
+                onSuccess={() => fetchSales(1)}
+            />
         </div>
     );
 };
 
 export default PublicFinancialSalesPage;
-
