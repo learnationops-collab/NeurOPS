@@ -13,6 +13,13 @@ def normalize_ig(ig_str):
         return None
     return ig_str.strip().lstrip('@').lower()
 
+def is_generic_val(val):
+    # Valida si un valor es generico o no valido
+    if not val:
+        return True
+    val_clean = str(val).strip().lower()
+    return val_clean in ('n/a', 'none', 'null', 'sin email', 'sin telefono', 'sin teléfono', 'desconocido', '')
+
 def format_datetime_es(dt):
     # Formatea un objeto datetime a string legible en español
     if not dt:
@@ -47,19 +54,27 @@ def get_lead_roadmap():
 
     # 2. Resolver por otros campos si no se encontró
     ig_norm = normalize_ig(instagram)
+    if is_generic_val(ig_norm):
+        ig_norm = None
+    
+    clean_email = email.strip().lower() if email and not is_generic_val(email) else None
+    clean_phone = phone.strip() if phone and not is_generic_val(phone) else None
     
     if not client:
         if ig_norm:
             client = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
-        if not client and email:
-            client = Client.query.filter(func.lower(Client.email) == email.strip().lower()).first()
-        if not client and phone:
-            client = Client.query.filter(Client.phone.like(f"%{phone.strip()}%")).first()
+        if not client and clean_email:
+            client = Client.query.filter(func.lower(Client.email) == clean_email).first()
+        if not client and clean_phone:
+            client = Client.query.filter(Client.phone.like(f"%{clean_phone}%")).first()
 
     # Si se encontró un Client, normalizamos sus búsquedas para jalar todo lo relacionado
     resolved_ig = normalize_ig(client.instagram) if client else ig_norm
-    resolved_email = client.email.strip().lower() if client and client.email else (email.strip().lower() if email else None)
-    resolved_phone = client.phone.strip() if client and client.phone else (phone.strip() if phone else None)
+    if is_generic_val(resolved_ig):
+        resolved_ig = None
+        
+    resolved_email = client.email.strip().lower() if client and client.email and not is_generic_val(client.email) else clean_email
+    resolved_phone = client.phone.strip() if client and client.phone and not is_generic_val(client.phone) else clean_phone
 
     # 3. Buscar ManychatLead
     if resolved_ig:
