@@ -80,6 +80,7 @@ def get_financial_agendas():
     search = request.args.get('search', default='', type=str).strip()
     start_date_str = request.args.get('start_date', default='', type=str).strip()
     end_date_str = request.args.get('end_date', default='', type=str).strip()
+    date_filter_by = request.args.get('date_filter_by', default='meet', type=str).strip().lower()
     
     estado = request.args.get('estado', default='', type=str).strip()
     closer = request.args.get('closer', default='', type=str).strip()
@@ -100,20 +101,26 @@ def get_financial_agendas():
     # Consulta base filtrada únicamente por fechas
     date_query = FinancialAgenda.query
     
-    if start_date_str:
-        try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            date_query = date_query.filter(FinancialAgenda.date >= start_date)
-        except ValueError:
-            pass
-            
-    if end_date_str:
-        try:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-            end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
-            date_query = date_query.filter(FinancialAgenda.date <= end_date)
-        except ValueError:
-            pass
+    if date_filter_by == 'created':
+        if start_date_str:
+            date_query = date_query.filter(FinancialAgenda.registro >= start_date_str)
+        if end_date_str:
+            date_query = date_query.filter(FinancialAgenda.registro <= f"{end_date_str}T23:59:59")
+    else:
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                date_query = date_query.filter(FinancialAgenda.date >= start_date)
+            except ValueError:
+                pass
+                
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+                end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+                date_query = date_query.filter(FinancialAgenda.date <= end_date)
+            except ValueError:
+                pass
 
     # La consulta principal aplica además los filtros específicos de estado, closer y fuente
     query = date_query
@@ -125,7 +132,10 @@ def get_financial_agendas():
     if fuente:
         query = query.filter(FinancialAgenda.nombre == fuente)
         
-    query = query.order_by(FinancialAgenda.date.desc())
+    if date_filter_by == 'created':
+        query = query.order_by(FinancialAgenda.registro.desc())
+    else:
+        query = query.order_by(FinancialAgenda.date.desc())
     
     if page is not None:
         agendas_pagination = query.paginate(page=page, per_page=limit, error_out=False)

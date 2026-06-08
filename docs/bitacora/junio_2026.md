@@ -282,6 +282,12 @@
     - **Refinamiento de Eventos de la Línea de Tiempo (`lead_roadmap.py`) [MODIFY]**:
       - Se eliminó el evento redundante `"Cita Local Agendada"` para evitar duplicaciones en el historial de eventos del CRM.
       - Se formateó la fecha en el evento `"Agenda Creada"` usando una función utilitaria en español (`format_datetime_es`) para mejorar drásticamente la legibilidad (ej: `"08 jun 2026, 14:00 hs"`).
+  - **Optimización y Flexibilidad en el Registro de Agendas (Filtro por Tipo de Fecha)**:
+    - **API Backend (`financial_agendas.py`) [MODIFY]**: Se añadió soporte en el endpoint de listado `GET /public/financial-agendas` para el parámetro `date_filter_by` ('meet' o 'created'). Permite filtrar el rango de fechas y ordenar los registros dinámicamente ya sea por fecha de la reunión (`date`/`fecha_meet`) o por fecha de creación/registro (`registro`), usando comparaciones directas de cadenas para mantener compatibilidad e independencia de la base de datos (SQLite/PostgreSQL) sin necesidad de migraciones.
+    - **Interfaz (Frontend) (`FinancialAgendasPage.jsx`) [MODIFY]**:
+      - Se añadió la columna **F. Creación** (mostrando el momento en que se registró la cita) lado a lado con la columna **F. Reunión** (fecha del encuentro/meet) en la tabla del historial.
+      - Se integró un hermoso y fluido switch/botón deslizable con estética Dark Glassmorphism ("Fecha Meet" vs "F. Creación") en la barra de filtros superiores. Al alternar este switch, se cambia de forma reactiva el criterio de filtrado por fechas y de ordenación de los registros.
+      - Se corrigieron los anchos de columna y el `colSpan` de los estados vacíos a 8 columnas de forma coherente.
   - **Actualización y Sincronización de Base de Datos Local**:
     - **Refactorización de Sincronizador (`actualizar_db.py`) [MODIFY]**: Se actualizaron las importaciones y la lista ordenada de modelos `modelos` para incluir todos los modelos del proyecto (incluyendo `ClientComment`, `event_closers`, `Availability`, `WeeklyAvailability`, `SurveyQuestion`, `PaymentMethod` y `ManychatAdLead`) ordenados adecuadamente por jerarquía de claves foráneas.
     - **Limpieza y Carga Bidireccional de Asociación Many-to-Many**: Se agregaron de manera explícita procesos específicos para vaciar y repoblar la tabla de asociación Many-to-Many `event_closers` respetando la integridad referencial en SQLite.

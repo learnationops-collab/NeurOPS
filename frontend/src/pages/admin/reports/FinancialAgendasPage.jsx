@@ -45,6 +45,23 @@ const getEstadoBadgeVariant = (estado) => {
     }
 };
 
+const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch {
+        return dateStr;
+    }
+};
+
 const FinancialAgendasPage = () => {
     const [agendas, setAgendas] = useState([]);
     const [selectedRoadmapLead, setSelectedRoadmapLead] = useState(null);
@@ -126,16 +143,18 @@ const FinancialAgendasPage = () => {
         endDate: getTodayDate(),
         estado: '',
         closer: '',
-        fuente: ''
+        fuente: '',
+        dateFilterBy: 'meet'
     });
 
-    const { searchTerm, startDate, endDate, estado, closer, fuente } = filters;
+    const { searchTerm, startDate, endDate, estado, closer, fuente, dateFilterBy } = filters;
     const setSearchTerm = (val) => setFilters({ searchTerm: val });
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
     const setEstado = (val) => setFilters({ estado: val });
     const setCloser = (val) => setFilters({ closer: val });
     const setFuente = (val) => setFilters({ fuente: val });
+    const setDateFilterBy = (val) => setFilters({ dateFilterBy: val });
 
     const applyDatePreset = (preset) => {
         const today = new Date();
@@ -219,7 +238,8 @@ const FinancialAgendasPage = () => {
                     end_date: endDate,
                     estado: estado,
                     closer: closer,
-                    fuente: fuente
+                    fuente: fuente,
+                    date_filter_by: dateFilterBy
                 }
             });
             const resData = response.data;
@@ -266,7 +286,7 @@ const FinancialAgendasPage = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, startDate, endDate, estado, closer, fuente]);
+    }, [searchTerm, startDate, endDate, estado, closer, fuente, dateFilterBy]);
 
     // Observador para scroll infinito
     useEffect(() => {
@@ -335,6 +355,37 @@ const FinancialAgendasPage = () => {
             <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-[1.8rem] p-4 flex flex-wrap items-center justify-between gap-4">
                 {/* Controles de Rango de Fecha */}
                 <div className="flex flex-wrap items-center gap-3">
+                    {/* Botón deslizable (Toggle Switch) para escoger el tipo de fecha */}
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-2xl">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Filtrar por:</span>
+                        <div className="relative flex items-center bg-slate-950 border border-white/5 p-0.5 rounded-xl h-7 w-44">
+                            {/* Deslizable de fondo */}
+                            <div 
+                                className={`absolute top-0.5 bottom-0.5 rounded-lg bg-primary/20 border border-primary/30 transition-all duration-300 ${
+                                    dateFilterBy === 'created' ? 'left-[calc(50%+1px)] right-0.5' : 'left-0.5 right-[calc(50%+1px)]'
+                                }`}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setDateFilterBy('meet')}
+                                className={`flex-1 text-[9px] font-black uppercase tracking-wider text-center relative z-10 transition-colors duration-300 cursor-pointer ${
+                                    dateFilterBy === 'meet' ? 'text-white font-bold' : 'text-slate-500 hover:text-slate-300'
+                                }`}
+                            >
+                                Fecha Meet
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setDateFilterBy('created')}
+                                className={`flex-1 text-[9px] font-black uppercase tracking-wider text-center relative z-10 transition-colors duration-300 cursor-pointer ${
+                                    dateFilterBy === 'created' ? 'text-white font-bold' : 'text-slate-500 hover:text-slate-300'
+                                }`}
+                            >
+                                F. Creación
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="flex flex-wrap items-center gap-1 bg-white/5 border border-white/10 p-1.5 rounded-2xl">
                         {[
                             { id: 'today', label: 'Hoy' },
@@ -586,7 +637,8 @@ const FinancialAgendasPage = () => {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-base">
-                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Fecha</th>
+                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">F. Creación</th>
+                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">F. Reunión</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Cliente</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Fuente</th>
@@ -601,17 +653,16 @@ const FinancialAgendasPage = () => {
                                             <td className="py-4 px-4">
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon size={14} className="text-muted" />
+                                                    <span className="text-xs font-bold text-slate-400">
+                                                        {formatDate(agenda.registro)}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <div className="flex items-center gap-2">
+                                                    <CalendarIcon size={14} className="text-primary/70" />
                                                     <span className="text-sm font-bold text-slate-200">
-                                                        {agenda.date 
-                                                            ? new Date(agenda.date).toLocaleDateString('es-ES', { 
-                                                                day: '2-digit', 
-                                                                month: 'short', 
-                                                                year: 'numeric',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit'
-                                                              }) 
-                                                            : agenda.fecha_meet
-                                                        }
+                                                        {formatDate(agenda.date || agenda.fecha_meet)}
                                                     </span>
                                                 </div>
                                             </td>
@@ -716,7 +767,7 @@ const FinancialAgendasPage = () => {
                                     ))}
                                     {agendas.length === 0 && (
                                         <tr>
-                                            <td colSpan="7" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
+                                            <td colSpan="8" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
                                                 No se encontraron agendas
                                             </td>
                                         </tr>
