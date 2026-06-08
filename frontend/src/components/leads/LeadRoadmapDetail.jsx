@@ -2,26 +2,24 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { 
     User, Mail, Phone, Instagram, DollarSign, Calendar, 
-    ChevronDown, ChevronUp, Edit, Link2, Clock, 
+    ChevronDown, ChevronUp, Edit, Clock, 
     Sparkles, Loader2, MessageCircle, AlertCircle, Trash2, Save, Award
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { EditLeadModal, LinkEventModal } from './LeadRoadmapModals';
+import { EditLeadModal } from './LeadRoadmapModals';
 
 const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate }) => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [showLinkModal, setShowLinkModal] = useState(false);
     
     // Calificación en caliente
     const [objeciones, setObjeciones] = useState('');
     const [observaciones, setObservaciones] = useState('');
     const [savingCalificacion, setSavingCalificacion] = useState(false);
 
-    // Formulario de edición y vinculación
+    // Formulario de edición
     const [editForm, setEditForm] = useState({ full_name: '', email: '', phone: '', instagram: '' });
-    const [linkForm, setLinkForm] = useState({ event_type: 'sale', event_id: '' });
 
     // Comentarios
     const [newComment, setNewComment] = useState('');
@@ -81,27 +79,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
         } catch (err) {
             console.error("Error saving client", err);
             toast.error(err.response?.data?.error || "Error al guardar cliente");
-        }
-    };
-
-    const handleLinkEvent = async (e) => {
-        e.preventDefault();
-        if (!linkForm.event_id) return;
-        try {
-            const payload = {
-                event_type: linkForm.event_type,
-                event_id: parseInt(linkForm.event_id),
-                instagram: data?.lead?.instagram || instagram
-            };
-            const res = await api.post('/public/lead-roadmap/relate-event', payload);
-            toast.success(res.data.message || "Evento relacionado correctamente");
-            setShowLinkModal(false);
-            setLinkForm({ ...linkForm, event_id: '' });
-            fetchRoadmap();
-            if (onUpdate) onUpdate();
-        } catch (err) {
-            console.error("Error linking event", err);
-            toast.error(err.response?.data?.error || "Error al relacionar evento");
         }
     };
 
@@ -298,12 +275,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
                     >
                         <Edit size={12} /> Editar Lead
-                    </button>
-                    <button 
-                        onClick={() => setShowLinkModal(true)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-violet-900/40 hover:bg-violet-900/60 border border-violet-500/30 rounded-xl text-[10px] font-black uppercase tracking-wider text-violet-300 transition-all"
-                    >
-                        <Link2 size={12} /> Vincular Cita/Venta
                     </button>
                 </div>
             </div>
@@ -708,16 +679,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                 editForm={editForm} 
                 setEditForm={setEditForm} 
                 onSubmit={handleSaveClient} 
-            />
-
-            {/* MODAL DE VINCULACIÓN MANUAL DE EVENTOS */}
-            <LinkEventModal 
-                show={showLinkModal} 
-                onClose={() => setShowLinkModal(false)} 
-                linkForm={linkForm} 
-                setLinkForm={setLinkForm} 
-                onSubmit={handleLinkEvent} 
-                currentInstagram={data?.lead?.instagram || instagram} 
             />
         </div>
     );
