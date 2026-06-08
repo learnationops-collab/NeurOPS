@@ -345,11 +345,10 @@ const FinancePage = () => {
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex-1 min-w-[120px] px-6 py-3.5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
-                            activeTab === tab.id
+                        className={`flex-1 min-w-[120px] px-6 py-3.5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${activeTab === tab.id
                                 ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20'
                                 : 'text-slate-500 hover:text-white hover:bg-slate-800/40'
-                        }`}
+                            }`}
                     >
                         {tab.label}
                     </button>
@@ -554,9 +553,8 @@ const FinancePage = () => {
                                                             </span>
                                                             <p className="text-[9px] text-slate-500 uppercase font-black mt-0.5">Auto-calc</p>
                                                         </td>
-                                                        <td className={`p-4 text-right font-mono font-black italic ${
-                                                            diff === 0 ? 'text-slate-400' : diff > 0 ? 'text-emerald-400' : 'text-rose-500'
-                                                        }`}>
+                                                        <td className={`p-4 text-right font-mono font-black italic ${diff === 0 ? 'text-slate-400' : diff > 0 ? 'text-emerald-400' : 'text-rose-500'
+                                                            }`}>
                                                             {diff === 0 ? '$0.00' : (diff > 0
                                                                 ? `+$${diff.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                                                                 : `-$${absDiff.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)}
@@ -580,9 +578,8 @@ const FinancePage = () => {
                                                         <td className="p-4 text-right">
                                                             <span className="text-sm font-black font-mono text-amber-300">${totalExpected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                         </td>
-                                                        <td className={`p-4 text-right font-mono font-black italic ${
-                                                            totalDiff === 0 ? 'text-slate-400' : totalDiff > 0 ? 'text-emerald-400' : 'text-rose-500'
-                                                        }`}>
+                                                        <td className={`p-4 text-right font-mono font-black italic ${totalDiff === 0 ? 'text-slate-400' : totalDiff > 0 ? 'text-emerald-400' : 'text-rose-500'
+                                                            }`}>
                                                             {totalDiff === 0 ? '$0.00' : (totalDiff > 0
                                                                 ? `+$${totalDiff.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                                                                 : `-$${absTotalDiff.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)}

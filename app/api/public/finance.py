@@ -194,6 +194,33 @@ def get_commissions_calculated(month_str):
         "marlon": round(marlon_recaudado * 0.05, 2)
     }
 
+def _seed_variable_members():
+    """Crea Elias, Jean Carlos y Marlon en TeamMember si no existen."""
+    defaults = [
+        {'name': 'Elias',       'role': 'Setter',              'salary_type': 'variable', 'payment_method': 'AirTM'},
+        {'name': 'Jean Carlos', 'role': 'Closer',              'salary_type': 'variable', 'payment_method': 'Stripe'},
+        {'name': 'Marlon',      'role': 'Director de Ventas',  'salary_type': 'variable', 'payment_method': 'Stripe'},
+    ]
+    changed = False
+    for d in defaults:
+        search_name = d['name'].lower().replace(' ', '')
+        existing = TeamMember.query.filter(
+            func.lower(func.replace(TeamMember.name, ' ', '')).like(f"%{search_name}%")
+        ).first()
+        if not existing:
+            member = TeamMember(
+                name=d['name'],
+                role=d['role'],
+                salary_type=d['salary_type'],
+                base_salary=0.0,
+                payment_method=d['payment_method'],
+                is_active=True
+            )
+            db.session.add(member)
+            changed = True
+    if changed:
+        db.session.commit()
+
 @bp.route('/public/finance/payroll', methods=['GET', 'POST'])
 @login_required
 @finance_admin_required
@@ -242,6 +269,9 @@ def manage_payroll():
 
     saved_payroll_list = MonthlyPayroll.query.filter_by(month=month).all()
     saved_payroll_map = {p.member_id: p for p in saved_payroll_list}
+    
+    # Auto-seedea los 3 miembros variables si no existen
+    _seed_variable_members()
     
     members = TeamMember.query.all()
     dynamic_commissions = get_commissions_calculated(month)
