@@ -20,6 +20,13 @@ def format_datetime_es(dt):
     months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
     return f"{dt.day:02d} {months[dt.month - 1]} {dt.year}, {dt.hour:02d}:{dt.minute:02d} hs"
 
+def format_date_es(dt):
+    # Formatea un objeto datetime a solo fecha en español
+    if not dt:
+        return ""
+    months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+    return f"{dt.day:02d} {months[dt.month - 1]} {dt.year}"
+
 @bp.route('/public/lead-roadmap', methods=['GET'])
 def get_lead_roadmap():
     client_id = request.args.get('client_id', type=int)
@@ -337,7 +344,14 @@ def get_lead_roadmap():
 
     # 3. Agendas
     for fa in financial_agendas:
-        fecha_formateada = format_datetime_es(fa.date) if fa.date else fa.fecha_meet
+        fecha_formateada = ""
+        if fa.date:
+            fecha_formateada = format_date_es(fa.date)
+        elif fa.fecha_meet:
+            fecha_formateada = fa.fecha_meet.split('T')[0]
+        else:
+            fecha_formateada = "N/A"
+
         activity.append({
             "id": fa.id,
             "event_type": "agenda",

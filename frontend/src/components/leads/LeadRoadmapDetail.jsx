@@ -138,10 +138,13 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
         }
     };
 
-    const formatTime = (isoString) => {
+    const formatTime = (isoString, eventType) => {
         if (!isoString) return '';
         try {
             const date = new Date(isoString);
+            if (eventType === 'agenda') {
+                return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
             return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) + 
                    ' ' + date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         } catch {
@@ -407,7 +410,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                             <tbody className="divide-y divide-slate-850/50">
                                 {activity.map((act, i) => (
                                     <tr key={i} className="hover:bg-slate-900/30 transition-all">
-                                        <td className="py-3 px-2 text-slate-500 font-bold whitespace-nowrap">{formatTime(act.date)}</td>
+                                        <td className="py-3 px-2 text-slate-500 font-bold whitespace-nowrap">{formatTime(act.date, act.event_type)}</td>
                                         <td className="py-3 px-2 font-black text-white italic">{act.event}</td>
                                         <td className="py-3 px-2 text-slate-350">{act.detail}</td>
                                         <td className="py-3 px-2 text-right font-medium text-slate-400">{act.origin}</td>

@@ -303,9 +303,12 @@
     - **Backend (API de Agendas) (`financial_agendas.py`) [MODIFY]**:
       - Se adaptó `receive_financial_agendas` (POST) para persistir el campo `registro` de forma explícita al insertar nuevas agendas.
       - **Prevención de Duplicados**: Se implementó una lógica de unicidad que valida si ya existe una agenda programada para el mismo prospecto (cruzando su Instagram, Email o Whatsapp) el mismo día de la cita. En caso afirmativo, actualiza sus campos (closer, fecha, estado, raw_data) en lugar de crear un registro duplicado.
-    - **Backend (API de Roadmap) (`lead_roadmap.py`) [MODIFY]**: Se modificó el listado de actividades (`activity`) de `get_lead_roadmap` para adjuntar de manera explícita el `id` y el tipo de evento (`event_type` como `"agenda"` o `"sale"`) en las actividades cronológicas originadas en agendas y ventas.
+    - **Backend (API de Roadmap) (`lead_roadmap.py`) [MODIFY]**: 
+      - Se modificó el listado de actividades (`activity`) de `get_lead_roadmap` para adjuntar de manera explícita el `id` y el tipo de evento (`event_type` como `"agenda"` o `"sale"`) en las actividades cronológicas originadas en agendas y ventas.
+      - **Ocultar Hora de Agendas**: Se incorporó la función `format_date_es` para formatear el evento `"Agenda Creada"` mostrando únicamente el día, mes y año de la cita de agenda sin la hora ni los minutos.
     - **Interfaz (Frontend) (`LeadRoadmapDetail.jsx`) [MODIFY]**:
       - Se añadió la columna **Acciones** y el icono de eliminación (`Trash2` de lucide-react) en la tabla del "Detalle de Actividad" para todas las filas asociadas a agendas y ventas.
       - Se implementó la función `handleDeleteActivity` que solicita confirmación en pantalla y, tras ser aceptada, realiza una petición DELETE asíncrona a los endpoints del backend (`/public/financial-agendas/<id>` o `/public/financial-sales/<id>`) para eliminar duplicados históricos y recargar la vista.
+      - **Ajuste de Visualización**: Se adaptó el formateador `formatTime` del componente para que, al procesar eventos del tipo `"agenda"`, no muestre la hora y sólo pinte la fecha correspondiente.
 
 
