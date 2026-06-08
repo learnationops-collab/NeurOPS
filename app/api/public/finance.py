@@ -316,35 +316,54 @@ def manage_balances():
         db.session.commit()
         return jsonify(balance.to_dict()), 200
         
-    default_methods = ['Stripe', 'AirTM', 'PayPal', 'Wise', 'Banco', 'Hotmart']
+    default_methods = ['Stripe', 'AirTM']
     balances = MonthlyPaymentMethodBalance.query.filter_by(month=month).all()
     balances_map = {b.payment_method: b for b in balances}
-    
+
+    # Calcula "por pagar" por pasarela desde la nómina del mes
+    saved_payroll_all = MonthlyPayroll.query.filter_by(month=month).all()
+    saved_payroll_map_all = {p.member_id: p for p in saved_payroll_all}
+    members_all = TeamMember.query.filter_by(is_active=True).all()
+    dyn_comm = get_commissions_calculated(month)
+    expected_by_method = {m: 0.0 for m in default_methods}
+
+    for mem in members_all:
+        if mem.id in saved_payroll_map_all:
+            p = saved_payroll_map_all[mem.id]
+            method = p.payment_method
+            total_pay = p.base_salary + p.commissions + p.bonuses
+        else:
+            method = mem.payment_method
+            comm = 0.0
+            if mem.salary_type == 'variable':
+                nc = mem.name.lower().strip().replace(' ', '')
+                if 'elias' in nc:
+                    comm = dyn_comm.get('elias', 0.0)
+                elif 'jeancarlo' in nc or 'jeancarlos' in nc:
+                    comm = dyn_comm.get('jeancarlo', 0.0)
+                elif 'marlon' in nc:
+                    comm = dyn_comm.get('marlon', 0.0)
+            total_pay = mem.base_salary + comm
+        if method in expected_by_method:
+            expected_by_method[method] += total_pay
+
     result = []
     total_actual = 0.0
     total_expected = 0.0
-    
+
     for m in default_methods:
-        if m in balances_map:
-            b = balances_map[m]
-            result.append(b.to_dict())
-            total_actual += b.actual_amount
-            total_expected += b.expected_amount
-        else:
-            result.append({
-                "id": None,
-                "month": month,
-                "payment_method": m,
-                "actual_amount": 0.0,
-                "expected_amount": 0.0
-            })
-            
-    for b in balances:
-        if b.payment_method not in default_methods:
-            result.append(b.to_dict())
-            total_actual += b.actual_amount
-            total_expected += b.expected_amount
-            
+        actual = balances_map[m].actual_amount if m in balances_map else 0.0
+        expected = round(expected_by_method.get(m, 0.0), 2)
+        result.append({
+            "id": balances_map[m].id if m in balances_map else None,
+            "month": month,
+            "payment_method": m,
+            "actual_amount": actual,
+            "expected_amount": expected
+        })
+        total_actual += actual
+        total_expected += expected
+
     return jsonify({
         "balances": result,
         "total_actual": round(total_actual, 2),
@@ -440,12 +459,6 @@ def get_finance_summary():
     ).all()
     total_software = sum(e.amount for e in software_expenses)
     
-    equipo_expenses = Expense.query.filter(
-        Expense.date >= start_date,
-        Expense.date <= end_date,
-        func.lower(Expense.category) == 'equipo'
-    ).all()
-    total_equipo = sum(e.amount for e in equipo_expenses)
     
     ad_spends = AdPeriodSpend.query.filter(
         AdPeriodSpend.start_date <= end_date.date(),
@@ -478,7 +491,7 @@ def get_finance_summary():
                     calculated_comm = dynamic_commissions.get('marlon', 0.0)
             total_sueldos += (m.base_salary + calculated_comm)
             
-    total_expenses = total_software + total_equipo + total_anuncios + total_sueldos
+    total_expenses = total_software + total_anuncios + total_sueldos
     
     balances = MonthlyPaymentMethodBalance.query.filter_by(month=month).all()
     total_actual = sum(b.actual_amount for b in balances)
@@ -504,7 +517,6 @@ def get_finance_summary():
         },
         "expenses_breakdown": {
             "software": round(total_software, 2),
-            "equipo": round(total_equipo, 2),
             "anuncios": round(total_anuncios, 2),
             "sueldos": round(total_sueldos, 2)
         },

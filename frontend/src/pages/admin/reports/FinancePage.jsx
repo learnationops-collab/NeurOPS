@@ -119,7 +119,7 @@ const FinancePage = () => {
 
             const res = await api.get(`/admin/finance/overview?start_date=${startDate}&end_date=${endDate}`);
             const expensesFiltered = (res.data.expenses || []).filter(e =>
-                ['software', 'equipo'].includes(e.category?.toLowerCase())
+                e.category?.toLowerCase() === 'software'
             );
             setExpensesList(expensesFiltered);
         } catch (error) {
@@ -340,7 +340,7 @@ const FinancePage = () => {
                     { id: 'summary', label: 'Resumen' },
                     { id: 'balances', label: 'Medios de Pago' },
                     { id: 'payroll', label: 'Nómina (Equipo)' },
-                    { id: 'expenses', label: 'Software / Equipos' }
+                    { id: 'expenses', label: 'Software' }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -411,12 +411,11 @@ const FinancePage = () => {
                                             <TrendingDown className="text-rose-500" size={16} />
                                             Distribución de Gastos
                                         </h3>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-3 gap-4">
                                             {[
-                                                { label: 'Sueldos y Nómina', amount: summary.expenses_breakdown.sueldos, color: 'text-rose-400', bg: 'bg-rose-500/5' },
+                                                { label: 'Equipo (Nómina)', amount: summary.expenses_breakdown.sueldos, color: 'text-rose-400', bg: 'bg-rose-500/5' },
                                                 { label: 'Inversión Anuncios', amount: summary.expenses_breakdown.anuncios, color: 'text-violet-400', bg: 'bg-violet-500/5' },
                                                 { label: 'Suscripciones Software', amount: summary.expenses_breakdown.software, color: 'text-amber-400', bg: 'bg-amber-500/5' },
-                                                { label: 'Equipamiento', amount: summary.expenses_breakdown.equipo, color: 'text-sky-400', bg: 'bg-sky-500/5' }
                                             ].map((item, idx) => (
                                                 <div key={idx} className={`p-4 rounded-2xl border border-slate-800 bg-slate-950/40 hover:border-slate-700 transition-all ${item.bg}`}>
                                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{item.label}</p>
@@ -515,8 +514,8 @@ const FinancePage = () => {
                             <Card variant="surface" className="p-6 rounded-[2.5rem] border-slate-800/80 bg-slate-900/10">
                                 <div className="flex justify-between items-center mb-6">
                                     <div>
-                                        <h3 className="text-xs font-black text-white uppercase tracking-wider">Balances en Medios de Pago</h3>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide mt-1">Registra lo que hay vs lo que debe haber en cada pasarela.</p>
+                                        <h3 className="text-xs font-black text-white uppercase tracking-wider">Saldos en Medios de Pago</h3>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide mt-1">Saldo actual vs. lo que se debe pagar al equipo por pasarela.</p>
                                     </div>
                                 </div>
 
@@ -524,21 +523,19 @@ const FinancePage = () => {
                                     <table className="w-full text-left border-collapse">
                                         <thead>
                                             <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-500">
-                                                <th className="p-4 font-semibold">Medio de Pago</th>
-                                                <th className="p-4 font-semibold text-right">Lo que hay (Real)</th>
-                                                <th className="p-4 font-semibold text-right">Lo que debe haber (Esperado)</th>
+                                                <th className="p-4 font-semibold">Pasarela</th>
+                                                <th className="p-4 font-semibold text-right">Saldo Actual</th>
+                                                <th className="p-4 font-semibold text-right">Por Pagar (Nómina)</th>
                                                 <th className="p-4 font-semibold text-right">Diferencia</th>
                                             </tr>
                                         </thead>
                                         <tbody className="text-sm text-slate-300 divide-y divide-slate-800/40">
                                             {balances.map((item, idx) => {
                                                 const diff = item.actual_amount - item.expected_amount;
-                                                const absoluteDiff = Math.abs(diff);
+                                                const absDiff = Math.abs(diff);
                                                 return (
                                                     <tr key={idx} className="hover:bg-slate-800/10 transition-colors">
-                                                        <td className="p-4 font-black text-slate-100 uppercase tracking-wide">
-                                                            {item.payment_method}
-                                                        </td>
+                                                        <td className="p-4 font-black text-slate-100 uppercase tracking-wide">{item.payment_method}</td>
                                                         <td className="p-4 text-right">
                                                             <div className="flex justify-end items-center gap-2">
                                                                 <span className="text-slate-500 text-xs">$</span>
@@ -552,24 +549,48 @@ const FinancePage = () => {
                                                             </div>
                                                         </td>
                                                         <td className="p-4 text-right">
-                                                            <div className="flex justify-end items-center gap-2">
-                                                                <span className="text-slate-500 text-xs">$</span>
-                                                                <input
-                                                                    type="number"
-                                                                    defaultValue={item.expected_amount}
-                                                                    onBlur={(e) => handleBalanceChange(item.payment_method, 'expected_amount', e.target.value)}
-                                                                    placeholder="0.00"
-                                                                    className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-32 focus:border-indigo-500 transition-all"
-                                                                />
-                                                            </div>
+                                                            <span className="text-sm font-black font-mono text-amber-300">
+                                                                ${item.expected_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                            </span>
+                                                            <p className="text-[9px] text-slate-500 uppercase font-black mt-0.5">Auto-calc</p>
                                                         </td>
-                                                        <td className={`p-4 text-right font-mono font-black italic ${diff === 0 ? 'text-slate-400' : (diff > 0 ? 'text-emerald-400' : 'text-rose-500')}`}>
-                                                            {diff === 0 ? '$0.00' : (diff > 0 ? `+$${diff.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : `-$${absoluteDiff.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)}
+                                                        <td className={`p-4 text-right font-mono font-black italic ${
+                                                            diff === 0 ? 'text-slate-400' : diff > 0 ? 'text-emerald-400' : 'text-rose-500'
+                                                        }`}>
+                                                            {diff === 0 ? '$0.00' : (diff > 0
+                                                                ? `+$${diff.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                                                                : `-$${absDiff.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)}
                                                         </td>
                                                     </tr>
                                                 );
                                             })}
                                         </tbody>
+                                        {balances.length > 0 && (() => {
+                                            const totalActual = balances.reduce((s, b) => s + b.actual_amount, 0);
+                                            const totalExpected = balances.reduce((s, b) => s + b.expected_amount, 0);
+                                            const totalDiff = totalActual - totalExpected;
+                                            const absTotalDiff = Math.abs(totalDiff);
+                                            return (
+                                                <tfoot>
+                                                    <tr className="border-t-2 border-slate-700 bg-slate-900/30">
+                                                        <td className="p-4 text-xs font-black text-white uppercase tracking-widest">Total</td>
+                                                        <td className="p-4 text-right">
+                                                            <span className="text-sm font-black font-mono text-slate-200">${totalActual.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        </td>
+                                                        <td className="p-4 text-right">
+                                                            <span className="text-sm font-black font-mono text-amber-300">${totalExpected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        </td>
+                                                        <td className={`p-4 text-right font-mono font-black italic ${
+                                                            totalDiff === 0 ? 'text-slate-400' : totalDiff > 0 ? 'text-emerald-400' : 'text-rose-500'
+                                                        }`}>
+                                                            {totalDiff === 0 ? '$0.00' : (totalDiff > 0
+                                                                ? `+$${totalDiff.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                                                                : `-$${absTotalDiff.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)}
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            );
+                                        })()}
                                     </table>
                                 </div>
                             </Card>
@@ -611,88 +632,105 @@ const FinancePage = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="text-sm text-slate-300 divide-y divide-slate-800/40">
-                                            {payroll.map((item) => {
+                                            {/* Equipo Fijo */}
+                                            <tr>
+                                                <td colSpan={7} className="pt-3 pb-1 px-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                                                        <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em]">Equipo Fijo</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {payroll.filter(item => {
+                                                const m = teamMembers.find(t => t.id === item.member_id);
+                                                return m?.salary_type !== 'variable';
+                                            }).map((item) => {
                                                 const member = teamMembers.find(m => m.id === item.member_id);
                                                 const baseSal = item.base_salary;
                                                 const comm = item.commissions;
                                                 const bon = item.bonuses;
-                                                const total = baseSal + comm + bon;
-
                                                 return (
-                                                    <tr key={item.member_id} className={`hover:bg-slate-800/10 transition-colors ${item.is_paid ? 'opacity-80' : ''}`}>
+                                                    <tr key={`fijo-${item.member_id}`} className={`hover:bg-slate-800/10 transition-colors ${item.is_paid ? 'opacity-80' : ''}`}>
                                                         <td className="p-4">
                                                             <p className="font-black text-slate-100 uppercase tracking-wide text-xs">{item.member_name}</p>
                                                             <p className="text-[9px] text-slate-500 font-black uppercase mt-0.5">{member?.role || 'Miembro'}</p>
                                                         </td>
                                                         <td className="p-4 text-right font-mono text-slate-200">
-                                                            <input
-                                                                type="number"
-                                                                defaultValue={baseSal}
-                                                                onBlur={(e) => handlePayrollChange(item.member_id, 'base_salary', e.target.value)}
-                                                                placeholder="0.00"
-                                                                className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all"
-                                                            />
+                                                            <input type="number" defaultValue={baseSal} onBlur={(e) => handlePayrollChange(item.member_id, 'base_salary', e.target.value)} placeholder="0.00" className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all" />
                                                         </td>
                                                         <td className="p-4 text-right font-mono text-slate-200">
-                                                            <input
-                                                                type="number"
-                                                                defaultValue={comm}
-                                                                onBlur={(e) => handlePayrollChange(item.member_id, 'commissions', e.target.value)}
-                                                                placeholder="0.00"
-                                                                className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all"
-                                                            />
+                                                            <input type="number" defaultValue={comm} onBlur={(e) => handlePayrollChange(item.member_id, 'commissions', e.target.value)} placeholder="0.00" className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all" />
                                                         </td>
                                                         <td className="p-4 text-right font-mono text-slate-200">
-                                                            <input
-                                                                type="number"
-                                                                defaultValue={bon}
-                                                                onBlur={(e) => handlePayrollChange(item.member_id, 'bonuses', e.target.value)}
-                                                                placeholder="0.00"
-                                                                className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all"
-                                                            />
+                                                            <input type="number" defaultValue={bon} onBlur={(e) => handlePayrollChange(item.member_id, 'bonuses', e.target.value)} placeholder="0.00" className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all" />
                                                         </td>
                                                         <td className="p-4 text-xs font-semibold">
-                                                            <select
-                                                                defaultValue={item.payment_method || 'Stripe'}
-                                                                onChange={(e) => handlePayrollChange(item.member_id, 'payment_method', e.target.value)}
-                                                                className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1 text-xs font-bold text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
-                                                            >
+                                                            <select defaultValue={item.payment_method || 'Stripe'} onChange={(e) => handlePayrollChange(item.member_id, 'payment_method', e.target.value)} className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1 text-xs font-bold text-slate-200 outline-none focus:border-indigo-500 cursor-pointer">
                                                                 <option value="Stripe">Stripe</option>
                                                                 <option value="AirTM">AirTM</option>
-                                                                <option value="PayPal">PayPal</option>
-                                                                <option value="Wise">Wise</option>
-                                                                <option value="Banco">Banco</option>
-                                                                <option value="Hotmart">Hotmart</option>
                                                             </select>
                                                         </td>
                                                         <td className="p-4 text-center">
-                                                            <button
-                                                                onClick={() => handlePayrollChange(item.member_id, 'is_paid', !item.is_paid)}
-                                                                className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${
-                                                                    item.is_paid 
-                                                                        ? 'bg-indigo-650 text-white border-indigo-600' 
-                                                                        : 'border-slate-850 bg-slate-950/60 text-slate-700 hover:border-slate-700'
-                                                                }`}
-                                                            >
+                                                            <button onClick={() => handlePayrollChange(item.member_id, 'is_paid', !item.is_paid)} className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${item.is_paid ? 'bg-indigo-650 text-white border-indigo-600' : 'border-slate-850 bg-slate-950/60 text-slate-700 hover:border-slate-700'}`}>
                                                                 {item.is_paid && <Check size={14} strokeWidth={3} />}
                                                             </button>
                                                         </td>
                                                         <td className="p-4 text-center">
                                                             <div className="flex gap-2 justify-center">
-                                                                <button
-                                                                    onClick={() => handleOpenMemberModal('edit', member)}
-                                                                    className="p-1.5 bg-slate-950 border border-slate-850 rounded-lg text-slate-400 hover:text-white hover:border-indigo-500 transition-all"
-                                                                    title="Editar"
-                                                                >
-                                                                    <Edit2 size={12} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteMember(item.member_id, item.member_name)}
-                                                                    className="p-1.5 bg-slate-950 border border-slate-850 rounded-lg text-slate-400 hover:text-rose-500 hover:border-rose-500/50 transition-all"
-                                                                    title="Eliminar"
-                                                                >
-                                                                    <Trash2 size={12} />
-                                                                </button>
+                                                                <button onClick={() => handleOpenMemberModal('edit', member)} className="p-1.5 bg-slate-950 border border-slate-850 rounded-lg text-slate-400 hover:text-white hover:border-indigo-500 transition-all" title="Editar"><Edit2 size={12} /></button>
+                                                                <button onClick={() => handleDeleteMember(item.member_id, item.member_name)} className="p-1.5 bg-slate-950 border border-slate-850 rounded-lg text-slate-400 hover:text-rose-500 hover:border-rose-500/50 transition-all" title="Eliminar"><Trash2 size={12} /></button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                            {/* Equipo Variable */}
+                                            <tr>
+                                                <td colSpan={7} className="pt-6 pb-1 px-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                                                        <span className="text-[10px] font-black text-emerald-300 uppercase tracking-[0.2em]">Equipo Variable (Comisiones)</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {payroll.filter(item => {
+                                                const m = teamMembers.find(t => t.id === item.member_id);
+                                                return m?.salary_type === 'variable';
+                                            }).map((item) => {
+                                                const member = teamMembers.find(m => m.id === item.member_id);
+                                                const baseSal = item.base_salary;
+                                                const comm = item.commissions;
+                                                const bon = item.bonuses;
+                                                return (
+                                                    <tr key={`var-${item.member_id}`} className={`hover:bg-slate-800/10 transition-colors ${item.is_paid ? 'opacity-80' : ''}`}>
+                                                        <td className="p-4">
+                                                            <p className="font-black text-slate-100 uppercase tracking-wide text-xs">{item.member_name}</p>
+                                                            <p className="text-[9px] text-slate-500 font-black uppercase mt-0.5">{member?.role || 'Miembro'}</p>
+                                                        </td>
+                                                        <td className="p-4 text-right font-mono text-slate-200">
+                                                            <input type="number" defaultValue={baseSal} onBlur={(e) => handlePayrollChange(item.member_id, 'base_salary', e.target.value)} placeholder="0.00" className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all" />
+                                                        </td>
+                                                        <td className="p-4 text-right font-mono text-slate-200">
+                                                            <input type="number" defaultValue={comm} onBlur={(e) => handlePayrollChange(item.member_id, 'commissions', e.target.value)} placeholder="0.00" className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all" />
+                                                        </td>
+                                                        <td className="p-4 text-right font-mono text-slate-200">
+                                                            <input type="number" defaultValue={bon} onBlur={(e) => handlePayrollChange(item.member_id, 'bonuses', e.target.value)} placeholder="0.00" className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all" />
+                                                        </td>
+                                                        <td className="p-4 text-xs font-semibold">
+                                                            <select defaultValue={item.payment_method || 'Stripe'} onChange={(e) => handlePayrollChange(item.member_id, 'payment_method', e.target.value)} className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1 text-xs font-bold text-slate-200 outline-none focus:border-indigo-500 cursor-pointer">
+                                                                <option value="Stripe">Stripe</option>
+                                                                <option value="AirTM">AirTM</option>
+                                                            </select>
+                                                        </td>
+                                                        <td className="p-4 text-center">
+                                                            <button onClick={() => handlePayrollChange(item.member_id, 'is_paid', !item.is_paid)} className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${item.is_paid ? 'bg-indigo-650 text-white border-indigo-600' : 'border-slate-850 bg-slate-950/60 text-slate-700 hover:border-slate-700'}`}>
+                                                                {item.is_paid && <Check size={14} strokeWidth={3} />}
+                                                            </button>
+                                                        </td>
+                                                        <td className="p-4 text-center">
+                                                            <div className="flex gap-2 justify-center">
+                                                                <button onClick={() => handleOpenMemberModal('edit', member)} className="p-1.5 bg-slate-950 border border-slate-850 rounded-lg text-slate-400 hover:text-white hover:border-indigo-500 transition-all" title="Editar"><Edit2 size={12} /></button>
+                                                                <button onClick={() => handleDeleteMember(item.member_id, item.member_name)} className="p-1.5 bg-slate-950 border border-slate-850 rounded-lg text-slate-400 hover:text-rose-500 hover:border-rose-500/50 transition-all" title="Eliminar"><Trash2 size={12} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -762,7 +800,6 @@ const FinancePage = () => {
                                             className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-3 text-xs text-slate-200 outline-none focus:border-indigo-500 transition-all font-bold cursor-pointer"
                                         >
                                             <option value="software">Software / Herramientas</option>
-                                            <option value="equipo">Equipos / Hardware</option>
                                         </select>
                                     </div>
 
@@ -923,10 +960,6 @@ const FinancePage = () => {
                                         >
                                             <option value="Stripe">Stripe</option>
                                             <option value="AirTM">AirTM</option>
-                                            <option value="PayPal">PayPal</option>
-                                            <option value="Wise">Wise</option>
-                                            <option value="Banco">Banco</option>
-                                            <option value="Hotmart">Hotmart</option>
                                         </select>
                                     </div>
                                 </div>
