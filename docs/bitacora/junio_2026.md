@@ -307,11 +307,7 @@
       - Se modificó el listado de actividades (`activity`) de `get_lead_roadmap` para adjuntar de manera explícita el `id` y el tipo de evento (`event_type` como `"agenda"` o `"sale"`) en las actividades cronológicas originadas en agendas y ventas.
       - **Ocultar Hora de Agendas**: Se incorporó la función `format_date_es` para formatear el evento `"Agenda Creada"` mostrando únicamente el día, mes y año de la cita de agenda sin la hora ni los minutos.
       - **Fusión de Duplicados**: Se implementó una lógica de deduplicación (en caliente) en el endpoint para que, si un cliente posee múltiples registros de agendas o ventas programadas en el mismo día, solo se liste un único evento consolidado en el historial de actividades cronológicas.
-      - **Blindaje de Búsqueda Cruzada contra Datos Genéricos (Bugfix Mezcla de Datos)**: Se definió el helper `is_generic_val` y se adaptó la resolución de `resolved_email` y `resolved_phone` para descartar valores genéricos como `'N/A'`, `'none'`, `'null'`, `'sin email'` o `'sin telefono'`. Esto evita que las cláusulas `OR` de la consulta SQL mezclen erróneamente agendas y ventas de otros leads que también tengan esos campos por defecto como `'N/A'`.
-    - **Interfaz (Frontend) (`LeadRoadmapDetail.jsx`) [MODIFY]**:
-      - Se añadió la columna **Acciones** y el icono de eliminación (`Trash2` de lucide-react) en la tabla del "Detalle de Actividad" para todas las filas asociadas a agendas y ventas.
-      - Se implementó la función `handleDeleteActivity` que solicita confirmación en pantalla y, tras ser aceptada, realiza una petición DELETE asíncrona a los endpoints del backend (`/public/financial-agendas/<id>` o `/public/financial-sales/<id>`) para eliminar duplicados históricos y recargar la vista.
-      - **Ajuste de Visualización**: Se adaptó el formateador `formatTime` del componente para que, al procesar eventos del tipo `"agenda"`, no muestre la hora y sólo pinte la fecha correspondiente.  - **Rediseño Premium "CEO Edition" y Calificación en Caliente en el Lead Roadmap**:
+      - **Blindaje de Búsqueda Cruzada contra Datos Genéricos (Bugfix Mezcla de Datos)**: Se definió el helper `is_generic_val` y se adaptó la res       - **Ajuste de Visualización**: Se adaptó el formateador `formatTime` del componente para que, al procesar eventos del tipo `"agenda"`, no muestre la hora y sólo pinte la fecha correspondiente.  - **Rediseño Premium "CEO Edition" y Calificación en Caliente en el Lead Roadmap**:
     - **Base de Datos y Modelos (`app/models/client.py`) [MODIFY]**: Se añadieron las columnas `objeciones` (db.Text) y `observaciones` (db.Text) a la clase `Client` para permitir que los setters y closers registren información estructurada sobre la calificación. Se generó y aplicó la migración correspondiente en local.
     - **Backend (API) (`lead_roadmap.py`) [MODIFY]**:
       - Se actualizaron los resolvedores para importar e integrar los modelos `Enrollment` y `Program`.
@@ -322,3 +318,32 @@
       - **Cabecera de Adquisición (CEO Trayectory Overview)**: Se rediseñó la cabecera del prospecto para detectar automáticamente y pintar en badges el canal de entrada (`ManyChat / Instagram`, `Workshop / WhatsApp` o `VSL / Bio Instagram`), la permanencia acumulada en el ecosistema en días, y los nombres explícitos del setter y closer asignados.
       - **Panel de Calificación en Caliente**: Se integró una sección en la barra lateral derecha para que los setters y closers registren y guarden en un solo clic las objeciones y observaciones de triage. Incluye píldoras/botones interactivos con atajos para objeciones comunes (Precio, Tiempo, Socio, Prioridad, Garantía) que permiten autocompletar el campo rápidamente.
       - **Sección de Permanencia en Programas**: Se diseñó una tarjeta visual premium que muestra todas las membresías del cliente, indicando la fecha de inicio, la inversión acumulada y la permanencia exacta del alumno en dicho programa. Ahora resuelve el programa de forma complementaria desde la base de datos de ventas (`FinancialSale`) si el lead no posee un registro formal de matrícula (`Enrollment`), mostrando un badge que indica la procedencia del dato (`Matrícula` o `Venta Declarada`).
+
+- **8 de Junio de 2026**:
+  - **Implementación Completa del Hub de Finanzas (`/admin/finance`)**: Se creó una vista de finanzas privada, accesible solo para administradores con el permiso `can_view_finance`, con 4 pestañas funcionales.
+    - **Modelos de Base de Datos (`app/models/financial.py`) [NEW MODELS]**:
+      - `TeamMember`: Integrante del equipo con nombre, rol, tipo de sueldo (`fijo` / `variable`), sueldo base y método de pago por defecto.
+      - `MonthlyPayroll`: Registro de nómina mensual por integrante, con sueldo base, comisiones calculadas automáticamente, bonos, método de pago y estado de pago (`is_paid` / `paid_at`).
+      - `MonthlyPaymentMethodBalance`: Balance mensual por pasarela de pago con monto real y monto esperado (para detectar diferencias).
+      - `MonthlySaving`: Registro manual de ahorros por mes.
+    - **Modelo de Usuario (`app/models/user.py`) [MODIFY]**: Se añadió la columna `can_view_finance` (Boolean, default False) para controlar el acceso granular a la vista de finanzas.
+    - **Migración (`migrations/`) [NEW]**: Se ejecutaron `flask db migrate` y `flask db upgrade` para aplicar los 4 nuevos modelos a la base de datos local y de producción.
+    - **Backend API Financiera (`app/api/public/finance.py`) [NEW FILE]**:
+      - Decorador `finance_admin_required`: Valida que el usuario esté autenticado y tenga `role=admin` y `can_view_finance=True`.
+      - `GET/POST /public/finance/team-members`: CRUD completo de integrantes del equipo.
+      - `PUT/DELETE /public/finance/team-members/<id>`: Editar y eliminar integrantes.
+      - `GET/POST /public/finance/payroll?month=YYYY-MM`: Listado y guardado de nómina mensual, con cálculo automático de comisiones de Elias (8% setter), Jean Carlos (10% closer) y Marlon (5% en ventas no renovación) basado en `FinancialSale` del período.
+      - `GET/POST /public/finance/balances?month=YYYY-MM`: Registro de balances reales y esperados por pasarela (Stripe, AirTM, PayPal, Wise, Banco, Hotmart).
+      - `GET/POST /public/finance/savings?month=YYYY-MM`: Ingreso manual de ahorros mensuales.
+      - `GET /public/finance/summary?month=YYYY-MM`: Resumen financiero completo (ingresos netos, gastos por categoría, profit, balance y balance neto).
+    - **Permisos Backend (`app/api/admin.py`) [MODIFY]**: Se actualizaron los endpoints `POST /admin/users` y `PUT /admin/users/<id>` para leer y guardar el campo `can_view_finance`. Asimismo, se añadió soporte de `start_date` y `end_date` como query params en `GET /admin/finance/overview` para filtrar gastos por el mes seleccionado desde el frontend.
+    - **Auth Backend (`app/api/auth.py`) [MODIFY]**: Se inyectó `can_view_finance` en las respuestas de `/auth/me` y `/auth/login`.
+    - **Navegación (`frontend/src/hooks/useDockNavigation.js`) [MODIFY]**: El item "Finanzas" con ruta `/admin/finance` se muestra únicamente si `user.role === 'admin' && user.can_view_finance`.
+    - **Ruta Protegida (`frontend/src/App.jsx`) [MODIFY]**: Se registró la ruta `/admin/finance` con `<ProtectedRoute roles={['admin']}>`.
+    - **Toggle de Acceso (`frontend/src/pages/admin/team/TeamManagementPage.jsx`) [MODIFY]**: En la gestión de usuarios con rol `admin`, se agregó un toggle interactivo para activar/desactivar el permiso `can_view_finance` individualmente.
+    - **Dashboard Financiero (`frontend/src/pages/admin/reports/FinancePage.jsx`) [NEW FILE]**:
+      - **Tab Resumen**: KPIs de Profit, Ingresos, Gastos y Balances en pasarelas. Distribución de gastos por categoría (Sueldos, Anuncios, Software, Equipos) e ingresos por método de pago. Panel de Balance General y Balance Neto con campo manual de Ahorros.
+      - **Tab Medios de Pago**: Tabla editable por pasarela con campos `Lo que hay (real)` y `Lo que debe haber (esperado)`, calculando automáticamente la diferencia.
+      - **Tab Nómina (Equipo)**: Tabla de nómina mensual con sueldo base, comisión (pre-calculada para Setters/Closers), bonos, medio de pago y checkbox de pagado. CRUD de integrantes via modal. Comisiones de Elias/Jean Carlos/Marlon se calculan automáticamente desde ventas del mes y son editables manualmente.
+      - **Tab Software / Equipos**: Formulario para registrar gastos de categoría `software` y `equipo` filtrados por el mes seleccionado. Lista completa con opción de eliminar.
+

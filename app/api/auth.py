@@ -42,7 +42,8 @@ def login():
             "id": user.id,
             "username": user.username,
             "role": user.role,
-            "email": user.email
+            "email": user.email,
+            "can_view_finance": getattr(user, 'can_view_finance', False)
         }
     }), 200
 
@@ -67,7 +68,8 @@ def get_me():
             "role": current_user.role,
             "email": current_user.email,
             "is_impersonating": is_impersonating,
-            "original_user_role": original_user_role
+            "original_user_role": original_user_role,
+            "can_view_finance": getattr(current_user, 'can_view_finance', False)
         }
     }), 200
 
@@ -116,7 +118,8 @@ def impersonate():
             "role": target_user.role,
             "email": target_user.email,
             "is_impersonating": True,
-            "original_user_role": session.get('original_user_role')
+            "original_user_role": session.get('original_user_role'),
+            "can_view_finance": getattr(target_user, 'can_view_finance', False)
         }
     }), 200
 
@@ -157,7 +160,8 @@ def revert_impersonation():
             "id": original_user.id,
             "username": original_user.username,
             "role": original_user.role,
-            "email": original_user.email
+            "email": original_user.email,
+            "can_view_finance": getattr(original_user, 'can_view_finance', False)
         }
     }), 200
 

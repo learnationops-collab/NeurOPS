@@ -21,10 +21,19 @@ import calendar
 @admin_required
 def get_finance_overview():
     today = date.today()
-    # Default to current month
-    start_date = today.replace(day=1)
-    last_day = calendar.monthrange(today.year, today.month)[1]
-    end_date = today.replace(day=last_day)
+    # Acepta start_date y end_date por query params (formato YYYY-MM-DD)
+    raw_start = request.args.get('start_date')
+    raw_end = request.args.get('end_date')
+    
+    try:
+        start_date = datetime.strptime(raw_start, '%Y-%m-%d').date() if raw_start else today.replace(day=1)
+    except ValueError:
+        start_date = today.replace(day=1)
+    
+    try:
+        end_date = datetime.strptime(raw_end, '%Y-%m-%d').date() if raw_end else today.replace(day=calendar.monthrange(today.year, today.month)[1])
+    except ValueError:
+        end_date = today.replace(day=calendar.monthrange(today.year, today.month)[1])
     
     data = FinancialService.get_finances_data(start_date, end_date)
     
@@ -326,6 +335,7 @@ def manage_users():
         user.set_password(password)
         if 'timezone' in data: user.timezone = data['timezone']
         if 'two_chat_number' in data: user.two_chat_number = data['two_chat_number']
+        if 'can_view_finance' in data: user.can_view_finance = bool(data['can_view_finance'])
         
         db.session.add(user)
         db.session.commit()
@@ -344,7 +354,7 @@ def manage_users():
         
     users = users_query.all()
     # Treat None as True for display
-    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "two_chat_number": u.two_chat_number, "is_active": u.is_active if u.is_active is not None else True} for u in users]
+    user_list = [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "timezone": u.timezone, "two_chat_number": u.two_chat_number, "is_active": u.is_active if u.is_active is not None else True, "can_view_finance": getattr(u, 'can_view_finance', False)} for u in users]
     return jsonify(user_list), 200
 
 @bp.route('/admin/users/<int:id>', methods=['PUT', 'DELETE'])
@@ -385,6 +395,8 @@ def user_operations(id):
             if user.id == current_user.id and data['is_active'] is False:
                 return jsonify({"message": "No puedes desactivar tu propia cuenta"}), 400
             user.is_active = data['is_active']
+        if 'can_view_finance' in data:
+            user.can_view_finance = bool(data['can_view_finance'])
         
         if data.get('password'):
             user.set_password(data['password'])

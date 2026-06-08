@@ -42,7 +42,8 @@ const TeamManagementPage = () => {
         role: 'closer',
         timezone: 'America/La_Paz',
         two_chat_number: '',
-        is_active: true
+        is_active: true,
+        can_view_finance: false
     });
     const [submitting, setSubmitting] = useState(false);
     const [modalError, setModalError] = useState(null);
@@ -75,7 +76,8 @@ const TeamManagementPage = () => {
                 role: user.role,
                 timezone: user.timezone || 'America/La_Paz',
                 two_chat_number: user.two_chat_number || '',
-                is_active: user.is_active
+                is_active: user.is_active,
+                can_view_finance: user.can_view_finance || false
             });
         } else {
             setFormData({
@@ -85,7 +87,8 @@ const TeamManagementPage = () => {
                 role: 'closer',
                 timezone: 'America/La_Paz',
                 two_chat_number: '',
-                is_active: true
+                is_active: true,
+                can_view_finance: false
             });
         }
     };
@@ -289,9 +292,16 @@ const TeamManagementPage = () => {
                                             </div>
 
                                             <div className="flex items-center justify-between mt-auto pt-4 border-t border-base/50">
-                                                <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-3">
-                                                    {getRoleLabel(u.role)}
-                                                </Badge>
+                                                <div className="flex gap-2 items-center">
+                                                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-3">
+                                                        {getRoleLabel(u.role)}
+                                                    </Badge>
+                                                    {u.role === 'admin' && u.can_view_finance && (
+                                                        <Badge className="text-[9px] font-black uppercase tracking-widest px-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                                            Finanzas
+                                                        </Badge>
+                                                    )}
+                                                </div>
 
                                                 <button
                                                     onClick={(e) => handleImpersonate(e, u)}
@@ -439,6 +449,27 @@ const TeamManagementPage = () => {
                                             <div className={`w-5 h-5 bg-white rounded-full shadow-xl transform transition-transform duration-500 ${formData.is_active ? 'translate-x-7' : 'translate-x-0'}`} />
                                         </button>
                                     </div>
+
+                                    {formData.role === 'admin' && (
+                                        <div className="flex items-center justify-between p-6 bg-main/40 rounded-[2rem] border border-base">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`p-3 rounded-2xl ${formData.can_view_finance ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
+                                                    <Shield size={24} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] font-black uppercase text-base tracking-widest">Acceso a Finanzas</p>
+                                                    <p className="text-[10px] text-muted font-bold uppercase mt-0.5">{formData.can_view_finance ? 'Permitido' : 'Restringido'}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, can_view_finance: !formData.can_view_finance })}
+                                                className={`w-14 h-7 rounded-full p-1 transition-all duration-500 ease-in-out ${formData.can_view_finance ? 'bg-indigo-500' : 'bg-slate-700'}`}
+                                            >
+                                                <div className={`w-5 h-5 bg-white rounded-full shadow-xl transform transition-transform duration-500 ${formData.can_view_finance ? 'translate-x-7' : 'translate-x-0'}`} />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <Button

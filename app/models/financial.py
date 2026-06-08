@@ -91,4 +91,93 @@ class ExcludedSale(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
+class TeamMember(db.Model):
+    __tablename__ = 'team_members'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(255), nullable=False)
+    salary_type = db.Column(db.String(50), nullable=False, default='fijo')  # 'fijo' or 'variable'
+    base_salary = db.Column(db.Float, default=0.0)
+    payment_method = db.Column(db.String(255), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "role": self.role,
+            "salary_type": self.salary_type,
+            "base_salary": self.base_salary,
+            "payment_method": self.payment_method,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+class MonthlyPayroll(db.Model):
+    __tablename__ = 'monthly_payroll'
+    id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('team_members.id'), nullable=False)
+    month = db.Column(db.String(7), nullable=False)  # YYYY-MM
+    base_salary = db.Column(db.Float, default=0.0)
+    commissions = db.Column(db.Float, default=0.0)
+    bonuses = db.Column(db.Float, default=0.0)
+    payment_method = db.Column(db.String(255), nullable=True)
+    is_paid = db.Column(db.Boolean, default=False)
+    paid_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    member = db.relationship('TeamMember', backref=db.backref('payroll_payments', lazy='dynamic', cascade="all, delete-orphan"))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "member_id": self.member_id,
+            "member_name": self.member.name if self.member else "Eliminado",
+            "month": self.month,
+            "base_salary": self.base_salary,
+            "commissions": self.commissions,
+            "bonuses": self.bonuses,
+            "payment_method": self.payment_method,
+            "is_paid": self.is_paid,
+            "paid_at": self.paid_at.isoformat() if self.paid_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+class MonthlyPaymentMethodBalance(db.Model):
+    __tablename__ = 'monthly_payment_method_balances'
+    id = db.Column(db.Integer, primary_key=True)
+    month = db.Column(db.String(7), nullable=False)  # YYYY-MM
+    payment_method = db.Column(db.String(255), nullable=False)  # e.g., 'Stripe', 'AirTM', etc.
+    actual_amount = db.Column(db.Float, default=0.0)  # Lo que hay
+    expected_amount = db.Column(db.Float, default=0.0)  # Lo que debe haber
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('month', 'payment_method', name='_month_pm_uc'),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "month": self.month,
+            "payment_method": self.payment_method,
+            "actual_amount": self.actual_amount,
+            "expected_amount": self.expected_amount
+        }
+
+class MonthlySaving(db.Model):
+    __tablename__ = 'monthly_savings'
+    id = db.Column(db.Integer, primary_key=True)
+    month = db.Column(db.String(7), unique=True, nullable=False)  # YYYY-MM
+    savings = db.Column(db.Float, default=0.0)  # Ahorros
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "month": self.month,
+            "savings": self.savings
+        }
+
 

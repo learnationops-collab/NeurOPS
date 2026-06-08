@@ -118,6 +118,16 @@ function App() {
               }
             />
             <Route
+              path="/admin/finance"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <MainLayout>
+                    <FinancePage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/payroll"
               element={
                 <ProtectedRoute roles={['admin']}>

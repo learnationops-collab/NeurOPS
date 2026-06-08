@@ -68,7 +68,7 @@ const useDockNavigation = () => {
         } else if (user?.role === 'sales_admin') {
             return [];
         } else if (user?.role === 'admin') {
-            return [
+            const adminPages = [
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
                 { id: 'payroll', icon: DollarSign, label: 'PayRoll', path: '/admin/payroll' },
                 { id: 'marketing', icon: Target, label: 'Marketing', path: '/admin/marketing' },
@@ -76,6 +76,10 @@ const useDockNavigation = () => {
                 { id: 'clients', icon: Users, label: 'Clientes', path: '/closer/clients' },
                 { id: 'sheets', icon: CalendarDays, label: 'Importaciones Sheets', path: '/admin/sheets' }
             ];
+            if (user?.can_view_finance) {
+                adminPages.push({ id: 'finance', icon: DollarSign, label: 'Finanzas', path: '/admin/finance' });
+            }
+            return adminPages;
         }
 
         return [];
