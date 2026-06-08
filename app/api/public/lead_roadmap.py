@@ -93,15 +93,30 @@ def get_lead_roadmap():
     if not client and not manychat_lead and not financial_agendas and not financial_sales:
         return jsonify({"error": "Lead no encontrado en el sistema"}), 404
 
+    # Determinar la fecha de creación del lead
+    created_at_val = None
+    if client and client.created_at:
+        created_at_val = client.created_at.isoformat()
+    elif manychat_lead and manychat_lead.created_at:
+        created_at_val = manychat_lead.created_at.isoformat()
+    elif financial_agendas:
+        # Usar el registro (creación) de la agenda más antigua (el final de la lista ordenada por date desc)
+        created_at_val = financial_agendas[-1].registro or (financial_agendas[-1].date.isoformat() if financial_agendas[-1].date else None)
+    elif financial_sales:
+        created_at_val = financial_sales[-1].marca_temporal or (financial_sales[-1].date.isoformat() if financial_sales[-1].date else None)
+        
+    if not created_at_val:
+        created_at_val = datetime.utcnow().isoformat()
+
     # Consolidar datos de perfil del lead
     lead_profile = {
         "id": client.id if client else None,
-        "full_name": client.full_name if client else (manychat_lead.name if manychat_lead else (financial_sales[0].nombre_cliente if financial_sales else (financial_agendas[0].nombre if financial_agendas else "Desconocido"))),
+        "full_name": client.full_name if client else (manychat_lead.name if manychat_lead else (financial_sales[0].nombre_cliente if financial_sales else (financial_agendas[0].lead if financial_agendas else "Desconocido"))),
         "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (financial_sales[0].mail_cliente if financial_sales else (financial_agendas[0].mail if financial_agendas else "Sin Email"))),
         "phone": client.phone if client else (financial_sales[0].telefono if financial_sales else (financial_agendas[0].whatsapp if financial_agendas else "Sin Teléfono")),
         "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (financial_sales[0].instagram if financial_sales else (financial_agendas[0].instagram if financial_agendas else "Sin Instagram"))),
         "status": "Entrante",
-        "created_at": client.created_at.isoformat() if client else (manychat_lead.created_at.isoformat() if manychat_lead else (financial_agendas[-1].date.isoformat() if financial_agendas else (financial_sales[-1].date.isoformat() if financial_sales else datetime.utcnow().isoformat())))
+        "created_at": created_at_val
     }
 
     # Resolver el estado del lead
@@ -215,8 +230,8 @@ def get_lead_roadmap():
     elif financial_agendas:
         agenda_completed = True
         latest_fa = financial_agendas[0]
-        agenda_date = latest_fa.created_at.isoformat() if latest_fa.created_at else None
-        agenda_type = latest_fa.lead or "Calendly / n8n"
+        agenda_date = latest_fa.registro or (latest_fa.created_at.isoformat() if latest_fa.created_at else None)
+        agenda_type = latest_fa.nombre or "Calendly / n8n"
         fecha_agendada_meet = latest_fa.date.isoformat() if latest_fa.date else latest_fa.fecha_meet
 
     stages.append({
@@ -324,9 +339,9 @@ def get_lead_roadmap():
     for fa in financial_agendas:
         fecha_formateada = format_datetime_es(fa.date) if fa.date else fa.fecha_meet
         activity.append({
-            "date": fa.created_at.isoformat() if fa.created_at else (fa.date.isoformat() if fa.date else lead_profile["created_at"]),
+            "date": fa.registro if fa.registro else (fa.date.isoformat() if fa.date else (fa.created_at.isoformat() if fa.created_at else lead_profile["created_at"])),
             "event": "Agenda Creada",
-            "detail": f"Cita programada para {fecha_formateada} con closer: {fa.closer or 'Sin asignar'} (Fuente: {fa.lead})",
+            "detail": f"Cita programada para {fecha_formateada} con closer: {fa.closer or 'Sin asignar'} (Fuente: {fa.nombre})",
             "origin": "Calendly / Webhook"
         })
 

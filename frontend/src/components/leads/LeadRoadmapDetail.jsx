@@ -254,7 +254,12 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                     </div>
                     <div className="space-y-1">
                         <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Fecha Creación</div>
-                        <div className="text-xs font-black text-white">{new Date(lead.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                        <div className="text-xs font-black text-white">
+                            {lead.created_at && !isNaN(new Date(lead.created_at).getTime()) 
+                                ? new Date(lead.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) 
+                                : 'N/A'
+                            }
+                        </div>
                     </div>
                     <div className="space-y-1">
                         <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Responsable</div>
