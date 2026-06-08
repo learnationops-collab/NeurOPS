@@ -462,9 +462,12 @@ def get_lead_roadmap():
 
     # 7. Permanencia en Programas
     programs_list = []
+    seen_program_names = set()
+    
     if client:
         for enroll in client.enrollments.all():
             program_name = enroll.program.name if enroll.program else "Programa Desconocido"
+            seen_program_names.add(program_name.lower().strip())
             total_paid = enroll.total_paid
             days_enrolled = (datetime.utcnow() - enroll.enrollment_date).days if enroll.enrollment_date else 0
             permanence_str = f"{days_enrolled} días"
@@ -479,8 +482,39 @@ def get_lead_roadmap():
                 "program_name": program_name,
                 "enrollment_date": enroll.enrollment_date.isoformat() if enroll.enrollment_date else None,
                 "total_paid": total_paid,
-                "permanence": permanence_str
+                "permanence": permanence_str,
+                "source": "Matrícula"
             })
+
+    # Integrar también desde FinancialSales
+    for fs in financial_sales:
+        if not fs.tipo_pago:
+            continue
+        p_name = fs.tipo_pago.strip()
+        if p_name.lower().strip() in seen_program_names:
+            continue
+            
+        seen_program_names.add(p_name.lower().strip())
+        
+        days_enrolled = (datetime.utcnow() - fs.date).days if fs.date else 0
+        permanence_str = f"{days_enrolled} días"
+        if days_enrolled >= 30:
+            months = days_enrolled // 30
+            rem_days = days_enrolled % 30
+            permanence_str = f"{months} mes(es)"
+            if rem_days > 0:
+                permanence_str += f" y {rem_days} día(s)"
+                
+        # Calcular el monto total abonado sumando todas las transacciones de esta venta
+        total_paid_product = sum(sale.monto or 0.0 for sale in financial_sales if sale.tipo_pago and sale.tipo_pago.strip().lower() == p_name.lower())
+        
+        programs_list.append({
+            "program_name": p_name,
+            "enrollment_date": fs.date.isoformat() if fs.date else None,
+            "total_paid": total_paid_product,
+            "permanence": permanence_str,
+            "source": "Venta Declarada"
+        })
 
     return jsonify({
         "lead": lead_profile,

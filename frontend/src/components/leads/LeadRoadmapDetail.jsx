@@ -600,7 +600,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                                     {prog.program_name}
                                                 </span>
                                                 <span className="text-[9px] text-slate-500 block font-bold">
-                                                    Inscrito: {prog.enrollment_date ? new Date(prog.enrollment_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                                                    Inscrito: {prog.enrollment_date ? new Date(prog.enrollment_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'} {prog.source && <span className="text-[8px] text-slate-600 ml-1">({prog.source})</span>}
                                                 </span>
                                             </div>
                                             <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
