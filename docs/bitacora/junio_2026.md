@@ -306,6 +306,7 @@
     - **Backend (API de Roadmap) (`lead_roadmap.py`) [MODIFY]**: 
       - Se modificó el listado de actividades (`activity`) de `get_lead_roadmap` para adjuntar de manera explícita el `id` y el tipo de evento (`event_type` como `"agenda"` o `"sale"`) en las actividades cronológicas originadas en agendas y ventas.
       - **Ocultar Hora de Agendas**: Se incorporó la función `format_date_es` para formatear el evento `"Agenda Creada"` mostrando únicamente el día, mes y año de la cita de agenda sin la hora ni los minutos.
+      - **Fusión de Duplicados**: Se implementó una lógica de deduplicación (en caliente) en el endpoint para que, si un cliente posee múltiples registros de agendas o ventas programadas en el mismo día, solo se liste un único evento consolidado en el historial de actividades cronológicas.
     - **Interfaz (Frontend) (`LeadRoadmapDetail.jsx`) [MODIFY]**:
       - Se añadió la columna **Acciones** y el icono de eliminación (`Trash2` de lucide-react) en la tabla del "Detalle de Actividad" para todas las filas asociadas a agendas y ventas.
       - Se implementó la función `handleDeleteActivity` que solicita confirmación en pantalla y, tras ser aceptada, realiza una petición DELETE asíncrona a los endpoints del backend (`/public/financial-agendas/<id>` o `/public/financial-sales/<id>`) para eliminar duplicados históricos y recargar la vista.

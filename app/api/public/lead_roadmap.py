@@ -343,6 +343,7 @@ def get_lead_roadmap():
             })
 
     # 3. Agendas
+    seen_agenda_dates = set()
     for fa in financial_agendas:
         fecha_formateada = ""
         if fa.date:
@@ -351,6 +352,11 @@ def get_lead_roadmap():
             fecha_formateada = fa.fecha_meet.split('T')[0]
         else:
             fecha_formateada = "N/A"
+
+        # Fusionar duplicados para la misma fecha
+        if fecha_formateada in seen_agenda_dates and fecha_formateada != "N/A":
+            continue
+        seen_agenda_dates.add(fecha_formateada)
 
         activity.append({
             "id": fa.id,
@@ -373,7 +379,15 @@ def get_lead_roadmap():
             })
 
     # 5. Ventas financieras
+    seen_sale_dates = set()
     for fs in financial_sales:
+        fecha_venta_str = fs.date.strftime('%Y-%m-%d') if fs.date else "N/A"
+        
+        # Fusionar duplicados para la misma fecha
+        if fecha_venta_str in seen_sale_dates and fecha_venta_str != "N/A":
+            continue
+        seen_sale_dates.add(fecha_venta_str)
+
         activity.append({
             "id": fs.id,
             "event_type": "sale",
