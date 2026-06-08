@@ -61,10 +61,11 @@ class FinancialAgenda(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de la cita oficial
 
     def to_dict(self):
+        # Fallback a created_at si registro es None
         return {
             "id": self.id,
             "nombre": self.nombre,
-            "registro": self.registro,
+            "registro": self.registro or (self.created_at.isoformat() if self.created_at else None),
             "fecha_meet": self.fecha_meet,
             "whatsapp": self.whatsapp,
             "zona_geografica": self.zona_geografica,

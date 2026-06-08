@@ -339,6 +339,8 @@ def get_lead_roadmap():
     for fa in financial_agendas:
         fecha_formateada = format_datetime_es(fa.date) if fa.date else fa.fecha_meet
         activity.append({
+            "id": fa.id,
+            "event_type": "agenda",
             "date": fa.registro if fa.registro else (fa.date.isoformat() if fa.date else (fa.created_at.isoformat() if fa.created_at else lead_profile["created_at"])),
             "event": "Agenda Creada",
             "detail": f"Cita programada para {fecha_formateada} con closer: {fa.closer or 'Sin asignar'} (Fuente: {fa.nombre})",
@@ -359,6 +361,8 @@ def get_lead_roadmap():
     # 5. Ventas financieras
     for fs in financial_sales:
         activity.append({
+            "id": fs.id,
+            "event_type": "sale",
             "date": fs.date.isoformat() if fs.date else lead_profile["created_at"],
             "event": "Venta Registrada",
             "detail": f"Declarada venta de {fs.tipo_pago} por ${fs.monto} via {fs.metodo_pago} (Estado: {fs.estado or 'Completada'})",

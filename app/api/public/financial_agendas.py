@@ -39,21 +39,61 @@ def receive_financial_agendas():
                 agenda_date = parser.parse(str(dt_str))
             except: pass
 
-        agenda = FinancialAgenda(
-            nombre=str(setter).strip(),
-            lead=str(lead_val).strip(),
-            closer=item.get('closer') or item.get('vendedor') or 'Sin asignar',
-            fecha_meet=dt_str or str(agenda_date),
-            date=agenda_date,
-            instagram=item.get('instagram') or item.get('ig') or 'N/A',
-            whatsapp=item.get('whatsapp') or item.get('phone') or 'N/A',
-            mail=item.get('mail') or item.get('email') or 'N/A',
-            estado=item.get('estado') or 'Pendiente',
-            raw_data=item
-        )
-        db.session.add(agenda)
-        agendas_created.append(agenda)
-        saved += 1
+        # Buscar duplicados en el mismo dia para el mismo lead
+        existing = None
+        ig_val = item.get('instagram') or item.get('ig')
+        ig_norm = None
+        if ig_val and isinstance(ig_val, str) and ig_val.lower() not in ('n/a', ''):
+            ig_norm = ig_val.strip().lstrip('@').lower()
+        
+        mail_val = (item.get('mail') or item.get('email') or '').strip().lower()
+        phone_val = (item.get('whatsapp') or item.get('phone') or '').strip()
+        
+        client_filters = []
+        if ig_norm and ig_norm != 'n/a':
+            client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm)
+        if mail_val and mail_val != 'n/a' and '@' in mail_val:
+            client_filters.append(func.lower(FinancialAgenda.mail) == mail_val)
+        if phone_val and phone_val != 'n/a':
+            client_filters.append(FinancialAgenda.whatsapp.like(f"%{phone_val}%"))
+
+        if client_filters and agenda_date:
+            start_day = agenda_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_day = agenda_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            existing = FinancialAgenda.query.filter(
+                or_(*client_filters),
+                FinancialAgenda.date >= start_day,
+                FinancialAgenda.date <= end_day
+            ).first()
+
+        if existing:
+            # Actualizar datos de agenda existente
+            existing.nombre = str(setter).strip()
+            existing.lead = str(lead_val).strip()
+            existing.closer = item.get('closer') or item.get('vendedor') or existing.closer
+            existing.fecha_meet = dt_str or existing.fecha_meet
+            existing.date = agenda_date
+            existing.estado = item.get('estado') or existing.estado
+            existing.raw_data = item
+            agendas_created.append(existing)
+        else:
+            # Crear nueva agenda si no existe duplicado
+            agenda = FinancialAgenda(
+                nombre=str(setter).strip(),
+                lead=str(lead_val).strip(),
+                closer=item.get('closer') or item.get('vendedor') or 'Sin asignar',
+                fecha_meet=dt_str or str(agenda_date),
+                date=agenda_date,
+                registro=item.get('registro') or item.get('fecha') or datetime.utcnow().isoformat(),
+                instagram=item.get('instagram') or item.get('ig') or 'N/A',
+                whatsapp=item.get('whatsapp') or item.get('phone') or 'N/A',
+                mail=item.get('mail') or item.get('email') or 'N/A',
+                estado=item.get('estado') or 'Pendiente',
+                raw_data=item
+            )
+            db.session.add(agenda)
+            agendas_created.append(agenda)
+            saved += 1
         
     db.session.commit()
 

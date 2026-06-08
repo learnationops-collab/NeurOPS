@@ -3,7 +3,7 @@ import api from '../../services/api';
 import { 
     User, Mail, Phone, Instagram, DollarSign, Calendar, MessageSquare, 
     Activity, ChevronDown, ChevronUp, Edit, Link2, CheckCircle2, Clock, 
-    Sparkles, Plus, Loader2, MessageCircle, AlertCircle, ExternalLink
+    Sparkles, Plus, Loader2, MessageCircle, AlertCircle, ExternalLink, Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -117,6 +117,24 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
             toast.error("Error al guardar comentario");
         } finally {
             setSubmittingComment(false);
+        }
+    };
+
+    const handleDeleteActivity = async (eventType, id) => {
+        const typeText = eventType === 'agenda' ? 'registro de agenda' : 'registro de venta';
+        if (!window.confirm(`¿Seguro que quieres eliminar este ${typeText} permanentemente?`)) return;
+        
+        try {
+            const endpoint = eventType === 'agenda' 
+                ? `/public/financial-agendas/${id}` 
+                : `/public/financial-sales/${id}`;
+            await api.delete(endpoint);
+            toast.success("Registro eliminado correctamente");
+            fetchRoadmap(); // Recargar datos del roadmap
+            if (onUpdate) onUpdate();
+        } catch (err) {
+            console.error("Error al eliminar registro:", err);
+            toast.error(err.response?.data?.error || "Error al eliminar el registro");
         }
     };
 
@@ -383,6 +401,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                     <th className="py-3 px-2">Evento</th>
                                     <th className="py-3 px-2">Detalle</th>
                                     <th className="py-3 px-2 text-right">Origen</th>
+                                    <th className="py-3 px-2 text-center w-12">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-850/50">
@@ -392,6 +411,17 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                         <td className="py-3 px-2 font-black text-white italic">{act.event}</td>
                                         <td className="py-3 px-2 text-slate-350">{act.detail}</td>
                                         <td className="py-3 px-2 text-right font-medium text-slate-400">{act.origin}</td>
+                                        <td className="py-3 px-2 text-center">
+                                            {act.event_type && act.id && (
+                                                <button
+                                                    onClick={() => handleDeleteActivity(act.event_type, act.id)}
+                                                    className="p-1.5 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                                                    title={`Eliminar ${act.event_type === 'agenda' ? 'agenda' : 'venta'}`}
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

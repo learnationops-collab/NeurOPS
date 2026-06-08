@@ -297,6 +297,15 @@
     - **Interfaz (Frontend) (`LeadRoadmapDetail.jsx`) [MODIFY]**: Se implementó un formateo seguro y controlado de la fecha de creación del lead (`lead.created_at`) mediante una verificación asíncrona para evitar posibles errores de renderizado de fechas nulas o con formatos incorrectos.
   - **Actualización y Sincronización de Base de Datos Local**:
     - **Refactorización de Sincronizador (`actualizar_db.py`) [MODIFY]**: Se actualizaron las importaciones y la lista ordenada de modelos `modelos` para incluir todos los modelos del proyecto (incluyendo `ClientComment`, `event_closers`, `Availability`, `WeeklyAvailability`, `SurveyQuestion`, `PaymentMethod` y `ManychatAdLead`) ordenados adecuadamente por jerarquía de claves foráneas.
-    - **Limpieza y Carga Bidireccional de Asociación Many-to-Many**: Se agregaron de manera explícita procesos específicos para vaciar y repoblar la tabla de asociación Many-to-Many `event_closers` respetando la integridad referencial en SQLite.
     - **Sincronización Exitosa**: Se ejecutó exitosamente el script de sincronización con el entorno virtual (`env\Scripts\python.exe actualizar_db.py`), importando con éxito todos los miles de registros de campañas, anuncios, agendas, leads, citas, ventas y pagos desde la base de datos en producción (PostgreSQL) a la base de datos local SQLite (`instance/local.db`).
+  - **Corrección de Fecha N/A, Control de Duplicados de Agendas y Eliminación Manual**:
+    - **Base de Datos y Modelos (`financial.py`) [MODIFY]**: Se modificó `to_dict` en la clase `FinancialAgenda` para incorporar un fallback seguro hacia `created_at` si el campo `registro` es nulo o vacío. Esto soluciona de inmediato el problema donde todos los registros en producción mostraban "N/A" como fecha de creación.
+    - **Backend (API de Agendas) (`financial_agendas.py`) [MODIFY]**:
+      - Se adaptó `receive_financial_agendas` (POST) para persistir el campo `registro` de forma explícita al insertar nuevas agendas.
+      - **Prevención de Duplicados**: Se implementó una lógica de unicidad que valida si ya existe una agenda programada para el mismo prospecto (cruzando su Instagram, Email o Whatsapp) el mismo día de la cita. En caso afirmativo, actualiza sus campos (closer, fecha, estado, raw_data) en lugar de crear un registro duplicado.
+    - **Backend (API de Roadmap) (`lead_roadmap.py`) [MODIFY]**: Se modificó el listado de actividades (`activity`) de `get_lead_roadmap` para adjuntar de manera explícita el `id` y el tipo de evento (`event_type` como `"agenda"` o `"sale"`) en las actividades cronológicas originadas en agendas y ventas.
+    - **Interfaz (Frontend) (`LeadRoadmapDetail.jsx`) [MODIFY]**:
+      - Se añadió la columna **Acciones** y el icono de eliminación (`Trash2` de lucide-react) en la tabla del "Detalle de Actividad" para todas las filas asociadas a agendas y ventas.
+      - Se implementó la función `handleDeleteActivity` que solicita confirmación en pantalla y, tras ser aceptada, realiza una petición DELETE asíncrona a los endpoints del backend (`/public/financial-agendas/<id>` o `/public/financial-sales/<id>`) para eliminar duplicados históricos y recargar la vista.
+
 
