@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { 
-    User, Mail, Phone, Instagram, DollarSign, Calendar, MessageSquare, 
-    Activity, ChevronDown, ChevronUp, Edit, Link2, CheckCircle2, Clock, 
-    Sparkles, Plus, Loader2, MessageCircle, AlertCircle, ExternalLink, Trash2
+    User, Mail, Phone, Instagram, DollarSign, Calendar, 
+    ChevronDown, ChevronUp, Edit, Link2, Clock, 
+    Sparkles, Loader2, MessageCircle, AlertCircle, Trash2, Save, Award
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { EditLeadModal, LinkEventModal } from './LeadRoadmapModals';
 
 const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate }) => {
     const [loading, setLoading] = useState(true);
@@ -13,23 +14,26 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
     const [showEditModal, setShowEditModal] = useState(false);
     const [showLinkModal, setShowLinkModal] = useState(false);
     
-    // Formulario de edición
-    const [editForm, setEditForm] = useState({
-        full_name: '',
-        email: '',
-        phone: '',
-        instagram: ''
-    });
+    // Calificación en caliente
+    const [objeciones, setObjeciones] = useState('');
+    const [observaciones, setObservaciones] = useState('');
+    const [savingCalificacion, setSavingCalificacion] = useState(false);
 
-    // Formulario de vinculación
-    const [linkForm, setLinkForm] = useState({
-        event_type: 'sale',
-        event_id: ''
-    });
+    // Formulario de edición y vinculación
+    const [editForm, setEditForm] = useState({ full_name: '', email: '', phone: '', instagram: '' });
+    const [linkForm, setLinkForm] = useState({ event_type: 'sale', event_id: '' });
 
-    // Formulario de comentarios
+    // Comentarios
     const [newComment, setNewComment] = useState('');
     const [submittingComment, setSubmittingComment] = useState(false);
+
+    const commonObjections = [
+        "Precio / Presupuesto",
+        "Tiempo / Horario",
+        "Debe consultar con socio",
+        "No es prioridad ahora",
+        "Desconfianza / Garantía"
+    ];
 
     useEffect(() => {
         fetchRoadmap();
@@ -47,7 +51,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
             const res = await api.get('/public/lead-roadmap', { params });
             setData(res.data);
             
-            // Inicializar formulario de edición
             if (res.data.lead) {
                 setEditForm({
                     full_name: res.data.lead.full_name || '',
@@ -55,6 +58,8 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                     phone: res.data.lead.phone || '',
                     instagram: res.data.lead.instagram || ''
                 });
+                setObjeciones(res.data.lead.objeciones || '');
+                setObservaciones(res.data.lead.observaciones || '');
             }
         } catch (err) {
             console.error("Error fetching lead roadmap", err);
@@ -67,10 +72,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
     const handleSaveClient = async (e) => {
         e.preventDefault();
         try {
-            const payload = {
-                ...editForm,
-                client_id: data?.lead?.id || null
-            };
+            const payload = { ...editForm, client_id: data?.lead?.id || null };
             const res = await api.post('/public/lead-roadmap/update-client', payload);
             toast.success(res.data.message || "Cliente guardado con éxito");
             setShowEditModal(false);
@@ -125,17 +127,103 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
         if (!window.confirm(`¿Seguro que quieres eliminar este ${typeText} permanentemente?`)) return;
         
         try {
-            const endpoint = eventType === 'agenda' 
-                ? `/public/financial-agendas/${id}` 
-                : `/public/financial-sales/${id}`;
+            const endpoint = eventType === 'agenda' ? `/public/financial-agendas/${id}` : `/public/financial-sales/${id}`;
             await api.delete(endpoint);
             toast.success("Registro eliminado correctamente");
-            fetchRoadmap(); // Recargar datos del roadmap
+            fetchRoadmap();
             if (onUpdate) onUpdate();
         } catch (err) {
             console.error("Error al eliminar registro:", err);
             toast.error(err.response?.data?.error || "Error al eliminar el registro");
         }
+    };
+
+    const handleSaveCalificacion = async () => {
+        setSavingCalificacion(true);
+        try {
+            const payload = {
+                client_id: data?.lead?.id || null,
+                instagram: data?.lead?.instagram || instagram,
+                email: data?.lead?.email || email,
+                phone: data?.lead?.phone || phone,
+                objeciones,
+                observaciones
+            };
+            await api.post('/public/lead-roadmap/update-client', payload);
+            toast.success("Calificación guardada");
+            if (onUpdate) onUpdate();
+        } catch (err) {
+            console.error("Error saving calificacion", err);
+            toast.error("Error al guardar calificación");
+        } finally {
+            setSavingCalificacion(false);
+        }
+    };
+
+    const toggleObjectionTag = (tag) => {
+        let current = objeciones.trim();
+        if (current.includes(tag)) {
+            const regex = new RegExp(`(^|\\n|\\s*,\\s*)${tag}(\\s*,?\\s*|$)`, 'i');
+            current = current.replace(regex, '$1').replace(/,\s*,/, ',').replace(/^,\s*/, '').replace(/,\s*$/, '').trim();
+        } else {
+            current = current ? `${current}, ${tag}` : tag;
+        }
+        setObjeciones(current);
+    };
+
+    const getDaysSinceCreated = (createdIso) => {
+        if (!createdIso) return '0 días';
+        const createdDate = new Date(createdIso);
+        const today = new Date();
+        const diffTime = today - createdDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays <= 0) return 'Hoy';
+        if (diffDays === 1) return '1 día';
+        return `${diffDays} días`;
+    };
+
+    const detectAdquisitionDetails = () => {
+        let channel = "Desconocido";
+        let setter = "No asignado";
+        let closer = "Sin asignar";
+
+        const agendaActivity = data?.activity?.find(act => act.event_type === 'agenda');
+        let source = "";
+        
+        if (agendaActivity && agendaActivity.detail) {
+            const matchFuente = agendaActivity.detail.match(/\(Fuente:\s*([^)]+)\)/i);
+            if (matchFuente) {
+                source = matchFuente[1].toLowerCase().trim();
+            }
+            const matchCloser = agendaActivity.detail.match(/closer:\s*([^\s(]+)/i);
+            if (matchCloser) {
+                closer = matchCloser[1];
+            }
+        }
+
+        if (closer === "Sin asignar" && data?.sales_summary && data?.sales_summary.vendedor) {
+            closer = data.sales_summary.vendedor;
+        }
+
+        if (source.includes("elias")) {
+            channel = "ManyChat / Instagram";
+            setter = "Elias";
+        } else if (source.includes("workshop")) {
+            channel = "Workshop / WhatsApp";
+            setter = "Automático (Workshop)";
+        } else if (source.includes("vsl")) {
+            channel = "VSL / Bio Instagram";
+            setter = "Automático (VSL)";
+        } else {
+            const mcDetail = data?.stages?.[0]?.details?.origen || "";
+            const mcCamp = data?.stages?.[0]?.details?.campaña || "";
+            if (mcDetail.toLowerCase().includes("manychat") || mcCamp.toLowerCase() !== "n/a") {
+                channel = "ManyChat / Instagram";
+                setter = "Elias";
+            }
+        }
+
+        return { channel, setter, closer };
     };
 
     const formatTime = (isoString, eventType) => {
@@ -147,9 +235,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
             }
             return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) + 
                    ' ' + date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        } catch {
-            return isoString;
-        }
+        } catch { return isoString; }
     };
 
     if (loading) {
@@ -166,9 +252,9 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
             <div className="h-[50vh] flex flex-col items-center justify-center text-center space-y-6 bg-slate-950 text-slate-200 p-8 rounded-[2rem] border border-slate-800">
                 <AlertCircle className="text-amber-500" size={48} />
                 <h3 className="text-xl font-bold">No se pudieron recuperar los datos del lead</h3>
-                <p className="text-slate-500 text-sm max-w-md">Verifica que el usuario de Instagram o identificador de cliente sea correcto e intenta relacionar sus eventos.</p>
+                <p className="text-slate-500 text-sm max-w-md">Verifica los datos e intenta de nuevo.</p>
                 {onBack && (
-                    <button onClick={onBack} className="px-6 py-3 bg-slate-900 border border-slate-800 rounded-xl font-bold hover:bg-slate-800 text-xs">
+                    <button onClick={onBack} className="px-6 py-3 bg-slate-900 border border-slate-880 rounded-xl font-bold hover:bg-slate-800 text-xs">
                         VOLVER ATRÁS
                     </button>
                 )}
@@ -176,9 +262,9 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
         );
     }
 
-    const { lead, stages, activity, sales_summary, dolores, comments: notesList } = data;
+    const { lead, stages, activity, sales_summary, dolores, comments: notesList, programs } = data;
+    const { channel, setter, closer } = detectAdquisitionDetails();
 
-    // Colores semafóricos según estado
     const statusColors = {
         "Ganado": "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
         "En proceso": "bg-violet-500/20 text-violet-400 border border-violet-500/30",
@@ -186,18 +272,10 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
         "Perdido": "bg-rose-500/20 text-rose-400 border border-rose-500/30"
     };
 
-    const stageIcons = [
-        Sparkles,        // Llegó
-        MessageCircle,   // Contactó
-        User,            // Dolor
-        Calendar,        // Agenda
-        Phone,           // Llamada
-        DollarSign       // Venta
-    ];
+    const stageIcons = [Sparkles, MessageCircle, User, Calendar, Phone, DollarSign];
 
     return (
         <div className="space-y-8 bg-slate-950 text-slate-200 p-6 rounded-[2rem] border border-slate-800 shadow-2xl relative">
-            
             {/* BARRA DE NAVEGACIÓN SUPERIOR */}
             <div className="flex justify-between items-center pb-4 border-b border-slate-800/50">
                 <div className="flex items-center gap-3">
@@ -264,27 +342,33 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                 </div>
 
                 {/* METADATOS DE ADQUISICIÓN */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 bg-slate-900/60 p-4 rounded-2xl border border-slate-850 self-center w-full lg:w-auto">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 bg-slate-900/60 p-5 rounded-2xl border border-slate-850 self-center w-full lg:w-auto">
                     <div className="space-y-1">
-                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Origen</div>
-                        <div className="text-xs font-black text-violet-400 truncate max-w-[140px]">{stages[0]?.details?.campaña || 'Instagram / Directo'}</div>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Inversión</div>
-                        <div className="text-xs font-black text-white">${sales_summary ? sales_summary.monto : '0.00'}</div>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Fecha Creación</div>
-                        <div className="text-xs font-black text-white">
-                            {lead.created_at && !isNaN(new Date(lead.created_at).getTime()) 
-                                ? new Date(lead.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) 
-                                : 'N/A'
-                            }
+                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Canal de Adquisición</div>
+                        <div className="text-xs font-black text-violet-400 flex items-center gap-1.5">
+                            {channel}
                         </div>
                     </div>
                     <div className="space-y-1">
-                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Responsable</div>
-                        <div className="text-xs font-black text-amber-500">Unassigned</div>
+                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Setter / Closer</div>
+                        <div className="text-xs font-black text-white">
+                            <span className="text-amber-500">{setter}</span>
+                            <span className="mx-1 text-slate-600">/</span>
+                            <span className="text-emerald-450">{closer}</span>
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Retención en Ecosistema</div>
+                        <div className="text-xs font-black text-white flex items-center gap-1">
+                            <Clock size={12} className="text-slate-550" />
+                            {lead.created_at ? getDaysSinceCreated(lead.created_at) : 'N/A'}
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-[9px] font-bold text-slate-550 uppercase tracking-wider">Total Facturado</div>
+                        <div className="text-xs font-black text-emerald-400">
+                            ${sales_summary ? sales_summary.monto : '0.00'}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -297,7 +381,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                 </div>
 
                 <div className="relative pt-6 pb-2">
-                    {/* Línea conectora de fondo */}
                     <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-slate-800 -translate-y-1/2 z-0" />
                     
                     <div className="grid grid-cols-2 md:grid-cols-6 gap-8 relative z-10">
@@ -307,7 +390,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                             
                             return (
                                 <div key={stage.name} className="flex flex-col items-center text-center space-y-4 group">
-                                    {/* Icono de Etapa */}
                                     <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ${
                                         isCompleted 
                                             ? 'bg-violet-650 text-white shadow-lg shadow-violet-600/30 border-2 border-violet-500' 
@@ -316,7 +398,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                         <IconComp size={22} className={isCompleted ? 'animate-pulse' : ''} />
                                     </div>
 
-                                    {/* Información de la Etapa */}
                                     <div className="space-y-1">
                                         <div className="text-xs font-black text-white">{stage.name}</div>
                                         <span className={`inline-block px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-widest ${
@@ -329,20 +410,19 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                         )}
                                     </div>
 
-                                    {/* Datos adicionales específicos abajo */}
                                     <div className="w-full bg-slate-950/45 p-3.5 rounded-xl border border-slate-900/60 text-left text-[10px] space-y-1 font-bold">
                                         {idx === 0 && (
                                             <>
-                                                <div className="text-slate-550">Origen: <span className="text-slate-300">{stage.details?.origen || 'Instagram'}</span></div>
-                                                <div className="text-slate-550">Canal: <span className="text-slate-300">{stage.details?.canal}</span></div>
-                                                <div className="text-slate-550">Campaña: <span className="text-slate-300 truncate block max-w-[120px]">{stage.details?.campaña}</span></div>
+                                                <div className="text-slate-550">Origen: <span className="text-slate-350">{stage.details?.origen || 'Instagram'}</span></div>
+                                                <div className="text-slate-550">Canal: <span className="text-slate-350">{stage.details?.canal}</span></div>
+                                                <div className="text-slate-550">Campaña: <span className="text-slate-350 truncate block max-w-[120px]">{stage.details?.campaña}</span></div>
                                             </>
                                         )}
                                         {idx === 1 && (
                                             <>
-                                                <div className="text-slate-550">Acción: <span className="text-slate-300">{stage.details?.accion}</span></div>
-                                                <div className="text-slate-550">Medio: <span className="text-slate-300">{stage.details?.medio}</span></div>
-                                                <div className="text-slate-550 text-slate-300 italic truncate max-w-[120px]">{stage.details?.mensaje}</div>
+                                                <div className="text-slate-550">Acción: <span className="text-slate-350">{stage.details?.accion}</span></div>
+                                                <div className="text-slate-550">Medio: <span className="text-slate-350">{stage.details?.medio}</span></div>
+                                                <div className="text-slate-550 text-slate-350 italic truncate max-w-[120px]">{stage.details?.mensaje}</div>
                                             </>
                                         )}
                                         {idx === 2 && (
@@ -357,14 +437,14 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                         )}
                                         {idx === 3 && (
                                             <>
-                                                <div className="text-slate-550">Tipo: <span className="text-slate-300">{stage.details?.tipo || 'Reunión'}</span></div>
+                                                <div className="text-slate-550">Tipo: <span className="text-slate-350">{stage.details?.tipo || 'Reunión'}</span></div>
                                                 <div className="text-slate-550">Fecha: <span className="text-slate-350">{stage.details?.fecha_agendada ? stage.details.fecha_agendada.split('T')[0] : 'N/A'}</span></div>
                                             </>
                                         )}
                                         {idx === 4 && (
                                             <>
                                                 <div className="text-slate-550">Resultado: <span className="text-slate-300">{stage.details?.resultado || 'Pendiente'}</span></div>
-                                                <div className="text-slate-550 text-slate-300 italic truncate max-w-[120px]">{stage.details?.notes}</div>
+                                                <div className="text-slate-550 text-slate-350 italic truncate max-w-[120px]">{stage.details?.notes}</div>
                                             </>
                                         )}
                                         {idx === 5 && (
@@ -383,7 +463,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
 
             {/* SECCIÓN INFERIOR: HISTORIAL, DETALLE DE VENTA, DOLORES Y COMENTARIOS */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
                 {/* DETALLE DE ACTIVIDAD (COLUMNA 1 y 2 - ANCHA) */}
                 <div className="lg:col-span-2 bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-6 flex flex-col">
                     <div className="flex justify-between items-center">
@@ -396,7 +475,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         </span>
                     </div>
 
-                    <div className="overflow-x-auto flex-1 max-h-[400px] custom-scrollbar">
+                    <div className="overflow-x-auto flex-1 max-h-[500px] custom-scrollbar">
                         <table className="w-full text-left text-xs border-collapse">
                             <thead>
                                 <tr className="border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
@@ -432,12 +511,121 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                     </div>
                 </div>
 
-                {/* DETALLE FINANCIERO Y NOTAS (COLUMNA 3) */}
+                {/* COLUMNA LATERAL (CALIFICACIÓN Y MEMBRESÍAS) */}
                 <div className="space-y-6">
-                    
+                    {/* CALIFICACIÓN EN CALIENTE */}
+                    <div className="bg-slate-900/40 p-6 rounded-3xl border border-violet-950/40 space-y-4 shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-violet-500 to-amber-500" />
+                        <div className="flex justify-between items-center">
+                            <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                                <Sparkles size={14} className="text-violet-400" />
+                                Calificación en Caliente
+                            </h4>
+                            <span className="text-[9px] font-bold text-slate-400 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-md">
+                                Quick Save
+                            </span>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objeciones</label>
+                            <div className="flex flex-wrap gap-1 mb-1">
+                                {commonObjections.map((tag) => {
+                                    const isSelected = objeciones.toLowerCase().includes(tag.toLowerCase().split(' ')[0]);
+                                    return (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onClick={() => toggleObjectionTag(tag)}
+                                            className={`text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border transition-all ${
+                                                isSelected
+                                                    ? 'bg-violet-600/20 text-violet-400 border-violet-500/40'
+                                                    : 'bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850'
+                                            }`}
+                                        >
+                                            {tag}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <textarea
+                                className="w-full h-16 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
+                                placeholder="Notas de objeción..."
+                                value={objeciones}
+                                onChange={(e) => setObjeciones(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Triage</label>
+                            <textarea
+                                className="w-full h-20 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
+                                placeholder="Notas de triage, facturación, socio, etc..."
+                                value={observaciones}
+                                onChange={(e) => setObservaciones(e.target.value)}
+                            />
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleSaveCalificacion}
+                            disabled={savingCalificacion}
+                            className="w-full py-3 bg-violet-600 hover:bg-violet-750 text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition-all shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {savingCalificacion ? (
+                                <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                                <Save size={12} />
+                            )}
+                            Guardar Calificación
+                        </button>
+                    </div>
+
+                    {/* PERMANENCIA EN PROGRAMAS */}
+                    <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h4 className="text-sm font-black text-white uppercase tracking-wider">Membresías y Programas</h4>
+                            <span className="text-[9px] font-black uppercase bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full">
+                                Retención
+                            </span>
+                        </div>
+                        {programs && programs.length > 0 ? (
+                            <div className="space-y-3">
+                                {programs.map((prog, i) => (
+                                    <div key={i} className="bg-slate-950/60 p-4 rounded-2xl border border-slate-900 space-y-2 relative overflow-hidden group hover:border-slate-800 transition-colors">
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/5 blur-2xl rounded-full" />
+                                        <div className="flex justify-between items-start">
+                                            <div className="space-y-0.5">
+                                                <span className="text-xs font-black text-white italic uppercase tracking-wide flex items-center gap-1.5">
+                                                    <Award size={14} className="text-amber-500" />
+                                                    {prog.program_name}
+                                                </span>
+                                                <span className="text-[9px] text-slate-500 block font-bold">
+                                                    Inscrito: {prog.enrollment_date ? new Date(prog.enrollment_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                                                </span>
+                                            </div>
+                                            <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                                ${prog.total_paid || '0.00'} USD
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 pt-1 border-t border-slate-900/50">
+                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Permanencia:</span>
+                                            <span className="text-[10px] font-black text-violet-400 bg-violet-500/10 px-2.5 py-1 rounded-full border border-violet-500/20">
+                                                {prog.permanence || '0 días'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6 px-4 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl bg-slate-950/20">
+                                Sin programas activos (Fase de Prospección)
+                            </div>
+                        )}
+                    </div>
+
                     {/* RESUMEN DE LA VENTA */}
                     <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4">
-                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Resumen de la Venta</h4>
+                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Resumen de Venta Global</h4>
                         {sales_summary ? (
                             <div className="space-y-4">
                                 <div className="flex justify-between items-baseline">
@@ -451,7 +639,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-center py-6 text-slate-500 text-xs font-bold italic border border-dashed border-slate-800 rounded-2xl">
+                            <div className="text-center py-6 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl">
                                 Sin registros de ventas asociadas
                             </div>
                         )}
@@ -469,7 +657,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         </div>
                     </div>
 
-                    {/* NOTAS INTERNAS */}
+                    {/* NOTAS INTERNAS / CHAT COMENTARIOS */}
                     <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4 flex flex-col max-h-[350px]">
                         <h4 className="text-sm font-black text-white uppercase tracking-wider">Notas Internas</h4>
                         
@@ -484,7 +672,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                 </div>
                             ))}
                             {notesList.length === 0 && (
-                                <div className="text-center py-6 text-slate-500 text-xs font-bold italic">
+                                <div className="text-center py-6 text-slate-550 text-xs font-bold italic">
                                     Sin comentarios registrados
                                 </div>
                             )}
@@ -510,135 +698,27 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                             </form>
                         )}
                     </div>
-
                 </div>
             </div>
 
             {/* MODAL DE EDICIÓN DE DATOS DEL CLIENTE */}
-            {showEditModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] max-w-md w-full p-8 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                        <div className="space-y-1 text-center">
-                            <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">Editar Ficha Lead</h3>
-                            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Actualizar datos de contacto y vinculación</p>
-                        </div>
-
-                        <form onSubmit={handleSaveClient} className="space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre Completo</label>
-                                <input 
-                                    type="text"
-                                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 font-bold"
-                                    value={editForm.full_name}
-                                    onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Email</label>
-                                <input 
-                                    type="email"
-                                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 font-bold"
-                                    value={editForm.email}
-                                    onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Teléfono</label>
-                                <input 
-                                    type="text"
-                                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 font-bold"
-                                    value={editForm.phone}
-                                    onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Instagram (@usuario)</label>
-                                <input 
-                                    type="text"
-                                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 font-bold"
-                                    value={editForm.instagram}
-                                    onChange={e => setEditForm({ ...editForm, instagram: e.target.value })}
-                                />
-                            </div>
-
-                            <div className="flex gap-3 pt-4">
-                                <button 
-                                    type="button"
-                                    onClick={() => setShowEditModal(false)}
-                                    className="flex-1 py-3 bg-slate-950 border border-slate-850 rounded-xl font-black uppercase text-[10px] tracking-wider hover:bg-slate-900 transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className="flex-1 py-3 bg-violet-600 hover:bg-violet-700 text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition-colors shadow-lg shadow-violet-600/20"
-                                >
-                                    Guardar Cambios
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <EditLeadModal 
+                show={showEditModal} 
+                onClose={() => setShowEditModal(false)} 
+                editForm={editForm} 
+                setEditForm={setEditForm} 
+                onSubmit={handleSaveClient} 
+            />
 
             {/* MODAL DE VINCULACIÓN MANUAL DE EVENTOS */}
-            {showLinkModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] max-w-md w-full p-8 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                        <div className="space-y-1 text-center">
-                            <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">Vincular Evento Manual</h3>
-                            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Relacionar eventos que no se conectaron automáticamente</p>
-                        </div>
-
-                        <form onSubmit={handleLinkEvent} className="space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Tipo de Evento</label>
-                                <select 
-                                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500 font-bold"
-                                    value={linkForm.event_type}
-                                    onChange={e => setLinkForm({ ...linkForm, event_type: e.target.value })}
-                                >
-                                    <option value="sale">Venta Declarada (ID)</option>
-                                    <option value="agenda">Agenda / Triage (ID)</option>
-                                </select>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">ID del Evento</label>
-                                <input 
-                                    type="number"
-                                    placeholder="Ej. 154"
-                                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-violet-500 font-bold"
-                                    value={linkForm.event_id}
-                                    onChange={e => setLinkForm({ ...linkForm, event_id: e.target.value })}
-                                    required
-                                />
-                            </div>
-
-                            <p className="text-[9px] text-slate-550 font-bold bg-slate-950/40 p-3 rounded-lg border border-slate-850">
-                                ℹ️ Esto asociará el evento ID ingresado actualizando su Instagram al valor @{data?.lead?.instagram || instagram}. De esta forma se mostrará automáticamente en este Roadmap.
-                            </p>
-
-                            <div className="flex gap-3 pt-4">
-                                <button 
-                                    type="button"
-                                    onClick={() => setShowLinkModal(false)}
-                                    className="flex-1 py-3 bg-slate-950 border border-slate-850 rounded-xl font-black uppercase text-[10px] tracking-wider hover:bg-slate-900 transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className="flex-1 py-3 bg-violet-600 hover:bg-violet-700 text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition-colors shadow-lg shadow-violet-600/20"
-                                >
-                                    Vincular Evento
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
+            <LinkEventModal 
+                show={showLinkModal} 
+                onClose={() => setShowLinkModal(false)} 
+                linkForm={linkForm} 
+                setLinkForm={setLinkForm} 
+                onSubmit={handleLinkEvent} 
+                currentInstagram={data?.lead?.instagram || instagram} 
+            />
         </div>
     );
 };

@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from app import db
-from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion, ClientComment, User
+from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion, ClientComment, User, Enrollment, Program
 from app.models.financial import FinancialSale, FinancialAgenda
 from app.models.marketing import ManychatLead, LeadAnswer
 from datetime import datetime, timedelta
@@ -138,7 +138,9 @@ def get_lead_roadmap():
         "phone": client.phone if client else (financial_sales[0].telefono if financial_sales else (financial_agendas[0].whatsapp if financial_agendas else "Sin Teléfono")),
         "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (financial_sales[0].instagram if financial_sales else (financial_agendas[0].instagram if financial_agendas else "Sin Instagram"))),
         "status": "Entrante",
-        "created_at": created_at_val
+        "created_at": created_at_val,
+        "objeciones": client.objeciones if client else "",
+        "observaciones": client.observaciones if client else ""
     }
 
     # Resolver el estado del lead
@@ -458,13 +460,36 @@ def get_lead_roadmap():
         } for c in comments
     ]
 
+    # 7. Permanencia en Programas
+    programs_list = []
+    if client:
+        for enroll in client.enrollments.all():
+            program_name = enroll.program.name if enroll.program else "Programa Desconocido"
+            total_paid = enroll.total_paid
+            days_enrolled = (datetime.utcnow() - enroll.enrollment_date).days if enroll.enrollment_date else 0
+            permanence_str = f"{days_enrolled} días"
+            if days_enrolled >= 30:
+                months = days_enrolled // 30
+                rem_days = days_enrolled % 30
+                permanence_str = f"{months} mes(es)"
+                if rem_days > 0:
+                    permanence_str += f" y {rem_days} día(s)"
+                
+            programs_list.append({
+                "program_name": program_name,
+                "enrollment_date": enroll.enrollment_date.isoformat() if enroll.enrollment_date else None,
+                "total_paid": total_paid,
+                "permanence": permanence_str
+            })
+
     return jsonify({
         "lead": lead_profile,
         "stages": stages,
         "activity": activity,
         "sales_summary": sales_summary,
         "dolores": dolores_lead,
-        "comments": comments_list
+        "comments": comments_list,
+        "programs": programs_list
     }), 200
 
 @bp.route('/public/lead-roadmap/update-client', methods=['POST'])
@@ -475,6 +500,8 @@ def update_client_roadmap():
     phone = data.get('phone')
     instagram = data.get('instagram')
     full_name = data.get('full_name')
+    objeciones = data.get('objeciones')
+    observaciones = data.get('observaciones')
 
     client = None
     if client_id:
@@ -495,7 +522,9 @@ def update_client_roadmap():
             full_name=full_name,
             email=email.strip().lower() if email else None,
             phone=phone.strip() if phone else None,
-            instagram=normalize_ig(instagram)
+            instagram=normalize_ig(instagram),
+            objeciones=objeciones,
+            observaciones=observaciones
         )
         db.session.add(client)
     else:
@@ -508,6 +537,10 @@ def update_client_roadmap():
             client.phone = phone.strip()
         if instagram:
             client.instagram = normalize_ig(instagram)
+        if objeciones is not None:
+            client.objeciones = objeciones
+        if observaciones is not None:
+            client.observaciones = observaciones
 
     try:
         db.session.commit()
@@ -518,7 +551,9 @@ def update_client_roadmap():
                 "full_name": client.full_name,
                 "email": client.email,
                 "phone": client.phone,
-                "instagram": client.instagram
+                "instagram": client.instagram,
+                "objeciones": client.objeciones or "",
+                "observaciones": client.observaciones or ""
             }
         }), 200
     except Exception as e:

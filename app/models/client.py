@@ -9,6 +9,8 @@ class Client(db.Model):
     phone = db.Column(db.String(20))
     instagram = db.Column(db.String(64))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    objeciones = db.Column(db.Text, nullable=True) # Objeciones del prospecto
+    observaciones = db.Column(db.Text, nullable=True) # Notas de triage / calificacion
     
     # Relationships
     enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
