@@ -346,4 +346,18 @@
       - **Tab Medios de Pago**: Tabla editable por pasarela con campos `Lo que hay (real)` y `Lo que debe haber (esperado)`, calculando automáticamente la diferencia.
       - **Tab Nómina (Equipo)**: Tabla de nómina mensual con sueldo base, comisión (pre-calculada para Setters/Closers), bonos, medio de pago y checkbox de pagado. CRUD de integrantes via modal. Comisiones de Elias/Jean Carlos/Marlon se calculan automáticamente desde ventas del mes y son editables manualmente.
       - **Tab Software / Equipos**: Formulario para registrar gastos de categoría `software` y `equipo` filtrados por el mes seleccionado. Lista completa con opción de eliminar.
+  - **Correcciones y Ajustes del Hub de Finanzas** (mismo día, feedback del usuario):
+    - **Clarificación Conceptual**: "Equipo" = trabajadores de la empresa (Belu, Pedro, Andrés, Kerwin, Santiago con sueldo fijo; Elias, Jean Carlos, Marlon con sueldo variable por comisiones). No hardware/equipamiento.
+    - **Backend API (`finance.py`) [MODIFY]**:
+      - Se eliminó la query `equipo_expenses` (hardware) del cálculo de `get_finance_summary`, ya que los sueldos del equipo están cubiertos por `total_sueldos`.
+      - Se actualizó `total_expenses = total_software + total_anuncios + total_sueldos` (sin hardware).
+      - Se eliminó `"equipo"` del dict `expenses_breakdown` en la respuesta JSON.
+      - En `manage_balances`, se redujo `default_methods` a solo `['Stripe', 'AirTM']` (se eliminó PayPal, Wise, Banco, Hotmart).
+      - El campo `expected_amount` en balances ahora se **auto-calcula** desde la nómina del mes (`MonthlyPayroll` + `TeamMember`), sumando el total a pagar por cada pasarela. Ya no es un valor manual almacenado.
+    - **Frontend (`FinancePage.jsx`) [MODIFY]**:
+      - **Tab Resumen**: Distribución de gastos cambiada de 4 a 3 categorías (eliminado "Equipamiento"), renombrado "Sueldos y Nómina" a "Equipo (Nómina)". Grid de 2 columnas → 3 columnas.
+      - **Tab Medios de Pago**: Columnas renombradas a "Saldo Actual" (editable) y "Por Pagar (Nómina)" (solo lectura, auto-calculado desde backend). Se agregó fila de **Total** al pie de la tabla. Se eliminaron PayPal, Wise, Banco y Hotmart; solo Stripe y AirTM.
+      - **Tab Nómina**: La tabla se dividió en dos secciones claramente diferenciadas: **Equipo Fijo** (sueldo estable) y **Equipo Variable (Comisiones)**, separadas por filas cabecera con indicadores de color (índigo/esmeralda). El `select` de medio de pago en cada fila ahora solo muestra Stripe y AirTM.
+      - **Tab Software**: Eliminada la opción "Equipos / Hardware" del select de categoría. El tab fue renombrado de "Software / Equipos" a "Software". El filtro de fetch solo incluye categoría `software`.
+      - **Modal de Equipo**: El `select` de medio de pago en el formulario de nuevo/editar integrante ahora solo muestra Stripe y AirTM.
 
