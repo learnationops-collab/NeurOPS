@@ -370,3 +370,6 @@
   - **Soporte para Tipo de Pago "Upsell"**:
     - **Frontend (`NewSalePage.jsx` y `PublicFinancialSalesPage.jsx`) [MODIFY]**: Se añadió la opción `"Upsell"` en los selectores de tipo de pago del formulario de closers y del modal de registro de ventas del administrador. Se asignó un código de color rosa (`text-pink-400 bg-pink-500/10`) para identificar visualmente las ventas tipo Upsell en el dashboard.
     - **API Backend (`financial_sales.py`) [MODIFY]**: Se modificó `parse_financial_data` para reconocer `"upsell"` en la columna de tipo de pago y parsearlo correctamente como `"Upsell"` sin arrojar errores de validación.
+  - **Botón "Enviar mensaje de WhatsApp" y Campo "enviar_mensaje" para n8n**:
+    - **Frontend (`NewSalePage.jsx` y `PublicFinancialSalesPage.jsx`) [MODIFY]**: Se renombró el switch de automatización en los formularios de ventas manuales a "Enviar mensaje de WhatsApp" con una descripción adaptada. Se modificó el estado local para utilizar `enviar_mensaje` (por defecto `true`). Al enviar la venta, se transmite el valor de `enviar_mensaje` y se fuerza `enviar_webhook: true` para garantizar que la automatización de n8n siempre reciba la venta y filtre mediante el booleano en una rama del flujo.
+

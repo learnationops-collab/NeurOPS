@@ -336,6 +336,7 @@ class SheetsService:
             "Setter": payload.get('setter'),
             "Estado": payload.get('estado'),
             "Documento de identidad": payload.get('documento_identidad'),
+            "enviar_mensaje": payload.get('enviar_mensaje', True),
 
             "marca_temporal": payload.get('marca_temporal'),
             "email_vendedor": payload.get('email_vendedor'),
@@ -350,7 +351,8 @@ class SheetsService:
             "instagram": payload.get('instagram'),
             "setter": payload.get('setter'),
             "estado": payload.get('estado'),
-            "documento_identidad": payload.get('documento_identidad')
+            "documento_identidad": payload.get('documento_identidad'),
+            "enviar_mensaje": payload.get('enviar_mensaje', True)
         }
 
         def send_request():

@@ -210,7 +210,8 @@ def create_new_financial_sale():
             "estado": "Completada" if (data.get('estado') or 'Completada').strip().lower() in ('completada', 'confirmada') else (data.get('estado') or 'Completada'),
             "documento_identidad": data.get('documento_identidad') or '',
             "marca_temporal": data.get('marca_temporal') or datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S'),
-            "enviar_webhook": data.get('enviar_webhook', True)
+            "enviar_webhook": data.get('enviar_webhook', True),
+            "enviar_mensaje": data.get('enviar_mensaje', True)
         }
         
         result = SheetsService.post_to_sheets("Ventas_DB", payload)

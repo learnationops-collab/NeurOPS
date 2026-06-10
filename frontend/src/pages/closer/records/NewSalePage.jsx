@@ -46,7 +46,7 @@ const CloserNewSalePage = () => {
         instagram: '',
         setter: '',
         documento_identidad: '',
-        enviar_webhook: true
+        enviar_mensaje: true
     });
 
     useEffect(() => {
@@ -178,7 +178,8 @@ const CloserNewSalePage = () => {
             setter: form.setter || '', // Columna M (Setter que Prospectó)
             documento_identidad: form.documento_identidad || '',
             marca_temporal: new Date().toLocaleString("es-ES"), // Fecha/hora del registro
-            enviar_webhook: form.enviar_webhook
+            enviar_webhook: true,
+            enviar_mensaje: form.enviar_mensaje
         };
 
         try {
@@ -591,19 +592,19 @@ const CloserNewSalePage = () => {
                         {/* Switch de Automatización */}
                         <div className="space-y-2 md:col-span-2 flex items-center justify-between bg-slate-950/20 p-4 rounded-2xl border border-slate-800/80">
                             <div className="space-y-0.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Automatización (n8n)</label>
-                                <span className="text-[10px] text-slate-500 font-bold uppercase">Enviar datos de venta al webhook tras registrar</span>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Enviar mensaje de WhatsApp</label>
+                                <span className="text-[10px] text-slate-500 font-bold uppercase">Activar o desactivar el envío de mensaje al cliente tras registrar la venta</span>
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setForm({ ...form, enviar_webhook: !form.enviar_webhook })}
+                                onClick={() => setForm({ ...form, enviar_mensaje: !form.enviar_mensaje })}
                                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                    form.enviar_webhook ? 'bg-indigo-600' : 'bg-slate-700'
+                                    form.enviar_mensaje ? 'bg-indigo-600' : 'bg-slate-700'
                                 }`}
                             >
                                 <span
                                     className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                        form.enviar_webhook ? 'translate-x-5' : 'translate-x-0'
+                                        form.enviar_mensaje ? 'translate-x-5' : 'translate-x-0'
                                     }`}
                                 />
                             </button>

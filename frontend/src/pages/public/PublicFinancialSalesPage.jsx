@@ -375,7 +375,7 @@ const PublicFinancialSalesPage = () => {
         segundo_pago: '',
         notas: '',
         date: new Date().toISOString().split('T')[0],
-        enviar_webhook: true
+        enviar_mensaje: true
     });
 
     const [agendaSearchQuery, setAgendaSearchQuery] = useState('');
@@ -453,7 +453,7 @@ const PublicFinancialSalesPage = () => {
             segundo_pago: '',
             notas: '',
             date: new Date().toISOString().split('T')[0],
-            enviar_webhook: true
+            enviar_mensaje: true
         });
     };
 
@@ -490,7 +490,8 @@ const PublicFinancialSalesPage = () => {
                 examen: combinedExamen,
                 segundo_pago: createData.segundo_pago,
                 marca_temporal: marcaTemporalStr,
-                enviar_webhook: createData.enviar_webhook
+                enviar_webhook: true,
+                enviar_mensaje: createData.enviar_mensaje
             };
 
             const res = await api.post('/public/financial-sales/new', payload);
@@ -1688,19 +1689,19 @@ const PublicFinancialSalesPage = () => {
                                 {/* Switch de Automatización */}
                                 <div className="space-y-2 md:col-span-2 flex items-center justify-between bg-slate-950/20 p-4 rounded-2xl border border-slate-850/80">
                                     <div className="space-y-0.5 text-left">
-                                        <label className="text-[10px] font-black text-slate-405 uppercase tracking-widest block">Automatización (n8n)</label>
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase">Enviar datos de venta al webhook tras registrar</span>
+                                        <label className="text-[10px] font-black text-slate-405 uppercase tracking-widest block">Enviar mensaje de WhatsApp</label>
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase">Activar o desactivar el envío de mensaje al cliente tras registrar la venta</span>
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => setCreateData({ ...createData, enviar_webhook: !createData.enviar_webhook })}
+                                        onClick={() => setCreateData({ ...createData, enviar_mensaje: !createData.enviar_mensaje })}
                                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                            createData.enviar_webhook ? 'bg-indigo-600' : 'bg-slate-700'
+                                            createData.enviar_mensaje ? 'bg-indigo-600' : 'bg-slate-700'
                                         }`}
                                     >
                                         <span
                                             className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                                createData.enviar_webhook ? 'translate-x-5' : 'translate-x-0'
+                                                createData.enviar_mensaje ? 'translate-x-5' : 'translate-x-0'
                                             }`}
                                         />
                                     </button>
