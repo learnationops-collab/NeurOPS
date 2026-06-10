@@ -97,6 +97,8 @@ def parse_financial_data(item):
             tipo_de_pago = "Seña"
         elif "renovacion" in pay_type_lower or "renovación" in pay_type_lower:
             tipo_de_pago = "Renovacion"
+        elif "upsell" in pay_type_lower:
+            tipo_de_pago = "Upsell"
         else:
             tipo_de_pago = pay_type.title()
             errors.append(f"Tipo de pago desconocido: {pay_type}")

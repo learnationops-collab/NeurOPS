@@ -490,6 +490,7 @@ const CloserNewSalePage = () => {
                                 <option value="Seña">Seña (Promesa de Venta)</option>
                                 <option value="Cuota">Cuotas</option>
                                 <option value="Renovacion">Renovación</option>
+                                <option value="Upsell">Upsell</option>
                             </select>
                         </div>
 

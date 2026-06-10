@@ -894,6 +894,8 @@ const PublicFinancialSalesPage = () => {
                                         payColor = "text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/20";
                                     } else if (norm.includes("parcial") || norm.includes("split")) {
                                         payColor = "text-violet-400 bg-violet-500/10 border-violet-500/20";
+                                    } else if (norm.includes("upsell")) {
+                                        payColor = "text-pink-400 bg-pink-500/10 border-pink-500/20";
                                     }
 
                                     return (
@@ -1570,6 +1572,7 @@ const PublicFinancialSalesPage = () => {
                                         <option value="Seña">Seña (Reserva)</option>
                                         <option value="Cuota">Cuota</option>
                                         <option value="Renovacion">Renovación</option>
+                                        <option value="Upsell">Upsell</option>
                                     </select>
                                 </div>
 
