@@ -459,6 +459,10 @@ const PublicFinancialSalesPage = () => {
 
     const handleCreateSubmit = async (e) => {
         e.preventDefault();
+        if (!createData.date) {
+            toast.error('La fecha de la venta es obligatoria');
+            return;
+        }
         if (!createData.nombre_cliente || !createData.monto) {
             toast.error('Nombre y monto son obligatorios');
             return;
@@ -1503,6 +1507,17 @@ const PublicFinancialSalesPage = () => {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1 md:col-span-2">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Fecha de la Venta *</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={createData.date}
+                                        onChange={e => setCreateData({...createData, date: e.target.value})}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 outline-none transition-all font-semibold cursor-pointer"
+                                    />
+                                </div>
+
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Nombre del Cliente *</label>
                                     <input
@@ -1621,16 +1636,7 @@ const PublicFinancialSalesPage = () => {
                                     </select>
                                 </div>
 
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Fecha de la Venta *</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={createData.date}
-                                        onChange={e => setCreateData({...createData, date: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 outline-none transition-all font-semibold cursor-pointer"
-                                    />
-                                </div>
+
 
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Closer (Email del Vendedor)</label>

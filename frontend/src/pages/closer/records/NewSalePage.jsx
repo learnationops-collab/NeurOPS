@@ -46,7 +46,8 @@ const CloserNewSalePage = () => {
         instagram: '',
         setter: '',
         documento_identidad: '',
-        enviar_mensaje: true
+        enviar_mensaje: true,
+        date: new Date().toISOString().split('T')[0]
     });
 
     useEffect(() => {
@@ -154,6 +155,10 @@ const CloserNewSalePage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
+        if (!form.date) {
+            setError("La fecha de la venta es obligatoria.");
+            return;
+        }
         if (!form.nombre_cliente || !form.mail_cliente || !form.monto) {
             setError("Los campos Nombre, Email de Cliente y Monto son obligatorios.");
             return;
@@ -177,7 +182,12 @@ const CloserNewSalePage = () => {
             estado: form.estado, // Columna L (Estado de la Venta)
             setter: form.setter || '', // Columna M (Setter que Prospectó)
             documento_identidad: form.documento_identidad || '',
-            marca_temporal: new Date().toLocaleString("es-ES"), // Fecha/hora del registro
+            marca_temporal: (() => {
+                const selectedDate = new Date(form.date);
+                const now = new Date();
+                selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+                return selectedDate.toLocaleString("es-ES");
+            })(), // Fecha/hora de la venta con hora actual
             enviar_webhook: true,
             enviar_mensaje: form.enviar_mensaje
         };
@@ -372,6 +382,20 @@ const CloserNewSalePage = () => {
                     {/* SECCIÓN 2: DATOS DEL CLIENTE Y REGISTRO */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         
+                        <div className="space-y-2 md:col-span-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Fecha de la Venta *</label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><Calendar size={14} /></span>
+                                <input
+                                    type="date"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500 transition-all"
+                                    value={form.date}
+                                    onChange={e => setForm({ ...form, date: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre Completo del Cliente *</label>
                             <div className="relative">
