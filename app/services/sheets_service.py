@@ -78,7 +78,7 @@ class SheetsService:
                     instagram=SheetsService._to_str(payload.get('instagram')),
                     setter=SheetsService._to_str(payload.get('setter')),
                     marca_temporal=SheetsService._to_str(marca_temp),
-                    estado=SheetsService._to_str(payload.get('estado')) or "Completada",
+                    estado="Completada" if (payload.get('estado') or 'Completada').strip().lower() in ('completada', 'confirmada') else (payload.get('estado') or 'Completada'),
                     date=sale_date
                 )
                 db.session.add(sale)
@@ -193,7 +193,7 @@ class SheetsService:
                         instagram=SheetsService._to_str(item.get('instagram')),
                         setter=SheetsService._to_str(item.get('setter')), # Columna M en Sheets (Setter)
                         marca_temporal=marca_temp,
-                        estado=SheetsService._to_str(item.get('estado') or item.get('status')) or "Completada", # Columna L en Sheets (Estado)
+                        estado="Completada" if (item.get('estado') or item.get('status') or 'Completada').strip().lower() in ('completada', 'confirmada') else (item.get('estado') or item.get('status') or 'Completada'), # Columna L en Sheets (Estado)
                         date=SheetsService._parse_date(item.get('marca_temporal')),
                         raw_data=item
                     )

@@ -141,7 +141,7 @@ def get_commissions_calculated(month_str):
     marlon_recaudado = 0.0
     
     for s in sales:
-        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() == "completada"
+        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
         if not sale_is_completed:
             continue
             
@@ -453,7 +453,7 @@ def get_finance_summary():
     income_by_method = {}
     
     for s in sales:
-        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() == "completada"
+        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
         if not sale_is_completed:
             continue
             

@@ -160,7 +160,7 @@ def receive_financial_sales():
                 nombre_cliente=item.get('nombre_cliente') or item.get('cliente') or 'Desconocido',
                 email_vendedor=item.get('email_vendedor') or item.get('vendedor_mail'),
                 instagram=item.get('instagram') or item.get('ig') or 'N/A',
-                estado=item.get('estado') or item.get('status') or 'Completada',
+                estado="Completada" if (item.get('estado') or item.get('status') or 'Completada').strip().lower() in ('completada', 'confirmada') else (item.get('estado') or item.get('status') or 'Completada'),
                 raw_data=item
             )
             db.session.add(sale)
@@ -205,7 +205,7 @@ def create_new_financial_sale():
             "examen": data.get('examen') or '',
             "instagram": data.get('instagram') or 'N/A',
             "setter": data.get('setter') or '',
-            "estado": data.get('estado') or 'Confirmada',
+            "estado": "Completada" if (data.get('estado') or 'Completada').strip().lower() in ('completada', 'confirmada') else (data.get('estado') or 'Completada'),
             "marca_temporal": data.get('marca_temporal') or datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S'),
             "enviar_webhook": data.get('enviar_webhook', True)
         }
@@ -263,7 +263,8 @@ def update_financial_sale(sale_id):
         if 'email_vendedor' in data:
             sale.email_vendedor = data['email_vendedor']
         if 'estado' in data:
-            sale.estado = data['estado']
+            raw_est = data['estado']
+            sale.estado = "Completada" if not raw_est or str(raw_est).strip().lower() in ('completada', 'confirmada') else str(raw_est)
         if 'date' in data and data['date']:
             try:
                 from dateutil import parser
@@ -467,8 +468,8 @@ def get_financial_sales():
                 if final_setter.lower() != source_filter.lower():
                     continue
                     
-        # Una venta está completada si no tiene estado o su estado es "Completada"
-        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() == "completada"
+        # Una venta está completada si no tiene estado o su estado es "Completada" o "Confirmada"
+        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
 
         # Aplicar el descuento de comisión si el método de pago es Stripe (4.5%) o Hotmart (8.9%)
         monto_original = float(s.monto or 0.0)
@@ -672,7 +673,7 @@ def get_financial_sales_payroll():
     marlon_recaudado = 0.0
     
     for s in sales:
-        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() == "completada"
+        sale_is_completed = not s.estado or s.estado.strip() == "" or s.estado.lower() in ("completada", "confirmada")
         if not sale_is_completed:
             continue
             

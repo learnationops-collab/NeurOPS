@@ -361,3 +361,7 @@
       - **Tab Software**: Eliminada la opción "Equipos / Hardware" del select de categoría. El tab fue renombrado de "Software / Equipos" a "Software". El filtro de fetch solo incluye categoría `software`.
       - **Modal de Equipo**: El `select` de medio de pago en el formulario de nuevo/editar integrante ahora solo muestra Stripe y AirTM.
 
+- **10 de Junio de 2026**:
+  - **Corrección y Estandarización de Estado de Ventas ("Confirmada" a "Completada")**:
+    - **API Backend (`financial_sales.py` y `finance.py`) [MODIFY]**: Se actualizó el filtro `sale_is_completed` para que considere como completadas las ventas con estado `"Confirmada"` además de `"Completada"`. Esto soluciona la omisión de las ventas "Confirmadas" en los totales de los dashboards y comisiones. Asimismo, se modificaron los endpoints de creación (`POST /public/financial-sales/new`) y actualización (`PUT /public/financial-sales/<id>`) para mapear automáticamente el valor `"Confirmada"` a `"Completada"`.
+    - **Servicio de Sincronización (`sheets_service.py`) [MODIFY]**: Se modificaron los métodos `post_to_sheets` y `_rebuild_sales` para normalizar en caliente el estado `"Confirmada"` a `"Completada"` al guardar localmente o reconstruir registros desde Google Sheets. Esto asegura que la base de datos almacene de manera consistente `"Completada"`.
