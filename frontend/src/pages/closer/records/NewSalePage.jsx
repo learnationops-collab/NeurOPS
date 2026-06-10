@@ -45,6 +45,7 @@ const CloserNewSalePage = () => {
         estado: 'Completada',
         instagram: '',
         setter: '',
+        documento_identidad: '',
         enviar_webhook: true
     });
 
@@ -175,6 +176,7 @@ const CloserNewSalePage = () => {
             instagram: form.instagram ? form.instagram.replace(/@/g, '').trim() : '',
             estado: form.estado, // Columna L (Estado de la Venta)
             setter: form.setter || '', // Columna M (Setter que Prospectó)
+            documento_identidad: form.documento_identidad || '',
             marca_temporal: new Date().toLocaleString("es-ES"), // Fecha/hora del registro
             enviar_webhook: form.enviar_webhook
         };
@@ -424,6 +426,20 @@ const CloserNewSalePage = () => {
                                     placeholder="ej. +34 600 000 000"
                                     value={form.telefono}
                                     onChange={e => setForm({ ...form, telefono: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Documento de identidad</label>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><PenTool size={14} /></span>
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-sm font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                    placeholder="ej. DNI, NIE, Pasaporte"
+                                    value={form.documento_identidad}
+                                    onChange={e => setForm({ ...form, documento_identidad: e.target.value })}
                                 />
                             </div>
                         </div>
