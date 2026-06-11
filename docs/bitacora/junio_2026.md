@@ -1,5 +1,15 @@
 # Bitácora - Junio 2026
 
+- **11 de Junio de 2026**:
+  - **Pestaña de Leads Entrantes de Manychat en Sección de Setters y Admins**:
+    - **API (Backend) (`manychat.py`) [MODIFY]**: Se modificó el endpoint de edición `PUT /api/manychat-webhook/answer/<int:answer_id>` para admitir la actualización del campo `keyword` (palabra clave) de la interacción del lead. Al recibir la modificación, el backend busca de manera automática si existe un anuncio (`Ad`) asociado a esa nueva palabra clave y actualiza el campo `ad_id` de forma acorde, manteniendo una atribución automática óptima.
+    - **Interfaz (Frontend) (`IncomingLeadsTab.jsx` y `PublicSetterStatsPage.jsx`) [NEW / MODIFY]**:
+      - Se diseñó y creó el componente premium `<IncomingLeadsTab />` bajo una estética Dark Glassmorphic. Este componente incluye filtros de cualificación y búsqueda de leads en tiempo real.
+      - **Flujo de Progreso Webhook (FlowProgress)**: Se integró un indicador visual del embudo de Manychat en 4 pasos (*Inbox*, *Mensaje*, *Respuesta*, *Cualificación*) que refleja de forma instantánea el estado del lead a medida que el webhook se ejecuta a lo largo de la conversación.
+      - **Edición Inline**: Se implementó la edición inline con controles rápidos (`Check` / `X`) para modificar la palabra clave de un lead directamente sobre la tabla sin necesidad de abrir modales de edición.
+      - **Auto-Refresco en Tiempo Real**: Se incorporó un interruptor interactivo que activa un interval de polling cada 5 segundos para actualizar automáticamente la bandeja de leads entrantes sin intervención del usuario.
+      - Se importó y registró el nuevo componente como una pestaña oficial llamada **"Leads Entrantes"** en el Performance Center de Setters (`PublicSetterStatsPage.jsx`), haciéndola visible y operable tanto para Setters como para Administradores.
+
 - **1 de Junio de 2026**:
   - **Optimización y Refinamiento del Dashboard de Rendimiento por Anuncio**: Rediseño integral y reubicación de elementos para maximizar la usabilidad, consistencia y densidad de datos.
     - **Reposicionamiento del Título (Hub de Marketing)**: Reubicación del título principal *"NeurOPS High Performance - Gestor de Marketing"* al extremo derecho de la barra de pestañas superior del Hub de Ventas (`AdminMarketingHubPage.jsx`). Esto eliminó la cabecera independiente en `AdManagementPage.jsx`, liberando un valioso espacio de pantalla vertical.

@@ -17,6 +17,7 @@ import EvolutionChart from '../../components/charts/EvolutionChart';
 import SetterReportsTable from './SetterReportsTable';
 import SetterComparisonView from './SetterComparisonView';
 import ConversationalStatsTab from './ConversationalStatsTab';
+import IncomingLeadsTab from './IncomingLeadsTab';
 import LeadUnifiedKPI from '../../components/shared/LeadUnifiedKPI';
 import ConfigurableStatCard from '../../components/shared/ConfigurableStatCard';
 
@@ -379,6 +380,7 @@ const PublicSetterStatsPage = () => {
                     )}
                     <TabButton id="reports" label="Registros" icon={Table} />
                     <TabButton id="conv_stats" label="Rend. Conversacional" icon={MessageSquare} />
+                    <TabButton id="incoming_leads" label="Leads Entrantes" icon={Users} />
                 </div>
 
                 {/* FILTERS BAR (Only for General) */}
@@ -754,6 +756,13 @@ const PublicSetterStatsPage = () => {
                 {activeTab === 'conv_stats' && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                         <ConversationalStatsTab />
+                    </div>
+                )}
+
+                {/* --- TAB: LEADS ENTRANTES --- */}
+                {activeTab === 'incoming_leads' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <IncomingLeadsTab />
                     </div>
                 )}
             </div>

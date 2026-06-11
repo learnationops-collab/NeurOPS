@@ -315,6 +315,20 @@ def update_ad_lead(answer_id):
 
     # Editar datos de la interacción
     if 'qualification' in data: answer.qualification = data.get('qualification')
+    if 'keyword' in data:
+        keyword_val = data.get('keyword')
+        answer.keyword = keyword_val
+        # Si se edita la palabra clave, intentar resolver el ad_id correspondiente
+        if keyword_val:
+            from app.models import Ad
+            ad = Ad.query.filter_by(keyword=keyword_val).first()
+            if ad:
+                answer.ad_id = ad.id
+            else:
+                answer.ad_id = None
+        else:
+            answer.ad_id = None
+
     if 'ad_id' in data:
         ad_id_raw = data.get('ad_id')
         try:
