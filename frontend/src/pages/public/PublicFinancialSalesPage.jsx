@@ -6,6 +6,7 @@ import Card from '../../components/ui/Card';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import AttributionModal from '../../components/modals/AttributionModal';
 import LeadRoadmapModal from '../../components/modals/LeadRoadmapModal';
+import { useNavigate } from 'react-router-dom';
 
 
 const getFirstDayOfCurrentMonth = () => {
@@ -56,6 +57,7 @@ const getCloserColors = (name) => {
 };
 
 const PublicFinancialSalesPage = () => {
+    const navigate = useNavigate();
     const [sales, setSales] = useState([]);
     const [selectedRoadmapLead, setSelectedRoadmapLead] = useState(null);
 
@@ -534,7 +536,7 @@ const PublicFinancialSalesPage = () => {
                     </button>
 
                     <button
-                        onClick={() => setShowCreateModal(true)}
+                        onClick={() => navigate('/closer/sales/new')}
                         className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20"
                     >
                         <Plus className="w-4 h-4" />

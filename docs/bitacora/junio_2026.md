@@ -377,6 +377,9 @@
   - **Reversión de Parseo de Fechas (Revert de `dayfirst=True`) y Restauración**:
     - **Backend (`sheets_service.py`, `financial_sales.py`, `financial_agendas.py`) [REVERT]**: Se revirtió el uso de `dayfirst=True` en `parser.parse` debido a efectos colaterales no deseados al editar manualmente fechas ISO (como `2026-05-01` que se interpretaba como el 5 de enero).
     - **Bases de Datos (SQLite y PostgreSQL Prod) [RESTORE]**: Se ejecutó el script `restore_sales_dates.py` para re-parsear las fechas de las ventas y agendas según el comportamiento original por defecto (sin `dayfirst`), restaurando la consistencia y permitiendo al usuario corregir las fechas problemáticas de forma manual.
+  - **Redirección del Botón Registrar Venta**:
+    - **Frontend (`PublicFinancialSalesPage.jsx`) [MODIFY]**: Se modificó la acción del botón "Registrar Venta" en el panel de administración para que redirija mediante `useNavigate` a la ruta `/closer/sales/new` en lugar de abrir el modal interno de creación de ventas, unificando la experiencia de declaración de ventas en una sola vista.
+
 
 
 
