@@ -139,18 +139,6 @@ def get_financial_agendas():
     closer = request.args.get('closer', default='', type=str).strip()
     fuente = request.args.get('fuente', default='', type=str).strip()
     
-    query = FinancialAgenda.query
-    
-    if search:
-        search_pattern = f"%{search}%"
-        query = query.filter(or_(
-            FinancialAgenda.lead.ilike(search_pattern),
-            FinancialAgenda.nombre.ilike(search_pattern),
-            FinancialAgenda.closer.ilike(search_pattern),
-            FinancialAgenda.mail.ilike(search_pattern),
-            FinancialAgenda.whatsapp.ilike(search_pattern)
-        ))
-        
     # Consulta base filtrada únicamente por fechas
     date_query = FinancialAgenda.query
     
@@ -175,8 +163,18 @@ def get_financial_agendas():
             except ValueError:
                 pass
 
-    # La consulta principal aplica además los filtros específicos de estado, closer y fuente
+    # La consulta principal aplica además los filtros específicos de estado, closer, fuente y búsqueda
     query = date_query
+    
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(or_(
+            FinancialAgenda.lead.ilike(search_pattern),
+            FinancialAgenda.nombre.ilike(search_pattern),
+            FinancialAgenda.closer.ilike(search_pattern),
+            FinancialAgenda.mail.ilike(search_pattern),
+            FinancialAgenda.whatsapp.ilike(search_pattern)
+        ))
     
     if estado:
         query = query.filter(FinancialAgenda.estado == estado)
