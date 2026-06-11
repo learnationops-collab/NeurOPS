@@ -374,5 +374,9 @@
     - **Frontend (`NewSalePage.jsx` y `PublicFinancialSalesPage.jsx`) [MODIFY]**: Se renombró el switch de automatización en los formularios de ventas manuales a "Enviar mensaje de WhatsApp" con una descripción adaptada. Se modificó el estado local para utilizar `enviar_mensaje` (por defecto `true`). Al enviar la venta, se transmite el valor de `enviar_mensaje` y se fuerza `enviar_webhook: true` para garantizar que la automatización de n8n siempre reciba la venta y filtre mediante el booleano en una rama del flujo.
   - **Fecha de la Venta Obligatoria al Inicio de los Formularios**:
     - **Frontend (`NewSalePage.jsx` y `PublicFinancialSalesPage.jsx`) [MODIFY]**: Se agregó/movió el campo "Fecha de la Venta *" al inicio de los formularios de venta (en la sección de datos y en el modal de creación) estableciendo validación de obligatoriedad en el envío. Se genera la `marca_temporal` usando la fecha seleccionada y la hora local actual.
+  - **Reversión de Parseo de Fechas (Revert de `dayfirst=True`) y Restauración**:
+    - **Backend (`sheets_service.py`, `financial_sales.py`, `financial_agendas.py`) [REVERT]**: Se revirtió el uso de `dayfirst=True` en `parser.parse` debido a efectos colaterales no deseados al editar manualmente fechas ISO (como `2026-05-01` que se interpretaba como el 5 de enero).
+    - **Bases de Datos (SQLite y PostgreSQL Prod) [RESTORE]**: Se ejecutó el script `restore_sales_dates.py` para re-parsear las fechas de las ventas y agendas según el comportamiento original por defecto (sin `dayfirst`), restaurando la consistencia y permitiendo al usuario corregir las fechas problemáticas de forma manual.
+
 
 
