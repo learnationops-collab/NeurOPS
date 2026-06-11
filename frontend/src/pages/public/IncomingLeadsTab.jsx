@@ -23,6 +23,29 @@ const QualificationBadge = ({ value }) => {
     );
 };
 
+const formatTimeRelative = (isoStr) => {
+    if (!isoStr) return '—';
+    try {
+        const d = new Date(isoStr);
+        const now = new Date();
+        const diffMs = now - d;
+        const diffMin = Math.floor(diffMs / 60000);
+        
+        if (diffMin < 1) return 'Hace un momento';
+        if (diffMin < 60) return `Hace ${diffMin} min`;
+        
+        const diffHr = Math.floor(diffMin / 60);
+        if (diffHr < 24) return `Hace ${diffHr} ${diffHr === 1 ? 'hora' : 'horas'}`;
+        
+        const diffDays = Math.floor(diffHr / 24);
+        if (diffDays < 7) return `Hace ${diffDays} ${diffDays === 1 ? 'día' : 'días'}`;
+        
+        return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) {
+        return '—';
+    }
+};
+
 const FlowProgress = ({ log }) => {
     // 1. Llegada (Inbox) -> Siempre activo
     const step1 = true;
@@ -366,13 +389,15 @@ const IncomingLeadsTab = () => {
                                         <td className="p-5">
                                             <FlowProgress log={log} />
                                         </td>
-                                        <td className="p-5 text-right font-mono">
-                                            <p className="text-[10px] font-black text-slate-300">
-                                                {log.created_at ? new Date(log.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                        <td className="p-5 text-right">
+                                            <p className="text-xs font-black text-white whitespace-nowrap">
+                                                {formatTimeRelative(log.created_at)}
                                             </p>
-                                            <p className="text-[9px] text-slate-500 mt-0.5">
-                                                {log.created_at ? new Date(log.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : ''}
-                                            </p>
+                                            {log.created_at && (
+                                                <p className="text-[9px] text-slate-500 mt-1 font-mono">
+                                                    {new Date(log.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} {new Date(log.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

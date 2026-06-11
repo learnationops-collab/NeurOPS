@@ -8,6 +8,7 @@
       - **Flujo de Progreso Webhook (FlowProgress)**: Se integró un indicador visual del embudo de Manychat en 4 pasos (*Inbox*, *Mensaje*, *Respuesta*, *Cualificación*) que refleja de forma instantánea el estado del lead a medida que el webhook se ejecuta a lo largo de la conversación.
       - **Edición Inline**: Se implementó la edición inline con controles rápidos (`Check` / `X`) para modificar la palabra clave de un lead directamente sobre la tabla sin necesidad de abrir modales de edición.
       - **Auto-Refresco en Tiempo Real**: Se incorporó un interruptor interactivo que activa un interval de polling cada 5 segundos para actualizar automáticamente la bandeja de leads entrantes sin intervención del usuario.
+      - **Tiempo Transcurrido (Tiempo Relativo)**: Se reemplazó la hora absoluta de llegada en la tabla por la visualización del tiempo transcurrido (ej: "Hace 5 min", "Hace 2 horas") mediante un helper formatTimeRelative en IncomingLeadsTab.jsx, dejando la fecha y hora absoluta en un formato secundario y más pequeño abajo para mayor claridad y precisión.
       - Se importó y registró el nuevo componente como una pestaña oficial llamada **"Leads Entrantes"** en el Performance Center de Setters (`PublicSetterStatsPage.jsx`), haciéndola visible y operable tanto para Setters como para Administradores.
 
 - **1 de Junio de 2026**:
