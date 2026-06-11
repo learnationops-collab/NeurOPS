@@ -36,7 +36,7 @@ def receive_financial_agendas():
         if dt_str:
             try:
                 from dateutil import parser
-                agenda_date = parser.parse(str(dt_str), dayfirst=True)
+                agenda_date = parser.parse(str(dt_str))
             except: pass
 
         # Buscar duplicados en el mismo dia para el mismo lead
@@ -335,7 +335,7 @@ def update_financial_agenda(agenda_id):
         if 'date' in data:
             try:
                 from dateutil import parser
-                agenda.date = parser.parse(str(data['date']), dayfirst=True)
+                agenda.date = parser.parse(str(data['date']))
             except: pass
             
         db.session.commit()

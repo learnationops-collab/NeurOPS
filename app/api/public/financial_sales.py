@@ -150,7 +150,7 @@ def receive_financial_sales():
         if fecha_str:
             try:
                 from dateutil import parser
-                sale_date = parser.parse(str(fecha_str), dayfirst=True)
+                sale_date = parser.parse(str(fecha_str))
             except Exception as e:
                 current_app.logger.error(f"[FINANCIAL] Date parsing error for '{fecha_str}': {e}")
 
@@ -273,7 +273,7 @@ def update_financial_sale(sale_id):
             try:
                 from dateutil import parser
                 # Parsear la fecha enviada desde el frontend
-                sale.date = parser.parse(str(data['date']), dayfirst=True)
+                sale.date = parser.parse(str(data['date']))
             except Exception as e:
                 pass
         db.session.commit()
