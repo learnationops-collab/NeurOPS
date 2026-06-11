@@ -62,7 +62,7 @@ class SheetsService:
                 if marca_temp:
                     try:
                         from dateutil import parser
-                        sale_date = parser.parse(str(marca_temp))
+                        sale_date = parser.parse(str(marca_temp), dayfirst=True)
                     except: pass
                     
                 sale = FinancialSale(
@@ -265,7 +265,7 @@ class SheetsService:
     def _parse_date(val):
         if not val: return datetime.utcnow()
         try:
-            return parser.parse(str(val))
+            return parser.parse(str(val), dayfirst=True)
         except:
             return datetime.utcnow()
 
