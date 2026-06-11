@@ -304,7 +304,48 @@ def update_financial_sale(sale_id):
             }
             SheetsService.update_in_sheets("Ventas_DB", sale.marca_temporal, update_payload)
 
-        return jsonify({"message": "Venta actualizada correctamente", "sale": sale.to_dict()}), 200
+        # Enriquecer el dict retornado con los campos calculados dinámicamente
+        s_dict = sale.to_dict()
+        prog, simple_tp = split_tipo_pago(sale.tipo_pago)
+        s_dict["programa"] = prog
+        s_dict["tipo_pago_simple"] = simple_tp
+        
+        monto_original = float(sale.monto or 0.0)
+        s_dict["monto_bruto"] = round(monto_original, 2)
+        if sale.metodo_pago and sale.metodo_pago.strip().lower() == 'stripe':
+            s_dict["monto"] = round(monto_original * 0.955, 2)
+        elif sale.metodo_pago and sale.metodo_pago.strip().lower() == 'hotmart':
+            s_dict["monto"] = round(monto_original * 0.911, 2)
+        else:
+            s_dict["monto"] = round(monto_original, 2)
+            
+        s_dict["closer_name"] = resolve_closer_name(sale.email_vendedor)
+        
+        # Cruzar con agenda por Instagram
+        ig_norm = normalize_ig(sale.instagram)
+        resolved_setter = None
+        has_agenda_match = False
+        if ig_norm:
+            agenda = FinancialAgenda.query.filter(
+                func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm
+            ).order_by(FinancialAgenda.date.desc()).first()
+            if agenda:
+                has_agenda_match = True
+                is_valid_lead_source = (
+                    agenda.nombre and 
+                    agenda.nombre.strip() and 
+                    agenda.nombre.lower() not in ('s/f', 'n/a', '') and 
+                    'entrevista' not in agenda.nombre.lower() and 
+                    'diagnostica' not in agenda.nombre.lower() and
+                    'diagnóstica' not in agenda.nombre.lower()
+                )
+                if is_valid_lead_source:
+                    resolved_setter = agenda.nombre
+                    
+        s_dict["has_agenda"] = has_agenda_match
+        s_dict["setter"] = resolved_setter or sale.setter or "Sin Setter"
+
+        return jsonify({"message": "Venta actualizada correctamente", "sale": s_dict}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
