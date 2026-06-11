@@ -381,8 +381,5 @@
     - **Frontend (`PublicFinancialSalesPage.jsx`) [MODIFY]**: Se modificó la acción del botón "Registrar Venta" en el panel de administración para que redirija mediante `useNavigate` a la ruta `/closer/sales/new` en lugar de abrir el modal interno de creación de ventas, unificando la experiencia de declaración de ventas en una sola vista.
   - **Implementación de Parseador de Fechas Dinámico y Robusto**:
     - **Backend (`sheets_service.py`, `financial_sales.py`, `financial_agendas.py`) [MODIFY]**: Se implementó una función `parse_date_robustly` que detecta dinámicamente el formato del string recibido. Si la cadena corresponde al formato de fecha del selector del navegador/ISO (`YYYY-MM-DD`), la procesa con `dayfirst=False`. Si corresponde al formato de marca temporal español con barras diagonales (`DD/MM/YYYY`), la procesa con `dayfirst=True`. Esto blinda el backend contra inconsistencias al guardar o editar manualmente registros.
-
-
-
-
-
+  - **Búsqueda e Integración de Leads desde Google Sheets (FinancialAgenda)**:
+    - **API Backend (`closer.py`) [MODIFY]**: Se optimizó el endpoint `GET /leads/search` para buscar prospectos concurrentemente en la tabla local de `Client` y en la tabla de agendas históricas de Google Sheets (`FinancialAgenda`). El endpoint consolida ambos resultados omitiendo duplicados mediante sets de emails e Instagrams normalizados. Los resultados de `FinancialAgenda` que no existen en el CRM local se envían al frontend con `id: null` y cargando los datos de la agenda (Setter, Instagram, Email, Teléfono, etc.) para que se autocomplete de inmediato el formulario. Esto permite registrar ventas a prospectos agendados en fechas pasadas (como el 24 de abril) cuyos datos no se habían plasmado aún en un registro de cliente local.

@@ -108,7 +108,15 @@ def search_closer_leads():
     )).limit(20).all()
     
     results = []
+    seen_emails = set()
+    seen_instagrams = set()
+    
     for l in leads:
+        if l.email:
+            seen_emails.add(l.email.strip().lower())
+        if l.instagram:
+            seen_instagrams.add(l.instagram.strip().replace('@', '').lower())
+            
         # Buscar cita más reciente en Appointment local
         appt = Appointment.query.filter_by(client_id=l.id).order_by(Appointment.start_time.desc()).first()
         appt_data = None
@@ -148,6 +156,41 @@ def search_closer_leads():
             "phone": l.phone,
             "instagram": l.instagram,
             "appointment": appt_data
+        })
+        
+    # Buscar en agendas de Google Sheets (FinancialAgenda) por coincidencia de nombre, email, instagram o teléfono
+    from app.models.financial import FinancialAgenda
+    fin_leads = FinancialAgenda.query.filter(or_(
+        FinancialAgenda.lead.ilike(term),
+        FinancialAgenda.mail.ilike(term),
+        FinancialAgenda.instagram.ilike(term),
+        FinancialAgenda.whatsapp.ilike(term)
+    )).order_by(FinancialAgenda.date.desc()).limit(20).all()
+    
+    for fa in fin_leads:
+        fa_email = fa.mail.strip().lower() if fa.mail else None
+        fa_ig = fa.instagram.strip().replace('@', '').lower() if fa.instagram else None
+        
+        # Omitir duplicados ya listados como Client
+        if (fa_email and fa_email in seen_emails) or (fa_ig and fa_ig in seen_instagrams):
+            continue
+            
+        if fa_email:
+            seen_emails.add(fa_email)
+        if fa_ig:
+            seen_instagrams.add(fa_ig)
+            
+        results.append({
+            "id": None,
+            "username": fa.lead,
+            "email": fa.mail,
+            "phone": fa.whatsapp,
+            "instagram": fa.instagram,
+            "appointment": {
+                "start_time": fa.date.isoformat() if fa.date else None,
+                "setter_name": fa.nombre or "",
+                "examen": ""
+            }
         })
         
     return jsonify(results), 200
