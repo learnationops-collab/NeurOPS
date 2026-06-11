@@ -4,6 +4,22 @@ from datetime import datetime
 from . import bp
 from sqlalchemy import or_, func
 
+def parse_date_robustly(val):
+    if not val:
+        return datetime.utcnow()
+    val_str = str(val).strip()
+    try:
+        from dateutil import parser
+        if '-' in val_str and val_str.find('-') == 4:
+            return parser.parse(val_str, dayfirst=False)
+        if '/' in val_str:
+            parts = val_str.split('/')
+            if len(parts) > 0 and len(parts[0]) <= 2:
+                return parser.parse(val_str, dayfirst=True)
+        return parser.parse(val_str)
+    except:
+        return datetime.utcnow()
+
 @bp.route('/public/financial-agendas', methods=['POST'])
 def receive_financial_agendas():
     # Recibe datos de agendas desde Excel/Apps Script/n8n
@@ -34,10 +50,7 @@ def receive_financial_agendas():
         dt_str = item.get('fecha') or item.get('date') or item.get('registro')
         agenda_date = datetime.utcnow()
         if dt_str:
-            try:
-                from dateutil import parser
-                agenda_date = parser.parse(str(dt_str))
-            except: pass
+            agenda_date = parse_date_robustly(dt_str)
 
         # Buscar duplicados en el mismo dia para el mismo lead
         existing = None
@@ -333,10 +346,7 @@ def update_financial_agenda(agenda_id):
         if 'estado' in data:
             agenda.estado = data['estado']
         if 'date' in data:
-            try:
-                from dateutil import parser
-                agenda.date = parser.parse(str(data['date']))
-            except: pass
+            agenda.date = parse_date_robustly(data['date'])
             
         db.session.commit()
 

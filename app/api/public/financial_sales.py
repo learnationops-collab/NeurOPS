@@ -49,6 +49,22 @@ def normalize_ig(ig_str):
         return None
     return ig_str.strip().lstrip('@').lower()
 
+def parse_date_robustly(val):
+    if not val:
+        return datetime.utcnow()
+    val_str = str(val).strip()
+    try:
+        from dateutil import parser
+        if '-' in val_str and val_str.find('-') == 4:
+            return parser.parse(val_str, dayfirst=False)
+        if '/' in val_str:
+            parts = val_str.split('/')
+            if len(parts) > 0 and len(parts[0]) <= 2:
+                return parser.parse(val_str, dayfirst=True)
+        return parser.parse(val_str)
+    except:
+        return datetime.utcnow()
+
 def parse_financial_data(item):
     errors = []
     
@@ -148,11 +164,7 @@ def receive_financial_sales():
         sale_date = datetime.utcnow()
         fecha_str = item.get('fecha') or item.get('date')
         if fecha_str:
-            try:
-                from dateutil import parser
-                sale_date = parser.parse(str(fecha_str))
-            except Exception as e:
-                current_app.logger.error(f"[FINANCIAL] Date parsing error for '{fecha_str}': {e}")
+            sale_date = parse_date_robustly(fecha_str)
 
         try:
             sale = FinancialSale(
@@ -270,12 +282,7 @@ def update_financial_sale(sale_id):
             raw_est = data['estado']
             sale.estado = "Completada" if not raw_est or str(raw_est).strip().lower() in ('completada', 'confirmada') else str(raw_est)
         if 'date' in data and data['date']:
-            try:
-                from dateutil import parser
-                # Parsear la fecha enviada desde el frontend
-                sale.date = parser.parse(str(data['date']))
-            except Exception as e:
-                pass
+            sale.date = parse_date_robustly(data['date'])
         db.session.commit()
 
         # Propagar actualización en caliente a Google Sheets

@@ -60,10 +60,7 @@ class SheetsService:
                 sale_date = datetime.utcnow()
                 marca_temp = payload.get('marca_temporal')
                 if marca_temp:
-                    try:
-                        from dateutil import parser
-                        sale_date = parser.parse(str(marca_temp))
-                    except: pass
+                    sale_date = SheetsService._parse_date(marca_temp)
                     
                 sale = FinancialSale(
                     email_vendedor=SheetsService._to_str(payload.get('email_vendedor')),
@@ -265,7 +262,14 @@ class SheetsService:
     def _parse_date(val):
         if not val: return datetime.utcnow()
         try:
-            return parser.parse(str(val))
+            val_str = str(val).strip()
+            if '-' in val_str and val_str.find('-') == 4:
+                return parser.parse(val_str, dayfirst=False)
+            if '/' in val_str:
+                parts = val_str.split('/')
+                if len(parts) > 0 and len(parts[0]) <= 2:
+                    return parser.parse(val_str, dayfirst=True)
+            return parser.parse(val_str)
         except:
             return datetime.utcnow()
 

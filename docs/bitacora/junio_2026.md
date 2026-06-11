@@ -379,6 +379,9 @@
     - **Bases de Datos (SQLite y PostgreSQL Prod) [RESTORE]**: Se ejecutó el script `restore_sales_dates.py` para re-parsear las fechas de las ventas y agendas según el comportamiento original por defecto (sin `dayfirst`), restaurando la consistencia y permitiendo al usuario corregir las fechas problemáticas de forma manual.
   - **Redirección del Botón Registrar Venta**:
     - **Frontend (`PublicFinancialSalesPage.jsx`) [MODIFY]**: Se modificó la acción del botón "Registrar Venta" en el panel de administración para que redirija mediante `useNavigate` a la ruta `/closer/sales/new` en lugar de abrir el modal interno de creación de ventas, unificando la experiencia de declaración de ventas en una sola vista.
+  - **Implementación de Parseador de Fechas Dinámico y Robusto**:
+    - **Backend (`sheets_service.py`, `financial_sales.py`, `financial_agendas.py`) [MODIFY]**: Se implementó una función `parse_date_robustly` que detecta dinámicamente el formato del string recibido. Si la cadena corresponde al formato de fecha del selector del navegador/ISO (`YYYY-MM-DD`), la procesa con `dayfirst=False`. Si corresponde al formato de marca temporal español con barras diagonales (`DD/MM/YYYY`), la procesa con `dayfirst=True`. Esto blinda el backend contra inconsistencias al guardar o editar manualmente registros.
+
 
 
 
