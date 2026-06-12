@@ -1,5 +1,16 @@
 # Bitácora - Junio 2026
 
+- **12 de Junio de 2026**:
+  - **Estructura Jerárquica y Filtros estilo Meta Ads en Rendimiento por Anuncio (`AdDashboardTab.jsx`) [MODIFY]**:
+    - **Navegación por Sub-pestañas**: Se diseñó e implementó un sistema de navegación mediante sub-pestañas integrando los niveles **Campañas**, **Conjuntos de Anuncios** y **Anuncios** (las cuales emulan la experiencia y flujo de Meta Ads Manager).
+    - **Agregación de Datos en Memoria**: Cómputo asíncrono y reactivo de las métricas financieras (Inversión, Leads, CPL, % Cualificado, CPQL, Agendas, CPA, Ventas, CPV, Cash Collect y ROAS) agrupadas a nivel de Campaña (`campaignsData`) y Conjunto de Anuncios (`adSetsData`) basándose en los datos generales devueltos por el backend, optimizando el rendimiento sin requerir peticiones de red adicionales.
+    - **Filtros Cruzados en Cascada**: Selección interactiva mediante checkboxes individuales y masivos para campañas y conjuntos de anuncios. Al seleccionar elementos superiores:
+      - Los acumulados generales del panel de KPIs superior se actualizan reactivamente.
+      - Las listas/tablas inferiores se filtran dinámicamente en cascada (mostrando únicamente adsets y ads vinculados a la selección).
+      - El gráfico de rendimiento por fuente/setter se recalcula en caliente mostrando agendas correspondientes a los anuncios filtrados.
+    - **Píldoras de Filtros Activos**: Integración de una barra con tags o píldoras interactivas de color esmeralda y azul que reflejan las selecciones activas y posibilitan limpiar filtros puntualmente o de forma masiva.
+    - **Tablas de Datos Premium**: Se mantuvieron los estándares de diseño Dark Glassmorphism, con compatibilidad de ordenamiento por columnas dinámico y códigos de color semafóricos (basados en HSL y thresholds configurados) para todas las nuevas tablas.
+
 - **11 de Junio de 2026**:
   - **Optimización Responsiva y Scroll en Modales de Agendas y Ventas**:
     - **Estructura Fija de 3 Capas con Viewports Dinámicos (`dvh`) (`FinancialAgendasPage.jsx`, `NewSaleModal.jsx`, `AddAgendaModal.jsx`, `QuickSaleModal.jsx`, `QuickAppointmentModal.jsx`) [MODIFY]**: Se implementó una estructura modular y responsiva separando la Cabecera Fija (Header), el Cuerpo con Scroll Interno (`flex-1 overflow-y-auto min-h-0`) y el Pie de Página Fijo (Footer) que contiene de forma permanente los botones de acción ("Guardar", "Confirmar", "Atrás", etc.) sin requerir scroll y previniendo que queden ocultos. Se limitó la altura máxima de todos los modales usando viewports dinámicos (`max-h-[80dvh]` o `max-h-[78dvh]`) para adaptarse automáticamente al colapsar/expandir el toolbar inferior del navegador en pantallas de móviles, tablets o bajo zoom.

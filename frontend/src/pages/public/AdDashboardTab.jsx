@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays, HelpCircle, LayoutGrid, List, Settings, ArrowUpDown, ChevronUp, ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Megaphone, RefreshCw, TrendingUp, Users, DollarSign, Activity, CalendarDays, HelpCircle, LayoutGrid, List, Settings, ArrowUpDown, ChevronUp, ChevronDown, Eye, EyeOff, Folder, Layers, X } from 'lucide-react';
 import { ResponsiveContainer, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ComposedChart } from 'recharts';
 import AdDetailModal from '../../components/modals/AdDetailModal';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
@@ -48,6 +48,11 @@ const AdDashboardTab = () => {
     const [showChart, setShowChart] = useState(true);
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
     
+    // Sub-pestañas y filtros estilo Meta Ads
+    const [activeSubTab, setActiveSubTab] = useState('campaigns'); // 'campaigns' | 'ad_sets' | 'ads'
+    const [selectedCampaigns, setSelectedCampaigns] = useState([]);
+    const [selectedAdSets, setSelectedAdSets] = useState([]);
+    
     const handleSort = (key) => {
         let direction = 'desc';
         if (sortConfig.key === key && sortConfig.direction === 'desc') {
@@ -77,9 +82,153 @@ const AdDashboardTab = () => {
         ? stats.ad_stats 
         : stats.ad_stats.filter(stat => !hiddenAds.includes(stat.ad_id));
 
-    // Calcular totales generales usando activeAdStats (después de su inicialización)
+    // Cómputo de Campañas (Agrupado de activeAdStats)
+    const campaignsData = React.useMemo(() => {
+        const groups = {};
+        activeAdStats.forEach(ad => {
+            const campName = ad.campaign_name || 'Desatribuido';
+            if (!groups[campName]) {
+                groups[campName] = {
+                    campaign_name: campName,
+                    spend: 0,
+                    total_leads: 0,
+                    qualified_leads: 0,
+                    agendas: 0,
+                    ventas: 0,
+                    cash_collect: 0,
+                    ads_count: 0
+                };
+            }
+            groups[campName].spend += (ad.spend || 0);
+            groups[campName].total_leads += (ad.total_leads || 0);
+            const qual = Math.round(((ad.qualified_percentage || 0) / 100) * (ad.total_leads || 0));
+            groups[campName].qualified_leads += qual;
+            groups[campName].agendas += (ad.agendas || 0);
+            groups[campName].ventas += (ad.ventas || 0);
+            groups[campName].cash_collect += (ad.cash_collect || 0);
+            groups[campName].ads_count += 1;
+        });
+
+        return Object.values(groups).map(camp => {
+            const total = camp.total_leads;
+            const qual = camp.qualified_leads;
+            const spend = camp.spend;
+            const agendas = camp.agendas;
+            const ventas = camp.ventas;
+
+            return {
+                ...camp,
+                qualified_percentage: total > 0 ? Math.round((qual / total) * 100) : 0,
+                cpl: total > 0 ? (spend / total).toFixed(2) : '0.00',
+                cpql: qual > 0 ? (spend / qual).toFixed(2) : '0.00',
+                cpa: agendas > 0 ? (spend / agendas).toFixed(2) : '0.00',
+                cpv: ventas > 0 ? (spend / ventas).toFixed(2) : '0.00',
+                roas: spend > 0 ? (camp.cash_collect / spend).toFixed(2) : '0.00'
+            };
+        });
+    }, [activeAdStats]);
+
+    // Cómputo de Conjuntos de Anuncios (Agrupado y filtrado por campañas seleccionadas)
+    const adSetsData = React.useMemo(() => {
+        const groups = {};
+        
+        // Filtrar anuncios por campaña seleccionada para el listado de conjuntos si hay selección
+        const adsForSets = selectedCampaigns.length > 0
+            ? activeAdStats.filter(ad => selectedCampaigns.includes(ad.campaign_name || 'Desatribuido'))
+            : activeAdStats;
+
+        adsForSets.forEach(ad => {
+            const setName = ad.ad_set_name || 'Desatribuido';
+            const campName = ad.campaign_name || 'Desatribuido';
+            const key = `${campName} | ${setName}`;
+            if (!groups[key]) {
+                groups[key] = {
+                    ad_set_name: setName,
+                    campaign_name: campName,
+                    spend: 0,
+                    total_leads: 0,
+                    qualified_leads: 0,
+                    agendas: 0,
+                    ventas: 0,
+                    cash_collect: 0,
+                    ads_count: 0
+                };
+            }
+            groups[key].spend += (ad.spend || 0);
+            groups[key].total_leads += (ad.total_leads || 0);
+            const qual = Math.round(((ad.qualified_percentage || 0) / 100) * (ad.total_leads || 0));
+            groups[key].qualified_leads += qual;
+            groups[key].agendas += (ad.agendas || 0);
+            groups[key].ventas += (ad.ventas || 0);
+            groups[key].cash_collect += (ad.cash_collect || 0);
+            groups[key].ads_count += 1;
+        });
+
+        return Object.values(groups).map(set => {
+            const total = set.total_leads;
+            const qual = set.qualified_leads;
+            const spend = set.spend;
+            const agendas = set.agendas;
+            const ventas = set.ventas;
+
+            return {
+                ...set,
+                qualified_percentage: total > 0 ? Math.round((qual / total) * 100) : 0,
+                cpl: total > 0 ? (spend / total).toFixed(2) : '0.00',
+                cpql: qual > 0 ? (spend / qual).toFixed(2) : '0.00',
+                cpa: agendas > 0 ? (spend / agendas).toFixed(2) : '0.00',
+                cpv: ventas > 0 ? (spend / ventas).toFixed(2) : '0.00',
+                roas: spend > 0 ? (set.cash_collect / spend).toFixed(2) : '0.00'
+            };
+        });
+    }, [activeAdStats, selectedCampaigns]);
+
+    // Filtrar anuncios en cascada según selección de campañas y conjuntos
+    const filteredAdStats = React.useMemo(() => {
+        let filtered = [...activeAdStats];
+        
+        if (selectedCampaigns.length > 0) {
+            filtered = filtered.filter(ad => selectedCampaigns.includes(ad.campaign_name || 'Desatribuido'));
+        }
+        
+        if (selectedAdSets.length > 0) {
+            filtered = filtered.filter(ad => selectedAdSets.includes(ad.ad_set_name || 'Desatribuido'));
+        }
+        
+        return filtered;
+    }, [activeAdStats, selectedCampaigns, selectedAdSets]);
+
+    // Filtrar estadísticas de setter para el gráfico
+    const filteredSetterStats = React.useMemo(() => {
+        if (selectedCampaigns.length === 0 && selectedAdSets.length === 0) {
+            return stats.setter_stats || [];
+        }
+        
+        const setterAgendas = {};
+        filteredAdStats.forEach(ad => {
+            if (ad.setter_breakdown) {
+                Object.entries(ad.setter_breakdown).forEach(([name, count]) => {
+                    setterAgendas[name] = (setterAgendas[name] || 0) + count;
+                });
+            }
+        });
+
+        const builtStats = Object.entries(setterAgendas).map(([name, agendas]) => {
+            const globalSetter = (stats.setter_stats || []).find(s => s.name === name);
+            const ventas = globalSetter ? globalSetter.ventas : 0;
+            return {
+                name,
+                agendas,
+                ventas
+            };
+        });
+
+        return builtStats.sort((a, b) => (b.ventas || 0) - (a.ventas || 0) || b.agendas - a.agendas);
+    }, [filteredAdStats, stats.setter_stats, selectedCampaigns, selectedAdSets]);
+
+    // Calcular totales generales usando filteredAdStats (para que los KPIs reflejen el filtro)
     const totals = React.useMemo(() => {
-        return activeAdStats.reduce((acc, curr) => {
+        return filteredAdStats.reduce((acc, curr) => {
             acc.spend += (curr.spend || 0);
             acc.total_leads += (curr.total_leads || 0);
             acc.agendas += (curr.agendas || 0);
@@ -90,7 +239,7 @@ const AdDashboardTab = () => {
             acc.total_qualified += qual;
             return acc;
         }, { spend: 0, total_leads: 0, agendas: 0, ventas: 0, total_qualified: 0, cash_collect: 0 });
-    }, [activeAdStats]);
+    }, [filteredAdStats]);
 
     const totalCPL = React.useMemo(() => totals.total_leads > 0 ? (totals.spend / totals.total_leads).toFixed(2) : '0.00', [totals]);
     const totalCPQL = React.useMemo(() => totals.total_qualified > 0 ? (totals.spend / totals.total_qualified).toFixed(2) : '0.00', [totals]);
@@ -101,7 +250,16 @@ const AdDashboardTab = () => {
     const totalQualPercentage = React.useMemo(() => totals.total_leads > 0 ? Math.round((totals.total_qualified / totals.total_leads) * 100) : 0, [totals]);
 
     const getSortedAdStats = () => {
-        let sortableData = [...activeAdStats];
+        let baseData = [];
+        if (activeSubTab === 'campaigns') {
+            baseData = campaignsData;
+        } else if (activeSubTab === 'ad_sets') {
+            baseData = adSetsData;
+        } else {
+            baseData = filteredAdStats;
+        }
+        
+        let sortableData = [...baseData];
         if (sortConfig.key) {
             sortableData.sort((a, b) => {
                 const aZero = isAllZero(a);
@@ -118,12 +276,13 @@ const AdDashboardTab = () => {
                 if (typeof aValue === 'string' && typeof bValue === 'string') {
                     aValue = aValue.toLowerCase();
                     bValue = bValue.toLowerCase();
-                } else if (typeof aValue === 'string') {
-                    const parsedA = parseFloat(aValue.replace(/[^0-9.-]+/g,""));
-                    if(!isNaN(parsedA)) aValue = parsedA;
-                } else if (typeof bValue === 'string') {
-                    const parsedB = parseFloat(bValue.replace(/[^0-9.-]+/g,""));
-                    if(!isNaN(parsedB)) bValue = parsedB;
+                } else {
+                    const cleanA = typeof aValue === 'string' ? parseFloat(aValue.replace(/[^0-9.-]+/g,"")) : parseFloat(aValue);
+                    const cleanB = typeof bValue === 'string' ? parseFloat(bValue.replace(/[^0-9.-]+/g,"")) : parseFloat(bValue);
+                    if (!isNaN(cleanA) && !isNaN(cleanB)) {
+                        aValue = cleanA;
+                        bValue = cleanB;
+                    }
                 }
 
                 if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -180,6 +339,330 @@ const AdDashboardTab = () => {
             setLoading(false);
             setRefreshing(false);
         }
+    };
+
+    const renderCampaignsTable = () => {
+        const sortedCamps = getSortedAdStats();
+        
+        return (
+            <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl overflow-x-auto shadow-xl">
+                <table className="w-full text-left border-collapse whitespace-nowrap">
+                    <thead>
+                        <tr className="border-b border-slate-800/80 bg-slate-950/50">
+                            <th className="py-4 px-5 text-[10px] font-black uppercase tracking-widest text-slate-500 text-center w-12">
+                                <input 
+                                    type="checkbox"
+                                    checked={sortedCamps.length > 0 && selectedCampaigns.length === sortedCamps.length}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedCampaigns(sortedCamps.map(c => c.campaign_name));
+                                        } else {
+                                            setSelectedCampaigns([]);
+                                        }
+                                    }}
+                                    className="rounded border-slate-800 bg-slate-950 text-blue-600 focus:ring-0 cursor-pointer w-4 h-4"
+                                />
+                            </th>
+                            {visibleColumns.map(col => (
+                                <th 
+                                    key={col.id}
+                                    onClick={() => handleSort(col.id === 'ad_name' ? 'campaign_name' : col.id)} 
+                                    className={`py-4 px-5 text-[10px] font-black uppercase tracking-widest cursor-pointer group/th hover:text-white transition-colors ${
+                                        col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
+                                    } ${col.color || 'text-slate-500'}`}
+                                >
+                                    <div className={`flex items-center gap-1.5 ${
+                                        col.align === 'center' ? 'justify-center' : col.align === 'right' ? 'justify-end' : 'justify-start'
+                                    }`}>
+                                        {col.id === 'ad_name' ? 'Campaña' : col.label}
+                                        {(sortConfig.key === col.id || (col.id === 'ad_name' && sortConfig.key === 'campaign_name')) ? (
+                                            sortConfig.direction === 'asc' ? <ChevronUp size={12} className="text-blue-400" /> : <ChevronDown size={12} className="text-blue-400" />
+                                        ) : (
+                                            <ArrowUpDown size={12} className="opacity-30 group-hover/th:opacity-100 transition-opacity" />
+                                        )}
+                                    </div>
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/50">
+                        {sortedCamps.map((camp, index, array) => {
+                            const isSelected = selectedCampaigns.includes(camp.campaign_name);
+                            
+                            let qualColorStat = "text-slate-400";
+                            if (camp.qualified_percentage >= 50) qualColorStat = "text-emerald-400";
+                            else if (camp.qualified_percentage >= 20) qualColorStat = "text-yellow-400";
+                            else if (camp.total_leads > 0 && camp.qualified_percentage < 20) qualColorStat = "text-red-400";
+
+                            const zeroRow = isAllZero(camp);
+                            
+                            const totalValid = array.filter(a => !isAllZero(a)).length;
+                            let rankColor = "hover:bg-slate-800/40";
+                            
+                            const colorEmerald = "bg-emerald-500/10 hover:bg-emerald-400/25";
+                            const colorAmber = "bg-amber-500/10 hover:bg-amber-400/25";
+                            const colorRed = "bg-red-500/10 hover:bg-red-400/25";
+
+                            if (zeroRow) {
+                                rankColor = "bg-red-950/30 hover:bg-red-900/40";
+                            } else if (sortConfig.key && colorThresholds[sortConfig.key]) {
+                                const conf = colorThresholds[sortConfig.key];
+                                const val = parseFloat(camp[sortConfig.key] || 0);
+                                
+                                if (conf.mode === 'higher') {
+                                    if (val >= conf.optimal) rankColor = colorEmerald;
+                                    else if (val >= conf.tolerable) rankColor = colorAmber;
+                                    else rankColor = colorRed;
+                                } else {
+                                    if (val <= conf.optimal) rankColor = colorEmerald;
+                                    else if (val <= conf.tolerable) rankColor = colorAmber;
+                                    else rankColor = colorRed;
+                                }
+                            } else if (totalValid > 0) {
+                                const rankRatio = index / totalValid;
+                                if (rankRatio <= 0.33) {
+                                    rankColor = colorEmerald;
+                                } else if (rankRatio <= 0.66) {
+                                    rankColor = colorAmber;
+                                } else {
+                                    rankColor = colorRed;
+                                }
+                            }
+
+                            return (
+                                <tr 
+                                    key={camp.campaign_name} 
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            setSelectedCampaigns(prev => prev.filter(c => c !== camp.campaign_name));
+                                        } else {
+                                            setSelectedCampaigns(prev => [...prev, camp.campaign_name]);
+                                        }
+                                    }}
+                                    className={`group transition-colors cursor-pointer ${rankColor} ${zeroRow ? 'opacity-80' : ''} ${isSelected ? 'bg-blue-600/10 hover:bg-blue-600/20' : ''}`}
+                                >
+                                    <td className="py-4 px-5 text-center w-12" onClick={(e) => e.stopPropagation()}>
+                                        <input 
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedCampaigns(prev => [...prev, camp.campaign_name]);
+                                                } else {
+                                                    setSelectedCampaigns(prev => prev.filter(c => c !== camp.campaign_name));
+                                                }
+                                            }}
+                                            className="rounded border-slate-800 bg-slate-950 text-blue-600 focus:ring-0 cursor-pointer w-4 h-4"
+                                        />
+                                    </td>
+                                    {visibleColumns.map(col => {
+                                        let content;
+                                        let color = "text-white";
+
+                                        if (col.id === 'ad_name') {
+                                            content = (
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-400">
+                                                        <Folder size={10} className="text-slate-400" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="text-sm font-black uppercase tracking-tight text-white">{camp.campaign_name}</h4>
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                                                            Anuncios: {camp.ads_count}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        else if (col.id === 'spend') content = `$${(camp.spend||0).toLocaleString()}`;
+                                        else if (col.id === 'total_leads') content = camp.total_leads;
+                                        else if (col.id === 'cpl') { content = `$${camp.cpl || '0.00'}`; color = "text-blue-400"; }
+                                        else if (col.id === 'qualified_percentage') { content = `${camp.qualified_percentage}%`; color = qualColorStat; }
+                                        else if (col.id === 'cpql') { content = `$${camp.cpql || '0.00'}`; color = "text-emerald-400"; }
+                                        else if (col.id === 'agendas') content = camp.agendas || 0;
+                                        else if (col.id === 'cpa') { content = `$${camp.cpa || '0.00'}`; color = "text-emerald-400"; }
+                                        else if (col.id === 'ventas') content = camp.ventas || 0;
+                                        else if (col.id === 'cpv') { content = `$${camp.cpv || '0.00'}`; color = "text-amber-400"; }
+                                        else if (col.id === 'cash_collect') { content = `$${camp.cash_collect || '0.00'}`; color = "text-emerald-400"; }
+                                        else if (col.id === 'roas') { content = `${camp.roas || '0.00'}x`; color = parseFloat(camp.roas || 0) >= 1 ? 'text-emerald-400' : 'text-red-400'; }
+
+                                        return (
+                                            <td key={col.id} className={`py-4 px-5 text-xs font-black ${zeroRow ? 'text-red-300 opacity-60' : color} ${
+                                                col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
+                                            }`}>
+                                                {content}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        );
+    };
+
+    const renderAdSetsTable = () => {
+        const sortedSets = getSortedAdStats();
+        
+        return (
+            <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl overflow-x-auto shadow-xl">
+                <table className="w-full text-left border-collapse whitespace-nowrap">
+                    <thead>
+                        <tr className="border-b border-slate-800/80 bg-slate-950/50">
+                            <th className="py-4 px-5 text-[10px] font-black uppercase tracking-widest text-slate-500 text-center w-12">
+                                <input 
+                                    type="checkbox"
+                                    checked={sortedSets.length > 0 && selectedAdSets.length === sortedSets.length}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedAdSets(sortedSets.map(s => s.ad_set_name));
+                                        } else {
+                                            setSelectedAdSets([]);
+                                        }
+                                    }}
+                                    className="rounded border-slate-800 bg-slate-950 text-blue-600 focus:ring-0 cursor-pointer w-4 h-4"
+                                />
+                            </th>
+                            {visibleColumns.map(col => (
+                                <th 
+                                    key={col.id}
+                                    onClick={() => handleSort(col.id === 'ad_name' ? 'ad_set_name' : col.id)} 
+                                    className={`py-4 px-5 text-[10px] font-black uppercase tracking-widest cursor-pointer group/th hover:text-white transition-colors ${
+                                        col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
+                                    } ${col.color || 'text-slate-500'}`}
+                                >
+                                    <div className={`flex items-center gap-1.5 ${
+                                        col.align === 'center' ? 'justify-center' : col.align === 'right' ? 'justify-end' : 'justify-start'
+                                    }`}>
+                                        {col.id === 'ad_name' ? 'Conjunto de Anuncios' : col.label}
+                                        {(sortConfig.key === col.id || (col.id === 'ad_name' && sortConfig.key === 'ad_set_name')) ? (
+                                            sortConfig.direction === 'asc' ? <ChevronUp size={12} className="text-blue-400" /> : <ChevronDown size={12} className="text-blue-400" />
+                                        ) : (
+                                            <ArrowUpDown size={12} className="opacity-30 group-hover/th:opacity-100 transition-opacity" />
+                                        )}
+                                    </div>
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/50">
+                        {sortedSets.map((set, index, array) => {
+                            const isSelected = selectedAdSets.includes(set.ad_set_name);
+                            
+                            let qualColorStat = "text-slate-400";
+                            if (set.qualified_percentage >= 50) qualColorStat = "text-emerald-400";
+                            else if (set.qualified_percentage >= 20) qualColorStat = "text-yellow-400";
+                            else if (set.total_leads > 0 && set.qualified_percentage < 20) qualColorStat = "text-red-400";
+
+                            const zeroRow = isAllZero(set);
+                            
+                            const totalValid = array.filter(a => !isAllZero(a)).length;
+                            let rankColor = "hover:bg-slate-800/40";
+                            
+                            const colorEmerald = "bg-emerald-500/10 hover:bg-emerald-400/25";
+                            const colorAmber = "bg-amber-500/10 hover:bg-amber-400/25";
+                            const colorRed = "bg-red-500/10 hover:bg-red-400/25";
+
+                            if (zeroRow) {
+                                rankColor = "bg-red-950/30 hover:bg-red-900/40";
+                            } else if (sortConfig.key && colorThresholds[sortConfig.key]) {
+                                const conf = colorThresholds[sortConfig.key];
+                                const val = parseFloat(set[sortConfig.key] || 0);
+                                
+                                if (conf.mode === 'higher') {
+                                    if (val >= conf.optimal) rankColor = colorEmerald;
+                                    else if (val >= conf.tolerable) rankColor = colorAmber;
+                                    else rankColor = colorRed;
+                                } else {
+                                    if (val <= conf.optimal) rankColor = colorEmerald;
+                                    else if (val <= conf.tolerable) rankColor = colorAmber;
+                                    else rankColor = colorRed;
+                                }
+                            } else if (totalValid > 0) {
+                                const rankRatio = index / totalValid;
+                                if (rankRatio <= 0.33) {
+                                    rankColor = colorEmerald;
+                                } else if (rankRatio <= 0.66) {
+                                    rankColor = colorAmber;
+                                } else {
+                                    rankColor = colorRed;
+                                }
+                            }
+
+                            return (
+                                <tr 
+                                    key={set.ad_set_name} 
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            setSelectedAdSets(prev => prev.filter(s => s !== set.ad_set_name));
+                                        } else {
+                                            setSelectedAdSets(prev => [...prev, set.ad_set_name]);
+                                        }
+                                    }}
+                                    className={`group transition-colors cursor-pointer ${rankColor} ${zeroRow ? 'opacity-80' : ''} ${isSelected ? 'bg-blue-600/10 hover:bg-blue-600/20' : ''}`}
+                                >
+                                    <td className="py-4 px-5 text-center w-12" onClick={(e) => e.stopPropagation()}>
+                                        <input 
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedAdSets(prev => [...prev, set.ad_set_name]);
+                                                } else {
+                                                    setSelectedAdSets(prev => prev.filter(s => s !== set.ad_set_name));
+                                                }
+                                            }}
+                                            className="rounded border-slate-800 bg-slate-950 text-blue-600 focus:ring-0 cursor-pointer w-4 h-4"
+                                        />
+                                    </td>
+                                    {visibleColumns.map(col => {
+                                        let content;
+                                        let color = "text-white";
+
+                                        if (col.id === 'ad_name') {
+                                            content = (
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-black text-slate-400">
+                                                        <Layers size={10} className="text-slate-400" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="text-sm font-black uppercase tracking-tight text-white">{set.ad_set_name}</h4>
+                                                        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                                                            Campaña: {set.campaign_name} | Anuncios: {set.ads_count}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        else if (col.id === 'spend') content = `$${(set.spend||0).toLocaleString()}`;
+                                        else if (col.id === 'total_leads') content = set.total_leads;
+                                        else if (col.id === 'cpl') { content = `$${set.cpl || '0.00'}`; color = "text-blue-400"; }
+                                        else if (col.id === 'qualified_percentage') { content = `${set.qualified_percentage}%`; color = qualColorStat; }
+                                        else if (col.id === 'cpql') { content = `$${set.cpql || '0.00'}`; color = "text-emerald-400"; }
+                                        else if (col.id === 'agendas') content = set.agendas || 0;
+                                        else if (col.id === 'cpa') { content = `$${set.cpa || '0.00'}`; color = "text-emerald-400"; }
+                                        else if (col.id === 'ventas') content = set.ventas || 0;
+                                        else if (col.id === 'cpv') { content = `$${set.cpv || '0.00'}`; color = "text-amber-400"; }
+                                        else if (col.id === 'cash_collect') { content = `$${set.cash_collect || '0.00'}`; color = "text-emerald-400"; }
+                                        else if (col.id === 'roas') { content = `${set.roas || '0.00'}x`; color = parseFloat(set.roas || 0) >= 1 ? 'text-emerald-400' : 'text-red-400'; }
+
+                                        return (
+                                            <td key={col.id} className={`py-4 px-5 text-xs font-black ${zeroRow ? 'text-red-300 opacity-60' : color} ${
+                                                col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
+                                            }`}>
+                                                {content}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        );
     };
 
     const periods = [
@@ -412,7 +895,7 @@ const AdDashboardTab = () => {
                     {showChart && (
                         <div className="h-48 w-full animate-in fade-in slide-in-from-top-1 duration-200">
                             <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={stats.setter_stats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <ComposedChart data={filteredSetterStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                                     <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                                     <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
@@ -437,6 +920,57 @@ const AdDashboardTab = () => {
                 </div>
             ) : (
                 <div className="space-y-6">
+                    {/* Barra de Filtros Activos (Píldoras) */}
+                    {(selectedCampaigns.length > 0 || selectedAdSets.length > 0) && (
+                        <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-900/50 border border-slate-800/80 rounded-2xl animate-in fade-in duration-200">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mr-1">Filtros Meta Ads:</span>
+                            {selectedCampaigns.map(camp => (
+                                <span key={camp} className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg px-2.5 py-1 text-[10px] font-bold">
+                                    Campaña: {camp}
+                                    <button onClick={() => setSelectedCampaigns(prev => prev.filter(c => c !== camp))} className="hover:text-white transition-colors ml-1">
+                                        <X size={10} />
+                                    </button>
+                                </span>
+                            ))}
+                            {selectedAdSets.map(set => (
+                                <span key={set} className="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-lg px-2.5 py-1 text-[10px] font-bold">
+                                    Conjunto: {set}
+                                    <button onClick={() => setSelectedAdSets(prev => prev.filter(s => s !== set))} className="hover:text-white transition-colors ml-1">
+                                        <X size={10} />
+                                    </button>
+                                </span>
+                            ))}
+                            <button
+                                onClick={() => { setSelectedCampaigns([]); setSelectedAdSets([]); }}
+                                className="text-[9px] font-black text-red-400 hover:text-red-300 uppercase tracking-widest ml-auto"
+                            >
+                                Limpiar Filtros
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Sub-navegación estilo Meta Ads */}
+                    <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-inner max-w-md">
+                        <button
+                            onClick={() => { setActiveSubTab('campaigns'); setSortConfig({ key: null, direction: 'desc' }); }}
+                            className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeSubTab === 'campaigns' ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Campañas ({campaignsData.length})
+                        </button>
+                        <button
+                            onClick={() => { setActiveSubTab('ad_sets'); setSortConfig({ key: null, direction: 'desc' }); }}
+                            className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeSubTab === 'ad_sets' ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Conjuntos ({adSetsData.length})
+                        </button>
+                        <button
+                            onClick={() => { setActiveSubTab('ads'); setSortConfig({ key: null, direction: 'desc' }); }}
+                            className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeSubTab === 'ads' ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Anuncios ({filteredAdStats.length})
+                        </button>
+                    </div>
+
                     {activeAdStats.length === 0 ? (
                         <div className="text-center py-20 bg-slate-900/20 rounded-3xl border border-dashed border-slate-800">
                             {hiddenAds.length > 0 ? (
@@ -457,7 +991,12 @@ const AdDashboardTab = () => {
                                 </>
                             )}
                         </div>
-                    ) : viewMode === 'list' ? (
+                    ) : (
+                        <>
+                            {activeSubTab === 'campaigns' && renderCampaignsTable()}
+                            {activeSubTab === 'ad_sets' && renderAdSetsTable()}
+                            {activeSubTab === 'ads' && (
+                                viewMode === 'list' ? (
                         <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl overflow-x-auto shadow-xl">
                             <table className="w-full text-left border-collapse whitespace-nowrap">
                                 <thead className="sticky top-0 z-20">
@@ -862,6 +1401,9 @@ const AdDashboardTab = () => {
                             })}
 
                         </div>
+                    )
+                    )}
+                    </>
                     )}
                 </div>
             )}
