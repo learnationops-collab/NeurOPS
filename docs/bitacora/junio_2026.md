@@ -408,6 +408,6 @@
 - **11 de Junio de 2026**:
   - **Selectores de Opciones Controladas para Ventas Financieras**:
     - **Frontend (`PublicFinancialSalesPage.jsx`) [MODIFY]**:
-      - Se implementaron selectores desplegables (`<select>`) controlados para los campos **Programa** (`RR`, `AL`, `SI`), **Tipo de Pago** (`Seña`, `Parcial`, `Cuota`, `Completo`, `Renovación`, `Upsell`), **Closer** (mapeando `Jean Carlo` al correo `jeancarlo@thelearnation.com`), y **Setter** (`workshop`, `vsl`, `Elias`) tanto en la edición inline de la tabla como en el modal de creación de nueva venta (`showCreateModal`).
+      - Se implementaron selectores desplegables (`<select>`) controlados para los campos **Programa** (`RR`, `AL`, `SI`), **Tipo de Pago** (`Seña`, `Parcial`, `Cuota`, `Completo`, `Renovación`, `Upsell`), **Método de Pago** (`Stripe`, `PayPal`, `Binance`, `Hotmart`), **Closer** (mapeando `Jean Carlo` al correo `jeancarlo@thelearnation.com`), y **Setter** (`workshop`, `vsl`, `Elias`) tanto en la edición inline de la tabla como en el modal de creación de nueva venta (`showCreateModal`).
       - Cada selector cuenta con una opción de *"Otro / Agregar nuevo..."*. Al seleccionarla, se despliega dinámicamente un input de texto de forma condicional que permite escribir un valor personalizado de texto libre.
       - Se modificó la etiqueta visual de Setter en la columna de roles de la tabla de `S:` a `F:` (Fuente) de forma coherente con las instrucciones del usuario.

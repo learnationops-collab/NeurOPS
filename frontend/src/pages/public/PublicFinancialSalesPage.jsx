@@ -304,6 +304,7 @@ const PublicFinancialSalesPage = () => {
         const isCustomPay = sale.tipo_pago_simple && !['Seña', 'Parcial', 'Cuota', 'Completo', 'Renovación', 'Upsell'].includes(sale.tipo_pago_simple);
         const isCustomCloser = sale.email_vendedor && sale.email_vendedor !== 'jeancarlo@thelearnation.com';
         const isCustomSetter = sale.setter && !['workshop', 'vsl', 'Elias'].includes(sale.setter);
+        const isCustomMethod = sale.metodo_pago && !['Stripe', 'PayPal', 'Paypal', 'Binance', 'Hotmart'].includes(sale.metodo_pago);
 
         setEditingSale(sale.id);
         setEditData({
@@ -317,6 +318,7 @@ const PublicFinancialSalesPage = () => {
             tipo_pago_simple: sale.tipo_pago_simple || '',
             tipo_pago_custom: isCustomPay,
             payment_type: sale.metodo_pago || '',
+            payment_type_custom: isCustomMethod,
             setter_name: sale.setter || '',
             setter_custom: isCustomSetter,
             estado: sale.estado || 'Completada',
@@ -381,6 +383,7 @@ const PublicFinancialSalesPage = () => {
         tipo_pago_custom: false,
         monto: '',
         metodo_pago: 'Stripe',
+        metodo_pago_custom: false,
         estado: 'Completada',
         email_vendedor: '',
         closer_custom: false,
@@ -472,6 +475,7 @@ const PublicFinancialSalesPage = () => {
             tipo_pago_custom: false,
             monto: '',
             metodo_pago: 'Stripe',
+            metodo_pago_custom: false,
             estado: 'Completada',
             email_vendedor: '',
             closer_custom: false,
@@ -1349,13 +1353,36 @@ const PublicFinancialSalesPage = () => {
                                                                 />
                                                             )}
                                                         </div>
-                                                        <input 
-                                                            type="text" 
-                                                            value={editData.payment_type} 
-                                                            onChange={e => setEditData({...editData, payment_type: e.target.value})}
-                                                            className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
-                                                            placeholder="Método (ej: Stripe)"
-                                                        />
+                                                        <div className="flex flex-col gap-1">
+                                                            <select
+                                                                value={editData.payment_type_custom ? 'otro' : editData.payment_type}
+                                                                onChange={e => {
+                                                                    const val = e.target.value;
+                                                                    if (val === 'otro') {
+                                                                        setEditData({ ...editData, payment_type: '', payment_type_custom: true });
+                                                                    } else {
+                                                                        setEditData({ ...editData, payment_type: val, payment_type_custom: false });
+                                                                    }
+                                                                }}
+                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs cursor-pointer focus:border-indigo-500 focus:outline-none"
+                                                            >
+                                                                <option value="">Seleccionar...</option>
+                                                                <option value="Stripe">Stripe</option>
+                                                                <option value="PayPal">PayPal</option>
+                                                                <option value="Binance">Binance</option>
+                                                                <option value="Hotmart">Hotmart</option>
+                                                                <option value="otro">Otro...</option>
+                                                            </select>
+                                                            {editData.payment_type_custom && (
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={editData.payment_type} 
+                                                                    onChange={e => setEditData({...editData, payment_type: e.target.value})}
+                                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                                                    placeholder="Especificar método"
+                                                                />
+                                                            )}
+                                                        </div>
                                                     </>
                                                 ) : (
                                                     <>
@@ -1761,18 +1788,33 @@ const PublicFinancialSalesPage = () => {
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Método de Pago *</label>
                                     <select
-                                        value={createData.metodo_pago}
-                                        onChange={e => setCreateData({...createData, metodo_pago: e.target.value})}
+                                        value={createData.metodo_pago_custom ? 'otro' : createData.metodo_pago}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === 'otro') {
+                                                setCreateData({ ...createData, metodo_pago: '', metodo_pago_custom: true });
+                                            } else {
+                                                setCreateData({ ...createData, metodo_pago: val, metodo_pago_custom: false });
+                                            }
+                                        }}
                                         className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
                                     >
+                                        <option value="">Seleccionar...</option>
                                         <option value="Stripe">Stripe</option>
                                         <option value="PayPal">PayPal</option>
-                                        <option value="Wise">Wise</option>
-                                        <option value="Transferencia Bancaria">Transferencia Bancaria</option>
-                                        <option value="Binance / USDT">Binance / USDT</option>
+                                        <option value="Binance">Binance</option>
                                         <option value="Hotmart">Hotmart</option>
-                                        <option value="Otro">Otro Método</option>
+                                        <option value="otro">Otro / Agregar nuevo...</option>
                                     </select>
+                                    {createData.metodo_pago_custom && (
+                                        <input
+                                            type="text"
+                                            value={createData.metodo_pago}
+                                            onChange={e => setCreateData({...createData, metodo_pago: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold mt-1"
+                                            placeholder="Especificar método"
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="space-y-1">
