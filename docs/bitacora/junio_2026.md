@@ -411,3 +411,8 @@
       - Se implementaron selectores desplegables (`<select>`) controlados para los campos **Programa** (`RR`, `AL`, `SI`), **Tipo de Pago** (`Seña`, `Parcial`, `Cuota`, `Completo`, `Renovación`, `Upsell`), **Método de Pago** (`Stripe`, `PayPal`, `Binance`, `Hotmart`), **Closer** (mapeando `Jean Carlo` al correo `jeancarlo@thelearnation.com`), y **Setter** (`workshop`, `vsl`, `Elias`) tanto en la edición inline de la tabla como en el modal de creación de nueva venta (`showCreateModal`).
       - Cada selector cuenta con una opción de *"Otro / Agregar nuevo..."*. Al seleccionarla, se despliega dinámicamente un input de texto de forma condicional que permite escribir un valor personalizado de texto libre.
       - Se modificó la etiqueta visual de Setter en la columna de roles de la tabla de `S:` a `F:` (Fuente) de forma coherente con las instrucciones del usuario.
+  - **Cálculo de Comparación Temporal al Mes Anterior en Dashboards**:
+    - **Backend (APIs de Estadísticas) (`setter.py`, `closer.py`, `conversational.py`) [MODIFY]**:
+      - Se reemplazó el cálculo de comparación temporal de ventana deslizante simple (que retrocedía el número de días de la ventana) por un cálculo de mes calendario anterior exacto.
+      - Se implementó la función auxiliar `_subtract_one_month` (y `_subtract_one_month_dt` para `datetime` en `conversational.py`) para restar un mes calendario de forma segura y tolerante a diferencias de duración de meses (ej: manejando correctamente días inexistentes al final del mes anterior).
+      - Se actualizaron los endpoints `/public/setter-stats`, `/public/closer-stats` y `/stats/conversational` para devolver datos comparativos correspondientes al mismo rango de fechas pero del mes anterior calendario exacto.

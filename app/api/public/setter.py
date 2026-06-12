@@ -400,6 +400,20 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
     return res
 
 
+def _subtract_one_month(d):
+    """Resta exactamente un mes calendario a un objeto date."""
+    year = d.year
+    month = d.month - 1
+    if month == 0:
+        month = 12
+        year -= 1
+    day = d.day
+    while True:
+        try:
+            return date(year, month, day)
+        except ValueError:
+            day -= 1
+
 @bp.route('/public/setter-stats', methods=['GET'])
 def get_public_setter_stats():
     """Returns aggregated stats for setters with sum/avg support and comparison."""
@@ -415,10 +429,9 @@ def get_public_setter_stats():
         try:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            duration_days = (end_date - start_date).days + 1
             
-            prev_start_date = start_date - timedelta(days=duration_days)
-            prev_end_date = start_date - timedelta(days=1)
+            prev_start_date = _subtract_one_month(start_date)
+            prev_end_date = _subtract_one_month(end_date)
             
             prev_start_str = prev_start_date.strftime('%Y-%m-%d')
             prev_end_str = prev_end_date.strftime('%Y-%m-%d')

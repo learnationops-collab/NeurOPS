@@ -366,6 +366,23 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
     return kpis, table_rows
 
 
+def _subtract_one_month_dt(dt):
+    """Resta exactamente un mes calendario a un objeto datetime."""
+    year = dt.year
+    month = dt.month - 1
+    if month == 0:
+        month = 12
+        year -= 1
+    day = dt.day
+    while True:
+        try:
+            from datetime import date
+            new_date = date(year, month, day)
+            break
+        except ValueError:
+            day -= 1
+    return dt.replace(year=new_date.year, month=new_date.month, day=new_date.day)
+
 @bp.route('/stats/conversational', methods=['GET'])
 def get_conversational_stats():
     """
@@ -387,9 +404,8 @@ def get_conversational_stats():
     }
 
     if compare:
-        days_in_range = max(1, (end_dt - start_dt).days + 1)
-        prev_start_dt = start_dt - timedelta(days=days_in_range)
-        prev_end_dt = start_dt - timedelta(seconds=1)
+        prev_start_dt = _subtract_one_month_dt(start_dt)
+        prev_end_dt = _subtract_one_month_dt(end_dt)
         
         prev_kpis, prev_table_rows = _compute_stats_for_dates(prev_start_dt, prev_end_dt, category_filter, ad_id_filter)
         response_data['comparison'] = {

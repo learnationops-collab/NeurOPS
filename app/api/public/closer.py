@@ -336,6 +336,21 @@ def _trigger_closer_report_discord(report):
         traceback.print_exc()
 
 
+def _subtract_one_month(d):
+    """Resta exactamente un mes calendario a un objeto date."""
+    year = d.year
+    month = d.month - 1
+    if month == 0:
+        month = 12
+        year -= 1
+    day = d.day
+    while True:
+        try:
+            from datetime import date
+            return date(year, month, day)
+        except ValueError:
+            day -= 1
+
 @bp.route('/public/closer-stats', methods=['GET'])
 def get_public_closer_stats():
     """Retorna estadísticas agregadas de closers con soporte de suma/promedio."""
@@ -359,10 +374,9 @@ def get_public_closer_stats():
         try:
             start_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
             end_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
-            duration_days = (end_dt - start_dt).days + 1
-
-            prev_start_date = start_dt - timedelta(days=duration_days)
-            prev_end_date = start_dt - timedelta(days=1)
+            
+            prev_start_date = _subtract_one_month(start_dt)
+            prev_end_date = _subtract_one_month(end_dt)
 
             prev_start_str = prev_start_date.strftime('%Y-%m-%d')
             prev_end_str = prev_end_date.strftime('%Y-%m-%d')
