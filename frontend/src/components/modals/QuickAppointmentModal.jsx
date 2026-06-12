@@ -132,7 +132,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, onSuccess }) => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-lg bg-surface border border-base rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                className="w-full max-w-2xl bg-surface border border-base rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[80dvh] flex flex-col"
             >
                 <div className="p-6 md:p-8 border-b border-base flex justify-between items-center bg-surface/50 shrink-0">
                     <div className="space-y-1">
@@ -144,172 +144,182 @@ const QuickAppointmentModal = ({ isOpen, onClose, onSuccess }) => {
                     </button>
                 </div>
 
-                <div className="p-6 md:p-8 space-y-6 md:space-y-8 flex-1 overflow-y-auto custom-scrollbar">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20 gap-4">
-                            <Loader2 className="animate-spin text-primary" size={32} />
-                            <p className="text-[10px] font-black text-muted tracking-widest uppercase">Sincronizando horarios...</p>
-                        </div>
-                    ) : (
-                        <form onSubmit={handleSubmit} className="space-y-8">
+                {loading ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-20 gap-4">
+                        <Loader2 className="animate-spin text-primary" size={32} />
+                        <p className="text-[10px] font-black text-muted tracking-widest uppercase">Sincronizando horarios...</p>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                        {/* Cuerpo con Scroll */}
+                        <div className="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar min-h-0">
                             {error && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-500 text-[10px] font-black tracking-widest flex items-center gap-3 uppercase"
+                                    className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-500 text-[10px] font-black tracking-widest flex items-center gap-3 uppercase mb-6"
                                 >
                                     <AlertCircle size={16} />
                                     {error}
                                 </motion.div>
                             )}
 
-                            {/* SELECT LEAD */}
-                            <div className="space-y-3 relative">
-                                <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2 uppercase">
-                                    <User size={14} className="text-primary" /> 1. Cliente / Lead
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        className="w-full h-14 bg-main border border-base rounded-2xl px-6 text-sm font-bold focus:ring-2 focus:ring-primary/50 outline-none transition-all placeholder:text-muted/30"
-                                        placeholder="Buscar por nombre o email..."
-                                        value={searchTerm}
-                                        onChange={(e) => {
-                                            setSearchTerm(e.target.value);
-                                            setIsDropdownOpen(true);
-                                            if (e.target.value === '') setForm(f => ({ ...f, lead_id: '' }));
-                                        }}
-                                        onFocus={() => setIsDropdownOpen(true)}
-                                        onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                                    />
-                                    {form.lead_id && (
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500">
-                                            <CheckCircle2 size={20} />
-                                        </div>
-                                    )}
-                                    <AnimatePresence>
-                                        {isDropdownOpen && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: 10 }}
-                                                className="absolute top-full left-0 w-full mt-4 bg-surface border border-base rounded-2xl shadow-2xl max-h-60 overflow-y-auto z-50 custom-scrollbar"
-                                            >
-                                                {filteredLeads.length > 0 ? filteredLeads.map(l => (
-                                                    <button
-                                                        key={l.id}
-                                                        type="button"
-                                                        onClick={() => handleLeadSelect(l)}
-                                                        className="w-full text-left px-6 py-4 hover:bg-surface-hover transition-colors flex flex-col gap-0.5 border-b border-base last:border-0"
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Columna Izquierda: Lead y Tipo de Agenda */}
+                                <div className="space-y-6">
+                                    {/* SELECT LEAD */}
+                                    <div className="space-y-3 relative">
+                                        <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2 uppercase">
+                                            <User size={14} className="text-primary" /> 1. Cliente / Lead
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                className="w-full h-14 bg-main border border-base rounded-2xl px-6 text-sm font-bold focus:ring-2 focus:ring-primary/50 outline-none transition-all placeholder:text-muted/30"
+                                                placeholder="Buscar por nombre o email..."
+                                                value={searchTerm}
+                                                onChange={(e) => {
+                                                    setSearchTerm(e.target.value);
+                                                    setIsDropdownOpen(true);
+                                                    if (e.target.value === '') setForm(f => ({ ...f, lead_id: '' }));
+                                                }}
+                                                onFocus={() => setIsDropdownOpen(true)}
+                                                onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
+                                            />
+                                            {form.lead_id && (
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500">
+                                                    <CheckCircle2 size={20} />
+                                                </div>
+                                            )}
+                                            <AnimatePresence>
+                                                {isDropdownOpen && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, y: 10 }}
+                                                        className="absolute top-full left-0 w-full mt-4 bg-surface border border-base rounded-2xl shadow-2xl max-h-60 overflow-y-auto z-50 custom-scrollbar"
                                                     >
-                                                        <span className="text-sm font-black text-base italic">{l.username || 'Sin nombre'}</span>
-                                                        <span className="text-[10px] text-muted font-bold">{l.email}</span>
-                                                    </button>
-                                                )) : (
-                                                    <div className="p-6 text-center text-muted text-[10px] font-black tracking-widest uppercase">No se encontraron leads</div>
+                                                        {filteredLeads.length > 0 ? filteredLeads.map(l => (
+                                                            <button
+                                                                key={l.id}
+                                                                type="button"
+                                                                onClick={() => handleLeadSelect(l)}
+                                                                className="w-full text-left px-6 py-4 hover:bg-surface-hover transition-colors flex flex-col gap-0.5 border-b border-base last:border-0"
+                                                            >
+                                                                <span className="text-sm font-black text-base italic">{l.username || 'Sin nombre'}</span>
+                                                                <span className="text-[10px] text-muted font-bold">{l.email}</span>
+                                                            </button>
+                                                        )) : (
+                                                            <div className="p-6 text-center text-muted text-[10px] font-black tracking-widest uppercase">No se encontraron leads</div>
+                                                        )}
+                                                    </motion.div>
                                                 )}
+                                            </AnimatePresence>
+                                        </div>
+                                    </div>
+
+                                    {/* SELECT TYPE */}
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2 uppercase">
+                                            <Bookmark size={14} className="text-primary" /> 4. Tipo de agenda
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {['Primera agenda', 'Segunda agenda', 'Pre-call', 'Cierre'].map(t => (
+                                                <button
+                                                    key={t}
+                                                    type="button"
+                                                    onClick={() => setForm({ ...form, type: t })}
+                                                    className={`h-12 rounded-xl border-2 transition-all text-[10px] font-black tracking-widest uppercase ${form.type === t
+                                                            ? 'bg-surface border-primary text-primary'
+                                                            : 'bg-main border-base text-muted hover:border-base-hover'
+                                                        }`}
+                                                >
+                                                    {t}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Columna Derecha: Selección de Día y Horario */}
+                                <div className="space-y-6">
+                                    {/* SELECT DATE */}
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2 uppercase">
+                                            <CalendarIcon size={14} className="text-primary" /> 2. Selecciona el día
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {availableDates.length > 0 ? availableDates.map(date => (
+                                                <button
+                                                    key={date}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedDate(date);
+                                                        setForm(prev => ({ ...prev, start_time: '' }));
+                                                    }}
+                                                    className={`h-14 px-4 rounded-2xl border-2 transition-all font-black text-[10px] tracking-widest uppercase flex flex-col items-center justify-center gap-1 ${selectedDate === date
+                                                            ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20'
+                                                            : 'bg-main border-base text-muted hover:border-primary/50'
+                                                        }`}
+                                                >
+                                                    {formatDate(date)}
+                                                </button>
+                                            )) : (
+                                                <div className="col-span-2 py-4 text-center text-muted text-[10px] font-black italic">No hay días disponibles</div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* SELECT TIME */}
+                                    <AnimatePresence>
+                                        {selectedDate && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="space-y-4 overflow-hidden"
+                                            >
+                                                <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2 uppercase">
+                                                    <Clock size={14} className="text-primary" /> 3. Horarios para el {formatDate(selectedDate)}
+                                                </label>
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    {timesForSelectedDate.length > 0 ? timesForSelectedDate.map(slot => (
+                                                        <button
+                                                            key={slot.utc_iso}
+                                                            type="button"
+                                                            onClick={() => setForm({ ...form, start_time: slot.utc_iso })}
+                                                            className={`h-12 rounded-xl border-2 transition-all font-black text-[11px] italic leading-none ${form.start_time === slot.utc_iso
+                                                                    ? 'bg-secondary border-secondary text-white shadow-lg shadow-secondary/20'
+                                                                    : 'bg-main border-base text-muted hover:border-secondary/50'
+                                                                }`}
+                                                        >
+                                                            {slot.start}
+                                                        </button>
+                                                    )) : (
+                                                        <div className="col-span-3 py-4 text-center text-muted text-[10px] font-black italic">No hay horas disponibles</div>
+                                                    )}
+                                                </div>
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* SELECT DATE */}
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2 uppercase">
-                                    <CalendarIcon size={14} className="text-primary" /> 2. Selecciona el día
-                                </label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {availableDates.length > 0 ? availableDates.map(date => (
-                                        <button
-                                            key={date}
-                                            type="button"
-                                            onClick={() => {
-                                                setSelectedDate(date);
-                                                setForm(prev => ({ ...prev, start_time: '' }));
-                                            }}
-                                            className={`h-14 px-4 rounded-2xl border-2 transition-all font-black text-[10px] tracking-widest uppercase flex flex-col items-center justify-center gap-1 ${selectedDate === date
-                                                    ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20'
-                                                    : 'bg-main border-base text-muted hover:border-primary/50'
-                                                }`}
-                                        >
-                                            {formatDate(date)}
-                                        </button>
-                                    )) : (
-                                        <div className="col-span-2 py-4 text-center text-muted text-[10px] font-black italic">No hay días disponibles</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* SELECT TIME */}
-                            <AnimatePresence>
-                                {selectedDate && (
-                                    <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        className="space-y-4 overflow-hidden"
-                                    >
-                                        <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2 uppercase">
-                                            <Clock size={14} className="text-primary" /> 3. Horarios para el {formatDate(selectedDate)}
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            {timesForSelectedDate.length > 0 ? timesForSelectedDate.map(slot => (
-                                                <button
-                                                    key={slot.utc_iso}
-                                                    type="button"
-                                                    onClick={() => setForm({ ...form, start_time: slot.utc_iso })}
-                                                    className={`h-12 rounded-xl border-2 transition-all font-black text-[11px] italic leading-none ${form.start_time === slot.utc_iso
-                                                            ? 'bg-secondary border-secondary text-white shadow-lg shadow-secondary/20'
-                                                            : 'bg-main border-base text-muted hover:border-secondary/50'
-                                                        }`}
-                                                >
-                                                    {slot.start}
-                                                </button>
-                                            )) : (
-                                                <div className="col-span-3 py-4 text-center text-muted text-[10px] font-black italic">No hay horas disponibles</div>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            {/* SELECT TYPE & SUBMIT */}
-                            <div className="pt-4 space-y-6">
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2 uppercase">
-                                        <Bookmark size={14} className="text-primary" /> Tipo de agenda
-                                    </label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {['Primera agenda', 'Segunda agenda', 'Pre-call', 'Cierre'].map(t => (
-                                            <button
-                                                key={t}
-                                                type="button"
-                                                onClick={() => setForm({ ...form, type: t })}
-                                                className={`h-12 rounded-xl border-2 transition-all text-[10px] font-black tracking-widest uppercase ${form.type === t
-                                                        ? 'bg-surface border-primary text-primary'
-                                                        : 'bg-main border-base text-muted hover:border-base-hover'
-                                                    }`}
-                                            >
-                                                {t}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <Button
-                                    loading={submitting}
-                                    variant="primary"
-                                    className="w-full h-16 text-xs font-black tracking-widest shadow-xl shadow-primary/20 rounded-2xl mt-4"
-                                    icon={Save}
-                                    disabled={!form.lead_id || !form.start_time}
-                                >
-                                    Confirmar Agenda
-                                </Button>
-                            </div>
-                        </form>
-                    )}
-                </div>
+                        {/* Footer Fijo */}
+                        <div className="p-6 border-t border-base bg-surface/50 shrink-0">
+                            <Button
+                                loading={submitting}
+                                variant="primary"
+                                className="w-full h-16 text-xs font-black tracking-widest shadow-xl shadow-primary/20 rounded-2xl uppercase"
+                                icon={Save}
+                                disabled={!form.lead_id || !form.start_time}
+                            >
+                                Confirmar Agenda
+                            </Button>
+                        </div>
+                    </form>
+                )}
             </motion.div>
         </div>
     );

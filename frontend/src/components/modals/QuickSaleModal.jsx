@@ -116,7 +116,7 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-2xl bg-surface border border-base rounded-[2rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                className="w-full max-w-2xl bg-surface border border-base rounded-[2rem] shadow-2xl overflow-hidden max-h-[78dvh] flex flex-col"
             >
                 <div className="p-5 md:p-6 border-b border-base flex justify-between items-center bg-surface/50 shrink-0">
                     <h2 className="text-xl font-black text-base italic tracking-tighter">Nueva venta</h2>
@@ -125,13 +125,14 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
                     </button>
                 </div>
 
-                <div className="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar">
-                    {loading ? (
-                        <div className="flex justify-center py-20">
-                            <Loader2 className="animate-spin text-primary" size={32} />
-                        </div>
-                    ) : (
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                {loading ? (
+                    <div className="flex-1 flex justify-center items-center py-20">
+                        <Loader2 className="animate-spin text-primary" size={32} />
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                        {/* Cuerpo con Scroll */}
+                        <div className="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar space-y-6 min-h-0">
                             {error && (
                                 <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-500 text-xs font-bold">
                                     {error}
@@ -152,10 +153,8 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
                                             setSearchTerm(e.target.value);
                                             setIsDropdownOpen(true);
                                             if (e.target.value === '') setForm(f => ({ ...f, lead_id: '' }));
-                                            // Debounced search logic would be ideal, but for now direct call or useEffect
                                         }}
                                         onFocus={() => setIsDropdownOpen(true)}
-                                        // Delay blur to allow click on option
                                         onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
                                     />
                                     {isDropdownOpen && searchTerm.length > 1 && (
@@ -191,7 +190,7 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
                                         <Box size={14} /> Programa
                                     </label>
                                     <select
-                                        className="w-full bg-main border border-base rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-primary/50 outline-none transition-all"
+                                        className="w-full bg-main border border-base rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-primary/50 outline-none transition-all cursor-pointer"
                                         value={form.program_id}
                                         onChange={e => {
                                             const prog = metadata.programs.find(p => p.id === parseInt(e.target.value));
@@ -211,7 +210,7 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-muted tracking-widest flex items-center gap-2">
-                                        <DollarSign size={14} /> Monto confimado
+                                        <DollarSign size={14} /> Monto confirmado
                                     </label>
                                     <input
                                         type="number"
@@ -230,7 +229,7 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
                                         <Wallet size={14} /> Método de pago
                                     </label>
                                     <select
-                                        className="w-full bg-main border border-base rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-primary/50 outline-none transition-all"
+                                        className="w-full bg-main border border-base rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-primary/50 outline-none transition-all cursor-pointer"
                                         value={form.payment_method_id}
                                         onChange={e => setForm({ ...form, payment_method_id: e.target.value })}
                                         required
@@ -259,20 +258,21 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="pt-4">
-                                <Button
-                                    loading={submitting}
-                                    variant="primary"
-                                    className="w-full h-14 text-xs font-black tracking-widest shadow-xl shadow-primary/20"
-                                    icon={Save}
-                                >
-                                    Registrar venta
-                                </Button>
-                            </div>
-                        </form>
-                    )}
-                </div>
+                        {/* Footer Fijo */}
+                        <div className="p-6 border-t border-base bg-surface/50 shrink-0">
+                            <Button
+                                loading={submitting}
+                                variant="primary"
+                                className="w-full h-14 text-xs font-black tracking-widest shadow-xl shadow-primary/20 uppercase"
+                                icon={Save}
+                            >
+                                Registrar venta
+                            </Button>
+                        </div>
+                    </form>
+                )}
             </motion.div>
         </div>
     );

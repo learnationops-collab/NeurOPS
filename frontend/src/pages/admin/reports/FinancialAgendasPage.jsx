@@ -793,91 +793,98 @@ const FinancialAgendasPage = () => {
             {/* Modal de Edición de Agenda */}
             {editingAgenda && (
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-5 md:p-6 max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="space-y-1 pb-3 border-b border-slate-800/60 flex-shrink-0">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] max-w-2xl w-full max-h-[80dvh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+                        {/* Cabecera Fija */}
+                        <div className="p-5 md:p-6 pb-3 border-b border-slate-800/60 flex-shrink-0">
                             <h3 className="text-lg font-black text-white italic uppercase">Editar Registro de Agenda</h3>
                             <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Modificar datos de la cita</p>
                         </div>
                         
-                        <form onSubmit={handleEditSubmit} className="space-y-4 text-left overflow-y-auto pr-1 flex-1 min-h-0 pt-3 custom-scrollbar">
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
-                                    <input 
-                                        type="text"
-                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                        value={editForm.lead}
-                                        onChange={e => setEditForm({...editForm, lead: e.target.value})}
-                                        required
-                                    />
+                        <form onSubmit={handleEditSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                            {/* Cuerpo con Scroll */}
+                            <div className="p-5 md:p-6 space-y-4 text-left overflow-y-auto flex-1 min-h-0 custom-scrollbar">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
+                                        <input 
+                                            type="text"
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                            value={editForm.lead}
+                                            onChange={e => setEditForm({...editForm, lead: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Meet (Texto)</label>
+                                        <input 
+                                            type="text"
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                            value={editForm.fecha_meet}
+                                            onChange={e => setEditForm({...editForm, fecha_meet: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fuente</label>
+                                        <input 
+                                            type="text"
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                            value={editForm.nombre}
+                                            onChange={e => setEditForm({...editForm, nombre: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Instagram</label>
+                                        <input 
+                                            type="text"
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                            value={editForm.instagram}
+                                            onChange={e => setEditForm({...editForm, instagram: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Closer</label>
+                                        <input 
+                                            type="text"
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                            value={editForm.closer}
+                                            onChange={e => setEditForm({...editForm, closer: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
+                                        <select 
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
+                                            value={editForm.estado}
+                                            onChange={e => setEditForm({...editForm, estado: e.target.value})}
+                                            required
+                                        >
+                                            {['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'].map(st => (
+                                                <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fuente</label>
-                                    <input 
-                                        type="text"
-                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                        value={editForm.nombre}
-                                        onChange={e => setEditForm({...editForm, nombre: e.target.value})}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Closer</label>
-                                    <input 
-                                        type="text"
-                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                        value={editForm.closer}
-                                        onChange={e => setEditForm({...editForm, closer: e.target.value})}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Meet (Texto)</label>
-                                    <input 
-                                        type="text"
-                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                        value={editForm.fecha_meet}
-                                        onChange={e => setEditForm({...editForm, fecha_meet: e.target.value})}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Instagram</label>
-                                    <input 
-                                        type="text"
-                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                        value={editForm.instagram}
-                                        onChange={e => setEditForm({...editForm, instagram: e.target.value})}
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
-                                    <select 
-                                        className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
-                                        value={editForm.estado}
-                                        onChange={e => setEditForm({...editForm, estado: e.target.value})}
-                                        required
-                                    >
-                                        {['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'].map(st => (
-                                            <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                            </div>
                                 
-                                <div className="flex gap-3 pt-4 sticky bottom-0 bg-slate-900 pb-1">
-                                    <button 
-                                        type="button"
-                                        onClick={() => setEditingAgenda(null)}
-                                        className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-400 rounded-xl hover:text-white transition-colors"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button 
-                                        type="submit"
-                                        className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
-                                    >
-                                        Guardar
-                                    </button>
-                                </div>
+                            {/* Footer Fijo */}
+                            <div className="p-5 border-t border-slate-800/60 bg-slate-900/50 shrink-0 flex gap-3">
+                                <button 
+                                    type="button"
+                                    onClick={() => setEditingAgenda(null)}
+                                    className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-400 rounded-xl hover:text-white transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    type="submit"
+                                    className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
