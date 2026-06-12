@@ -404,3 +404,10 @@
     - **API Backend (`financial_agendas.py`) [MODIFY]**: Se corrigió un error lógico en el endpoint `GET /public/financial-agendas` donde la variable `query` (que almacena el filtro de búsqueda por texto `search`) era sobrescrita por `date_query` (que solo contiene filtros de fecha). Ahora la asignación de variables se realiza en la secuencia correcta, permitiendo que las búsquedas por texto funcionen correctamente en el panel de control y tablas de agendas.
   - **Corrección en Sincronización de Edición de Ventas (Campos Dinámicos)**:
     - **API Backend (`financial_sales.py`) [MODIFY]**: Se modificó la respuesta JSON del endpoint `PUT /public/financial-sales/<int:sale_id>` para calcular y adjuntar todos los campos dinámicos (`programa`, `tipo_pago_simple`, `monto_bruto`, `monto` ajustado, `closer_name`, `setter` y `has_agenda`). Esto previene que al guardar la edición de una venta el frontend pierda temporalmente estos campos en el estado de React (que causaba que el "tipo de pago" o "programa" se vieran como "N/A" o no se actualizaran en caliente hasta refrescar la página).
+
+- **11 de Junio de 2026**:
+  - **Selectores de Opciones Controladas para Ventas Financieras**:
+    - **Frontend (`PublicFinancialSalesPage.jsx`) [MODIFY]**:
+      - Se implementaron selectores desplegables (`<select>`) controlados para los campos **Programa** (`RR`, `AL`, `SI`), **Tipo de Pago** (`Seña`, `Parcial`, `Cuota`, `Completo`, `Renovación`, `Upsell`), **Closer** (mapeando `Jean Carlo` al correo `jeancarlo@thelearnation.com`), y **Setter** (`workshop`, `vsl`, `Elias`) tanto en la edición inline de la tabla como en el modal de creación de nueva venta (`showCreateModal`).
+      - Cada selector cuenta con una opción de *"Otro / Agregar nuevo..."*. Al seleccionarla, se despliega dinámicamente un input de texto de forma condicional que permite escribir un valor personalizado de texto libre.
+      - Se modificó la etiqueta visual de Setter en la columna de roles de la tabla de `S:` a `F:` (Fuente) de forma coherente con las instrucciones del usuario.

@@ -300,16 +300,25 @@ const PublicFinancialSalesPage = () => {
     };
 
     const handleEditClick = (sale) => {
+        const isCustomProg = sale.programa && !['RR', 'AL', 'SI'].includes(sale.programa);
+        const isCustomPay = sale.tipo_pago_simple && !['Seña', 'Parcial', 'Cuota', 'Completo', 'Renovación', 'Upsell'].includes(sale.tipo_pago_simple);
+        const isCustomCloser = sale.email_vendedor && sale.email_vendedor !== 'jeancarlo@thelearnation.com';
+        const isCustomSetter = sale.setter && !['workshop', 'vsl', 'Elias'].includes(sale.setter);
+
         setEditingSale(sale.id);
         setEditData({
             instagram: sale.instagram || '',
             nombre_cliente: sale.nombre_cliente || '',
             email_vendedor: sale.email_vendedor || '',
+            closer_custom: isCustomCloser,
             amount: sale.monto_bruto || sale.monto || 0,
             programa: sale.programa || '',
+            programa_custom: isCustomProg,
             tipo_pago_simple: sale.tipo_pago_simple || '',
+            tipo_pago_custom: isCustomPay,
             payment_type: sale.metodo_pago || '',
             setter_name: sale.setter || '',
+            setter_custom: isCustomSetter,
             estado: sale.estado || 'Completada',
             date: sale.date && typeof sale.date === 'string' ? sale.date.split('T')[0] : ''
         });
@@ -367,12 +376,16 @@ const PublicFinancialSalesPage = () => {
         mail_cliente: '',
         telefono: '',
         programa: 'RR',
-        tipo_pago_simple: 'completo',
+        programa_custom: false,
+        tipo_pago_simple: 'Completo',
+        tipo_pago_custom: false,
         monto: '',
         metodo_pago: 'Stripe',
         estado: 'Completada',
         email_vendedor: '',
+        closer_custom: false,
         setter_name: '',
+        setter_custom: false,
         examen: '',
         segundo_pago: '',
         notas: '',
@@ -407,14 +420,21 @@ const PublicFinancialSalesPage = () => {
 
     const handleSelectAgenda = (agenda) => {
         setSelectedAgenda(agenda);
+        const closerEmail = agenda.closer && agenda.closer !== 'Sin asignar' ? agenda.closer : createData.email_vendedor;
+        const setterName = agenda.nombre || '';
+        const isCustomCloser = closerEmail && closerEmail !== 'jeancarlo@thelearnation.com';
+        const isCustomSetter = setterName && !['workshop', 'vsl', 'Elias'].includes(setterName);
+
         setCreateData(prev => ({
             ...prev,
             nombre_cliente: agenda.lead || '',
             instagram: agenda.instagram && agenda.instagram !== 'N/A' ? agenda.instagram : '',
             mail_cliente: agenda.mail && agenda.mail !== 'N/A' ? agenda.mail : '',
             telefono: agenda.whatsapp && agenda.whatsapp !== 'N/A' ? agenda.whatsapp : '',
-            setter_name: agenda.nombre || '',
-            email_vendedor: agenda.closer && agenda.closer !== 'Sin asignar' ? agenda.closer : prev.email_vendedor,
+            setter_name: setterName,
+            setter_custom: isCustomSetter,
+            email_vendedor: closerEmail,
+            closer_custom: isCustomCloser,
             date: agenda.date ? agenda.date.split('T')[0] : prev.date
         }));
         setAgendaSearchResults([]);
@@ -430,6 +450,8 @@ const PublicFinancialSalesPage = () => {
             mail_cliente: '',
             telefono: '',
             setter_name: '',
+            setter_custom: false,
+            closer_custom: false,
             date: new Date().toISOString().split('T')[0]
         }));
     };
@@ -445,12 +467,16 @@ const PublicFinancialSalesPage = () => {
             mail_cliente: '',
             telefono: '',
             programa: 'RR',
-            tipo_pago_simple: 'completo',
+            programa_custom: false,
+            tipo_pago_simple: 'Completo',
+            tipo_pago_custom: false,
             monto: '',
             metodo_pago: 'Stripe',
             estado: 'Completada',
             email_vendedor: '',
+            closer_custom: false,
             setter_name: '',
+            setter_custom: false,
             examen: '',
             segundo_pago: '',
             notas: '',
@@ -1254,13 +1280,35 @@ const PublicFinancialSalesPage = () => {
                                             
                                             <td className="p-4 whitespace-nowrap">
                                                 {isEditing ? (
-                                                    <input 
-                                                        type="text" 
-                                                        value={editData.programa} 
-                                                        onChange={e => setEditData({...editData, programa: e.target.value})}
-                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
-                                                        placeholder="Prog (ej: RR)"
-                                                    />
+                                                    <div className="flex flex-col gap-1">
+                                                        <select
+                                                            value={editData.programa_custom ? 'otro' : editData.programa}
+                                                            onChange={e => {
+                                                                const val = e.target.value;
+                                                                if (val === 'otro') {
+                                                                    setEditData({ ...editData, programa: '', programa_custom: true });
+                                                                } else {
+                                                                    setEditData({ ...editData, programa: val, programa_custom: false });
+                                                                }
+                                                            }}
+                                                            className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs cursor-pointer focus:border-indigo-500 focus:outline-none"
+                                                        >
+                                                            <option value="">Seleccionar...</option>
+                                                            <option value="RR">RR</option>
+                                                            <option value="AL">AL</option>
+                                                            <option value="SI">SI</option>
+                                                            <option value="otro">Otro...</option>
+                                                        </select>
+                                                        {editData.programa_custom && (
+                                                            <input 
+                                                                type="text" 
+                                                                value={editData.programa} 
+                                                                onChange={e => setEditData({...editData, programa: e.target.value})}
+                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs mt-1"
+                                                                placeholder="Especificar programa"
+                                                            />
+                                                        )}
+                                                    </div>
                                                 ) : (
                                                     <span className="font-medium text-slate-200">{sale.programa || 'N/A'}</span>
                                                 )}
@@ -1269,13 +1317,38 @@ const PublicFinancialSalesPage = () => {
                                             <td className="p-4 space-y-1">
                                                 {isEditing ? (
                                                     <>
-                                                        <input 
-                                                            type="text" 
-                                                            value={editData.tipo_pago_simple} 
-                                                            onChange={e => setEditData({...editData, tipo_pago_simple: e.target.value})}
-                                                            className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs mb-1"
-                                                            placeholder="Pago (ej: completo)"
-                                                        />
+                                                        <div className="flex flex-col gap-1 mb-1">
+                                                            <select
+                                                                value={editData.tipo_pago_custom ? 'otro' : editData.tipo_pago_simple}
+                                                                onChange={e => {
+                                                                    const val = e.target.value;
+                                                                    if (val === 'otro') {
+                                                                        setEditData({ ...editData, tipo_pago_simple: '', tipo_pago_custom: true });
+                                                                    } else {
+                                                                        setEditData({ ...editData, tipo_pago_simple: val, tipo_pago_custom: false });
+                                                                    }
+                                                                }}
+                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs cursor-pointer focus:border-indigo-500 focus:outline-none"
+                                                            >
+                                                                <option value="">Seleccionar...</option>
+                                                                <option value="Seña">Seña</option>
+                                                                <option value="Parcial">Parcial</option>
+                                                                <option value="Cuota">Cuota</option>
+                                                                <option value="Completo">Completo</option>
+                                                                <option value="Renovación">Renovación</option>
+                                                                <option value="Upsell">Upsell</option>
+                                                                <option value="otro">Otro...</option>
+                                                            </select>
+                                                            {editData.tipo_pago_custom && (
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={editData.tipo_pago_simple} 
+                                                                    onChange={e => setEditData({...editData, tipo_pago_simple: e.target.value})}
+                                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                                                    placeholder="Especificar tipo pago"
+                                                                />
+                                                            )}
+                                                        </div>
                                                         <input 
                                                             type="text" 
                                                             value={editData.payment_type} 
@@ -1295,25 +1368,67 @@ const PublicFinancialSalesPage = () => {
                                             <td className="p-4 space-y-1">
                                                 {isEditing ? (
                                                     <>
-                                                        <input 
-                                                            type="text" 
-                                                            value={editData.email_vendedor} 
-                                                            onChange={e => setEditData({...editData, email_vendedor: e.target.value})}
-                                                            className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs mb-1"
-                                                            placeholder="Closer (Email)"
-                                                        />
-                                                        <input 
-                                                            type="text" 
-                                                            value={editData.setter_name} 
-                                                            onChange={e => setEditData({...editData, setter_name: e.target.value})}
-                                                            className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
-                                                            placeholder="Setter"
-                                                        />
+                                                        <div className="flex flex-col gap-1 mb-1">
+                                                            <select
+                                                                value={editData.closer_custom ? 'otro' : editData.email_vendedor}
+                                                                onChange={e => {
+                                                                    const val = e.target.value;
+                                                                    if (val === 'otro') {
+                                                                        setEditData({ ...editData, email_vendedor: '', closer_custom: true });
+                                                                    } else {
+                                                                        setEditData({ ...editData, email_vendedor: val, closer_custom: false });
+                                                                    }
+                                                                }}
+                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs cursor-pointer focus:border-indigo-500 focus:outline-none"
+                                                            >
+                                                                <option value="">Seleccionar...</option>
+                                                                <option value="jeancarlo@thelearnation.com">Jean Carlo</option>
+                                                                <option value="otro">Otro...</option>
+                                                            </select>
+                                                            {editData.closer_custom && (
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={editData.email_vendedor} 
+                                                                    onChange={e => setEditData({...editData, email_vendedor: e.target.value})}
+                                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                                                    placeholder="Closer (Email)"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col gap-1">
+                                                            <select
+                                                                value={editData.setter_custom ? 'otro' : editData.setter_name}
+                                                                onChange={e => {
+                                                                    const val = e.target.value;
+                                                                    if (val === 'otro') {
+                                                                        setEditData({ ...editData, setter_name: '', setter_custom: true });
+                                                                    } else {
+                                                                        setEditData({ ...editData, setter_name: val, setter_custom: false });
+                                                                    }
+                                                                }}
+                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs cursor-pointer focus:border-indigo-500 focus:outline-none"
+                                                            >
+                                                                <option value="">Seleccionar...</option>
+                                                                <option value="workshop">workshop</option>
+                                                                <option value="vsl">vsl</option>
+                                                                <option value="Elias">Elias</option>
+                                                                <option value="otro">Otro...</option>
+                                                            </select>
+                                                            {editData.setter_custom && (
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={editData.setter_name} 
+                                                                    onChange={e => setEditData({...editData, setter_name: e.target.value})}
+                                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                                                    placeholder="Especificar Setter"
+                                                                />
+                                                            )}
+                                                        </div>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <div className="text-xs text-slate-300">C: {sale.closer_name || sale.email_vendedor?.split('@')[0] || 'N/A'}</div>
-                                                        <div className="text-xs text-slate-400">S: {sale.setter || 'N/A'}</div>
+                                                        <div className="text-xs text-slate-400">F: {sale.setter || 'N/A'}</div>
                                                     </>
                                                 )}
                                             </td>
@@ -1568,30 +1683,66 @@ const PublicFinancialSalesPage = () => {
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Programa *</label>
                                     <select
-                                        value={createData.programa}
-                                        onChange={e => setCreateData({...createData, programa: e.target.value})}
+                                        value={createData.programa_custom ? 'otro' : createData.programa}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === 'otro') {
+                                                setCreateData({ ...createData, programa: '', programa_custom: true });
+                                            } else {
+                                                setCreateData({ ...createData, programa: val, programa_custom: false });
+                                            }
+                                        }}
                                         className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
                                     >
+                                        <option value="">Seleccionar...</option>
                                         <option value="RR">Residency Roadmap (RR)</option>
                                         <option value="AL">Ace Learner (AL)</option>
                                         <option value="SI">Specialist Initiative (SI)</option>
+                                        <option value="otro">Otro / Agregar nuevo...</option>
                                     </select>
+                                    {createData.programa_custom && (
+                                        <input
+                                            type="text"
+                                            value={createData.programa}
+                                            onChange={e => setCreateData({...createData, programa: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-1"
+                                            placeholder="Especificar programa"
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Tipo de Pago *</label>
                                     <select
-                                        value={createData.tipo_pago_simple}
-                                        onChange={e => setCreateData({...createData, tipo_pago_simple: e.target.value})}
+                                        value={createData.tipo_pago_custom ? 'otro' : createData.tipo_pago_simple}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === 'otro') {
+                                                setCreateData({ ...createData, tipo_pago_simple: '', tipo_pago_custom: true });
+                                            } else {
+                                                setCreateData({ ...createData, tipo_pago_simple: val, tipo_pago_custom: false });
+                                            }
+                                        }}
                                         className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
                                     >
-                                        <option value="completo">Completo (PIF)</option>
-                                        <option value="parcial">Parcial (Primer Pago)</option>
-                                        <option value="Seña">Seña (Reserva)</option>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Seña">Seña</option>
+                                        <option value="Parcial">Parcial</option>
                                         <option value="Cuota">Cuota</option>
-                                        <option value="Renovacion">Renovación</option>
+                                        <option value="Completo">Completo</option>
+                                        <option value="Renovación">Renovación</option>
                                         <option value="Upsell">Upsell</option>
+                                        <option value="otro">Otro / Agregar nuevo...</option>
                                     </select>
+                                    {createData.tipo_pago_custom && (
+                                        <input
+                                            type="text"
+                                            value={createData.tipo_pago_simple}
+                                            onChange={e => setCreateData({...createData, tipo_pago_simple: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-1"
+                                            placeholder="Especificar tipo pago"
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="space-y-1">
@@ -1642,24 +1793,62 @@ const PublicFinancialSalesPage = () => {
 
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Closer (Email del Vendedor)</label>
-                                    <input
-                                        type="email"
-                                        value={createData.email_vendedor}
-                                        onChange={e => setCreateData({...createData, email_vendedor: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
-                                        placeholder="ej. closer@neurops.com"
-                                    />
+                                    <select
+                                        value={createData.closer_custom ? 'otro' : createData.email_vendedor}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === 'otro') {
+                                                setCreateData({ ...createData, email_vendedor: '', closer_custom: true });
+                                            } else {
+                                                setCreateData({ ...createData, email_vendedor: val, closer_custom: false });
+                                            }
+                                        }}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        <option value="jeancarlo@thelearnation.com">Jean Carlo</option>
+                                        <option value="otro">Otro / Agregar nuevo...</option>
+                                    </select>
+                                    {createData.closer_custom && (
+                                        <input
+                                            type="text"
+                                            value={createData.email_vendedor}
+                                            onChange={e => setCreateData({...createData, email_vendedor: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold mt-1"
+                                            placeholder="ej. closer@neurops.com"
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Setter (Nombre del Setter)</label>
-                                    <input
-                                        type="text"
-                                        value={createData.setter_name}
-                                        onChange={e => setCreateData({...createData, setter_name: e.target.value})}
-                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold"
-                                        placeholder="ej. elias"
-                                    />
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Setter (Fuente)</label>
+                                    <select
+                                        value={createData.setter_custom ? 'otro' : createData.setter_name}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === 'otro') {
+                                                setCreateData({ ...createData, setter_name: '', setter_custom: true });
+                                            } else {
+                                                setCreateData({ ...createData, setter_name: val, setter_custom: false });
+                                            }
+                                        }}
+                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        <option value="workshop">workshop</option>
+                                        <option value="vsl">vsl</option>
+                                        <option value="Elias">Elias</option>
+                                        <option value="otro">Otro / Agregar nuevo...</option>
+                                    </select>
+                                    {createData.setter_custom && (
+                                        <input
+                                            type="text"
+                                            value={createData.setter_name}
+                                            onChange={e => setCreateData({...createData, setter_name: e.target.value})}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-650 focus:border-indigo-500 outline-none transition-all font-semibold mt-1"
+                                            placeholder="ej. elias"
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="space-y-1 md:col-span-2">
