@@ -793,13 +793,13 @@ const FinancialAgendasPage = () => {
             {/* Modal de Edición de Agenda */}
             {editingAgenda && (
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 max-w-md w-full space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="space-y-1">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-5 md:p-6 max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="space-y-1 pb-3 border-b border-slate-800/60 flex-shrink-0">
                             <h3 className="text-lg font-black text-white italic uppercase">Editar Registro de Agenda</h3>
                             <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Modificar datos de la cita</p>
                         </div>
                         
-                        <form onSubmit={handleEditSubmit} className="space-y-4 text-left">
+                        <form onSubmit={handleEditSubmit} className="space-y-4 text-left overflow-y-auto pr-1 flex-1 min-h-0 pt-3 custom-scrollbar">
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
                                     <input 
@@ -863,7 +863,7 @@ const FinancialAgendasPage = () => {
                                     </select>
                                 </div>
                                 
-                                <div className="flex gap-3 pt-4">
+                                <div className="flex gap-3 pt-4 sticky bottom-0 bg-slate-900 pb-1">
                                     <button 
                                         type="button"
                                         onClick={() => setEditingAgenda(null)}

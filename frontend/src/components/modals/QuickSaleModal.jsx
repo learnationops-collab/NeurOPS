@@ -116,16 +116,16 @@ const QuickSaleModal = ({ isOpen, onClose, onSuccess, preselectedLead }) => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-2xl bg-surface border border-base rounded-[2rem] shadow-2xl overflow-visible"
+                className="w-full max-w-2xl bg-surface border border-base rounded-[2rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             >
-                <div className="p-6 border-b border-base flex justify-between items-center bg-surface/50">
+                <div className="p-5 md:p-6 border-b border-base flex justify-between items-center bg-surface/50 shrink-0">
                     <h2 className="text-xl font-black text-base italic tracking-tighter">Nueva venta</h2>
                     <button onClick={onClose} className="p-2 hover:bg-surface-hover rounded-full text-muted hover:text-white transition-all">
                         <X size={20} />
                     </button>
                 </div>
 
-                <div className="p-8 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                <div className="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar">
                     {loading ? (
                         <div className="flex justify-center py-20">
                             <Loader2 className="animate-spin text-primary" size={32} />

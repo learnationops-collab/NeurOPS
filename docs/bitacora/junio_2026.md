@@ -1,6 +1,9 @@
 # Bitácora - Junio 2026
 
 - **11 de Junio de 2026**:
+  - **Optimización Responsiva y Scroll en Modales de Agendas y Ventas**:
+    - **Reestructuración de Layouts (`FinancialAgendasPage.jsx`, `NewSaleModal.jsx`, `AddAgendaModal.jsx`, `QuickSaleModal.jsx`, `QuickAppointmentModal.jsx`) [MODIFY]**: Se aplicaron límites de altura máxima (`max-h-[90vh]`) y layouts flexibles (`flex flex-col`) a los contenedores principales de los modales de edición y creación de agendas y ventas. Se configuraron las secciones internas y formularios con scroll vertical automático (`overflow-y-auto` y `custom-scrollbar`) para asegurar que todos los botones y campos sean accesibles en pantallas pequeñas, laptops de 13" y móviles con barras de herramientas inferiores.
+    - **Optimización de Espacio Lateral**: Se reemplazaron paddings estáticos de gran escala (`p-12`) por clases responsivas adaptables (`p-6 md:p-10 lg:p-12`), logrando un mejor aprovechamiento del ancho disponible en pantallas estrechas.
   - **Pestaña de Leads Entrantes de Manychat en Sección de Setters y Admins**:
     - **API (Backend) (`manychat.py`) [MODIFY]**: Se modificó el endpoint de edición `PUT /api/manychat-webhook/answer/<int:answer_id>` para admitir la actualización del campo `keyword` (palabra clave) de la interacción del lead. Al recibir la modificación, el backend busca de manera automática si existe un anuncio (`Ad`) asociado a esa nueva palabra clave y actualiza el campo `ad_id` de forma acorde, manteniendo una atribución automática óptima.
     - **Interfaz (Frontend) (`IncomingLeadsTab.jsx` y `PublicSetterStatsPage.jsx`) [NEW / MODIFY]**:

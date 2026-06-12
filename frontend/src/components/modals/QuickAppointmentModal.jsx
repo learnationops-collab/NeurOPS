@@ -132,9 +132,9 @@ const QuickAppointmentModal = ({ isOpen, onClose, onSuccess }) => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-lg bg-surface border border-base rounded-[2.5rem] shadow-2xl overflow-visible"
+                className="w-full max-w-lg bg-surface border border-base rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             >
-                <div className="p-8 border-b border-base flex justify-between items-center bg-surface/50">
+                <div className="p-6 md:p-8 border-b border-base flex justify-between items-center bg-surface/50 shrink-0">
                     <div className="space-y-1">
                         <h2 className="text-2xl font-black text-base italic tracking-tighter">Nueva agenda</h2>
                         <p className="text-[10px] font-bold text-muted tracking-widest uppercase">Próximos 4 días disponibles</p>
@@ -144,7 +144,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, onSuccess }) => {
                     </button>
                 </div>
 
-                <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <div className="p-6 md:p-8 space-y-6 md:space-y-8 flex-1 overflow-y-auto custom-scrollbar">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-4">
                             <Loader2 className="animate-spin text-primary" size={32} />

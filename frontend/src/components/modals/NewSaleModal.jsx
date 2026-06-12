@@ -199,25 +199,25 @@ const NewSaleModal = ({ isOpen, onClose, onSuccess }) => {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
-            <div className="w-full max-w-2xl bg-surface border border-base rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,0.5)] relative overflow-hidden">
+            <div className="w-full max-w-2xl bg-surface border border-base rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,0.5)] relative overflow-hidden max-h-[90vh] flex flex-col">
 
                 {/* Close Button */}
                 <button
                     onClick={onClose}
-                    className="absolute right-8 top-8 text-muted hover:text-base transition-colors z-10 p-2 hover:bg-surface-hover rounded-full"
+                    className="absolute right-6 top-6 md:right-8 md:top-8 text-muted hover:text-base transition-colors z-20 p-2 hover:bg-surface-hover rounded-full"
                 >
                     <X size={24} />
                 </button>
 
                 {/* Progress Bar */}
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-base">
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-base z-20">
                     <div
                         className="h-full bg-primary transition-all duration-500 shadow-[0_0_15px_var(--color-primary)]"
                         style={{ width: `${(step / 3) * 100}%` }}
                     ></div>
                 </div>
 
-                <div className="p-12">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 lg:p-12 pt-14 md:pt-16">
                     {loading ? (
                         <div className="py-20 flex flex-col items-center gap-6">
                             <Loader2 className="w-12 h-12 text-primary animate-spin" />
