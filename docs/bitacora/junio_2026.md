@@ -420,3 +420,7 @@
     - **Frontend (`CloserPerformanceTab.jsx`) [MODIFY]**:
       - Se integró el desglose detallado de **No Show Rate (Inasistencias %)** y **Cancel Rate (Cancelaciones %)** en el pilar estratégico de Productividad y Agendamiento.
       - Ambos indicadores muestran sus valores porcentuales correspondientes al periodo consultado y su respectiva comparación con el mes anterior calendario, complementando la tasa de asistencia (Show Rate) y la cantidad absoluta de reuniones no concretadas.
+  - **Tooltips Descriptivos Interactivos al hacer Hover en KPIs**:
+    - **Frontend (`CloserPerformanceTab.jsx`) [MODIFY]**:
+      - Se diseñó el componente utilitario `MetricWithTooltip` para renderizar tooltips flotantes en HTML de diseño glassmorphism flotante sobre cualquier elemento sin romper la maquetación CSS flex/grid.
+      - Se envolvieron todos los números e indicadores clave del Pilar 1 (ingresos brutos, netos, cuotas, señas y nuevas ventas), Pilar 2 (ventas, close rate, ticket promedio y conversión de señas) y Pilar 3 (asistencias, show rate, no show rate, cancel rate, pitch rate e inasistencias totales) con descripciones precisas de negocio que aparecen al pasar el mouse por encima de los números.

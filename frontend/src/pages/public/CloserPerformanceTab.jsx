@@ -114,6 +114,18 @@ const normalizeStats = (s) => {
     };
 };
 
+const MetricWithTooltip = ({ children, tooltip, className = "flex items-center justify-between w-full", position = "top" }) => {
+    return (
+        <div className={`relative group/metric cursor-help ${className}`}>
+            {children}
+            <div className={`absolute ${position === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-slate-800 text-slate-200 text-[10px] leading-relaxed font-bold normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/metric:opacity-100 transition-all pointer-events-none z-[9999] shadow-2xl text-center`}>
+                {tooltip}
+                <div className={`absolute left-1/2 -translate-x-1/2 border-4 border-transparent ${position === 'bottom' ? 'bottom-full border-b-slate-900' : 'top-full border-t-slate-900'}`}></div>
+            </div>
+        </div>
+    );
+};
+
 const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab, setFilters }) => {
 
     const [showDiscrepanciesModal, setShowDiscrepanciesModal] = React.useState(false);
@@ -677,39 +689,41 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         </div>
                     </div>
                     <div className="space-y-4 relative z-10">
-                        <div>
+                        <MetricWithTooltip tooltip="Total de dinero bruto facturado o recaudado en el período, incluyendo nuevos cierres (PIF/Splits), señas y cobro de cuotas, sin descontar comisiones de pasarelas." className="block cursor-help">
                             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT BRUTO</h4>
                             <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none mt-1">{fmtCash(totalCashCollected)}</h2>
                             {renderComparisonSubdataLeft(totalCashCollected, compTotalCashCollected, true)}
-                        </div>
+                        </MetricWithTooltip>
                         <div className="pt-3 border-t border-slate-800/60">
-                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT NETO</h4>
-                            <h2 className="text-4xl font-black text-emerald-400 italic tracking-tighter leading-none mt-1">{fmtCash(totalCashCollectedNeto)}</h2>
-                            {renderComparisonSubdataLeft(totalCashCollectedNeto, compTotalCashCollectedNeto, true)}
+                            <MetricWithTooltip tooltip="Total de dinero neto recaudado tras descontar comisiones de pasarelas (Stripe: 4.5%, Hotmart: 8.9%)." className="block cursor-help">
+                                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT NETO</h4>
+                                <h2 className="text-4xl font-black text-emerald-400 italic tracking-tighter leading-none mt-1">{fmtCash(totalCashCollectedNeto)}</h2>
+                                {renderComparisonSubdataLeft(totalCashCollectedNeto, compTotalCashCollectedNeto, true)}
+                            </MetricWithTooltip>
                         </div>
                     </div>
                     <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        <MetricWithTooltip tooltip="Recaudación bruta de pagos únicos o iniciales de nuevos contratos." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nuevas Ventas (New Cash)</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash)}</span>
                                 {renderComparisonSubdata(realSalesCash, compRealSalesCash, true)}
                             </div>
-                        </div>
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="Recaudación bruta de cobros de cuotas de alumnos inscritos previamente." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cobro de Cuotas (Installments)</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-white tabular-nums">{fmtCash(installmentCash)}</span>
                                 {renderComparisonSubdata(installmentCash, compInstallmentCash, true)}
                             </div>
-                        </div>
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="Recaudación bruta de reservas o señas de llamadas." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reservas (Cash Señas)</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-fuchsia-400 tabular-nums">{fmtCash(depositCash)}</span>
                                 {renderComparisonSubdata(depositCash, compDepositCash, true)}
                             </div>
-                        </div>
+                        </MetricWithTooltip>
                     </div>
                 </div>
 
@@ -725,13 +739,15 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         </div>
                     </div>
                     <div className="space-y-1 relative z-10">
-                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">NUEVOS CLIENTES (VENTAS)</h4>
-                        <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{fmt(realSalesCount)}</h2>
-                        {renderComparisonSubdataLeft(realSalesCount, compRealSalesCount)}
-                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Contratos PIF + Split Concretados</p>
+                        <MetricWithTooltip tooltip="Cantidad de nuevos contratos o alumnos cerrados (incluye solo transacciones iniciales PIF y Split Pay)." className="block cursor-help">
+                            <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">NUEVOS CLIENTES (VENTAS)</h4>
+                            <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none mt-1">{fmt(realSalesCount)}</h2>
+                            {renderComparisonSubdataLeft(realSalesCount, compRealSalesCount)}
+                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Contratos PIF + Split Concretados</p>
+                        </MetricWithTooltip>
                     </div>
                     <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        <MetricWithTooltip tooltip="Porcentaje de cierres de ventas sobre el total de llamadas atendidas en primera llamada." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Close Rate (Asistencias)</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-amber-400 tabular-nums">
@@ -744,15 +760,15 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                     true
                                 )}
                             </div>
-                        </div>
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="Monto promedio cobrado por cada nuevo contrato (PIF + Split) concretado en el período." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ticket Promedio Real</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-sky-400 tabular-nums">{fmtNum(ticketPromedioReal, false, true)}</span>
                                 {renderComparisonSubdata(ticketPromedioReal, compTicketPromedioReal, true)}
                             </div>
-                        </div>
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="Porcentaje de señas del período que se convirtieron en un contrato cerrado (PIF o Split)." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conversión de Señas</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.sales.deposit_conversions?.rate ?? 0}%</span>
@@ -763,7 +779,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                     true
                                 )}
                             </div>
-                        </div>
+                        </MetricWithTooltip>
                     </div>
                 </div>
 
@@ -779,47 +795,49 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         </div>
                     </div>
                     <div className="space-y-1 relative z-10">
-                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">ASISTENCIAS REALES</h4>
-                        <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none">{fmt(stats.agendas.totals.attended)}</h2>
-                        {renderComparisonSubdataLeft(stats.agendas.totals.attended, compStats?.agendas?.totals?.attended)}
-                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Reuniones Uno a Uno Completadas</p>
+                        <MetricWithTooltip tooltip="Cantidad total de reuniones uno a uno que fueron atendidas en el período." className="block cursor-help">
+                            <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">ASISTENCIAS REALES</h4>
+                            <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none mt-1">{fmt(stats.agendas.totals.attended)}</h2>
+                            {renderComparisonSubdataLeft(stats.agendas.totals.attended, compStats?.agendas?.totals?.attended)}
+                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Reuniones Uno a Uno Completadas</p>
+                        </MetricWithTooltip>
                     </div>
                     <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        <MetricWithTooltip tooltip="Porcentaje de citas agendadas que asistieron a la llamada." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Show Rate (Asistencia %)</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-emerald-400 tabular-nums">{stats.percentages.show_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.show_rate, compStats?.percentages?.show_rate, false, true)}
                             </div>
-                        </div>
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="Porcentaje de citas agendadas que no asistieron ni cancelaron." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Show Rate (Inasistencias %)</span>
                             <div className="text-right">
-                                <span className="text-sm font-black text-rose-450 tabular-nums">{stats.percentages.no_show_rate.toFixed(1)}%</span>
+                                <span className="text-sm font-black text-rose-400 tabular-nums">{stats.percentages.no_show_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.no_show_rate, compStats?.percentages?.no_show_rate, false, true)}
                             </div>
-                        </div>
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="Porcentaje de citas agendadas que cancelaron la llamada." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cancel Rate (Cancelaciones %)</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-amber-400 tabular-nums">{stats.percentages.cancel_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.cancel_rate, compStats?.percentages?.cancel_rate, false, true)}
                             </div>
-                        </div>
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="Porcentaje de llamadas atendidas en las que el closer logró realizar la presentación de la oferta." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pitch Rate (Presentación)</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.percentages.pitch_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.pitch_rate, compStats?.percentages?.pitch_rate, false, true)}
                             </div>
-                        </div>
-                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="Cantidad total de citas agendadas que no se concretaron (No Shows + Cancelaciones)." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Shows / Canceladas (Cant.)</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-rose-400 tabular-nums">{fmt(totalNoShow + totalCanceled)}</span>
                                 {renderComparisonSubdata(totalNoShow + totalCanceled, (compStats?.agendas?.totals?.no_show ?? 0) + (compStats?.agendas?.totals?.canceled ?? 0))}
                             </div>
-                        </div>
+                        </MetricWithTooltip>
                     </div>
                 </div>
                 
