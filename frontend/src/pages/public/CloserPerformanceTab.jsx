@@ -793,6 +793,20 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             </div>
                         </div>
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Show Rate (Inasistencias %)</span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-rose-450 tabular-nums">{stats.percentages.no_show_rate.toFixed(1)}%</span>
+                                {renderComparisonSubdata(stats.percentages.no_show_rate, compStats?.percentages?.no_show_rate, false, true)}
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cancel Rate (Cancelaciones %)</span>
+                            <div className="text-right">
+                                <span className="text-sm font-black text-amber-400 tabular-nums">{stats.percentages.cancel_rate.toFixed(1)}%</span>
+                                {renderComparisonSubdata(stats.percentages.cancel_rate, compStats?.percentages?.cancel_rate, false, true)}
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pitch Rate (Presentación)</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.percentages.pitch_rate.toFixed(1)}%</span>
@@ -800,7 +814,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             </div>
                         </div>
                         <div className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Shows / Canceladas</span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Shows / Canceladas (Cant.)</span>
                             <div className="text-right">
                                 <span className="text-sm font-black text-rose-400 tabular-nums">{fmt(totalNoShow + totalCanceled)}</span>
                                 {renderComparisonSubdata(totalNoShow + totalCanceled, (compStats?.agendas?.totals?.no_show ?? 0) + (compStats?.agendas?.totals?.canceled ?? 0))}

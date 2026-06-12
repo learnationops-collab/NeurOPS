@@ -416,3 +416,7 @@
       - Se reemplazó el cálculo de comparación temporal de ventana deslizante simple (que retrocedía el número de días de la ventana) por un cálculo de mes calendario anterior exacto.
       - Se implementó la función auxiliar `_subtract_one_month` (y `_subtract_one_month_dt` para `datetime` en `conversational.py`) para restar un mes calendario de forma segura y tolerante a diferencias de duración de meses (ej: manejando correctamente días inexistentes al final del mes anterior).
       - Se actualizaron los endpoints `/public/setter-stats`, `/public/closer-stats` y `/stats/conversational` para devolver datos comparativos correspondientes al mismo rango de fechas pero del mes anterior calendario exacto.
+  - **Integración del Porcentaje de Cancelaciones e Inasistencias en el Dashboard de Closers**:
+    - **Frontend (`CloserPerformanceTab.jsx`) [MODIFY]**:
+      - Se integró el desglose detallado de **No Show Rate (Inasistencias %)** y **Cancel Rate (Cancelaciones %)** en el pilar estratégico de Productividad y Agendamiento.
+      - Ambos indicadores muestran sus valores porcentuales correspondientes al periodo consultado y su respectiva comparación con el mes anterior calendario, complementando la tasa de asistencia (Show Rate) y la cantidad absoluta de reuniones no concretadas.
