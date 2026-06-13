@@ -517,7 +517,7 @@ const FinancePage = () => {
                                             </div>
                                             <div className="w-full bg-slate-800/50 h-px" />
                                             <div className="flex justify-between items-baseline">
-                                                <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Balance Neto (A - B - C)</span>
+                                                <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Balance Neto (A - B + C)</span>
                                                 <span className={`text-xl font-black italic tracking-tighter ${summary.kpis.balance_neto >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
                                                     ${summary.kpis.balance_neto?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </span>

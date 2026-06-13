@@ -583,7 +583,7 @@ def get_finance_summary():
     savings_val = saving.savings if saving else 0.0
     
     profit = total_actual - total_expenses
-    balance_neto = total_income - total_expenses - savings_val
+    balance_neto = total_income - total_expenses + savings_val
     
     return jsonify({
         "month": month,
