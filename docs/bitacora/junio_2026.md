@@ -5,6 +5,7 @@
     - **Remoción del KPI "Balance en pasarela"**: Eliminado de la interfaz para evitar redundancia y confusión.
     - **Cálculo del Balance Neto**: Se corrigió el cálculo de gastos generales en el resumen financiero de modo que refleje el presupuesto de anuncios configurado en lugar de la inversión en anuncios real de ese periodo.
     - **Pestaña "Presupuesto Anuncios"**: Diseñado e implementado un panel premium Glassmorphic que permite registrar y consultar en tiempo real el presupuesto asignado mensual, el gasto real ejecutado y la diferencia/desviación presupuestaria.
+    - **Ajuste de Ahorros**: Se corrigió la fórmula para sumar los ahorros en el balance neto (`A - B + C`) en lugar de restarlos, tanto en el backend como en la etiqueta del frontend.
 
 - **12 de Junio de 2026**:
   - **Estructura Jerárquica y Filtros estilo Meta Ads en Rendimiento por Anuncio (`AdDashboardTab.jsx`) [MODIFY]**:
