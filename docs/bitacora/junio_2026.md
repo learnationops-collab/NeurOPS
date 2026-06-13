@@ -1,5 +1,11 @@
 # Bitácora - Junio 2026
 
+- **13 de Junio de 2026**:
+  - **Correcciones de Finanzas y Presupuesto de Anuncios (`finance.py` y `FinancePage.jsx`) [MODIFY]**:
+    - **Remoción del KPI "Balance en pasarela"**: Eliminado de la interfaz para evitar redundancia y confusión.
+    - **Cálculo del Balance Neto**: Se corrigió el cálculo de gastos generales en el resumen financiero de modo que refleje el presupuesto de anuncios configurado en lugar de la inversión en anuncios real de ese periodo.
+    - **Pestaña "Presupuesto Anuncios"**: Diseñado e implementado un panel premium Glassmorphic que permite registrar y consultar en tiempo real el presupuesto asignado mensual, el gasto real ejecutado y la diferencia/desviación presupuestaria.
+
 - **12 de Junio de 2026**:
   - **Estructura Jerárquica y Filtros estilo Meta Ads en Rendimiento por Anuncio (`AdDashboardTab.jsx`) [MODIFY]**:
     - **Navegación por Sub-pestañas**: Se diseñó e implementó un sistema de navegación mediante sub-pestañas integrando los niveles **Campañas**, **Conjuntos de Anuncios** y **Anuncios** (las cuales emulan la experiencia y flujo de Meta Ads Manager).

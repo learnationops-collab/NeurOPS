@@ -45,6 +45,9 @@ const FinancePage = () => {
     const [teamMembers, setTeamMembers] = useState([]);
     const [savings, setSavings] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [adBudget, setAdBudget] = useState(0);
+    const [adSpent, setAdSpent] = useState(0);
+    const [loadingAdBudget, setLoadingAdBudget] = useState(false);
 
     // Expenses CRUD State
     const [expensesList, setExpensesList] = useState([]);
@@ -97,6 +100,18 @@ const FinancePage = () => {
                 ]);
                 setPayroll(payRes.data);
                 setTeamMembers(teamRes.data);
+            } else if (activeTab === 'ad-budget') {
+                setLoadingAdBudget(true);
+                try {
+                    const res = await api.get(`/public/finance/ad-budget?month=${selectedMonth}`);
+                    setAdBudget(res.data.budget);
+                    setAdSpent(res.data.spent);
+                } catch (error) {
+                    console.error(error);
+                    toast.error('Error al cargar presupuesto de anuncios');
+                } finally {
+                    setLoadingAdBudget(false);
+                }
             } else if (activeTab === 'expenses') {
                 fetchExpenses();
             }
@@ -141,6 +156,20 @@ const FinancePage = () => {
             toast.success('Ahorros guardados');
         } catch (error) {
             toast.error('Error al guardar ahorros');
+        }
+    };
+
+    const handleSaveAdBudget = async (val) => {
+        try {
+            const res = await api.post('/public/finance/ad-budget', { month: selectedMonth, budget: parseFloat(val) || 0.0 });
+            setAdBudget(res.data.budget);
+            setAdSpent(res.data.spent);
+            // Refetch summary to update net balance and expenses
+            const sumRes = await api.get(`/public/finance/summary?month=${selectedMonth}`);
+            setSummary(sumRes.data);
+            toast.success('Presupuesto de anuncios guardado');
+        } catch (error) {
+            toast.error('Error al guardar presupuesto de anuncios');
         }
     };
 
@@ -339,6 +368,7 @@ const FinancePage = () => {
                 {[
                     { id: 'summary', label: 'Resumen' },
                     { id: 'balances', label: 'Medios de Pago' },
+                    { id: 'ad-budget', label: 'Presupuesto Anuncios' },
                     { id: 'payroll', label: 'Nómina (Equipo)' },
                     { id: 'expenses', label: 'Software' }
                 ].map(tab => (
@@ -366,7 +396,7 @@ const FinancePage = () => {
                     {activeTab === 'summary' && summary && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             {/* KPI Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <Card variant="surface" className="flex flex-col justify-center rounded-[2rem] bg-indigo-950/10 border-indigo-900/30">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Profit (Balances - Gastos)</p>
                                     <h3 className={`text-2xl font-black italic tracking-tighter ${summary.kpis.profit >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
@@ -389,14 +419,6 @@ const FinancePage = () => {
                                         ${summary.kpis.total_expenses?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </h3>
                                     <p className="text-[9px] font-bold text-slate-550 uppercase mt-1">Sueldos, Anuncios, Software y Equipos</p>
-                                </Card>
-
-                                <Card variant="surface" className="flex flex-col justify-center rounded-[2rem] bg-slate-900/40 border-slate-800/80">
-                                    <p className="text-[10px] font-black text-indigo-400/80 uppercase tracking-widest mb-1.5">Balances en Pasarelas</p>
-                                    <h3 className="text-2xl font-black text-slate-200 italic tracking-tighter">
-                                        ${summary.kpis.total_actual_balances?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                    </h3>
-                                    <p className="text-[9px] font-bold text-slate-550 uppercase mt-1">Total acumulado en medios de pago</p>
                                 </Card>
                             </div>
 
@@ -590,6 +612,70 @@ const FinancePage = () => {
                                         })()}
                                     </table>
                                 </div>
+                            </Card>
+                        </div>
+                    )}
+
+                    {/* TAB: AD BUDGET */}
+                    {activeTab === 'ad-budget' && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <Card variant="surface" className="p-6 rounded-[2.5rem] border-slate-800/80 bg-slate-900/10 max-w-xl mx-auto">
+                                <h3 className="text-xs font-black text-white uppercase tracking-wider mb-6 flex items-center gap-2">
+                                    <TrendingUp className="text-indigo-400" size={16} />
+                                    Presupuesto para Anuncios
+                                </h3>
+                                
+                                {loadingAdBudget ? (
+                                    <div className="flex justify-center py-12">
+                                        <Loader2 className="animate-spin text-indigo-500 w-8 h-8" />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center p-4 bg-slate-950/40 border border-slate-850 rounded-2xl">
+                                                <div className="space-y-0.5">
+                                                    <span className="text-xs font-bold text-slate-300 uppercase block">Presupuesto Destinado (A)</span>
+                                                    <span className="text-[10px] text-slate-500 uppercase font-black block">Ingreso manual</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-slate-400 font-bold">$</span>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0.00"
+                                                        value={adBudget}
+                                                        onChange={(e) => setAdBudget(e.target.value)}
+                                                        onBlur={(e) => handleSaveAdBudget(e.target.value)}
+                                                        className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-right font-black text-slate-200 outline-none w-32 focus:border-indigo-500 transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-between items-center p-4 bg-slate-950/40 border border-slate-850 rounded-2xl">
+                                                <div className="space-y-0.5">
+                                                    <span className="text-xs font-bold text-slate-300 uppercase block">Gastado en Anuncios (B)</span>
+                                                    <span className="text-[10px] text-slate-500 uppercase font-black block">Cálculo desde marketing</span>
+                                                </div>
+                                                <span className="text-sm font-black font-mono text-amber-300">
+                                                    ${adSpent?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-6 bg-indigo-950/15 border border-indigo-900/30 rounded-3xl mt-4 space-y-3">
+                                            <div className="flex justify-between items-baseline">
+                                                <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Diferencia (A - B)</span>
+                                                {(() => {
+                                                    const diff = (parseFloat(adBudget) || 0) - adSpent;
+                                                    return (
+                                                        <span className={`text-xl font-black italic tracking-tighter ${diff >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
+                                                            {diff >= 0 ? `+$${diff.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : `-$${Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </Card>
                         </div>
                     )}

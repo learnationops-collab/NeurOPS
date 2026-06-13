@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from flask_login import current_user, login_required
 from app import db
-from app.models import User, Expense, AdPeriodSpend
+from app.models import User, Expense, AdPeriodSpend, MarketingBudget
 from app.models.financial import FinancialSale, FinancialAgenda, TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving
 from datetime import datetime
 import calendar
@@ -428,6 +428,61 @@ def manage_savings():
         "savings": saving.savings if saving else 0.0
     }), 200
 
+@bp.route('/public/finance/ad-budget', methods=['GET', 'POST'])
+@login_required
+@finance_admin_required
+def manage_ad_budget():
+    month = request.args.get('month') or (request.json.get('month') if request.is_json else None)
+    if not month or len(month) != 7 or '-' not in month:
+        return jsonify({"error": "Parámetro 'month' (YYYY-MM) es requerido"}), 400
+        
+    try:
+        year, month_num = map(int, month.split('-'))
+        start_date = datetime(year, month_num, 1).date()
+        last_day = calendar.monthrange(year, month_num)[1]
+        end_date = datetime(year, month_num, last_day).date()
+    except Exception:
+        return jsonify({"error": "Mes con formato inválido"}), 400
+
+    if request.method == 'POST':
+        data = request.json or {}
+        budget_val = float(data.get('budget', 0.0))
+        
+        budget_rec = MarketingBudget.query.filter_by(date=start_date).first()
+        if not budget_rec:
+            budget_rec = MarketingBudget(date=start_date, budget=budget_val, spent=0.0)
+            db.session.add(budget_rec)
+        else:
+            budget_rec.budget = budget_val
+            
+        db.session.commit()
+        
+        ad_spends = AdPeriodSpend.query.filter(
+            AdPeriodSpend.start_date <= end_date,
+            AdPeriodSpend.end_date >= start_date
+        ).all()
+        total_spent = sum(sp.spend for sp in ad_spends)
+        
+        return jsonify({
+            "month": month,
+            "budget": budget_rec.budget,
+            "spent": round(total_spent, 2)
+        }), 200
+
+    budget_rec = MarketingBudget.query.filter_by(date=start_date).first()
+    
+    ad_spends = AdPeriodSpend.query.filter(
+        AdPeriodSpend.start_date <= end_date,
+        AdPeriodSpend.end_date >= start_date
+    ).all()
+    total_spent = sum(sp.spend for sp in ad_spends)
+    
+    return jsonify({
+        "month": month,
+        "budget": budget_rec.budget if budget_rec else 0.0,
+        "spent": round(total_spent, 2)
+    }), 200
+
 @bp.route('/public/finance/summary', methods=['GET'])
 @login_required
 @finance_admin_required
@@ -490,11 +545,8 @@ def get_finance_summary():
     total_software = sum(e.amount for e in software_expenses)
     
     
-    ad_spends = AdPeriodSpend.query.filter(
-        AdPeriodSpend.start_date <= end_date.date(),
-        AdPeriodSpend.end_date >= start_date.date()
-    ).all()
-    total_anuncios = sum(sp.spend for sp in ad_spends)
+    budget_rec = MarketingBudget.query.filter_by(date=start_date.date()).first()
+    total_anuncios = budget_rec.budget if budget_rec else 0.0
     
     saved_payroll_list = MonthlyPayroll.query.filter_by(month=month).all()
     saved_payroll_map = {p.member_id: p for p in saved_payroll_list}
