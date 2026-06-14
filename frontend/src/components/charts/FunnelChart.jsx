@@ -1,19 +1,19 @@
 import React from 'react';
 import { ResponsiveContainer, FunnelChart as RechartsFunnelChart, Funnel, LabelList, Tooltip, Cell } from 'recharts';
 
-const FunnelChart = ({ data }) => {
+const FunnelChart = ({ data, height = '300px' }) => {
     // data expected format: [{ name: 'Stage Name', value: 100, fill: '#8884d8' }, ...]
 
     if (!data || data.length === 0) {
         return (
-            <div className="h-64 flex items-center justify-center text-muted text-sm">
+            <div className="flex items-center justify-center text-muted text-sm" style={{ height }}>
                 No hay datos suficientes para el gráfico
             </div>
         );
     }
 
     return (
-        <div className="w-full h-full">
+        <div className="w-full" style={{ height }}>
             <ResponsiveContainer width="100%" height="100%">
                 <RechartsFunnelChart>
                     <Tooltip
