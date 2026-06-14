@@ -582,7 +582,7 @@ def get_finance_summary():
     saving = MonthlySaving.query.filter_by(month=month).first()
     savings_val = saving.savings if saving else 0.0
     
-    profit = total_actual - total_expenses
+    profit = total_income - total_expenses
     balance_neto = total_income - total_expenses + savings_val
     
     return jsonify({
