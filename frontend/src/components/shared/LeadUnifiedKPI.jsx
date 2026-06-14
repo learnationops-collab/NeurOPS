@@ -55,9 +55,9 @@ const LeadUnifiedKPI = ({ stats }) => {
                 {/* 1. SECCIÓN DOMINANTE: ENTRANTES */}
                 <div className="lg:col-span-3 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-slate-800/50 pb-8 lg:pb-0 lg:pr-8">
                     <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Lead Discovery</span>
+                        <span className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Lead Discovery</span>
                         <div className="relative group/tt flex items-center">
-                            <HelpCircle size={12} className="text-slate-600 cursor-help" />
+                            <HelpCircle size={12} className="text-slate-650 cursor-help" />
                             <div className="absolute bottom-full left-0 mb-2 w-48 p-3 bg-slate-800 text-white text-[10px] rounded-xl opacity-0 group-hover/tt:opacity-100 transition-opacity pointer-events-none z-50 border border-slate-700 shadow-2xl shadow-black">
                                 {tooltipContent.entrantes}
                             </div>
@@ -80,7 +80,7 @@ const LeadUnifiedKPI = ({ stats }) => {
                         </div>
                         <div className="pb-2">
                             <p className="text-sm font-black text-pink-500 uppercase italic leading-none">Entrantes</p>
-                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Total Periodo</p>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Total Periodo</p>
                         </div>
                     </div>
                 </div>
@@ -93,7 +93,7 @@ const LeadUnifiedKPI = ({ stats }) => {
                             <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest italic">Engagement Rate</h3>
                         </div>
                         <div className="relative group/tt flex items-center">
-                            <HelpCircle size={12} className="text-slate-600 cursor-help" />
+                            <HelpCircle size={12} className="text-slate-650 cursor-help" />
                             <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-slate-800 text-white text-[10px] rounded-xl opacity-0 group-hover/tt:opacity-100 transition-opacity pointer-events-none z-50 border border-slate-700 shadow-2xl shadow-black">
                                 {tooltipContent.respuesta}
                             </div>
@@ -102,23 +102,23 @@ const LeadUnifiedKPI = ({ stats }) => {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-slate-950/40 border border-slate-800/50 p-4 rounded-3xl group/sub hover:bg-slate-800/40 transition-colors">
-                            <p className="text-3xl font-black text-indigo-400 italic leading-none mb-1">{respondidosPct}%</p>
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Tasa Respuesta</p>
+                            <p className="text-4xl font-black text-indigo-400 italic leading-none mb-1">{respondidosPct}%</p>
+                            <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Tasa Respuesta</p>
                         </div>
                         <div className="flex flex-col justify-center space-y-3 px-2">
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                                    <span className="text-[9px] font-black text-slate-400 uppercase">Respondidos</span>
+                                    <span className="text-xs font-black text-slate-400 uppercase">Respondidos</span>
                                 </div>
-                                <span className="text-xs font-black text-white italic">{respondidos}</span>
+                                <span className="text-sm font-black text-white italic">{respondidos}</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-                                    <span className="text-[9px] font-black text-slate-500 uppercase">Sin Respuesta</span>
+                                    <span className="text-xs font-black text-slate-500 uppercase">Sin Respuesta</span>
                                 </div>
-                                <span className="text-xs font-black text-slate-400 italic">{sinRespuesta}</span>
+                                <span className="text-sm font-black text-slate-400 italic">{sinRespuesta}</span>
                             </div>
                         </div>
                     </div>
@@ -141,7 +141,7 @@ const LeadUnifiedKPI = ({ stats }) => {
                             <h3 className="text-xs font-black text-emerald-400 uppercase tracking-widest italic">Cualificación Final</h3>
                         </div>
                         <div className="relative group/tt flex items-center">
-                            <HelpCircle size={12} className="text-slate-600 cursor-help" />
+                            <HelpCircle size={12} className="text-slate-650 cursor-help" />
                             <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-slate-800 text-white text-[10px] rounded-xl opacity-0 group-hover/tt:opacity-100 transition-opacity pointer-events-none z-50 border border-slate-700 shadow-2xl shadow-black">
                                 {tooltipContent.cualificacion}
                             </div>
@@ -175,33 +175,33 @@ const LeadUnifiedKPI = ({ stats }) => {
                                 />
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-xl font-black text-white italic leading-none">{cualificados}</span>
-                                <span className="text-[7px] font-black text-slate-500 uppercase tracking-tighter">Leads</span>
+                                <span className="text-2xl font-black text-white italic leading-none">{cualificados}</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leads</span>
                             </div>
                         </div>
 
                         <div className="flex-1 grid grid-cols-2 gap-y-4 gap-x-8 w-full">
                             <div>
-                                <p className="text-[10px] font-black text-white italic tracking-tighter leading-none mb-1">{cualificadosSobreEntrantes}%</p>
-                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">% / Entrantes</p>
+                                <p className="text-sm font-black text-white italic tracking-tighter leading-none mb-1">{cualificadosSobreEntrantes}%</p>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">% / Entrantes</p>
                                 <div className="w-full h-1 bg-slate-800 mt-2 rounded-full">
                                     <div className="h-full bg-emerald-500/40 rounded-full" style={{ width: `${cualificadosSobreEntrantes}%` }} />
                                 </div>
                             </div>
                             <div>
-                                <p className="text-[10px] font-black text-white italic tracking-tighter leading-none mb-1">{cualificadosSobreRespondidos}%</p>
-                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">% / Respuesta</p>
+                                <p className="text-sm font-black text-white italic tracking-tighter leading-none mb-1">{cualificadosSobreRespondidos}%</p>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">% / Respuesta</p>
                                 <div className="w-full h-1 bg-slate-800 mt-2 rounded-full">
                                     <div className="h-full bg-indigo-500/40 rounded-full" style={{ width: `${cualificadosSobreRespondidos}%` }} />
                                 </div>
                             </div>
                             <div>
-                                <p className="text-[10px] font-black text-rose-500 italic tracking-tighter leading-none mb-1">{noCualificados}</p>
-                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">No Cualificados</p>
+                                <p className="text-sm font-black text-rose-500 italic tracking-tighter leading-none mb-1">{noCualificados}</p>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">No Cualificados</p>
                             </div>
                             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2 flex items-center justify-center">
                                 <TrendingUp className="text-emerald-500 mr-2" size={12} />
-                                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-tighter">High Quality</span>
+                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">High Quality</span>
                             </div>
                         </div>
                     </div>

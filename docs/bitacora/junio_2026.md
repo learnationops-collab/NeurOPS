@@ -9,6 +9,9 @@
   - **Accesos Rápidos de Períodos en Performance Center de Setters (`PublicSetterStatsPage.jsx`) [MODIFY]**:
     - **Botones de Filtros Rápidos**: Se integró una hilera de accesos rápidos estilo Glassmorphic en el panel de filtros principales (Ayer, Últimos 7 días, Últimos 30 días, Este mes, Mes anterior) para permitir cambiar el rango temporal de análisis de manera instantánea.
     - **Soporte de Cómputo de Fechas**: Se ampliaron los cálculos automáticos de rangos de fechas de inicio (`start_date`) y fin (`end_date`) en el hook `useEffect` correspondiente para dar soporte consistente a todos los nuevos presets de tiempo.
+  - **Optimización de Escalas de Fuente y Legibilidad (`LeadUnifiedKPI.jsx` y `PublicSetterStatsPage.jsx`) [MODIFY]**:
+    - **Aumento de Textos e Indicadores**: Se incrementó el tamaño de las fuentes que se encontraban en escalas demasiado reducidas (como `text-[7px]`, `text-[8px]`, `text-[9px]` y `text-[10px]`) en métricas secundarias, tasas de conversión, subtítulos y porcentajes comparativos de los KPIs a escalas más legibles (`text-xs`, `text-sm`, `text-base` y `text-xl`).
+    - **Mejora en Tablas y Grids**: Se incrementó el tamaño de la tipografía y el grosor de las barras de progreso de la tabla de pérdida de pasos (Funnel Matrix) y los bloques informativos de conversión de Setters, logrando una interfaz limpia de alta legibilidad en monitores y dispositivos.
 
 - **13 de Junio de 2026**:
   - **Correcciones de Finanzas y Presupuesto de Anuncios (`finance.py` y `FinancePage.jsx`) [MODIFY]**:

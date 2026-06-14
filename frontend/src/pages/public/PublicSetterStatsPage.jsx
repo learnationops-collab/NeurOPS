@@ -155,7 +155,7 @@ const PublicSetterStatsPage = () => {
 
         if (prevVal === 0) {
             return (
-                <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500 justify-end">
+                <div className="flex items-center gap-1.5 mt-1 text-xs font-black uppercase text-slate-500 justify-end">
                     <span>Ant: {prevVal}</span>
                     {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
                 </div>
@@ -167,7 +167,7 @@ const PublicSetterStatsPage = () => {
         const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
 
         return (
-            <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500 justify-end">
+            <div className="flex items-center gap-1.5 mt-1 text-xs font-black uppercase text-slate-500 justify-end">
                 <span>Ant: {prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                 <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
             </div>
@@ -181,7 +181,7 @@ const PublicSetterStatsPage = () => {
 
         if (prevVal === 0) {
             return (
-                <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500">
+                <div className="flex items-center gap-1.5 mt-1 text-xs font-black uppercase text-slate-500">
                     <span>Ant: {prevVal}</span>
                     {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
                 </div>
@@ -193,7 +193,7 @@ const PublicSetterStatsPage = () => {
         const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
 
         return (
-            <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500">
+            <div className="flex items-center gap-1.5 mt-1 text-xs font-black uppercase text-slate-500">
                 <span>Ant: {prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                 <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
             </div>
@@ -293,7 +293,7 @@ const PublicSetterStatsPage = () => {
         <div className="flex justify-between items-center bg-slate-950/50 p-4 rounded-2xl border border-slate-800 shadow-sm overflow-visible">
             <div className="flex flex-col">
                 <div className="flex items-center gap-1.5 mb-1">
-                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none">{label}</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">{label}</span>
                     {tooltipInfo && (
                         <div className="relative group/tooltip inline-block">
                             <HelpCircle size={10} className="text-slate-500 cursor-help hover:text-indigo-500 transition-colors" />
@@ -304,11 +304,11 @@ const PublicSetterStatsPage = () => {
                         </div>
                     )}
                 </div>
-                <span className={`text-lg font-black italic tracking-tighter ${colorClass}`}>{value}</span>
+                <span className={`text-xl font-black italic tracking-tighter ${colorClass}`}>{value}</span>
             </div>
             {subValue && (
                 <div className="text-right">
-                    <span className="text-[10px] font-black text-white bg-slate-800 px-2 py-1 rounded-lg">{subValue}</span>
+                    <span className="text-xs font-black text-white bg-slate-800 px-2 py-1 rounded-lg">{subValue}</span>
                 </div>
             )}
         </div>
@@ -550,13 +550,13 @@ const PublicSetterStatsPage = () => {
                                             </div>
                                             <div className="flex items-start justify-between relative z-10">
                                                 <div className="space-y-1 text-left">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Agendas Generadas</p>
+                                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Agendas Generadas</p>
                                                     <h3 className="text-4xl font-black text-white italic tracking-tighter">{stats.totals.funnel_agenda}</h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
-                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30">
+                                                        <span className="px-2 py-0.5 rounded-full text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30">
                                                             {div(stats.totals.funnel_agenda, stats.totals.leads)}% conv.
                                                         </span>
-                                                        <span className="text-[8px] text-slate-500 font-bold uppercase">sobre leads reales</span>
+                                                        <span className="text-[10px] text-slate-500 font-bold uppercase">sobre leads reales</span>
                                                     </div>
                                                     {renderComparisonSubdataLeft(stats.totals.funnel_agenda, stats.comparison?.totals?.funnel_agenda)}
                                                 </div>
@@ -573,15 +573,15 @@ const PublicSetterStatsPage = () => {
                                             </div>
                                             <div className="flex items-start justify-between relative z-10">
                                                 <div className="space-y-1 text-left">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Eficacia a Cita</p>
+                                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Eficacia a Cita</p>
                                                     <h3 className="text-4xl font-black text-white italic tracking-tighter">
                                                         {div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%
                                                     </h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
-                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-violet-400 bg-violet-500/10 border border-violet-500/30">
+                                                        <span className="px-2 py-0.5 rounded-full text-xs font-black text-violet-400 bg-violet-500/10 border border-violet-500/30">
                                                             {stats.percentages.conversions_to_agenda.opening_to_agenda}%
                                                         </span>
-                                                        <span className="text-[8px] text-slate-500 font-bold uppercase">de openings a cita</span>
+                                                        <span className="text-[10px] text-slate-500 font-bold uppercase">de openings a cita</span>
                                                     </div>
                                                     {renderComparisonSubdataLeft(
                                                         div(stats.totals.funnel_agenda, stats.totals.funnel_qualification),
@@ -597,19 +597,19 @@ const PublicSetterStatsPage = () => {
                                         {/* TARJETA 3: TASA DE REACTIVACIÓN (Follow-Up Response) */}
                                         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
                                             <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-                                                <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-indigo-500" />
+                                                <div className="absolute top-0 right-0 w-24 h-24 blur-[65px] opacity-10 group-hover:opacity-30 transition-opacity bg-indigo-500" />
                                             </div>
                                             <div className="flex items-start justify-between relative z-10">
                                                 <div className="space-y-1 text-left">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tasa Follow-Up</p>
+                                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Tasa Follow-Up</p>
                                                     <h3 className="text-4xl font-black text-white italic tracking-tighter">
                                                         {stats.percentages.rates.total_fur}%
                                                     </h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
-                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/30">
+                                                        <span className="px-2 py-0.5 rounded-full text-xs font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/30">
                                                             {stats.totals.total_fu_r} / {stats.totals.total_fu_s}
                                                         </span>
-                                                        <span className="text-[8px] text-slate-500 font-bold uppercase">respondidos</span>
+                                                        <span className="text-[10px] text-slate-500 font-bold uppercase">respondidos</span>
                                                     </div>
                                                     {renderComparisonSubdataLeft(
                                                         stats.percentages.rates.total_fur,
@@ -629,15 +629,15 @@ const PublicSetterStatsPage = () => {
                                             </div>
                                             <div className="flex items-start justify-between relative z-10">
                                                 <div className="space-y-1 text-left">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Calidad de Tráfico</p>
+                                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Calidad de Tráfico</p>
                                                     <h3 className="text-4xl font-black text-white italic tracking-tighter">
                                                         {div(stats.totals.leads, stats.totals.entrantes)}%
                                                     </h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
-                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30">
+                                                        <span className="px-2 py-0.5 rounded-full text-xs font-black text-amber-400 bg-amber-500/10 border border-emerald-500/30">
                                                             Leads: {stats.totals.leads}
                                                         </span>
-                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black text-slate-400 bg-slate-500/10 border border-slate-500/30">
+                                                        <span className="px-2 py-0.5 rounded-full text-xs font-black text-slate-400 bg-slate-500/10 border border-slate-500/30">
                                                             Inbox: {stats.totals.entrantes}
                                                         </span>
                                                     </div>
@@ -667,9 +667,9 @@ const PublicSetterStatsPage = () => {
                                             </div>
                                             
                                             <div className="overflow-x-auto">
-                                                <table className="w-full text-left border-collapse text-[11px]">
+                                                <table className="w-full text-left border-collapse text-xs">
                                                     <thead>
-                                                        <tr className="border-b border-slate-800 text-slate-500 font-black uppercase">
+                                                        <tr className="border-b border-slate-800 text-slate-500 font-black uppercase text-[10px]">
                                                             <th className="pb-3 tracking-wider">Etapa del Embudo</th>
                                                             <th className="pb-3 text-center tracking-wider">Leads</th>
                                                             <th className="pb-3 text-center tracking-wider">Paso a Paso</th>
@@ -686,17 +686,17 @@ const PublicSetterStatsPage = () => {
                                                             { label: '6. Cita Agendada', value: stats.totals.funnel_agenda, conv: `${stats.percentages.funnel_evolution.link_to_agenda}%`, pct: div(stats.totals.funnel_agenda, stats.totals.entrantes), color: 'bg-emerald-500' },
                                                         ].map((row, idx) => (
                                                             <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                                                <td className="py-3.5 font-bold text-slate-300 uppercase tracking-wider">{row.label}</td>
-                                                                <td className="py-3.5 text-center font-black text-white tabular-nums italic text-sm">{row.value}</td>
+                                                                <td className="py-3.5 font-bold text-slate-300 uppercase tracking-wider text-xs">{row.label}</td>
+                                                                <td className="py-3.5 text-center font-black text-white tabular-nums italic text-base">{row.value}</td>
                                                                 <td className="py-3.5 text-center tabular-nums">
-                                                                    <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 font-bold text-slate-400">
+                                                                    <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 font-bold text-slate-400 text-xs">
                                                                         {row.conv}
                                                                     </span>
                                                                 </td>
                                                                 <td className="py-3.5 text-right">
                                                                     <div className="flex flex-col items-end gap-1">
-                                                                        <span className="font-black text-white italic">{row.pct}%</span>
-                                                                        <div className="w-16 h-1 bg-slate-900 rounded-full overflow-hidden">
+                                                                        <span className="font-black text-white italic text-xs">{row.pct}%</span>
+                                                                        <div className="w-20 h-1.5 bg-slate-900 rounded-full overflow-hidden">
                                                                             <div className={`h-full ${row.color} rounded-full`} style={{ width: `${row.pct}%` }} />
                                                                         </div>
                                                                     </div>
