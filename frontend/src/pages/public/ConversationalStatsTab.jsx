@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import MessageManagerModal from '../setter/dashboard/MessageManagerModal';
+import StatTooltip from '../../components/shared/StatTooltip';
 
 // ── Helpers de formato ──
 const pct = (a, b) => (b > 0 ? `${((a / b) * 100).toFixed(1)}%` : '0.0%');
@@ -284,8 +285,24 @@ const ConversationalStatsTab = () => {
                 </div>
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_sends)}</h3>
-                <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Prom. diario: {fmt(kpis.daily_avg_sends)}</p>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">
+                  <StatTooltip
+                    label="Mensajes Recibidos (ManyChat)"
+                    value={fmt(kpis.total_sends)}
+                    calculation="Suma total de mensajes iniciales y seguimientos enviados en las automatizaciones."
+                  >
+                    {fmt(kpis.total_sends)}
+                  </StatTooltip>
+                </h3>
+                <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">
+                  Prom. diario: <StatTooltip
+                    label="Promedio Diario de Mensajes"
+                    value={fmt(kpis.daily_avg_sends)}
+                    calculation="Mensajes totales enviados divididos por el número de días en el periodo seleccionado."
+                  >
+                    {fmt(kpis.daily_avg_sends)}
+                  </StatTooltip>
+                </p>
                 {compare && data?.comparison?.kpis && (
                   <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
                     {renderChange(kpis.total_sends, data.comparison.kpis.total_sends)}
@@ -304,8 +321,24 @@ const ConversationalStatsTab = () => {
                 </div>
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_responses)}</h3>
-                <p className="text-[9px] text-pink-400 font-black uppercase mt-1">Tasa de respuesta: {kpis.global_response_rate}%</p>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">
+                  <StatTooltip
+                    label="Respuestas Totales"
+                    value={fmt(kpis.total_responses)}
+                    calculation="Suma total de respuestas recibidas de los prospectos."
+                  >
+                    {fmt(kpis.total_responses)}
+                  </StatTooltip>
+                </h3>
+                <p className="text-[9px] text-pink-400 font-black uppercase mt-1">
+                  Tasa de respuesta: <StatTooltip
+                    label="Tasa Global de Respuesta"
+                    value={`${kpis.global_response_rate}%`}
+                    calculation="Proporción de respuestas sobre mensajes enviados. Fórmula: (Respuestas / Mensajes Enviados) * 100"
+                  >
+                    {kpis.global_response_rate}%
+                  </StatTooltip>
+                </p>
                 {compare && data?.comparison?.kpis && (
                   <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
                     {renderChange(kpis.total_responses, data.comparison.kpis.total_responses)}
@@ -324,9 +357,23 @@ const ConversationalStatsTab = () => {
                 </div>
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_responses)}</h3>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">
+                  <StatTooltip
+                    label="Leads Generados"
+                    value={fmt(kpis.total_responses)}
+                    calculation="Cantidad de prospectos que interactuaron o iniciaron conversación."
+                  >
+                    {fmt(kpis.total_responses)}
+                  </StatTooltip>
+                </h3>
                 <p className="text-[9px] text-blue-400 font-black uppercase mt-1">
-                  Tasa de conversión: {pct(kpis.total_responses, kpis.total_sends)}
+                  Tasa de conversión: <StatTooltip
+                    label="Tasa Conversión a Lead"
+                    value={pct(kpis.total_responses, kpis.total_sends)}
+                    calculation="Porcentaje de mensajes que derivaron en un lead interesado. Fórmula: (Leads Generados / Mensajes Enviados) * 100"
+                  >
+                    {pct(kpis.total_responses, kpis.total_sends)}
+                  </StatTooltip>
                 </p>
                 {compare && data?.comparison?.kpis && (
                   <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
@@ -346,8 +393,24 @@ const ConversationalStatsTab = () => {
                 </div>
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_leads)}</h3>
-                <p className="text-[9px] text-violet-400 font-black uppercase mt-1">Tasa de cualificación: {kpis.global_qualification_rate}%</p>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">
+                  <StatTooltip
+                    label="Leads Cualificados"
+                    value={fmt(kpis.total_leads)}
+                    calculation="Prospectos confirmados que cumplen con los requisitos del cliente ideal."
+                  >
+                    {fmt(kpis.total_leads)}
+                  </StatTooltip>
+                </h3>
+                <p className="text-[9px] text-violet-400 font-black uppercase mt-1">
+                  Tasa de cualificación: <StatTooltip
+                    label="Tasa de Cualificación"
+                    value={`${kpis.global_qualification_rate}%`}
+                    calculation="Porcentaje de leads cualificados sobre leads totales. Fórmula: (Leads Cualificados / Leads Generados) * 100"
+                  >
+                    {kpis.global_qualification_rate}%
+                  </StatTooltip>
+                </p>
                 {compare && data?.comparison?.kpis && (
                   <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
                     {renderChange(kpis.total_leads, data.comparison.kpis.total_leads)}
@@ -366,8 +429,24 @@ const ConversationalStatsTab = () => {
                 </div>
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_agendas)}</h3>
-                <p className="text-[9px] text-emerald-400 font-black uppercase mt-1">Tasa de agenda: {kpis.agenda_rate}%</p>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">
+                  <StatTooltip
+                    label="Agendas Generadas"
+                    value={fmt(kpis.total_agendas)}
+                    calculation="Total de citas agendadas registradas en el periodo."
+                  >
+                    {fmt(kpis.total_agendas)}
+                  </StatTooltip>
+                </h3>
+                <p className="text-[9px] text-emerald-400 font-black uppercase mt-1">
+                  Tasa de agenda: <StatTooltip
+                    label="Tasa de Agenda"
+                    value={`${kpis.agenda_rate}%`}
+                    calculation="Porcentaje de leads cualificados que agendaron cita. Fórmula: (Agendas / Leads Cualificados) * 100"
+                  >
+                    {kpis.agenda_rate}%
+                  </StatTooltip>
+                </p>
                 {compare && data?.comparison?.kpis && (
                   <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
                     {renderChange(kpis.total_agendas, data.comparison.kpis.total_agendas)}
@@ -386,8 +465,24 @@ const ConversationalStatsTab = () => {
                 </div>
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white italic tracking-tighter">{fmt(kpis.total_ventas)}</h3>
-                <p className="text-[9px] text-amber-400 font-black uppercase mt-1">Tasa de cierre: {kpis.venta_rate_from_agendas}%</p>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter">
+                  <StatTooltip
+                    label="Ventas Generadas"
+                    value={fmt(kpis.total_ventas)}
+                    calculation="Ventas totales originadas a partir de las agendas del periodo."
+                  >
+                    {fmt(kpis.total_ventas)}
+                  </StatTooltip>
+                </h3>
+                <p className="text-[9px] text-amber-400 font-black uppercase mt-1">
+                  Tasa de cierre: <StatTooltip
+                    label="Tasa de Cierre"
+                    value={`${kpis.venta_rate_from_agendas}%`}
+                    calculation="Porcentaje de agendas completadas que se concretaron en ventas. Fórmula: (Ventas / Agendas) * 100"
+                  >
+                    {kpis.venta_rate_from_agendas}%
+                  </StatTooltip>
+                </p>
                 {compare && data?.comparison?.kpis && (
                   <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-col gap-0.5">
                     {renderChange(kpis.total_ventas, data.comparison.kpis.total_ventas)}

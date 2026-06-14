@@ -20,6 +20,7 @@ import ConversationalStatsTab from './ConversationalStatsTab';
 import IncomingLeadsTab from './IncomingLeadsTab';
 import LeadUnifiedKPI from '../../components/shared/LeadUnifiedKPI';
 import ConfigurableStatCard from '../../components/shared/ConfigurableStatCard';
+import StatTooltip from '../../components/shared/StatTooltip';
 
 const PublicSetterStatsPage = () => {
     const auth = useAuth();
@@ -342,11 +343,25 @@ const PublicSetterStatsPage = () => {
                                 </div>
                             </td>
                             <td className="p-6 text-center font-black text-white text-lg italic tabular-nums">
-                                {row.reports_count}
+                                <StatTooltip
+                                    label="Días Reportados"
+                                    value={row.reports_count}
+                                    calculation="Cantidad de reportes diarios completados por el setter en el periodo seleccionado."
+                                >
+                                    {row.reports_count}
+                                </StatTooltip>
                             </td>
                             <td className="p-6 text-center">
                                 <div className="flex flex-col items-center gap-2">
-                                    <span className="font-black text-indigo-400 text-lg italic tabular-nums">{row.report_rate}%</span>
+                                    <span className="font-black text-indigo-400 text-lg italic tabular-nums">
+                                        <StatTooltip
+                                            label="Cumplimiento de Reportes"
+                                            value={`${row.report_rate}%`}
+                                            calculation="Porcentaje de días reportados del total de días posibles del periodo. Fórmula: (Días Reportados / Días del Periodo) * 100"
+                                        >
+                                            {row.report_rate}%
+                                        </StatTooltip>
+                                    </span>
                                     <div className="w-32 h-2 bg-slate-800 rounded-full overflow-hidden p-0.5">
                                         <div 
                                             className="h-full bg-indigo-500 rounded-full transition-all duration-1000 shadow-sm" 
@@ -540,7 +555,7 @@ const PublicSetterStatsPage = () => {
                                 {/* GRID PRINCIPAL */}
                                 <div className="space-y-6">
                                     <LeadUnifiedKPI stats={stats} />
-                                                                   {/* 1. TOP ROW: 4 TARJETAS DE IMPACTO Y RENDIMIENTO OPERACIONAL DEL SETTER */}
+                                    {/* 1. TOP ROW: 4 TARJETAS DE IMPACTO Y RENDIMIENTO OPERACIONAL DEL SETTER */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
                                         
                                         {/* TARJETA 1: AGENDAS TOTALES (Volumen Final) */}
@@ -551,10 +566,24 @@ const PublicSetterStatsPage = () => {
                                             <div className="flex items-start justify-between relative z-10">
                                                 <div className="space-y-1 text-left">
                                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Agendas Generadas</p>
-                                                    <h3 className="text-4xl font-black text-white italic tracking-tighter">{stats.totals.funnel_agenda}</h3>
+                                                    <h3 className="text-4xl font-black text-white italic tracking-tighter">
+                                                        <StatTooltip
+                                                            label="Agendas Generadas"
+                                                            value={stats.totals.funnel_agenda}
+                                                            calculation="Total de citas agendadas por el setter en el periodo seleccionado."
+                                                        >
+                                                            {stats.totals.funnel_agenda}
+                                                        </StatTooltip>
+                                                    </h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
                                                         <span className="px-2 py-0.5 rounded-full text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30">
-                                                            {div(stats.totals.funnel_agenda, stats.totals.leads)}% conv.
+                                                            <StatTooltip
+                                                                label="Conversión de Agendas sobre Leads"
+                                                                value={`${div(stats.totals.funnel_agenda, stats.totals.leads)}%`}
+                                                                calculation="Porcentaje de leads cualificados que terminaron con una cita agendada. Fórmula: (Agendas / Leads Cualificados) * 100"
+                                                            >
+                                                                {div(stats.totals.funnel_agenda, stats.totals.leads)}% conv.
+                                                            </StatTooltip>
                                                         </span>
                                                         <span className="text-[10px] text-slate-500 font-bold uppercase">sobre leads reales</span>
                                                     </div>
@@ -575,11 +604,23 @@ const PublicSetterStatsPage = () => {
                                                 <div className="space-y-1 text-left">
                                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Eficacia a Cita</p>
                                                     <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                                                        {div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%
+                                                        <StatTooltip
+                                                            label="Eficacia a Cita"
+                                                            value={`${div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%`}
+                                                            calculation="Porcentaje de leads cualificados que resultaron en agendamiento. Fórmula: (Agendas / Leads Cualificados) * 100"
+                                                        >
+                                                            {div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%
+                                                        </StatTooltip>
                                                     </h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
                                                         <span className="px-2 py-0.5 rounded-full text-xs font-black text-violet-400 bg-violet-500/10 border border-violet-500/30">
-                                                            {stats.percentages.conversions_to_agenda.opening_to_agenda}%
+                                                            <StatTooltip
+                                                                label="Conversión Openings a Cita"
+                                                                value={`${stats.percentages.conversions_to_agenda.opening_to_agenda}%`}
+                                                                calculation="Porcentaje de conversaciones iniciadas (openings con respuesta) que terminaron en cita. Fórmula: (Agendas / Respondidos) * 100"
+                                                            >
+                                                                {stats.percentages.conversions_to_agenda.opening_to_agenda}%
+                                                            </StatTooltip>
                                                         </span>
                                                         <span className="text-[10px] text-slate-500 font-bold uppercase">de openings a cita</span>
                                                     </div>
@@ -603,11 +644,23 @@ const PublicSetterStatsPage = () => {
                                                 <div className="space-y-1 text-left">
                                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Tasa Follow-Up</p>
                                                     <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                                                        {stats.percentages.rates.total_fur}%
+                                                        <StatTooltip
+                                                            label="Tasa Follow-Up"
+                                                            value={`${stats.percentages.rates.total_fur}%`}
+                                                            calculation="Porcentaje de efectividad general de los mensajes de seguimiento (follow-ups) que obtuvieron respuesta. Fórmula: (Respuestas Follow-Up / Seguimientos Enviados) * 100"
+                                                        >
+                                                            {stats.percentages.rates.total_fur}%
+                                                        </StatTooltip>
                                                     </h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
                                                         <span className="px-2 py-0.5 rounded-full text-xs font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/30">
-                                                            {stats.totals.total_fu_r} / {stats.totals.total_fu_s}
+                                                            <StatTooltip
+                                                                label="Follow-Up Respondidos / Enviados"
+                                                                value={`${stats.totals.total_fu_r} / ${stats.totals.total_fu_s}`}
+                                                                calculation="Respuestas obtenidas sobre el total de mensajes de seguimiento enviados."
+                                                            >
+                                                                {stats.totals.total_fu_r} / {stats.totals.total_fu_s}
+                                                            </StatTooltip>
                                                         </span>
                                                         <span className="text-[10px] text-slate-500 font-bold uppercase">respondidos</span>
                                                     </div>
@@ -631,14 +684,32 @@ const PublicSetterStatsPage = () => {
                                                 <div className="space-y-1 text-left">
                                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Calidad de Tráfico</p>
                                                     <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                                                        {div(stats.totals.leads, stats.totals.entrantes)}%
+                                                        <StatTooltip
+                                                            label="Calidad de Tráfico"
+                                                            value={`${div(stats.totals.leads, stats.totals.entrantes)}%`}
+                                                            calculation="Porcentaje de leads cualificados obtenidos sobre el total de leads entrantes. Fórmula: (Leads Cualificados / Entrantes) * 100"
+                                                        >
+                                                            {div(stats.totals.leads, stats.totals.entrantes)}%
+                                                        </StatTooltip>
                                                     </h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
                                                         <span className="px-2 py-0.5 rounded-full text-xs font-black text-amber-400 bg-amber-500/10 border border-emerald-500/30">
-                                                            Leads: {stats.totals.leads}
+                                                            <StatTooltip
+                                                                label="Total Leads Cualificados"
+                                                                value={stats.totals.leads}
+                                                                calculation="Cantidad de prospectos que calificaron positivamente."
+                                                            >
+                                                                Leads: {stats.totals.leads}
+                                                            </StatTooltip>
                                                         </span>
                                                         <span className="px-2 py-0.5 rounded-full text-xs font-black text-slate-400 bg-slate-500/10 border border-slate-500/30">
-                                                            Inbox: {stats.totals.entrantes}
+                                                            <StatTooltip
+                                                                label="Total Entrantes"
+                                                                value={stats.totals.entrantes}
+                                                                calculation="Cantidad total de contactos iniciados/entrantes."
+                                                            >
+                                                                Inbox: {stats.totals.entrantes}
+                                                            </StatTooltip>
                                                         </span>
                                                     </div>
                                                     {renderComparisonSubdataLeft(
@@ -684,25 +755,60 @@ const PublicSetterStatsPage = () => {
                                                             { label: '4. Oferta Presentada', value: stats.totals.funnel_offer, conv: `${stats.percentages.funnel_evolution.pain_to_offer}%`, pct: div(stats.totals.funnel_offer, stats.totals.entrantes), color: 'bg-fuchsia-500' },
                                                             { label: '5. Link de Calendario', value: stats.totals.funnel_link, conv: `${stats.percentages.funnel_evolution.offer_to_link}%`, pct: div(stats.totals.funnel_link, stats.totals.entrantes), color: 'bg-indigo-500' },
                                                             { label: '6. Cita Agendada', value: stats.totals.funnel_agenda, conv: `${stats.percentages.funnel_evolution.link_to_agenda}%`, pct: div(stats.totals.funnel_agenda, stats.totals.entrantes), color: 'bg-emerald-500' },
-                                                        ].map((row, idx) => (
-                                                            <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                                                <td className="py-3.5 font-bold text-slate-300 uppercase tracking-wider text-xs">{row.label}</td>
-                                                                <td className="py-3.5 text-center font-black text-white tabular-nums italic text-base">{row.value}</td>
-                                                                <td className="py-3.5 text-center tabular-nums">
-                                                                    <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 font-bold text-slate-400 text-xs">
-                                                                        {row.conv}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="py-3.5 text-right">
-                                                                    <div className="flex flex-col items-end gap-1">
-                                                                        <span className="font-black text-white italic text-xs">{row.pct}%</span>
-                                                                        <div className="w-20 h-1.5 bg-slate-900 rounded-full overflow-hidden">
-                                                                            <div className={`h-full ${row.color} rounded-full`} style={{ width: `${row.pct}%` }} />
+                                                        ].map((row, idx) => {
+                                                            const calculations = {
+                                                                0: { v: "Total de leads ingresados en el periodo.", c: "Suma simple de leads entrantes.", p: "Porcentaje base de entrada (100%)." },
+                                                                1: { v: "Leads calificados en la etapa inicial.", c: "(Cualificados / Entrantes) * 100", p: "Porcentaje de cualificación sobre el total de entrantes." },
+                                                                2: { v: "Leads con dolor o necesidad identificada.", c: "(Dolor / Cualificados) * 100", p: "Porcentaje de dolor sobre el total de entrantes." },
+                                                                3: { v: "Leads a los que se les presentó oferta comercial.", c: "(Ofertas / Dolor) * 105", p: "Porcentaje de ofertas sobre el total de entrantes." },
+                                                                4: { v: "Leads que recibieron el link del calendario.", c: "(Links / Ofertas) * 100", p: "Porcentaje de links sobre el total de entrantes." },
+                                                                5: { v: "Leads que agendaron cita final.", c: "(Agendas / Links) * 100", p: "Porcentaje de agendas sobre el total de entrantes." }
+                                                            };
+                                                            const calc = calculations[idx] || { v: "", c: "", p: "" };
+                                                            return (
+                                                                <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                                                    <td className="py-3.5 font-bold text-slate-300 uppercase tracking-wider text-xs">{row.label}</td>
+                                                                    <td className="py-3.5 text-center font-black text-white tabular-nums italic text-base">
+                                                                        <StatTooltip
+                                                                            label={row.label}
+                                                                            value={row.value}
+                                                                            calculation={calc.v}
+                                                                        >
+                                                                            {row.value}
+                                                                        </StatTooltip>
+                                                                    </td>
+                                                                    <td className="py-3.5 text-center tabular-nums">
+                                                                        <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 font-bold text-slate-400 text-xs">
+                                                                            {row.conv === '-' ? '-' : (
+                                                                                <StatTooltip
+                                                                                    label={`Conversión Paso a Paso: ${row.label}`}
+                                                                                    value={row.conv}
+                                                                                    calculation={calc.c}
+                                                                                >
+                                                                                    {row.conv}
+                                                                                </StatTooltip>
+                                                                            )}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-3.5 text-right">
+                                                                        <div className="flex flex-col items-end gap-1">
+                                                                            <span className="font-black text-white italic text-xs">
+                                                                                <StatTooltip
+                                                                                    label={`Porcentaje Total: ${row.label}`}
+                                                                                    value={`${row.pct}%`}
+                                                                                    calculation={calc.p}
+                                                                                >
+                                                                                    {row.pct}%
+                                                                                </StatTooltip>
+                                                                            </span>
+                                                                            <div className="w-20 h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                                                                                <div className={`h-full ${row.color} rounded-full`} style={{ width: `${row.pct}%` }} />
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -734,12 +840,34 @@ const PublicSetterStatsPage = () => {
                                                             <div className="flex flex-col text-left space-y-1">
                                                                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{fu.label}</span>
                                                                 <span className="text-[10px] font-black text-slate-300">
-                                                                    Env: <span className="text-white tabular-nums">{fu.s}</span> • Resp: <span className="text-white tabular-nums">{fu.r}</span>
+                                                                    Env: <span className="text-white tabular-nums">
+                                                                        <StatTooltip
+                                                                            label={`Enviados - ${fu.label}`}
+                                                                            value={fu.s}
+                                                                            calculation="Cantidad de mensajes de seguimiento enviados en esta etapa."
+                                                                        >
+                                                                            {fu.s}
+                                                                        </StatTooltip>
+                                                                    </span> • Resp: <span className="text-white tabular-nums">
+                                                                        <StatTooltip
+                                                                            label={`Respondidos - ${fu.label}`}
+                                                                            value={fu.r}
+                                                                            calculation="Cantidad de respuestas recibidas de los seguimientos de esta etapa."
+                                                                        >
+                                                                            {fu.r}
+                                                                        </StatTooltip>
+                                                                    </span>
                                                                 </span>
                                                             </div>
                                                             <div className="text-right">
                                                                 <span className={`px-2 py-1 rounded-xl text-[10px] font-black tabular-nums ${semaphoricColor}`}>
-                                                                    {fu.rate}%
+                                                                    <StatTooltip
+                                                                        label={`Tasa Respuesta - ${fu.label}`}
+                                                                        value={`${fu.rate}%`}
+                                                                        calculation="Eficacia del seguimiento en esta etapa específica. Fórmula: (Respondidos / Enviados) * 100"
+                                                                    >
+                                                                        {fu.rate}%
+                                                                    </StatTooltip>
                                                                 </span>
                                                             </div>
                                                         </div>

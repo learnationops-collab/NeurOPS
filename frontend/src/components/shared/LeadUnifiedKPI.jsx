@@ -5,6 +5,7 @@ import {
     ArrowUpRight, HelpCircle, Inbox, 
     CheckCircle2, AlertCircle, TrendingUp
 } from 'lucide-react';
+import StatTooltip from './StatTooltip';
 
 /**
  * LeadUnifiedKPI - Un componente premium para visualizar el embudo inicial de leads.
@@ -67,7 +68,13 @@ const LeadUnifiedKPI = ({ stats }) => {
                     <div className="flex items-end gap-4">
                         <div className="relative">
                             <h2 className="text-7xl lg:text-8xl font-black text-white italic tracking-tighter leading-none">
-                                {entrantes}
+                                <StatTooltip 
+                                    label="Leads Entrantes" 
+                                    value={entrantes} 
+                                    calculation="Total de leads que ingresaron al sistema desde todas las fuentes (ManyChat, formularios, etc.) en el periodo seleccionado."
+                                >
+                                    {entrantes}
+                                </StatTooltip>
                             </h2>
                             <motion.div 
                                 initial={{ scale: 0.8, opacity: 0 }}
@@ -102,7 +109,15 @@ const LeadUnifiedKPI = ({ stats }) => {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-slate-950/40 border border-slate-800/50 p-4 rounded-3xl group/sub hover:bg-slate-800/40 transition-colors">
-                            <p className="text-4xl font-black text-indigo-400 italic leading-none mb-1">{respondidosPct}%</p>
+                            <p className="text-4xl font-black text-indigo-400 italic leading-none mb-1">
+                                <StatTooltip 
+                                    label="Tasa de Respuesta (Engagement)" 
+                                    value={`${respondidosPct}%`}
+                                    calculation="Proporción de leads entrantes que respondieron. Fórmula: ((Entrantes - Sin Respuesta) / Entrantes) * 100"
+                                >
+                                    {respondidosPct}%
+                                </StatTooltip>
+                            </p>
                             <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Tasa Respuesta</p>
                         </div>
                         <div className="flex flex-col justify-center space-y-3 px-2">
@@ -111,14 +126,30 @@ const LeadUnifiedKPI = ({ stats }) => {
                                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                                     <span className="text-xs font-black text-slate-400 uppercase">Respondidos</span>
                                 </div>
-                                <span className="text-sm font-black text-white italic">{respondidos}</span>
+                                <span className="text-sm font-black text-white italic">
+                                    <StatTooltip 
+                                        label="Leads Respondidos" 
+                                        value={respondidos} 
+                                        calculation="Total de leads que contestaron. Fórmula: Entrantes - Sin Respuesta"
+                                    >
+                                        {respondidos}
+                                    </StatTooltip>
+                                </span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
                                     <span className="text-xs font-black text-slate-500 uppercase">Sin Respuesta</span>
                                 </div>
-                                <span className="text-sm font-black text-slate-400 italic">{sinRespuesta}</span>
+                                <span className="text-sm font-black text-slate-400 italic">
+                                    <StatTooltip 
+                                        label="Leads Sin Respuesta" 
+                                        value={sinRespuesta} 
+                                        calculation="Total de leads que ingresaron pero no contestaron a las interacciones iniciales."
+                                    >
+                                        {sinRespuesta}
+                                    </StatTooltip>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -175,28 +206,60 @@ const LeadUnifiedKPI = ({ stats }) => {
                                 />
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-2xl font-black text-white italic leading-none">{cualificados}</span>
+                                <span className="text-2xl font-black text-white italic leading-none">
+                                    <StatTooltip 
+                                        label="Leads Cualificados" 
+                                        value={cualificados} 
+                                        calculation="Contactos confirmados que cumplen con los criterios del cliente ideal para agendamiento."
+                                    >
+                                        {cualificados}
+                                    </StatTooltip>
+                                </span>
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leads</span>
                             </div>
                         </div>
 
                         <div className="flex-1 grid grid-cols-2 gap-y-4 gap-x-8 w-full">
                             <div>
-                                <p className="text-sm font-black text-white italic tracking-tighter leading-none mb-1">{cualificadosSobreEntrantes}%</p>
+                                <p className="text-sm font-black text-white italic tracking-tighter leading-none mb-1">
+                                    <StatTooltip 
+                                        label="Tasa Cualificación sobre Entrantes" 
+                                        value={`${cualificadosSobreEntrantes}%`} 
+                                        calculation="Proporción de leads cualificados respecto al total de leads entrantes. Fórmula: (Leads Cualificados / Entrantes) * 100"
+                                    >
+                                        {cualificadosSobreEntrantes}%
+                                    </StatTooltip>
+                                </p>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">% / Entrantes</p>
                                 <div className="w-full h-1 bg-slate-800 mt-2 rounded-full">
                                     <div className="h-full bg-emerald-500/40 rounded-full" style={{ width: `${cualificadosSobreEntrantes}%` }} />
                                 </div>
                             </div>
                             <div>
-                                <p className="text-sm font-black text-white italic tracking-tighter leading-none mb-1">{cualificadosSobreRespondidos}%</p>
+                                <p className="text-sm font-black text-white italic tracking-tighter leading-none mb-1">
+                                    <StatTooltip 
+                                        label="Tasa Cualificación sobre Respuesta" 
+                                        value={`${cualificadosSobreRespondidos}%`} 
+                                        calculation="Proporción de leads cualificados respecto a los que sí respondieron. Fórmula: (Leads Cualificados / Respondidos) * 100"
+                                    >
+                                        {cualificadosSobreRespondidos}%
+                                    </StatTooltip>
+                                </p>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">% / Respuesta</p>
                                 <div className="w-full h-1 bg-slate-800 mt-2 rounded-full">
                                     <div className="h-full bg-indigo-500/40 rounded-full" style={{ width: `${cualificadosSobreRespondidos}%` }} />
                                 </div>
                             </div>
                             <div>
-                                <p className="text-sm font-black text-rose-500 italic tracking-tighter leading-none mb-1">{noCualificados}</p>
+                                <p className="text-sm font-black text-rose-500 italic tracking-tighter leading-none mb-1">
+                                    <StatTooltip 
+                                        label="Leads No Cualificados" 
+                                        value={noCualificados} 
+                                        calculation="Contactos descartados por no cumplir con el perfil requerido en el filtro inicial."
+                                    >
+                                        {noCualificados}
+                                    </StatTooltip>
+                                </p>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">No Cualificados</p>
                             </div>
                             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2 flex items-center justify-center">

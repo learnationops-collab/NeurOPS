@@ -455,3 +455,17 @@
     - **Frontend (`CloserPerformanceTab.jsx`) [MODIFY]**:
       - Se diseñó el componente utilitario `MetricWithTooltip` para renderizar tooltips flotantes en HTML de diseño glassmorphism flotante sobre cualquier elemento sin romper la maquetación CSS flex/grid.
       - Se envolvieron todos los números e indicadores clave del Pilar 1 (ingresos brutos, netos, cuotas, señas y nuevas ventas), Pilar 2 (ventas, close rate, ticket promedio y conversión de señas) y Pilar 3 (asistencias, show rate, no show rate, cancel rate, pitch rate e inasistencias totales) con descripciones precisas de negocio que aparecen al pasar el mouse por encima de los números.
+- **14 de Junio de 2026**:
+  - **Tooltips Descriptivos con Fórmulas de Cálculo en Dashboard de Setters**:
+    - **Frontend (Componente Compartido) [NEW] [StatTooltip.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/StatTooltip.jsx)**:
+      - Creación de un componente premium `StatTooltip` con estética oscura permanente y bordes redondeados. Muestra el nombre del KPI, el valor actual, la explicación de negocio y la fórmula de cálculo exacta al pasar el ratón (hover) sobre los números o porcentajes.
+      - Utiliza una sutil decoración de línea punteada (`underline decoration-dotted decoration-indigo-500/50`) para indicar de forma intuitiva al usuario que el elemento posee un tooltip informativo interactivo.
+    - **Frontend (Visualización del Embudo Inicial) [MODIFY] [LeadUnifiedKPI.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/LeadUnifiedKPI.jsx)**:
+      - Integración de `StatTooltip` en todos los números y porcentajes del KPI unificado: Leads Entrantes, Tasa de Respuesta, Respondidos, Sin Respuesta, Leads Cualificados, Tasa de Cualificación sobre Entrantes, Tasa de Cualificación sobre Respuesta y Leads No Cualificados.
+    - **Frontend (Estadísticas Generales de Setters) [MODIFY] [PublicSetterStatsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicSetterStatsPage.jsx)**:
+      - Integración de `StatTooltip` en los KPIs principales: Agendas Generadas, Conversión sobre Leads Reales, Eficacia a Cita, Conversión Openings a Cita, Tasa Follow-Up, y la proporción de Follow-Up Respondidos / Enviados y Calidad de Tráfico.
+      - Integración en las columnas de la **Matriz de Pérdida de Pasos** (explicando cada etapa del embudo, la conversión paso a paso y el porcentaje total) y en la **Matriz de Tenacidad en Seguimiento** (explicando los mensajes enviados, respondidos y la tasa de respuesta por etapa).
+      - Integración en la tabla de **Rendimiento por Setter** (explicando la cantidad de reportes diarios y la tasa de cumplimiento de reportes).
+    - **Frontend (Métricas Conversacionales) [MODIFY] [ConversationalStatsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/ConversationalStatsTab.jsx)**:
+      - Integración de `StatTooltip` en los 6 principales KPIs de la pestaña conversacional (Mensajes Recibidos, Respuestas Totales, Leads Generados, Leads Cualificados, Agendas Generadas, Ventas Generadas) y sus tasas porcentuales derivadas (Promedio Diario, Tasa Global de Respuesta, Tasa Conversión a Lead, Tasa de Cualificación, Tasa de Agenda y Tasa de Cierre).
+
