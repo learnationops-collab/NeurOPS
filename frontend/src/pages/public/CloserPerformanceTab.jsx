@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import FunnelChart from '../../components/charts/FunnelChart';
+import StatTooltip from '../../components/shared/StatTooltip';
 
 const normalizeStats = (s) => {
     if (!s) return null;
@@ -228,13 +229,9 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                     <div className="flex items-center gap-1.5">
                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{title}</p>
                         {tooltip && (
-                            <div className="relative group/tooltip flex items-center">
+                            <StatTooltip label={title} calculation={tooltip}>
                                 <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-slate-300 transition-colors" />
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
-                                    {tooltip}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                                </div>
-                            </div>
+                            </StatTooltip>
                         )}
                     </div>
                     <h3 className="text-3xl font-black text-white italic tracking-tighter">{value}</h3>
@@ -253,13 +250,9 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                 <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
                     {tooltip && (
-                        <div className="relative group/tooltip flex items-center">
+                        <StatTooltip label={label} calculation={tooltip}>
                             <Info size={10} className="text-slate-500 cursor-help hover:text-white transition-colors" />
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl">
-                                {tooltip}
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                            </div>
-                        </div>
+                        </StatTooltip>
                     )}
                     {absolute !== undefined && <span className="text-[10px] font-bold text-slate-600 ml-0.5">({absolute})</span>}
                 </div>
@@ -965,13 +958,13 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         </div>
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2 relative group overflow-visible">
-                            <div className="flex items-center gap-1.5 relative group/tooltip">
-                                <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest leading-none">Efectividad de Cobro Señas</p>
-                                <Info size={10} className="text-emerald-400/50 cursor-help" />
-                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 border border-slate-700 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl">
-                                    Tasa de conversión de señas en ventas reales (PIF o Split Pay). Mide la efectividad del closer para concretar el cobro total posterior a la reserva.
-                                    <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
-                                </div>
+                            <div className="flex items-center gap-1.5 relative">
+                                <StatTooltip label="Efectividad de Cobro Señas" calculation="Tasa de conversión de señas en ventas reales (PIF o Split Pay). Mide la efectividad del closer para concretar el cobro total posterior a la reserva.">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest leading-none">Efectividad de Cobro Señas</span>
+                                        <Info size={10} className="text-emerald-400/50 cursor-help" />
+                                    </span>
+                                </StatTooltip>
                             </div>
                             <div className="flex justify-between items-center mt-1">
                                 <span className="text-[10px] font-bold text-slate-500">Señas → Ventas Reales</span>
@@ -1052,13 +1045,9 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                     <div className="flex items-center gap-1.5">
                                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{kpi.title}</p>
                                         {kpi.tooltip && (
-                                            <div className="relative group/tooltip flex items-center">
-                                                <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-slate-300 transition-colors" />
-                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
-                                                    {kpi.tooltip}
-                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                                                </div>
-                                            </div>
+                                            <StatTooltip label={kpi.title} calculation={kpi.tooltip}>
+                                                <HelpCircle size={10} className="text-slate-650 cursor-help hover:text-slate-300 transition-colors" />
+                                            </StatTooltip>
                                         )}
                                     </div>
                                     <h3 className="text-3xl font-black text-white italic tracking-tighter">{fmtCash(kpi.val)}</h3>

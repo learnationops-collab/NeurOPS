@@ -26,6 +26,7 @@ import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import { useAuth } from '../../../contexts/AuthContext';
+import StatTooltip from '../../../components/shared/StatTooltip';
 
 // Helper to get current YYYY-MM
 const getCurrentMonthStr = () => {
@@ -38,12 +39,9 @@ const getCurrentMonthStr = () => {
 const InfoTooltip = ({ content }) => {
     if (!content) return null;
     return (
-        <div className="relative group/tooltip inline-block ml-1.5 align-middle cursor-help">
-            <AlertCircle size={12} className="text-slate-500 hover:text-slate-350 transition-colors inline" />
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-slate-950 text-slate-200 text-[10px] font-normal normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-2xl border border-slate-800/80 leading-relaxed text-left">
-                {content}
-            </div>
-        </div>
+        <StatTooltip label="Información" calculation={content}>
+            <AlertCircle size={12} className="text-slate-500 hover:text-slate-350 transition-colors inline cursor-help ml-1.5 align-middle" />
+        </StatTooltip>
     );
 };
 

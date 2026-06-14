@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Info, Settings, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import StatTooltip from './StatTooltip';
 
 /**
  * ConfigurableStatCard - Versión "Minimalismo Funcional"
@@ -62,14 +63,9 @@ const ConfigurableStatCard = ({
                     </div>
                     <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.15em]">{title}</span>
                     {tooltipInfo && (
-                        <div className="relative group/tooltip inline-block">
-                            <Info size={12} className="text-slate-600 cursor-help hover:text-blue-400 transition-colors" />
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 bg-[#0f172a] text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-2xl border border-slate-800">
-                                <div className="text-blue-400 font-bold mb-1 uppercase tracking-tighter">Explicación:</div>
-                                {tooltipInfo}
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#0f172a]"></div>
-                            </div>
-                        </div>
+                        <StatTooltip label={title} calculation={tooltipInfo}>
+                            <Info size={12} className="text-slate-650 cursor-help hover:text-blue-400 transition-colors" />
+                        </StatTooltip>
                     )}
                 </div>
                 <button 

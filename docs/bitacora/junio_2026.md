@@ -1,6 +1,18 @@
 # Bitácora - Junio 2026
 
 - **14 de Junio de 2026**:
+  - **Solución al Clipping de Tooltips mediante React Portals y StatTooltip (`StatTooltip.jsx`, `AdDashboardTab.jsx`) [MODIFY]**:
+    - **Parámetro Flexible en `StatTooltip.jsx`**: Se añadió la propiedad opcional `calcLabel` al componente de tooltip compartido para permitir silenciar o personalizar el prefijo "Fórmula / Explicación:" (por ejemplo, mostrando "Detalle:" en la estructura del anuncio).
+    - **Dashboard de Rendimiento por Anuncio (`AdDashboardTab.jsx`)**:
+      - Se eliminaron todos los tooltips absolutos tradicionales basados en CSS (`group-hover/tooltip` y similares) en los desgloses de estructura del anuncio de la tabla y tarjetas de galería, resolviendo el bug de clipping (donde quedaban recortados por el `overflow-x-auto` u `overflow-hidden` del layout).
+      - Se reemplazaron por el componente portalizado `StatTooltip` que se renderiza directamente en `document.body` y con z-index seguro (`z-[99999]`), garantizando que siempre se visualicen sobre todo elemento de la página.
+      - Se integró el soporte de tooltips explicativos y fórmulas matemáticas para las métricas de negocio principales (Inversión, Leads, CPL, % Cualificado, CPQL, Agendas, CPA, Ventas, CPV, Cash Collect y ROAS) en:
+        - Las celdas de datos numéricos en la tabla de **Campañas** (`renderCampaignsTable`).
+        - Las celdas de datos numéricos en la tabla de **Conjuntos de Anuncios** (`renderAdSetsTable`).
+        - Las celdas y la estructura del anuncio de la tabla de **Anuncios** (list view).
+        - Las tarjetas de KPIs generales superiores (6 tarjetas fijas).
+        - Los botones e indicadores individuales en la vista de **Galería** de anuncios.
+      - Se validó de forma robusta la compilación de producción (`npm run build`) para certificar la consistencia del bundle sin errores de tipografía o imports.
   - **Ajustes de Profit, Etiquetas y Tooltips en Hub de Finanzas (`FinancePage.jsx`) [MODIFY]**:
     - **Corrección de Profit**: Se actualizó la etiqueta y subtítulo del KPI card en el frontend a "Profit (Ingresos - Gastos)" para alinearlo con la lógica matemática implementada en el backend (Ingresos Totales - Gastos Totales del periodo).
     - **Simplificación de Egresos y Pestaña**: Se renombró la categoría "Suscripciones Software" a simplemente "Software" en el desglose de distribución de gastos en el Resumen Financiero. Asimismo, se simplificó la pestaña "Presupuesto Anuncios" a simplemente "Anuncios".

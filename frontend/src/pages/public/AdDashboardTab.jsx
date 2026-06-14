@@ -6,6 +6,7 @@ import AdDetailModal from '../../components/modals/AdDetailModal';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import ColumnSettings from '../../components/marketing/ColumnSettings';
 import GradientSettings from '../../components/marketing/GradientSettings';
+import StatTooltip from '../../components/shared/StatTooltip';
 
 const defaultThresholds = {
     spend: { optimal: 100, tolerable: 50, mode: 'higher' },
@@ -39,6 +40,23 @@ const initialColumns = [
 
 
 const AdDashboardTab = () => {
+    const getMetricTooltipInfo = (colId) => {
+        const formulas = {
+            spend: { label: "Inversión", calc: "Inversión total destinada a publicidad en Facebook/Meta." },
+            total_leads: { label: "Leads Totales", calc: "Cantidad total de leads registrados." },
+            cpl: { label: "Costo por Lead (CPL)", calc: "Costo promedio por lead generado. Fórmula: Inversión / Leads Totales" },
+            qualified_percentage: { label: "% Cualificados", calc: "Porcentaje de leads marcados como cualificados. Fórmula: (Leads Cualificados / Leads Totales) * 100" },
+            cpql: { label: "Costo por Lead Cualificado (CPQL)", calc: "Costo promedio por lead cualificado. Fórmula: Inversión / Leads Cualificados" },
+            agendas: { label: "Agendas", calc: "Cantidad de leads que agendaron una llamada o cita." },
+            cpa: { label: "Costo por Agenda (CPA)", calc: "Costo promedio por cita agendada. Fórmula: Inversión / Agendas" },
+            ventas: { label: "Ventas", calc: "Cantidad de leads que concretaron una venta." },
+            cpv: { label: "Costo por Venta (CPV)", calc: "Costo promedio por venta. Fórmula: Inversión / Ventas" },
+            cash_collect: { label: "Cash Collected", calc: "Total de cobros reales atribuidos." },
+            roas: { label: "ROAS", calc: "Retorno de inversión en publicidad (Return on Ad Spend). Fórmula: Cash Collected / Inversión" },
+        };
+        return formulas[colId];
+    };
+
     const [stats, setStats] = useState({ ad_stats: [], setter_stats: [] });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -486,11 +504,18 @@ const AdDashboardTab = () => {
                                         else if (col.id === 'cash_collect') { content = `$${camp.cash_collect || '0.00'}`; color = "text-emerald-400"; }
                                         else if (col.id === 'roas') { content = `${camp.roas || '0.00'}x`; color = parseFloat(camp.roas || 0) >= 1 ? 'text-emerald-400' : 'text-red-400'; }
 
+                                        const tooltipInfo = getMetricTooltipInfo(col.id);
+                                        const cellContent = tooltipInfo ? (
+                                            <StatTooltip label={tooltipInfo.label} value={content} calculation={tooltipInfo.calc}>
+                                                {content}
+                                            </StatTooltip>
+                                        ) : content;
+
                                         return (
                                             <td key={col.id} className={`py-4 px-5 text-xs font-black ${zeroRow ? 'text-red-300 opacity-60' : color} ${
                                                 col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
                                             }`}>
-                                                {content}
+                                                {cellContent}
                                             </td>
                                         );
                                     })}
@@ -648,11 +673,18 @@ const AdDashboardTab = () => {
                                         else if (col.id === 'cash_collect') { content = `$${set.cash_collect || '0.00'}`; color = "text-emerald-400"; }
                                         else if (col.id === 'roas') { content = `${set.roas || '0.00'}x`; color = parseFloat(set.roas || 0) >= 1 ? 'text-emerald-400' : 'text-red-400'; }
 
+                                        const tooltipInfo = getMetricTooltipInfo(col.id);
+                                        const cellContent = tooltipInfo ? (
+                                            <StatTooltip label={tooltipInfo.label} value={content} calculation={tooltipInfo.calc}>
+                                                {content}
+                                            </StatTooltip>
+                                        ) : content;
+
                                         return (
                                             <td key={col.id} className={`py-4 px-5 text-xs font-black ${zeroRow ? 'text-red-300 opacity-60' : color} ${
                                                 col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
-                                            }`}>
-                                                {content}
+                                             }`}>
+                                                {cellContent}
                                             </td>
                                         );
                                     })}
@@ -782,8 +814,10 @@ const AdDashboardTab = () => {
                             </div>
                         </div>
                         <div>
-                            <p className="text-2xl font-black text-white italic tracking-tight">${Number(totals.spend).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Inversión Total</span>
+                            <StatTooltip label="Inversión" value={`$${Number(totals.spend).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} calculation="Inversión total destinada a publicidad en Facebook/Meta.">
+                                <p className="text-2xl font-black text-white italic tracking-tight">${Number(totals.spend).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                            </StatTooltip>
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mt-0.5">Inversión Total</span>
                         </div>
                     </div>
 
@@ -796,9 +830,13 @@ const AdDashboardTab = () => {
                             </div>
                         </div>
                         <div>
-                            <p className="text-2xl font-black text-white italic tracking-tight">{totals.total_leads}</p>
-                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
-                                {totalQualPercentage}% Cualificados
+                            <StatTooltip label="Leads Totales" value={`${totals.total_leads}`} calculation="Cantidad total de leads registrados.">
+                                <p className="text-2xl font-black text-white italic tracking-tight">{totals.total_leads}</p>
+                            </StatTooltip>
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mt-0.5">
+                                <StatTooltip label="% Cualificados" value={`${totalQualPercentage}%`} calculation="Porcentaje de leads marcados como cualificados. Fórmula: (Leads Cualificados / Leads Totales) * 100">
+                                    {totalQualPercentage}% Cualificados
+                                </StatTooltip>
                             </span>
                         </div>
                     </div>
@@ -812,9 +850,13 @@ const AdDashboardTab = () => {
                             </div>
                         </div>
                         <div>
-                            <p className="text-xl font-black text-white italic tracking-tight">CPL: ${totalCPL}</p>
+                            <StatTooltip label="Costo por Lead (CPL)" value={`$${totalCPL}`} calculation="Costo promedio por lead generado. Fórmula: Inversión / Leads Totales">
+                                <p className="text-xl font-black text-white italic tracking-tight">CPL: ${totalCPL}</p>
+                            </StatTooltip>
                             <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest block mt-0.5">
-                                CPQL: ${totalCPQL}
+                                <StatTooltip label="Costo por Lead Cualificado (CPQL)" value={`$${totalCPQL}`} calculation="Costo promedio por lead cualificado. Fórmula: Inversión / Leads Cualificados">
+                                    CPQL: ${totalCPQL}
+                                </StatTooltip>
                             </span>
                         </div>
                     </div>
@@ -828,9 +870,13 @@ const AdDashboardTab = () => {
                             </div>
                         </div>
                         <div>
-                            <p className="text-2xl font-black text-white italic tracking-tight">{totals.agendas}</p>
-                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
-                                CPA: ${totalCPA}
+                            <StatTooltip label="Agendas" value={`${totals.agendas}`} calculation="Cantidad de leads que agendaron una llamada o cita.">
+                                <p className="text-2xl font-black text-white italic tracking-tight">{totals.agendas}</p>
+                            </StatTooltip>
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mt-0.5">
+                                <StatTooltip label="Costo por Agenda (CPA)" value={`$${totalCPA}`} calculation="Costo promedio por cita agendada. Fórmula: Inversión / Agendas">
+                                    CPA: ${totalCPA}
+                                </StatTooltip>
                             </span>
                         </div>
                     </div>
@@ -844,9 +890,13 @@ const AdDashboardTab = () => {
                             </div>
                         </div>
                         <div>
-                            <p className="text-2xl font-black text-white italic tracking-tight">{totals.ventas}</p>
-                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
-                                CPV: ${totalCPV}
+                            <StatTooltip label="Ventas" value={`${totals.ventas}`} calculation="Cantidad de leads que concretaron una venta.">
+                                <p className="text-2xl font-black text-white italic tracking-tight">{totals.ventas}</p>
+                            </StatTooltip>
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mt-0.5">
+                                <StatTooltip label="Costo por Venta (CPV)" value={`$${totalCPV}`} calculation="Costo promedio por venta. Fórmula: Inversión / Ventas">
+                                    CPV: ${totalCPV}
+                                </StatTooltip>
                             </span>
                         </div>
                     </div>
@@ -860,9 +910,13 @@ const AdDashboardTab = () => {
                             </div>
                         </div>
                         <div>
-                            <p className="text-xl font-black text-emerald-400 italic tracking-tight">${Number(totals.cash_collect).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                            <StatTooltip label="Cash Collected" value={`$${Number(totals.cash_collect).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} calculation="Total de cobros reales atribuidos.">
+                                <p className="text-xl font-black text-emerald-400 italic tracking-tight">${Number(totals.cash_collect).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                            </StatTooltip>
                             <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest block mt-0.5">
-                                ROAS: {totalROAS}x
+                                <StatTooltip label="ROAS" value={`${totalROAS}x`} calculation="Retorno de inversión en publicidad (Return on Ad Spend). Fórmula: Cash Collected / Inversión">
+                                    ROAS: {totalROAS}x
+                                </StatTooltip>
                             </span>
                         </div>
                     </div>
@@ -1089,9 +1143,35 @@ const AdDashboardTab = () => {
                                                                         ★
                                                                     </div>
                                                                 )}
-                                                                <div className="flex-1 min-w-0 relative group/tooltip overflow-visible">
+                                                                <div className="flex-1 min-w-0 overflow-visible">
                                                                     <div className="flex items-center gap-2">
-                                                                        <h4 className={`text-sm font-black uppercase tracking-tight max-w-[200px] truncate ${zeroRow ? 'text-red-400' : 'text-white'}`}>{stat.ad_name}</h4>
+                                                                        {(stat.campaign_name || stat.ad_set_name) ? (
+                                                                            <StatTooltip 
+                                                                                label="Estructura del Anuncio" 
+                                                                                value={stat.ad_name} 
+                                                                                calcLabel="Detalle:"
+                                                                                calculation={(
+                                                                                    <div className="space-y-1.5 mt-1">
+                                                                                        {stat.campaign_name && (
+                                                                                            <div>
+                                                                                                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-wider block leading-none mb-0.5">Campaña</span>
+                                                                                                <span className="text-xs text-white font-bold block whitespace-normal">{stat.campaign_name}</span>
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {stat.ad_set_name && (
+                                                                                            <div>
+                                                                                                <span className="text-[8px] font-black text-blue-400 uppercase tracking-wider block leading-none mb-0.5">Conjunto de Anuncios</span>
+                                                                                                <span className="text-xs text-white font-bold block whitespace-normal">{stat.ad_set_name}</span>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                            >
+                                                                                <h4 className={`text-sm font-black uppercase tracking-tight max-w-[200px] truncate ${zeroRow ? 'text-red-400' : 'text-white'}`}>{stat.ad_name}</h4>
+                                                                            </StatTooltip>
+                                                                        ) : (
+                                                                            <h4 className={`text-sm font-black uppercase tracking-tight max-w-[200px] truncate ${zeroRow ? 'text-red-400' : 'text-white'}`}>{stat.ad_name}</h4>
+                                                                        )}
                                                                         {stat.ad_id !== 0 && (
                                                                             <button 
                                                                                 onClick={(e) => handleToggleHideAd(e, stat.ad_id)}
@@ -1112,26 +1192,6 @@ const AdDashboardTab = () => {
                                                                         )}
                                                                         {isAdHidden && <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest ml-1">Archivado</span>}
                                                                     </p>
-
-                                                                    {/* Tooltip para mostrar Campaña y Conjunto de Anuncios */}
-                                                                    {(stat.campaign_name || stat.ad_set_name) && (
-                                                                        <div className="absolute top-full left-0 mt-1.5 w-64 bg-slate-900 border border-slate-700/80 rounded-xl p-3 shadow-2xl opacity-0 group-hover/tooltip:opacity-100 group-hover/tooltip:pointer-events-auto pointer-events-none transition-all duration-200 z-[100] text-left whitespace-normal leading-normal font-normal normal-case">
-                                                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Estructura del Anuncio</p>
-                                                                            {stat.campaign_name && (
-                                                                                <div className="mb-1.5">
-                                                                                    <span className="text-[8px] font-black text-emerald-400 uppercase tracking-wider block leading-none mb-0.5">Campaña</span>
-                                                                                    <span className="text-xs text-white font-bold block">{stat.campaign_name}</span>
-                                                                                </div>
-                                                                            )}
-                                                                            {stat.ad_set_name && (
-                                                                                <div>
-                                                                                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-wider block leading-none mb-0.5">Conjunto de Anuncios</span>
-                                                                                    <span className="text-xs text-white font-bold block">{stat.ad_set_name}</span>
-                                                                                </div>
-                                                                            )}
-                                                                            <div className="absolute bottom-full left-4 border-4 border-transparent border-b-slate-900"></div>
-                                                                        </div>
-                                                                    )}
                                                                 </div>
                                                             </div>
                                                         );
@@ -1148,11 +1208,18 @@ const AdDashboardTab = () => {
                                                                 else if (col.id === 'cash_collect') { content = `$${stat.cash_collect || '0'}`; color = "text-emerald-400"; }
                                                                 else if (col.id === 'roas') { content = `${stat.roas || '0'}x`; color = parseFloat(stat.roas || 0) >= 1 ? 'text-emerald-400' : 'text-red-400'; }
 
+                                                                const tooltipInfo = getMetricTooltipInfo(col.id);
+                                                                const cellContent = tooltipInfo ? (
+                                                                    <StatTooltip label={tooltipInfo.label} value={content} calculation={tooltipInfo.calc}>
+                                                                        {content}
+                                                                    </StatTooltip>
+                                                                ) : content;
+
                                                                 return (
                                                                     <td key={col.id} className={`py-4 px-5 text-xs font-black ${zeroRow ? 'text-red-300 opacity-60' : color} ${
                                                                         col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'
                                                                     }`}>
-                                                                        {content}
+                                                                        {cellContent}
                                                                     </td>
                                                                 );
                                                             })}
@@ -1194,7 +1261,7 @@ const AdDashboardTab = () => {
                                             <div className="relative">
                                                 {/* Header */}
                                                 <div className="flex items-start justify-between mb-5">
-                                                    <div className="flex-1 min-w-0 relative group/tooltip overflow-visible">
+                                                    <div className="flex-1 min-w-0 overflow-visible">
                                                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                                                             {stat.ad_id !== 0 ? (
                                                                 <>
@@ -1208,28 +1275,36 @@ const AdDashboardTab = () => {
                                                             )}
                                                             {isAdHidden && <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest ml-1">Archivado</span>}
                                                         </p>
-                                                        <h4 className="text-sm font-black text-white italic tracking-tight leading-tight line-clamp-2 uppercase">
-                                                            {stat.ad_name}
-                                                        </h4>
-
-                                                        {/* Tooltip para mostrar Campaña y Conjunto de Anuncios */}
-                                                        {(stat.campaign_name || stat.ad_set_name) && (
-                                                            <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700/80 rounded-xl p-3 shadow-2xl opacity-0 group-hover/tooltip:opacity-100 group-hover/tooltip:pointer-events-auto pointer-events-none transition-all duration-200 z-[100] text-left whitespace-normal leading-normal font-normal normal-case">
-                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Estructura del Anuncio</p>
-                                                                {stat.campaign_name && (
-                                                                    <div className="mb-1.5">
-                                                                        <span className="text-[8px] font-black text-emerald-400 uppercase tracking-wider block leading-none mb-0.5">Campaña</span>
-                                                                        <span className="text-xs text-white font-bold block">{stat.campaign_name}</span>
+                                                        {(stat.campaign_name || stat.ad_set_name) ? (
+                                                            <StatTooltip 
+                                                                label="Estructura del Anuncio" 
+                                                                value={stat.ad_name} 
+                                                                calcLabel="Detalle:"
+                                                                calculation={(
+                                                                    <div className="space-y-1.5 mt-1">
+                                                                        {stat.campaign_name && (
+                                                                            <div>
+                                                                                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-wider block leading-none mb-0.5">Campaña</span>
+                                                                                <span className="text-xs text-white font-bold block whitespace-normal">{stat.campaign_name}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {stat.ad_set_name && (
+                                                                            <div>
+                                                                                <span className="text-[8px] font-black text-blue-400 uppercase tracking-wider block leading-none mb-0.5">Conjunto de Anuncios</span>
+                                                                                <span className="text-xs text-white font-bold block whitespace-normal">{stat.ad_set_name}</span>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 )}
-                                                                {stat.ad_set_name && (
-                                                                    <div>
-                                                                        <span className="text-[8px] font-black text-blue-400 uppercase tracking-wider block leading-none mb-0.5">Conjunto de Anuncios</span>
-                                                                        <span className="text-xs text-white font-bold block">{stat.ad_set_name}</span>
-                                                                    </div>
-                                                                )}
-                                                                <div className="absolute bottom-full left-4 border-4 border-transparent border-b-slate-900"></div>
-                                                            </div>
+                                                            >
+                                                                <h4 className="text-sm font-black text-white italic tracking-tight leading-tight line-clamp-2 uppercase">
+                                                                    {stat.ad_name}
+                                                                </h4>
+                                                            </StatTooltip>
+                                                        ) : (
+                                                            <h4 className="text-sm font-black text-white italic tracking-tight leading-tight line-clamp-2 uppercase">
+                                                                {stat.ad_name}
+                                                            </h4>
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
@@ -1252,32 +1327,28 @@ const AdDashboardTab = () => {
 
                                             {/* Main Metrics (Leads/Qual) */}
                                             <div className="grid grid-cols-2 gap-3 mb-4 overflow-visible">
-                                                <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800/50 relative group/tooltip overflow-visible">
+                                                <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800/50">
                                                     <div className="flex items-center justify-between mb-1">
                                                         <div className="flex items-center gap-1.5 opacity-70">
                                                             <Users size={12} className="text-blue-400" />
                                                             <p className="text-[9px] font-black text-blue-400 uppercase tracking-wider">Leads</p>
                                                         </div>
-                                                        <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
-                                                    </div>
-                                                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
-                                                        Suma total de leads registrados para este anuncio en el periodo seleccionado.
-                                                        <div className="absolute top-full right-1.5 border-4 border-transparent border-t-slate-800"></div>
+                                                        <StatTooltip label="Leads Totales" value={`${stat.total_leads}`} calculation="Suma total de leads registrados para este anuncio en el periodo seleccionado.">
+                                                            <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
+                                                        </StatTooltip>
                                                     </div>
                                                     <p className="text-2xl font-black text-white leading-none">{stat.total_leads}</p>
                                                 </div>
 
-                                                <div className={`rounded-xl p-3 border ${qualBg.replace('10', '20').replace('bg-', 'border-')} relative group/tooltip overflow-visible`}>
+                                                <div className={`rounded-xl p-3 border ${qualBg.replace('10', '20').replace('bg-', 'border-')}`}>
                                                     <div className="flex items-center justify-between mb-1">
                                                         <div className="flex items-center gap-1.5 opacity-70">
                                                             <TrendingUp size={12} className={qualColor} />
                                                             <p className={`text-[9px] font-black uppercase tracking-wider ${qualColor}`}>% Cual.</p>
                                                         </div>
-                                                        <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
-                                                    </div>
-                                                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
-                                                        Porcentaje de leads marcados como cualificados. Cálculo: (Cualificados / Total Leads).
-                                                        <div className="absolute top-full right-1.5 border-4 border-transparent border-t-slate-800"></div>
+                                                        <StatTooltip label="% Cualificados" value={`${stat.qualified_percentage}%`} calculation="Porcentaje de leads marcados como cualificados. Cálculo: (Cualificados / Total Leads).">
+                                                            <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
+                                                        </StatTooltip>
                                                     </div>
                                                     <p className={`text-2xl font-black leading-none ${qualColor}`}>{stat.qualified_percentage}%</p>
                                                 </div>
@@ -1285,17 +1356,15 @@ const AdDashboardTab = () => {
 
                                             {/* Conversion Metrics (Agendas/Sales) */}
                                             <div className="grid grid-cols-2 gap-3 mb-4 overflow-visible">
-                                                <div className="bg-slate-950/40 rounded-xl p-3 border border-slate-800/30 relative group/tooltip overflow-visible">
+                                                <div className="bg-slate-950/40 rounded-xl p-3 border border-slate-800/30">
                                                     <div className="flex items-center justify-between mb-1">
                                                         <div className="flex items-center gap-1.5 opacity-70">
                                                             <CalendarDays size={12} className="text-emerald-400" />
                                                             <p className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">Agendas</p>
                                                         </div>
-                                                        <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
-                                                    </div>
-                                                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
-                                                        Cantidad de leads que agendaron una llamada o cita.
-                                                        <div className="absolute top-full right-1.5 border-4 border-transparent border-t-slate-800"></div>
+                                                        <StatTooltip label="Agendas" value={`${stat.agendas || 0}`} calculation="Cantidad de leads que agendaron una llamada o cita.">
+                                                            <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
+                                                        </StatTooltip>
                                                     </div>
                                                     <p className="text-xl font-black text-white leading-none">{stat.agendas || 0}</p>
                                                     {/* Setter Breakdown */}
@@ -1311,17 +1380,15 @@ const AdDashboardTab = () => {
                                                     )}
                                                 </div>
 
-                                                <div className="bg-slate-950/40 rounded-xl p-3 border border-slate-800/30 relative group/tooltip overflow-visible">
+                                                <div className="bg-slate-950/40 rounded-xl p-3 border border-slate-800/30">
                                                     <div className="flex items-center justify-between mb-1">
                                                         <div className="flex items-center gap-1.5 opacity-70">
                                                             <DollarSign size={12} className="text-amber-400" />
                                                             <p className="text-[9px] font-black text-amber-400 uppercase tracking-wider">Ventas</p>
                                                         </div>
-                                                        <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
-                                                    </div>
-                                                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
-                                                        Cantidad de leads que terminaron en una venta cerrada.
-                                                        <div className="absolute top-full right-1.5 border-4 border-transparent border-t-slate-800"></div>
+                                                        <StatTooltip label="Ventas" value={`${stat.ventas || 0}`} calculation="Cantidad de leads que terminaron en una venta cerrada.">
+                                                            <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-white transition-colors" />
+                                                        </StatTooltip>
                                                     </div>
                                                     <p className="text-xl font-black text-white leading-none">{stat.ventas || 0}</p>
                                                 </div>
@@ -1330,26 +1397,21 @@ const AdDashboardTab = () => {
                                             {/* Financial Metrics (CPL, CPA, CPV) */}
                                             <div className="pt-4 border-t border-slate-800/50 overflow-visible">
                                                 <div className="flex items-center justify-between gap-2 overflow-visible">
-                                                    <div className="flex flex-col relative group/tooltip overflow-visible">
+                                                    <div className="flex flex-col">
                                                         <div className="flex items-center gap-1">
                                                             <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Inversión</p>
-                                                            <HelpCircle size={8} className="text-slate-600 cursor-help" />
-                                                        </div>
-                                                        <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
-                                                            Gasto total reportado en la plataforma de anuncios para este periodo.
-                                                            <div className="absolute top-full left-2 border-4 border-transparent border-t-slate-800"></div>
+                                                            <StatTooltip label="Inversión" value={`$${(stat.spend||0).toLocaleString()}`} calculation="Gasto total reportado en la plataforma de anuncios para este periodo.">
+                                                                <HelpCircle size={8} className="text-slate-600 cursor-help" />
+                                                            </StatTooltip>
                                                         </div>
                                                         <p className="text-xs font-black text-white">${(stat.spend||0).toLocaleString()}</p>
                                                     </div>
-                                                    <div className="flex flex-col text-center relative group/tooltip overflow-visible">
+                                                    <div className="flex flex-col text-center">
                                                         <div className="flex items-center justify-center gap-1">
                                                             <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">CPL</p>
-                                                            <HelpCircle size={8} className="text-slate-600 cursor-help" />
-                                                        </div>
-                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
-                                                            CPL: Costo por cada lead generado (Inversión / Total Leads).<br/>
-                                                            CPQL: Costo por Lead Cualificado (Inversión / Cualificados).
-                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                            <StatTooltip label="Costo por Lead (CPL)" value={`$${stat.cpl || '0'}`} calculation="CPL: Costo por lead generado (Inversión / Total Leads). CPQL: Costo por Lead Cualificado (Inversión / Cualificados).">
+                                                                <HelpCircle size={8} className="text-slate-600 cursor-help" />
+                                                            </StatTooltip>
                                                         </div>
                                                         <p className="text-xs font-black text-blue-400">${stat.cpl || '0'}</p>
                                                         <div className="mt-1 flex flex-col items-center">
@@ -1357,25 +1419,21 @@ const AdDashboardTab = () => {
                                                             <p className="text-[10px] font-black text-emerald-400">${stat.cpql || '0'}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="flex flex-col text-center relative group/tooltip overflow-visible">
+                                                    <div className="flex flex-col text-center">
                                                         <div className="flex items-center justify-center gap-1">
                                                             <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">CPA</p>
-                                                            <HelpCircle size={8} className="text-slate-600 cursor-help" />
-                                                        </div>
-                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
-                                                            Costo por cada agenda conseguida. Cálculo: (Inversión / Agendas).
-                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                            <StatTooltip label="Costo por Agenda (CPA)" value={`$${stat.cpa || '0'}`} calculation="Costo por cada agenda conseguida. Cálculo: (Inversión / Agendas).">
+                                                                <HelpCircle size={8} className="text-slate-600 cursor-help" />
+                                                            </StatTooltip>
                                                         </div>
                                                         <p className="text-xs font-black text-emerald-400">${stat.cpa || '0'}</p>
                                                     </div>
-                                                    <div className="flex flex-col text-right relative group/tooltip overflow-visible">
+                                                    <div className="flex flex-col text-right">
                                                         <div className="flex items-center justify-end gap-1">
                                                             <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">CPV</p>
-                                                            <HelpCircle size={8} className="text-slate-600 cursor-help" />
-                                                        </div>
-                                                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
-                                                            Costo por cada venta cerrada. Cálculo: (Inversión / Ventas).
-                                                            <div className="absolute top-full right-2 border-4 border-transparent border-t-slate-800"></div>
+                                                            <StatTooltip label="Costo por Venta (CPV)" value={`$${stat.cpv || '0'}`} calculation="Costo por cada venta cerrada. Cálculo: (Inversión / Ventas).">
+                                                                <HelpCircle size={8} className="text-slate-600 cursor-help" />
+                                                            </StatTooltip>
                                                         </div>
                                                         <p className="text-xs font-black text-amber-400">${stat.cpv || '0'}</p>
                                                     </div>

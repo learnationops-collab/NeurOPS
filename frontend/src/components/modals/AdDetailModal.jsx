@@ -3,6 +3,7 @@ import { X, Users, TrendingUp, DollarSign, Calendar, Instagram, Loader2, Calenda
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
+import StatTooltip from '../shared/StatTooltip';
 
 const AdDetailModal = ({ adId, isOpen, onClose }) => {
     const [details, setDetails] = useState(null);
@@ -478,13 +479,9 @@ const StatCard = ({ label, value, subValue, icon, color, description }) => {
                     <p className="text-[9px] font-black uppercase tracking-wider">{label}</p>
                 </div>
                 {description && (
-                    <div className="relative group/tooltip">
+                    <StatTooltip label={label} calculation={description}>
                         <HelpCircle size={10} className="text-slate-500 cursor-help hover:text-white transition-colors" />
-                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-50 shadow-xl border border-slate-700/50">
-                            {description}
-                            <div className="absolute top-full right-1.5 border-4 border-transparent border-t-slate-800"></div>
-                        </div>
-                    </div>
+                    </StatTooltip>
                 )}
             </div>
             <div className="flex items-baseline gap-1.5">

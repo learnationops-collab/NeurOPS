@@ -231,13 +231,9 @@ const PublicSetterStatsPage = () => {
                     <div className="flex items-center gap-1.5">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
                         {tooltipInfo && (
-                            <div className="relative group/tooltip inline-block">
+                            <StatTooltip label={title} calculation={tooltipInfo}>
                                 <HelpCircle size={12} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
-                                    {tooltipInfo}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                                </div>
-                            </div>
+                            </StatTooltip>
                         )}
                     </div>
                     <h3 className="text-3xl font-black text-white italic tracking-tighter">{value}</h3>
@@ -296,13 +292,9 @@ const PublicSetterStatsPage = () => {
                 <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">{label}</span>
                     {tooltipInfo && (
-                        <div className="relative group/tooltip inline-block">
+                        <StatTooltip label={label} calculation={tooltipInfo}>
                             <HelpCircle size={10} className="text-slate-500 cursor-help hover:text-indigo-500 transition-colors" />
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] font-medium normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-xl border border-slate-700/50">
-                                {tooltipInfo}
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                            </div>
-                        </div>
+                        </StatTooltip>
                     )}
                 </div>
                 <span className={`text-xl font-black italic tracking-tighter ${colorClass}`}>{value}</span>
