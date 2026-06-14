@@ -6,6 +6,9 @@
     - **Simplificación de Egresos y Pestaña**: Se renombró la categoría "Suscripciones Software" a simplemente "Software" en el desglose de distribución de gastos en el Resumen Financiero. Asimismo, se simplificó la pestaña "Presupuesto Anuncios" a simplemente "Anuncios".
     - **Remoción de Duplicados**: Se eliminó el "Balance General (A - B)" de la sección "Balance del Período", al ser equivalente al Profit operativo.
     - **Tooltips Informativos detallados**: Se integraron componentes dinámicos de tooltip (`InfoTooltip`) bajo estilo CSS Glassmorphism en todas las secciones, KPIs principales, columnas de tablas y balances de pasarelas del Hub de Finanzas para detallar conceptualmente cada dato y su fórmula de cálculo.
+  - **Accesos Rápidos de Períodos en Performance Center de Setters (`PublicSetterStatsPage.jsx`) [MODIFY]**:
+    - **Botones de Filtros Rápidos**: Se integró una hilera de accesos rápidos estilo Glassmorphic en el panel de filtros principales (Ayer, Últimos 7 días, Últimos 30 días, Este mes, Mes anterior) para permitir cambiar el rango temporal de análisis de manera instantánea.
+    - **Soporte de Cómputo de Fechas**: Se ampliaron los cálculos automáticos de rangos de fechas de inicio (`start_date`) y fin (`end_date`) en el hook `useEffect` correspondiente para dar soporte consistente a todos los nuevos presets de tiempo.
 
 - **13 de Junio de 2026**:
   - **Correcciones de Finanzas y Presupuesto de Anuncios (`finance.py` y `FinancePage.jsx`) [MODIFY]**:

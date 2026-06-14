@@ -59,6 +59,30 @@ const PublicSetterStatsPage = () => {
             yesterday.setDate(now.getDate() - 1);
             start = yesterday.toISOString().split('T')[0];
             end = start;
+        } else if (filters.time_preset === 'last_7_days') {
+            const d = new Date();
+            d.setDate(now.getDate() - 7);
+            start = d.toISOString().split('T')[0];
+        } else if (filters.time_preset === 'last_30_days') {
+            const d = new Date();
+            d.setDate(now.getDate() - 30);
+            start = d.toISOString().split('T')[0];
+        } else if (filters.time_preset === 'this_month') {
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            start = `${y}-${m}-01`;
+        } else if (filters.time_preset === 'last_month') {
+            const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            
+            const yL = firstOfLastMonth.getFullYear();
+            const mL = String(firstOfLastMonth.getMonth() + 1).padStart(2, '0');
+            start = `${yL}-${mL}-01`;
+            
+            const yE = lastOfLastMonth.getFullYear();
+            const mE = String(lastOfLastMonth.getMonth() + 1).padStart(2, '0');
+            const dE = String(lastOfLastMonth.getDate()).padStart(2, '0');
+            end = `${yE}-${mE}-${dE}`;
         } else if (filters.time_preset === 'last_days') {
             const d = new Date();
             d.setDate(now.getDate() - parseInt(filters.custom_days || 7));
@@ -408,10 +432,39 @@ const PublicSetterStatsPage = () => {
                                 onChange={e => setFilters({ ...filters, time_preset: e.target.value })}
                             >
                                 <option value="yesterday">Ayer</option>
+                                <option value="last_7_days">Últimos 7 días</option>
+                                <option value="last_30_days">Últimos 30 días</option>
+                                <option value="this_month">Este mes</option>
+                                <option value="last_month">Mes anterior</option>
                                 <option value="last_days">Últimos X días</option>
                                 <option value="all_time">Todo el tiempo</option>
                                 <option value="custom">Personalizado</option>
                             </select>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Accesos Rápidos</label>
+                            <div className="flex flex-wrap gap-2 min-h-[38px] items-center">
+                                {[
+                                    { id: 'yesterday', label: 'Ayer' },
+                                    { id: 'last_7_days', label: 'Últimos 7 días' },
+                                    { id: 'last_30_days', label: 'Últimos 30 días' },
+                                    { id: 'this_month', label: 'Este mes' },
+                                    { id: 'last_month', label: 'Mes anterior' }
+                                ].map(p => (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => setFilters({ ...filters, time_preset: p.id })}
+                                        className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                            filters.time_preset === p.id
+                                                ? 'bg-indigo-650 text-white shadow-md shadow-indigo-650/30'
+                                                : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-750 border border-slate-750'
+                                        }`}
+                                    >
+                                        {p.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {filters.time_preset === 'last_days' && (
