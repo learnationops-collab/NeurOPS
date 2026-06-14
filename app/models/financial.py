@@ -61,7 +61,21 @@ class FinancialAgenda(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de la cita oficial
 
     def to_dict(self):
-        # Fallback a created_at si registro es None
+        # Calcular ventas asociadas en financial_sales
+        from sqlalchemy import or_, func
+        ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
+        mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
+        
+        sales_count = 0
+        filters = []
+        if ig_clean:
+            filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_clean)
+        if mail_clean:
+            filters.append(func.lower(FinancialSale.mail_cliente) == mail_clean)
+            
+        if filters:
+            sales_count = FinancialSale.query.filter(or_(*filters)).count()
+
         return {
             "id": self.id,
             "nombre": self.nombre,
@@ -75,7 +89,9 @@ class FinancialAgenda(db.Model):
             "instagram": self.instagram,
             "estado": self.estado or "Pendiente",
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "date": self.date.isoformat() if self.date else None
+            "date": self.date.isoformat() if self.date else None,
+            "sales_count": sales_count,
+            "has_sale": sales_count > 0
         }
 
 class ExcludedSale(db.Model):

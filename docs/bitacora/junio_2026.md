@@ -1,11 +1,13 @@
 # Bitácora - Junio 2026
 
 - **14 de Junio de 2026**:
-  - **Resaltado y Conteo de Ventas en Registro de Agendas de Closers (`closer.py`, `LeadsPage.jsx`, `CloserDashboard.jsx`, `CloserKanbanBoard.jsx`) [MODIFY]**:
-    - **Backend (API)**: Se agregaron los campos `sales_count` y `has_sale` a las agendas y pipelines de closer en `app/api/closer.py` para permitir vincular las citas con las compras de cada cliente.
+  - **Resaltado y Conteo de Ventas en Registro de Agendas de Closers (`closer.py`, `financial.py`, `LeadsPage.jsx`, `CloserDashboard.jsx`, `CloserKanbanBoard.jsx`, `FinancialAgendasPage.jsx`) [MODIFY]**:
+    - **Backend (API y Modelos)**:
+      - Se agregaron los campos `sales_count` y `has_sale` a las agendas y pipelines de closer en `app/api/closer.py`.
+      - Se integró el cálculo en tiempo real de ventas asociadas a través de instagram o email en la función `to_dict()` del modelo `FinancialAgenda` en `app/models/financial.py`.
     - **Frontend (Interfaz)**:
-      - Se integró un badge esmeralda premium (`✓ X cierres`) en la tabla de agendas (`LeadsPage.jsx`), las tarjetas y listas del Kanban (`CloserKanbanBoard.jsx`) y el listado del panel principal (`CloserDashboard.jsx`).
-      - Se aplicó una sutil tonalidad de fondo y borde esmeralda a las celdas y tarjetas de agendas que tienen al menos una venta registrada.
+      - Se integró un badge esmeralda premium (`✓ X cierres`) en la tabla de agendas (`LeadsPage.jsx`), las tarjetas y listas del Kanban (`CloserKanbanBoard.jsx`), el listado del panel principal (`CloserDashboard.jsx`) y el Tablero de Agendas Financieras del administrador (`FinancialAgendasPage.jsx`).
+      - Se aplicó una sutil tonalidad de fondo y borde esmeralda a las celdas y tarjetas de agendas que tienen al menos una venta registrada en todas estas vistas.
   - **Remoción de Redundancia de Métricas en Dashboard de Setters (`PublicSetterStatsPage.jsx`) [MODIFY]**:
     - Se identificó y eliminó la métrica redundante "Calidad de Tráfico" (`leads / entrantes`), la cual mostraba exactamente la misma información que la "Tasa de Cualificación sobre Entrantes" (`% / Entrantes`) en el bloque unificado superior.
     - Se reemplazó por la métrica clave **"Conversión Final"** (Agendas / Entrantes: `funnel_agenda / entrantes`), que representa el yield global de citas generadas respecto al volumen inicial de conversaciones del periodo.

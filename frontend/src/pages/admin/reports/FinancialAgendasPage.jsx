@@ -649,7 +649,7 @@ const FinancialAgendasPage = () => {
                                 </thead>
                                 <tbody className="divide-y divide-base/50">
                                     {agendas.map((agenda) => (
-                                        <tr key={agenda.id} className="group hover:bg-white/5 transition-colors">
+                                        <tr key={agenda.id} className={`group hover:bg-white/5 transition-colors ${agenda.has_sale ? 'bg-emerald-500/[0.02]' : ''}`}>
                                             <td className="py-4 px-4">
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon size={14} className="text-muted" />
@@ -667,17 +667,24 @@ const FinancialAgendasPage = () => {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-4">
-                                                <span 
-                                                    className="text-sm font-bold text-white hover:text-indigo-400 hover:underline cursor-pointer"
-                                                    onClick={() => setSelectedRoadmapLead({
-                                                        instagram: agenda.instagram,
-                                                        email: agenda.mail,
-                                                        phone: agenda.whatsapp,
-                                                        full_name: agenda.lead
-                                                    })}
-                                                >
-                                                    {agenda.lead}
-                                                </span>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span 
+                                                        className="text-sm font-bold text-white hover:text-indigo-400 hover:underline cursor-pointer"
+                                                        onClick={() => setSelectedRoadmapLead({
+                                                            instagram: agenda.instagram,
+                                                            email: agenda.mail,
+                                                            phone: agenda.whatsapp,
+                                                            full_name: agenda.lead
+                                                        })}
+                                                    >
+                                                        {agenda.lead}
+                                                    </span>
+                                                    {agenda.has_sale && (
+                                                        <Badge variant="success" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px] py-0.5 px-1.5 font-bold shrink-0">
+                                                            ✓ {agenda.sales_count} {agenda.sales_count === 1 ? 'cierre' : 'cierres'}
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="py-4 px-4">
                                                 <Badge variant="amber" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider border-amber-500/30">
