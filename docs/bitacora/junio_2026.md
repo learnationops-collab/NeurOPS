@@ -1,6 +1,10 @@
 # Bitácora - Junio 2026
 
 - **14 de Junio de 2026**:
+  - **Remoción de Redundancia de Métricas en Dashboard de Setters (`PublicSetterStatsPage.jsx`) [MODIFY]**:
+    - Se identificó y eliminó la métrica redundante "Calidad de Tráfico" (`leads / entrantes`), la cual mostraba exactamente la misma información que la "Tasa de Cualificación sobre Entrantes" (`% / Entrantes`) en el bloque unificado superior.
+    - Se reemplazó por la métrica clave **"Conversión Final"** (Agendas / Entrantes: `funnel_agenda / entrantes`), que representa el yield global de citas generadas respecto al volumen inicial de conversaciones del periodo.
+    - Se actualizaron las fórmulas del valor principal, sub-indicadores, tooltip conceptual de cálculo e histórico de comparación.
   - **Corrección de Visibilidad de Gráfico de Embudo (`FunnelChart.jsx`, `PublicSetterReportPage.jsx`) [MODIFY]**:
     - Se solucionó el colapso a altura cero de `ResponsiveContainer` de Recharts agregando la prop `height` (por defecto `'300px'`) y usando estilos inline en el contenedor del componente `FunnelChart.jsx`.
     - Se adaptaron las llamadas correspondientes en los dashboards y se pasó `height="100%"` en la página de reporte de setters (`PublicSetterReportPage.jsx`) para preservar el contenedor responsivo de relación de aspecto cuadrada.

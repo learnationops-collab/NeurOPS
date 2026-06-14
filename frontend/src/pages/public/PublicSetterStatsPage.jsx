@@ -667,31 +667,31 @@ const PublicSetterStatsPage = () => {
                                             </div>
                                         </div>
 
-                                        {/* TARJETA 4: CALIDAD DE TRÁFICO (Leads Netos sobre Entrantes) */}
+                                        {/* TARJETA 4: CONVERSIÓN FINAL (Cita sobre Entrantes) */}
                                         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
                                             <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
                                                 <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-amber-500" />
                                             </div>
                                             <div className="flex items-start justify-between relative z-10">
                                                 <div className="space-y-1 text-left">
-                                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Calidad de Tráfico</p>
+                                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Conversión Final</p>
                                                     <h3 className="text-4xl font-black text-white italic tracking-tighter">
                                                         <StatTooltip
-                                                            label="Calidad de Tráfico"
-                                                            value={`${div(stats.totals.leads, stats.totals.entrantes)}%`}
-                                                            calculation="Porcentaje de leads cualificados obtenidos sobre el total de leads entrantes. Fórmula: (Leads Cualificados / Entrantes) * 100"
+                                                            label="Conversión Final"
+                                                            value={`${div(stats.totals.funnel_agenda, stats.totals.entrantes)}%`}
+                                                            calculation="Porcentaje de citas agendadas respecto al total de leads entrantes. Fórmula: (Agendas / Entrantes) * 100"
                                                         >
-                                                            {div(stats.totals.leads, stats.totals.entrantes)}%
+                                                            {div(stats.totals.funnel_agenda, stats.totals.entrantes)}%
                                                         </StatTooltip>
                                                     </h3>
                                                     <div className="flex items-center gap-1.5 mt-2">
                                                         <span className="px-2 py-0.5 rounded-full text-xs font-black text-amber-400 bg-amber-500/10 border border-emerald-500/30">
                                                             <StatTooltip
-                                                                label="Total Leads Cualificados"
-                                                                value={stats.totals.leads}
-                                                                calculation="Cantidad de prospectos que calificaron positivamente."
+                                                                label="Total Agendas"
+                                                                value={stats.totals.funnel_agenda}
+                                                                calculation="Cantidad total de citas agendadas por el setter."
                                                             >
-                                                                Leads: {stats.totals.leads}
+                                                                Agendas: {stats.totals.funnel_agenda}
                                                             </StatTooltip>
                                                         </span>
                                                         <span className="px-2 py-0.5 rounded-full text-xs font-black text-slate-400 bg-slate-500/10 border border-slate-500/30">
@@ -705,8 +705,8 @@ const PublicSetterStatsPage = () => {
                                                         </span>
                                                     </div>
                                                     {renderComparisonSubdataLeft(
-                                                        div(stats.totals.leads, stats.totals.entrantes),
-                                                        div(stats.comparison?.totals?.leads, stats.comparison?.totals?.entrantes)
+                                                        div(stats.totals.funnel_agenda, stats.totals.entrantes),
+                                                        div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.entrantes)
                                                     )}
                                                 </div>
                                                 <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-amber-400 shrink-0">
