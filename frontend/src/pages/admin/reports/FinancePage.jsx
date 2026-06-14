@@ -35,6 +35,18 @@ const getCurrentMonthStr = () => {
     return `${year}-${month}`;
 };
 
+const InfoTooltip = ({ content }) => {
+    if (!content) return null;
+    return (
+        <div className="relative group/tooltip inline-block ml-1.5 align-middle cursor-help">
+            <AlertCircle size={12} className="text-slate-500 hover:text-slate-350 transition-colors inline" />
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-slate-950 text-slate-200 text-[10px] font-normal normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-2xl border border-slate-800/80 leading-relaxed text-left">
+                {content}
+            </div>
+        </div>
+    );
+};
+
 const FinancePage = () => {
     const { user } = useAuth();
     const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthStr());
@@ -398,15 +410,21 @@ const FinancePage = () => {
                             {/* KPI Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <Card variant="surface" className="flex flex-col justify-center rounded-[2rem] bg-indigo-950/10 border-indigo-900/30">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Profit (Balances - Gastos)</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                                        Profit (Ingresos - Gastos)
+                                        <InfoTooltip content="Rentabilidad neta del período calculada como: Ingresos Totales (Cash Collect) menos Gastos Totales del período." />
+                                    </p>
                                     <h3 className={`text-2xl font-black italic tracking-tighter ${summary.kpis.profit >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
                                         ${summary.kpis.profit?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </h3>
-                                    <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Rentabilidad según saldos de pasarelas</p>
+                                    <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Rentabilidad neta del período</p>
                                 </Card>
 
                                 <Card variant="surface" className="flex flex-col justify-center rounded-[2rem] bg-emerald-950/10 border-emerald-900/30">
-                                    <p className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest mb-1.5">Ingresos Totales (Cash Collect)</p>
+                                    <p className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest mb-1.5">
+                                        Ingresos Totales (Cash Collect)
+                                        <InfoTooltip content="Monto neto de ventas completadas y confirmadas en el período, deduciendo comisiones de pasarelas (4.5% Stripe, 8.9% Hotmart)." />
+                                    </p>
                                     <h3 className="text-2xl font-black text-emerald-400 italic tracking-tighter">
                                         ${summary.kpis.total_income?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </h3>
@@ -414,7 +432,10 @@ const FinancePage = () => {
                                 </Card>
 
                                 <Card variant="surface" className="flex flex-col justify-center rounded-[2rem] bg-rose-950/10 border-rose-900/30">
-                                    <p className="text-[10px] font-black text-rose-400/80 uppercase tracking-widest mb-1.5">Gastos Totales</p>
+                                    <p className="text-[10px] font-black text-rose-400/80 uppercase tracking-widest mb-1.5">
+                                        Gastos Totales
+                                        <InfoTooltip content="Suma de todos los egresos del período: Nómina del equipo, Presupuesto de Anuncios y Gastos de Software." />
+                                    </p>
                                     <h3 className="text-2xl font-black text-rose-500 italic tracking-tighter">
                                         ${summary.kpis.total_expenses?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </h3>
@@ -431,15 +452,19 @@ const FinancePage = () => {
                                         <h3 className="text-xs font-black text-white uppercase tracking-wider mb-6 flex items-center gap-2">
                                             <TrendingDown className="text-rose-500" size={16} />
                                             Distribución de Gastos
+                                            <InfoTooltip content="Desglose de egresos del período en tres grandes rubros: Nómina, Presupuesto de Anuncios y Licencias/Software." />
                                         </h3>
                                         <div className="grid grid-cols-3 gap-4">
                                             {[
-                                                { label: 'Equipo (Nómina)', amount: summary.expenses_breakdown.sueldos, color: 'text-rose-400', bg: 'bg-rose-500/5' },
-                                                { label: 'Inversión Anuncios', amount: summary.expenses_breakdown.anuncios, color: 'text-violet-400', bg: 'bg-violet-500/5' },
-                                                { label: 'Suscripciones Software', amount: summary.expenses_breakdown.software, color: 'text-amber-400', bg: 'bg-amber-500/5' },
+                                                { label: 'Equipo (Nómina)', amount: summary.expenses_breakdown.sueldos, color: 'text-rose-400', bg: 'bg-rose-500/5', tooltip: "Monto total a pagar a los integrantes del equipo (sueldos fijos, comisiones y bonos)." },
+                                                { label: 'Inversión Anuncios', amount: summary.expenses_breakdown.anuncios, color: 'text-violet-400', bg: 'bg-violet-500/5', tooltip: "Presupuesto destinado a campañas publicitarias establecido para el mes." },
+                                                { label: 'Software', amount: summary.expenses_breakdown.software, color: 'text-amber-400', bg: 'bg-amber-500/5', tooltip: "Monto total de egresos por suscripciones de software y herramientas operativas." },
                                             ].map((item, idx) => (
-                                                <div key={idx} className={`p-4 rounded-2xl border border-slate-800 bg-slate-950/40 hover:border-slate-700 transition-all ${item.bg}`}>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{item.label}</p>
+                                                <div key={idx} className="p-4 rounded-2xl border border-slate-800 bg-slate-950/40 hover:border-slate-700 transition-all relative">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{item.label}</p>
+                                                        <InfoTooltip content={item.tooltip} />
+                                                    </div>
                                                     <h4 className={`text-lg font-black tracking-tight mt-1 ${item.color}`}>
                                                         ${item.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </h4>
@@ -453,13 +478,14 @@ const FinancePage = () => {
                                         <h3 className="text-xs font-black text-white uppercase tracking-wider mb-6 flex items-center gap-2">
                                             <TrendingUp className="text-emerald-400" size={16} />
                                             Ingresos por Método de Pago
+                                            <InfoTooltip content="Desglose de recaudación neta acumulada por cada pasarela o método de pago (deduciendo comisiones de Stripe u Hotmart)." />
                                         </h3>
                                         <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                                             {summary.income_breakdown.map((item, idx) => (
                                                 <div key={idx} className="flex justify-between items-center bg-slate-950/60 p-4 rounded-2xl border border-slate-800 hover:border-emerald-500/20 transition-all">
                                                     <div>
                                                         <span className="text-xs font-black uppercase text-slate-200">{item.metodo_pago}</span>
-                                                        <span className="text-[10px] font-bold text-slate-500 uppercase ml-2">({item.count} {item.count === 1 ? 'venta' : 'ventas'})</span>
+                                                        <span className="text-[10px] font-bold text-slate-550 uppercase ml-2">({item.count} {item.count === 1 ? 'venta' : 'ventas'})</span>
                                                     </div>
                                                     <span className="text-emerald-400 font-black tracking-tighter">
                                                         ${item.total?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -478,20 +504,30 @@ const FinancePage = () => {
                                     <h3 className="text-xs font-black text-white uppercase tracking-wider mb-6 flex items-center gap-2">
                                         <BookmarkCheck className="text-indigo-400" size={16} />
                                         Balance del Período
+                                        <InfoTooltip content="Estado consolidado del balance del mes, contrastando ingresos directos con egresos operativos y ahorros ingresados." />
                                     </h3>
                                     <div className="flex-1 flex flex-col justify-between space-y-6">
                                         <div className="space-y-4">
                                             <div className="flex justify-between items-center p-4 bg-slate-950/40 border border-slate-850 rounded-2xl">
-                                                <span className="text-xs font-bold text-slate-300 uppercase">Ingresos Totales (A)</span>
+                                                <div className="flex items-center">
+                                                    <span className="text-xs font-bold text-slate-300 uppercase">Ingresos Totales (A)</span>
+                                                    <InfoTooltip content="Recaudación neta total obtenida de las ventas del periodo (Cash Collect)." />
+                                                </div>
                                                 <span className="text-sm font-black text-emerald-400">${summary.kpis.total_income?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
                                             <div className="flex justify-between items-center p-4 bg-slate-950/40 border border-slate-850 rounded-2xl">
-                                                <span className="text-xs font-bold text-slate-300 uppercase">Gastos Totales (B)</span>
+                                                <div className="flex items-center">
+                                                    <span className="text-xs font-bold text-slate-300 uppercase">Gastos Totales (B)</span>
+                                                    <InfoTooltip content="Total de egresos operativos acumulados del periodo (Nómina + Anuncios + Software)." />
+                                                </div>
                                                 <span className="text-sm font-black text-rose-400">-${summary.kpis.total_expenses?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
                                             <div className="flex justify-between items-center p-4 bg-slate-950/40 border border-slate-850 rounded-2xl">
                                                 <div className="space-y-0.5">
-                                                    <span className="text-xs font-bold text-slate-300 uppercase block">Ahorros Mensuales (C)</span>
+                                                    <div className="flex items-center">
+                                                        <span className="text-xs font-bold text-slate-300 uppercase block">Ahorros Mensuales (C)</span>
+                                                        <InfoTooltip content="Monto de ahorro mensual del negocio guardado de manera manual." />
+                                                    </div>
                                                     <span className="text-[10px] text-slate-500 uppercase font-black block">Ingreso manual</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -510,14 +546,20 @@ const FinancePage = () => {
 
                                         <div className="p-6 bg-indigo-950/15 border border-indigo-900/30 rounded-3xl mt-4 space-y-3">
                                             <div className="flex justify-between items-baseline">
-                                                <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Balance General (A - B)</span>
+                                                <div className="flex items-center">
+                                                    <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Balance General (A - B)</span>
+                                                    <InfoTooltip content="Cálculo directo de la diferencia operativa del mes: Ingresos Totales menos Gastos Totales." />
+                                                </div>
                                                 <span className={`text-xl font-black italic tracking-tighter ${summary.kpis.balance >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
                                                     ${summary.kpis.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </span>
                                             </div>
                                             <div className="w-full bg-slate-800/50 h-px" />
                                             <div className="flex justify-between items-baseline">
-                                                <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Balance Neto (A - B + C)</span>
+                                                <div className="flex items-center">
+                                                    <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Balance Neto (A - B + C)</span>
+                                                    <InfoTooltip content="Resultado financiero final del periodo sumando los ahorros mensuales: (Ingresos Totales - Gastos Totales) + Ahorros." />
+                                                </div>
                                                 <span className={`text-xl font-black italic tracking-tighter ${summary.kpis.balance_neto >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
                                                     ${summary.kpis.balance_neto?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </span>
@@ -535,7 +577,10 @@ const FinancePage = () => {
                             <Card variant="surface" className="p-6 rounded-[2.5rem] border-slate-800/80 bg-slate-900/10">
                                 <div className="flex justify-between items-center mb-6">
                                     <div>
-                                        <h3 className="text-xs font-black text-white uppercase tracking-wider">Saldos en Medios de Pago</h3>
+                                        <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                                            Saldos en Medios de Pago
+                                            <InfoTooltip content="Comparación y conciliación entre el dinero real disponible en cada pasarela y las obligaciones de nómina por pagar asignadas a esa misma pasarela." />
+                                        </h3>
                                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide mt-1">Saldo actual vs. lo que se debe pagar al equipo por pasarela.</p>
                                     </div>
                                 </div>
@@ -545,9 +590,18 @@ const FinancePage = () => {
                                         <thead>
                                             <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-500">
                                                 <th className="p-4 font-semibold">Pasarela</th>
-                                                <th className="p-4 font-semibold text-right">Saldo Actual</th>
-                                                <th className="p-4 font-semibold text-right">Por Pagar (Nómina)</th>
-                                                <th className="p-4 font-semibold text-right">Diferencia</th>
+                                                <th className="p-4 font-semibold text-right">
+                                                    Saldo Actual
+                                                    <InfoTooltip content="Monto real en la cuenta o pasarela. Se actualiza de manera manual." />
+                                                </th>
+                                                <th className="p-4 font-semibold text-right">
+                                                    Por Pagar (Nómina)
+                                                    <InfoTooltip content="Suma acumulada de sueldos y comisiones del equipo que se ha configurado para pagar mediante esta pasarela." />
+                                                </th>
+                                                <th className="p-4 font-semibold text-right">
+                                                    Diferencia
+                                                    <InfoTooltip content="Resultado neto en la pasarela tras pagar la nómina correspondiente: Saldo Actual menos Por Pagar (Nómina)." />
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody className="text-sm text-slate-300 divide-y divide-slate-800/40">
@@ -623,6 +677,7 @@ const FinancePage = () => {
                                 <h3 className="text-xs font-black text-white uppercase tracking-wider mb-6 flex items-center gap-2">
                                     <TrendingUp className="text-indigo-400" size={16} />
                                     Presupuesto para Anuncios
+                                    <InfoTooltip content="Monitoreo de la inversión publicitaria mensual, comparando el presupuesto estimado con el gasto real extraído del hub de marketing." />
                                 </h3>
                                 
                                 {loadingAdBudget ? (
@@ -634,7 +689,10 @@ const FinancePage = () => {
                                         <div className="space-y-4">
                                             <div className="flex justify-between items-center p-4 bg-slate-950/40 border border-slate-850 rounded-2xl">
                                                 <div className="space-y-0.5">
-                                                    <span className="text-xs font-bold text-slate-300 uppercase block">Presupuesto Destinado (A)</span>
+                                                    <div className="flex items-center">
+                                                        <span className="text-xs font-bold text-slate-300 uppercase block">Presupuesto Destinado (A)</span>
+                                                        <InfoTooltip content="Presupuesto planificado de inversión mensual en anuncios. Este valor se resta en los Gastos Totales del resumen financiero." />
+                                                    </div>
                                                     <span className="text-[10px] text-slate-500 uppercase font-black block">Ingreso manual</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -652,7 +710,10 @@ const FinancePage = () => {
 
                                             <div className="flex justify-between items-center p-4 bg-slate-950/40 border border-slate-850 rounded-2xl">
                                                 <div className="space-y-0.5">
-                                                    <span className="text-xs font-bold text-slate-300 uppercase block">Gastado en Anuncios (B)</span>
+                                                    <div className="flex items-center">
+                                                        <span className="text-xs font-bold text-slate-300 uppercase block">Gastado en Anuncios (B)</span>
+                                                        <InfoTooltip content="Gasto de inversión publicitaria real del período consultado desde el historial de inversión de marketing." />
+                                                    </div>
                                                     <span className="text-[10px] text-slate-500 uppercase font-black block">Cálculo desde marketing</span>
                                                 </div>
                                                 <span className="text-sm font-black font-mono text-amber-300">
@@ -663,7 +724,10 @@ const FinancePage = () => {
 
                                         <div className="p-6 bg-indigo-950/15 border border-indigo-900/30 rounded-3xl mt-4 space-y-3">
                                             <div className="flex justify-between items-baseline">
-                                                <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Diferencia (A - B)</span>
+                                                <div className="flex items-center">
+                                                    <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Diferencia (A - B)</span>
+                                                    <InfoTooltip content="Margen o desviación entre el presupuesto planificado y la inversión publicitaria real del período: Presupuesto Destinado menos Gastado." />
+                                                </div>
                                                 {(() => {
                                                     const diff = (parseFloat(adBudget) || 0) - adSpent;
                                                     return (
@@ -687,7 +751,10 @@ const FinancePage = () => {
                             <Card variant="surface" className="p-6 rounded-[2.5rem] border-slate-800/80 bg-slate-900/10">
                                 <div className="flex justify-between items-center mb-6">
                                     <div>
-                                        <h3 className="text-xs font-black text-white uppercase tracking-wider">Nómina del Mes</h3>
+                                        <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                                            Nómina del Mes
+                                            <InfoTooltip content="Listado de remuneraciones fijos y variables del equipo de ventas y operaciones correspondientes al mes." />
+                                        </h3>
                                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide mt-1">Registra sueldos fijos, comisiones variables, bonos e indicadores de pago.</p>
                                     </div>
                                     <Button
@@ -706,11 +773,26 @@ const FinancePage = () => {
                                         <thead>
                                             <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-500">
                                                 <th className="p-4 font-semibold">Miembro / Rol</th>
-                                                <th className="p-4 font-semibold text-right">Sueldo Base</th>
-                                                <th className="p-4 font-semibold text-right">Comisión</th>
-                                                <th className="p-4 font-semibold text-right">Bonos</th>
-                                                <th className="p-4 font-semibold">Medio de Pago</th>
-                                                <th className="p-4 font-semibold text-center">Pagado</th>
+                                                <th className="p-4 font-semibold text-right">
+                                                    Sueldo Base
+                                                    <InfoTooltip content="Sueldo base o fijo configurado para el integrante del equipo." />
+                                                </th>
+                                                <th className="p-4 font-semibold text-right">
+                                                    Comisión
+                                                    <InfoTooltip content="Comisiones generadas por rendimiento del periodo, autocalculadas a partir de las ventas cerradas (Setters: 8% Elias; Closers: 10% Jean Carlo, 5% Marlon sobre ventas aplicables)." />
+                                                </th>
+                                                <th className="p-4 font-semibold text-right">
+                                                    Bonos
+                                                    <InfoTooltip content="Bonificaciones o incentivos extra aplicados a la nómina de forma manual." />
+                                                </th>
+                                                <th className="p-4 font-semibold">
+                                                    Medio de Pago
+                                                    <InfoTooltip content="Método de pago o pasarela asignada para realizar la transferencia de nómina." />
+                                                </th>
+                                                <th className="p-4 font-semibold text-center">
+                                                    Pagado
+                                                    <InfoTooltip content="Estado de liquidación del pago. Al marcarse como pagado, el saldo se deduce del balance de pasarela respectivo." />
+                                                </th>
                                                 <th className="p-4 font-semibold text-center">Acciones</th>
                                             </tr>
                                         </thead>
@@ -901,6 +983,7 @@ const FinancePage = () => {
                                 <h3 className="text-xs font-black text-white uppercase tracking-wider mb-6 flex items-center gap-2">
                                     <Laptop className="text-indigo-400" size={16} />
                                     Detalle Gastos de Equipo / Software
+                                    <InfoTooltip content="Lista de egresos operativos correspondientes a herramientas tecnológicas y software registrado en el mes." />
                                 </h3>
 
                                 {loadingExpenses ? (
@@ -913,7 +996,10 @@ const FinancePage = () => {
                                                     <th className="p-4 font-semibold">Descripción</th>
                                                     <th className="p-4 font-semibold">Categoría</th>
                                                     <th className="p-4 font-semibold">Fecha</th>
-                                                    <th className="p-4 font-semibold text-right">Monto</th>
+                                                    <th className="p-4 font-semibold text-right">
+                                                        Monto
+                                                        <InfoTooltip content="Costo de suscripción de la herramienta o gasto operativo de software." />
+                                                    </th>
                                                     <th className="p-4 font-semibold text-center">Acciones</th>
                                                 </tr>
                                             </thead>
