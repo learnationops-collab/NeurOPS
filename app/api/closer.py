@@ -46,7 +46,9 @@ def get_dashboard():
             "start_time": appt.start_time.isoformat(),
             "last_stage": appt.last_stage,
             "seq_num": seq,
-            "client_id": appt.client_id
+            "client_id": appt.client_id,
+            "sales_count": appt.client.enrollments.count() if appt.client else 0,
+            "has_sale": (appt.client.enrollments.count() > 0) if appt.client else False
         })
         
     serialized['sales_today'] = data.get('sales_today', [])
@@ -407,7 +409,9 @@ def get_all_agendas():
             "result": a.result,
             "linked_call": a.linked_call,
             "created_at": a.created_at.isoformat() if a.created_at else None,
-            "client_id": a.client_id
+            "client_id": a.client_id,
+            "sales_count": a.client.enrollments.count() if a.client else 0,
+            "has_sale": (a.client.enrollments.count() > 0) if a.client else False
         } for a in pagination.items],
         "total": pagination.total, "pages": pagination.pages
     }), 200
@@ -906,7 +910,9 @@ def get_kanban_data():
             "start_time": a.start_time.isoformat(),
             "result": a.result,
             "linked_call": a.linked_call,
-            "client_id": a.client_id
+            "client_id": a.client_id,
+            "sales_count": a.client.enrollments.count() if a.client else 0,
+            "has_sale": (a.client.enrollments.count() > 0) if a.client else False
         })
     
     return jsonify({

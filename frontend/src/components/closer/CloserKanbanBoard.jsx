@@ -65,7 +65,14 @@ const KanbanCard = memo(({ item, stages = [], currentStage = null, onMove, onCar
         >
             <div className="flex justify-between items-start">
                 <div className="space-y-2">
-                    <h4 className="text-sm font-black italic tracking-tighter leading-tight">{item.lead_name}</h4>
+                    <h4 className="text-sm font-black italic tracking-tighter leading-tight flex items-center gap-1.5 flex-wrap">
+                        {item.lead_name}
+                        {item.has_sale && (
+                            <Badge variant="success" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[8px] py-0.5 px-1.5 font-bold shrink-0">
+                                ✓ {item.sales_count} {item.sales_count === 1 ? 'cierre' : 'cierres'}
+                            </Badge>
+                        )}
+                    </h4>
                     <div className="flex items-center gap-2 text-muted">
                         <Calendar size={10} className="text-primary/40" />
                         <span className="text-[9px] font-bold tracking-widest whitespace-nowrap">
@@ -280,7 +287,14 @@ const CloserKanbanBoard = ({ stages, board, onMove, onCardClick, onSetOutcome, v
                                                 {item.lead_name[0]}
                                             </div>
                                             <div>
-                                                <h4 className="text-xs font-black tracking-tight">{item.lead_name}</h4>
+                                                <h4 className="text-xs font-black tracking-tight flex items-center gap-1.5 flex-wrap">
+                                                    {item.lead_name}
+                                                    {item.has_sale && (
+                                                        <Badge variant="success" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[8px] py-0.5 px-1.5 font-bold shrink-0">
+                                                            ✓ {item.sales_count} {item.sales_count === 1 ? 'cierre' : 'cierres'}
+                                                        </Badge>
+                                                    )}
+                                                </h4>
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <Clock size={10} className="text-muted" />
                                                     <span className="text-[9px] font-bold text-muted">

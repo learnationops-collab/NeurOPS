@@ -486,11 +486,19 @@ const CloserLeadsPage = () => {
                                                 </thead>
                                                 <tbody className="divide-y divide-base">
                                                     {data[selectedDb]?.length > 0 ? data[selectedDb].map(item => (
-                                                        <tr key={item.id} className="hover:bg-surface-hover/50 transition-all group">
+                                                        <tr key={item.id} className={`hover:bg-surface-hover/50 transition-all group ${selectedDb === 'agendas' && item.has_sale ? 'bg-emerald-500/[0.02]' : ''}`}>
                                                             <td className="px-8 py-6 font-black">
-                                                                {selectedDb === 'agendas' ? item.lead_name :
-                                                                    selectedDb === 'sales' ? item.student_name :
-                                                                        item.subject}
+                                                                {selectedDb === 'agendas' ? (
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <span>{item.lead_name}</span>
+                                                                        {item.has_sale && (
+                                                                            <Badge variant="success" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px] py-0.5 px-1.5 font-bold shrink-0">
+                                                                                ✓ {item.sales_count} {item.sales_count === 1 ? 'cierre' : 'cierres'}
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                ) : selectedDb === 'sales' ? item.student_name :
+                                                                    item.subject}
                                                             </td>
                                                             <td className="px-8 py-6 text-[10px] font-bold text-muted">
                                                                 {item.created_at ? new Date(item.created_at).toLocaleDateString() : '—'}

@@ -423,10 +423,17 @@ const CloserDashboard = () => {
                                             <div
                                                 key={a.id}
                                                 onClick={() => handleAgendaClick(a)}
-                                                className="flex items-center justify-between p-4 bg-main/50 rounded-2xl border border-base group hover:border-primary/30 transition-all cursor-pointer"
+                                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${a.has_sale ? 'bg-emerald-500/[0.03] border-emerald-500/10 hover:border-emerald-500/30' : 'bg-main/50 border-base hover:border-primary/30'}`}
                                             >
                                                 <div className="space-y-1">
-                                                    <p className="text-[11px] font-black text-main">{a.lead_name}</p>
+                                                    <p className="text-[11px] font-black text-main flex items-center gap-1.5 flex-wrap">
+                                                        {a.lead_name}
+                                                        {a.has_sale && (
+                                                            <span className="inline-flex items-center gap-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[8px] py-0.5 px-1.5 rounded-full font-bold">
+                                                                ✓ {a.sales_count}
+                                                            </span>
+                                                        )}
+                                                    </p>
                                                     <div className="flex items-center gap-2 text-[8px] font-bold text-muted tracking-tighter">
                                                         <Clock size={10} className="text-primary" />
                                                         {new Date(a.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
