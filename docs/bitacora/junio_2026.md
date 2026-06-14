@@ -1,6 +1,13 @@
 # Bitácora - Junio 2026
 
 - **14 de Junio de 2026**:
+  - **Corrección de Visibilidad de Gráfico de Embudo (`FunnelChart.jsx`, `PublicSetterReportPage.jsx`) [MODIFY]**:
+    - Se solucionó el colapso a altura cero de `ResponsiveContainer` de Recharts agregando la prop `height` (por defecto `'300px'`) y usando estilos inline en el contenedor del componente `FunnelChart.jsx`.
+    - Se adaptaron las llamadas correspondientes en los dashboards y se pasó `height="100%"` en la página de reporte de setters (`PublicSetterReportPage.jsx`) para preservar el contenedor responsivo de relación de aspecto cuadrada.
+  - **Evitación de Desbordamiento Horizontal en Tooltips (`StatTooltip.jsx`) [MODIFY]**:
+    - Se optimizó la detección de límites del viewport (`window.innerWidth`) en el componente de portal `StatTooltip.jsx`.
+    - Si un tooltip se posiciona demasiado cerca de los bordes izquierdo o derecho de la pantalla (como el de "Agendas Generadas" en el extremo izquierdo del dashboard de setters), se desplaza horizontalmente de manera dinámica para mantenerse dentro del área visible.
+    - La flecha indicadora inferior del tooltip se ajusta dinámicamente (`arrowLeft`) para continuar apuntando exactamente al centro del elemento hovered.
   - **Solución al Clipping de Tooltips mediante React Portals y StatTooltip (`StatTooltip.jsx`, `AdDashboardTab.jsx`) [MODIFY]**:
     - **Parámetro Flexible en `StatTooltip.jsx`**: Se añadió la propiedad opcional `calcLabel` al componente de tooltip compartido para permitir silenciar o personalizar el prefijo "Fórmula / Explicación:" (por ejemplo, mostrando "Detalle:" en la estructura del anuncio).
     - **Dashboard de Rendimiento por Anuncio (`AdDashboardTab.jsx`)**:

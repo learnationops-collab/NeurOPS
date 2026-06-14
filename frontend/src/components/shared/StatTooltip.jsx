@@ -8,16 +8,36 @@ import { createPortal } from 'react-dom';
  */
 const StatTooltip = ({ label, value, calculation, calcLabel, children }) => {
     const [coords, setCoords] = useState(null);
+    const [arrowLeft, setArrowLeft] = useState('50%');
     const triggerRef = useRef(null);
 
     const handleMouseEnter = () => {
         if (!triggerRef.current) return;
         const rect = triggerRef.current.getBoundingClientRect();
-        // Calcular la posición exacta en el body (sumando el scroll actual del documento)
+        const tooltipWidth = 256; // w-64
+        const margin = 16;
+        const viewportWidth = window.innerWidth;
+
+        // Centro horizontal del trigger
+        const targetCenter = rect.left + rect.width / 2;
+        let idealLeft = targetCenter - tooltipWidth / 2;
+
+        // Evitar desbordamiento por la izquierda o derecha
+        if (idealLeft < margin) {
+            idealLeft = margin;
+        } else if (idealLeft + tooltipWidth > viewportWidth - margin) {
+            idealLeft = viewportWidth - tooltipWidth - margin;
+        }
+
+        // Alinear la flecha con el trigger (reducido por los bordes redondeados)
+        const arrowPos = targetCenter - idealLeft;
+        const clampedArrowPos = Math.max(12, Math.min(tooltipWidth - 12, arrowPos));
+
         setCoords({
             top: rect.top + window.scrollY,
-            left: rect.left + window.scrollX + rect.width / 2
+            left: idealLeft + window.scrollX
         });
+        setArrowLeft(`${clampedArrowPos}px`);
     };
 
     const handleMouseLeave = () => {
@@ -38,9 +58,9 @@ const StatTooltip = ({ label, value, calculation, calcLabel, children }) => {
                 <span
                     className="absolute bg-slate-950 text-slate-200 text-[10px] font-normal normal-case tracking-normal rounded-xl p-3.5 z-[99999] shadow-2xl border border-slate-800/80 leading-relaxed text-left w-64 animate-in fade-in duration-200"
                     style={{
-                        top: `${coords.top - 10}px`, // Posicionar arriba con margen
+                        top: `${coords.top - 10}px`,
                         left: `${coords.left}px`,
-                        transform: 'translate(-50%, -100%)', // Centrar horizontalmente y alinear la base del tooltip
+                        transform: 'translateY(-100%)',
                         pointerEvents: 'none'
                     }}
                 >
@@ -58,7 +78,10 @@ const StatTooltip = ({ label, value, calculation, calcLabel, children }) => {
                         )}
                         {calculation}
                     </span>
-                    <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-950"></span>
+                    <span 
+                        className="absolute top-full border-4 border-transparent border-t-slate-950"
+                        style={{ left: arrowLeft, transform: 'translateX(-50%)' }}
+                    ></span>
                 </span>,
                 document.body
             )}
