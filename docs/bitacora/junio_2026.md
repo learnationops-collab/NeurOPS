@@ -3,7 +3,8 @@
 - **14 de Junio de 2026**:
   - **Ajustes de Profit, Etiquetas y Tooltips en Hub de Finanzas (`FinancePage.jsx`) [MODIFY]**:
     - **Corrección de Profit**: Se actualizó la etiqueta y subtítulo del KPI card en el frontend a "Profit (Ingresos - Gastos)" para alinearlo con la lógica matemática implementada en el backend (Ingresos Totales - Gastos Totales del periodo).
-    - **Simplificación de Egresos**: Se renombró la categoría "Suscripciones Software" a simplemente "Software" en el desglose de distribución de gastos en el Resumen Financiero.
+    - **Simplificación de Egresos y Pestaña**: Se renombró la categoría "Suscripciones Software" a simplemente "Software" en el desglose de distribución de gastos en el Resumen Financiero. Asimismo, se simplificó la pestaña "Presupuesto Anuncios" a simplemente "Anuncios".
+    - **Remoción de Duplicados**: Se eliminó el "Balance General (A - B)" de la sección "Balance del Período", al ser equivalente al Profit operativo.
     - **Tooltips Informativos detallados**: Se integraron componentes dinámicos de tooltip (`InfoTooltip`) bajo estilo CSS Glassmorphism en todas las secciones, KPIs principales, columnas de tablas y balances de pasarelas del Hub de Finanzas para detallar conceptualmente cada dato y su fórmula de cálculo.
 
 - **13 de Junio de 2026**:

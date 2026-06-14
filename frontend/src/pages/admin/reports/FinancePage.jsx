@@ -380,7 +380,7 @@ const FinancePage = () => {
                 {[
                     { id: 'summary', label: 'Resumen' },
                     { id: 'balances', label: 'Medios de Pago' },
-                    { id: 'ad-budget', label: 'Presupuesto Anuncios' },
+                    { id: 'ad-budget', label: 'Anuncios' },
                     { id: 'payroll', label: 'Nómina (Equipo)' },
                     { id: 'expenses', label: 'Software' }
                 ].map(tab => (
@@ -545,16 +545,6 @@ const FinancePage = () => {
                                         </div>
 
                                         <div className="p-6 bg-indigo-950/15 border border-indigo-900/30 rounded-3xl mt-4 space-y-3">
-                                            <div className="flex justify-between items-baseline">
-                                                <div className="flex items-center">
-                                                    <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Balance General (A - B)</span>
-                                                    <InfoTooltip content="Cálculo directo de la diferencia operativa del mes: Ingresos Totales menos Gastos Totales." />
-                                                </div>
-                                                <span className={`text-xl font-black italic tracking-tighter ${summary.kpis.balance >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
-                                                    ${summary.kpis.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                </span>
-                                            </div>
-                                            <div className="w-full bg-slate-800/50 h-px" />
                                             <div className="flex justify-between items-baseline">
                                                 <div className="flex items-center">
                                                     <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Balance Neto (A - B + C)</span>
