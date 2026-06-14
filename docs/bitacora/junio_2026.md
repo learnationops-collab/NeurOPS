@@ -1,12 +1,14 @@
 # Bitácora - Junio 2026
 
 - **14 de Junio de 2026**:
-  - **Resaltado y Conteo de Ventas en Registro de Agendas de Closers (`closer.py`, `financial.py`, `LeadsPage.jsx`, `CloserDashboard.jsx`, `CloserKanbanBoard.jsx`, `FinancialAgendasPage.jsx`) [MODIFY]**:
+  - **Resaltado y Conteo de Ventas en Registro de Agendas de Closers (`closer.py`, `financial.py`, `financial_agendas.py`, `LeadsPage.jsx`, `CloserDashboard.jsx`, `CloserKanbanBoard.jsx`, `FinancialAgendasPage.jsx`) [MODIFY]**:
     - **Backend (API y Modelos)**:
       - Se agregaron los campos `sales_count` y `has_sale` a las agendas y pipelines de closer en `app/api/closer.py`.
       - Se integró el cálculo en tiempo real de ventas asociadas a través de instagram o email en la función `to_dict()` del modelo `FinancialAgenda` en `app/models/financial.py`.
+      - Se reestructuró la API de agendas financieras en `app/api/public/financial_agendas.py` para calcular en memoria el total de cierres (`cierres`) por Closer y por Fuente de forma consolidada, evitando N+1 queries.
     - **Frontend (Interfaz)**:
-      - Se integró un badge esmeralda premium (`✓ X cierres`) en la tabla de agendas (`LeadsPage.jsx`), las tarjetas y listas del Kanban (`CloserKanbanBoard.jsx`), el listado del panel principal (`CloserDashboard.jsx`) y el Tablero de Agendas Financieras del administrador (`FinancialAgendasPage.jsx`).
+      - Se integró un badge esmeralda premium (`✓ X cierres`) en la tabla de agendas (`LeadsPage.jsx`), las tarjetas y listas del Kanban (`CloserKanbanBoard.jsx`), el listado del panel principal (`CloserDashboard.jsx`) y el Tablero de Agendas Financieras (`FinancialAgendasPage.jsx`).
+      - Se incorporó la columna **"Cierres"** en los paneles de desgloses de "Desglose por Closer" y "Desglose por Fuente" en `FinancialAgendasPage.jsx` para visualizar el volumen agregado de ventas concretadas.
       - Se aplicó una sutil tonalidad de fondo y borde esmeralda a las celdas y tarjetas de agendas que tienen al menos una venta registrada en todas estas vistas.
   - **Remoción de Redundancia de Métricas en Dashboard de Setters (`PublicSetterStatsPage.jsx`) [MODIFY]**:
     - Se identificó y eliminó la métrica redundante "Calidad de Tráfico" (`leads / entrantes`), la cual mostraba exactamente la misma información que la "Tasa de Cualificación sobre Entrantes" (`% / Entrantes`) en el bloque unificado superior.

@@ -521,6 +521,7 @@ const FinancialAgendasPage = () => {
                                         <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
                                         <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
                                         <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
+                                        <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
                                         <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
                                     </tr>
                                 </thead>
@@ -540,6 +541,7 @@ const FinancialAgendasPage = () => {
                                                 <td className="py-3 px-2 text-center font-semibold text-amber-400">{stats["Reagendada"] || 0}</td>
                                                 <td className="py-3 px-2 text-center font-semibold text-slate-500">{stats["Cancelada"] || 0}</td>
                                                 <td className="py-3 px-2 text-center font-black text-white italic">{stats["total"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-black text-emerald-400 italic">{stats["cierres"] || 0}</td>
                                                 <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
                                                     {showRate}%
                                                 </td>
@@ -579,6 +581,7 @@ const FinancialAgendasPage = () => {
                                         <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
                                         <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
                                         <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
+                                        <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
                                         <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
                                     </tr>
                                 </thead>
@@ -598,6 +601,7 @@ const FinancialAgendasPage = () => {
                                                 <td className="py-3 px-2 text-center font-semibold text-amber-400">{stats["Reagendada"] || 0}</td>
                                                 <td className="py-3 px-2 text-center font-semibold text-slate-500">{stats["Cancelada"] || 0}</td>
                                                 <td className="py-3 px-2 text-center font-black text-white italic">{stats["total"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-black text-emerald-400 italic">{stats["cierres"] || 0}</td>
                                                 <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
                                                     {showRate}%
                                                 </td>

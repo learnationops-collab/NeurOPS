@@ -193,32 +193,103 @@ def get_financial_agendas():
         total_count = query.count()
         upcoming_count = query.filter(FinancialAgenda.date >= datetime.utcnow()).count()
         
-        closer_counts = db.session.query(
-            FinancialAgenda.closer, 
-            func.count(FinancialAgenda.id)
-        ).filter(
-            FinancialAgenda.id.in_(query.with_entities(FinancialAgenda.id))
-        ).group_by(FinancialAgenda.closer).all()
+        # Obtener todas las agendas del periodo filtrado para las agregaciones
+        all_agendas = query.all()
         
-        by_closer = {closer or 'Sin Asignar': count for closer, count in closer_counts}
+        # Mapear ventas asociadas a las agendas en una sola consulta
+        from app.models import FinancialSale
+        emails = {a.mail.strip().lower() for a in all_agendas if a.mail and a.mail.lower() not in ('n/a', '')}
+        instagrams = {a.instagram.strip().replace('@', '').lower() for a in all_agendas if a.instagram and a.instagram.lower() not in ('n/a', '')}
+        
+        sales_by_email = {}
+        sales_by_ig = {}
+        if emails or instagrams:
+            sales_filters = []
+            if instagrams:
+                sales_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(list(instagrams)))
+            if emails:
+                sales_filters.append(func.lower(FinancialSale.mail_cliente).in_(list(emails)))
+            
+            sales = FinancialSale.query.filter(or_(*sales_filters)).all()
+            for s in sales:
+                if s.mail_cliente:
+                    m = s.mail_cliente.strip().lower()
+                    if m not in sales_by_email: sales_by_email[m] = []
+                    sales_by_email[m].append(s)
+                if s.instagram:
+                    ig = s.instagram.strip().replace('@', '').lower()
+                    if ig not in sales_by_ig: sales_by_ig[ig] = []
+                    sales_by_ig[ig].append(s)
+                    
+        def get_agenda_sales_count(agenda):
+            ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
+            mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
+            associated_sales = set()
+            if ig_clean and ig_clean in sales_by_ig:
+                for s in sales_by_ig[ig_clean]: associated_sales.add(s.id)
+            if mail_clean and mail_clean in sales_by_email:
+                for s in sales_by_email[mail_clean]: associated_sales.add(s.id)
+            return len(associated_sales)
 
-        # Agrupación por Closer y Estado
-        closer_state_counts = db.session.query(
-            FinancialAgenda.closer,
-            FinancialAgenda.estado,
-            func.count(FinancialAgenda.id)
-        ).filter(
-            FinancialAgenda.id.in_(query.with_entities(FinancialAgenda.id))
-        ).group_by(FinancialAgenda.closer, FinancialAgenda.estado).all()
-
-        # Agrupación por Fuente y Estado
-        source_state_counts = db.session.query(
-            FinancialAgenda.nombre,
-            FinancialAgenda.estado,
-            func.count(FinancialAgenda.id)
-        ).filter(
-            FinancialAgenda.id.in_(query.with_entities(FinancialAgenda.id))
-        ).group_by(FinancialAgenda.nombre, FinancialAgenda.estado).all()
+        # Agrupaciones en memoria en Python
+        by_closer = {}
+        by_closer_state = {}
+        by_source_state = {}
+        
+        known_setters_lower = {
+            'elias', 'workshop', 'vsl', 'marketing', 'organico', 'orgánico',
+            'sin asignar', 'sin_asignar', 'facebook', 'instagram', 'youtube',
+            'tiktok', 'manychat', 'workshop manychat', 'ads', 'setter', 'organica'
+        }
+        
+        for a in all_agendas:
+            c_name = (a.closer or 'Sin Asignar').strip()
+            st_name = a.estado or 'Pendiente'
+            s_count = get_agenda_sales_count(a)
+            
+            # by_closer
+            by_closer[c_name] = by_closer.get(c_name, 0) + 1
+            
+            # by_closer_state
+            if c_name not in by_closer_state:
+                by_closer_state[c_name] = {
+                    "total": 0,
+                    "Pendiente": 0,
+                    "Show Up": 0,
+                    "No show": 0,
+                    "Reagendada": 0,
+                    "Cancelada": 0,
+                    "cierres": 0
+                }
+            if st_name in by_closer_state[c_name]:
+                by_closer_state[c_name][st_name] += 1
+            by_closer_state[c_name]["total"] += 1
+            by_closer_state[c_name]["cierres"] += s_count
+            
+            # by_source_state
+            s_name = (a.nombre or 'Sin Asignar').strip()
+            if len(s_name.split()) > 2:
+                continue
+            s_name_lower = s_name.lower()
+            if s_name_lower not in known_setters_lower and len(s_name.split()) == 2:
+                words = [w.lower() for w in s_name.split()]
+                if not any(w in known_setters_lower for w in words):
+                    continue
+                    
+            if s_name not in by_source_state:
+                by_source_state[s_name] = {
+                    "total": 0,
+                    "Pendiente": 0,
+                    "Show Up": 0,
+                    "No show": 0,
+                    "Reagendada": 0,
+                    "Cancelada": 0,
+                    "cierres": 0
+                }
+            if st_name in by_source_state[s_name]:
+                by_source_state[s_name][st_name] += 1
+            by_source_state[s_name]["total"] += 1
+            by_source_state[s_name]["cierres"] += s_count
         
         # Obtener closers y fuentes únicas para el periodo de fechas seleccionado
         closers_query = db.session.query(FinancialAgenda.closer).distinct().filter(
@@ -229,13 +300,6 @@ def get_financial_agendas():
         ).all()
         
         unique_closers = sorted(list(set([c[0].strip() for c in closers_query if c[0] and c[0].strip()])))
-        
-        # Filtrar fuentes para evitar nombres de clientes obvios
-        known_setters_lower = {
-            'elias', 'workshop', 'vsl', 'marketing', 'organico', 'orgánico',
-            'sin asignar', 'sin_asignar', 'facebook', 'instagram', 'youtube',
-            'tiktok', 'manychat', 'workshop manychat', 'ads', 'setter', 'organica'
-        }
         
         raw_sources = [s[0].strip() for s in sources_query if s[0] and s[0].strip()]
         unique_sources = []
@@ -253,49 +317,6 @@ def get_financial_agendas():
                     unique_sources.append(src)
                     
         unique_sources = sorted(list(set(unique_sources)))
-
-        # Estructurar desglose por closer y por estado
-        by_closer_state = {}
-        for closer_name, state, count in closer_state_counts:
-            c_name = closer_name or 'Sin Asignar'
-            st_name = state or 'Pendiente'
-            if c_name not in by_closer_state:
-                by_closer_state[c_name] = {
-                    "total": 0,
-                    "Pendiente": 0,
-                    "Show Up": 0,
-                    "No show": 0,
-                    "Reagendada": 0,
-                    "Cancelada": 0
-                }
-            by_closer_state[c_name][st_name] = count
-            by_closer_state[c_name]["total"] += count
-
-        # Estructurar desglose por fuente y por estado (aplicando la misma sanitización)
-        by_source_state = {}
-        for source_name, state, count in source_state_counts:
-            s_name = source_name or 'Sin Asignar'
-            # Evitar nombres de clientes en fuentes agregadas
-            if len(s_name.split()) > 2:
-                continue
-            s_name_lower = s_name.lower()
-            if s_name_lower not in known_setters_lower and len(s_name.split()) == 2:
-                words = [w.lower() for w in s_name.split()]
-                if not any(w in known_setters_lower for w in words):
-                    continue
-            
-            st_name = state or 'Pendiente'
-            if s_name not in by_source_state:
-                by_source_state[s_name] = {
-                    "total": 0,
-                    "Pendiente": 0,
-                    "Show Up": 0,
-                    "No show": 0,
-                    "Reagendada": 0,
-                    "Cancelada": 0
-                }
-            by_source_state[s_name][st_name] = count
-            by_source_state[s_name]["total"] += count
         
         return jsonify({
             "data": [a.to_dict() for a in agendas_pagination.items],
