@@ -606,3 +606,15 @@
       - Se quitó la columna derecha redundante (bitácora de eventos simplificada y gráfica circular de estados), ya que el roadmap integrado ya visualiza el historial de actividad detallado de forma nativa.
       - Se verificó la compilación del bundle de producción sin fallas.
 
+  - **Cambio de Stripe a Mercury en Hub de Finanzas (Nómina y Medios de Pago)**:
+    - **API Backend (`app/api/public/finance.py`) [MODIFY]**:
+      - Se actualizó el sembrado de nómina inicial en `_seed_variable_members` para establecer `'Mercury'` como medio de pago predeterminado para los integrantes variables Marlon y Jean Carlos en lugar de `'Stripe'`.
+      - Se modificó `default_methods` en la consulta y creación de balances de pasarelas (`manage_balances`) para cambiar `'Stripe'` por `'Mercury'`, definiendo los métodos predeterminados de balances corporativos como `['Mercury', 'AirTM']`.
+    - **Base de Datos (Migración Local SQLite) [NEW]**:
+      - Se creó y ejecutó el script `scratch/migrate_stripe_to_mercury.py` que actualizó en caliente todos los registros de las tablas `team_members`, `monthly_payroll` y `monthly_payment_method_balances` que tenían `'Stripe'` como `payment_method`, reconfigurándolos de manera consistente a `'Mercury'`.
+    - **Frontend (`FinancePage.jsx`) [MODIFY]**:
+      - Se modificó el valor inicial del estado al crear un integrante de equipo para usar `'Mercury'`.
+      - Se cambiaron las opciones de los selectores de medio de pago y sus valores de contingencia a `'Mercury'` tanto en la tabla de nómina para el equipo fijo como para el equipo variable, y dentro del modal para agregar/editar integrantes.
+    - **Verificación**: Se validó el correcto funcionamiento mediante la compilación del bundle de producción de Vite (`npm run build`) sin advertencias ni errores.
+
+

@@ -78,7 +78,7 @@ const FinancePage = () => {
         role: 'Setter',
         salary_type: 'fijo',
         base_salary: '',
-        payment_method: 'Stripe'
+        payment_method: 'Mercury'
     });
 
     // Permission check
@@ -241,7 +241,7 @@ const FinancePage = () => {
                 role: member.role,
                 salary_type: member.salary_type,
                 base_salary: member.base_salary,
-                payment_method: member.payment_method || 'Stripe'
+                payment_method: member.payment_method || 'Mercury'
             });
         } else {
             setMemberForm({
@@ -249,7 +249,7 @@ const FinancePage = () => {
                 role: 'Setter',
                 salary_type: 'fijo',
                 base_salary: '',
-                payment_method: 'Stripe'
+                payment_method: 'Mercury'
             });
         }
         setIsMemberModalOpen(true);
@@ -818,8 +818,8 @@ const FinancePage = () => {
                                                             <input type="number" defaultValue={bon} onBlur={(e) => handlePayrollChange(item.member_id, 'bonuses', e.target.value)} placeholder="0.00" className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all" />
                                                         </td>
                                                         <td className="p-4 text-xs font-semibold">
-                                                            <select defaultValue={item.payment_method || 'Stripe'} onChange={(e) => handlePayrollChange(item.member_id, 'payment_method', e.target.value)} className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1 text-xs font-bold text-slate-200 outline-none focus:border-indigo-500 cursor-pointer">
-                                                                <option value="Stripe">Stripe</option>
+                                                            <select defaultValue={item.payment_method || 'Mercury'} onChange={(e) => handlePayrollChange(item.member_id, 'payment_method', e.target.value)} className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1 text-xs font-bold text-slate-200 outline-none focus:border-indigo-500 cursor-pointer">
+                                                                <option value="Mercury">Mercury</option>
                                                                 <option value="AirTM">AirTM</option>
                                                             </select>
                                                         </td>
@@ -870,8 +870,8 @@ const FinancePage = () => {
                                                             <input type="number" defaultValue={bon} onBlur={(e) => handlePayrollChange(item.member_id, 'bonuses', e.target.value)} placeholder="0.00" className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-slate-200 outline-none w-24 focus:border-indigo-500 transition-all" />
                                                         </td>
                                                         <td className="p-4 text-xs font-semibold">
-                                                            <select defaultValue={item.payment_method || 'Stripe'} onChange={(e) => handlePayrollChange(item.member_id, 'payment_method', e.target.value)} className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1 text-xs font-bold text-slate-200 outline-none focus:border-indigo-500 cursor-pointer">
-                                                                <option value="Stripe">Stripe</option>
+                                                            <select defaultValue={item.payment_method || 'Mercury'} onChange={(e) => handlePayrollChange(item.member_id, 'payment_method', e.target.value)} className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1 text-xs font-bold text-slate-200 outline-none focus:border-indigo-500 cursor-pointer">
+                                                                <option value="Mercury">Mercury</option>
                                                                 <option value="AirTM">AirTM</option>
                                                             </select>
                                                         </td>
@@ -1115,7 +1115,7 @@ const FinancePage = () => {
                                             value={memberForm.payment_method}
                                             onChange={(e) => setMemberForm({ ...memberForm, payment_method: e.target.value })}
                                         >
-                                            <option value="Stripe">Stripe</option>
+                                            <option value="Mercury">Mercury</option>
                                             <option value="AirTM">AirTM</option>
                                         </select>
                                     </div>

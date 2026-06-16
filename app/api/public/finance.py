@@ -198,8 +198,8 @@ def _seed_variable_members():
     """Crea Elias, Jean Carlos y Marlon en TeamMember si no existen."""
     defaults = [
         {'name': 'Elias',       'role': 'Setter',              'salary_type': 'variable', 'payment_method': 'AirTM'},
-        {'name': 'Jean Carlos', 'role': 'Closer',              'salary_type': 'variable', 'payment_method': 'Stripe'},
-        {'name': 'Marlon',      'role': 'Director de Ventas',  'salary_type': 'variable', 'payment_method': 'Stripe'},
+        {'name': 'Jean Carlos', 'role': 'Closer',              'salary_type': 'variable', 'payment_method': 'Mercury'},
+        {'name': 'Marlon',      'role': 'Director de Ventas',  'salary_type': 'variable', 'payment_method': 'Mercury'},
     ]
     changed = False
     for d in defaults:
@@ -346,7 +346,7 @@ def manage_balances():
         db.session.commit()
         return jsonify(balance.to_dict()), 200
         
-    default_methods = ['Stripe', 'AirTM']
+    default_methods = ['Mercury', 'AirTM']
     balances = MonthlyPaymentMethodBalance.query.filter_by(month=month).all()
     balances_map = {b.payment_method: b for b in balances}
 
