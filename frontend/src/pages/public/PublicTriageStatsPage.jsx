@@ -164,9 +164,9 @@ const PublicTriageStatsPage = () => {
                 {/* Dashboard Header */}
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div className="space-y-1">
-                        <p className="text-cyan-600 font-black tracking-[0.2em] text-[10px] uppercase ml-1">NeurOPS Triage System</p>
+                        <p className="text-cyan-600 font-black tracking-[0.2em] text-[10px] uppercase ml-1">NeurOPS Call Confirmer System</p>
                         <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                            Triage Stats <span className="text-slate-300 font-light">/</span> <span className="text-indigo-600 italic">Dashboard</span>
+                            Call Confirmer Stats <span className="text-slate-300 font-light">/</span> <span className="text-indigo-600 italic">Dashboard</span>
                         </h1>
                         <p className="text-slate-500 font-medium text-sm">Performance Analysis Board 🚀</p>
                     </div>
@@ -180,7 +180,7 @@ const PublicTriageStatsPage = () => {
                 {/* FILTROS INTEGRADOS */}
                 <div className="bg-white/80 backdrop-blur-md border border-white p-6 md:p-8 rounded-[2.5rem] shadow-xl flex flex-wrap items-end gap-6">
                     <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Triage / Equipo</label>
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Call Confirmer / Equipo</label>
                         <select 
                             className="bg-white border border-slate-200 text-sm font-bold rounded-[1.25rem] px-5 py-3.5 text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm min-w-[220px] appearance-none" 
                             value={filters.triage_name} 
@@ -487,7 +487,7 @@ const PublicTriageStatsPage = () => {
                 )}
 
                 <footer className="text-center pt-20 pb-10">
-                    <p className="text-[10px] text-slate-400 font-black tracking-[0.4em] uppercase">NeurOPS Triage Intelligence • Executive Dashboard • © 2026</p>
+                    <p className="text-[10px] text-slate-400 font-black tracking-[0.4em] uppercase">NeurOPS Call Confirmer Intelligence • Executive Dashboard • © 2026</p>
                 </footer>
             </div>
         </div>

@@ -128,7 +128,7 @@ export default function TriageTrackerTable() {
             {/* FILTERS */}
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-[2rem] flex flex-wrap items-end gap-6 shadow-2xl">
                 <div className="flex flex-col gap-2">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Triage</label>
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Call Confirmer</label>
                     <select
                         className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 min-w-[150px]"
                         value={filters.triage_name}
@@ -204,7 +204,7 @@ export default function TriageTrackerTable() {
                         <thead className="sticky top-0 z-20 bg-slate-900 border-b border-slate-800 shadow-sm">
                             <tr>
                                 <th rowSpan="2" className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-slate-900 border-r border-b border-slate-800 sticky left-0 z-30 min-w-[100px]">Fecha</th>
-                                <th rowSpan="2" className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-slate-900 border-r border-b border-slate-800 sticky left-[100px] z-30 min-w-[100px]">Triage</th>
+                                <th rowSpan="2" className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-slate-900 border-r border-b border-slate-800 sticky left-[100px] z-30 min-w-[100px]">Call Confirmer</th>
                                 
                                 <th colSpan="5" className="p-2 text-[10px] font-black text-center text-indigo-400 uppercase tracking-widest border-r border-b border-slate-800 bg-indigo-500/10">ST (1st Call)</th>
                                 <th colSpan="5" className="p-2 text-[10px] font-black text-center text-indigo-300 uppercase tracking-widest border-r border-b border-slate-800 bg-indigo-400/10">ST (2nd Call)</th>

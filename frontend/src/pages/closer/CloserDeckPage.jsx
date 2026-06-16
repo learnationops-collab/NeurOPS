@@ -390,7 +390,7 @@ const CloserDeckPage = () => {
                                                         <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-5 space-y-3 text-left">
                                                             <div className="flex items-center gap-2 text-[9px] font-black text-emerald-400 uppercase tracking-widest">
                                                                 <Layers size={14} />
-                                                                Perfil de Triage (Calificación)
+                                                                Perfil de Call Confirmer (Calificación)
                                                             </div>
                                                             <div className="max-h-[180px] overflow-y-auto custom-scrollbar space-y-3.5 pr-2">
                                                                 {activeCard.survey_answers.map((ans, idx) => (
@@ -728,7 +728,7 @@ const CloserDeckPage = () => {
                                     <ul className="space-y-3 text-[11px] text-slate-400 font-medium">
                                         <li className="flex gap-2">
                                             <span className="text-primary font-black">1.</span>
-                                            <span>Lee con atención las notas y la información de triage preparadas por el Setter.</span>
+                                            <span>Lee con atención las notas y la información de Call Confirmer preparadas por el Setter.</span>
                                         </li>
                                         <li className="flex gap-2">
                                             <span className="text-primary font-black">2.</span>

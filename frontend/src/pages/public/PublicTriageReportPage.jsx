@@ -130,9 +130,9 @@ const PublicTriageReportPage = () => {
                 {/* Dashboard Header */}
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div className="space-y-1">
-                        <p className="text-cyan-600 font-black tracking-[0.2em] text-[10px] uppercase ml-1">NeurOPS Triage System</p>
+                        <p className="text-cyan-600 font-black tracking-[0.2em] text-[10px] uppercase ml-1">NeurOPS Call Confirmer System</p>
                         <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                            Triage Dashboard <span className="text-slate-300 font-light">/</span> <span className="text-indigo-600 italic">Report</span>
+                            Call Confirmer Dashboard <span className="text-slate-300 font-light">/</span> <span className="text-indigo-600 italic">Report</span>
                         </h1>
                         <p className="text-slate-500 font-medium text-lg">Daily Tracker for <span className="text-slate-800 font-bold">{formData.triage_name}</span> 🎯</p>
                     </div>
@@ -148,7 +148,7 @@ const PublicTriageReportPage = () => {
                             />
                         </div>
                         <div className="px-4 pr-6">
-                            <span className="font-bold text-slate-400 text-sm uppercase tracking-widest mr-2">Triage:</span>
+                            <span className="font-bold text-slate-400 text-sm uppercase tracking-widest mr-2">Call Confirmer:</span>
                             <span className="font-black text-indigo-600 italic">{formData.triage_name}</span>
                         </div>
                     </div>
@@ -309,7 +309,7 @@ const PublicTriageReportPage = () => {
                                     className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white py-5 rounded-[1.5rem] font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
                                 >
                                     {submitting ? <Loader2 className="animate-spin" size={18} /> : null}
-                                    {submitting ? 'Sending Data...' : 'Submit Triage Report'}
+                                    {submitting ? 'Sending Data...' : 'Submit Call Confirmer Report'}
                                 </button>
                             </div>
                         </div>

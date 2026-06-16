@@ -490,7 +490,7 @@ const FinancialAgendasPage = () => {
 
                     {/* Selector de Triage */}
                     <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Triage</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Call Confirmer</span>
                         <select
                             value={encargadoTriage}
                             onChange={(e) => setEncargadoTriage(e.target.value)}
@@ -683,7 +683,7 @@ const FinancialAgendasPage = () => {
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Cliente</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Fuente</th>
-                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Triage</th>
+                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Call Confirmer</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Instagram</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Estado</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
@@ -942,7 +942,7 @@ const FinancialAgendasPage = () => {
                                         </select>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Encargado Triage</label>
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Call Confirmer</label>
                                         <input 
                                             type="text"
                                             className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"

@@ -560,5 +560,12 @@
       - Se integró el hook de verificación en `receive_financial_sales` en `financial_sales.py` tras confirmar exitosamente el commit en lote/individual de ventas financieras.
       - Se inyectó la llamada al hook en `trigger_sale_automation` en `closer_service.py` para capturar conversiones en pagos internos de la UI.
     - **Pruebas de Integración (`scratch/test_conversion.py`) [NEW]**: Script de pruebas que simula el flujo completo de extremo a extremo, levantando un servidor web HTTP mock temporal para asegurar que las alertas a Discord Wins y Onboarding se emiten correctamente ante una conversión.
+  - **Renombramiento de "Triage" a "Call Confirmer" en el Frontend**:
+    - **Interfaz (Frontend) [MODIFY]**: Se modificaron las etiquetas textuales y títulos visibles en el frontend de "Triage" a "Call Confirmer" para reflejar el nombre real del rol:
+      - En `TeamManagementPage.jsx`: Se actualizó el listado de roles y la opción correspondiente en el modal de creación/edición de usuarios.
+      - En `FinancialAgendasPage.jsx`: Se cambiaron las referencias en los dropdowns de filtrado superior, cabecera de la tabla y campos del formulario de edición.
+      - En `PublicTriageStatsPage.jsx` y `PublicTriageReportPage.jsx`: Se actualizaron títulos de dashboard, logos y textos informativos del sistema.
+      - En `TriageTrackerTable.jsx` y `CloserDeckPage.jsx`: Se renombraron las columnas de visualización del rol y del perfil de calificación de triage.
+    - **Verificación**: Se validó el correcto funcionamiento mediante la compilación de producción (`npm run build`) del frontend sin errores.
 
 
