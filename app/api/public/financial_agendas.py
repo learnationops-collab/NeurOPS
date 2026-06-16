@@ -140,6 +140,7 @@ def get_financial_agendas():
     estado = request.args.get('estado', default='', type=str).strip()
     closer = request.args.get('closer', default='', type=str).strip()
     fuente = request.args.get('fuente', default='', type=str).strip()
+    encargado_triage = request.args.get('encargado_triage', default='', type=str).strip()
     
     # Consulta base filtrada únicamente por fechas
     date_query = FinancialAgenda.query
@@ -184,6 +185,11 @@ def get_financial_agendas():
         query = query.filter(FinancialAgenda.closer == closer)
     if fuente:
         query = query.filter(FinancialAgenda.nombre == fuente)
+    if encargado_triage:
+        if encargado_triage == 'Sin Asignar':
+            query = query.filter(or_(FinancialAgenda.encargado_triage == None, FinancialAgenda.encargado_triage == ''))
+        else:
+            query = query.filter(FinancialAgenda.encargado_triage == encargado_triage)
         
     if date_filter_by == 'created':
         query = query.order_by(FinancialAgenda.registro.desc())
@@ -312,8 +318,12 @@ def get_financial_agendas():
         sources_query = db.session.query(FinancialAgenda.nombre).distinct().filter(
             FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
         ).all()
+        triage_query = db.session.query(FinancialAgenda.encargado_triage).distinct().filter(
+            FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
+        ).all()
         
         unique_closers = sorted(list(set([c[0].strip() for c in closers_query if c[0] and c[0].strip()])))
+        unique_triage = sorted(list(set([t[0].strip() for t in triage_query if t[0] and t[0].strip()])))
         
         raw_sources = [s[0].strip() for s in sources_query if s[0] and s[0].strip()]
         unique_sources = []
@@ -342,6 +352,7 @@ def get_financial_agendas():
             "unique_states": ['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada'],
             "unique_closers": unique_closers,
             "unique_sources": unique_sources,
+            "unique_triage": unique_triage,
             "page": agendas_pagination.page,
             "pages": agendas_pagination.pages,
             "has_more": agendas_pagination.has_next

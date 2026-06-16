@@ -87,6 +87,7 @@ const FinancialAgendasPage = () => {
     const [uniqueStates, setUniqueStates] = useState([]);
     const [uniqueClosers, setUniqueClosers] = useState([]);
     const [uniqueSources, setUniqueSources] = useState([]);
+    const [uniqueTriage, setUniqueTriage] = useState([]);
 
     // Estados para edición
     const [editingAgenda, setEditingAgenda] = useState(null);
@@ -151,16 +152,18 @@ const FinancialAgendasPage = () => {
         estado: '',
         closer: '',
         fuente: '',
+        encargadoTriage: '',
         dateFilterBy: 'meet'
     });
 
-    const { searchTerm, startDate, endDate, estado, closer, fuente, dateFilterBy } = filters;
+    const { searchTerm, startDate, endDate, estado, closer, fuente, encargadoTriage, dateFilterBy } = filters;
     const setSearchTerm = (val) => setFilters({ searchTerm: val });
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
     const setEstado = (val) => setFilters({ estado: val });
     const setCloser = (val) => setFilters({ closer: val });
     const setFuente = (val) => setFilters({ fuente: val });
+    const setEncargadoTriage = (val) => setFilters({ encargadoTriage: val });
     const setDateFilterBy = (val) => setFilters({ dateFilterBy: val });
 
     const applyDatePreset = (preset) => {
@@ -246,6 +249,7 @@ const FinancialAgendasPage = () => {
                     estado: estado,
                     closer: closer,
                     fuente: fuente,
+                    encargado_triage: encargadoTriage,
                     date_filter_by: dateFilterBy
                 }
             });
@@ -268,6 +272,7 @@ const FinancialAgendasPage = () => {
                 setUniqueStates(resData.unique_states || []);
                 setUniqueClosers(resData.unique_closers || []);
                 setUniqueSources(resData.unique_sources || []);
+                setUniqueTriage(resData.unique_triage || []);
             } else {
                 setAgendas(prev => {
                     const existingIds = new Set(prev.map(a => a.id));
@@ -293,7 +298,7 @@ const FinancialAgendasPage = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, startDate, endDate, estado, closer, fuente, dateFilterBy]);
+    }, [searchTerm, startDate, endDate, estado, closer, fuente, encargadoTriage, dateFilterBy]);
 
     // Observador para scroll infinito
     useEffect(() => {
@@ -483,8 +488,24 @@ const FinancialAgendasPage = () => {
                         </select>
                     </div>
 
+                    {/* Selector de Triage */}
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Triage</span>
+                        <select
+                            value={encargadoTriage}
+                            onChange={(e) => setEncargadoTriage(e.target.value)}
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
+                        >
+                            <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
+                            <option value="Sin Asignar" className="bg-slate-900 text-white font-semibold">Sin Asignar</option>
+                            {uniqueTriage.map(tg => (
+                                <option key={tg} value={tg} className="bg-slate-900 text-white font-semibold">{tg}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* Botón para Limpiar todos los Filtros */}
-                    {(estado || closer || fuente || searchTerm || startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate()) && (
+                    {(estado || closer || fuente || encargadoTriage || searchTerm || startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate()) && (
                         <button
                             type="button"
                             onClick={() => setFilters({
@@ -493,7 +514,8 @@ const FinancialAgendasPage = () => {
                                 endDate: getTodayDate(),
                                 estado: '',
                                 closer: '',
-                                fuente: ''
+                                fuente: '',
+                                encargadoTriage: ''
                             })}
                             className="p-3 bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 rounded-2xl transition-all cursor-pointer shadow-sm shadow-rose-950/20"
                             title="Limpiar Filtros"
@@ -805,7 +827,7 @@ const FinancialAgendasPage = () => {
                                     ))}
                                     {agendas.length === 0 && (
                                         <tr>
-                                            <td colSpan="8" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
+                                            <td colSpan="9" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
                                                 No se encontraron agendas
                                             </td>
                                         </tr>

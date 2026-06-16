@@ -539,3 +539,16 @@
       - Se fuerza el refresco en caliente de la ficha al guardar los cambios para actualizar la lista de frecuentes global.
       - Se validó la compilación exitosa sin advertencias o errores utilizando `npm run build`.
 
+  - **Filtro por Encargado de Triage en Tablero de Agendas**:
+    - **Backend (API) (`financial_agendas.py`)**:
+      - Se añadió el parámetro `encargado_triage` al endpoint `GET /public/financial-agendas`.
+      - Se implementó el filtrado de agendas por la columna `encargado_triage` (manejando de forma robusta la opción `"Sin Asignar"` para encontrar registros nulos o vacíos).
+      - Se calcula y retorna en la respuesta la lista de encargados de triage únicos (`unique_triage`) del periodo de fechas consultado.
+    - **Frontend (Interfaz) (`FinancialAgendasPage.jsx`)**:
+      - Se agregó el filtro `encargadoTriage` a `usePersistentFilters` para persistir su estado de filtro.
+      - Se adaptó la llamada de API para pasar el parámetro `encargado_triage` y almacenar `uniqueTriage` en el estado.
+      - Se integró el selector dropdown "Triage" en la barra de control de filtros, permitiendo seleccionar los encargados dinámicamente y los registros "Sin Asignar".
+      - Se actualizó el `colSpan` del mensaje de tabla vacía de 8 a 9 columnas para alinear correctamente el diseño.
+      - Se validó que el build de producción finalice sin errores.
+
+
