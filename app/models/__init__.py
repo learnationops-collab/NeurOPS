@@ -14,7 +14,7 @@ from .financial import FinancialSale, FinancialAgenda, ExcludedSale, TeamMember,
 from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
 from .workshop import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction
-
+from .alert import AlertRule, Alert
 
 # Export all for easy access via from app.models import ...
 __all__ = [
@@ -28,7 +28,6 @@ __all__ = [
     'Pipeline', 'PipelineStage', 'UserViewSetting', 'Notification', 'Comment', 'LeadEventLog',
     'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport',
     'TeamMember', 'MonthlyPayroll', 'MonthlyPaymentMethodBalance', 'MonthlySaving',
-    'WorkshopTemplate', 'WorkshopButton', 'WorkshopTemplateSent', 'WorkshopInteraction'
-
-
+    'WorkshopTemplate', 'WorkshopButton', 'WorkshopTemplateSent', 'WorkshopInteraction',
+    'AlertRule', 'Alert'
 ]

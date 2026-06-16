@@ -43,6 +43,7 @@ import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPag
 import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
+import AlertsHubPage from './pages/admin/alerts/AlertsHubPage';
 
 import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
@@ -150,6 +151,14 @@ function App() {
                   <MainLayout>
                     <AdminSheetsHubPage />
                   </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/alerts"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <AlertsHubPage />
                 </ProtectedRoute>
               }
             />

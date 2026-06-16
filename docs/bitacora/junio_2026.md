@@ -1,5 +1,22 @@
 # Bitácora - Junio 2026
 
+- **16 de Junio de 2026**:
+  - **Implementación del Centro de Alertas (`alert.py`, `alert_service.py`, `alerts.py`, `__init__.py`, `sheets.py`, `App.jsx`, `useDockNavigation.js`, `AlertsHubPage.jsx`, `AlertsCenter.jsx`, `AlertRulesConfig.jsx`) [NEW / MODIFY]**:
+    - **Backend (API, Modelos y Servicios)**:
+      - Creación del archivo de modelos `app/models/alert.py` con las tablas `alert_rules` y `alerts` para almacenar las condiciones configuradas y el historial de incidencias gatilladas.
+      - Registro de los nuevos modelos en el paquete global en `app/models/__init__.py`.
+      - Ejecución de migraciones y actualización del esquema de la base de datos local (`add_alerts_system`).
+      - Creación del servicio principal `app/services/alert_service.py` con el motor `evaluate_rules()` para procesar CPL, CPQL, Leads, Inversión, Agendas y Ventas asociadas a las reglas. El motor evita duplicados y envía notificaciones JSON embed premium a Discord.
+      - Creación del blueprint `app/api/alerts.py` con el CRUD de reglas de alerta, listado de alertas, resolución, forzar evaluación manual y configuración del webhook de Discord en `integrations`.
+      - Registro del blueprint de alertas y exención de CSRF en `app/__init__.py`.
+      - Integración de la evaluación automática al final de la sincronización en background en `app/api/sheets.py`.
+    - **Frontend (Interfaz y Navegación)**:
+      - Registro de la página principal `/admin/alerts` limitada a administradores en `frontend/src/App.jsx`.
+      - Adición del menú "Alertas" (Bell) en el Dock para acceso inmediato en `frontend/src/hooks/useDockNavigation.js`.
+      - Creación de la página `AlertsHubPage.jsx` que implementa el sidebar izquierdo "ADSPRO" del mockup para navegar entre Centro de alertas, Reglas de alertas, Configuración de alertas e Historial.
+      - Creación del componente `AlertsCenter.jsx` con KPI cards superiores de severidad, listado de alertas y un panel derecho con resumen de la última semana y gráfico de área de Recharts que compara la evolución del indicador contra el límite establecido (ReferenceLine).
+      - Creación del componente `AlertRulesConfig.jsx` con listado de reglas, toggles de estado rápidos, formulario deslizante (Drawer) para creación/edición de reglas y modal para configurar dinámicamente la URL del Webhook de Discord.
+
 - **14 de Junio de 2026**:
   - **Resaltado y Conteo de Ventas en Registro de Agendas de Closers (`closer.py`, `financial.py`, `financial_agendas.py`, `LeadsPage.jsx`, `CloserDashboard.jsx`, `CloserKanbanBoard.jsx`, `FinancialAgendasPage.jsx`) [MODIFY]**:
     - **Backend (API y Modelos)**:
