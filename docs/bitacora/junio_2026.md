@@ -487,6 +487,7 @@
     - **Frontend (`CloserPerformanceTab.jsx`) [MODIFY]**:
       - Se diseñó el componente utilitario `MetricWithTooltip` para renderizar tooltips flotantes en HTML de diseño glassmorphism flotante sobre cualquier elemento sin romper la maquetación CSS flex/grid.
       - Se envolvieron todos los números e indicadores clave del Pilar 1 (ingresos brutos, netos, cuotas, señas y nuevas ventas), Pilar 2 (ventas, close rate, ticket promedio y conversión de señas) y Pilar 3 (asistencias, show rate, no show rate, cancel rate, pitch rate e inasistencias totales) con descripciones precisas de negocio que aparecen al pasar el mouse por encima de los números.
+
 - **14 de Junio de 2026**:
   - **Tooltips Descriptivos con Fórmulas de Cálculo en Dashboard de Setters**:
     - **Frontend (Componente Compartido) [NEW] [StatTooltip.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/StatTooltip.jsx)**:
@@ -501,3 +502,18 @@
     - **Frontend (Métricas Conversacionales) [MODIFY] [ConversationalStatsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/ConversationalStatsTab.jsx)**:
       - Integración de `StatTooltip` en los 6 principales KPIs de la pestaña conversacional (Mensajes Recibidos, Respuestas Totales, Leads Generados, Leads Cualificados, Agendas Generadas, Ventas Generadas) y sus tasas porcentuales derivadas (Promedio Diario, Tasa Global de Respuesta, Tasa Conversión a Lead, Tasa de Cualificación, Tasa de Agenda y Tasa de Cierre).
 
+- **15 de Junio de 2026**:
+  - **Reestructuración de Roles, Vista de Triage y Estados de Agendas**:
+    - **Backend (API y Modelos)**:
+      - Se reemplazó el rol `sales_admin` por `triage` en `app/models/user.py`.
+      - Se agregó la columna `encargado_triage` al modelo `FinancialAgenda` en `app/models/financial.py` y se expuso en `to_dict()`.
+      - Se removió el rol `ROLE_SALES_ADMIN` de los decoradores de acceso en `app/decorators.py`.
+      - Se modificó la API de agendas en `app/api/public/financial_agendas.py` para capturar `encargado_triage` en peticiones POST/PUT, y retornar los nuevos estados de agenda (`Contactado` y `Confirmado`) y actualizar conteos y agrupaciones.
+      - Se creó y aplicó la migración de base de datos local para la columna `encargado_triage`.
+      - Se adaptó `app/services/booking_service.py` para mapear los nuevos estados en la sincronización de agendas.
+    - **Frontend (Interfaz)**:
+      - Se eliminó la ruta y vista pública `/publico` (`PublicHubPage.jsx`) en `frontend/src/App.jsx` y se eliminó físicamente el archivo.
+      - Se modificaron los redireccionamientos del rol de triage de `/triage/report` a `/triage/agendas` en `LoginPage.jsx` y `useDockNavigation.js`.
+      - Se reemplazó el rol de `sales_admin` por `triage` en `TeamManagementPage.jsx` y `OperatorControls.jsx`.
+      - Se actualizó el tablero `FinancialAgendasPage.jsx` para incluir la columna "Triage", el campo `encargado_triage` y los nuevos estados en el modal de edición de agendas, así como el desglose por closer/fuente de los nuevos estados.
+      - Se validó el correcto funcionamiento mediante la compilación exitosa de producción (`npm run build`).
