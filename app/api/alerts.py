@@ -266,3 +266,36 @@ def handle_discord_config():
         "configured": bool(integration and (integration.url_prod or integration.url_dev)),
         "webhook_url": integration.url_prod if integration else ""
     }), 200
+
+@bp.route('/alerts/test', methods=['POST'])
+@login_required
+def test_discord_alert():
+    # Envia una alerta de prueba a Discord
+    forbidden = check_admin()
+    if forbidden: return forbidden
+
+    try:
+        test_alert = Alert(
+            title="Alerta de Prueba (NeurOPS Platform)",
+            metric="cpl",
+            severity="critical",
+            scope_value="Prueba de Canal / General",
+            current_value=2.85,
+            expected_limit=1.50,
+            percentage_change=90.0,
+            explanation="Esta es una ALERTA DE PRUEBA generada manualmente para certificar la conexion y el formato del canal de Discord.",
+            recommended_action="• Certificar que el mensaje llego correctamente.\n• No requiere acciones operativas reales.",
+            target_url="/admin/alerts",
+            is_resolved=True,
+            resolved_at=datetime.utcnow()
+        )
+        db.session.add(test_alert)
+        db.session.commit()
+        
+        AlertService._send_to_discord(test_alert)
+        return jsonify({"status": "success", "message": "Alerta de prueba enviada con exito a Discord"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error al enviar alerta de prueba: {str(e)}")
+        return jsonify({"message": f"Error al enviar alerta de prueba: {str(e)}"}), 500
+

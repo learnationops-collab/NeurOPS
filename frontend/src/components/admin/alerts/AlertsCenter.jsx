@@ -10,7 +10,8 @@ import {
     RefreshCw,
     TrendingUp,
     ExternalLink,
-    Check
+    Check,
+    Send
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import api from '../../../services/api';
@@ -23,6 +24,7 @@ const AlertsCenter = ({ stats, refreshStats, isHistoryMode = false }) => {
     const [sortBy, setSortBy] = useState('newest');
     const [loading, setLoading] = useState(false);
     const [evaluating, setEvaluating] = useState(false);
+    const [testing, setTesting] = useState(false);
 
     const loadAlerts = async () => {
         setLoading(true);
@@ -63,6 +65,21 @@ const AlertsCenter = ({ stats, refreshStats, isHistoryMode = false }) => {
             toast.error("Error durante la evaluación de alertas");
         } finally {
             setEvaluating(false);
+        }
+    };
+
+    const handleTestAlert = async () => {
+        setTesting(true);
+        try {
+            const res = await api.post('/alerts/test');
+            toast.success(res.data.message || 'Alerta de prueba enviada con éxito');
+            loadAlerts();
+            refreshStats();
+        } catch (err) {
+            console.error("Error al enviar alerta de prueba:", err);
+            toast.error(err.response?.data?.message || "Error al enviar alerta de prueba");
+        } finally {
+            setTesting(false);
         }
     };
 
@@ -160,6 +177,14 @@ const AlertsCenter = ({ stats, refreshStats, isHistoryMode = false }) => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleTestAlert}
+                        disabled={testing}
+                        className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50"
+                    >
+                        <Send size={14} className={testing ? 'animate-spin' : ''} />
+                        {testing ? 'Probando...' : 'Probar Alerta'}
+                    </button>
                     <button
                         onClick={handleForceEvaluate}
                         disabled={evaluating}

@@ -646,3 +646,9 @@
   - **Simplificación de Notificaciones de Alertas en Discord**:
     - **Backend (`app/services/alert_service.py`) [MODIFY]**: Se modificó `AlertService._send_to_discord` para establecer la URL del webhook de triage y setting como fallback predeterminado si no está configurada la variable `DISCORD_ALERTS_WEBHOOK` ni el registro de integración en base de datos, eliminando la necesidad de que el usuario ingrese este enlace manualmente.
 
+  - **Botón de Prueba para el Sistema de Alertas**:
+    - **API Backend (`app/api/alerts.py`) [MODIFY]**: Se implementó el endpoint `POST /api/alerts/test` que genera e inserta una alerta de prueba en estado resuelto y la envía inmediatamente a Discord mediante `AlertService._send_to_discord`.
+    - **Frontend (`AlertsCenter.jsx`) [MODIFY]**:
+      - Se importó el icono `Send` de `lucide-react`.
+      - Se implementó la función `handleTestAlert` y se integró un botón "Probar Alerta" en el header del Centro de Alertas.
+    - **Verificación**: Se validó el correcto funcionamiento y la ausencia de errores mediante la compilación del build de producción de Vite (`npm run build`).
