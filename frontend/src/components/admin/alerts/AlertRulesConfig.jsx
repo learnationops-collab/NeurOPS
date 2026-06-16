@@ -199,6 +199,23 @@ const AlertRulesConfig = ({ stats, refreshStats }) => {
         }
     };
 
+    const handleTestRule = async (rule) => {
+        const confirmTest = window.confirm(
+            `¿Deseas simular la activación de la regla "${rule.name}"? Esto creará una alerta activa en la página y la notificará en Discord.`
+        );
+        if (!confirmTest) return;
+
+        const loadingToast = toast.loading('Simulando alerta en vivo...');
+        try {
+            const res = await api.post(`/alerts/rules/${rule.id}/test`);
+            toast.success(res.data.message || 'Simulación enviada con éxito', { id: loadingToast });
+            refreshStats();
+        } catch (err) {
+            console.error("Error al simular alerta:", err);
+            toast.error(err.response?.data?.message || "Error al simular alerta", { id: loadingToast });
+        }
+    };
+
     const labelMapping = {
         metrics: {
             cpl: 'CPL (Costo por lead)',
@@ -361,6 +378,13 @@ const AlertRulesConfig = ({ stats, refreshStats }) => {
                                                 </td>
                                                 <td className="py-4 pr-2 text-right">
                                                     <div className="flex items-center justify-end gap-2">
+                                                        <button 
+                                                            onClick={() => handleTestRule(rule)}
+                                                            className="p-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-indigo-500/10 hover:text-indigo-400 text-slate-400 transition-colors"
+                                                            title="Simular/Probar regla"
+                                                        >
+                                                            <Send size={12} />
+                                                        </button>
                                                         <button 
                                                             onClick={() => handleOpenEdit(rule)}
                                                             className="p-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-blue-400 text-slate-400 transition-colors"

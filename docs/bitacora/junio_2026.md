@@ -653,3 +653,10 @@
       - Se implementó la función `handleTestAlert` en ambos paneles.
       - Se integró el botón "Probar Alerta" con el icono `Send` en el header del Centro de Alertas y de la sección de Configuración de Alertas, permitiendo probar la conexión desde cualquier pestaña de la vista.
     - **Verificación**: Se validó el correcto funcionamiento y la ausencia de errores mediante la compilación del build de producción de Vite (`npm run build`).
+
+  - **Simulación y Prueba de Reglas de Alertas Configuradas**:
+    - **API Backend (`app/api/alerts.py`) [MODIFY]**: Se implementó el endpoint `POST /api/alerts/rules/<int:rule_id>/test` para forzar la activación simulada de una regla específica con datos ficticios que cumplan la condición. Se genera una alerta activa real (con `is_resolved=False`) para reflejarla de inmediato en la interfaz web y se notifica a Discord mediante `AlertService._send_to_discord`.
+    - **Frontend (`AlertRulesConfig.jsx`) [MODIFY]**:
+      - Se implementó la función `handleTestRule(rule)` para disparar la simulación en vivo de una regla específica con toasts de estado.
+      - Se agregó un botón con el icono `Send` en la columna de acciones de cada fila de la tabla de reglas configuradas para iniciar la simulación.
+    - **Verificación**: Se validó el correcto funcionamiento y la ausencia de errores mediante la compilación del build de producción de Vite (`npm run build`).

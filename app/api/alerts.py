@@ -299,3 +299,63 @@ def test_discord_alert():
         logger.error(f"Error al enviar alerta de prueba: {str(e)}")
         return jsonify({"message": f"Error al enviar alerta de prueba: {str(e)}"}), 500
 
+@bp.route('/alerts/rules/<int:rule_id>/test', methods=['POST'])
+@login_required
+def test_specific_rule(rule_id):
+    # Simula la activacion de una regla especifica creando una alerta de prueba activa
+    forbidden = check_admin()
+    if forbidden: return forbidden
+
+    rule = AlertRule.query.get_or_404(rule_id)
+    try:
+        # Generar valor que active la condicion
+        if rule.condition == '>':
+            current_value = rule.value * 1.25 + 0.1
+            percentage_change = 25.0
+        else:
+            current_value = rule.value * 0.75 - 0.1
+            percentage_change = -25.0
+            
+        metric_labels = {
+            'cpl': 'CPL (Costo por lead)',
+            'cpql': 'CPQL (CPL cualificado)',
+            'leads': 'Leads totales',
+            'inversion': 'Inversión',
+            'agendas': 'Agendas creadas',
+            'ventas': 'Ventas concretadas',
+            'cash_collect': 'Cash Collect'
+        }
+        lbl_metric = metric_labels.get(rule.metric, rule.metric.upper())
+        lbl_condition = 'supero' if rule.condition == '>' else 'cayo por debajo de'
+        lbl_symbol = '$' if rule.metric in ('cpl', 'cpql', 'inversion', 'cash_collect') else ''
+        
+        explanation = f"[SIMULACIÓN DE PRUEBA] El {lbl_metric} actual ({lbl_symbol}{current_value:,.2f}) {lbl_condition} el limite establecido de {lbl_symbol}{rule.value:,.2f}."
+
+        test_alert = Alert(
+            rule_id=rule.id,
+            title=f"Prueba: {rule.name}",
+            metric=rule.metric,
+            severity=rule.severity,
+            scope_value=f"Simulacion: {rule.scope_type} - {rule.scope_value}" if rule.scope_value else "Simulacion: General",
+            current_value=float(current_value),
+            expected_limit=float(rule.value),
+            percentage_change=float(percentage_change),
+            explanation=explanation,
+            recommended_action=f"Esta es una alerta de prueba. La accion recomendada real seria:\n{rule.description or 'Optimizar rendimiento.'}",
+            target_url="/admin/alerts",
+            is_resolved=False
+        )
+        db.session.add(test_alert)
+        db.session.commit()
+        
+        # Envia a Discord si la regla tiene activado Discord
+        if rule.notify_discord:
+            AlertService._send_to_discord(test_alert)
+            
+        return jsonify({"status": "success", "message": f"Simulacion de '{rule.name}' enviada con exito"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error al simular regla {rule_id}: {str(e)}")
+        return jsonify({"message": f"Error al simular regla: {str(e)}"}), 500
+
+
