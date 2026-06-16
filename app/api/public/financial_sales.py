@@ -841,3 +841,46 @@ def get_financial_sales_payroll():
             "total_ventas": len(marlon_sales)
         }
     }), 200
+
+@bp.route('/public/financial-sales/<int:sale_id>/resend-webhook', methods=['POST'])
+def resend_financial_sale_webhook(sale_id):
+    # Reenvia la venta al webhook de n8n
+    from app.services.sheets_service import SheetsService
+    from flask import current_app
+    
+    sale = FinancialSale.query.get(sale_id)
+    if not sale:
+        return jsonify({"error": "Venta no encontrada"}), 404
+        
+    try:
+        # Extrae documento si viene en raw_data original
+        documento_identidad = ''
+        if sale.raw_data and isinstance(sale.raw_data, dict):
+            documento_identidad = sale.raw_data.get('documento_identidad') or sale.raw_data.get('Documento de identidad') or ''
+
+        payload = {
+            "email_vendedor": sale.email_vendedor or '',
+            "nombre_cliente": sale.nombre_cliente or '',
+            "telefono": sale.telefono or '',
+            "mail_cliente": sale.mail_cliente or '',
+            "tipo_pago": sale.tipo_pago or '',
+            "monto": float(sale.monto or 0.0),
+            "segundo_pago": sale.segundo_pago or '',
+            "metodo_pago": sale.metodo_pago or '',
+            "examen": sale.examen or '',
+            "instagram": sale.instagram or '',
+            "setter": sale.setter or '',
+            "estado": sale.estado or 'Completada',
+            "documento_identidad": documento_identidad,
+            "marca_temporal": sale.marca_temporal or (sale.date.strftime('%d/%m/%Y %H:%M:%S') if sale.date else datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S')),
+            "enviar_webhook": True,
+            "enviar_mensaje": True
+        }
+        
+        SheetsService._trigger_n8n_webhook(payload)
+        current_app.logger.info(f"[N8N WEBHOOK RESEND] Reenvio solicitado para venta ID: {sale.id}")
+        return jsonify({"message": "Webhook reenviado a n8n con exito", "status": "success"}), 200
+    except Exception as e:
+        current_app.logger.error(f"[N8N WEBHOOK RESEND] Error al reenviar: {e}")
+        return jsonify({"error": str(e)}), 500
+

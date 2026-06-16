@@ -635,3 +635,10 @@
     - **Verificación**: Se validó el correcto funcionamiento mediante la compilación del bundle de producción de Vite (`npm run build`) sin advertencias ni errores.
 
 
+  - **Reenvío de Webhook de Ventas a n8n desde el Registro de Ventas**:
+    - **API Backend (`app/api/public/financial_sales.py`) [MODIFY]**: Se implementó el endpoint `POST /api/public/financial-sales/<int:sale_id>/resend-webhook` para retransmitir una venta de manera asíncrona al webhook de n8n por medio de `SheetsService._trigger_n8n_webhook`, extrayendo el documento de identidad desde `raw_data`.
+    - **Frontend (`PublicFinancialSalesPage.jsx`) [MODIFY]**:
+      - Se importó el icono `Send` de `lucide-react`.
+      - Se implementó la función `handleResendWebhook(sale)` que despliega un cuadro de diálogo nativo de confirmación (`window.confirm`) y emite una petición POST al backend con toasts informativos de carga, éxito y error.
+      - Se integró un botón con el icono `Send` en la columna de acciones de la tabla del registro de ventas.
+    - **Verificación**: Se validó el correcto funcionamiento y la ausencia de errores mediante la compilación del build de producción de Vite (`npm run build`).

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp, AlertCircle, Plus, Trash2, BookOpen, CreditCard, Wallet, UserCheck, Compass, ChevronDown, Filter } from 'lucide-react';
+import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp, AlertCircle, Plus, Trash2, BookOpen, CreditCard, Wallet, UserCheck, Compass, ChevronDown, Filter, Send } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import AttributionModal from '../../components/modals/AttributionModal';
@@ -367,6 +367,22 @@ const PublicFinancialSalesPage = () => {
             fetchSales(1);
         } catch (error) {
             toast.error('Error al eliminar la venta');
+            console.error(error);
+        }
+    };
+
+    const handleResendWebhook = async (sale) => {
+        const confirmResend = window.confirm(
+            `¿Estás seguro de que deseas volver a enviar la venta de "${sale.nombre_cliente}" por $${sale.monto} a n8n?`
+        );
+        if (!confirmResend) return;
+
+        const loadingToast = toast.loading('Reenviando webhook a n8n...');
+        try {
+            await api.post(`/public/financial-sales/${sale.id}/resend-webhook`);
+            toast.success('Webhook reenviado a n8n con éxito', { id: loadingToast });
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Error al reenviar webhook', { id: loadingToast });
             console.error(error);
         }
     };
@@ -1515,6 +1531,9 @@ const PublicFinancialSalesPage = () => {
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center justify-center gap-2">
+                                                        <button onClick={() => handleResendWebhook(sale)} className="p-1.5 text-indigo-400 hover:text-white bg-indigo-950/40 border border-indigo-900/30 hover:bg-indigo-900 rounded-lg transition-colors" title="Volver a enviar a n8n">
+                                                            <Send className="w-3.5 h-3.5" />
+                                                        </button>
                                                         <button onClick={() => handleEditClick(sale)} className="p-1.5 text-slate-400 hover:text-white bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                         </button>
