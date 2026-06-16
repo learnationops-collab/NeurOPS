@@ -361,6 +361,38 @@ class CloserService:
             client = enrollment.client
             closer = enrollment.closer_rel
             program = enrollment.program
+            
+            # Map payment types to friendly names
+            type_labels = {
+                'full': 'Pago Completo',
+                'first_payment': 'Primer Pago',
+                'down_payment': 'Seña',
+                'installment': 'Cuota',
+                'renewal': 'Renovación'
+            }
+            payment_type_label = type_labels.get(payment.payment_type, payment.payment_type)
+
+            # Verificar si es conversión de seña a venta real
+            try:
+                client_data = {
+                    'email': client.email,
+                    'phone': client.phone,
+                    'instagram': client.instagram,
+                    'name': client.full_name
+                }
+                sale_data = {
+                    'payment_type': payment.payment_type,
+                    'payment_type_friendly': payment_type_label,
+                    'amount': payment.amount,
+                    'closer_name': closer.username if closer else 'N/A',
+                    'program_name': program.name if program else 'N/A',
+                    'payment_id': payment.id
+                }
+                CloserService.check_and_notify_down_payment_conversion(client_data, sale_data)
+            except Exception as conv_err:
+                print(f"[Down Payment Conversion Hook Error] {conv_err}")
+            closer = enrollment.closer_rel
+            program = enrollment.program
             pm = payment.method or PaymentMethod.query.get(payment.payment_method_id)
             
             # Map payment types to friendly names
@@ -455,6 +487,162 @@ class CloserService:
 
         except Exception as global_err:
             print(f"[Sale Automation Global Error] {global_err}")
+
+    @staticmethod
+    def check_and_notify_down_payment_conversion(client_data, sale_data):
+        """
+        Detecta si la venta es PIF/Split Pay y si el lead tenía una seña previa,
+        enviando notificaciones en Discord.
+        """
+        try:
+            from app.models import FinancialSale, Payment, Client, Enrollment, Integration
+            from sqlalchemy import func, or_
+            from datetime import datetime
+            import requests
+
+            # 1. Verificar si es PIF o Split Pay
+            pay_type = str(sale_data.get('payment_type') or '').lower().strip()
+            
+            # Si es seña, omitimos (no es conversión a venta real)
+            is_down_payment = (
+                'down_payment' in pay_type or 
+                'seña' in pay_type or 
+                'sena' in pay_type or 
+                'deposito' in pay_type or 
+                'deposit' in pay_type
+            )
+            if is_down_payment:
+                return
+                
+            is_pif_or_split = (
+                'full' in pay_type or
+                'first_payment' in pay_type or
+                'completo' in pay_type or
+                'pif' in pay_type or
+                'cuota' in pay_type or
+                'parcial' in pay_type or
+                'primer pago' in pay_type or
+                'split' in pay_type
+            )
+            if not is_pif_or_split:
+                return
+
+            # 2. Normalizar datos del cliente para la búsqueda
+            email = str(client_data.get('email') or '').strip().lower()
+            phone = str(client_data.get('phone') or '').strip()
+            instagram = str(client_data.get('instagram') or '').strip().lower().replace('@', '')
+            
+            # 3. Buscar señas anteriores
+            has_previous_seña = False
+            
+            client_filters = []
+            if email and email != 'n/a' and len(email) > 2:
+                client_filters.append(func.lower(FinancialSale.mail_cliente) == email)
+            if instagram and instagram != 'n/a' and len(instagram) > 2:
+                client_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == instagram)
+            if phone and phone != 'n/a' and len(phone) > 4:
+                client_filters.append(FinancialSale.telefono == phone)
+                
+            # A) Buscar seña en FinancialSale
+            if client_filters:
+                exclude_id = sale_data.get('financial_sale_id')
+                query = FinancialSale.query.filter(
+                    or_(*client_filters),
+                    or_(
+                        FinancialSale.tipo_pago.ilike('%seña%'),
+                        FinancialSale.tipo_pago.ilike('%deposito%'),
+                        FinancialSale.tipo_pago.ilike('%deposit%')
+                    )
+                )
+                if exclude_id:
+                    query = query.filter(FinancialSale.id != exclude_id)
+                if query.first():
+                    has_previous_seña = True
+                    
+            # B) Buscar seña en la base de datos interna de pagos si no se ha encontrado en FinancialSale
+            if not has_previous_seña:
+                client_db_filters = []
+                if email and email != 'n/a' and len(email) > 2:
+                    client_db_filters.append(func.lower(Client.email) == email)
+                if instagram and instagram != 'n/a' and len(instagram) > 2:
+                    client_db_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == instagram)
+                if phone and phone != 'n/a' and len(phone) > 4:
+                    client_db_filters.append(Client.phone.like(f"%{phone}%"))
+                    
+                if client_db_filters:
+                    matching_clients = Client.query.filter(or_(*client_db_filters)).all()
+                    if matching_clients:
+                        client_ids = [c.id for c in matching_clients]
+                        exclude_payment_id = sale_data.get('payment_id')
+                        payment_query = Payment.query.join(Enrollment).filter(
+                            Enrollment.client_id.in_(client_ids),
+                            Payment.payment_type == 'down_payment',
+                            Payment.status == 'completed'
+                        )
+                        if exclude_payment_id:
+                            payment_query = payment_query.filter(Payment.id != exclude_payment_id)
+                        if payment_query.first():
+                            has_previous_seña = True
+
+            # 4. Enviar notificaciones si se detecta conversión
+            if has_previous_seña:
+                import os
+                
+                wins_webhook_url = os.environ.get('DISCORD_WINS_WEBHOOK')
+                onboarding_webhook_url = os.environ.get('DISCORD_ONBOARDING_WEBHOOK')
+                
+                if not wins_webhook_url:
+                    wins_int = Integration.query.filter_by(key='sale_wins').first()
+                    if wins_int:
+                        wins_webhook_url = wins_int.url_prod if wins_int.active_env == 'prod' else wins_int.url_dev
+                if not onboarding_webhook_url:
+                    onboarding_int = Integration.query.filter_by(key='sale_onboarding').first()
+                    if onboarding_int:
+                        onboarding_webhook_url = onboarding_int.url_prod if onboarding_int.active_env == 'prod' else onboarding_int.url_dev
+                        
+                if not wins_webhook_url and not onboarding_webhook_url:
+                    print("[Discord Conversion Alert] No webhooks configured in environment or database integrations.")
+                    return
+                    
+                client_name = client_data.get('name') or 'Desconocido'
+                closer_name = sale_data.get('closer_name') or 'N/A'
+                program_name = sale_data.get('program_name') or 'N/A'
+                amount = sale_data.get('amount') or 0.0
+                
+                content = (
+                    f"🔥 **¡CONVERSIÓN DE SEÑA A VENTA REAL!** 🔥\n"
+                    f"El lead **{client_name}** ha convertido su seña registrada anteriormente en una venta real.\n\n"
+                    f"• **Tipo de pago:** {sale_data.get('payment_type_friendly', pay_type.title())}\n"
+                    f"• **Monto:** ${amount}\n"
+                    f"• **Closer:** {closer_name}\n"
+                    f"• **Programa:** {program_name}\n"
+                )
+                
+                payload = {
+                    "content": content,
+                    "embeds": [{
+                        "title": "🎉 Conversión Lograda",
+                        "description": f"Seña previa de **{client_name}** convertida con éxito a venta definitiva.",
+                        "color": 16737792, # Naranja/Fuego
+                        "timestamp": datetime.utcnow().isoformat()
+                    }]
+                }
+                
+                if wins_webhook_url:
+                    try:
+                        res = requests.post(wins_webhook_url, json=payload, timeout=10)
+                        print(f"[Discord Conversion Alert Wins] Sent. Status: {res.status_code}")
+                    except Exception as e:
+                        print(f"[Discord Conversion Alert Wins Error] {e}")
+                        
+                if onboarding_webhook_url:
+                    try:
+                        res = requests.post(onboarding_webhook_url, json=payload, timeout=10)
+                        print(f"[Discord Conversion Alert Onboarding] Sent. Status: {res.status_code}")
+                    except Exception as e:
+                        print(f"[Discord Conversion Alert Onboarding Error] {e}")
+        except Exception as global_err:
+            print(f"[Down Payment Conversion Hook Global Error] {global_err}")
 
     @staticmethod
     def get_sale_metadata(closer_id):

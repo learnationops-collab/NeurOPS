@@ -151,6 +151,7 @@ def receive_financial_sales():
     items = data if isinstance(data, list) else [data]
     saved = 0
     errors = []
+    successful_sales = []
     
     for item in items:
         monto = item.get('monto') or item.get('amount') or item.get('value')
@@ -178,6 +179,7 @@ def receive_financial_sales():
                 raw_data=item
             )
             db.session.add(sale)
+            successful_sales.append(sale)
             saved += 1
         except Exception as e:
             current_app.logger.error(f"[FINANCIAL] Error creating record: {e}")
@@ -186,6 +188,29 @@ def receive_financial_sales():
     try:
         db.session.commit()
         current_app.logger.info(f"[FINANCIAL] Successfully saved {saved} records")
+
+        # Verificar conversión de seña a venta real para cada venta exitosa
+        try:
+            from app.services.closer_service import CloserService
+            for s in successful_sales:
+                client_data = {
+                    'email': s.mail_cliente or (s.raw_data.get('email') if s.raw_data else None),
+                    'phone': s.telefono or (s.raw_data.get('phone') if s.raw_data else None),
+                    'instagram': s.instagram,
+                    'name': s.nombre_cliente
+                }
+                sale_data = {
+                    'payment_type': s.tipo_pago,
+                    'payment_type_friendly': s.tipo_pago,
+                    'amount': s.monto,
+                    'closer_name': s.email_vendedor or s.setter or 'N/A',
+                    'program_name': s.tipo_pago.split(' - ')[0] if s.tipo_pago and ' - ' in str(s.tipo_pago) else (s.tipo_pago or 'N/A'),
+                    'financial_sale_id': s.id
+                }
+                CloserService.check_and_notify_down_payment_conversion(client_data, sale_data)
+        except Exception as conv_err:
+            current_app.logger.error(f"[Down Payment Conversion API Hook Error] {conv_err}")
+
         return jsonify({
             "message": f"{saved} sales records saved",
             "saved": saved,

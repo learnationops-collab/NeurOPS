@@ -552,4 +552,13 @@
       - Se actualizó el `colSpan` del mensaje de tabla vacía de 8 a 9 columnas para alinear correctamente el diseño.
       - Se validó que el build de producción finalice sin errores.
 
+- **16 de Junio de 2026**:
+  - **Alertas de Conversión de Seña a Venta Real (Discord Webhooks)**:
+    - **Backend (`app/services/closer_service.py`) [MODIFY]**: Se implementó el método estático `check_and_notify_down_payment_conversion(client_data, sale_data)` que detecta si la venta actual es PIF (`full`, `completo`, `pif`) o Split pay (`first_payment`, `cuota`, `primer pago`, `split`). Si es así, realiza una búsqueda cruzada normalizada de señas anteriores (`down_payment`, `seña`, `deposito`) tanto en la tabla interna de pagos (`Payment` / `Client`) como en el registro de ventas externas (`FinancialSale`). En caso de hallar una coincidencia, envía una notificación estructurada con embed detallado a los webhooks de Discord de los canales de **Wins** (ID `1232723653032935464`) y **Onboarding** (ID `1318622160951971922`), cargando las URLs desde variables de entorno (`DISCORD_WINS_WEBHOOK`, `DISCORD_ONBOARDING_WEBHOOK`) o la tabla `Integration` (`sale_wins` y `sale_onboarding`).
+    - **Integración de Webhook en Flujos de Venta (`sheets_service.py` y `api/public/financial_sales.py`) [MODIFY]**:
+      - Se agregó el hook de verificación en `SheetsService.post_to_sheets` al registrar ventas de Google Sheets tras el `commit()`.
+      - Se integró el hook de verificación en `receive_financial_sales` en `financial_sales.py` tras confirmar exitosamente el commit en lote/individual de ventas financieras.
+      - Se inyectó la llamada al hook en `trigger_sale_automation` en `closer_service.py` para capturar conversiones en pagos internos de la UI.
+    - **Pruebas de Integración (`scratch/test_conversion.py`) [NEW]**: Script de pruebas que simula el flujo completo de extremo a extremo, levantando un servidor web HTTP mock temporal para asegurar que las alertas a Discord Wins y Onboarding se emiten correctamente ante una conversión.
+
 

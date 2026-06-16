@@ -81,6 +81,29 @@ class SheetsService:
                 db.session.add(sale)
                 db.session.commit()
                 logger.info("[SHEETS POST] Venta registrada exitosamente en base de datos local.")
+                
+                # Verificar conversión de seña a venta real
+                try:
+                    from app.services.closer_service import CloserService
+                    tipo_pago_val = payload.get('tipo_pago') or ''
+                    client_data = {
+                        'email': payload.get('mail_cliente'),
+                        'phone': payload.get('telefono'),
+                        'instagram': payload.get('instagram'),
+                        'name': payload.get('nombre_cliente')
+                    }
+                    sale_data = {
+                        'payment_type': tipo_pago_val,
+                        'payment_type_friendly': tipo_pago_val,
+                        'amount': float(payload.get('monto') or 0.0),
+                        'closer_name': payload.get('email_vendedor') or payload.get('setter') or 'N/A',
+                        'program_name': tipo_pago_val.split(' - ')[0] if ' - ' in str(tipo_pago_val) else tipo_pago_val,
+                        'financial_sale_id': sale.id
+                    }
+                    CloserService.check_and_notify_down_payment_conversion(client_data, sale_data)
+                except Exception as conv_err:
+                    logger.error(f"[Down Payment Conversion Sheets Hook Error] {conv_err}")
+
                 # Enviar webhook a n8n en segundo plano si está activo
                 enviar_webhook = payload.get('enviar_webhook', True)
                 if enviar_webhook in (True, 'true', 'True', 1, '1', 'on'):
