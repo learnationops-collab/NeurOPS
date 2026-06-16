@@ -739,13 +739,28 @@ const FinancialAgendasPage = () => {
                                                 </Badge>
                                             </td>
                                             <td className="py-4 px-4">
-                                                {agenda.encargado_triage ? (
-                                                    <Badge variant="secondary" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider bg-slate-800 text-slate-300">
-                                                        {agenda.encargado_triage}
-                                                    </Badge>
-                                                ) : (
-                                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Sin Asignar</span>
-                                                )}
+                                                <select
+                                                    value={agenda.encargado_triage || ''}
+                                                    onChange={async (e) => {
+                                                        const nuevoTriage = e.target.value;
+                                                        try {
+                                                            const response = await api.put(`/public/financial-agendas/${agenda.id}`, { encargado_triage: nuevoTriage });
+                                                            const updated = response.data.agenda;
+                                                            setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
+                                                        } catch (err) {
+                                                            console.error("Error updating agenda triage in-line:", err);
+                                                            alert("Error al actualizar el encargado de triage");
+                                                        }
+                                                    }}
+                                                    className={`rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-wider border cursor-pointer outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all text-left bg-slate-950 text-slate-350 border-slate-800 hover:bg-slate-900/60
+                                                        ${agenda.encargado_triage ? 'bg-slate-900 text-slate-200 border-slate-800' : 'bg-slate-950/20 text-slate-500 border-dashed border-slate-850'}
+                                                    `}
+                                                >
+                                                    <option value="" className="bg-slate-900 text-slate-500 font-semibold">Sin Asignar</option>
+                                                    {uniqueTriage.map(tg => (
+                                                        <option key={tg} value={tg} className="bg-slate-900 text-white font-semibold">{tg}</option>
+                                                    ))}
+                                                </select>
                                             </td>
                                             <td className="py-4 px-4 text-center">
                                                 {agenda.instagram && agenda.instagram !== 'N/A' ? (

@@ -539,15 +539,16 @@
       - Se fuerza el refresco en caliente de la ficha al guardar los cambios para actualizar la lista de frecuentes global.
       - Se validó la compilación exitosa sin advertencias o errores utilizando `npm run build`.
 
-  - **Filtro por Encargado de Triage en Tablero de Agendas**:
+  - **Filtro y Asignación In-line por Encargado de Triage en Tablero de Agendas**:
     - **Backend (API) (`financial_agendas.py`)**:
       - Se añadió el parámetro `encargado_triage` al endpoint `GET /public/financial-agendas`.
       - Se implementó el filtrado de agendas por la columna `encargado_triage` (manejando de forma robusta la opción `"Sin Asignar"` para encontrar registros nulos o vacíos).
-      - Se calcula y retorna en la respuesta la lista de encargados de triage únicos (`unique_triage`) del periodo de fechas consultado.
+      - Se importó el modelo `User` en `financial_agendas.py` y se modificó el cálculo de `unique_triage` para combinar los encargados asignados actualmente en la BD con todos los usuarios del sistema que tienen el rol de `triage` y están activos, permitiendo listar a todo el equipo de triage para asignaciones inmediatas.
     - **Frontend (Interfaz) (`FinancialAgendasPage.jsx`)**:
       - Se agregó el filtro `encargadoTriage` a `usePersistentFilters` para persistir su estado de filtro.
       - Se adaptó la llamada de API para pasar el parámetro `encargado_triage` y almacenar `uniqueTriage` en el estado.
       - Se integró el selector dropdown "Triage" en la barra de control de filtros, permitiendo seleccionar los encargados dinámicamente y los registros "Sin Asignar".
+      - Se reemplazó el badge/texto estático de encargado de triage por un **selector dropdown interactivo en línea** (`select`) en la tabla de agendas. Este dropdown permite asignar o cambiar en caliente el encargado de triage directamente desde la fila con un solo clic (disparando una petición `PUT` de actualización al backend).
       - Se actualizó el `colSpan` del mensaje de tabla vacía de 8 a 9 columnas para alinear correctamente el diseño.
       - Se validó que el build de producción finalice sin errores.
 

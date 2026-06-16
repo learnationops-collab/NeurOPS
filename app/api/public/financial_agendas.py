@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from app.models import db, FinancialAgenda
+from app.models import db, FinancialAgenda, User
 from datetime import datetime
 from . import bp
 from sqlalchemy import or_, func
@@ -323,7 +323,12 @@ def get_financial_agendas():
         ).all()
         
         unique_closers = sorted(list(set([c[0].strip() for c in closers_query if c[0] and c[0].strip()])))
-        unique_triage = sorted(list(set([t[0].strip() for t in triage_query if t[0] and t[0].strip()])))
+        
+        # Combinar encargados de triage actuales en BD con todos los usuarios triage activos
+        triage_names_db = [t[0].strip() for t in triage_query if t[0] and t[0].strip()]
+        triage_users = User.query.filter_by(role='triage', is_active=True).all()
+        triage_usernames = [u.username for u in triage_users]
+        unique_triage = sorted(list(set(triage_names_db + triage_usernames)))
         
         raw_sources = [s[0].strip() for s in sources_query if s[0] and s[0].strip()]
         unique_sources = []
