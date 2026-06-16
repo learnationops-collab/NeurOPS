@@ -13,7 +13,7 @@
     - **Frontend (Interfaz y Navegación)**:
       - Registro de la página principal `/admin/alerts` limitada a administradores en `frontend/src/App.jsx`.
       - Adición del menú "Alertas" (Bell) en el Dock para acceso inmediato en `frontend/src/hooks/useDockNavigation.js`.
-      - Creación de la página `AlertsHubPage.jsx` que implementa el sidebar izquierdo "ADSPRO" del mockup para navegar entre Centro de alertas, Reglas de alertas, Configuración de alertas e Historial.
+      - Creación de la página `AlertsHubPage.jsx` que implementa pestañas horizontales superiores en alineación estética con el resto de hubs de la plataforma, permitiendo cambiar dinámicamente entre Centro de alertas, Configuración de alertas e Historial.
       - Creación del componente `AlertsCenter.jsx` con KPI cards superiores de severidad, listado de alertas y un panel derecho con resumen de la última semana y gráfico de área de Recharts que compara la evolución del indicador contra el límite establecido (ReferenceLine).
       - Creación del componente `AlertRulesConfig.jsx` con listado de reglas, toggles de estado rápidos, formulario deslizante (Drawer) para creación/edición de reglas y modal para configurar dinámicamente la URL del Webhook de Discord.
 
