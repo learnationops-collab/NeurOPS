@@ -528,6 +528,25 @@ def get_lead_roadmap():
             "source": "Venta Declarada"
         })
 
+    # Calcular las objeciones y dolores más frecuentes de todos los clientes
+    all_clients = Client.query.with_entities(Client.objeciones, Client.dolores).all()
+    objection_counts = {}
+    dolores_counts = {}
+    for c_obj, c_dol in all_clients:
+        if c_obj:
+            for obj in c_obj.split(','):
+                obj_clean = obj.strip()
+                if obj_clean:
+                    objection_counts[obj_clean] = objection_counts.get(obj_clean, 0) + 1
+        if c_dol:
+            for dol in c_dol.split(','):
+                dol_clean = dol.strip()
+                if dol_clean:
+                    dolores_counts[dol_clean] = dolores_counts.get(dol_clean, 0) + 1
+
+    frequent_objections = sorted(objection_counts.keys(), key=lambda k: objection_counts[k], reverse=True)[:10]
+    frequent_dolores = sorted(dolores_counts.keys(), key=lambda k: dolores_counts[k], reverse=True)[:10]
+
     return jsonify({
         "lead": lead_profile,
         "stages": stages,
@@ -535,7 +554,9 @@ def get_lead_roadmap():
         "sales_summary": sales_summary,
         "dolores": dolores_lead,
         "comments": comments_list,
-        "programs": programs_list
+        "programs": programs_list,
+        "frequent_objections": frequent_objections,
+        "frequent_dolores": frequent_dolores
     }), 200
 
 @bp.route('/public/lead-roadmap/update-client', methods=['POST'])

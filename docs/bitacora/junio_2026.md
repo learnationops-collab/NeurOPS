@@ -527,3 +527,15 @@
       - Se actualizó `LeadRoadmapDetail.jsx` incorporando un selector de tags rápidos de dolores comunes y una caja de texto dedicada para `dolores` dentro del panel de Calificación en Caliente.
       - Se integró el estado con el backend y se evitó la colisión del estado con la variable destructurada mediante el renombrado a `doloresConsolidados`.
       - Se validó con un build de producción exitoso.
+
+  - **Frecuentes y Agregación Manual de Objeciones y Dolores en Lead Roadmap**:
+    - **Backend (API)**:
+      - Se modificó el endpoint `/public/lead-roadmap` en `app/api/public/lead_roadmap.py` para consultar en caliente todos los registros de clientes y calcular los 10 dolores y 10 objeciones más frecuentes, retornándolos en la respuesta.
+    - **Frontend (Interfaz)**:
+      - Se eliminaron las constantes estáticas `commonObjections` y `commonDolores` de `LeadRoadmapDetail.jsx`.
+      - Se definieron los estados para frecuentes y entradas manuales, permitiendo agregar nuevos dolores/objeciones al presionar Enter o hacer clic en `+`.
+      - Se listan los tags activos con botones `×` para poder removerlos de forma rápida.
+      - Se muestran en una sección de "Frecuentes" los tags dinámicos obtenidos del servidor que aún no están asociados al lead, permitiendo agregarlos con un solo clic.
+      - Se fuerza el refresco en caliente de la ficha al guardar los cambios para actualizar la lista de frecuentes global.
+      - Se validó la compilación exitosa sin advertencias o errores utilizando `npm run build`.
+

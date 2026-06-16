@@ -26,31 +26,57 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
     const [newComment, setNewComment] = useState('');
     const [submittingComment, setSubmittingComment] = useState(false);
 
-    const commonObjections = [
-        "Precio / Presupuesto",
-        "Tiempo / Horario",
-        "Debe consultar con socio",
-        "No es prioridad ahora",
-        "Desconfianza / Garantía"
-    ];
-
-    const commonDolores = [
-        "Falta de ventas",
-        "Falta de setters/closers",
-        "Lead gen ineficiente",
-        "Problemas de escala",
-        "Procesos desorganizados"
-    ];
+    const [frequentObjections, setFrequentObjections] = useState([]);
+    const [frequentDolores, setFrequentDolores] = useState([]);
+    const [newDolorInput, setNewDolorInput] = useState('');
+    const [newObjectionInput, setNewObjectionInput] = useState('');
 
     const toggleDolorTag = (tag) => {
-        let current = dolores.trim();
-        if (current.includes(tag)) {
-            const regex = new RegExp(`(^|\\n|\\s*,\\s*)${tag}(\\s*,?\\s*|$)`, 'i');
-            current = current.replace(regex, '$1').replace(/,\s*,/, ',').replace(/^,\s*/, '').replace(/,\s*$/, '').trim();
+        // Alterna la selección de un dolor
+        const list = dolores.split(',').map(d => d.trim()).filter(Boolean);
+        const index = list.indexOf(tag);
+        if (index > -1) {
+            list.splice(index, 1);
         } else {
-            current = current ? `${current}, ${tag}` : tag;
+            list.push(tag);
         }
-        setDolores(current);
+        setDolores(list.join(', '));
+    };
+
+    const toggleObjectionTag = (tag) => {
+        // Alterna la selección de una objeción
+        const list = objeciones.split(',').map(o => o.trim()).filter(Boolean);
+        const index = list.indexOf(tag);
+        if (index > -1) {
+            list.splice(index, 1);
+        } else {
+            list.push(tag);
+        }
+        setObjeciones(list.join(', '));
+    };
+
+    const addManualDolor = () => {
+        // Agrega un dolor de forma manual
+        const val = newDolorInput.trim();
+        if (!val) return;
+        const list = dolores.split(',').map(d => d.trim()).filter(Boolean);
+        if (!list.some(d => d.toLowerCase() === val.toLowerCase())) {
+            list.push(val);
+            setDolores(list.join(', '));
+        }
+        setNewDolorInput('');
+    };
+
+    const addManualObjection = () => {
+        // Agrega una objeción de forma manual
+        const val = newObjectionInput.trim();
+        if (!val) return;
+        const list = objeciones.split(',').map(o => o.trim()).filter(Boolean);
+        if (!list.some(o => o.toLowerCase() === val.toLowerCase())) {
+            list.push(val);
+            setObjeciones(list.join(', '));
+        }
+        setNewObjectionInput('');
     };
 
     useEffect(() => {
@@ -68,6 +94,9 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
 
             const res = await api.get('/public/lead-roadmap', { params });
             setData(res.data);
+            
+            setFrequentObjections(res.data.frequent_objections || []);
+            setFrequentDolores(res.data.frequent_dolores || []);
             
             if (res.data.lead) {
                 setEditForm({
@@ -150,6 +179,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
             };
             await api.post('/public/lead-roadmap/update-client', payload);
             toast.success("Calificación guardada");
+            fetchRoadmap();
             if (onUpdate) onUpdate();
         } catch (err) {
             console.error("Error saving calificacion", err);
@@ -159,16 +189,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
         }
     };
 
-    const toggleObjectionTag = (tag) => {
-        let current = objeciones.trim();
-        if (current.includes(tag)) {
-            const regex = new RegExp(`(^|\\n|\\s*,\\s*)${tag}(\\s*,?\\s*|$)`, 'i');
-            current = current.replace(regex, '$1').replace(/,\s*,/, ',').replace(/^,\s*/, '').replace(/,\s*$/, '').trim();
-        } else {
-            current = current ? `${current}, ${tag}` : tag;
-        }
-        setObjeciones(current);
-    };
+
 
     const getDaysSinceCreated = (createdIso) => {
         if (!createdIso) return '0 días';
@@ -521,28 +542,74 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
 
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dolores del Prospecto</label>
-                            <div className="flex flex-wrap gap-1 mb-1">
-                                {commonDolores.map((tag) => {
-                                    const isSelected = dolores.toLowerCase().includes(tag.toLowerCase().split(' ')[0]);
-                                    return (
+                            
+                            {/* Tags de dolor activos */}
+                            <div className="flex flex-wrap gap-1 mb-1.5">
+                                {dolores.split(',').map(d => d.trim()).filter(Boolean).map((tag, idx) => (
+                                    <span
+                                        key={idx}
+                                        className="text-[9px] font-bold bg-violet-650/20 text-violet-300 border border-violet-500/30 px-2 py-1 rounded-md flex items-center gap-1"
+                                    >
+                                        {tag}
                                         <button
-                                            key={tag}
                                             type="button"
                                             onClick={() => toggleDolorTag(tag)}
-                                            className={`text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border transition-all ${
-                                                isSelected
-                                                    ? 'bg-violet-600/20 text-violet-400 border-violet-500/40'
-                                                    : 'bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850'
-                                            }`}
+                                            className="text-violet-400 hover:text-rose-450 transition-colors ml-0.5 font-black text-xs"
                                         >
-                                            {tag}
+                                            ×
                                         </button>
-                                    );
-                                })}
+                                    </span>
+                                ))}
                             </div>
+
+                            {/* Input para agregar dolor manual */}
+                            <div className="flex gap-1 mb-2">
+                                <input
+                                    type="text"
+                                    placeholder="Agregar dolor manualmente..."
+                                    value={newDolorInput}
+                                    onChange={(e) => setNewDolorInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            addManualDolor();
+                                        }
+                                    }}
+                                    className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-violet-500 font-bold"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={addManualDolor}
+                                    className="px-3 bg-slate-950 hover:bg-slate-900 border border-slate-850 text-white rounded-xl text-xs font-black"
+                                >
+                                    +
+                                </button>
+                            </div>
+
+                            {/* Dolores frecuentes */}
+                            {frequentDolores.length > 0 && (
+                                <div className="space-y-1 mb-2">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Frecuentes:</span>
+                                    <div className="flex flex-wrap gap-1">
+                                        {frequentDolores
+                                            .filter(tag => !dolores.split(',').map(d => d.trim().toLowerCase()).includes(tag.toLowerCase()))
+                                            .map((tag) => (
+                                                <button
+                                                    key={tag}
+                                                    type="button"
+                                                    onClick={() => toggleDolorTag(tag)}
+                                                    className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 transition-all"
+                                                >
+                                                    {tag}
+                                                </button>
+                                            ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <textarea
                                 className="w-full h-16 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
-                                placeholder="Notas de dolor del lead..."
+                                placeholder="Notas de dolor del lead (separadas por comas)..."
                                 value={dolores}
                                 onChange={(e) => setDolores(e.target.value)}
                             />
@@ -550,28 +617,74 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
 
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objeciones</label>
-                            <div className="flex flex-wrap gap-1 mb-1">
-                                {commonObjections.map((tag) => {
-                                    const isSelected = objeciones.toLowerCase().includes(tag.toLowerCase().split(' ')[0]);
-                                    return (
+                            
+                            {/* Tags de objeción activos */}
+                            <div className="flex flex-wrap gap-1 mb-1.5">
+                                {objeciones.split(',').map(o => o.trim()).filter(Boolean).map((tag, idx) => (
+                                    <span
+                                        key={idx}
+                                        className="text-[9px] font-bold bg-violet-655/20 text-violet-300 border border-violet-500/30 px-2 py-1 rounded-md flex items-center gap-1"
+                                    >
+                                        {tag}
                                         <button
-                                            key={tag}
                                             type="button"
                                             onClick={() => toggleObjectionTag(tag)}
-                                            className={`text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border transition-all ${
-                                                isSelected
-                                                    ? 'bg-violet-600/20 text-violet-400 border-violet-500/40'
-                                                    : 'bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850'
-                                            }`}
+                                            className="text-violet-400 hover:text-rose-450 transition-colors ml-0.5 font-black text-xs"
                                         >
-                                            {tag}
+                                            ×
                                         </button>
-                                    );
-                                })}
+                                    </span>
+                                ))}
                             </div>
+
+                            {/* Input para agregar objeción manual */}
+                            <div className="flex gap-1 mb-2">
+                                <input
+                                    type="text"
+                                    placeholder="Agregar objeción manualmente..."
+                                    value={newObjectionInput}
+                                    onChange={(e) => setNewObjectionInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            addManualObjection();
+                                        }
+                                    }}
+                                    className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white placeholder-slate-660 focus:outline-none focus:border-violet-500 font-bold"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={addManualObjection}
+                                    className="px-3 bg-slate-950 hover:bg-slate-900 border border-slate-850 text-white rounded-xl text-xs font-black"
+                                >
+                                    +
+                                </button>
+                            </div>
+
+                            {/* Objeciones frecuentes */}
+                            {frequentObjections.length > 0 && (
+                                <div className="space-y-1 mb-2">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Frecuentes:</span>
+                                    <div className="flex flex-wrap gap-1">
+                                        {frequentObjections
+                                            .filter(tag => !objeciones.split(',').map(o => o.trim().toLowerCase()).includes(tag.toLowerCase()))
+                                            .map((tag) => (
+                                                <button
+                                                    key={tag}
+                                                    type="button"
+                                                    onClick={() => toggleObjectionTag(tag)}
+                                                    className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 transition-all"
+                                                >
+                                                    {tag}
+                                                </button>
+                                            ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <textarea
                                 className="w-full h-16 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
-                                placeholder="Notas de objeción..."
+                                placeholder="Notas de objeción (separadas por comas)..."
                                 value={objeciones}
                                 onChange={(e) => setObjeciones(e.target.value)}
                             />
