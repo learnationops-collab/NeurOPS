@@ -517,3 +517,13 @@
       - Se reemplazó el rol de `sales_admin` por `triage` en `TeamManagementPage.jsx` y `OperatorControls.jsx`.
       - Se actualizó el tablero `FinancialAgendasPage.jsx` para incluir la columna "Triage", el campo `encargado_triage` y los nuevos estados en el modal de edición de agendas, así como el desglose por closer/fuente de los nuevos estados.
       - Se validó el correcto funcionamiento mediante la compilación exitosa de producción (`npm run build`).
+  - **Gestión de Dolores del Lead en el Lead Roadmap**:
+    - **Backend (API y Modelos)**:
+      - Se agregó la columna `dolores` en el modelo `Client` en `app/models/client.py`.
+      - Se creó y aplicó la migración de base de datos correspondiente (`add_dolores_to_client`).
+      - Se modificó la API de Lead Roadmap en `app/api/public/lead_roadmap.py` para devolver el campo `dolores` del cliente en `lead_profile`, y consolidar los dolores ingresados manualmente con los detectados de encuestas/ManyChat en `dolores_lead`.
+      - Se actualizó el endpoint `/public/lead-roadmap/update-client` para capturar y persistir el campo `dolores`.
+    - **Frontend (Interfaz)**:
+      - Se actualizó `LeadRoadmapDetail.jsx` incorporando un selector de tags rápidos de dolores comunes y una caja de texto dedicada para `dolores` dentro del panel de Calificación en Caliente.
+      - Se integró el estado con el backend y se evitó la colisión del estado con la variable destructurada mediante el renombrado a `doloresConsolidados`.
+      - Se validó con un build de producción exitoso.
