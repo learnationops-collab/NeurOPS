@@ -12,7 +12,8 @@ import {
     HelpCircle,
     ChevronRight,
     ToggleLeft,
-    ToggleRight
+    ToggleRight,
+    Send
 } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
@@ -25,6 +26,7 @@ const AlertRulesConfig = ({ stats, refreshStats }) => {
     const [showDiscordModal, setShowDiscordModal] = useState(false);
     const [discordWebhookUrl, setDiscordWebhookUrl] = useState('');
     const [testingDiscord, setTestingDiscord] = useState(false);
+    const [testing, setTesting] = useState(false);
 
     // Form states
     const [name, setName] = useState('');
@@ -183,6 +185,20 @@ const AlertRulesConfig = ({ stats, refreshStats }) => {
         }
     };
 
+    const handleTestAlert = async () => {
+        setTesting(true);
+        try {
+            const res = await api.post('/alerts/test');
+            toast.success(res.data.message || 'Alerta de prueba enviada con éxito');
+            refreshStats();
+        } catch (err) {
+            console.error("Error al enviar alerta de prueba:", err);
+            toast.error(err.response?.data?.message || "Error al enviar alerta de prueba");
+        } finally {
+            setTesting(false);
+        }
+    };
+
     const labelMapping = {
         metrics: {
             cpl: 'CPL (Costo por lead)',
@@ -219,6 +235,15 @@ const AlertRulesConfig = ({ stats, refreshStats }) => {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleTestAlert}
+                            disabled={testing}
+                            className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-indigo-650/30 hover:bg-indigo-600 transition-all text-xs font-black uppercase tracking-wider text-indigo-300 hover:text-white border border-indigo-500/20 disabled:opacity-50"
+                        >
+                            <Send size={14} className={testing ? 'animate-spin' : ''} />
+                            {testing ? 'Probando...' : 'Probar Alerta'}
+                        </button>
+
                         <button
                             onClick={() => setShowDiscordModal(true)}
                             className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#1d1f27] border border-white/5 text-xs font-black uppercase tracking-wider hover:bg-[#282a35] hover:border-white/10 transition-all text-slate-300"

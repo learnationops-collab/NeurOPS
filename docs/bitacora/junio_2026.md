@@ -648,7 +648,8 @@
 
   - **Botón de Prueba para el Sistema de Alertas**:
     - **API Backend (`app/api/alerts.py`) [MODIFY]**: Se implementó el endpoint `POST /api/alerts/test` que genera e inserta una alerta de prueba en estado resuelto y la envía inmediatamente a Discord mediante `AlertService._send_to_discord`.
-    - **Frontend (`AlertsCenter.jsx`) [MODIFY]**:
-      - Se importó el icono `Send` de `lucide-react`.
-      - Se implementó la función `handleTestAlert` y se integró un botón "Probar Alerta" en el header del Centro de Alertas.
+    - **Frontend (`AlertsCenter.jsx` y `AlertRulesConfig.jsx`) [MODIFY]**:
+      - Se importó el icono `Send` de `lucide-react` en ambos componentes.
+      - Se implementó la función `handleTestAlert` en ambos paneles.
+      - Se integró el botón "Probar Alerta" con el icono `Send` en el header del Centro de Alertas y de la sección de Configuración de Alertas, permitiendo probar la conexión desde cualquier pestaña de la vista.
     - **Verificación**: Se validó el correcto funcionamiento y la ausencia de errores mediante la compilación del build de producción de Vite (`npm run build`).
