@@ -158,7 +158,9 @@ function App() {
               path="/admin/alerts"
               element={
                 <ProtectedRoute roles={['admin']}>
-                  <AlertsHubPage />
+                  <MainLayout>
+                    <AlertsHubPage />
+                  </MainLayout>
                 </ProtectedRoute>
               }
             />
