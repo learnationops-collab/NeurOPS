@@ -590,3 +590,7 @@
       - Se modificó la columna de `Prospecto (Instagram)` en la tabla de leads entrantes para hacer el nombre del prospecto cliqueable (`cursor-pointer` y efectos hover) y abrir el roadmap al hacer clic.
       - Se instanció el componente `<LeadRoadmapModal>` al final de la página, permitiendo a los setters analizar y calificar dolores/notas de forma directa.
       - Se verificó la compilación sin fallas en el build de Vite.
+
+  - **Edición de WhatsApp / Teléfono en Registro de Agendas**:
+    - **Frontend (`FinancialAgendasPage.jsx`) [MODIFY]**: Se añadió el input de edición para el campo `whatsapp` (WhatsApp / Teléfono) en el modal de edición de agenda (`editingAgenda`), permitiendo la corrección o adición manual de números telefónicos de contacto directo.
+    - **Verificación**: Se validó el correcto funcionamiento y la ausencia de errores mediante la compilación del build de producción de Vite (`npm run build`).

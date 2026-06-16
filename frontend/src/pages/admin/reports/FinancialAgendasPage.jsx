@@ -925,6 +925,15 @@ const FinancialAgendasPage = () => {
                                         />
                                     </div>
                                     <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp / Teléfono</label>
+                                        <input 
+                                            type="text"
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                            value={editForm.whatsapp}
+                                            onChange={e => setEditForm({...editForm, whatsapp: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Closer</label>
                                         <input 
                                             type="text"
