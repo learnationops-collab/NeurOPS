@@ -38,6 +38,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import MazoCartas from '../../components/deck/MazoCartas';
 import BuscadorGlobalDeck from '../../components/deck/BuscadorGlobalDeck';
 import Button from '../../components/ui/Button';
+import LeadRoadmapModal from '../../components/modals/LeadRoadmapModal';
 
 // Colores premium para gráfico circular
 const COLORS = ['#1534ff', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
@@ -78,6 +79,7 @@ const LeadsManagementPage = () => {
     const [showAllEventsModal, setShowAllEventsModal] = useState(false);
     const [allEvents, setAllEvents] = useState([]);
     const [loadingEvents, setLoadingEvents] = useState(false);
+    const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
 
     // Cargar cola de cartas filtrada
     const fetchQueue = async () => {
@@ -523,7 +525,7 @@ const LeadsManagementPage = () => {
                                                 </span>
                                             </div>
 
-                                            <div className="flex justify-between items-start">
+                                            <div className="flex justify-between items-start gap-4">
                                                 <div className="space-y-1 text-left">
                                                     <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">
                                                         {activeFilteredCard.lead_name}
@@ -532,9 +534,18 @@ const LeadsManagementPage = () => {
                                                         Lead ID: #{activeFilteredCard.id} • Estado: {activeFilteredCard.result || 'Pendiente'}
                                                     </p>
                                                 </div>
-                                                <button className="p-2 text-slate-500 hover:text-white transition-colors">
-                                                    <MoreVertical size={18} />
-                                                </button>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsRoadmapOpen(true)}
+                                                        className="px-3 py-2 bg-violet-600 hover:bg-violet-750 text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition-all shadow-lg shadow-violet-600/20 flex items-center gap-1.5"
+                                                    >
+                                                        <Layers size={12} /> Roadmap
+                                                    </button>
+                                                    <button className="p-2 text-slate-500 hover:text-white transition-colors">
+                                                        <MoreVertical size={18} />
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {/* Info de Asignación y Meet */}
@@ -921,6 +932,22 @@ const LeadsManagementPage = () => {
                     </>
                 )}
             </AnimatePresence>
+
+            {isRoadmapOpen && activeFilteredCard && (
+                <LeadRoadmapModal
+                    isOpen={isRoadmapOpen}
+                    instagram={instagram || activeFilteredCard.instagram}
+                    email={activeFilteredCard.email}
+                    phone={activeFilteredCard.phone}
+                    onClose={() => setIsRoadmapOpen(false)}
+                    onSuccess={() => {
+                        fetchQueue();
+                        if (activeFilteredCard.id) {
+                            fetchEventLogs(activeFilteredCard.id);
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 };

@@ -574,3 +574,11 @@
     - **Backend (`app/api/public/financial_agendas.py`) [MODIFY]**: Se añadió soporte para la variable `telefono` al recibir payloads del webhook de n8n para agendas externas. Se implementó además una extracción robusta e insensible a mayúsculas para `encargado_triage` con un buscador de claves candidatas y se agregaron registros de logs (`current_app.logger.info`) para auditoría y diagnóstico rápido de la carga de webhook de n8n.
     - **Backend (`app/api/public/lead_roadmap.py`) [MODIFY]**: Se corrigió la línea de tiempo del Roadmap (Etapa 3: Dolor) para incorporar dinámicamente los dolores manuales del prospecto (`client.dolores`) y marcar la etapa como completada. También se integró un evento cronológico de "Calificación Registrada" en la actividad detallada del roadmap al guardar dolores u objeciones manuales.
     - **Verificación**: Se validó el correcto funcionamiento mediante la compilación de producción (`npm run build`) del frontend y compilación de sintaxis de Python sin errores.
+
+  - **Integración de Lead Roadmap en Leads Entrantes (Setter & Closer)**:
+    - **Frontend (`LeadsManagementPage.jsx`) [MODIFY]**:
+      - Se importó el componente `LeadRoadmapModal`.
+      - Se implementó el estado `isRoadmapOpen` para manejar la visibilidad del modal de Roadmap.
+      - Se agregó un botón interactivo "Roadmap" con diseño premium en la cabecera de la tarjeta del lead activo (dentro de `MazoCartas`), utilizando el icono `Layers` y una estética de color violeta.
+      - Se instanció condicionalmente el modal `<LeadRoadmapModal>` al final del JSX, pasando los datos del lead activo (`instagram`, `email` y `phone`) y configurando llamadas a `fetchQueue` y `fetchEventLogs` al completarse de manera exitosa para actualizar la bitácora de eventos y la cola en caliente.
+      - Se validó el correcto funcionamiento mediante la compilación de producción (`npm run build`) del frontend sin errores.
