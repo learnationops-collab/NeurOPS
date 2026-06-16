@@ -60,7 +60,7 @@ def receive_financial_agendas():
             ig_norm = ig_val.strip().lstrip('@').lower()
         
         mail_val = (item.get('mail') or item.get('email') or '').strip().lower()
-        phone_val = (item.get('whatsapp') or item.get('phone') or '').strip()
+        phone_val = (item.get('whatsapp') or item.get('phone') or item.get('telefono') or '').strip()
         
         client_filters = []
         if ig_norm and ig_norm != 'n/a':
@@ -100,7 +100,7 @@ def receive_financial_agendas():
                 date=agenda_date,
                 registro=item.get('registro') or item.get('fecha') or datetime.utcnow().isoformat(),
                 instagram=item.get('instagram') or item.get('ig') or 'N/A',
-                whatsapp=item.get('whatsapp') or item.get('phone') or 'N/A',
+                whatsapp=item.get('whatsapp') or item.get('phone') or item.get('telefono') or 'N/A',
                 mail=item.get('mail') or item.get('email') or 'N/A',
                 estado=item.get('estado') or 'Pendiente',
                 encargado_triage=item.get('encargado_triage'),

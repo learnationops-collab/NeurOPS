@@ -616,6 +616,16 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         </div>
 
                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Call Confirmer</label>
+                            <textarea
+                                className="w-full h-20 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
+                                placeholder="Notas de call confirmer, facturación, socio, etc..."
+                                value={observaciones}
+                                onChange={(e) => setObservaciones(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objeciones</label>
                             
                             {/* Tags de objeción activos */}
@@ -687,16 +697,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                 placeholder="Notas de objeción (separadas por comas)..."
                                 value={objeciones}
                                 onChange={(e) => setObjeciones(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Triage</label>
-                            <textarea
-                                className="w-full h-20 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
-                                placeholder="Notas de triage, facturación, socio, etc..."
-                                value={observaciones}
-                                onChange={(e) => setObservaciones(e.target.value)}
                             />
                         </div>
 
@@ -780,17 +780,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         )}
                     </div>
 
-                    {/* DOLORES DEL LEAD */}
-                    <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4">
-                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Dolores del Lead</h4>
-                        <div className="flex flex-wrap gap-2">
-                            {doloresConsolidados.map((d, i) => (
-                                <span key={i} className="px-3.5 py-1.5 bg-slate-900 border border-slate-800 text-[10px] font-black text-slate-300 rounded-xl uppercase tracking-wider">
-                                    • {d}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
+
 
                     {/* NOTAS INTERNAS / CHAT COMENTARIOS */}
                     <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4 flex flex-col max-h-[350px]">

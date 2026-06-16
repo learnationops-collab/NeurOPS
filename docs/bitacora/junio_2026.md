@@ -568,4 +568,8 @@
       - En `TriageTrackerTable.jsx` y `CloserDeckPage.jsx`: Se renombraron las columnas de visualización del rol y del perfil de calificación de triage.
     - **Verificación**: Se validó el correcto funcionamiento mediante la compilación de producción (`npm run build`) del frontend sin errores.
 
-
+  - **Reordenamiento y Mejoras en Lead Roadmap y Soporte para n8n**:
+    - **Frontend (`LeadRoadmapDetail.jsx`) [MODIFY]**: Se reordenó la sección de Calificación en Caliente del panel lateral para seguir la secuencia: **Dolor** -> **Observaciones de Call Confirmer** -> **Objeciones**. Se actualizó el título a "Observaciones de Call Confirmer" y se eliminó la sección redundante de "Dolores del Lead" ubicada en la parte inferior del panel.
+    - **Frontend (`LeadRoadmapModals.jsx`) [MODIFY]**: Se cambió la etiqueta de "Agenda / Triage (ID)" por "Agenda / Call Confirmer (ID)" en el modal de vinculación manual de eventos para mantener la consistencia con el renombramiento del rol.
+    - **Backend (`app/api/public/financial_agendas.py`) [MODIFY]**: Se añadió soporte para la variable `telefono` al recibir payloads del webhook de n8n para agendas externas (buscando en `telefono` además de `whatsapp` y `phone` para la deduplicación y creación de registros de agenda).
+    - **Verificación**: Se validó el correcto funcionamiento mediante la compilación de producción (`npm run build`) del frontend sin errores.

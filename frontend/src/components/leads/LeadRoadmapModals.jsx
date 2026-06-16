@@ -91,7 +91,7 @@ export const LinkEventModal = ({ show, onClose, linkForm, setLinkForm, onSubmit,
                             onChange={e => setLinkForm({ ...linkForm, event_type: e.target.value })}
                         >
                             <option value="sale">Venta Declarada (ID)</option>
-                            <option value="agenda">Agenda / Triage (ID)</option>
+                            <option value="agenda">Agenda / Call Confirmer (ID)</option>
                         </select>
                     </div>
                     <div className="space-y-1">

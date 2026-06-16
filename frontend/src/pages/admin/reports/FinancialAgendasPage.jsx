@@ -10,7 +10,8 @@ import {
     Copy,
     Edit,
     Trash2,
-    FilterX
+    FilterX,
+    Phone
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -681,10 +682,9 @@ const FinancialAgendasPage = () => {
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">F. Creación</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">F. Reunión</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Cliente</th>
-                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Fuente</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Call Confirmer</th>
-                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Instagram</th>
+                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Estado</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
                                     </tr>
@@ -709,29 +709,57 @@ const FinancialAgendasPage = () => {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-4">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span 
-                                                        className="text-sm font-bold text-white hover:text-indigo-400 hover:underline cursor-pointer"
-                                                        onClick={() => setSelectedRoadmapLead({
-                                                            instagram: agenda.instagram,
-                                                            email: agenda.mail,
-                                                            phone: agenda.whatsapp,
-                                                            full_name: agenda.lead
-                                                        })}
-                                                    >
-                                                        {agenda.lead}
-                                                    </span>
-                                                    {agenda.has_sale && (
-                                                        <Badge variant="success" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px] py-0.5 px-1.5 font-bold shrink-0">
-                                                            ✓ {agenda.sales_count} {agenda.sales_count === 1 ? 'cierre' : 'cierres'}
-                                                        </Badge>
-                                                    )}
+                                                <div className="flex flex-col gap-1 text-left">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span 
+                                                            className="text-sm font-bold text-white hover:text-indigo-400 hover:underline cursor-pointer"
+                                                            onClick={() => setSelectedRoadmapLead({
+                                                                instagram: agenda.instagram,
+                                                                email: agenda.mail,
+                                                                phone: agenda.whatsapp,
+                                                                full_name: agenda.lead
+                                                            })}
+                                                        >
+                                                            {agenda.lead}
+                                                        </span>
+                                                        {agenda.has_sale && (
+                                                            <Badge variant="success" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px] py-0.5 px-1.5 font-bold shrink-0">
+                                                                ✓ {agenda.sales_count} {agenda.sales_count === 1 ? 'cierre' : 'cierres'}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-slate-400 font-medium">
+                                                        {agenda.instagram && agenda.instagram !== 'N/A' && (
+                                                            <div className="flex items-center gap-1">
+                                                                <a 
+                                                                    href={`https://instagram.com/${agenda.instagram.replace('@', '')}`} 
+                                                                    target="_blank" 
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-primary hover:underline flex items-center gap-0.5"
+                                                                >
+                                                                    <Instagram size={10} />
+                                                                    {agenda.instagram.startsWith('@') ? agenda.instagram : `@${agenda.instagram}`}
+                                                                </a>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        navigator.clipboard.writeText(agenda.instagram.startsWith('@') ? agenda.instagram : `@${agenda.instagram}`);
+                                                                    }}
+                                                                    className="text-muted hover:text-primary transition-colors p-0.5"
+                                                                    title="Copiar usuario"
+                                                                >
+                                                                    <Copy size={10} />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        {agenda.whatsapp && agenda.whatsapp !== 'N/A' && (
+                                                            <span className="flex items-center gap-0.5 text-slate-400">
+                                                                <Phone size={10} className="text-emerald-500" />
+                                                                {agenda.whatsapp}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </td>
-                                            <td className="py-4 px-4">
-                                                <Badge variant="amber" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider border-amber-500/30">
-                                                    {agenda.closer}
-                                                </Badge>
                                             </td>
                                             <td className="py-4 px-4">
                                                 <Badge variant="indigo" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider">
@@ -762,32 +790,10 @@ const FinancialAgendasPage = () => {
                                                     ))}
                                                 </select>
                                             </td>
-                                            <td className="py-4 px-4 text-center">
-                                                {agenda.instagram && agenda.instagram !== 'N/A' ? (
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <a 
-                                                            href={`https://instagram.com/${agenda.instagram.replace('@', '')}`} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer"
-                                                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-                                                        >
-                                                            <Instagram size={10} />
-                                                            {agenda.instagram.startsWith('@') ? agenda.instagram : `@${agenda.instagram}`}
-                                                        </a>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                navigator.clipboard.writeText(agenda.instagram.startsWith('@') ? agenda.instagram : `@${agenda.instagram}`);
-                                                            }}
-                                                            className="text-muted hover:text-primary transition-colors p-1"
-                                                            title="Copiar usuario"
-                                                        >
-                                                            <Copy size={12} />
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-xs text-muted">No IG</span>
-                                                )}
+                                            <td className="py-4 px-4">
+                                                <Badge variant="amber" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider border-amber-500/30">
+                                                    {agenda.closer}
+                                                </Badge>
                                             </td>
                                             <td className="py-4 px-4 text-center">
                                                 <select
@@ -842,7 +848,7 @@ const FinancialAgendasPage = () => {
                                     ))}
                                     {agendas.length === 0 && (
                                         <tr>
-                                            <td colSpan="9" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
+                                            <td colSpan="8" className="py-20 text-center text-muted uppercase text-xs font-bold tracking-widest">
                                                 No se encontraron agendas
                                             </td>
                                         </tr>
