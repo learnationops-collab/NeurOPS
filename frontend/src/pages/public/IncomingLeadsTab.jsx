@@ -4,6 +4,7 @@ import {
     Loader2, RefreshCw, CheckCircle2, XCircle, HelpCircle, 
     Search, Edit2, Check, X, Radio, ArrowRight, Instagram
 } from 'lucide-react';
+import LeadRoadmapModal from '../../components/modals/LeadRoadmapModal';
 
 const QualificationBadge = ({ value }) => {
     if (value === 'true') return (
@@ -100,6 +101,7 @@ const IncomingLeadsTab = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [qualFilter, setQualFilter] = useState('all');
     const [limit, setLimit] = useState(30);
+    const [selectedRoadmapLead, setSelectedRoadmapLead] = useState(null);
 
     // Edición de keyword inline
     const [editingId, setEditingId] = useState(null);
@@ -310,7 +312,17 @@ const IncomingLeadsTab = () => {
                                         <td className="p-5 text-[10px] font-black text-slate-600 font-mono">{idx + 1}</td>
                                         <td className="p-5">
                                             <div className="flex flex-col text-left space-y-1">
-                                                <span className="text-xs font-black text-white uppercase tracking-wide leading-none">{log.lead_name || 'Desconocido'}</span>
+                                                <span 
+                                                    className="text-xs font-black text-white uppercase tracking-wide leading-none hover:text-indigo-400 hover:underline cursor-pointer"
+                                                    onClick={() => setSelectedRoadmapLead({
+                                                        instagram: log.lead_ig,
+                                                        email: null,
+                                                        phone: null,
+                                                        full_name: log.lead_name
+                                                    })}
+                                                >
+                                                    {log.lead_name || 'Desconocido'}
+                                                </span>
                                                 {log.lead_ig ? (
                                                     <a 
                                                         href={`https://instagram.com/${log.lead_ig.replace('@', '')}`} 
@@ -405,6 +417,17 @@ const IncomingLeadsTab = () => {
                         </table>
                     </div>
                 </div>
+            )}
+
+            {selectedRoadmapLead && (
+                <LeadRoadmapModal
+                    isOpen={!!selectedRoadmapLead}
+                    instagram={selectedRoadmapLead.instagram}
+                    email={selectedRoadmapLead.email}
+                    phone={selectedRoadmapLead.phone}
+                    onClose={() => setSelectedRoadmapLead(null)}
+                    onSuccess={() => fetchLogs(true)}
+                />
             )}
         </div>
     );

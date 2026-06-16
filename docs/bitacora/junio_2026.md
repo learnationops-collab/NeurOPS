@@ -582,3 +582,11 @@
       - Se agregó un botón interactivo "Roadmap" con diseño premium en la cabecera de la tarjeta del lead activo (dentro de `MazoCartas`), utilizando el icono `Layers` y una estética de color violeta.
       - Se instanció condicionalmente el modal `<LeadRoadmapModal>` al final del JSX, pasando los datos del lead activo (`instagram`, `email` y `phone`) y configurando llamadas a `fetchQueue` y `fetchEventLogs` al completarse de manera exitosa para actualizar la bitácora de eventos y la cola en caliente.
       - Se validó el correcto funcionamiento mediante la compilación de producción (`npm run build`) del frontend sin errores.
+
+  - **Apertura de Lead Roadmap desde Leads Entrantes (Estadísticas del Setter)**:
+    - **Frontend (`IncomingLeadsTab.jsx`) [MODIFY]**:
+      - Se importó el componente `LeadRoadmapModal`.
+      - Se implementó el estado `selectedRoadmapLead` para controlar el lead seleccionado y la apertura del modal.
+      - Se modificó la columna de `Prospecto (Instagram)` en la tabla de leads entrantes para hacer el nombre del prospecto cliqueable (`cursor-pointer` y efectos hover) y abrir el roadmap al hacer clic.
+      - Se instanció el componente `<LeadRoadmapModal>` al final de la página, permitiendo a los setters analizar y calificar dolores/notas de forma directa.
+      - Se verificó la compilación sin fallas en el build de Vite.
