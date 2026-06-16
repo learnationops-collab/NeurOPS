@@ -140,7 +140,8 @@ def get_lead_roadmap():
         "status": "Entrante",
         "created_at": created_at_val,
         "objeciones": client.objeciones if client else "",
-        "observaciones": client.observaciones if client else ""
+        "observaciones": client.observaciones if client else "",
+        "dolores": client.dolores if client else ""
     }
 
     # Resolver el estado del lead
@@ -448,7 +449,18 @@ def get_lead_roadmap():
         }
 
     # Dolores consolidados
-    dolores_lead = pain_list if pain_list else ["Por identificar"]
+    dolores_set = set()
+    if client and client.dolores:
+        for d in client.dolores.split(','):
+            d_clean = d.strip()
+            if d_clean:
+                dolores_set.add(d_clean)
+    for d in pain_list:
+        d_clean = d.strip()
+        if d_clean and d_clean.lower() != "por identificar":
+            dolores_set.add(d_clean)
+            
+    dolores_lead = list(dolores_set) if dolores_set else ["Por identificar"]
 
     # Comentarios / Notas en formato simplificado
     comments_list = [
@@ -536,6 +548,7 @@ def update_client_roadmap():
     full_name = data.get('full_name')
     objeciones = data.get('objeciones')
     observaciones = data.get('observaciones')
+    dolores = data.get('dolores')
 
     client = None
     if client_id:
@@ -558,7 +571,8 @@ def update_client_roadmap():
             phone=phone.strip() if phone else None,
             instagram=normalize_ig(instagram),
             objeciones=objeciones,
-            observaciones=observaciones
+            observaciones=observaciones,
+            dolores=dolores
         )
         db.session.add(client)
     else:
@@ -575,6 +589,8 @@ def update_client_roadmap():
             client.objeciones = objeciones
         if observaciones is not None:
             client.observaciones = observaciones
+        if dolores is not None:
+            client.dolores = dolores
 
     try:
         db.session.commit()
@@ -587,7 +603,8 @@ def update_client_roadmap():
                 "phone": client.phone,
                 "instagram": client.instagram,
                 "objeciones": client.objeciones or "",
-                "observaciones": client.observaciones or ""
+                "observaciones": client.observaciones or "",
+                "dolores": client.dolores or ""
             }
         }), 200
     except Exception as e:

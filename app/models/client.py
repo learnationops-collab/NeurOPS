@@ -11,6 +11,8 @@ class Client(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     objeciones = db.Column(db.Text, nullable=True) # Objeciones del prospecto
     observaciones = db.Column(db.Text, nullable=True) # Notas de triage / calificacion
+    dolores = db.Column(db.Text, nullable=True) # Dolores del prospecto
+
     
     # Relationships
     enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")

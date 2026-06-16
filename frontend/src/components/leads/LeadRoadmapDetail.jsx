@@ -15,6 +15,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
     
     // Calificación en caliente
     const [objeciones, setObjeciones] = useState('');
+    const [dolores, setDolores] = useState('');
     const [observaciones, setObservaciones] = useState('');
     const [savingCalificacion, setSavingCalificacion] = useState(false);
 
@@ -32,6 +33,25 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
         "No es prioridad ahora",
         "Desconfianza / Garantía"
     ];
+
+    const commonDolores = [
+        "Falta de ventas",
+        "Falta de setters/closers",
+        "Lead gen ineficiente",
+        "Problemas de escala",
+        "Procesos desorganizados"
+    ];
+
+    const toggleDolorTag = (tag) => {
+        let current = dolores.trim();
+        if (current.includes(tag)) {
+            const regex = new RegExp(`(^|\\n|\\s*,\\s*)${tag}(\\s*,?\\s*|$)`, 'i');
+            current = current.replace(regex, '$1').replace(/,\s*,/, ',').replace(/^,\s*/, '').replace(/,\s*$/, '').trim();
+        } else {
+            current = current ? `${current}, ${tag}` : tag;
+        }
+        setDolores(current);
+    };
 
     useEffect(() => {
         fetchRoadmap();
@@ -57,6 +77,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                     instagram: res.data.lead.instagram || ''
                 });
                 setObjeciones(res.data.lead.objeciones || '');
+                setDolores(res.data.lead.dolores || '');
                 setObservaciones(res.data.lead.observaciones || '');
             }
         } catch (err) {
@@ -124,7 +145,8 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                 email: data?.lead?.email || email,
                 phone: data?.lead?.phone || phone,
                 objeciones,
-                observaciones
+                observaciones,
+                dolores
             };
             await api.post('/public/lead-roadmap/update-client', payload);
             toast.success("Calificación guardada");
@@ -239,7 +261,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
         );
     }
 
-    const { lead, stages, activity, sales_summary, dolores, comments: notesList, programs } = data;
+    const { lead, stages, activity, sales_summary, dolores: doloresConsolidados, comments: notesList, programs } = data;
     const { channel, setter, closer } = detectAdquisitionDetails();
 
     const statusColors = {
@@ -498,6 +520,35 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         </div>
 
                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dolores del Prospecto</label>
+                            <div className="flex flex-wrap gap-1 mb-1">
+                                {commonDolores.map((tag) => {
+                                    const isSelected = dolores.toLowerCase().includes(tag.toLowerCase().split(' ')[0]);
+                                    return (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onClick={() => toggleDolorTag(tag)}
+                                            className={`text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border transition-all ${
+                                                isSelected
+                                                    ? 'bg-violet-600/20 text-violet-400 border-violet-500/40'
+                                                    : 'bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850'
+                                            }`}
+                                        >
+                                            {tag}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <textarea
+                                className="w-full h-16 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
+                                placeholder="Notas de dolor del lead..."
+                                value={dolores}
+                                onChange={(e) => setDolores(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objeciones</label>
                             <div className="flex flex-wrap gap-1 mb-1">
                                 {commonObjections.map((tag) => {
@@ -620,7 +671,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                     <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4">
                         <h4 className="text-sm font-black text-white uppercase tracking-wider">Dolores del Lead</h4>
                         <div className="flex flex-wrap gap-2">
-                            {dolores.map((d, i) => (
+                            {doloresConsolidados.map((d, i) => (
                                 <span key={i} className="px-3.5 py-1.5 bg-slate-900 border border-slate-800 text-[10px] font-black text-slate-300 rounded-xl uppercase tracking-wider">
                                     • {d}
                                 </span>
