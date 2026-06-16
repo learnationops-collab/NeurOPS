@@ -35,10 +35,9 @@ import {
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import MazoCartas from '../../components/deck/MazoCartas';
 import BuscadorGlobalDeck from '../../components/deck/BuscadorGlobalDeck';
 import Button from '../../components/ui/Button';
-import LeadRoadmapModal from '../../components/modals/LeadRoadmapModal';
+import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 
 // Colores premium para gráfico circular
 const COLORS = ['#1534ff', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b'];
@@ -79,7 +78,6 @@ const LeadsManagementPage = () => {
     const [showAllEventsModal, setShowAllEventsModal] = useState(false);
     const [allEvents, setAllEvents] = useState([]);
     const [loadingEvents, setLoadingEvents] = useState(false);
-    const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
 
     // Cargar cola de cartas filtrada
     const fetchQueue = async () => {
@@ -479,362 +477,27 @@ const LeadsManagementPage = () => {
                             </button>
                         </div>
 
-                        {/* Columna 2: Mazo de Leads (Central, Ancha) */}
-                        <div className="lg:col-span-2 flex flex-col items-center w-full space-y-4">
-                            {filteredCards.length > 0 && (
-                                <div className="flex justify-between items-center bg-[#1a1c23]/90 border border-slate-800/80 px-6 py-3 rounded-2xl w-full max-w-xl mx-auto shadow-xl">
-                                    <button
-                                        type="button"
-                                        disabled={currentIndex === 0}
-                                        onClick={() => setCurrentIndex(prev => prev - 1)}
-                                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400 transition-colors flex items-center gap-1.5"
-                                    >
-                                        <ArrowLeft size={14} />
-                                        Anterior
-                                    </button>
-                                    
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                        Ficha {Math.min(currentIndex + 1, filteredCards.length)} de {filteredCards.length}
-                                    </span>
-                                    
-                                    <button
-                                        type="button"
-                                        disabled={currentIndex >= filteredCards.length - 1}
-                                        onClick={() => setCurrentIndex(prev => prev + 1)}
-                                        className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400 transition-colors flex items-center gap-1.5"
-                                    >
-                                        Siguiente
-                                        <ArrowRight size={14} />
-                                    </button>
+                        {/* Columna 2: Ficha del Lead (Lead Roadmap Detalle) */}
+                        <div className="lg:col-span-3 space-y-6">
+                            {activeFilteredCard ? (
+                                <LeadRoadmapDetail 
+                                    instagram={instagram || activeFilteredCard.instagram}
+                                    email={activeFilteredCard.email}
+                                    phone={activeFilteredCard.phone}
+                                    onUpdate={() => {
+                                        fetchQueue();
+                                        if (activeFilteredCard.id) {
+                                            fetchEventLogs(activeFilteredCard.id);
+                                        }
+                                    }}
+                                />
+                            ) : (
+                                <div className="h-[60vh] flex flex-col items-center justify-center text-center p-8 bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] shadow-2xl">
+                                    <Layers className="text-slate-655 mb-4 animate-pulse" size={48} />
+                                    <h3 className="text-lg font-black text-slate-400 uppercase tracking-widest">Selecciona un Lead</h3>
+                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Usa la sección de sin asignar o el buscador superior para iniciar</p>
                                 </div>
                             )}
-
-                            <MazoCartas cards={filteredCards} currentIndex={currentIndex}>
-                                {activeFilteredCard && (
-                                    <div className="flex flex-col justify-between h-full space-y-6">
-                                        {/* Cabecera de la carta */}
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between items-start gap-4">
-                                                <span className="text-[10px] font-black uppercase bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-xl tracking-widest flex items-center gap-1.5">
-                                                    <Clock size={12} />
-                                                    {formatTime(activeFilteredCard.start_time)}
-                                                </span>
-                                                <span className="text-[10px] font-black uppercase bg-white/5 border border-white/10 text-slate-400 px-3 py-1.5 rounded-xl tracking-widest flex items-center gap-1.5">
-                                                    <Tag size={12} />
-                                                    {activeFilteredCard.origin || 'Sin Origen'}
-                                                </span>
-                                            </div>
-
-                                            <div className="flex justify-between items-start gap-4">
-                                                <div className="space-y-1 text-left">
-                                                    <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">
-                                                        {activeFilteredCard.lead_name}
-                                                    </h2>
-                                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                                                        Lead ID: #{activeFilteredCard.id} • Estado: {activeFilteredCard.result || 'Pendiente'}
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setIsRoadmapOpen(true)}
-                                                        className="px-3 py-2 bg-violet-600 hover:bg-violet-750 text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition-all shadow-lg shadow-violet-600/20 flex items-center gap-1.5"
-                                                    >
-                                                        <Layers size={12} /> Roadmap
-                                                    </button>
-                                                    <button className="p-2 text-slate-500 hover:text-white transition-colors">
-                                                        <MoreVertical size={18} />
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Info de Asignación y Meet */}
-                                            <div className="grid grid-cols-2 gap-4 bg-black/20 border border-slate-800/50 p-4 rounded-3xl text-left text-xs font-bold">
-                                                <div className="space-y-1">
-                                                    <span className="text-[9px] uppercase tracking-widest text-slate-500 block">Closer Asignado</span>
-                                                    <span className="text-slate-300 flex items-center gap-1.5">
-                                                        <User size={14} className="text-primary" />
-                                                        {activeFilteredCard.closer_name || 'Sin Asignar'}
-                                                    </span>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <span className="text-[9px] uppercase tracking-widest text-slate-500 block">Fecha de Meet</span>
-                                                    <span className="text-slate-300 flex items-center gap-1.5">
-                                                        <Calendar size={14} className="text-primary" />
-                                                        {formatTime(activeFilteredCard.start_time)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Campos del Formulario */}
-                                        <form onSubmit={handleSubmit} className="space-y-5 flex-1 overflow-y-auto pr-1 py-1 custom-scrollbar text-left">
-                                            
-                                            {/* SECCIÓN SETTER DATA */}
-                                            <div className="space-y-4 border-b border-slate-800 pb-5">
-                                                <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.25em] flex items-center gap-2">
-                                                    <Instagram size={14} />
-                                                    Información de Setting
-                                                </h4>
-                                                
-                                                {/* Mostrar link chat e inputs dependiendo de rol o compartidos */}
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Instagram Usuario</label>
-                                                        <input 
-                                                            type="text"
-                                                            placeholder="@instagram"
-                                                            value={instagram}
-                                                            onChange={(e) => handleInstagramChange(e.target.value)}
-                                                            disabled={user?.role !== 'setter' && user?.role !== 'admin'}
-                                                            className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all disabled:opacity-50"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Palabra Clave</label>
-                                                        <input 
-                                                            type="text"
-                                                            placeholder="Ej: EVENTO"
-                                                            value={keyword}
-                                                            onChange={(e) => setKeyword(e.target.value)}
-                                                            disabled={user?.role !== 'setter' && user?.role !== 'admin'}
-                                                            className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all disabled:opacity-50"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block font-bold">Enlace a Conversación IG</label>
-                                                    <div className="flex gap-2">
-                                                        <input 
-                                                            type="url"
-                                                            placeholder="https://instagram.com/..."
-                                                            value={igChatLink}
-                                                            onChange={(e) => setIgChatLink(e.target.value)}
-                                                            disabled={user?.role !== 'setter' && user?.role !== 'admin'}
-                                                            className="flex-1 bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all disabled:opacity-50"
-                                                        />
-                                                        {igChatLink && (
-                                                            <a href={igChatLink} target="_blank" rel="noopener noreferrer" className="bg-[#1534ff]/10 hover:bg-[#1534ff]/20 text-[#1534ff] border border-[#1534ff]/20 px-4 rounded-2xl flex items-center justify-center transition-all">
-                                                                <ExternalLink size={14} />
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Instrucciones del Setter</label>
-                                                    <textarea 
-                                                        rows={2}
-                                                        placeholder="Notas del setter..."
-                                                        value={setterNotes}
-                                                        onChange={(e) => setSetterNotes(e.target.value)}
-                                                        disabled={user?.role !== 'setter' && user?.role !== 'admin'}
-                                                        className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all resize-none disabled:opacity-50"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* SECCIÓN CLOSER DATA */}
-                                            {(user?.role === 'closer' || user?.role === 'admin') && (
-                                                <div className="space-y-4 pt-1">
-                                                    <h4 className="text-[10px] font-black text-violet-400 uppercase tracking-[0.25em] flex items-center gap-2">
-                                                        <Video size={14} />
-                                                        Información de Closing
-                                                    </h4>
-
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Enlace a Video / Google Meet</label>
-                                                        <div className="flex gap-2">
-                                                            <input 
-                                                                type="url"
-                                                                placeholder="https://meet.google.com/..."
-                                                                value={linkedCall}
-                                                                onChange={(e) => setLinkedCall(e.target.value)}
-                                                                disabled={user?.role !== 'closer' && user?.role !== 'admin'}
-                                                                className="flex-1 bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all disabled:opacity-50"
-                                                            />
-                                                            {linkedCall && (
-                                                                <a href={linkedCall} target="_blank" rel="noopener noreferrer" className="bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 border border-violet-500/20 px-4 rounded-2xl flex items-center justify-center transition-all">
-                                                                    <ExternalLink size={14} />
-                                                                </a>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Notas del Closer (Seguimiento / Cierre)</label>
-                                                        <textarea 
-                                                            rows={2}
-                                                            placeholder="Detalles sobre objeciones, monto cobrado, señas, etc..."
-                                                            value={closerNotes}
-                                                            onChange={(e) => setCloserNotes(e.target.value)}
-                                                            disabled={user?.role !== 'closer' && user?.role !== 'admin'}
-                                                            className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all resize-none disabled:opacity-50"
-                                                        />
-                                                    </div>
-
-                                                    {/* Estado / Resultado dependiente del rol */}
-                                                    <div className="space-y-2">
-                                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Estado de Cierre / Agenda</label>
-                                                        <div className="grid grid-cols-3 gap-2">
-                                                            {[
-                                                                { key: 'Pendiente', color: 'amber' },
-                                                                { key: 'Asistió', color: 'emerald' },
-                                                                { key: 'No Show', color: 'rose' }
-                                                            ].map(opt => {
-                                                                const isActive = result === opt.key;
-                                                                const colorMap = {
-                                                                    amber: isActive ? 'bg-amber-500/10 border-amber-500/50 text-amber-400' : 'hover:bg-amber-500/5 border-slate-800 text-slate-500',
-                                                                    emerald: isActive ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'hover:bg-emerald-500/5 border-slate-800 text-slate-500',
-                                                                    rose: isActive ? 'bg-rose-500/10 border-rose-500/50 text-rose-400' : 'hover:bg-rose-500/5 border-slate-800 text-slate-500'
-                                                                };
-                                                                return (
-                                                                    <button
-                                                                        key={opt.key}
-                                                                        type="button"
-                                                                        onClick={() => setResult(opt.key)}
-                                                                        className={`py-3 rounded-2xl border text-[9px] font-black uppercase tracking-wider transition-all ${colorMap[opt.color]}`}
-                                                                    >
-                                                                        {opt.key}
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </form>
-
-                                        {/* Botón de envío */}
-                                        <button
-                                            type="button"
-                                            onClick={handleSubmit}
-                                            disabled={submitting}
-                                            className="w-full bg-[#1534ff] hover:bg-[#1534ff]/90 text-white font-black text-[10px] uppercase tracking-widest py-4 rounded-2xl transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 group disabled:opacity-50 shrink-0"
-                                        >
-                                            {submitting ? (
-                                                <Loader2 className="animate-spin" size={14} />
-                                            ) : (
-                                                <>
-                                                    Guardar y Confirmar Progreso
-                                                    <Check size={14} className="group-hover:scale-110 transition-transform" />
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                )}
-                            </MazoCartas>
-                        </div>
-
-                        {/* Columna 3: Historial y Gráfica Circular (De la derecha) */}
-                        <div className="lg:col-span-1 space-y-6 text-left">
-                            
-                            {/* Historial de Eventos (Timeline) */}
-                            <div className="bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-6 shadow-2xl space-y-5">
-                                <div className="border-b border-slate-800 pb-3 mb-2">
-                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                        <Activity className="text-violet-400" size={14} />
-                                        Historial de Eventos
-                                    </h3>
-                                </div>
-
-                                <div className="space-y-4 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
-                                    {eventHistory.length === 0 ? (
-                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider text-center py-6">
-                                            Sin acciones registradas.
-                                        </p>
-                                    ) : (
-                                        eventHistory.map((log, idx) => (
-                                            <div key={log.id || idx} className="flex gap-3 relative group">
-                                                {idx < eventHistory.length - 1 && (
-                                                    <div className="w-px bg-slate-800 absolute top-5 bottom-0 left-2.5 z-0" />
-                                                )}
-                                                <div className="w-5 h-5 rounded-full bg-slate-800/85 border border-slate-700/50 flex items-center justify-center text-[8px] font-black text-primary shrink-0 relative z-10 group-hover:bg-[#1534ff]/10 group-hover:border-[#1534ff]/25 transition-colors">
-                                                    •
-                                                </div>
-                                                <div className="space-y-0.5">
-                                                    <p className="text-[10px] font-black text-slate-400 leading-tight">
-                                                        {log.username} ({log.user_role})
-                                                    </p>
-                                                    <p className="text-[11px] text-slate-300 font-medium leading-normal">
-                                                        {log.description}
-                                                    </p>
-                                                    <span className="text-[7.5px] font-bold text-slate-500 block">
-                                                        {formatTime(log.created_at)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-
-                                {activeCard && (
-                                    <button
-                                        onClick={() => {
-                                            fetchAllEventLogs(activeCard.id);
-                                            setShowAllEventsModal(true);
-                                        }}
-                                        className="w-full bg-white/5 hover:bg-white/10 text-slate-300 font-black text-[9px] uppercase tracking-widest py-3.5 rounded-2xl transition-all border border-white/5 flex items-center justify-center gap-1"
-                                    >
-                                        Ver Historial Completo
-                                        <ChevronRight size={10} />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Gráfica Circular de Estados */}
-                            <div className="bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-6 shadow-2xl flex flex-col justify-start">
-                                <div className="border-b border-slate-800 pb-3 mb-4">
-                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                        <TrendingUp className="text-emerald-400" size={14} />
-                                        Distribución de Estados
-                                    </h3>
-                                </div>
-
-                                <div className="h-[220px] w-full flex items-center justify-center relative">
-                                    {(stats?.chart_data || []).length === 0 ? (
-                                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider text-center">Sin datos de gráfica</div>
-                                    ) : (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={stats?.chart_data || []}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={55}
-                                                    outerRadius={75}
-                                                    paddingAngle={3}
-                                                    dataKey="value"
-                                                >
-                                                    {(stats?.chart_data || []).map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip 
-                                                    contentStyle={{ backgroundColor: '#101117', border: '1px solid #1e293b', borderRadius: '12px' }}
-                                                    itemStyle={{ color: '#fff', fontSize: '10px', fontWeight: 'bold' }}
-                                                    labelStyle={{ display: 'none' }}
-                                                />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    )}
-                                </div>
-
-                                {/* Leyenda Personalizada Compacta */}
-                                <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-slate-800">
-                                    {(stats?.chart_data || []).map((item, idx) => (
-                                        <div key={idx} className="flex items-center gap-2 text-left">
-                                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                                            <div className="space-y-px truncate">
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block truncate">{item.name}</span>
-                                                <span className="text-xs font-black text-white leading-none block">{item.value} ({item.percentage}%)</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                            </div>
                         </div>
 
                     </div>
@@ -933,21 +596,6 @@ const LeadsManagementPage = () => {
                 )}
             </AnimatePresence>
 
-            {isRoadmapOpen && activeFilteredCard && (
-                <LeadRoadmapModal
-                    isOpen={isRoadmapOpen}
-                    instagram={instagram || activeFilteredCard.instagram}
-                    email={activeFilteredCard.email}
-                    phone={activeFilteredCard.phone}
-                    onClose={() => setIsRoadmapOpen(false)}
-                    onSuccess={() => {
-                        fetchQueue();
-                        if (activeFilteredCard.id) {
-                            fetchEventLogs(activeFilteredCard.id);
-                        }
-                    }}
-                />
-            )}
         </div>
     );
 };

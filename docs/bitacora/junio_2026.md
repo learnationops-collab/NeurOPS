@@ -594,3 +594,12 @@
   - **Edición de WhatsApp / Teléfono en Registro de Agendas**:
     - **Frontend (`FinancialAgendasPage.jsx`) [MODIFY]**: Se añadió el input de edición para el campo `whatsapp` (WhatsApp / Teléfono) en el modal de edición de agenda (`editingAgenda`), permitiendo la corrección o adición manual de números telefónicos de contacto directo.
     - **Verificación**: Se validó el correcto funcionamiento y la ausencia de errores mediante la compilación del build de producción de Vite (`npm run build`).
+
+  - **Reemplazo del Mazo de Cartas por Lead Roadmap en Gestión de Leads**:
+    - **Frontend (`LeadsManagementPage.jsx`) [MODIFY]**:
+      - Se removió la dependencia e importación de `MazoCartas` y `LeadRoadmapModal`.
+      - Se importó `LeadRoadmapDetail` para empotrarse directamente en la pantalla de forma estática en la columna central.
+      - Se eliminaron el estado `isRoadmapOpen` y toda la navegación secuencial (botones Anterior / Siguiente, ficha por ficha).
+      - Se reestructuró el grid a 2 columnas principales: Leads sin asignar a la izquierda (`lg:col-span-1`) y el componente central `LeadRoadmapDetail` a la derecha (`lg:col-span-3`).
+      - Se quitó la columna derecha redundante (bitácora de eventos simplificada y gráfica circular de estados), ya que el roadmap integrado ya visualiza el historial de actividad detallado de forma nativa.
+      - Se verificó la compilación del bundle de producción sin fallas.
