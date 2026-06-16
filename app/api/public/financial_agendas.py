@@ -31,6 +31,9 @@ def receive_financial_agendas():
     saved = 0
     agendas_created = []
     for item in items:
+        # Loggear el item para auditoría y diagnóstico
+        current_app.logger.info(f"[n8n AGENDA WEBHOOK] Recibido item: {item}")
+
         if 'fuente' in item:
             setter = item.get('fuente')
             lead_val = item.get('nombre') or item.get('cliente') or item.get('lead') or 'Desconocido'
@@ -79,6 +82,14 @@ def receive_financial_agendas():
                 FinancialAgenda.date <= end_day
             ).first()
 
+        # Extraer encargado de triage de forma robusta
+        encargado_triage_val = None
+        for k in ['encargado_triage', 'encargado', 'triage', 'call_confirmer', 'confirmer', 'encargadotriage', 'callconfirmer']:
+            val = next((item[key] for key in item if key.lower() == k), None)
+            if val:
+                encargado_triage_val = str(val).strip()
+                break
+
         if existing:
             # Actualizar datos de agenda existente
             existing.nombre = str(setter).strip()
@@ -87,7 +98,7 @@ def receive_financial_agendas():
             existing.fecha_meet = dt_str or existing.fecha_meet
             existing.date = agenda_date
             existing.estado = item.get('estado') or existing.estado
-            existing.encargado_triage = item.get('encargado_triage') or existing.encargado_triage
+            existing.encargado_triage = encargado_triage_val or existing.encargado_triage
             existing.raw_data = item
             agendas_created.append(existing)
         else:
@@ -103,7 +114,7 @@ def receive_financial_agendas():
                 whatsapp=item.get('whatsapp') or item.get('phone') or item.get('telefono') or 'N/A',
                 mail=item.get('mail') or item.get('email') or 'N/A',
                 estado=item.get('estado') or 'Pendiente',
-                encargado_triage=item.get('encargado_triage'),
+                encargado_triage=encargado_triage_val,
                 raw_data=item
             )
             db.session.add(agenda)

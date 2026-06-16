@@ -211,14 +211,25 @@ def get_lead_roadmap():
     pain_notes = "Sin notas de dolor registradas"
 
     if client:
+        # Agregar dolores manuales registrados
+        if client.dolores:
+            pain_completed = True
+            for d in client.dolores.split(','):
+                d_clean = d.strip()
+                if d_clean:
+                    pain_list.append(d_clean)
+            pain_date = client.created_at.isoformat() if client.created_at else datetime.utcnow().isoformat()
+
         # Buscar en survey answers
         survey_answers = SurveyAnswer.query.filter_by(client_id=client.id).all()
         for sa in survey_answers:
             q_text = sa.question.text.lower() if sa.question else ""
             if "dolor" in q_text or "problema" in q_text or "dificultad" in q_text or "obstáculo" in q_text:
                 pain_completed = True
-                pain_list.append(sa.answer)
-                pain_date = sa.appointment.start_time.isoformat() if sa.appointment else datetime.utcnow().isoformat()
+                if sa.answer not in pain_list:
+                    pain_list.append(sa.answer)
+                if not pain_date:
+                    pain_date = sa.appointment.start_time.isoformat() if sa.appointment else datetime.utcnow().isoformat()
 
     # Si no se encontraron dolores en las encuestas, buscar en ManyChat
     if not pain_completed and manychat_lead:
@@ -422,6 +433,23 @@ def get_lead_roadmap():
             "event": f"Nota de {c.author.username}",
             "detail": c.text,
             "origin": "Notas Internas"
+        })
+
+    # 6b. Calificación en Caliente manual
+    if client and (client.dolores or client.objeciones or client.observaciones):
+        detail_parts = []
+        if client.dolores:
+            detail_parts.append(f"Dolores: {client.dolores}")
+        if client.objeciones:
+            detail_parts.append(f"Objeciones: {client.objeciones}")
+        if client.observaciones:
+            detail_parts.append(f"Obs. Call Confirmer: {client.observaciones}")
+            
+        activity.append({
+            "date": client.created_at.isoformat() if client.created_at else lead_profile["created_at"],
+            "event": "Calificación Registrada",
+            "detail": " | ".join(detail_parts),
+            "origin": "Call Confirmer"
         })
 
     # Ordenar por fecha descendentemente
