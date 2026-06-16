@@ -642,3 +642,7 @@
       - Se implementó la función `handleResendWebhook(sale)` que despliega un cuadro de diálogo nativo de confirmación (`window.confirm`) y emite una petición POST al backend con toasts informativos de carga, éxito y error.
       - Se integró un botón con el icono `Send` en la columna de acciones de la tabla del registro de ventas.
     - **Verificación**: Se validó el correcto funcionamiento y la ausencia de errores mediante la compilación del build de producción de Vite (`npm run build`).
+
+  - **Simplificación de Notificaciones de Alertas en Discord**:
+    - **Backend (`app/services/alert_service.py`) [MODIFY]**: Se modificó `AlertService._send_to_discord` para establecer la URL del webhook de triage y setting como fallback predeterminado si no está configurada la variable `DISCORD_ALERTS_WEBHOOK` ni el registro de integración en base de datos, eliminando la necesidad de que el usuario ingrese este enlace manualmente.
+

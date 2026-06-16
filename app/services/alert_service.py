@@ -344,12 +344,9 @@ class AlertService:
                 if integration:
                     webhook_url = integration.url_prod if integration.active_env == 'prod' else integration.url_dev
 
-            # Fallback al canal crítico del usuario si no hay ninguno configurado
+            # Fallback al canal predeterminado de reportes si no hay ninguno configurado
             if not webhook_url:
-                # Usar el ID del canal entregado por el usuario: 1342945225890336910
-                # Pero requiere url del webhook de Discord. Si no hay webhook configurado, no podemos enviar.
-                print("[AlertService] No Discord webhook configured in Integration table or env.")
-                return
+                webhook_url = "https://discord.com/api/webhooks/1482070325641347288/fFK0OKoDIRngTIzh1kl81_Um8GrtFg62Z3TK4Rq0qgjQtU3jNqlOOLZ4lw1c_0qV0drX"
 
             # Elegir color del embed según severidad
             colors = {
