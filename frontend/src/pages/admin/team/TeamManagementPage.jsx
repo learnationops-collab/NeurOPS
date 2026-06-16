@@ -153,7 +153,7 @@ const TeamManagementPage = () => {
         { id: 'all', label: 'Todos', icon: Users },
         { id: 'closer', label: 'Closers', icon: User },
         { id: 'setter', label: 'Setters', icon: User },
-        { id: 'sales_admin', label: 'Sales Admin', icon: Shield },
+        { id: 'triage', label: 'Triage', icon: Shield },
         { id: 'operator', label: 'Operadores', icon: Zap },
         { id: 'admin', label: 'Admins', icon: Shield },
     ];
@@ -405,7 +405,7 @@ const TeamManagementPage = () => {
                                                 <option value="closer">Closer Principal</option>
                                                 <option value="setter">Setter de Leads</option>
                                                 <option value="operator">Operador Técnico</option>
-                                                <option value="sales_admin">Sales Admin</option>
+                                                <option value="triage">Triage</option>
                                             </select>
                                         </div>
 

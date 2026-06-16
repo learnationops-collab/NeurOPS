@@ -494,15 +494,19 @@ class BookingService:
             closer_processed = False
             setter_processed = False
         else:
-            # Estado procesado (No show, Show Up, Cancelada, Reagendada)
+            # Estado procesado (No Show, Show Up, Cancelada, Reagendada, Contactado, Confirmado)
             if estado_clean == 'no show':
-                result = 'No show'
+                result = 'No Show'
             elif estado_clean == 'show up':
                 result = 'Show Up'
             elif estado_clean == 'cancelada':
                 result = 'Cancelada'
             elif estado_clean == 'reagendada':
                 result = 'Reagendada'
+            elif estado_clean == 'contactado':
+                result = 'Contactado'
+            elif estado_clean == 'confirmado':
+                result = 'Confirmado'
             else:
                 result = agenda.estado
             closer_processed = True

@@ -33,7 +33,12 @@ const getEstadoBadgeVariant = (estado) => {
     switch (estado) {
         case 'Show Up':
             return 'primary';
+        case 'Contactado':
+            return 'indigo';
+        case 'Confirmado':
+            return 'success';
         case 'No show':
+        case 'No Show':
             return 'rose';
         case 'Reagendada':
             return 'warning';
@@ -93,7 +98,8 @@ const FinancialAgendasPage = () => {
         instagram: '',
         whatsapp: '',
         mail: '',
-        estado: ''
+        estado: '',
+        encargado_triage: ''
     });
 
     const handleEditClick = (agenda) => {
@@ -106,7 +112,8 @@ const FinancialAgendasPage = () => {
             instagram: agenda.instagram || '',
             whatsapp: agenda.whatsapp || '',
             mail: agenda.mail || '',
-            estado: agenda.estado || 'Pendiente'
+            estado: agenda.estado || 'Pendiente',
+            encargado_triage: agenda.encargado_triage || ''
         });
     };
 
@@ -440,7 +447,7 @@ const FinancialAgendasPage = () => {
                             className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
                         >
                             <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
-                            {['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'].map(st => (
+                            {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada'].map(st => (
                                 <option key={st} value={st} className="bg-slate-900 text-white font-semibold">{st}</option>
                             ))}
                         </select>
@@ -516,6 +523,8 @@ const FinancialAgendasPage = () => {
                                     <tr className="border-b border-base/60">
                                         <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Closer</th>
                                         <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
+                                        <th className="py-3 px-2 font-black text-center text-indigo-400 uppercase tracking-wider">Cto</th>
+                                        <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cfm</th>
                                         <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
                                         <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
                                         <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
@@ -528,7 +537,7 @@ const FinancialAgendasPage = () => {
                                 <tbody className="divide-y divide-base/40">
                                     {Object.entries(byCloserState).map(([closerName, stats]) => {
                                         const showUp = stats["Show Up"] || 0;
-                                        const noShow = stats["No show"] || 0;
+                                        const noShow = (stats["No Show"] || 0) + (stats["No show"] || 0);
                                         const totalAttended = showUp + noShow;
                                         const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
                                         
@@ -536,8 +545,10 @@ const FinancialAgendasPage = () => {
                                             <tr key={closerName} className="hover:bg-white/5 transition-colors">
                                                 <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{closerName}</td>
                                                 <td className="py-3 px-2 text-center font-semibold text-slate-400">{stats["Pendiente"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-indigo-400">{stats["Contactado"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-emerald-400">{stats["Confirmado"] || 0}</td>
                                                 <td className="py-3 px-2 text-center font-bold text-primary">{stats["Show Up"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-rose-400">{stats["No show"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-rose-400">{noShow}</td>
                                                 <td className="py-3 px-2 text-center font-semibold text-amber-400">{stats["Reagendada"] || 0}</td>
                                                 <td className="py-3 px-2 text-center font-semibold text-slate-500">{stats["Cancelada"] || 0}</td>
                                                 <td className="py-3 px-2 text-center font-black text-white italic">{stats["total"] || 0}</td>
@@ -576,6 +587,8 @@ const FinancialAgendasPage = () => {
                                     <tr className="border-b border-base/60">
                                         <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Fuente</th>
                                         <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
+                                        <th className="py-3 px-2 font-black text-center text-indigo-400 uppercase tracking-wider">Cto</th>
+                                        <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cfm</th>
                                         <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
                                         <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
                                         <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
@@ -588,7 +601,7 @@ const FinancialAgendasPage = () => {
                                 <tbody className="divide-y divide-base/40">
                                     {Object.entries(bySourceState).map(([sourceName, stats]) => {
                                         const showUp = stats["Show Up"] || 0;
-                                        const noShow = stats["No show"] || 0;
+                                        const noShow = (stats["No Show"] || 0) + (stats["No show"] || 0);
                                         const totalAttended = showUp + noShow;
                                         const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
                                         
@@ -596,8 +609,10 @@ const FinancialAgendasPage = () => {
                                             <tr key={sourceName} className="hover:bg-white/5 transition-colors">
                                                 <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{sourceName}</td>
                                                 <td className="py-3 px-2 text-center font-semibold text-slate-400">{stats["Pendiente"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-indigo-400">{stats["Contactado"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-emerald-400">{stats["Confirmado"] || 0}</td>
                                                 <td className="py-3 px-2 text-center font-bold text-primary">{stats["Show Up"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-rose-400">{stats["No show"] || 0}</td>
+                                                <td className="py-3 px-2 text-center font-semibold text-rose-400">{noShow}</td>
                                                 <td className="py-3 px-2 text-center font-semibold text-amber-400">{stats["Reagendada"] || 0}</td>
                                                 <td className="py-3 px-2 text-center font-semibold text-slate-500">{stats["Cancelada"] || 0}</td>
                                                 <td className="py-3 px-2 text-center font-black text-white italic">{stats["total"] || 0}</td>
@@ -646,6 +661,7 @@ const FinancialAgendasPage = () => {
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Cliente</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Fuente</th>
+                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Triage</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Instagram</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Estado</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
@@ -700,6 +716,15 @@ const FinancialAgendasPage = () => {
                                                     {agenda.nombre}
                                                 </Badge>
                                             </td>
+                                            <td className="py-4 px-4">
+                                                {agenda.encargado_triage ? (
+                                                    <Badge variant="secondary" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider bg-slate-800 text-slate-300">
+                                                        {agenda.encargado_triage}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Sin Asignar</span>
+                                                )}
+                                            </td>
                                             <td className="py-4 px-4 text-center">
                                                 {agenda.instagram && agenda.instagram !== 'N/A' ? (
                                                     <div className="flex items-center justify-center gap-2">
@@ -727,34 +752,36 @@ const FinancialAgendasPage = () => {
                                                     <span className="text-xs text-muted">No IG</span>
                                                 )}
                                             </td>
-                                             <td className="py-4 px-4 text-center">
-                                                 <select
-                                                     value={agenda.estado || 'Pendiente'}
-                                                     onChange={async (e) => {
-                                                         const nuevoEstado = e.target.value;
-                                                         try {
-                                                             const response = await api.put(`/public/financial-agendas/${agenda.id}`, { estado: nuevoEstado });
-                                                             const updated = response.data.agenda;
-                                                             setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
-                                                         } catch (err) {
-                                                             console.error("Error updating agenda status in-line:", err);
-                                                             alert("Error al actualizar el estado de la agenda");
-                                                         }
-                                                     }}
-                                                     className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border cursor-pointer outline-none focus:ring-1 focus:ring-primary/50 transition-all text-center border-box
-                                                         ${agenda.estado === 'Show Up' ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : ''}
-                                                         ${agenda.estado === 'No show' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20' : ''}
-                                                         ${agenda.estado === 'Reagendada' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : ''}
-                                                         ${agenda.estado === 'Cancelada' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
-                                                         ${!agenda.estado || agenda.estado === 'Pendiente' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
-                                                     `}
-                                                 >
-                                                     {['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'].map(st => (
-                                                         <option key={st} value={st} className="bg-slate-900 text-white font-semibold">
-                                                             {st}
-                                                         </option>
-                                                     ))}
-                                                 </select>
+                                            <td className="py-4 px-4 text-center">
+                                                <select
+                                                      value={agenda.estado || 'Pendiente'}
+                                                      onChange={async (e) => {
+                                                          const nuevoEstado = e.target.value;
+                                                          try {
+                                                              const response = await api.put(`/public/financial-agendas/${agenda.id}`, { estado: nuevoEstado });
+                                                              const updated = response.data.agenda;
+                                                              setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
+                                                          } catch (err) {
+                                                              console.error("Error updating agenda status in-line:", err);
+                                                              alert("Error al actualizar el estado de la agenda");
+                                                          }
+                                                      }}
+                                                      className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border cursor-pointer outline-none focus:ring-1 focus:ring-primary/50 transition-all text-center border-box
+                                                          ${agenda.estado === 'Show Up' ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : ''}
+                                                          ${agenda.estado === 'Contactado' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20' : ''}
+                                                          ${agenda.estado === 'Confirmado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : ''}
+                                                          ${agenda.estado === 'No Show' || agenda.estado === 'No show' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20' : ''}
+                                                          ${agenda.estado === 'Reagendada' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : ''}
+                                                          ${agenda.estado === 'Cancelada' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
+                                                          ${!agenda.estado || agenda.estado === 'Pendiente' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
+                                                      `}
+                                                  >
+                                                      {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada'].map(st => (
+                                                          <option key={st} value={st} className="bg-slate-900 text-white font-semibold">
+                                                              {st}
+                                                          </option>
+                                                      ))}
+                                                  </select>
                                              </td>
                                             <td className="py-4 px-4 text-right">
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -872,10 +899,19 @@ const FinancialAgendasPage = () => {
                                             onChange={e => setEditForm({...editForm, estado: e.target.value})}
                                             required
                                         >
-                                            {['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'].map(st => (
+                                            {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada'].map(st => (
                                                 <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Encargado Triage</label>
+                                        <input 
+                                            type="text"
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                            value={editForm.encargado_triage}
+                                            onChange={e => setEditForm({...editForm, encargado_triage: e.target.value})}
+                                        />
                                     </div>
                                 </div>
                             </div>

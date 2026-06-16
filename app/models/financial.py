@@ -55,6 +55,7 @@ class FinancialAgenda(db.Model):
     mail = db.Column(db.String(255), nullable=True)
     instagram = db.Column(db.String(255), nullable=True)
     estado = db.Column(db.String(255), nullable=True, default="Pendiente", server_default="Pendiente")
+    encargado_triage = db.Column(db.String(255), nullable=True)
     # Metadatos
     raw_data = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -88,6 +89,7 @@ class FinancialAgenda(db.Model):
             "mail": self.mail,
             "instagram": self.instagram,
             "estado": self.estado or "Pendiente",
+            "encargado_triage": self.encargado_triage,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "date": self.date.isoformat() if self.date else None,
             "sales_count": sales_count,

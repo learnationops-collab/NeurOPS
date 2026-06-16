@@ -26,13 +26,13 @@ const LoginPage = () => {
       } else if (user.role === 'setter') {
         navigate('/setter/statistics');
       } else if (user.role === 'triage') {
-        navigate('/triage/report');
+        navigate('/triage/agendas');
       } else if (user.role === 'closer') {
         navigate('/closer/report');
       } else if (user.role === 'operator') {
         navigate('/ops/dashboard');
       } else {
-        navigate('/publico');
+        navigate('/login');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Usuario o contraseña incorrectos');

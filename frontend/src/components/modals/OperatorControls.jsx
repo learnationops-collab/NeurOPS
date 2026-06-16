@@ -61,13 +61,13 @@ const OperatorControls = ({ isOpen, onClose }) => {
             if (token) localStorage.setItem('auth_token', token);
 
             // Redirigir según el rol del usuario simulado
-            let redirectPath = '/publico';
+            let redirectPath = '/login';
             if (targetUser.role === 'admin') {
                 redirectPath = '/admin/ventas';
             } else if (targetUser.role === 'setter') {
                 redirectPath = '/setter/report';
             } else if (targetUser.role === 'triage') {
-                redirectPath = '/triage/report';
+                redirectPath = '/triage/agendas';
             } else if (targetUser.role === 'closer') {
                 redirectPath = '/closer/report';
             } else if (targetUser.role === 'operator') {
@@ -92,11 +92,11 @@ const OperatorControls = ({ isOpen, onClose }) => {
             if (token) localStorage.setItem('auth_token', token);
 
             // Redirigir al dashboard original
-            let redirectPath = '/publico';
+            let redirectPath = '/login';
             if (originalUser.role === 'admin') redirectPath = '/admin/ventas';
             if (originalUser.role === 'operator') redirectPath = '/ops/dashboard';
             if (originalUser.role === 'setter') redirectPath = '/setter/report';
-            if (originalUser.role === 'triage') redirectPath = '/triage/report';
+            if (originalUser.role === 'triage') redirectPath = '/triage/agendas';
             if (originalUser.role === 'closer') redirectPath = '/closer/report';
 
             window.location.href = redirectPath;
@@ -116,7 +116,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
         { id: 'all', label: 'Todos' },
         { id: 'closer', label: 'Closers' },
         { id: 'setter', label: 'Setters' },
-        { id: 'sales_admin', label: 'Sales Admin' },
+        { id: 'triage', label: 'Triage' },
         { id: 'operator', label: 'Operadores' },
         { id: 'admin', label: 'Admins' },
     ];

@@ -59,14 +59,12 @@ const useDockNavigation = () => {
             ];
         } else if (isTriage) {
             return [
-                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/triage/report' }
+                { id: 'agendas', icon: CalendarDays, label: 'Registro de Agendas', path: '/triage/agendas' }
             ];
         } else if (user?.role === 'operator') {
             return [
                 { id: 'settings', icon: Settings, label: 'Control Técnico', path: '/ops/dashboard' }
             ];
-        } else if (user?.role === 'sales_admin') {
-            return [];
         } else if (user?.role === 'admin') {
             const adminPages = [
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
@@ -134,13 +132,7 @@ const useDockNavigation = () => {
             ];
         }
 
-        // Secciones para Sales Admin Dashboard
-        if (activePage.id === 'dashboard' && user?.role === 'sales_admin') {
-            return [
-                { id: 'overview', icon: LayoutDashboard, label: 'Resumen' },
-                { id: 'activity', icon: Activity, label: 'Rendimiento' }
-            ];
-        }
+
 
         // Secciones para Team Management
         if (activePage.id === 'team') {

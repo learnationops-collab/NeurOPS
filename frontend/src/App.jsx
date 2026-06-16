@@ -21,10 +21,6 @@ import CloserSettingsPage from './pages/closer/settings/SettingsPage';
 import CloserNewSalePage from './pages/closer/records/NewSalePage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
 import CloserClientsPage from './pages/closer/clients/ClientsPage';
-import SalesAdminDashboard from './pages/sales_admin/dashboard/SalesAdminDashboard';
-import TeamManagement from './pages/sales_admin/team/TeamManagement';
-import SalesSettingsPage from './pages/sales_admin/settings/SalesSettingsPage';
-import SalesAgendasPage from './pages/sales_admin/agendas/SalesAgendasPage';
 import SetterDashboard from './pages/setter/dashboard/SetterDashboard';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import SetterAgendasPage from './pages/setter/agendas/SetterAgendasPage';
@@ -41,8 +37,8 @@ import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
 import PublicCloserStatsPage from './pages/public/PublicCloserStatsPage';
 import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
 import PublicTriageStatsPage from './pages/public/PublicTriageStatsPage';
-import PublicHubPage from './pages/public/PublicHubPage';
 import AdManagementPage from './pages/public/AdManagementPage';
+import FinancialAgendasPage from './pages/admin/reports/FinancialAgendasPage';
 import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPage';
 import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
@@ -74,7 +70,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     if (user.role === 'operator') return <Navigate to="/ops/dashboard" />;
     if (user.role === 'setter') return <Navigate to="/setter/statistics" />;
     if (user.role === 'closer') return <Navigate to="/closer/stats" />;
-    if (user.role === 'triage') return <Navigate to="/triage/report" />;
+    if (user.role === 'triage') return <Navigate to="/triage/agendas" />;
     return <Navigate to="/" />;
   }
 
@@ -260,11 +256,11 @@ function App() {
               }
             />
             <Route
-              path="/triage/report"
+              path="/triage/agendas"
               element={
                 <ProtectedRoute roles={['triage']}>
                   <MainLayout>
-                    <PublicTriageReportPage />
+                    <FinancialAgendasPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -292,8 +288,7 @@ function App() {
               }
             />
 
-            {/* Hub Público Remanente */}
-            <Route path="/publico" element={<PublicHubPage />} />
+
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" />} />

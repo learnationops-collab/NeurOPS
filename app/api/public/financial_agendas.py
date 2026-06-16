@@ -87,6 +87,7 @@ def receive_financial_agendas():
             existing.fecha_meet = dt_str or existing.fecha_meet
             existing.date = agenda_date
             existing.estado = item.get('estado') or existing.estado
+            existing.encargado_triage = item.get('encargado_triage') or existing.encargado_triage
             existing.raw_data = item
             agendas_created.append(existing)
         else:
@@ -102,6 +103,7 @@ def receive_financial_agendas():
                 whatsapp=item.get('whatsapp') or item.get('phone') or 'N/A',
                 mail=item.get('mail') or item.get('email') or 'N/A',
                 estado=item.get('estado') or 'Pendiente',
+                encargado_triage=item.get('encargado_triage'),
                 raw_data=item
             )
             db.session.add(agenda)
@@ -255,7 +257,10 @@ def get_financial_agendas():
                 by_closer_state[c_name] = {
                     "total": 0,
                     "Pendiente": 0,
+                    "Contactado": 0,
+                    "Confirmado": 0,
                     "Show Up": 0,
+                    "No Show": 0,
                     "No show": 0,
                     "Reagendada": 0,
                     "Cancelada": 0,
@@ -263,6 +268,9 @@ def get_financial_agendas():
                 }
             if st_name in by_closer_state[c_name]:
                 by_closer_state[c_name][st_name] += 1
+            elif st_name.lower() == 'no show':
+                by_closer_state[c_name]["No Show"] += 1
+                by_closer_state[c_name]["No show"] += 1
             by_closer_state[c_name]["total"] += 1
             by_closer_state[c_name]["cierres"] += s_count
             
@@ -280,7 +288,10 @@ def get_financial_agendas():
                 by_source_state[s_name] = {
                     "total": 0,
                     "Pendiente": 0,
+                    "Contactado": 0,
+                    "Confirmado": 0,
                     "Show Up": 0,
+                    "No Show": 0,
                     "No show": 0,
                     "Reagendada": 0,
                     "Cancelada": 0,
@@ -288,6 +299,9 @@ def get_financial_agendas():
                 }
             if st_name in by_source_state[s_name]:
                 by_source_state[s_name][st_name] += 1
+            elif st_name.lower() == 'no show':
+                by_source_state[s_name]["No Show"] += 1
+                by_source_state[s_name]["No show"] += 1
             by_source_state[s_name]["total"] += 1
             by_source_state[s_name]["cierres"] += s_count
         
@@ -325,7 +339,7 @@ def get_financial_agendas():
             "by_closer": by_closer,
             "by_closer_state": by_closer_state,
             "by_source_state": by_source_state,
-            "unique_states": ['Pendiente', 'Show Up', 'No show', 'Reagendada', 'Cancelada'],
+            "unique_states": ['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada'],
             "unique_closers": unique_closers,
             "unique_sources": unique_sources,
             "page": agendas_pagination.page,
@@ -364,6 +378,8 @@ def update_financial_agenda(agenda_id):
             agenda.mail = data['mail']
         if 'estado' in data:
             agenda.estado = data['estado']
+        if 'encargado_triage' in data:
+            agenda.encargado_triage = data['encargado_triage']
         if 'date' in data:
             agenda.date = parse_date_robustly(data['date'])
             

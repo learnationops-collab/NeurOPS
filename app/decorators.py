@@ -32,14 +32,14 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            from app.models.user import ROLE_OPERATOR, ROLE_SALES_ADMIN
+            from app.models.user import ROLE_OPERATOR
             
             if not current_user.is_authenticated:
                 if request.path.startswith('/api/'):
                     return jsonify({"error": "Authentication required"}), 401
                 return redirect(url_for('auth.login'))
 
-            if current_user.role not in ['admin', ROLE_OPERATOR, ROLE_SALES_ADMIN]:
+            if current_user.role not in ['admin', ROLE_OPERATOR]:
                 if request.path.startswith('/api/'):
                     return jsonify({"error": "Admin role required"}), 403
                 flash('No tienes permiso para acceder a esta página.')
