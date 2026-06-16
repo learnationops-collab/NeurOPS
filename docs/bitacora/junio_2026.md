@@ -600,6 +600,9 @@
       - Se removió la dependencia e importación de `MazoCartas` y `LeadRoadmapModal`.
       - Se importó `LeadRoadmapDetail` para empotrarse directamente en la pantalla de forma estática en la columna central.
       - Se eliminaron el estado `isRoadmapOpen` y toda la navegación secuencial (botones Anterior / Siguiente, ficha por ficha).
-      - Se reestructuró el grid a 2 columnas principales: Leads sin asignar a la izquierda (`lg:col-span-1`) y el componente central `LeadRoadmapDetail` a la derecha (`lg:col-span-3`).
+      - Se añadió una función `handleSelectFilteredCard` para poder cambiar de lead al hacer clic sobre cualquier elemento de la cola de prospectos activos.
+      - Se reestructuró la columna izquierda en dos bloques independientes: **Mi Cola** (para listar todos los prospectos asignados al usuario y permitir su selección directa) y **Sin Asignar** (para los leads entrantes que necesitan asignarse).
+      - Se reestructuró el layout del grid general a 2 columnas principales: Controles de selección de leads a la izquierda (`lg:col-span-1`) y el visor principal de `LeadRoadmapDetail` a la derecha (`lg:col-span-3`).
       - Se quitó la columna derecha redundante (bitácora de eventos simplificada y gráfica circular de estados), ya que el roadmap integrado ya visualiza el historial de actividad detallado de forma nativa.
       - Se verificó la compilación del bundle de producción sin fallas.
+
