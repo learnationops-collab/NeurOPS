@@ -87,6 +87,32 @@ const formatDate = (dateStr) => {
     }
 };
 
+const formatToDatetimeLocal = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) {
+            const parsed = Date.parse(dateStr);
+            if (isNaN(parsed)) return '';
+            const dp = new Date(parsed);
+            const year = dp.getFullYear();
+            const month = String(dp.getMonth() + 1).padStart(2, '0');
+            const day = String(dp.getDate()).padStart(2, '0');
+            const hours = String(dp.getHours()).padStart(2, '0');
+            const minutes = String(dp.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch {
+        return '';
+    }
+};
+
 const FinancialAgendasPage = () => {
     const [agendas, setAgendas] = useState([]);
     const [selectedRoadmapLead, setSelectedRoadmapLead] = useState(null);
@@ -141,7 +167,11 @@ const FinancialAgendasPage = () => {
     const handleEditSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await api.put(`/public/financial-agendas/${editingAgenda.id}`, editForm);
+            const payload = {
+                ...editForm,
+                date: editForm.fecha_meet
+            };
+            const response = await api.put(`/public/financial-agendas/${editingAgenda.id}`, payload);
             const updated = response.data.agenda;
             setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
             setEditingAgenda(null);
@@ -722,9 +752,26 @@ const FinancialAgendasPage = () => {
                                             <td className="py-4 px-4">
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon size={14} className="text-primary/70" />
-                                                    <span className="text-sm font-bold text-slate-200">
-                                                        {formatDate(agenda.date || agenda.fecha_meet)}
-                                                    </span>
+                                                    <input 
+                                                        type="datetime-local" 
+                                                        value={formatToDatetimeLocal(agenda.date || agenda.fecha_meet)}
+                                                        onChange={async (e) => {
+                                                            const newVal = e.target.value;
+                                                            if (!newVal) return;
+                                                            try {
+                                                                const response = await api.put(`/public/financial-agendas/${agenda.id}`, {
+                                                                    date: newVal,
+                                                                    fecha_meet: newVal
+                                                                });
+                                                                const updated = response.data.agenda;
+                                                                setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
+                                                            } catch (err) {
+                                                                console.error("Error updating agenda date in-line:", err);
+                                                                alert("Error al actualizar la fecha de la agenda");
+                                                            }
+                                                        }}
+                                                        className="bg-transparent border-none text-xs font-bold text-slate-200 focus:outline-none focus:ring-0 cursor-pointer p-0 w-36 hover:text-primary transition-colors"
+                                                    />
                                                 </div>
                                             </td>
                                             <td className="py-4 px-4">
@@ -915,11 +962,11 @@ const FinancialAgendasPage = () => {
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Meet (Texto)</label>
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Meet</label>
                                         <input 
-                                            type="text"
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                            value={editForm.fecha_meet}
+                                            type="datetime-local"
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
+                                            value={formatToDatetimeLocal(editForm.fecha_meet)}
                                             onChange={e => setEditForm({...editForm, fecha_meet: e.target.value})}
                                             required
                                         />

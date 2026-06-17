@@ -5,6 +5,10 @@
     - Se agregaron los porcentajes correspondientes a todos los valores numéricos (estados, total y cierres) en las tablas de "Desglose por Closer" y "Desglose por Fuente".
     - Al pasar el puntero (hover) sobre cada número en el desglose, este cambia dinámicamente al porcentaje respectivo sobre el total de agendas.
     - Se implementó de forma robusta con el componente atómico `HoverPercentCell` previniendo divisiones por cero.
+  - **Edición Ágil de la Fecha de Reunión (Fecha Meet) (`FinancialAgendasPage.jsx`) [MODIFY]**:
+    - Se reemplazó el campo de texto plano de la fecha de reunión en la tabla por un selector interactivo nativo `datetime-local` para habilitar la edición en línea instantánea.
+    - Se actualizó el formulario del modal de edición de agenda para utilizar el selector `datetime-local` en lugar de una entrada de texto manual.
+    - Se diseñó el helper `formatToDatetimeLocal` para normalizar y formatear fechas ISO al formato requerido por los inputs de navegador de manera robusta.
 
 - **16 de Junio de 2026**:
   - **Implementación del Centro de Alertas (`alert.py`, `alert_service.py`, `alerts.py`, `__init__.py`, `sheets.py`, `App.jsx`, `useDockNavigation.js`, `AlertsHubPage.jsx`, `AlertsCenter.jsx`, `AlertRulesConfig.jsx`) [NEW / MODIFY]**:
