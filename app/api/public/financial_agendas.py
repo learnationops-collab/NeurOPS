@@ -583,6 +583,35 @@ def receive_financial_agendas_form():
     # 2. Intentar buscar por teléfono si no se encontró por instagram
     if not client and clean_phone and len(clean_phone) > 4:
         client = Client.query.filter(Client.phone.like(f"%{clean_phone}%")).first()
+
+    # 3. Buscar por nombre en FinancialAgenda (campo lead o nombre) → obtener el Client vinculado
+    if not client and nombre:
+        nombre_norm = nombre.strip().lower()
+        agenda_match = FinancialAgenda.query.filter(
+            or_(
+                func.lower(FinancialAgenda.lead).like(f"%{nombre_norm}%"),
+                func.lower(FinancialAgenda.nombre).like(f"%{nombre_norm}%")
+            )
+        ).order_by(FinancialAgenda.date.desc()).first()
+        if agenda_match:
+            # Buscar el Client asociado por instagram o mail de la agenda
+            ag_ig = agenda_match.instagram.strip().lstrip('@').lower() if agenda_match.instagram and agenda_match.instagram.lower() not in ('n/a', '') else None
+            ag_mail = agenda_match.mail.strip().lower() if agenda_match.mail and agenda_match.mail.lower() not in ('n/a', '') else None
+            ag_phone = agenda_match.whatsapp.strip() if agenda_match.whatsapp and agenda_match.whatsapp.lower() not in ('n/a', '') else None
+            if ag_ig:
+                client = Client.query.filter(func.lower(Client.instagram) == ag_ig).first()
+            if not client and ag_mail:
+                client = Client.query.filter(func.lower(Client.email) == ag_mail).first()
+            if not client and ag_phone:
+                client = Client.query.filter(Client.phone.like(f"%{ag_phone}%")).first()
+            # Si la agenda no tiene cliente vinculado, buscar por nombre directo
+            if not client:
+                client = Client.query.filter(func.lower(Client.full_name).like(f"%{nombre_norm}%")).first()
+
+    # 4. Último recurso: buscar por nombre exacto en Client
+    if not client and nombre:
+        client = Client.query.filter(func.lower(Client.full_name) == nombre.strip().lower()).first()
+
         
     # Construir el nuevo bloque de respuestas de calificación
     new_form_data = {
