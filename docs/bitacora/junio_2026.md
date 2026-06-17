@@ -9,6 +9,9 @@
     - Se reemplazó el campo de texto plano de la fecha de reunión en la tabla por un selector interactivo nativo `datetime-local` para habilitar la edición en línea instantánea.
     - Se actualizó el formulario del modal de edición de agenda para utilizar el selector `datetime-local` en lugar de una entrada de texto manual.
     - Se diseñó el helper `formatToDatetimeLocal` para normalizar y formatear fechas ISO al formato requerido por los inputs de navegador de manera robusta.
+  - **Simplificación de la Fecha de Creación (`FinancialAgendasPage.jsx`) [MODIFY]**:
+    - Se removió la hora y minutos de la visualización de la fecha de creación ("F. Creación") en el historial de agendas.
+    - Se creó el helper `formatDateOnly` para formatear de forma segura y consistente únicamente el día, mes y año en español (ej. "17 de jun. de 2026").
 
 - **16 de Junio de 2026**:
   - **Implementación del Centro de Alertas (`alert.py`, `alert_service.py`, `alerts.py`, `__init__.py`, `sheets.py`, `App.jsx`, `useDockNavigation.js`, `AlertsHubPage.jsx`, `AlertsCenter.jsx`, `AlertRulesConfig.jsx`) [NEW / MODIFY]**:

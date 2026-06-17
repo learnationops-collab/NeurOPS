@@ -87,6 +87,39 @@ const formatDate = (dateStr) => {
     }
 };
 
+const formatDateOnly = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) {
+            if (typeof dateStr === 'string') {
+                const parts = dateStr.split(/[ T]/);
+                if (parts[0] && parts[0].includes('-')) {
+                    const subparts = parts[0].split('-');
+                    if (subparts.length === 3 && subparts[0].length === 4) {
+                        const dateObj = new Date(subparts[0], subparts[1] - 1, subparts[2]);
+                        if (!isNaN(dateObj.getTime())) {
+                            return dateObj.toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                            });
+                        }
+                    }
+                }
+            }
+            return dateStr;
+        }
+        return d.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+    } catch {
+        return dateStr;
+    }
+};
+
 const formatToDatetimeLocal = (dateStr) => {
     if (!dateStr) return '';
     try {
@@ -745,7 +778,7 @@ const FinancialAgendasPage = () => {
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon size={14} className="text-muted" />
                                                     <span className="text-xs font-bold text-slate-400">
-                                                        {formatDate(agenda.registro)}
+                                                        {formatDateOnly(agenda.registro)}
                                                     </span>
                                                 </div>
                                             </td>
