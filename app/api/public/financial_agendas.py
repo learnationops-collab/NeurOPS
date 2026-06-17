@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from app.models import db, FinancialAgenda, User
+from app.models import db, FinancialAgenda, User, Client
 from datetime import datetime
 from . import bp
 from sqlalchemy import or_, func
@@ -541,3 +541,108 @@ def sync_all_financial_agendas():
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@bp.route('/public/financial-agendas-form', methods=['POST'])
+def receive_financial_agendas_form():
+    """Recibe datos del formulario de calificación de n8n y actualiza o crea el cliente correspondiente."""
+    data = request.get_json() or {}
+    
+    nombre = data.get('nombre')
+    telefono = data.get('telefono')
+    fuente_form = data.get('fuente_form', 'Setting Form')
+    instagram = data.get('instagram')
+    
+    # Datos de calificación
+    examen = data.get('examen')
+    profesion = data.get('profesion')
+    formacion = data.get('formacion')
+    empleo = data.get('empleo')
+    interes = data.get('interes')
+    puntaje = data.get('puntaje')
+    inversion = data.get('inversion')
+    apoyo = data.get('apoyo')
+    
+    # Validaciones iniciales
+    if not nombre and not instagram and not telefono:
+        return jsonify({"error": "Se requiere al menos un nombre, instagram o teléfono para procesar el lead"}), 400
+        
+    ig_norm = None
+    if instagram and isinstance(instagram, str) and instagram.lower() not in ('n/a', ''):
+        ig_norm = instagram.strip().lstrip('@').lower()
+        
+    clean_phone = None
+    if telefono and isinstance(telefono, str) and telefono.lower() not in ('n/a', ''):
+        clean_phone = telefono.strip()
+        
+    client = None
+    
+    # 1. Intentar buscar cliente por instagram normalizado
+    if ig_norm:
+        client = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
+        
+    # 2. Intentar buscar por teléfono si no se encontró por instagram
+    if not client and clean_phone and len(clean_phone) > 4:
+        client = Client.query.filter(Client.phone.like(f"%{clean_phone}%")).first()
+        
+    # Construir el nuevo bloque de respuestas de calificación
+    new_form_data = {
+        "nombre": nombre,
+        "telefono": telefono,
+        "fuente_form": fuente_form,
+        "instagram": instagram,
+        "examen": examen,
+        "profesion": profesion,
+        "formacion": formacion,
+        "empleo": empleo,
+        "interes": interes,
+        "puntaje": puntaje,
+        "inversion": inversion,
+        "apoyo": apoyo,
+        "submitted_at": datetime.utcnow().isoformat()
+    }
+    
+    try:
+        if client:
+            # Actualizar datos básicos si están vacíos o son genéricos
+            if nombre and (not client.full_name or client.full_name.lower() in ('desconocido', '', 'n/a')):
+                client.full_name = nombre
+            if clean_phone and (not client.phone or client.phone.lower() in ('sin telefono', 'sin teléfono', '', 'n/a')):
+                client.phone = clean_phone
+            if ig_norm and (not client.instagram or client.instagram.lower() in ('sin instagram', '', 'n/a')):
+                client.instagram = ig_norm
+            # Actualizar form_data de manera incremental
+            from sqlalchemy.orm.attributes import flag_modified
+            current_form_data = dict(client.form_data or {})
+            current_form_data.update(new_form_data)
+            client.form_data = current_form_data
+            flag_modified(client, 'form_data')
+            
+            message = "Cliente existente actualizado con las respuestas del formulario"
+        else:
+            # Crear un nuevo cliente
+            client = Client(
+                full_name=nombre or "Desconocido",
+                phone=clean_phone,
+                instagram=ig_norm,
+                form_data=new_form_data
+            )
+            db.session.add(client)
+            message = "Nuevo cliente creado con las respuestas del formulario"
+            
+        db.session.commit()
+        return jsonify({
+            "message": message,
+            "status": "success",
+            "client_id": client.id,
+            "client": {
+                "id": client.id,
+                "full_name": client.full_name,
+                "phone": client.phone,
+                "instagram": client.instagram,
+                "form_data": client.form_data
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error al procesar el formulario de calificación: {str(e)}"}), 500

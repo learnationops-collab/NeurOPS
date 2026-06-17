@@ -12,8 +12,8 @@ class Client(db.Model):
     objeciones = db.Column(db.Text, nullable=True) # Objeciones del prospecto
     observaciones = db.Column(db.Text, nullable=True) # Notas de triage / calificacion
     dolores = db.Column(db.Text, nullable=True) # Dolores del prospecto
+    form_data = db.Column(db.JSON, nullable=True) # Datos del formulario de calificacion externa
 
-    
     # Relationships
     enrollments = db.relationship('Enrollment', backref='client', lazy='dynamic', cascade="all, delete-orphan")
     appointments = db.relationship('Appointment', backref='client', lazy='dynamic', cascade="all, delete-orphan")

@@ -12,8 +12,25 @@
   - **Simplificación de la Fecha de Creación (`FinancialAgendasPage.jsx`) [MODIFY]**:
     - Se removió la hora y minutos de la visualización de la fecha de creación ("F. Creación") en el historial de agendas.
     - Se creó el helper `formatDateOnly` para formatear de forma segura y consistente únicamente el día, mes y año en español (ej. "17 de jun. de 2026").
+  - **Integración de Formulario de Calificación n8n en Lead Roadmap (`financial_agendas.py`, `lead_roadmap.py`, `client.py`, `LeadRoadmapDetail.jsx`) [NEW / MODIFY]**:
+    - **Base de Datos (SQLite/PostgreSQL)**:
+      - Se añadió la columna `form_data` (JSON, nullable) al modelo `Client` en `app/models/client.py`.
+      - Se ejecutaron las migraciones: `add_form_data_to_client` (`80c788051ebb`).
+    - **Backend (API)**:
+      - Se creó el endpoint público `POST /api/public/financial-agendas-form` en `app/api/public/financial_agendas.py`, accesible desde n8n en `https://work.thelearnation.com/api/public/financial-agendas-form`.
+      - Recibe: `nombre`, `telefono`, `fuente_form`, `instagram`, `examen`, `profesion`, `formacion`, `empleo`, `interes`, `puntaje`, `inversion`, `apoyo`.
+      - Detección de duplicados por Instagram normalizado o teléfono. Si el cliente existe, actualiza `form_data` incrementalmente con `flag_modified`. Si no existe, crea un nuevo `Client`.
+      - Se expone `form_data` en el retorno de `GET /api/public/lead-roadmap` y en `update_client_roadmap` de `app/api/public/lead_roadmap.py`.
+    - **Frontend (Interfaz)**:
+      - Se rediseñó la sección inferior de `LeadRoadmapDetail.jsx` a un **grid de 3 columnas simétricas**:
+        - Col 1: Tarjeta "Calificación Formulario (n8n)" con las respuestas del formulario (examen, profesión, formación, empleo, puntaje, inversión, interés, apoyo).
+        - Col 2: Panel "Calificación en Caliente" (dolores, observaciones, objeciones, Quick Save).
+        - Col 3: Membresías y Programas + Resumen de Venta + Notas Internas.
+      - La **Tabla de Detalle de Actividad** fue movida a fila inferior en ancho completo (`lg:col-span-3`).
+      - Se importó el ícono `ClipboardList` de `lucide-react`. Build de producción validado sin errores.
 
 - **16 de Junio de 2026**:
+
   - **Implementación del Centro de Alertas (`alert.py`, `alert_service.py`, `alerts.py`, `__init__.py`, `sheets.py`, `App.jsx`, `useDockNavigation.js`, `AlertsHubPage.jsx`, `AlertsCenter.jsx`, `AlertRulesConfig.jsx`) [NEW / MODIFY]**:
     - **Backend (API, Modelos y Servicios)**:
       - Creación del archivo de modelos `app/models/alert.py` con las tablas `alert_rules` y `alerts` para almacenar las condiciones configuradas y el historial de incidencias gatilladas.

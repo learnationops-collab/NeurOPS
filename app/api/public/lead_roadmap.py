@@ -141,7 +141,8 @@ def get_lead_roadmap():
         "created_at": created_at_val,
         "objeciones": client.objeciones if client else "",
         "observaciones": client.observaciones if client else "",
-        "dolores": client.dolores if client else ""
+        "dolores": client.dolores if client else "",
+        "form_data": client.form_data if client else None
     }
 
     # Resolver el estado del lead
@@ -653,7 +654,8 @@ def update_client_roadmap():
                 "instagram": client.instagram,
                 "objeciones": client.objeciones or "",
                 "observaciones": client.observaciones or "",
-                "dolores": client.dolores or ""
+                "dolores": client.dolores or "",
+                "form_data": client.form_data
             }
         }), 200
     except Exception as e:

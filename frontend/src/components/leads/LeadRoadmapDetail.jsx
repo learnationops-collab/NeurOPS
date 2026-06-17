@@ -3,7 +3,7 @@ import api from '../../services/api';
 import { 
     User, Mail, Phone, Instagram, DollarSign, Calendar, 
     ChevronDown, ChevronUp, Edit, Clock, 
-    Sparkles, Loader2, MessageCircle, AlertCircle, Trash2, Save, Award
+    Sparkles, Loader2, MessageCircle, AlertCircle, Trash2, Save, Award, ClipboardList
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EditLeadModal } from './LeadRoadmapModals';
@@ -475,246 +475,271 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                 </div>
             </div>
 
-            {/* SECCIÓN INFERIOR: HISTORIAL, DETALLE DE VENTA, DOLORES Y COMENTARIOS */}
+            {/* SECCIÓN INFERIOR: CALIFICACIÓN, VENTAS, COMENTARIOS E HISTORIAL */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* DETALLE DE ACTIVIDAD (COLUMNA 1 y 2 - ANCHA) */}
-                <div className="lg:col-span-2 bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-6 flex flex-col">
+                
+                {/* COLUMNA 1: CALIFICACIÓN FORMULARIO (n8n) */}
+                <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4 flex flex-col shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-blue-500 to-violet-500" />
                     <div className="flex justify-between items-center">
-                        <div className="space-y-0.5">
-                            <h4 className="text-base font-black text-white uppercase tracking-tight">Detalle de Actividad</h4>
-                            <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Historial completo del prospecto</p>
+                        <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                            <ClipboardList size={14} className="text-blue-400" />
+                            Calificación Formulario (n8n)
+                        </h4>
+                        {lead.form_data?.fuente_form && (
+                            <span className="text-[9px] font-bold text-slate-400 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-md">
+                                {lead.form_data.fuente_form}
+                            </span>
+                        )}
+                    </div>
+
+                    {lead.form_data ? (
+                        <div className="space-y-4 overflow-y-auto max-h-[500px] pr-1 custom-scrollbar text-xs">
+                            {lead.form_data.examen && (
+                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Examen objetivo</span>
+                                    <span className="font-black text-white italic">{lead.form_data.examen}</span>
+                                </div>
+                            )}
+                            {lead.form_data.profesion && (
+                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Profesión</span>
+                                    <span className="font-bold text-slate-200">{lead.form_data.profesion}</span>
+                                </div>
+                            )}
+                            {lead.form_data.formacion && (
+                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Formación / Estado</span>
+                                    <span className="text-slate-350 font-medium">{lead.form_data.formacion}</span>
+                                </div>
+                            )}
+                            {lead.form_data.empleo && (
+                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Situación Laboral</span>
+                                    <span className="text-slate-350">{lead.form_data.empleo}</span>
+                                </div>
+                            )}
+                            {lead.form_data.puntaje && (
+                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Puntaje a subir</span>
+                                    <span className="text-amber-400 font-black">{lead.form_data.puntaje}</span>
+                                </div>
+                            )}
+                            {lead.form_data.inversion && (
+                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Capacidad de Inversión</span>
+                                    <span className="text-rose-400 font-bold">{lead.form_data.inversion}</span>
+                                </div>
+                            )}
+                            {lead.form_data.interes && (
+                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Interés Principal</span>
+                                    <p className="text-slate-300 font-medium italic">"{lead.form_data.interes}"</p>
+                                </div>
+                            )}
+                            {lead.form_data.apoyo && (
+                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Apoyo adicional</span>
+                                    <p className="text-slate-300 font-medium">"{lead.form_data.apoyo}"</p>
+                                </div>
+                            )}
+                            {lead.form_data.submitted_at && (
+                                <div className="text-[9px] text-slate-600 text-right font-bold uppercase mt-2">
+                                    Recibido: {new Date(lead.form_data.submitted_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                            )}
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
-                            {activity.length} Eventos
+                    ) : (
+                        <div className="text-center py-12 px-4 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl bg-slate-950/20 my-auto">
+                            Sin respuestas de formulario n8n (Lead no completó el formulario)
+                        </div>
+                    )}
+                </div>
+
+                {/* COLUMNA 2: CALIFICACIÓN EN CALIENTE (MANUAL) */}
+                <div className="bg-slate-900/40 p-6 rounded-3xl border border-violet-950/40 space-y-4 shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-violet-500 to-amber-500" />
+                    <div className="flex justify-between items-center">
+                        <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                            <Sparkles size={14} className="text-violet-400" />
+                            Calificación en Caliente
+                        </h4>
+                        <span className="text-[9px] font-bold text-slate-400 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-md">
+                            Quick Save
                         </span>
                     </div>
 
-                    <div className="overflow-x-auto flex-1 max-h-[500px] custom-scrollbar">
-                        <table className="w-full text-left text-xs border-collapse">
-                            <thead>
-                                <tr className="border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                    <th className="py-3 px-2">Fecha</th>
-                                    <th className="py-3 px-2">Evento</th>
-                                    <th className="py-3 px-2">Detalle</th>
-                                    <th className="py-3 px-2 text-right">Origen</th>
-                                    <th className="py-3 px-2 text-center w-12">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-850/50">
-                                {activity.map((act, i) => (
-                                    <tr key={i} className="hover:bg-slate-900/30 transition-all">
-                                        <td className="py-3 px-2 text-slate-500 font-bold whitespace-nowrap">{formatTime(act.date, act.event_type)}</td>
-                                        <td className="py-3 px-2 font-black text-white italic">{act.event}</td>
-                                        <td className="py-3 px-2 text-slate-350">{act.detail}</td>
-                                        <td className="py-3 px-2 text-right font-medium text-slate-400">{act.origin}</td>
-                                        <td className="py-3 px-2 text-center">
-                                            {act.event_type && act.id && (
-                                                <button
-                                                    onClick={() => handleDeleteActivity(act.event_type, act.id)}
-                                                    className="p-1.5 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
-                                                    title={`Eliminar ${act.event_type === 'agenda' ? 'agenda' : 'venta'}`}
-                                                >
-                                                    <Trash2 size={13} />
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dolores del Prospecto</label>
+                        
+                        <div className="flex flex-wrap gap-1 mb-1.5">
+                            {dolores.split(',').map(d => d.trim()).filter(Boolean).map((tag, idx) => (
+                                <span
+                                    key={idx}
+                                    className="text-[9px] font-bold bg-violet-650/20 text-violet-300 border border-violet-500/30 px-2 py-1 rounded-md flex items-center gap-1"
+                                >
+                                    {tag}
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleDolorTag(tag)}
+                                        className="text-violet-400 hover:text-rose-450 transition-colors ml-0.5 font-black text-xs"
+                                    >
+                                        ×
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-1 mb-2">
+                            <input
+                                type="text"
+                                placeholder="Agregar dolor manualmente..."
+                                value={newDolorInput}
+                                onChange={(e) => setNewDolorInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        addManualDolor();
+                                    }
+                                }}
+                                className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-violet-500 font-bold"
+                            />
+                            <button
+                                type="button"
+                                onClick={addManualDolor}
+                                className="px-3 bg-slate-950 hover:bg-slate-900 border border-slate-850 text-white rounded-xl text-xs font-black"
+                            >
+                                +
+                            </button>
+                        </div>
+
+                        {frequentDolores.length > 0 && (
+                            <div className="space-y-1 mb-2">
+                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Frecuentes:</span>
+                                <div className="flex flex-wrap gap-1">
+                                    {frequentDolores
+                                        .filter(tag => !dolores.split(',').map(d => d.trim().toLowerCase()).includes(tag.toLowerCase()))
+                                        .map((tag) => (
+                                            <button
+                                                key={tag}
+                                                type="button"
+                                                onClick={() => toggleDolorTag(tag)}
+                                                className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 transition-all"
+                                            >
+                                                {tag}
+                                            </button>
+                                        ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <textarea
+                            className="w-full h-16 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
+                            placeholder="Notas de dolor del lead (separadas por comas)..."
+                            value={dolores}
+                            onChange={(e) => setDolores(e.target.value)}
+                        />
                     </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Call Confirmer</label>
+                        <textarea
+                            className="w-full h-20 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
+                            placeholder="Notas de call confirmer, facturación, socio, etc..."
+                            value={observaciones}
+                            onChange={(e) => setObservaciones(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objeciones</label>
+                        
+                        <div className="flex flex-wrap gap-1 mb-1.5">
+                            {objeciones.split(',').map(o => o.trim()).filter(Boolean).map((tag, idx) => (
+                                <span
+                                    key={idx}
+                                    className="text-[9px] font-bold bg-violet-655/20 text-violet-300 border border-violet-500/30 px-2 py-1 rounded-md flex items-center gap-1"
+                                >
+                                    {tag}
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleObjectionTag(tag)}
+                                        className="text-violet-400 hover:text-rose-450 transition-colors ml-0.5 font-black text-xs"
+                                    >
+                                        ×
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-1 mb-2">
+                            <input
+                                type="text"
+                                placeholder="Agregar objeción manualmente..."
+                                value={newObjectionInput}
+                                onChange={(e) => setNewObjectionInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        addManualObjection();
+                                    }
+                                }}
+                                className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white placeholder-slate-660 focus:outline-none focus:border-violet-500 font-bold"
+                            />
+                            <button
+                                type="button"
+                                onClick={addManualObjection}
+                                className="px-3 bg-slate-950 hover:bg-slate-900 border border-slate-850 text-white rounded-xl text-xs font-black"
+                            >
+                                +
+                            </button>
+                        </div>
+
+                        {frequentObjections.length > 0 && (
+                            <div className="space-y-1 mb-2">
+                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Frecuentes:</span>
+                                <div className="flex flex-wrap gap-1">
+                                    {frequentObjections
+                                        .filter(tag => !objeciones.split(',').map(o => o.trim().toLowerCase()).includes(tag.toLowerCase()))
+                                        .map((tag) => (
+                                            <button
+                                                key={tag}
+                                                type="button"
+                                                onClick={() => toggleObjectionTag(tag)}
+                                                className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 transition-all"
+                                            >
+                                                {tag}
+                                            </button>
+                                        ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <textarea
+                            className="w-full h-16 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
+                            placeholder="Notas de objeción (separadas por comas)..."
+                            value={objeciones}
+                            onChange={(e) => setObjeciones(e.target.value)}
+                        />
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleSaveCalificacion}
+                        disabled={savingCalificacion}
+                        className="w-full py-3 bg-violet-600 hover:bg-violet-750 text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition-all shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        {savingCalificacion ? (
+                            <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                            <Save size={12} />
+                        )}
+                        Guardar Calificación
+                    </button>
                 </div>
 
-                {/* COLUMNA LATERAL (CALIFICACIÓN Y MEMBRESÍAS) */}
+                {/* COLUMNA 3: PROGRAMAS, VENTAS Y COMENTARIOS */}
                 <div className="space-y-6">
-                    {/* CALIFICACIÓN EN CALIENTE */}
-                    <div className="bg-slate-900/40 p-6 rounded-3xl border border-violet-950/40 space-y-4 shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-violet-500 to-amber-500" />
-                        <div className="flex justify-between items-center">
-                            <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
-                                <Sparkles size={14} className="text-violet-400" />
-                                Calificación en Caliente
-                            </h4>
-                            <span className="text-[9px] font-bold text-slate-400 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-md">
-                                Quick Save
-                            </span>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dolores del Prospecto</label>
-                            
-                            {/* Tags de dolor activos */}
-                            <div className="flex flex-wrap gap-1 mb-1.5">
-                                {dolores.split(',').map(d => d.trim()).filter(Boolean).map((tag, idx) => (
-                                    <span
-                                        key={idx}
-                                        className="text-[9px] font-bold bg-violet-650/20 text-violet-300 border border-violet-500/30 px-2 py-1 rounded-md flex items-center gap-1"
-                                    >
-                                        {tag}
-                                        <button
-                                            type="button"
-                                            onClick={() => toggleDolorTag(tag)}
-                                            className="text-violet-400 hover:text-rose-450 transition-colors ml-0.5 font-black text-xs"
-                                        >
-                                            ×
-                                        </button>
-                                    </span>
-                                ))}
-                            </div>
-
-                            {/* Input para agregar dolor manual */}
-                            <div className="flex gap-1 mb-2">
-                                <input
-                                    type="text"
-                                    placeholder="Agregar dolor manualmente..."
-                                    value={newDolorInput}
-                                    onChange={(e) => setNewDolorInput(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            addManualDolor();
-                                        }
-                                    }}
-                                    className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-violet-500 font-bold"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={addManualDolor}
-                                    className="px-3 bg-slate-950 hover:bg-slate-900 border border-slate-850 text-white rounded-xl text-xs font-black"
-                                >
-                                    +
-                                </button>
-                            </div>
-
-                            {/* Dolores frecuentes */}
-                            {frequentDolores.length > 0 && (
-                                <div className="space-y-1 mb-2">
-                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Frecuentes:</span>
-                                    <div className="flex flex-wrap gap-1">
-                                        {frequentDolores
-                                            .filter(tag => !dolores.split(',').map(d => d.trim().toLowerCase()).includes(tag.toLowerCase()))
-                                            .map((tag) => (
-                                                <button
-                                                    key={tag}
-                                                    type="button"
-                                                    onClick={() => toggleDolorTag(tag)}
-                                                    className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 transition-all"
-                                                >
-                                                    {tag}
-                                                </button>
-                                            ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <textarea
-                                className="w-full h-16 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
-                                placeholder="Notas de dolor del lead (separadas por comas)..."
-                                value={dolores}
-                                onChange={(e) => setDolores(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Call Confirmer</label>
-                            <textarea
-                                className="w-full h-20 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
-                                placeholder="Notas de call confirmer, facturación, socio, etc..."
-                                value={observaciones}
-                                onChange={(e) => setObservaciones(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objeciones</label>
-                            
-                            {/* Tags de objeción activos */}
-                            <div className="flex flex-wrap gap-1 mb-1.5">
-                                {objeciones.split(',').map(o => o.trim()).filter(Boolean).map((tag, idx) => (
-                                    <span
-                                        key={idx}
-                                        className="text-[9px] font-bold bg-violet-655/20 text-violet-300 border border-violet-500/30 px-2 py-1 rounded-md flex items-center gap-1"
-                                    >
-                                        {tag}
-                                        <button
-                                            type="button"
-                                            onClick={() => toggleObjectionTag(tag)}
-                                            className="text-violet-400 hover:text-rose-450 transition-colors ml-0.5 font-black text-xs"
-                                        >
-                                            ×
-                                        </button>
-                                    </span>
-                                ))}
-                            </div>
-
-                            {/* Input para agregar objeción manual */}
-                            <div className="flex gap-1 mb-2">
-                                <input
-                                    type="text"
-                                    placeholder="Agregar objeción manualmente..."
-                                    value={newObjectionInput}
-                                    onChange={(e) => setNewObjectionInput(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            addManualObjection();
-                                        }
-                                    }}
-                                    className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white placeholder-slate-660 focus:outline-none focus:border-violet-500 font-bold"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={addManualObjection}
-                                    className="px-3 bg-slate-950 hover:bg-slate-900 border border-slate-850 text-white rounded-xl text-xs font-black"
-                                >
-                                    +
-                                </button>
-                            </div>
-
-                            {/* Objeciones frecuentes */}
-                            {frequentObjections.length > 0 && (
-                                <div className="space-y-1 mb-2">
-                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Frecuentes:</span>
-                                    <div className="flex flex-wrap gap-1">
-                                        {frequentObjections
-                                            .filter(tag => !objeciones.split(',').map(o => o.trim().toLowerCase()).includes(tag.toLowerCase()))
-                                            .map((tag) => (
-                                                <button
-                                                    key={tag}
-                                                    type="button"
-                                                    onClick={() => toggleObjectionTag(tag)}
-                                                    className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 transition-all"
-                                                >
-                                                    {tag}
-                                                </button>
-                                            ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <textarea
-                                className="w-full h-16 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
-                                placeholder="Notas de objeción (separadas por comas)..."
-                                value={objeciones}
-                                onChange={(e) => setObjeciones(e.target.value)}
-                            />
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={handleSaveCalificacion}
-                            disabled={savingCalificacion}
-                            className="w-full py-3 bg-violet-600 hover:bg-violet-750 text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition-all shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                            {savingCalificacion ? (
-                                <Loader2 size={12} className="animate-spin" />
-                            ) : (
-                                <Save size={12} />
-                            )}
-                            Guardar Calificación
-                        </button>
-                    </div>
-
                     {/* PERMANENCIA EN PROGRAMAS */}
                     <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4">
                         <div className="flex justify-between items-center">
@@ -780,8 +805,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         )}
                     </div>
 
-
-
                     {/* NOTAS INTERNAS / CHAT COMENTARIOS */}
                     <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4 flex flex-col max-h-[350px]">
                         <h4 className="text-sm font-black text-white uppercase tracking-wider">Notas Internas</h4>
@@ -816,12 +839,60 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                 <button 
                                     type="submit"
                                     disabled={submittingComment || !newComment.trim()}
-                                    className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-black uppercase text-[10px] tracking-wider rounded-xl disabled:opacity-30 transition-colors"
+                                    className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white font-black uppercase text-[10px] tracking-wider rounded-xl disabled:opacity-30 transition-colors"
                                 >
                                     Enviar
                                 </button>
                             </form>
                         )}
+                    </div>
+                </div>
+
+                {/* FILA INFERIOR: DETALLE DE ACTIVIDAD (ANCHO COMPLETO - lg:col-span-3) */}
+                <div className="lg:col-span-3 bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-6 flex flex-col">
+                    <div className="flex justify-between items-center">
+                        <div className="space-y-0.5">
+                            <h4 className="text-base font-black text-white uppercase tracking-tight">Detalle de Actividad</h4>
+                            <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Historial completo del prospecto</p>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+                            {activity.length} Eventos
+                        </span>
+                    </div>
+
+                    <div className="overflow-x-auto flex-1 max-h-[500px] custom-scrollbar">
+                        <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                    <th className="py-3 px-2">Fecha</th>
+                                    <th className="py-3 px-2">Evento</th>
+                                    <th className="py-3 px-2">Detalle</th>
+                                    <th className="py-3 px-2 text-right">Origen</th>
+                                    <th className="py-3 px-2 text-center w-12">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-850/50">
+                                {activity.map((act, i) => (
+                                    <tr key={i} className="hover:bg-slate-900/30 transition-all">
+                                        <td className="py-3 px-2 text-slate-500 font-bold whitespace-nowrap">{formatTime(act.date, act.event_type)}</td>
+                                        <td className="py-3 px-2 font-black text-white italic">{act.event}</td>
+                                        <td className="py-3 px-2 text-slate-350">{act.detail}</td>
+                                        <td className="py-3 px-2 text-right font-medium text-slate-400">{act.origin}</td>
+                                        <td className="py-3 px-2 text-center">
+                                            {act.event_type && act.id && (
+                                                <button
+                                                    onClick={() => handleDeleteActivity(act.event_type, act.id)}
+                                                    className="p-1.5 text-rose-500 hover:text-rose-450 hover:bg-rose-500/10 rounded-lg transition-all"
+                                                    title={`Eliminar ${act.event_type === 'agenda' ? 'agenda' : 'venta'}`}
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
