@@ -351,3 +351,25 @@ from . import lead_roadmap
 from . import finance
 
 
+@bp.route('/public/clients/search', methods=['GET'])
+def search_clients_public():
+    """Busca clientes por nombre (usado en buscador del mazo para leads sin agenda)."""
+    from sqlalchemy import func
+    q = request.args.get('q', '').strip()
+    if len(q) < 2:
+        return jsonify([]), 200
+
+    term = f"%{q.lower()}%"
+    # Busca solo clientes que tienen form_data (vinieron de formulario n8n) o coinciden por nombre
+    clients = Client.query.filter(
+        func.lower(Client.full_name).like(term)
+    ).order_by(Client.created_at.desc()).limit(20).all()
+
+    return jsonify([{
+        "client_id": c.id,
+        "full_name": c.full_name,
+        "fuente": (c.form_data or {}).get('fuente_form', 'Formulario'),
+        "created_at": c.created_at.isoformat() if c.created_at else None,
+        "has_form_data": bool(c.form_data)
+    } for c in clients]), 200
+

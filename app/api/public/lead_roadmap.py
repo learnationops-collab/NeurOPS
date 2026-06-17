@@ -40,6 +40,7 @@ def get_lead_roadmap():
     instagram = request.args.get('instagram', type=str)
     email = request.args.get('email', type=str)
     phone = request.args.get('phone', type=str)
+    name = request.args.get('name', type=str)
 
     client = None
     manychat_lead = None
@@ -59,6 +60,7 @@ def get_lead_roadmap():
     
     clean_email = email.strip().lower() if email and not is_generic_val(email) else None
     clean_phone = phone.strip() if phone and not is_generic_val(phone) else None
+    clean_name = name.strip() if name and name.strip() else None
     
     if not client:
         if ig_norm:
@@ -67,6 +69,11 @@ def get_lead_roadmap():
             client = Client.query.filter(func.lower(Client.email) == clean_email).first()
         if not client and clean_phone:
             client = Client.query.filter(Client.phone.like(f"%{clean_phone}%")).first()
+        # Búsqueda por nombre (parcial, case-insensitive) como último recurso
+        if not client and clean_name:
+            client = Client.query.filter(
+                func.lower(Client.full_name).like(f"%{clean_name.lower()}%")
+            ).first()
 
     # Si se encontró un Client, normalizamos sus búsquedas para jalar todo lo relacionado
     resolved_ig = normalize_ig(client.instagram) if client else ig_norm

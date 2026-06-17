@@ -79,6 +79,9 @@ const LeadsManagementPage = () => {
     const [allEvents, setAllEvents] = useState([]);
     const [loadingEvents, setLoadingEvents] = useState(false);
 
+    // Cliente seleccionado directamente (sin agenda, solo form_data)
+    const [selectedClientRoadmap, setSelectedClientRoadmap] = useState(null);
+
     // Cargar cola de cartas filtrada
     const fetchQueue = async () => {
         setLoading(true);
@@ -251,6 +254,12 @@ const LeadsManagementPage = () => {
         }
     };
 
+    // Seleccionar cliente directo desde búsqueda (formulario n8n)
+    const handleSelectClient = (client) => {
+        setSelectedClientRoadmap(client);
+        setIsSearchedCard(true);
+    };
+
 
     // Guardar cambios en la carta (Setter o Closer)
     const handleSubmit = async (e) => {
@@ -393,11 +402,15 @@ const LeadsManagementPage = () => {
                                 <option value="Cancelada">Cancelada</option>
                             </select>
 
-                            <BuscadorGlobalDeck onSelectLead={handleSelectLead} role={user?.role} />
+                            <BuscadorGlobalDeck
+                                onSelectLead={handleSelectLead}
+                                onSelectClient={handleSelectClient}
+                                role={user?.role}
+                            />
 
-                            {isSearchedCard && (
+                            {(isSearchedCard) && (
                                 <Button
-                                    onClick={fetchQueue}
+                                    onClick={() => { fetchQueue(); setSelectedClientRoadmap(null); }}
                                     variant="outline"
                                     className="h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2 shrink-0"
                                     icon={ArrowLeft}
@@ -554,7 +567,12 @@ const LeadsManagementPage = () => {
 
                         {/* Columna 2: Ficha del Lead (Lead Roadmap Detalle) */}
                         <div className="lg:col-span-3 space-y-6">
-                            {activeFilteredCard ? (
+                            {selectedClientRoadmap ? (
+                                <LeadRoadmapDetail
+                                    clientId={selectedClientRoadmap.client_id}
+                                    onUpdate={() => {}}
+                                />
+                            ) : activeFilteredCard ? (
                                 <LeadRoadmapDetail 
                                     instagram={instagram || activeFilteredCard.instagram}
                                     email={activeFilteredCard.email}
