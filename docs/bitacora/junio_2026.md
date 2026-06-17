@@ -1,5 +1,11 @@
 # Bitácora - Junio 2026
 
+- **17 de Junio de 2026**:
+  - **Mejora en Desgloses del Tablero de Agendas (`FinancialAgendasPage.jsx`) [MODIFY]**:
+    - Se agregaron los porcentajes correspondientes a todos los valores numéricos (estados, total y cierres) en las tablas de "Desglose por Closer" y "Desglose por Fuente".
+    - Al pasar el puntero (hover) sobre cada número en el desglose, este cambia dinámicamente al porcentaje respectivo sobre el total de agendas.
+    - Se implementó de forma robusta con el componente atómico `HoverPercentCell` previniendo divisiones por cero.
+
 - **16 de Junio de 2026**:
   - **Implementación del Centro de Alertas (`alert.py`, `alert_service.py`, `alerts.py`, `__init__.py`, `sheets.py`, `App.jsx`, `useDockNavigation.js`, `AlertsHubPage.jsx`, `AlertsCenter.jsx`, `AlertRulesConfig.jsx`) [NEW / MODIFY]**:
     - **Backend (API, Modelos y Servicios)**:

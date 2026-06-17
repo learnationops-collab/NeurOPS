@@ -20,6 +20,25 @@ import usePersistentFilters from '../../../hooks/usePersistentFilters';
 import LeadRoadmapModal from '../../../components/modals/LeadRoadmapModal';
 
 
+// Celda interactiva que muestra el porcentaje en hover
+const HoverPercentCell = ({ value, total, className = "" }) => {
+    const [hovered, setHovered] = useState(false);
+    const numericValue = Number(value) || 0;
+    const numericTotal = Number(total) || 0;
+    const percentage = numericTotal > 0 ? ((numericValue / numericTotal) * 100).toFixed(0) : '0';
+    
+    return (
+        <td
+            className={`${className} cursor-pointer select-none transition-all duration-150`}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
+            {hovered ? `${percentage}%` : value}
+        </td>
+    );
+};
+
+
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -567,15 +586,15 @@ const FinancialAgendasPage = () => {
                                         return (
                                             <tr key={closerName} className="hover:bg-white/5 transition-colors">
                                                 <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{closerName}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-slate-400">{stats["Pendiente"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-indigo-400">{stats["Contactado"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-emerald-400">{stats["Confirmado"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-bold text-primary">{stats["Show Up"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-rose-400">{noShow}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-amber-400">{stats["Reagendada"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-slate-500">{stats["Cancelada"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-black text-white italic">{stats["total"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-black text-emerald-400 italic">{stats["cierres"] || 0}</td>
+                                                <HoverPercentCell value={stats["Pendiente"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-400" />
+                                                <HoverPercentCell value={stats["Contactado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-indigo-400" />
+                                                <HoverPercentCell value={stats["Confirmado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-emerald-400" />
+                                                <HoverPercentCell value={stats["Show Up"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-bold text-primary" />
+                                                <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
+                                                <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
+                                                <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
+                                                <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
+                                                <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
                                                 <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
                                                     {showRate}%
                                                 </td>
@@ -631,15 +650,15 @@ const FinancialAgendasPage = () => {
                                         return (
                                             <tr key={sourceName} className="hover:bg-white/5 transition-colors">
                                                 <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{sourceName}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-slate-400">{stats["Pendiente"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-indigo-400">{stats["Contactado"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-emerald-400">{stats["Confirmado"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-bold text-primary">{stats["Show Up"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-rose-400">{noShow}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-amber-400">{stats["Reagendada"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-semibold text-slate-500">{stats["Cancelada"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-black text-white italic">{stats["total"] || 0}</td>
-                                                <td className="py-3 px-2 text-center font-black text-emerald-400 italic">{stats["cierres"] || 0}</td>
+                                                <HoverPercentCell value={stats["Pendiente"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-400" />
+                                                <HoverPercentCell value={stats["Contactado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-indigo-400" />
+                                                <HoverPercentCell value={stats["Confirmado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-emerald-400" />
+                                                <HoverPercentCell value={stats["Show Up"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-bold text-primary" />
+                                                <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
+                                                <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
+                                                <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
+                                                <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
+                                                <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
                                                 <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
                                                     {showRate}%
                                                 </td>
