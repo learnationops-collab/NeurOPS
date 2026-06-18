@@ -323,7 +323,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
             </div>
 
             {/* CABECERA PRINCIPAL DEL LEAD */}
-            <div className="flex flex-col lg:flex-row justify-between gap-6 bg-slate-900/30 p-6 rounded-3xl border border-slate-800">
+            <div className="flex flex-col lg:flex-row justify-between gap-6 p-2 mb-4">
                 <div className="flex items-center gap-6">
                     <div className="w-16 h-16 bg-gradient-to-br from-violet-600/30 to-amber-600/10 rounded-2xl flex items-center justify-center text-violet-400 font-black text-2xl border border-violet-500/20 shadow-xl">
                         {lead.full_name ? lead.full_name.substring(0, 2).toUpperCase() : 'LD'}
@@ -356,39 +356,33 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                 </div>
 
                 {/* METADATOS DE ADQUISICIÓN */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 bg-slate-900/60 p-5 rounded-2xl border border-slate-850 self-center w-full lg:w-auto">
-                    <div className="space-y-1">
-                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Canal de Adquisición</div>
+                <div className="flex flex-wrap gap-8 items-center self-center w-full lg:w-auto mt-4 lg:mt-0">
+                    <div className="space-y-1" title="Canal de Adquisición">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Origen</div>
                         <div className="text-xs font-black text-violet-400 flex items-center gap-1.5">
                             {channel}
                         </div>
                     </div>
-                    <div className="space-y-1">
-                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Setter / Closer</div>
+                    <div className="space-y-1" title="Setter asignado y Closer responsable">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Asignación</div>
                         <div className="text-xs font-black text-white">
                             <span className="text-amber-500">{setter}</span>
                             <span className="mx-1 text-slate-600">/</span>
                             <span className="text-emerald-450">{closer}</span>
                         </div>
                     </div>
-                    <div className="space-y-1">
-                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Retención en Ecosistema</div>
+                    <div className="space-y-1" title="Tiempo de retención desde la creación del lead">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Edad</div>
                         <div className="text-xs font-black text-white flex items-center gap-1">
                             <Clock size={12} className="text-slate-550" />
                             {lead.created_at ? getDaysSinceCreated(lead.created_at) : 'N/A'}
-                        </div>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="text-[9px] font-bold text-slate-550 uppercase tracking-wider">Total Facturado</div>
-                        <div className="text-xs font-black text-emerald-400">
-                            ${sales_summary ? sales_summary.monto : '0.00'}
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* SECCIÓN LEAD ROADMAP (EMBUDO HORIZONTAL) */}
-            <div className="bg-slate-900/40 p-8 rounded-3xl border border-slate-800 space-y-6">
+            <div className="space-y-6 mb-8">
                 <div className="space-y-1">
                     <h3 className="text-lg font-black text-white tracking-tight uppercase">Lead Roadmap</h3>
                     <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Paso a paso del recorrido del lead en el embudo</p>
@@ -424,7 +418,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                         )}
                                     </div>
 
-                                    <div className="w-full bg-slate-950/45 p-3.5 rounded-xl border border-slate-900/60 text-left text-[10px] space-y-1 font-bold">
+                                    <div className="w-full text-left text-[10px] space-y-1 font-bold mt-2">
                                         {idx === 0 && (
                                             <>
                                                 <div className="text-slate-550">Origen: <span className="text-slate-350">{stage.details?.origen || 'Instagram'}</span></div>
@@ -475,8 +469,8 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                 </div>
             </div>
 
-            {/* SECCIÓN INFERIOR: CALIFICACIÓN, VENTAS, COMENTARIOS E HISTORIAL */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* SECCIÓN INFERIOR: CALIFICACIÓN Y FORMULARIO */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 
                 {/* COLUMNA 1: CALIFICACIÓN FORMULARIO (n8n) */}
                 <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4 flex flex-col shadow-xl relative overflow-hidden">
@@ -494,51 +488,51 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                     </div>
 
                     {lead.form_data ? (
-                        <div className="space-y-4 overflow-y-auto max-h-[500px] pr-1 custom-scrollbar text-xs">
+                        <div className="space-y-3 overflow-y-auto max-h-[500px] pr-1 custom-scrollbar text-xs">
                             {lead.form_data.examen && (
-                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                <div className="space-y-0.5">
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Examen objetivo</span>
                                     <span className="font-black text-white italic">{lead.form_data.examen}</span>
                                 </div>
                             )}
                             {lead.form_data.profesion && (
-                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                <div className="space-y-0.5">
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Profesión</span>
                                     <span className="font-bold text-slate-200">{lead.form_data.profesion}</span>
                                 </div>
                             )}
                             {lead.form_data.formacion && (
-                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                <div className="space-y-0.5">
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Formación / Estado</span>
                                     <span className="text-slate-350 font-medium">{lead.form_data.formacion}</span>
                                 </div>
                             )}
                             {lead.form_data.empleo && (
-                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                <div className="space-y-0.5">
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Situación Laboral</span>
                                     <span className="text-slate-350">{lead.form_data.empleo}</span>
                                 </div>
                             )}
                             {lead.form_data.puntaje && (
-                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                <div className="space-y-0.5">
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Puntaje a subir</span>
                                     <span className="text-amber-400 font-black">{lead.form_data.puntaje}</span>
                                 </div>
                             )}
                             {lead.form_data.inversion && (
-                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                <div className="space-y-0.5">
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Capacidad de Inversión</span>
                                     <span className="text-rose-400 font-bold">{lead.form_data.inversion}</span>
                                 </div>
                             )}
                             {lead.form_data.interes && (
-                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                <div className="space-y-0.5">
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Interés Principal</span>
                                     <p className="text-slate-300 font-medium italic">"{lead.form_data.interes}"</p>
                                 </div>
                             )}
                             {lead.form_data.apoyo && (
-                                <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-900 space-y-1">
+                                <div className="space-y-0.5">
                                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Apoyo adicional</span>
                                     <p className="text-slate-300 font-medium">"{lead.form_data.apoyo}"</p>
                                 </div>
@@ -602,12 +596,12 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                         addManualDolor();
                                     }
                                 }}
-                                className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-violet-500 font-bold"
+                                className="flex-1 px-3 py-1.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold"
                             />
                             <button
                                 type="button"
                                 onClick={addManualDolor}
-                                className="px-3 bg-slate-950 hover:bg-slate-900 border border-slate-850 text-white rounded-xl text-xs font-black"
+                                className="px-3 bg-slate-950/80 hover:bg-slate-900 border border-transparent text-white rounded-xl text-xs font-black transition-colors"
                             >
                                 +
                             </button>
@@ -624,7 +618,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                                 key={tag}
                                                 type="button"
                                                 onClick={() => toggleDolorTag(tag)}
-                                                className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 transition-all"
+                                                className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-slate-900/50 hover:bg-slate-800 text-slate-400 border border-transparent hover:text-white transition-all"
                                             >
                                                 {tag}
                                             </button>
@@ -634,7 +628,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         )}
 
                         <textarea
-                            className="w-full h-16 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
+                            className="w-full h-16 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
                             placeholder="Notas de dolor del lead (separadas por comas)..."
                             value={dolores}
                             onChange={(e) => setDolores(e.target.value)}
@@ -644,7 +638,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Call Confirmer</label>
                         <textarea
-                            className="w-full h-20 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
+                            className="w-full h-20 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
                             placeholder="Notas de call confirmer, facturación, socio, etc..."
                             value={observaciones}
                             onChange={(e) => setObservaciones(e.target.value)}
@@ -684,12 +678,12 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                         addManualObjection();
                                     }
                                 }}
-                                className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-850 rounded-xl text-xs text-white placeholder-slate-660 focus:outline-none focus:border-violet-500 font-bold"
+                                className="flex-1 px-3 py-1.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold"
                             />
                             <button
                                 type="button"
                                 onClick={addManualObjection}
-                                className="px-3 bg-slate-950 hover:bg-slate-900 border border-slate-850 text-white rounded-xl text-xs font-black"
+                                className="px-3 bg-slate-950/80 hover:bg-slate-900 border border-transparent text-white rounded-xl text-xs font-black transition-colors"
                             >
                                 +
                             </button>
@@ -706,7 +700,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                                 key={tag}
                                                 type="button"
                                                 onClick={() => toggleObjectionTag(tag)}
-                                                className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md border bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 transition-all"
+                                                className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-slate-900/50 hover:bg-slate-800 text-slate-400 border border-transparent hover:text-white transition-all"
                                             >
                                                 {tag}
                                             </button>
@@ -716,7 +710,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         )}
 
                         <textarea
-                            className="w-full h-16 px-3.5 py-2.5 bg-slate-950 border border-slate-855 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold resize-none custom-scrollbar"
+                            className="w-full h-16 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
                             placeholder="Notas de objeción (separadas por comas)..."
                             value={objeciones}
                             onChange={(e) => setObjeciones(e.target.value)}
@@ -737,130 +731,122 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         Guardar Calificación
                     </button>
                 </div>
+            </div>
 
-                {/* COLUMNA 3: PROGRAMAS, VENTAS Y COMENTARIOS */}
-                <div className="space-y-6">
-                    {/* PERMANENCIA EN PROGRAMAS */}
-                    <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h4 className="text-sm font-black text-white uppercase tracking-wider">Membresías y Programas</h4>
-                            <span className="text-[9px] font-black uppercase bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full">
-                                Retención
-                            </span>
-                        </div>
-                        {programs && programs.length > 0 ? (
-                            <div className="space-y-3">
-                                {programs.map((prog, i) => (
-                                    <div key={i} className="bg-slate-950/60 p-4 rounded-2xl border border-slate-900 space-y-2 relative overflow-hidden group hover:border-slate-800 transition-colors">
-                                        <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/5 blur-2xl rounded-full" />
-                                        <div className="flex justify-between items-start">
-                                            <div className="space-y-0.5">
-                                                <span className="text-xs font-black text-white italic uppercase tracking-wide flex items-center gap-1.5">
-                                                    <Award size={14} className="text-amber-500" />
-                                                    {prog.program_name}
-                                                </span>
-                                                <span className="text-[9px] text-slate-500 block font-bold">
-                                                    Inscrito: {prog.enrollment_date ? new Date(prog.enrollment_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'} {prog.source && <span className="text-[8px] text-slate-600 ml-1">({prog.source})</span>}
-                                                </span>
-                                            </div>
-                                            <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                                                ${prog.total_paid || '0.00'} USD
+            {/* SECCIÓN INFERIOR: MEMBRESÍAS, VENTAS Y NOTAS INTERNAS */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                
+                {/* COLUMNA 1: PROGRAMAS */}
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center px-1">
+                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Membresías</h4>
+                    </div>
+                    {programs && programs.length > 0 ? (
+                        <div className="space-y-3">
+                            {programs.map((prog, i) => (
+                                <div key={i} className="bg-slate-900/30 px-4 py-3 rounded-2xl space-y-2 relative overflow-hidden group">
+                                    <div className="flex justify-between items-start">
+                                        <div className="space-y-0.5">
+                                            <span className="text-xs font-black text-white italic uppercase tracking-wide flex items-center gap-1.5">
+                                                <Award size={14} className="text-amber-500" />
+                                                {prog.program_name}
+                                            </span>
+                                            <span className="text-[9px] text-slate-500 block font-bold" title={prog.source ? `Fuente: ${prog.source}` : ''}>
+                                                Inscrito: {prog.enrollment_date ? new Date(prog.enrollment_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2 pt-1 border-t border-slate-900/50">
-                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Permanencia:</span>
-                                            <span className="text-[10px] font-black text-violet-400 bg-violet-500/10 px-2.5 py-1 rounded-full border border-violet-500/20">
-                                                {prog.permanence || '0 días'}
-                                            </span>
-                                        </div>
+                                        <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                                            ${prog.total_paid || '0.00'}
+                                        </span>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-6 px-4 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl bg-slate-950/20">
-                                Sin programas activos (Fase de Prospección)
-                            </div>
-                        )}
-                    </div>
-
-                    {/* RESUMEN DE LA VENTA */}
-                    <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4">
-                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Resumen de Venta Global</h4>
-                        {sales_summary ? (
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-baseline">
-                                    <span className="text-2xl font-black text-emerald-400">${sales_summary.monto} USD</span>
-                                    <span className="text-[10px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">{sales_summary.estado}</span>
-                                </div>
-                                <div className="space-y-1.5 text-xs font-bold text-slate-300">
-                                    <div className="flex justify-between"><span className="text-slate-500">Producto</span> <span>{sales_summary.producto}</span></div>
-                                    <div className="flex justify-between"><span className="text-slate-500">Método de pago</span> <span>{sales_summary.metodo_pago}</span></div>
-                                    <div className="flex justify-between"><span className="text-slate-500">Próximo pago</span> <span className="text-amber-500">{sales_summary.proximo_pago}</span></div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="text-center py-6 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl">
-                                Sin registros de ventas asociadas
-                            </div>
-                        )}
-                    </div>
-
-                    {/* NOTAS INTERNAS / CHAT COMENTARIOS */}
-                    <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4 flex flex-col max-h-[350px]">
-                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Notas Internas</h4>
-                        
-                        <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
-                            {notesList.map((n) => (
-                                <div key={n.id} className="bg-slate-950/60 p-3 rounded-xl border border-slate-900 space-y-1">
-                                    <div className="flex justify-between text-[8px] text-slate-500 font-bold uppercase tracking-wider">
-                                        <span>{n.author}</span>
-                                        <span>{formatTime(n.created_at)}</span>
-                                    </div>
-                                    <p className="text-xs text-slate-300 font-medium">{n.text}</p>
                                 </div>
                             ))}
-                            {notesList.length === 0 && (
-                                <div className="text-center py-6 text-slate-550 text-xs font-bold italic">
-                                    Sin comentarios registrados
-                                </div>
-                            )}
                         </div>
-
-                        {lead.id && (
-                            <form onSubmit={handleAddComment} className="flex gap-2 pt-2 border-t border-slate-800">
-                                <input 
-                                    type="text"
-                                    placeholder="Añadir nota interna..."
-                                    className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-550 focus:outline-none focus:border-violet-500 font-bold"
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    disabled={submittingComment}
-                                />
-                                <button 
-                                    type="submit"
-                                    disabled={submittingComment || !newComment.trim()}
-                                    className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white font-black uppercase text-[10px] tracking-wider rounded-xl disabled:opacity-30 transition-colors"
-                                >
-                                    Enviar
-                                </button>
-                            </form>
-                        )}
-                    </div>
+                    ) : (
+                        <div className="text-center py-6 px-4 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl bg-slate-950/20">
+                            Sin programas
+                        </div>
+                    )}
                 </div>
 
-                {/* FILA INFERIOR: DETALLE DE ACTIVIDAD (ANCHO COMPLETO - lg:col-span-3) */}
-                <div className="lg:col-span-3 bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-6 flex flex-col">
-                    <div className="flex justify-between items-center">
-                        <div className="space-y-0.5">
-                            <h4 className="text-base font-black text-white uppercase tracking-tight">Detalle de Actividad</h4>
-                            <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Historial completo del prospecto</p>
+                {/* COLUMNA 2: RESUMEN DE VENTAS */}
+                <div className="space-y-4">
+                    <h4 className="text-sm font-black text-white uppercase tracking-wider px-1">Ventas Totales</h4>
+                    {sales_summary ? (
+                        <div className="bg-slate-900/30 p-5 rounded-2xl space-y-4">
+                            <div className="flex justify-between items-baseline">
+                                <span className="text-2xl font-black text-emerald-400">${sales_summary.monto}</span>
+                                <span className="text-[10px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">{sales_summary.estado}</span>
+                            </div>
+                            <div className="space-y-1.5 text-xs font-bold text-slate-300">
+                                <div className="flex justify-between"><span className="text-slate-500">Producto</span> <span>{sales_summary.producto}</span></div>
+                                <div className="flex justify-between"><span className="text-slate-500">Método</span> <span>{sales_summary.metodo_pago}</span></div>
+                                <div className="flex justify-between"><span className="text-slate-500">Próximo</span> <span className="text-amber-500">{sales_summary.proximo_pago}</span></div>
+                            </div>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
-                            {activity.length} Eventos
-                        </span>
+                    ) : (
+                        <div className="text-center py-6 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl">
+                            Sin ventas
+                        </div>
+                    )}
+                </div>
+
+                {/* COLUMNA 3: NOTAS INTERNAS */}
+                <div className="space-y-4 flex flex-col max-h-[350px]">
+                    <h4 className="text-sm font-black text-white uppercase tracking-wider px-1">Notas Internas</h4>
+                    
+                    <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+                        {notesList.map((n) => (
+                            <div key={n.id} className="bg-slate-900/30 p-3 rounded-xl space-y-1">
+                                <div className="flex justify-between text-[8px] text-slate-500 font-bold uppercase tracking-wider">
+                                    <span>{n.author}</span>
+                                    <span>{formatTime(n.created_at)}</span>
+                                </div>
+                                <p className="text-xs text-slate-300 font-medium">{n.text}</p>
+                            </div>
+                        ))}
+                        {notesList.length === 0 && (
+                            <div className="text-center py-6 text-slate-550 text-xs font-bold italic">
+                                Sin comentarios
+                            </div>
+                        )}
                     </div>
 
-                    <div className="overflow-x-auto flex-1 max-h-[500px] custom-scrollbar">
+                    {lead.id && (
+                        <form onSubmit={handleAddComment} className="flex gap-2 pt-2 border-t border-slate-800">
+                            <input 
+                                type="text"
+                                placeholder="Añadir nota interna..."
+                                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-550 focus:outline-none focus:border-violet-500 font-bold"
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                disabled={submittingComment}
+                            />
+                            <button 
+                                type="submit"
+                                disabled={submittingComment || !newComment.trim()}
+                                className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white font-black uppercase text-[10px] tracking-wider rounded-xl disabled:opacity-30 transition-colors"
+                            >
+                                Enviar
+                            </button>
+                        </form>
+                    )}
+                </div>
+            </div>
+
+            {/* FILA INFERIOR: DETALLE DE ACTIVIDAD (ANCHO COMPLETO - lg:col-span-3) */}
+            <div className="lg:col-span-3 bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-6 flex flex-col">
+                <div className="flex justify-between items-center">
+                    <div className="space-y-0.5">
+                        <h4 className="text-base font-black text-white uppercase tracking-tight">Detalle de Actividad</h4>
+                        <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Historial completo del prospecto</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+                        {activity.length} Eventos
+                    </span>
+                </div>
+
+                <div className="overflow-x-auto flex-1 max-h-[500px] custom-scrollbar">
                         <table className="w-full text-left text-xs border-collapse">
                             <thead>
                                 <tr className="border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
@@ -895,7 +881,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         </table>
                     </div>
                 </div>
-            </div>
 
             {/* MODAL DE EDICIÓN DE DATOS DEL CLIENTE */}
             <EditLeadModal 
