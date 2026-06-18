@@ -546,7 +546,7 @@ const PublicSetterStatsPage = () => {
                             <>
                                 {/* GRID PRINCIPAL */}
                                 <div className="space-y-6">
-                                    <LeadUnifiedKPI stats={stats} />
+                                    <LeadUnifiedKPI stats={stats} compareActive={compare} comparisonStats={stats.comparison} />
                                     {/* 1. TOP ROW: 4 TARJETAS DE IMPACTO Y RENDIMIENTO OPERACIONAL DEL SETTER */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
                                         

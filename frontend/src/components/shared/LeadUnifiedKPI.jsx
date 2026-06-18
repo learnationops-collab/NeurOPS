@@ -11,11 +11,38 @@ import StatTooltip from './StatTooltip';
  * LeadUnifiedKPI - Un componente premium para visualizar el embudo inicial de leads.
  * Fusiona Entrantes, Tasa de Respuesta y Cualificación en una sola pieza de diseño.
  */
-const LeadUnifiedKPI = ({ stats }) => {
+const LeadUnifiedKPI = ({ stats, compareActive, comparisonStats }) => {
     if (!stats) return null;
 
     const { totals, percentages } = stats;
     
+    // Auxiliar para mostrar el cambio entre periodos
+    const renderComparison = (current, previous, isPercentage = false, justifyClass = "justify-start") => {
+        if (!compareActive || !comparisonStats) return null;
+        const curVal = Number(current || 0);
+        const prevVal = Number(previous || 0);
+
+        if (prevVal === 0) {
+            return (
+                <div className={`flex items-center gap-1 mt-0.5 text-[9px] font-black uppercase text-slate-500 ${justifyClass}`}>
+                    <span>Ant: {prevVal}{isPercentage ? '%' : ''}</span>
+                    {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
+                </div>
+            );
+        }
+
+        const diff = ((curVal - prevVal) / prevVal) * 100;
+        const sign = diff > 0 ? '+' : '';
+        const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
+
+        return (
+            <div className={`flex items-center gap-1 mt-0.5 text-[9px] font-black uppercase text-slate-500 ${justifyClass}`}>
+                <span>Ant: {prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 })}{isPercentage ? '%' : ''}</span>
+                <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
+            </div>
+        );
+    };
+
     // Cálculos y extracción de datos
     const entrantes = totals.entrantes || 0;
     const sinRespuesta = totals.no_response || 0;
@@ -88,6 +115,7 @@ const LeadUnifiedKPI = ({ stats }) => {
                         <div className="pb-2">
                             <p className="text-sm font-black text-pink-500 uppercase italic leading-none">Entrantes</p>
                             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Total Periodo</p>
+                            {renderComparison(entrantes, comparisonStats?.totals?.entrantes, false, "justify-start")}
                         </div>
                     </div>
                 </div>
@@ -119,6 +147,7 @@ const LeadUnifiedKPI = ({ stats }) => {
                                 </StatTooltip>
                             </p>
                             <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Tasa Respuesta</p>
+                            {renderComparison(respondidosPct, comparisonStats?.percentages?.rates?.opening_response, true, "justify-start")}
                         </div>
                         <div className="flex flex-col justify-center space-y-3 px-2">
                             <div className="flex justify-between items-center">
@@ -126,30 +155,36 @@ const LeadUnifiedKPI = ({ stats }) => {
                                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                                     <span className="text-xs font-black text-slate-400 uppercase">Respondidos</span>
                                 </div>
-                                <span className="text-sm font-black text-white italic">
-                                    <StatTooltip 
-                                        label="Leads Respondidos" 
-                                        value={respondidos} 
-                                        calculation="Total de leads que contestaron. Fórmula: Entrantes - Sin Respuesta"
-                                    >
-                                        {respondidos}
-                                    </StatTooltip>
-                                </span>
+                                <div className="text-right">
+                                    <span className="text-sm font-black text-white italic block">
+                                        <StatTooltip 
+                                            label="Leads Respondidos" 
+                                            value={respondidos} 
+                                            calculation="Total de leads que contestaron. Fórmula: Entrantes - Sin Respuesta"
+                                        >
+                                            {respondidos}
+                                        </StatTooltip>
+                                    </span>
+                                    {renderComparison(respondidos, (comparisonStats?.totals?.entrantes || 0) - (comparisonStats?.totals?.no_response || 0), false, "justify-end")}
+                                </div>
                             </div>
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
                                     <span className="text-xs font-black text-slate-500 uppercase">Sin Respuesta</span>
                                 </div>
-                                <span className="text-sm font-black text-slate-400 italic">
-                                    <StatTooltip 
-                                        label="Leads Sin Respuesta" 
-                                        value={sinRespuesta} 
-                                        calculation="Total de leads que ingresaron pero no contestaron a las interacciones iniciales."
-                                    >
-                                        {sinRespuesta}
-                                    </StatTooltip>
-                                </span>
+                                <div className="text-right">
+                                    <span className="text-sm font-black text-slate-400 italic block">
+                                        <StatTooltip 
+                                            label="Leads Sin Respuesta" 
+                                            value={sinRespuesta} 
+                                            calculation="Total de leads que ingresaron pero no contestaron a las interacciones iniciales."
+                                        >
+                                            {sinRespuesta}
+                                        </StatTooltip>
+                                    </span>
+                                    {renderComparison(sinRespuesta, comparisonStats?.totals?.no_response, false, "justify-end")}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -215,7 +250,8 @@ const LeadUnifiedKPI = ({ stats }) => {
                                         {cualificados}
                                     </StatTooltip>
                                 </span>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leads</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Leads</span>
+                                {renderComparison(cualificados, comparisonStats?.totals?.leads, false, "justify-center mt-1")}
                             </div>
                         </div>
 
@@ -231,6 +267,7 @@ const LeadUnifiedKPI = ({ stats }) => {
                                     </StatTooltip>
                                 </p>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">% / Entrantes</p>
+                                {renderComparison(cualificadosSobreEntrantes, comparisonStats?.percentages?.rates?.opening_rate, true, "justify-start")}
                                 <div className="w-full h-1 bg-slate-800 mt-2 rounded-full">
                                     <div className="h-full bg-emerald-500/40 rounded-full" style={{ width: `${cualificadosSobreEntrantes}%` }} />
                                 </div>
@@ -246,6 +283,14 @@ const LeadUnifiedKPI = ({ stats }) => {
                                     </StatTooltip>
                                 </p>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">% / Respuesta</p>
+                                {renderComparison(
+                                    cualificadosSobreRespondidos,
+                                    (comparisonStats?.totals?.entrantes - comparisonStats?.totals?.no_response) > 0 
+                                        ? Number(((comparisonStats?.totals?.leads / (comparisonStats?.totals?.entrantes - comparisonStats?.totals?.no_response)) * 100).toFixed(1))
+                                        : 0,
+                                    true,
+                                    "justify-start"
+                                )}
                                 <div className="w-full h-1 bg-slate-800 mt-2 rounded-full">
                                     <div className="h-full bg-indigo-500/40 rounded-full" style={{ width: `${cualificadosSobreRespondidos}%` }} />
                                 </div>
@@ -261,6 +306,7 @@ const LeadUnifiedKPI = ({ stats }) => {
                                     </StatTooltip>
                                 </p>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">No Cualificados</p>
+                                {renderComparison(noCualificados, comparisonStats?.totals?.not_lead, false, "justify-start")}
                             </div>
                             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2 flex items-center justify-center">
                                 <TrendingUp className="text-emerald-500 mr-2" size={12} />

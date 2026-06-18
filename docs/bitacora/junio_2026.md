@@ -723,3 +723,5 @@
 - Se eliminó por completo la funcionalidad de Cartera de Clientes. Se quitaron los imports, pestañas y rutas correspondientes de useDockNavigation.js, PublicCloserStatsPage.jsx y App.jsx.
 
 - Se corrigió la comparación de datos en el Dashboard de Setters (MessageTable.jsx) para que los mensajes nuevos o sin registros del periodo anterior se comparen con valores en 0 en lugar de no mostrar datos.
+
+- Se implementó la visualización de la comparación de periodos anteriores en todas las métricas del componente LeadUnifiedKPI.jsx (Leads entrantes, tasa de respuesta, cualificación, no cualificados, respondidos y sin respuesta).
