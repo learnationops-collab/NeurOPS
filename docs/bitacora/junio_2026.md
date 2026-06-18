@@ -704,3 +704,8 @@
 - Se implementó la lógica real de archivado en la base de datos ('status' = 'archived') para Campañas y Conjuntos de anuncios, reemplazando el guardado local.
 - Se agregó el botón para mostrar/ocultar y archivar conjuntos de anuncios en 'AdManagementPage' y 'AdDashboardTab'.
 
+- Se integró la librería 'papaparse' en el frontend para el manejo de archivos CSV.
+- Se creó el componente 'ImportSpendModal' que permite subir el reporte de anuncios desde Meta Ads.
+- Se implementó un algoritmo de auto-mapeo que vincula los nombres de los conjuntos de anuncios del CSV con los del sistema NeurOPS.
+- Se agregó el botón 'Cargar Inversión' en la pestaña 'PeriodSpendTab' para auto-rellenar los importes gastados, optimizando la carga diaria de inversión publicitaria.
+

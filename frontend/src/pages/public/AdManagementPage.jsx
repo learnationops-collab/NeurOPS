@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import WebhookMonitorTab from './WebhookMonitorTab';
 import AdDashboardTab from './AdDashboardTab';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
+import ImportSpendModal from '../../components/modals/ImportSpendModal';
+import { UploadCloud } from 'lucide-react';
 
 // ==========================================
 // Componentes Auxiliares
@@ -453,6 +455,7 @@ const AdsTab = ({ campaigns, ads, onRefresh, loading }) => {
 const PeriodSpendTab = ({ campaigns }) => {
     const [selectedStartDate, setSelectedStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedEndDate, setSelectedEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     
     // States for inputs
     const [campValues, setCampValues] = useState({}); 
@@ -603,6 +606,55 @@ const PeriodSpendTab = ({ campaigns }) => {
         }
     };
 
+    const handleImportConfirm = (importedData) => {
+        const spendByCamp = {}; 
+        const spendBySet = {}; 
+
+        importedData.forEach(({ setId, spend }) => {
+            let parentCampId = null;
+            campaigns.forEach(c => {
+                if (c.ad_sets?.find(s => s.id === setId)) {
+                    parentCampId = c.id;
+                }
+            });
+
+            if (parentCampId) {
+                spendBySet[setId] = { spend: spend.toString(), percent: '' };
+                spendByCamp[parentCampId] = (spendByCamp[parentCampId] || 0) + spend;
+            }
+        });
+
+        const newCampValues = { ...campValues };
+        Object.entries(spendByCamp).forEach(([campId, totalSpend]) => {
+            newCampValues[campId] = totalSpend.toString();
+        });
+        setCampValues(newCampValues);
+
+        const newSetValues = { ...setValues, ...spendBySet };
+        
+        Object.keys(spendBySet).forEach(setIdStr => {
+            const setId = parseInt(setIdStr);
+            let parentCampId = null;
+            campaigns.forEach(c => {
+                if (c.ad_sets?.find(s => s.id === setId)) parentCampId = c.id;
+            });
+            if (parentCampId) {
+                const cTotal = parseFloat(newCampValues[parentCampId]);
+                const sTotal = parseFloat(spendBySet[setIdStr].spend);
+                if (cTotal > 0) {
+                    newSetValues[setIdStr].percent = ((sTotal / cTotal) * 100).toFixed(1);
+                }
+            }
+        });
+
+        setSetValues(newSetValues);
+        
+        const campsToExpand = {};
+        Object.keys(spendByCamp).forEach(campId => {
+            campsToExpand[campId] = true;
+        });
+        setExpandedCamps(prev => ({ ...prev, ...campsToExpand }));
+    };
 
     const periodTotal = useMemo(() => {
         let sum = 0;
@@ -685,6 +737,12 @@ const PeriodSpendTab = ({ campaigns }) => {
                                 <p className="text-3xl font-black text-amber-400">${periodTotal.toFixed(2)}</p>
                             </div>
                             <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => setIsImportModalOpen(true)} 
+                                    className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 transition-colors flex items-center gap-1 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.1)]"
+                                >
+                                    <UploadCloud size={12} /> Cargar Inversión
+                                </button>
                                 {archivedCampsCount > 0 && (
                                     <button 
                                         onClick={() => setShowHidden(!showHidden)} 
@@ -918,6 +976,13 @@ const PeriodSpendTab = ({ campaigns }) => {
                     </div>
                 )}
             </div>
+            
+            <ImportSpendModal 
+                isOpen={isImportModalOpen} 
+                onClose={() => setIsImportModalOpen(false)} 
+                onConfirm={handleImportConfirm} 
+                campaigns={campaigns} 
+            />
         </div>
     );
 };
