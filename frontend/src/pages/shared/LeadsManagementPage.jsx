@@ -31,8 +31,7 @@ import {
     ChevronRight,
     ChevronDown,
     ChevronUp,
-    PanelLeftClose,
-    PanelLeftOpen
+    ChevronLeft
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import api from '../../services/api';
@@ -615,7 +614,7 @@ const LeadsManagementPage = () => {
                                 className="absolute -top-12 -left-2 p-2 bg-[#1a1c23]/80 hover:bg-white/10 backdrop-blur-md border border-slate-800 rounded-xl text-slate-400 hover:text-white shadow-xl transition-all z-10 hidden lg:flex items-center gap-2 group"
                                 title={isSidebarOpen ? "Ocultar panel izquierdo" : "Mostrar panel izquierdo"}
                             >
-                                {isSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+                                {isSidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
                                 {!isSidebarOpen && <span className="text-[10px] font-black uppercase tracking-widest px-1">Mostrar Cola</span>}
                             </button>
 
