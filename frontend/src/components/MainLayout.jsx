@@ -73,7 +73,7 @@ const MainLayout = ({ children }) => {
             }
         }
         
-        if (noti.associated_id) {
+        if (noti.associated_id && noti.associated_type === 'appointment') {
             navigate(`/${rolePath}/deck?appt_id=${noti.associated_id}`);
         }
         
