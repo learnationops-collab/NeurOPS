@@ -118,6 +118,19 @@ const MessageRow = ({ row, index, totalSends, compareActive, prevRow }) => {
   const responseRate = row.response_rate;
   const barColor = responseRate >= 50 ? 'bg-primary' : responseRate >= 25 ? 'bg-amber-400' : 'bg-rose-400';
 
+  const effectivePrevRow = prevRow || {
+    total_sends: 0,
+    pct_of_total_sends: 0,
+    total_responses: 0,
+    response_rate: 0,
+    leads_generated: 0,
+    qualification_rate: 0,
+    agendas: 0,
+    agenda_rate: 0,
+    ventas: 0,
+    venta_rate: 0
+  };
+
   return (
     <tr className="hover:bg-primary/5 transition-all group">
       {/* # */}
@@ -161,24 +174,24 @@ const MessageRow = ({ row, index, totalSends, compareActive, prevRow }) => {
       {/* Enviados */}
       <td className="px-5 py-4 text-xs font-black font-mono text-base">
         <div>{fmt(row.total_sends)}</div>
-        {compareActive && prevRow && (
-          <div className="text-[9px] text-muted/60 font-mono mt-0.5">Ant: {fmt(prevRow.total_sends)}</div>
+        {compareActive && (
+          <div className="text-[9px] text-muted/60 font-mono mt-0.5">Ant: {fmt(effectivePrevRow.total_sends)}</div>
         )}
       </td>
 
       {/* % del total */}
       <td className="px-5 py-4">
         <Badge variant="primary" className="text-[9px] px-2 py-0.5 font-mono">{row.pct_of_total_sends}%</Badge>
-        {compareActive && prevRow && (
-          <div className="text-[9px] text-muted/60 font-mono mt-0.5">Ant: {prevRow.pct_of_total_sends}%</div>
+        {compareActive && (
+          <div className="text-[9px] text-muted/60 font-mono mt-0.5">Ant: {effectivePrevRow.pct_of_total_sends}%</div>
         )}
       </td>
 
       {/* Respuestas */}
       <td className="px-5 py-4 text-xs font-black font-mono text-base">
         <div>{fmt(row.total_responses)}</div>
-        {compareActive && prevRow && (
-          <div className="text-[9px] text-muted/60 font-mono mt-0.5">Ant: {fmt(prevRow.total_responses)}</div>
+        {compareActive && (
+          <div className="text-[9px] text-muted/60 font-mono mt-0.5">Ant: {fmt(effectivePrevRow.total_responses)}</div>
         )}
       </td>
 
@@ -187,8 +200,8 @@ const MessageRow = ({ row, index, totalSends, compareActive, prevRow }) => {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-black text-base">{responseRate}%</span>
-            {compareActive && prevRow && (
-              <span className="text-[9px] text-muted/60 font-mono">Ant: {prevRow.response_rate}%</span>
+            {compareActive && (
+              <span className="text-[9px] text-muted/60 font-mono">Ant: {effectivePrevRow.response_rate}%</span>
             )}
           </div>
           <div className="h-1.5 bg-surface-hover/50 rounded-full overflow-hidden">
@@ -207,9 +220,9 @@ const MessageRow = ({ row, index, totalSends, compareActive, prevRow }) => {
         <div>
           <p className="text-xs font-black font-mono text-base">{fmt(row.leads_generated)}</p>
           <p className="text-[8px] text-muted">{row.qualification_rate}% cual.</p>
-          {compareActive && prevRow && (
+          {compareActive && (
             <div className="text-[9px] text-muted/60 font-mono mt-0.5">
-              Ant: {fmt(prevRow.leads_generated)} ({prevRow.qualification_rate}% cual.)
+              Ant: {fmt(effectivePrevRow.leads_generated)} ({effectivePrevRow.qualification_rate}% cual.)
             </div>
           )}
         </div>
@@ -220,9 +233,9 @@ const MessageRow = ({ row, index, totalSends, compareActive, prevRow }) => {
         <div>
           <p className="text-xs font-black font-mono text-base">{fmt(row.agendas)}</p>
           <p className="text-[8px] text-muted">{row.agenda_rate}% agenda</p>
-          {compareActive && prevRow && (
+          {compareActive && (
             <div className="text-[9px] text-muted/60 font-mono mt-0.5">
-              Ant: {fmt(prevRow.agendas)} ({prevRow.agenda_rate}% agenda)
+              Ant: {fmt(effectivePrevRow.agendas)} ({effectivePrevRow.agenda_rate}% agenda)
             </div>
           )}
         </div>
@@ -233,9 +246,9 @@ const MessageRow = ({ row, index, totalSends, compareActive, prevRow }) => {
         <div>
           <p className="text-xs font-black font-mono text-base">{fmt(row.ventas)}</p>
           <p className="text-[8px] text-muted">{row.venta_rate}% cierre</p>
-          {compareActive && prevRow && (
+          {compareActive && (
             <div className="text-[9px] text-muted/60 font-mono mt-0.5">
-              Ant: {fmt(prevRow.ventas)} ({prevRow.venta_rate}% cierre)
+              Ant: {fmt(effectivePrevRow.ventas)} ({effectivePrevRow.venta_rate}% cierre)
             </div>
           )}
         </div>

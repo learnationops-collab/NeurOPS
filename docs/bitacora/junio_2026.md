@@ -721,3 +721,5 @@
 - Se añadió funcionalidad para colapsar/minimizar las tablas de desglose por closer y por fuente con botones de chevron.
 
 - Se eliminó por completo la funcionalidad de Cartera de Clientes. Se quitaron los imports, pestañas y rutas correspondientes de useDockNavigation.js, PublicCloserStatsPage.jsx y App.jsx.
+
+- Se corrigió la comparación de datos en el Dashboard de Setters (MessageTable.jsx) para que los mensajes nuevos o sin registros del periodo anterior se comparen con valores en 0 en lugar de no mostrar datos.
