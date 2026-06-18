@@ -471,8 +471,11 @@ const PeriodSpendTab = ({ campaigns }) => {
     // Estados para la edicion en el historial
     const [editingSpendId, setEditingSpendId] = useState(null);
     const [editingSpendValue, setEditingSpendValue] = useState('');
-    const [editingSpendDate, setEditingSpendDate] = useState('');
     const [updatingSpendId, setUpdatingSpendId] = useState(null);
+
+    const [editingGroupKey, setEditingGroupKey] = useState(null);
+    const [editingGroupDate, setEditingGroupDate] = useState('');
+    const [updatingGroupKey, setUpdatingGroupKey] = useState(null);
 
 
     const { filters: hiddenFilters, updateFilter: setHiddenFilters } = usePersistentFilters('hidden_camps_v1', { hidden: [] });
@@ -588,27 +591,43 @@ const PeriodSpendTab = ({ campaigns }) => {
         try { await api.delete(`/public/ads/period-spend/${id}`); loadHistory(); loadPeriodData(); } catch (err) {}
     };
 
-    const handleUpdateSpend = async (id, newSpend, newDate) => {
+    const handleUpdateSpend = async (id, newSpend) => {
         const val = parseFloat(newSpend);
         if (isNaN(val) || val < 0) {
             alert('Por favor ingrese un monto válido.');
             return;
         }
-        if (!newDate) {
-            alert('Por favor seleccione una fecha válida.');
-            return;
-        }
         setUpdatingSpendId(id);
         try {
-            await api.put(`/public/ads/period-spend/${id}`, { spend: val, date: newDate });
+            await api.put(`/public/ads/period-spend/${id}`, { spend: val });
             setEditingSpendId(null);
             setEditingSpendValue('');
-            setEditingSpendDate('');
             await Promise.all([loadHistory(), loadPeriodData()]);
         } catch (err) {
             alert('Error al actualizar: ' + (err.response?.data?.error || err.message));
         } finally {
             setUpdatingSpendId(null);
+        }
+    };
+
+    const handleUpdateGroupDate = async (key, entries, newDate) => {
+        if (!newDate) {
+            alert('Por favor seleccione una fecha válida.');
+            return;
+        }
+        setUpdatingGroupKey(key);
+        try {
+            const promises = entries.map(entry => 
+                api.put(`/public/ads/period-spend/${entry.id}`, { date: newDate })
+            );
+            await Promise.all(promises);
+            setEditingGroupKey(null);
+            setEditingGroupDate('');
+            await Promise.all([loadHistory(), loadPeriodData()]);
+        } catch (err) {
+            alert('Error al actualizar fecha del grupo: ' + (err.response?.data?.error || err.message));
+        } finally {
+            setUpdatingGroupKey(null);
         }
     };
 
@@ -918,13 +937,34 @@ const PeriodSpendTab = ({ campaigns }) => {
                                         <div className={`p-1 rounded-lg ${expandedHistory[key] ? 'text-amber-400 bg-amber-500/10' : 'text-slate-500 bg-slate-900'}`}>
                                             {expandedHistory[key] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <CalendarDays size={14} className={expandedHistory[key] ? "text-amber-400" : "text-slate-500"} />
-                                            <span className="text-sm font-bold text-slate-300">
-                                                {new Date(group.start + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-                                                {group.start !== group.end && <> al {new Date(group.end + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>}
-                                            </span>
-                                        </div>
+                                        {editingGroupKey === key ? (
+                                            <div className="flex items-center gap-2">
+                                                <input 
+                                                    type="date"
+                                                    className="bg-slate-950 border border-slate-700 rounded text-xs text-slate-300 px-2 py-1 outline-none focus:border-amber-500"
+                                                    value={editingGroupDate}
+                                                    onChange={e => setEditingGroupDate(e.target.value)}
+                                                    onClick={e => e.stopPropagation()}
+                                                />
+                                                {updatingGroupKey === key ? (
+                                                    <Loader2 size={12} className="animate-spin text-amber-500" />
+                                                ) : (
+                                                    <div className="flex gap-1">
+                                                        <button onClick={(e) => { e.stopPropagation(); handleUpdateGroupDate(key, group.entries, editingGroupDate); }} className="p-1 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 rounded"><Save size={12} /></button>
+                                                        <button onClick={(e) => { e.stopPropagation(); setEditingGroupKey(null); }} className="p-1 bg-slate-800 text-slate-400 hover:bg-slate-700 rounded"><X size={12} /></button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2">
+                                                <CalendarDays size={14} className={expandedHistory[key] ? "text-amber-400" : "text-slate-500"} />
+                                                <span className="text-sm font-bold text-slate-300">
+                                                    {new Date(group.start + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                                    {group.start !== group.end && <> al {new Date(group.end + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>}
+                                                </span>
+                                                <button onClick={(e) => { e.stopPropagation(); setEditingGroupKey(key); setEditingGroupDate(group.start); }} className="p-1 text-slate-400 hover:text-white transition-colors" title="Editar Fecha del Grupo"><Pencil size={12} /></button>
+                                            </div>
+                                        )}
                                     </div>
                                     <span className="text-sm font-black text-amber-400">${group.total.toFixed(2)}</span>
                                 </div>
@@ -939,16 +979,6 @@ const PeriodSpendTab = ({ campaigns }) => {
                                             <div className="flex items-center gap-3">
                                                 {editingSpendId === entry.id ? (
                                                     <div className="flex items-center gap-1.5">
-                                                        <input 
-                                                            type="date"
-                                                            className="w-[110px] py-0.5 px-1 bg-slate-950 border border-slate-700 rounded text-xs text-slate-300 outline-none focus:border-emerald-500 transition-colors"
-                                                            value={editingSpendDate}
-                                                            onChange={e => setEditingSpendDate(e.target.value)}
-                                                            onKeyDown={e => {
-                                                                if (e.key === 'Enter') handleUpdateSpend(entry.id, editingSpendValue, editingSpendDate);
-                                                                if (e.key === 'Escape') { setEditingSpendId(null); setEditingSpendValue(''); setEditingSpendDate(''); }
-                                                            }}
-                                                        />
                                                         <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-700 shadow-inner">
                                                             <span className="pl-1 font-black text-slate-500 text-xs">$</span>
                                                             <input 
@@ -961,8 +991,8 @@ const PeriodSpendTab = ({ campaigns }) => {
                                                                 onChange={e => setEditingSpendValue(e.target.value)}
                                                                 autoFocus
                                                                 onKeyDown={e => {
-                                                                    if (e.key === 'Enter') handleUpdateSpend(entry.id, editingSpendValue, editingSpendDate);
-                                                                    if (e.key === 'Escape') { setEditingSpendId(null); setEditingSpendValue(''); setEditingSpendDate(''); }
+                                                                    if (e.key === 'Enter') handleUpdateSpend(entry.id, editingSpendValue);
+                                                                    if (e.key === 'Escape') { setEditingSpendId(null); setEditingSpendValue(''); }
                                                                 }}
                                                             />
                                                         </div>
@@ -970,15 +1000,15 @@ const PeriodSpendTab = ({ campaigns }) => {
                                                             <Loader2 size={12} className="animate-spin text-emerald-500" />
                                                         ) : (
                                                             <div className="flex gap-1">
-                                                                <button onClick={() => handleUpdateSpend(entry.id, editingSpendValue, editingSpendDate)} className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors" title="Guardar"><Save size={12} /></button>
-                                                                <button onClick={() => { setEditingSpendId(null); setEditingSpendValue(''); setEditingSpendDate(''); }} className="p-1 text-slate-400 hover:text-slate-200 transition-colors" title="Cancelar"><X size={12} /></button>
+                                                                <button onClick={() => handleUpdateSpend(entry.id, editingSpendValue)} className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors" title="Guardar"><Save size={12} /></button>
+                                                                <button onClick={() => { setEditingSpendId(null); setEditingSpendValue(''); }} className="p-1 text-slate-400 hover:text-slate-200 transition-colors" title="Cancelar"><X size={12} /></button>
                                                             </div>
                                                         )}
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm font-bold text-white">${entry.spend.toFixed(2)}</span>
-                                                        <button onClick={() => { setEditingSpendId(entry.id); setEditingSpendValue(entry.spend.toString()); setEditingSpendDate(new Date(entry.start_date).toISOString().split('T')[0]); }} className="p-1 text-slate-400 hover:text-white transition-colors" title="Editar"><Pencil size={12} /></button>
+                                                        <button onClick={() => { setEditingSpendId(entry.id); setEditingSpendValue(entry.spend.toString()); }} className="p-1 text-slate-400 hover:text-white transition-colors" title="Editar"><Pencil size={12} /></button>
                                                     </div>
                                                 )}
                                                 <button onClick={() => handleDeleteSpend(entry.id)} className="p-1 text-slate-600 hover:text-red-400"><Trash2 size={12} /></button>

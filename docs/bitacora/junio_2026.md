@@ -712,3 +712,6 @@
 - Se modificó el endpoint de actualización de inversión ('PUT /api/ads/period-spend/<id>') para permitir la modificación de la fecha ('start_date' y 'end_date').
 - Se integró un selector de fecha interactivo en el Historial de Inversión del panel de Gestión de Anuncios, permitiendo corregir fácilmente la fecha al editar un registro existente.
 
+- Se modificó el comportamiento de la edición de fecha en el Historial de Inversión para que se aplique al grupo completo de registros (por día) en lugar de hacerlo individualmente.
+- La opción de edición de fecha se trasladó al encabezado de cada grupo.
+
