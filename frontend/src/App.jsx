@@ -20,7 +20,6 @@ import CloserLeadsPage from './pages/closer/leads/LeadsPage';
 import CloserSettingsPage from './pages/closer/settings/SettingsPage';
 import CloserNewSalePage from './pages/closer/records/NewSalePage';
 import CloserNewAppointmentPage from './pages/closer/records/NewAppointmentPage';
-import CloserClientsPage from './pages/closer/clients/ClientsPage';
 import SetterDashboard from './pages/setter/dashboard/SetterDashboard';
 import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import SetterAgendasPage from './pages/setter/agendas/SetterAgendasPage';
@@ -222,16 +221,6 @@ function App() {
                 <ProtectedRoute roles={['closer']}>
                   <MainLayout>
                     <PublicCloserStatsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/closer/clients"
-              element={
-                <ProtectedRoute roles={['closer']}>
-                  <MainLayout>
-                    <CloserClientsPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

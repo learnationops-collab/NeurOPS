@@ -719,3 +719,5 @@
 - Se reorganizó el desglose por closer y por fuente en el Tablero de Agendas (FinancialAgendasPage.jsx) a una vista completamente vertical.
 - Se rediseñó la celda HoverPercentCell para mostrar el número y el porcentaje de manera simultánea en posiciones separadas.
 - Se añadió funcionalidad para colapsar/minimizar las tablas de desglose por closer y por fuente con botones de chevron.
+
+- Se eliminó por completo la funcionalidad de Cartera de Clientes. Se quitaron los imports, pestañas y rutas correspondientes de useDockNavigation.js, PublicCloserStatsPage.jsx y App.jsx.

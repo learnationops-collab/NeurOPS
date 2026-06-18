@@ -47,8 +47,7 @@ const useDockNavigation = () => {
                 { id: 'deck', icon: Layers, label: 'Gestión de Leads', path: '/closer/deck' },
                 { id: 'new-sale', icon: DollarSign, label: 'Declarar Venta', path: '/closer/sales/new' },
                 { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/closer/report' },
-                { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' },
-                { id: 'clients', icon: Users, label: 'Clientes', path: '/closer/clients' }
+                { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' }
             ];
         } else if (isSetter) {
             return [
@@ -72,7 +71,6 @@ const useDockNavigation = () => {
                 { id: 'marketing', icon: Target, label: 'Marketing', path: '/admin/marketing' },
                 { id: 'alerts', icon: Bell, label: 'Alertas', path: '/admin/alerts' },
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' },
-                { id: 'clients', icon: Users, label: 'Clientes', path: '/closer/clients' },
                 { id: 'sheets', icon: CalendarDays, label: 'Importaciones Sheets', path: '/admin/sheets' }
             ];
             if (user?.can_view_finance) {

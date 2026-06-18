@@ -10,7 +10,6 @@ import usePersistentFilters from '../../hooks/usePersistentFilters';
 import CloserPerformanceTab from './CloserPerformanceTab';
 import CloserReportsTable from './CloserReportsTable';
 import PublicFinancialSalesPage from './PublicFinancialSalesPage';
-import CloserClientsPage from '../closer/clients/ClientsPage';
 import FinancialAgendasPage from '../admin/reports/FinancialAgendasPage';
 
 const getFirstDayOfCurrentMonth = () => {
@@ -193,7 +192,6 @@ const PublicCloserStatsPage = () => {
                     <TabButton id="history" label="Historial de Reportes" icon={List} />
                     <TabButton id="sales_log" label="Registro Ventas" icon={DollarSign} />
                     <TabButton id="agendas_log" label="Registro Agendas" icon={CalendarDays} />
-                    <TabButton id="customers" label="Cartera Clientes" icon={Users} />
                 </div>
 
                 {/* FILTROS (Comunes para vista rendimiento) */}
@@ -323,13 +321,6 @@ const PublicCloserStatsPage = () => {
                         {activeTab === 'agendas_log' && (
                             <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
                                 <FinancialAgendasPage />
-                            </div>
-                        )}
-
-                        {/* TAB CARTERA CLIENTES */}
-                        {activeTab === 'customers' && (
-                            <div className="animate-in fade-in duration-500 bg-slate-950 rounded-[2.5rem] mt-8">
-                                <CloserClientsPage />
                             </div>
                         )}
 
