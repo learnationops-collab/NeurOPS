@@ -35,10 +35,10 @@ const MainLayout = ({ children }) => {
 
     // Obtener notificaciones
     const fetchNotifications = useCallback(async () => {
-        if (!user || !['closer', 'setter', 'admin'].includes(user.role)) return;
+        if (!user || !['closer', 'setter', 'admin', 'triage'].includes(user.role)) return;
         
         try {
-            const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : 'admin';
+            const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : user.role === 'admin' ? 'admin' : 'triage';
             const res = await api.get(`/${rolePath}/notifications`);
             setNotifications(res.data || []);
         } catch (err) {
@@ -46,13 +46,13 @@ const MainLayout = ({ children }) => {
         }
     }, [user]);
 
-    // Polling inteligente cada 30 segundos
+    // Polling rápido cada 5 segundos para simular real-time
     useEffect(() => {
         fetchNotifications();
         
         const interval = setInterval(() => {
             fetchNotifications();
-        }, 30000);
+        }, 5000);
 
         return () => clearInterval(interval);
     }, [fetchNotifications]);
@@ -62,7 +62,7 @@ const MainLayout = ({ children }) => {
 
     // Acción de click en notificación
     const handleNotificationClick = async (noti) => {
-        const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : 'admin';
+        const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : user.role === 'admin' ? 'admin' : 'triage';
         
         if (!noti.is_read) {
             try {
