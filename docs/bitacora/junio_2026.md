@@ -709,3 +709,6 @@
 - Se implementó un algoritmo de auto-mapeo que vincula los nombres de los conjuntos de anuncios del CSV con los del sistema NeurOPS.
 - Se agregó el botón 'Cargar Inversión' en la pestaña 'PeriodSpendTab' para auto-rellenar los importes gastados, optimizando la carga diaria de inversión publicitaria.
 
+- Se modificó el endpoint de actualización de inversión ('PUT /api/ads/period-spend/<id>') para permitir la modificación de la fecha ('start_date' y 'end_date').
+- Se integró un selector de fecha interactivo en el Historial de Inversión del panel de Gestión de Anuncios, permitiendo corregir fácilmente la fecha al editar un registro existente.
+

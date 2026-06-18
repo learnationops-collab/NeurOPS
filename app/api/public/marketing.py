@@ -423,9 +423,18 @@ def update_public_period_spend(spend_id):
         except ValueError:
             return jsonify({"error": "El monto debe ser un número válido."}), 400
 
+    if 'date' in data:
+        from datetime import datetime
+        try:
+            new_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            record.start_date = new_date
+            record.end_date = new_date
+        except ValueError:
+            return jsonify({"error": "Formato de fecha inválido. Use YYYY-MM-DD"}), 400
+
     try:
         db.session.commit()
-        return jsonify({"message": "Registro actualizado exitosamente", "spend": record.spend}), 200
+        return jsonify({"message": "Registro actualizado exitosamente", "spend": record.spend, "date": str(record.start_date)}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

@@ -471,6 +471,7 @@ const PeriodSpendTab = ({ campaigns }) => {
     // Estados para la edicion en el historial
     const [editingSpendId, setEditingSpendId] = useState(null);
     const [editingSpendValue, setEditingSpendValue] = useState('');
+    const [editingSpendDate, setEditingSpendDate] = useState('');
     const [updatingSpendId, setUpdatingSpendId] = useState(null);
 
 
@@ -587,17 +588,22 @@ const PeriodSpendTab = ({ campaigns }) => {
         try { await api.delete(`/public/ads/period-spend/${id}`); loadHistory(); loadPeriodData(); } catch (err) {}
     };
 
-    const handleUpdateSpend = async (id, newSpend) => {
+    const handleUpdateSpend = async (id, newSpend, newDate) => {
         const val = parseFloat(newSpend);
         if (isNaN(val) || val < 0) {
             alert('Por favor ingrese un monto válido.');
             return;
         }
+        if (!newDate) {
+            alert('Por favor seleccione una fecha válida.');
+            return;
+        }
         setUpdatingSpendId(id);
         try {
-            await api.put(`/public/ads/period-spend/${id}`, { spend: val });
+            await api.put(`/public/ads/period-spend/${id}`, { spend: val, date: newDate });
             setEditingSpendId(null);
             setEditingSpendValue('');
+            setEditingSpendDate('');
             await Promise.all([loadHistory(), loadPeriodData()]);
         } catch (err) {
             alert('Error al actualizar: ' + (err.response?.data?.error || err.message));
@@ -933,6 +939,16 @@ const PeriodSpendTab = ({ campaigns }) => {
                                             <div className="flex items-center gap-3">
                                                 {editingSpendId === entry.id ? (
                                                     <div className="flex items-center gap-1.5">
+                                                        <input 
+                                                            type="date"
+                                                            className="w-[110px] py-0.5 px-1 bg-slate-950 border border-slate-700 rounded text-xs text-slate-300 outline-none focus:border-emerald-500 transition-colors"
+                                                            value={editingSpendDate}
+                                                            onChange={e => setEditingSpendDate(e.target.value)}
+                                                            onKeyDown={e => {
+                                                                if (e.key === 'Enter') handleUpdateSpend(entry.id, editingSpendValue, editingSpendDate);
+                                                                if (e.key === 'Escape') { setEditingSpendId(null); setEditingSpendValue(''); setEditingSpendDate(''); }
+                                                            }}
+                                                        />
                                                         <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-700 shadow-inner">
                                                             <span className="pl-1 font-black text-slate-500 text-xs">$</span>
                                                             <input 
@@ -945,8 +961,8 @@ const PeriodSpendTab = ({ campaigns }) => {
                                                                 onChange={e => setEditingSpendValue(e.target.value)}
                                                                 autoFocus
                                                                 onKeyDown={e => {
-                                                                    if (e.key === 'Enter') handleUpdateSpend(entry.id, editingSpendValue);
-                                                                    if (e.key === 'Escape') { setEditingSpendId(null); setEditingSpendValue(''); }
+                                                                    if (e.key === 'Enter') handleUpdateSpend(entry.id, editingSpendValue, editingSpendDate);
+                                                                    if (e.key === 'Escape') { setEditingSpendId(null); setEditingSpendValue(''); setEditingSpendDate(''); }
                                                                 }}
                                                             />
                                                         </div>
@@ -954,15 +970,15 @@ const PeriodSpendTab = ({ campaigns }) => {
                                                             <Loader2 size={12} className="animate-spin text-emerald-500" />
                                                         ) : (
                                                             <div className="flex gap-1">
-                                                                <button onClick={() => handleUpdateSpend(entry.id, editingSpendValue)} className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors" title="Guardar"><Save size={12} /></button>
-                                                                <button onClick={() => { setEditingSpendId(null); setEditingSpendValue(''); }} className="p-1 text-slate-400 hover:text-slate-200 transition-colors" title="Cancelar"><X size={12} /></button>
+                                                                <button onClick={() => handleUpdateSpend(entry.id, editingSpendValue, editingSpendDate)} className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors" title="Guardar"><Save size={12} /></button>
+                                                                <button onClick={() => { setEditingSpendId(null); setEditingSpendValue(''); setEditingSpendDate(''); }} className="p-1 text-slate-400 hover:text-slate-200 transition-colors" title="Cancelar"><X size={12} /></button>
                                                             </div>
                                                         )}
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm font-bold text-white">${entry.spend.toFixed(2)}</span>
-                                                        <button onClick={() => { setEditingSpendId(entry.id); setEditingSpendValue(entry.spend.toString()); }} className="p-1 text-slate-400 hover:text-white transition-colors" title="Editar"><Pencil size={12} /></button>
+                                                        <button onClick={() => { setEditingSpendId(entry.id); setEditingSpendValue(entry.spend.toString()); setEditingSpendDate(new Date(entry.start_date).toISOString().split('T')[0]); }} className="p-1 text-slate-400 hover:text-white transition-colors" title="Editar"><Pencil size={12} /></button>
                                                     </div>
                                                 )}
                                                 <button onClick={() => handleDeleteSpend(entry.id)} className="p-1 text-slate-600 hover:text-red-400"><Trash2 size={12} /></button>
