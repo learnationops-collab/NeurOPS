@@ -1293,12 +1293,15 @@ def get_admin_notifications():
         
         if is_target:
             is_read = current_user.id in (n.read_by or [])
+            if is_read:
+                continue
+                
             relevant.append({
                 "id": n.id,
                 "subject": n.subject,
                 "content": n.content,
                 "created_at": n.created_at.isoformat(),
-                "is_read": is_read
+                "is_read": False
             })
             
     return jsonify(relevant), 200

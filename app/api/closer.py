@@ -818,6 +818,19 @@ def add_lead_comment(id):
     
     comment = ClientComment(client_id=id, author_id=current_user.id, text=text)
     db.session.add(comment)
+    
+    from app.models import Notification, Client
+    client = Client.query.get(id)
+    if client:
+        notif = Notification(
+            subject=f"Nueva nota interna en el lead: {client.full_name or client.instagram or 'Desconocido'}",
+            content=f"{current_user.username} agregó una nota:\n\n{text}",
+            target_users="all",
+            associated_id=client.id,
+            associated_type="lead"
+        )
+        db.session.add(notif)
+        
     db.session.commit()
     
     return jsonify({"message": "Comentario agregado", "comment": {

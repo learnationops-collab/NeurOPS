@@ -649,6 +649,17 @@ def update_client_roadmap():
         if dolores is not None:
             client.dolores = dolores
 
+    if objeciones is not None or observaciones is not None or dolores is not None:
+        from app.models import Notification
+        notif = Notification(
+            subject=f"Calificación de Lead Actualizada: {client.full_name or client.instagram or 'Desconocido'}",
+            content=f"Se actualizaron los datos de calificación del lead.\nDolores: {client.dolores or 'N/A'}\nObjeciones: {client.objeciones or 'N/A'}\nObservaciones: {client.observaciones or 'N/A'}",
+            target_users="all",
+            associated_id=client.id,
+            associated_type="lead"
+        )
+        db.session.add(notif)
+
     try:
         db.session.commit()
         return jsonify({

@@ -35,10 +35,10 @@ const MainLayout = ({ children }) => {
 
     // Obtener notificaciones
     const fetchNotifications = useCallback(async () => {
-        if (!user || (user.role !== 'closer' && user.role !== 'setter')) return;
+        if (!user || !['closer', 'setter', 'admin'].includes(user.role)) return;
         
         try {
-            const rolePath = user.role === 'closer' ? 'closer' : 'setter';
+            const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : 'admin';
             const res = await api.get(`/${rolePath}/notifications`);
             setNotifications(res.data || []);
         } catch (err) {
@@ -62,12 +62,12 @@ const MainLayout = ({ children }) => {
 
     // Acción de click en notificación
     const handleNotificationClick = async (noti) => {
-        const rolePath = user.role === 'closer' ? 'closer' : 'setter';
+        const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : 'admin';
         
         if (!noti.is_read) {
             try {
                 await api.post(`/${rolePath}/notifications/${noti.id}/read`);
-                setNotifications(prev => prev.map(n => n.id === noti.id ? { ...n, is_read: true } : n));
+                setNotifications(prev => prev.filter(n => n.id !== noti.id));
             } catch (err) {
                 console.error("Error al marcar notificación como leída:", err);
             }

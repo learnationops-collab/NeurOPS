@@ -403,12 +403,26 @@ def update_financial_agenda(agenda_id):
             agenda.whatsapp = data['whatsapp']
         if 'mail' in data:
             agenda.mail = data['mail']
-        if 'estado' in data:
+        status_changed = False
+        if 'estado' in data and data['estado'] != agenda.estado:
+            status_changed = True
             agenda.estado = data['estado']
+            
         if 'encargado_triage' in data:
             agenda.encargado_triage = data['encargado_triage']
         if 'date' in data:
             agenda.date = parse_date_robustly(data['date'])
+            
+        if status_changed:
+            from app.models import Notification
+            notif = Notification(
+                subject=f"Estado de Agenda Actualizado: {agenda.lead or agenda.nombre or 'Desconocido'}",
+                content=f"La agenda con @{agenda.instagram or 'sin_ig'} ha cambiado de estado a '{agenda.estado}'.",
+                target_users="all",
+                associated_id=agenda.id,
+                associated_type="agenda"
+            )
+            db.session.add(notif)
             
         db.session.commit()
 
