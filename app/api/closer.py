@@ -802,7 +802,7 @@ def get_lead_comments(id):
     return jsonify([{
         "id": c.id,
         "text": c.text,
-        "author": c.author.username,
+        "author": c.author_rel.username if c.author_rel else "Desconocido",
         "created_at": c.created_at.isoformat()
     } for c in comments]), 200
 

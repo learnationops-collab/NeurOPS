@@ -438,7 +438,7 @@ def get_lead_roadmap():
     for c in comments:
         activity.append({
             "date": c.created_at.isoformat(),
-            "event": f"Nota de {c.author.username}",
+            "event": f"Nota de {c.author_rel.username if c.author_rel else 'Desconocido'}",
             "detail": c.text,
             "origin": "Notas Internas"
         })
@@ -503,7 +503,7 @@ def get_lead_roadmap():
         {
             "id": c.id,
             "text": c.text,
-            "author": c.author.username,
+            "author": c.author_rel.username if c.author_rel else "Desconocido",
             "created_at": c.created_at.isoformat()
         } for c in comments
     ]
