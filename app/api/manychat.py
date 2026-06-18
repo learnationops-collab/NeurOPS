@@ -820,8 +820,10 @@ def get_ad_dashboard_stats():
         if not closest or not closest.ad_id:
             agendas_sin_asignar += 1
 
-    # 4. CONSOLIDAR TODOS LOS ANUNCIOS (con leads o con ventas)
-    all_active_ad_ids = set(ad_ids) | set(ventas_por_ad.keys())
+    # 4. CONSOLIDAR TODOS LOS ANUNCIOS (con leads o con ventas, y todos los activos)
+    all_unarchived_ads = Ad.query.filter(Ad.status != 'archived').all()
+    unarchived_ad_ids = {a.id for a in all_unarchived_ads}
+    all_active_ad_ids = set(ad_ids) | set(ventas_por_ad.keys()) | unarchived_ad_ids
     
     # Asegurar que tenemos todos los modelos de anuncios necesarios
     missing_ad_ids = [aid for aid in all_active_ad_ids if aid not in ads_map]
@@ -874,22 +876,30 @@ def get_ad_dashboard_stats():
         # ROAS (Cash Collect / Inversión)
         roas = round(cash_collect / spend, 2) if spend > 0 else 0
 
-        # Obtener nombres de campaña y conjunto de anuncios
+        # Obtener nombres y estatus de campaña y conjunto de anuncios
         ad_set_name = None
         campaign_name = None
+        ad_set_status = 'active'
+        campaign_status = 'active'
+        
         if ad and ad.ad_set_id:
             ad_set = adset_map.get(ad.ad_set_id)
             if ad_set:
                 ad_set_name = ad_set.name
+                ad_set_status = ad_set.status
                 campaign = campaign_map_by_id.get(ad_set.campaign_id)
                 if campaign:
                     campaign_name = campaign.name
+                    campaign_status = campaign.status
 
         result.append({
             'ad_id': ad_id,
             'ad_name': ad_name,
+            'ad_status': ad.status if ad else 'active',
             'ad_set_name': ad_set_name,
+            'ad_set_status': ad_set_status,
             'campaign_name': campaign_name,
+            'campaign_status': campaign_status,
             'total_leads': total,
             'qualified_leads': qual,
             'qualified_percentage': round((qual / total) * 100, 1) if total > 0 else 0,
@@ -905,13 +915,15 @@ def get_ad_dashboard_stats():
             'roas': roas
         })
 
-    # Fila especial "Ventas desatribuidas"
     if agendas_sin_asignar > 0 or ventas_sin_asignar > 0 or monto_sin_asignar > 0:
         result.append({
             'ad_id': 0,
             'ad_name': 'Ventas desatribuidas',
+            'ad_status': 'active',
             'ad_set_name': None,
+            'ad_set_status': 'active',
             'campaign_name': None,
+            'campaign_status': 'active',
             'total_leads': 0,
             'qualified_leads': 0,
             'qualified_percentage': 0.0,

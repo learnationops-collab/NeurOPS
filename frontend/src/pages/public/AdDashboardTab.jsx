@@ -83,22 +83,31 @@ const AdDashboardTab = () => {
         return (stat.spend || 0) === 0 && (stat.total_leads || 0) === 0 && (stat.agendas || 0) === 0 && (stat.ventas || 0) === 0;
     };
 
-    const { filters: hiddenAdsFilters, updateFilter: setHiddenAdsFilters } = usePersistentFilters('hidden_ads_v1', { hidden: [] });
-    const hiddenAds = hiddenAdsFilters.hidden || [];
     const [showHiddenAds, setShowHiddenAds] = useState(false);
 
-    const handleToggleHideAd = (e, adId) => {
+    const handleToggleHideAd = async (e, stat) => {
         e.stopPropagation(); // Evitar abrir el modal del anuncio al hacer clic en el ojo
-        if (hiddenAds.includes(adId)) {
-            setHiddenAdsFilters({ hidden: hiddenAds.filter(id => id !== adId) });
-        } else {
-            setHiddenAdsFilters({ hidden: [...hiddenAds, adId] });
+        const newStatus = stat.ad_status === 'archived' ? 'active' : 'archived';
+        try {
+            await api.put(`/public/ads/${stat.ad_id}`, { status: newStatus });
+            setStats(prev => ({
+                ...prev,
+                ad_stats: prev.ad_stats.map(s => s.ad_id === stat.ad_id ? { ...s, ad_status: newStatus } : s)
+            }));
+        } catch (err) {
+            console.error('Error al archivar anuncio:', err);
         }
     };
 
     const activeAdStats = showHiddenAds 
         ? stats.ad_stats 
-        : stats.ad_stats.filter(stat => !hiddenAds.includes(stat.ad_id));
+        : stats.ad_stats.filter(stat => 
+            stat.ad_status !== 'archived' && 
+            stat.ad_set_status !== 'archived' && 
+            stat.campaign_status !== 'archived'
+        );
+
+    const archivedAdsCount = (stats.ad_stats || []).filter(s => s.ad_status === 'archived' || s.ad_set_status === 'archived' || s.campaign_status === 'archived').length;
 
     // Cómputo de Campañas (Agrupado de activeAdStats)
     const campaignsData = React.useMemo(() => {
@@ -772,13 +781,13 @@ const AdDashboardTab = () => {
                     <ColumnSettings columns={columns} setColumns={setColumns} />
                     <GradientSettings sortKey={sortConfig.key} thresholds={colorThresholds} setThresholds={setColorThresholds} columns={initialColumns} />
                     
-                    {hiddenAds.length > 0 && (
+                    {archivedAdsCount > 0 && (
                         <button 
                             onClick={() => setShowHiddenAds(!showHiddenAds)} 
                             className={`text-[10px] font-black uppercase px-3 py-2 rounded-xl transition-colors flex items-center gap-1.5 border ${showHiddenAds ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700/50'}`}
                         >
                             {showHiddenAds ? <EyeOff size={12} /> : <Eye size={12} />}
-                            {showHiddenAds ? 'Ocultar Archivados' : `Mostrar Archivados (${hiddenAds.length})`}
+                            {showHiddenAds ? 'Ocultar Archivados' : `Mostrar Archivados (${archivedAdsCount})`}
                         </button>
                     )}
 
@@ -1027,7 +1036,7 @@ const AdDashboardTab = () => {
 
                     {activeAdStats.length === 0 ? (
                         <div className="text-center py-20 bg-slate-900/20 rounded-3xl border border-dashed border-slate-800">
-                            {hiddenAds.length > 0 ? (
+                            {archivedAdsCount > 0 ? (
                                 <>
                                     <EyeOff size={40} className="mx-auto mb-3 opacity-20 text-indigo-400" />
                                     <p className="font-bold text-slate-500 uppercase tracking-widest text-sm">Todos los anuncios están archivados/ocultos</p>
@@ -1174,7 +1183,7 @@ const AdDashboardTab = () => {
                                                                         )}
                                                                         {stat.ad_id !== 0 && (
                                                                             <button 
-                                                                                onClick={(e) => handleToggleHideAd(e, stat.ad_id)}
+                                                                                onClick={(e) => handleToggleHideAd(e, stat)}
                                                                                 className="p-1 text-slate-500 hover:text-slate-200 transition-colors rounded hover:bg-slate-800"
                                                                                 title={isAdHidden ? "Desarchivar / Mostrar anuncio" : "Archivar / Ocultar anuncio"}
                                                                             >
@@ -1245,7 +1254,7 @@ const AdDashboardTab = () => {
                                     qualBg = "bg-red-500/10";
                                 }
 
-                                const isAdHidden = hiddenAds.includes(stat.ad_id);
+                                const isAdHidden = stat.ad_status === 'archived';
                                     
                                 return (
                                         <div 

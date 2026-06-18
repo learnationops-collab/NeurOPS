@@ -639,16 +639,30 @@ const PeriodSpendTab = ({ campaigns }) => {
         }
     };
 
-    const handleToggleHideCamp = (e, campId) => {
+    const handleToggleHideCamp = async (e, camp) => {
         e.stopPropagation();
-        if (hiddenCamps.includes(campId)) {
-            setHiddenFilters({ hidden: hiddenCamps.filter(id => id !== campId) });
-        } else {
-            setHiddenFilters({ hidden: [...hiddenCamps, campId] });
+        const newStatus = camp.status === 'archived' ? 'active' : 'archived';
+        try {
+            await api.put(`/public/campaigns/${camp.id}`, { status: newStatus });
+            onRefresh();
+        } catch (err) {
+            console.error('Error al archivar campaña:', err);
         }
     };
 
-    const visibleCampaigns = showHidden ? campaigns : campaigns.filter(c => !hiddenCamps.includes(c.id));
+    const handleToggleHideSet = async (e, set) => {
+        e.stopPropagation();
+        const newStatus = set.status === 'archived' ? 'active' : 'archived';
+        try {
+            await api.put(`/public/adsets/${set.id}`, { status: newStatus });
+            onRefresh();
+        } catch (err) {
+            console.error('Error al archivar conjunto:', err);
+        }
+    };
+
+    const archivedCampsCount = campaigns.filter(c => c.status === 'archived').length;
+    const visibleCampaigns = showHidden ? campaigns : campaigns.filter(c => c.status !== 'archived');
 
     return (
         <div className="space-y-8">
@@ -671,13 +685,13 @@ const PeriodSpendTab = ({ campaigns }) => {
                                 <p className="text-3xl font-black text-amber-400">${periodTotal.toFixed(2)}</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                {hiddenCamps.length > 0 && (
+                                {archivedCampsCount > 0 && (
                                     <button 
                                         onClick={() => setShowHidden(!showHidden)} 
                                         className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 border ${showHidden ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700/50'}`}
                                     >
                                         {showHidden ? <EyeOff size={12} /> : <Eye size={12} />}
-                                        {showHidden ? 'Ocultar Archivados' : `Mostrar Archivados (${hiddenCamps.length})`}
+                                        {showHidden ? 'Ocultar Archivados' : `Mostrar Archivados (${archivedCampsCount})`}
                                     </button>
                                 )}
                                 <button 
@@ -710,7 +724,7 @@ const PeriodSpendTab = ({ campaigns }) => {
                         const campSets = camp.ad_sets || [];
                         const cVal = campValues[camp.id] ?? '';
                         const isCampFilled = cVal !== '' && parseFloat(cVal) > 0;
-                        const isHidden = hiddenCamps.includes(camp.id);
+                        const isHidden = camp.status === 'archived';
                         
                         return (
                             <div key={camp.id} className={`bg-slate-900/50 border border-slate-800 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 ${isHidden ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}>
@@ -729,7 +743,7 @@ const PeriodSpendTab = ({ campaigns }) => {
                                             {isHidden && <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none">Archivada</span>}
                                         </div>
                                         <button 
-                                            onClick={(e) => handleToggleHideCamp(e, camp.id)} 
+                                            onClick={(e) => handleToggleHideCamp(e, camp)} 
                                             className="ml-2 p-1.5 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
                                             title={isHidden ? "Desarchivar Campaña" : "Archivar / Ocultar Campaña"}
                                         >
@@ -754,16 +768,30 @@ const PeriodSpendTab = ({ campaigns }) => {
                                         <div className="py-2 text-sm text-slate-600 pl-4">No hay conjuntos de anuncios.</div>
                                     ) : (
                                         campSets.map(set => {
+                                            const isSetHidden = set.status === 'archived';
+                                            if (isSetHidden && !showHidden) return null;
+
                                             const sData = setValues[set.id] || { spend: '', percent: '' };
                                             const isSetFilled = sData.spend !== '' && parseFloat(sData.spend) >= 0;
                                             
                                             return (
                                                 <div key={set.id} className={`flex flex-wrap items-center justify-between p-3 pl-12 rounded-xl border transition-all duration-300
-                                                    ${isSetFilled ? 'bg-slate-800/40 border-slate-700/80 shadow-md' : 'bg-slate-950/40 border-transparent hover:bg-slate-900/80'}`}
+                                                    ${isSetFilled ? 'bg-slate-800/40 border-slate-700/80 shadow-md' : 'bg-slate-950/40 border-transparent hover:bg-slate-900/80'}
+                                                    ${isSetHidden ? 'opacity-50 grayscale hover:grayscale-0 hover:opacity-100' : ''}`}
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <Layers size={16} className={isSetFilled ? 'text-amber-500' : 'text-slate-600'} />
-                                                        <span className={`font-bold text-sm ${isSetFilled ? 'text-white' : 'text-slate-400'}`}>{set.name}</span>
+                                                        <div className="flex flex-col">
+                                                            <span className={`font-bold text-sm ${isSetFilled ? 'text-white' : 'text-slate-400'}`}>{set.name}</span>
+                                                            {isSetHidden && <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mt-0.5">Archivado</span>}
+                                                        </div>
+                                                        <button 
+                                                            onClick={(e) => handleToggleHideSet(e, set)} 
+                                                            className="ml-2 p-1.5 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                                                            title={isSetHidden ? "Desarchivar Conjunto" : "Archivar / Ocultar Conjunto"}
+                                                        >
+                                                            {isSetHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                                                        </button>
                                                     </div>
                                                     
                                                     <div className="flex items-center gap-4">

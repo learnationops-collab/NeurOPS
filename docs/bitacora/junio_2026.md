@@ -700,3 +700,7 @@
 - Se agregó el endpoint /notifications/read-all para todos los roles (admin, closer, setter, triage).
 - Se añadió el botón 'Marcar Leídas' en la bandeja de leads (MainLayout.jsx).
 - Se simplificó la vista de las notificaciones para mostrar solo el contenido y el nombre del lead, haciéndolo más específico y de uso rápido.
+- Se resolvió el problema de visualización de conjuntos de anuncios en el Dashboard, modificando el endpoint '/manychat-webhook/stats/dashboard' para incluir todos los anuncios activos (con 0 estadísticas) y devolviendo sus estados.
+- Se implementó la lógica real de archivado en la base de datos ('status' = 'archived') para Campañas y Conjuntos de anuncios, reemplazando el guardado local.
+- Se agregó el botón para mostrar/ocultar y archivar conjuntos de anuncios en 'AdManagementPage' y 'AdDashboardTab'.
+
