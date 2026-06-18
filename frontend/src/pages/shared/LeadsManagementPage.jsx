@@ -31,7 +31,8 @@ import {
     ChevronRight,
     ChevronDown,
     ChevronUp,
-    ChevronLeft
+    ChevronLeft,
+    PhoneCall
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import api from '../../services/api';

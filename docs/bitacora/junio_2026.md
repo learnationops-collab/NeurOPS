@@ -1,5 +1,9 @@
 # Bitácora - Junio 2026
 
+- **18 de Junio de 2026**:
+  - **Corrección de Renderizado en Gestión de Leads (`LeadsManagementPage.jsx`) [MODIFY]**:
+    - Se solucionó un error crítico (pantalla solo con el fondo) que impedía visualizar la página al faltar la importación del icono `PhoneCall` de `lucide-react` en los KPIs inferiores.
+
 - **17 de Junio de 2026**:
   - **Mejora en Desgloses del Tablero de Agendas (`FinancialAgendasPage.jsx`) [MODIFY]**:
     - Se agregaron los porcentajes correspondientes a todos los valores numéricos (estados, total y cierres) en las tablas de "Desglose por Closer" y "Desglose por Fuente".
