@@ -457,16 +457,7 @@ const LeadsManagementPage = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
                         
                         {/* Columna 1: Panel de Control de Leads (Cola y Sin Asignar) */}
-                        <AnimatePresence initial={false}>
-                            {isSidebarOpen && (
-                                <motion.div 
-                                    key="sidebar-column"
-                                    initial={{ width: 0, opacity: 0 }}
-                                    animate={{ width: "auto", opacity: 1 }}
-                                    exit={{ width: 0, opacity: 0 }}
-                                    transition={{ duration: 0.3 }}
-                                    className="lg:col-span-1 space-y-6 overflow-hidden"
-                                >
+                        <div className={`lg:col-span-1 space-y-6 transition-all duration-300 ${isSidebarOpen ? 'block' : 'hidden'}`}>
                             
                             {/* Bloque 1: Mi Cola de Leads */}
                             <div className="space-y-4 text-left bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-6 shadow-2xl">
@@ -613,9 +604,7 @@ const LeadsManagementPage = () => {
                                 </button>
                             </div>
 
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                        </div>
 
                         {/* Columna 2: Ficha del Lead (Lead Roadmap Detalle) */}
                         <div className={`${isSidebarOpen ? 'lg:col-span-3' : 'lg:col-span-4'} space-y-6 transition-all duration-300 relative`}>
