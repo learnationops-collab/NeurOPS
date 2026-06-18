@@ -460,6 +460,7 @@ const LeadsManagementPage = () => {
                         <AnimatePresence initial={false}>
                             {isSidebarOpen && (
                                 <motion.div 
+                                    key="sidebar-column"
                                     initial={{ width: 0, opacity: 0 }}
                                     animate={{ width: "auto", opacity: 1 }}
                                     exit={{ width: 0, opacity: 0 }}
@@ -486,6 +487,7 @@ const LeadsManagementPage = () => {
                                 <AnimatePresence initial={false}>
                                     {isQueueOpen && (
                                         <motion.div
+                                            key="queue-content"
                                             initial={{ height: 0, opacity: 0 }}
                                             animate={{ height: "auto", opacity: 1 }}
                                             exit={{ height: 0, opacity: 0 }}
@@ -563,6 +565,7 @@ const LeadsManagementPage = () => {
                                 <AnimatePresence initial={false}>
                                     {isUnassignedOpen && (
                                         <motion.div
+                                            key="unassigned-content"
                                             initial={{ height: 0, opacity: 0 }}
                                             animate={{ height: "auto", opacity: 1 }}
                                             exit={{ height: 0, opacity: 0 }}
