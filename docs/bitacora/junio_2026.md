@@ -715,3 +715,7 @@
 - Se modificó el comportamiento de la edición de fecha en el Historial de Inversión para que se aplique al grupo completo de registros (por día) en lugar de hacerlo individualmente.
 - La opción de edición de fecha se trasladó al encabezado de cada grupo.
 
+
+- Se reorganizó el desglose por closer y por fuente en el Tablero de Agendas (FinancialAgendasPage.jsx) a una vista completamente vertical.
+- Se rediseñó la celda HoverPercentCell para mostrar el número y el porcentaje de manera simultánea en posiciones separadas.
+- Se añadió funcionalidad para colapsar/minimizar las tablas de desglose por closer y por fuente con botones de chevron.
