@@ -28,11 +28,11 @@ import {
     CheckCircle,
     AlertTriangle,
     TrendingUp,
-    PhoneCall,
-    Search,
     ChevronRight,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    PanelLeftClose,
+    PanelLeftOpen
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import api from '../../services/api';
@@ -61,6 +61,7 @@ const LeadsManagementPage = () => {
     // Estados para collapsibles
     const [isQueueOpen, setIsQueueOpen] = useState(true);
     const [isUnassignedOpen, setIsUnassignedOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     // Form states compartidos
     const [instagram, setInstagram] = useState('');
@@ -456,7 +457,15 @@ const LeadsManagementPage = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
                         
                         {/* Columna 1: Panel de Control de Leads (Cola y Sin Asignar) */}
-                        <div className="lg:col-span-1 space-y-6">
+                        <AnimatePresence initial={false}>
+                            {isSidebarOpen && (
+                                <motion.div 
+                                    initial={{ width: 0, opacity: 0 }}
+                                    animate={{ width: "auto", opacity: 1 }}
+                                    exit={{ width: 0, opacity: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="lg:col-span-1 space-y-6 overflow-hidden"
+                                >
                             
                             {/* Bloque 1: Mi Cola de Leads */}
                             <div className="space-y-4 text-left bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-6 shadow-2xl">
@@ -601,10 +610,23 @@ const LeadsManagementPage = () => {
                                 </button>
                             </div>
 
-                        </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Columna 2: Ficha del Lead (Lead Roadmap Detalle) */}
-                        <div className="lg:col-span-3 space-y-6">
+                        <div className={`${isSidebarOpen ? 'lg:col-span-3' : 'lg:col-span-4'} space-y-6 transition-all duration-300 relative`}>
+                            
+                            {/* Botón Flotante para Colapsar/Expandir Menú */}
+                            <button
+                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                className="absolute -top-12 -left-2 p-2 bg-[#1a1c23]/80 hover:bg-white/10 backdrop-blur-md border border-slate-800 rounded-xl text-slate-400 hover:text-white shadow-xl transition-all z-10 hidden lg:flex items-center gap-2 group"
+                                title={isSidebarOpen ? "Ocultar panel izquierdo" : "Mostrar panel izquierdo"}
+                            >
+                                {isSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+                                {!isSidebarOpen && <span className="text-[10px] font-black uppercase tracking-widest px-1">Mostrar Cola</span>}
+                            </button>
+
                             {selectedClientRoadmap ? (
                                 <LeadRoadmapDetail
                                     clientId={selectedClientRoadmap.client_id}
