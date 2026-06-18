@@ -397,7 +397,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                             const isCompleted = stage.completed;
                             
                             return (
-                                <div key={stage.name} className="flex flex-col items-center text-center space-y-4 group">
+                                <div key={stage.name} className="relative flex flex-col items-center text-center space-y-4 group">
                                     <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ${
                                         isCompleted 
                                             ? 'bg-violet-650 text-white shadow-lg shadow-violet-600/30 border-2 border-violet-500' 
@@ -418,27 +418,28 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                         )}
                                     </div>
 
-                                    <div className="w-full text-left text-[10px] space-y-1 font-bold mt-2">
+                                    {/* Tooltip con información detallada, visible al hacer hover */}
+                                    <div className="absolute top-[85%] left-1/2 -translate-x-1/2 mt-4 w-48 bg-slate-950/95 border border-slate-800 p-3.5 rounded-2xl shadow-2xl shadow-black/50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-300 z-50 text-left text-[10px] space-y-1.5 font-bold scale-95 group-hover:scale-100 origin-top">
                                         {idx === 0 && (
                                             <>
                                                 <div className="text-slate-550">Origen: <span className="text-slate-350">{stage.details?.origen || 'Instagram'}</span></div>
                                                 <div className="text-slate-550">Canal: <span className="text-slate-350">{stage.details?.canal}</span></div>
-                                                <div className="text-slate-550">Campaña: <span className="text-slate-350 truncate block max-w-[120px]">{stage.details?.campaña}</span></div>
+                                                <div className="text-slate-550 flex flex-col">Campaña: <span className="text-slate-350 truncate">{stage.details?.campaña}</span></div>
                                             </>
                                         )}
                                         {idx === 1 && (
                                             <>
                                                 <div className="text-slate-550">Acción: <span className="text-slate-350">{stage.details?.accion}</span></div>
                                                 <div className="text-slate-550">Medio: <span className="text-slate-350">{stage.details?.medio}</span></div>
-                                                <div className="text-slate-550 text-slate-350 italic truncate max-w-[120px]">{stage.details?.mensaje}</div>
+                                                <div className="text-slate-550 text-slate-350 italic break-words">{stage.details?.mensaje}</div>
                                             </>
                                         )}
                                         {idx === 2 && (
                                             <>
                                                 <div className="text-slate-550">Dolores:</div>
-                                                <ul className="list-disc pl-3 text-slate-300 space-y-0.5">
-                                                    {(stage.details?.dolores || []).slice(0, 3).map((d, i) => (
-                                                        <li key={i} className="truncate max-w-[110px]">{d}</li>
+                                                <ul className="list-disc pl-3 text-slate-300 space-y-0.5 max-h-24 overflow-y-auto custom-scrollbar">
+                                                    {(stage.details?.dolores || []).map((d, i) => (
+                                                        <li key={i} className="break-words">{d}</li>
                                                     ))}
                                                 </ul>
                                             </>
@@ -452,7 +453,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                         {idx === 4 && (
                                             <>
                                                 <div className="text-slate-550">Resultado: <span className="text-slate-300">{stage.details?.resultado || 'Pendiente'}</span></div>
-                                                <div className="text-slate-550 text-slate-350 italic truncate max-w-[120px]">{stage.details?.notes}</div>
+                                                <div className="text-slate-550 text-slate-350 italic break-words">{stage.details?.notes}</div>
                                             </>
                                         )}
                                         {idx === 5 && (
