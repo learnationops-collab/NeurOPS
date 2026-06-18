@@ -30,7 +30,9 @@ import {
     TrendingUp,
     PhoneCall,
     Search,
-    ChevronRight
+    ChevronRight,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import api from '../../services/api';
@@ -55,6 +57,10 @@ const LeadsManagementPage = () => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [isSearchedCard, setIsSearchedCard] = useState(false);
+
+    // Estados para collapsibles
+    const [isQueueOpen, setIsQueueOpen] = useState(true);
+    const [isUnassignedOpen, setIsUnassignedOpen] = useState(true);
 
     // Form states compartidos
     const [instagram, setInstagram] = useState('');
@@ -454,105 +460,137 @@ const LeadsManagementPage = () => {
                             
                             {/* Bloque 1: Mi Cola de Leads */}
                             <div className="space-y-4 text-left bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-6 shadow-2xl">
-                                <div className="border-b border-slate-800 pb-3 mb-4 flex justify-between items-center">
-                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <div 
+                                    className={`border-b border-slate-800 pb-3 flex justify-between items-center cursor-pointer group select-none transition-colors ${isQueueOpen ? 'mb-4' : ''}`}
+                                    onClick={() => setIsQueueOpen(!isQueueOpen)}
+                                >
+                                    <h3 className="text-xs font-black text-slate-400 group-hover:text-primary uppercase tracking-widest flex items-center gap-2 transition-colors">
                                         <Layers className="text-primary" size={14} />
                                         Mi Cola
+                                        {isQueueOpen ? <ChevronUp size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
                                     </h3>
                                     <span className="text-[9px] font-black uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-lg">
                                         {filteredCards.length} Leads
                                     </span>
                                 </div>
                                 
-                                <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
-                                    {filteredCards.length === 0 ? (
-                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider text-center py-8">
-                                            Tu cola está vacía
-                                        </p>
-                                    ) : (
-                                        filteredCards.map((l) => {
-                                            const isActive = activeFilteredCard?.id === l.id;
-                                            return (
-                                                <div 
-                                                    key={l.id} 
-                                                    onClick={() => handleSelectFilteredCard(l)}
-                                                    className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-1 group text-left ${
-                                                        isActive 
-                                                            ? 'bg-[#1534ff]/10 border-[#1534ff]/40 shadow-[0_0_15px_rgba(21,52,255,0.15)]' 
-                                                            : 'bg-black/30 border-slate-800/50 hover:bg-white/5 hover:border-slate-700/50'
-                                                    }`}
-                                                >
-                                                    <div className="flex justify-between items-start gap-2">
-                                                        <h4 className={`text-[11px] font-black leading-tight truncate ${isActive ? 'text-primary' : 'text-white group-hover:text-primary transition-colors'}`}>
-                                                            {l.lead_name || l.instagram || 'Sin Nombre'}
-                                                        </h4>
-                                                        <span className="text-[8px] font-bold text-slate-500 shrink-0">
-                                                            {formatTimeOnly(l.created_at)}
-                                                        </span>
-                                                    </div>
+                                <AnimatePresence initial={false}>
+                                    {isQueueOpen && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
+                                                {filteredCards.length === 0 ? (
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider text-center py-8">
+                                                        Tu cola está vacía
+                                                    </p>
+                                                ) : (
+                                                    filteredCards.map((l) => {
+                                                        const isActive = activeFilteredCard?.id === l.id;
+                                                        return (
+                                                            <div 
+                                                                key={l.id} 
+                                                                onClick={() => handleSelectFilteredCard(l)}
+                                                                className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-1 group text-left ${
+                                                                    isActive 
+                                                                        ? 'bg-[#1534ff]/10 border-[#1534ff]/40 shadow-[0_0_15px_rgba(21,52,255,0.15)]' 
+                                                                        : 'bg-black/30 border-slate-800/50 hover:bg-white/5 hover:border-slate-700/50'
+                                                                }`}
+                                                            >
+                                                                <div className="flex justify-between items-start gap-2">
+                                                                    <h4 className={`text-[11px] font-black leading-tight truncate ${isActive ? 'text-primary' : 'text-white group-hover:text-primary transition-colors'}`}>
+                                                                        {l.lead_name || l.instagram || 'Sin Nombre'}
+                                                                    </h4>
+                                                                    <span className="text-[8px] font-bold text-slate-500 shrink-0">
+                                                                        {formatTimeOnly(l.created_at)}
+                                                                    </span>
+                                                                </div>
 
-                                                    <div className="flex justify-between items-center gap-2">
-                                                        <span className="text-[8px] font-black uppercase text-slate-500 group-hover:text-slate-400 tracking-widest truncate">
-                                                            {l.origin}
-                                                        </span>
-                                                        
-                                                        <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${
-                                                            l.result === 'Agendado' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                            l.result === 'Asistió' ? 'bg-violet-500/10 text-violet-400' :
-                                                            l.result === 'No Show' ? 'bg-rose-500/10 text-rose-400' :
-                                                            l.result === 'Cancelada' ? 'bg-amber-500/10 text-amber-400' :
-                                                            'bg-slate-500/10 text-slate-400'
-                                                        }`}>
-                                                            {l.result || 'Pendiente'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
+                                                                <div className="flex justify-between items-center gap-2">
+                                                                    <span className="text-[8px] font-black uppercase text-slate-500 group-hover:text-slate-400 tracking-widest truncate">
+                                                                        {l.origin}
+                                                                    </span>
+                                                                    
+                                                                    <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${
+                                                                        l.result === 'Agendado' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                                        l.result === 'Asistió' ? 'bg-violet-500/10 text-violet-400' :
+                                                                        l.result === 'No Show' ? 'bg-rose-500/10 text-rose-400' :
+                                                                        l.result === 'Cancelada' ? 'bg-amber-500/10 text-amber-400' :
+                                                                        'bg-slate-500/10 text-slate-400'
+                                                                    }`}>
+                                                                        {l.result || 'Pendiente'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+                                        </motion.div>
                                     )}
-                                </div>
+                                </AnimatePresence>
                             </div>
 
                             {/* Bloque 2: Leads Sin Asignar */}
                             <div className="space-y-4 text-left bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-6 shadow-2xl">
-                                <div className="border-b border-slate-800 pb-3 mb-4 flex justify-between items-center">
-                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <div 
+                                    className={`border-b border-slate-800 pb-3 flex justify-between items-center cursor-pointer group select-none transition-colors ${isUnassignedOpen ? 'mb-4' : ''}`}
+                                    onClick={() => setIsUnassignedOpen(!isUnassignedOpen)}
+                                >
+                                    <h3 className="text-xs font-black text-slate-400 group-hover:text-rose-400 uppercase tracking-widest flex items-center gap-2 transition-colors">
                                         <UserPlus className="text-rose-400" size={14} />
                                         Sin asignar
+                                        {isUnassignedOpen ? <ChevronUp size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
                                     </h3>
                                     <span className="text-[9px] font-black uppercase bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded-lg">
                                         {unassignedLeads.length} Activos
                                     </span>
                                 </div>
                                 
-                                <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
-                                    {unassignedLeads.length === 0 ? (
-                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider text-center py-8">
-                                            Sin leads sin asignar
-                                        </p>
-                                    ) : (
-                                        unassignedLeads.map(l => (
-                                            <div 
-                                                key={l.id} 
-                                                onClick={() => handleSelectLead(l.id)}
-                                                className="bg-black/30 border border-slate-800/50 p-3 rounded-2xl hover:bg-[#1534ff]/5 hover:border-[#1534ff]/20 transition-all cursor-pointer space-y-1 group"
-                                            >
-                                                <div className="flex justify-between items-start gap-2">
-                                                    <h4 className="text-[11px] font-black text-white group-hover:text-primary transition-colors leading-tight truncate">
-                                                        {l.lead_name}
-                                                    </h4>
-                                                    <span className="text-[8px] font-bold text-slate-500">
-                                                        {formatTimeOnly(l.created_at)}
-                                                    </span>
-                                                </div>
+                                <AnimatePresence initial={false}>
+                                    {isUnassignedOpen && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
+                                                {unassignedLeads.length === 0 ? (
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider text-center py-8">
+                                                        Sin leads sin asignar
+                                                    </p>
+                                                ) : (
+                                                    unassignedLeads.map(l => (
+                                                        <div 
+                                                            key={l.id} 
+                                                            onClick={() => handleSelectLead(l.id)}
+                                                            className="bg-black/30 border border-slate-800/50 p-3 rounded-2xl hover:bg-[#1534ff]/5 hover:border-[#1534ff]/20 transition-all cursor-pointer space-y-1 group"
+                                                        >
+                                                            <div className="flex justify-between items-start gap-2">
+                                                                <h4 className="text-[11px] font-black text-white group-hover:text-primary transition-colors leading-tight truncate">
+                                                                    {l.lead_name}
+                                                                </h4>
+                                                                <span className="text-[8px] font-bold text-slate-500">
+                                                                    {formatTimeOnly(l.created_at)}
+                                                                </span>
+                                                            </div>
 
-                                                <span className="text-[8px] font-black uppercase text-slate-500 group-hover:text-primary tracking-widest block">
-                                                    {l.origin} • Clic para asignar
-                                                </span>
+                                                            <span className="text-[8px] font-black uppercase text-slate-500 group-hover:text-primary tracking-widest block">
+                                                                {l.origin} • Clic para asignar
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                )}
                                             </div>
-                                        ))
+                                        </motion.div>
                                     )}
-                                </div>
+                                </AnimatePresence>
 
                                 <button
                                     onClick={() => navigate('/unattributed-leads')}
