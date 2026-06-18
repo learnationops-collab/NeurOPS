@@ -694,3 +694,9 @@
       - Se implement√≥ la funci√≥n `handleTestRule(rule)` para disparar la simulaci√≥n en vivo de una regla espec√≠fica con toasts de estado.
       - Se agreg√≥ un bot√≥n con el icono `Send` en la columna de acciones de cada fila de la tabla de reglas configuradas para iniciar la simulaci√≥n.
     - **Verificaci√≥n**: Se valid√≥ el correcto funcionamiento y la ausencia de errores mediante la compilaci√≥n del build de producci√≥n de Vite (`npm run build`).
+
+
+## 18 de Junio 2026
+- Se agregÛ el endpoint /notifications/read-all para todos los roles (admin, closer, setter, triage).
+- Se aÒadiÛ el botÛn 'Marcar LeÌdas' en la bandeja de leads (MainLayout.jsx).
+- Se simplificÛ la vista de las notificaciones para mostrar solo el contenido y el nombre del lead, haciÈndolo m·s especÌfico y de uso r·pido.

@@ -250,12 +250,28 @@ const MainLayout = ({ children }) => {
                                         Comentarios y actualizaciones
                                     </p>
                                 </div>
-                                <button
-                                    onClick={() => setShowNotificationsDrawer(false)}
-                                    className="p-2 hover:bg-white/5 rounded-2xl transition-all text-muted hover:text-white"
-                                >
-                                    <X size={18} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={async () => {
+                                            const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : user.role === 'admin' ? 'admin' : 'triage';
+                                            try {
+                                                await api.post(`/${rolePath}/notifications/read-all`);
+                                                setNotifications(prev => prev.map(n => ({...n, is_read: true})));
+                                            } catch (err) {
+                                                console.error("Error al marcar todas como leídas:", err);
+                                            }
+                                        }}
+                                        className="text-[9px] font-black text-[#1534ff] uppercase tracking-widest hover:text-white transition-colors mr-2 bg-[#1534ff]/10 hover:bg-[#1534ff]/20 px-3 py-1.5 rounded-lg"
+                                    >
+                                        Marcar Leídas
+                                    </button>
+                                    <button
+                                        onClick={() => setShowNotificationsDrawer(false)}
+                                        className="p-2 hover:bg-white/5 rounded-2xl transition-all text-muted hover:text-white"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Contenido/Lista de Notificaciones */}
@@ -290,17 +306,16 @@ const MainLayout = ({ children }) => {
                                             )}
 
                                             <div className="flex justify-between items-start gap-4">
-                                                <h3 className="text-xs font-black text-white group-hover:text-[#1534ff] transition-colors leading-tight pr-3">
-                                                    {noti.subject}
-                                                </h3>
-                                                <span className="text-[8px] font-bold text-slate-500 whitespace-nowrap">
+                                                <p className="text-[11px] font-medium text-slate-300 group-hover:text-white transition-colors leading-tight pr-3 line-clamp-3">
+                                                    <span className="font-black text-white mr-1">
+                                                        {noti.subject.includes(':') ? noti.subject.split(':')[1].trim() : noti.subject}:
+                                                    </span> 
+                                                    {noti.content}
+                                                </p>
+                                                <span className="text-[8px] font-bold text-slate-500 whitespace-nowrap mt-0.5">
                                                     {formatTimeRelative(noti.created_at)}
                                                 </span>
                                             </div>
-                                            
-                                            <p className="text-[11px] text-slate-400 font-medium leading-normal italic line-clamp-2">
-                                                {noti.content}
-                                            </p>
                                             
                                             <div className="flex items-center gap-1.5 pt-1 text-[9px] font-black uppercase text-[#1534ff] tracking-wider">
                                                 <span>Ir al lead</span>

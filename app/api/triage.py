@@ -410,3 +410,32 @@ def read_triage_notification(id):
         db.session.commit()
         
     return jsonify({"message": "Marked as read"}), 200
+
+@bp.route('/notifications/read-all', methods=['POST'])
+@login_required
+def read_all_triage_notifications():
+    from app.models import Notification
+    
+    notifications = Notification.query.all()
+    for n in notifications:
+        is_target = False
+        targets = n.target_users
+        
+        if targets == 'all': is_target = True
+        elif isinstance(targets, str) and targets.startswith("role:") and targets == f"role:{current_user.role}": is_target = True
+        elif isinstance(targets, list) and (current_user.id in targets or f"role:{current_user.role}" in targets): is_target = True
+        
+        if is_target:
+            read_by_val = n.read_by or []
+            if isinstance(read_by_val, str):
+                try: read_by_val = json.loads(read_by_val)
+                except: read_by_val = []
+                
+            if current_user.id not in read_by_val:
+                new_read_by = list(read_by_val)
+                new_read_by.append(current_user.id)
+                n.read_by = new_read_by
+                
+    db.session.commit()
+    return jsonify({"message": "Todas marcadas como leídas"}), 200
+

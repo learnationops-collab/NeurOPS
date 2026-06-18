@@ -1071,6 +1071,39 @@ def mark_notification_read(id):
         db.session.commit()
     return jsonify({"message": "Marked as read"}), 200
 
+@bp.route('/notifications/read-all', methods=['POST'])
+@login_required
+def mark_all_notifications_read():
+    from app.models import Notification
+    import json
+    
+    all_notis = Notification.query.all()
+    for n in all_notis:
+        targets = n.target_users
+        is_target = False
+        
+        if isinstance(targets, list):
+            if current_user.id in targets or f"role:{current_user.role}" in targets:
+                is_target = True
+        elif targets == "all":
+            is_target = True
+        elif isinstance(targets, str) and targets.startswith("role:") and targets == f"role:{current_user.role}":
+            is_target = True
+            
+        if is_target:
+            read_by = n.read_by or []
+            if isinstance(read_by, str):
+                try: read_by = json.loads(read_by)
+                except: read_by = []
+            read_by = list(read_by)
+            if current_user.id not in read_by:
+                read_by.append(current_user.id)
+                n.read_by = read_by
+                
+    db.session.commit()
+    return jsonify({"message": "Todas marcadas como leídas"}), 200
+
+
 @bp.route('/booking-link', methods=['GET'])
 @login_required
 def get_booking_links():

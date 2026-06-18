@@ -827,6 +827,33 @@ def mark_notification_read(id):
         
     return jsonify({"message": "Marked as read"}), 200
 
+@bp.route('/notifications/read-all', methods=['POST'])
+@role_required(ROLE_SETTER)
+def mark_all_notifications_read():
+    from app.models import Notification
+    
+    all_notifs = Notification.query.all()
+    for n in all_notifs:
+        is_target = False
+        if n.target_users == "all":
+            is_target = True
+        elif isinstance(n.target_users, str) and (n.target_users == f"role:{ROLE_SETTER}" or n.target_users == "role:setter"):
+            is_target = True
+        elif isinstance(n.target_users, list) and current_user.id in n.target_users:
+            is_target = True
+            
+        if is_target:
+            if not n.read_by:
+                n.read_by = []
+            if current_user.id not in n.read_by:
+                new_list = list(n.read_by)
+                new_list.append(current_user.id)
+                n.read_by = new_list
+                
+    db.session.commit()
+    return jsonify({"message": "Todas marcadas como leídas"}), 200
+
+
 
 @bp.route('/deck', methods=['GET'])
 @role_required(ROLE_SETTER)
