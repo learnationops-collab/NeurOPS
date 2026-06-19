@@ -162,6 +162,7 @@ const FinancialAgendasPage = () => {
     const [sortedClosers, setSortedClosers] = useState([]);
     const [byCloserState, setByCloserState] = useState({});
     const [bySourceState, setBySourceState] = useState({});
+    const [byTriageState, setByTriageState] = useState({});
 
     const [uniqueStates, setUniqueStates] = useState([]);
     const [uniqueClosers, setUniqueClosers] = useState([]);
@@ -170,6 +171,7 @@ const FinancialAgendasPage = () => {
 
     const [closerTableMinimized, setCloserTableMinimized] = useState(false);
     const [sourceTableMinimized, setSourceTableMinimized] = useState(false);
+    const [triageTableMinimized, setTriageTableMinimized] = useState(false);
 
     // Estados para edición
     const [editingAgenda, setEditingAgenda] = useState(null);
@@ -354,6 +356,7 @@ const FinancialAgendasPage = () => {
 
                 setByCloserState(resData.by_closer_state || {});
                 setBySourceState(resData.by_source_state || {});
+                setByTriageState(resData.by_triage_state || {});
 
                 setUniqueStates(resData.unique_states || []);
                 setUniqueClosers(resData.unique_closers || []);
@@ -757,6 +760,80 @@ const FinancialAgendasPage = () => {
                             !loading && (
                                 <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
                                     Sin datos en el periodo
+                                </div>
+                            )
+                        )
+                    )}
+                </Card>
+
+                {/* Desglose por Call Confirmer */}
+                <Card variant="surface" className="p-6 space-y-6 rounded-[2rem] border-base relative overflow-hidden">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
+                            <Users className="text-primary" size={16} />
+                            Desglose por Call Confirmer
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() => setTriageTableMinimized(!triageTableMinimized)}
+                            className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+                            title={triageTableMinimized ? "Maximizar tabla" : "Minimizar tabla"}
+                        >
+                            {triageTableMinimized ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                        </button>
+                    </div>
+                    
+                    {!triageTableMinimized && (
+                        Object.keys(byTriageState).length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr className="border-b border-base/60">
+                                            <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Call Confirmer</th>
+                                            <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
+                                            <th className="py-3 px-2 font-black text-center text-indigo-400 uppercase tracking-wider">Cto</th>
+                                            <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cfm</th>
+                                            <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
+                                            <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
+                                            <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
+                                            <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
+                                            <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
+                                            <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
+                                            <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-base/40">
+                                        {Object.entries(byTriageState).map(([triageName, stats]) => {
+                                            const showUp = stats["Show Up"] || 0;
+                                            const noShow = (stats["No Show"] || 0) + (stats["No show"] || 0);
+                                            const totalAttended = showUp + noShow;
+                                            const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
+                                            
+                                            return (
+                                                <tr key={triageName} className="hover:bg-white/5 transition-colors">
+                                                    <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{triageName}</td>
+                                                    <HoverPercentCell value={stats["Pendiente"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-400" />
+                                                    <HoverPercentCell value={stats["Contactado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-indigo-400" />
+                                                    <HoverPercentCell value={stats["Confirmado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-emerald-400" />
+                                                    <HoverPercentCell value={stats["Show Up"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-bold text-primary" />
+                                                    <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
+                                                    <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
+                                                    <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
+                                                    <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
+                                                    <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
+                                                    <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
+                                                        {showRate}%
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            !loading && (
+                                <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
+                                    Sin datos de Call Confirmer en el periodo
                                 </div>
                             )
                         )

@@ -254,6 +254,7 @@ def get_financial_agendas():
         by_closer = {}
         by_closer_state = {}
         by_source_state = {}
+        by_triage_state = {}
         
         known_setters_lower = {
             'elias', 'workshop', 'vsl', 'marketing', 'organico', 'orgánico',
@@ -321,6 +322,29 @@ def get_financial_agendas():
                 by_source_state[s_name]["No show"] += 1
             by_source_state[s_name]["total"] += 1
             by_source_state[s_name]["cierres"] += s_count
+            
+            # by_triage_state
+            t_name = (a.encargado_triage or 'Sin Asignar').strip()
+            if t_name not in by_triage_state:
+                by_triage_state[t_name] = {
+                    "total": 0,
+                    "Pendiente": 0,
+                    "Contactado": 0,
+                    "Confirmado": 0,
+                    "Show Up": 0,
+                    "No Show": 0,
+                    "No show": 0,
+                    "Reagendada": 0,
+                    "Cancelada": 0,
+                    "cierres": 0
+                }
+            if st_name in by_triage_state[t_name]:
+                by_triage_state[t_name][st_name] += 1
+            elif st_name.lower() == 'no show':
+                by_triage_state[t_name]["No Show"] += 1
+                by_triage_state[t_name]["No show"] += 1
+            by_triage_state[t_name]["total"] += 1
+            by_triage_state[t_name]["cierres"] += s_count
         
         # Obtener closers y fuentes únicas para el periodo de fechas seleccionado
         closers_query = db.session.query(FinancialAgenda.closer).distinct().filter(
@@ -365,6 +389,7 @@ def get_financial_agendas():
             "by_closer": by_closer,
             "by_closer_state": by_closer_state,
             "by_source_state": by_source_state,
+            "by_triage_state": by_triage_state,
             "unique_states": ['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada'],
             "unique_closers": unique_closers,
             "unique_sources": unique_sources,
