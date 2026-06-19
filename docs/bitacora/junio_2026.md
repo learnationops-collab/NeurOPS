@@ -725,3 +725,5 @@
 - Se corrigió la comparación de datos en el Dashboard de Setters (MessageTable.jsx) para que los mensajes nuevos o sin registros del periodo anterior se comparen con valores en 0 en lugar de no mostrar datos.
 
 - Se implementó la visualización de la comparación de periodos anteriores en todas las métricas del componente LeadUnifiedKPI.jsx (Leads entrantes, tasa de respuesta, cualificación, no cualificados, respondidos y sin respuesta).
+
+- Se agregó la comparación del periodo anterior a la Matriz de Pérdida de Pasos y a la Matriz de Tenacidad en Seguimiento. Además, se aumentó el tamaño de las fuentes de los títulos y cifras para una mejor legibilidad en el dashboard de Setters.

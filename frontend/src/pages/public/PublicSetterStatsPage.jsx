@@ -726,13 +726,13 @@ const PublicSetterStatsPage = () => {
                                         <div className="lg:col-span-5 bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left relative overflow-hidden">
                                             <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
                                                 <ListChecks size={16} className="text-indigo-400" />
-                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Matriz de Pérdida de Pasos</h4>
+                                                <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Matriz de Pérdida de Pasos</h4>
                                             </div>
                                             
                                             <div className="overflow-x-auto">
-                                                <table className="w-full text-left border-collapse text-xs">
+                                                <table className="w-full text-left border-collapse text-sm">
                                                     <thead>
-                                                        <tr className="border-b border-slate-800 text-slate-500 font-black uppercase text-[10px]">
+                                                        <tr className="border-b border-slate-800 text-slate-500 font-black uppercase text-xs">
                                                             <th className="pb-3 tracking-wider">Etapa del Embudo</th>
                                                             <th className="pb-3 text-center tracking-wider">Leads</th>
                                                             <th className="pb-3 text-center tracking-wider">Paso a Paso</th>
@@ -741,12 +741,12 @@ const PublicSetterStatsPage = () => {
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-800/40">
                                                         {[
-                                                            { label: '1. Entrantes (Inbox)', value: stats.totals.entrantes, conv: '-', pct: 100, color: 'bg-rose-500' },
-                                                            { label: '2. Cualificados', value: stats.totals.funnel_qualification, conv: `${div(stats.totals.funnel_qualification, stats.totals.entrantes)}%`, pct: div(stats.totals.funnel_qualification, stats.totals.entrantes), color: 'bg-violet-500' },
-                                                            { label: '3. Dolor Identificado', value: stats.totals.funnel_pain, conv: `${stats.percentages.funnel_evolution.qual_to_pain}%`, pct: div(stats.totals.funnel_pain, stats.totals.entrantes), color: 'bg-blue-500' },
-                                                            { label: '4. Oferta Presentada', value: stats.totals.funnel_offer, conv: `${stats.percentages.funnel_evolution.pain_to_offer}%`, pct: div(stats.totals.funnel_offer, stats.totals.entrantes), color: 'bg-fuchsia-500' },
-                                                            { label: '5. Link de Calendario', value: stats.totals.funnel_link, conv: `${stats.percentages.funnel_evolution.offer_to_link}%`, pct: div(stats.totals.funnel_link, stats.totals.entrantes), color: 'bg-indigo-500' },
-                                                            { label: '6. Cita Agendada', value: stats.totals.funnel_agenda, conv: `${stats.percentages.funnel_evolution.link_to_agenda}%`, pct: div(stats.totals.funnel_agenda, stats.totals.entrantes), color: 'bg-emerald-500' },
+                                                            { label: '1. Entrantes (Inbox)', value: stats.totals.entrantes, valuePrev: stats.comparison?.totals?.entrantes, conv: '-', convPrev: '-', pct: 100, pctPrev: 100, color: 'bg-rose-500' },
+                                                            { label: '2. Cualificados', value: stats.totals.funnel_qualification, valuePrev: stats.comparison?.totals?.funnel_qualification, conv: `${div(stats.totals.funnel_qualification, stats.totals.entrantes)}%`, convPrev: stats.comparison ? `${div(stats.comparison.totals.funnel_qualification, stats.comparison.totals.entrantes)}%` : '-', pct: div(stats.totals.funnel_qualification, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.funnel_qualification, stats.comparison.totals.entrantes) : 0, color: 'bg-violet-500' },
+                                                            { label: '3. Dolor Identificado', value: stats.totals.funnel_pain, valuePrev: stats.comparison?.totals?.funnel_pain, conv: `${stats.percentages.funnel_evolution.qual_to_pain}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.qual_to_pain}%` : '-', pct: div(stats.totals.funnel_pain, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.funnel_pain, stats.comparison.totals.entrantes) : 0, color: 'bg-blue-500' },
+                                                            { label: '4. Oferta Presentada', value: stats.totals.funnel_offer, valuePrev: stats.comparison?.totals?.funnel_offer, conv: `${stats.percentages.funnel_evolution.pain_to_offer}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.pain_to_offer}%` : '-', pct: div(stats.totals.funnel_offer, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.funnel_offer, stats.comparison.totals.entrantes) : 0, color: 'bg-fuchsia-500' },
+                                                            { label: '5. Link de Calendario', value: stats.totals.funnel_link, valuePrev: stats.comparison?.totals?.funnel_link, conv: `${stats.percentages.funnel_evolution.offer_to_link}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.offer_to_link}%` : '-', pct: div(stats.totals.funnel_link, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.funnel_link, stats.comparison.totals.entrantes) : 0, color: 'bg-indigo-500' },
+                                                            { label: '6. Cita Agendada', value: stats.totals.funnel_agenda, valuePrev: stats.comparison?.totals?.funnel_agenda, conv: `${stats.percentages.funnel_evolution.link_to_agenda}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.link_to_agenda}%` : '-', pct: div(stats.totals.funnel_agenda, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.funnel_agenda, stats.comparison.totals.entrantes) : 0, color: 'bg-emerald-500' },
                                                         ].map((row, idx) => {
                                                             const calculations = {
                                                                 0: { v: "Total de leads ingresados en el periodo.", c: "Suma simple de leads entrantes.", p: "Porcentaje base de entrada (100%)." },
@@ -757,30 +757,55 @@ const PublicSetterStatsPage = () => {
                                                                 5: { v: "Leads que agendaron cita final.", c: "(Agendas / Links) * 100", p: "Porcentaje de agendas sobre el total de entrantes." }
                                                             };
                                                             const calc = calculations[idx] || { v: "", c: "", p: "" };
+                                                            
+                                                            const renderTableCompare = (current, previous, isPct = false) => {
+                                                                if (!compare || !stats?.comparison) return null;
+                                                                const curVal = Number(current || 0);
+                                                                const prevVal = Number(previous || 0);
+                                                                if (prevVal === 0) {
+                                                                    return <div className="text-[9px] text-slate-500 font-bold mt-0.5">Ant: 0{isPct ? '%' : ''}</div>;
+                                                                }
+                                                                const diff = ((curVal - prevVal) / prevVal) * 100;
+                                                                const sign = diff > 0 ? '+' : '';
+                                                                const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
+                                                                return (
+                                                                    <div className="text-[9px] text-slate-550 font-bold mt-0.5 flex items-center justify-center gap-1 leading-none">
+                                                                        <span>Ant: {prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 })}{isPct ? '%' : ''}</span>
+                                                                        <span className={color}>({sign}{diff.toFixed(1)}%)</span>
+                                                                    </div>
+                                                                );
+                                                            };
+
                                                             return (
                                                                 <tr key={idx} className="hover:bg-white/5 transition-colors">
                                                                     <td className="py-3.5 font-bold text-slate-300 uppercase tracking-wider text-xs">{row.label}</td>
                                                                     <td className="py-3.5 text-center font-black text-white tabular-nums italic text-base">
-                                                                        <StatTooltip
-                                                                            label={row.label}
-                                                                            value={row.value}
-                                                                            calculation={calc.v}
-                                                                        >
-                                                                            {row.value}
-                                                                        </StatTooltip>
+                                                                        <div className="flex flex-col items-center">
+                                                                            <StatTooltip
+                                                                                label={row.label}
+                                                                                value={row.value}
+                                                                                calculation={calc.v}
+                                                                            >
+                                                                                {row.value}
+                                                                            </StatTooltip>
+                                                                            {renderTableCompare(row.value, row.valuePrev)}
+                                                                        </div>
                                                                     </td>
                                                                     <td className="py-3.5 text-center tabular-nums">
-                                                                        <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 font-bold text-slate-400 text-xs">
-                                                                            {row.conv === '-' ? '-' : (
-                                                                                <StatTooltip
-                                                                                    label={`Conversión Paso a Paso: ${row.label}`}
-                                                                                    value={row.conv}
-                                                                                    calculation={calc.c}
-                                                                                >
-                                                                                    {row.conv}
-                                                                                </StatTooltip>
-                                                                            )}
-                                                                        </span>
+                                                                        <div className="flex flex-col items-center justify-center">
+                                                                            <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 font-bold text-slate-400 text-xs">
+                                                                                {row.conv === '-' ? '-' : (
+                                                                                    <StatTooltip
+                                                                                        label={`Conversión Paso a Paso: ${row.label}`}
+                                                                                        value={row.conv}
+                                                                                        calculation={calc.c}
+                                                                                    >
+                                                                                        {row.conv}
+                                                                                    </StatTooltip>
+                                                                                )}
+                                                                            </span>
+                                                                            {row.conv !== '-' && renderTableCompare(parseFloat(row.conv) || 0, parseFloat(row.convPrev) || 0, true)}
+                                                                        </div>
                                                                     </td>
                                                                     <td className="py-3.5 text-right">
                                                                         <div className="flex flex-col items-end gap-1">
@@ -793,6 +818,7 @@ const PublicSetterStatsPage = () => {
                                                                                     {row.pct}%
                                                                                 </StatTooltip>
                                                                             </span>
+                                                                            {renderTableCompare(row.pct, row.pctPrev, true)}
                                                                             <div className="w-20 h-1.5 bg-slate-900 rounded-full overflow-hidden">
                                                                                 <div className={`h-full ${row.color} rounded-full`} style={{ width: `${row.pct}%` }} />
                                                                             </div>
@@ -805,33 +831,33 @@ const PublicSetterStatsPage = () => {
                                                 </table>
                                             </div>
                                         </div>
-
+ 
                                         {/* COLUMNA 2: MATRIZ DE TENACIDAD DE SEGUIMIENTO (Delgada) */}
                                         <div className="lg:col-span-4 bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left">
                                             <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
                                                 <RefreshCw size={16} className="text-indigo-400 animate-spin-slow" />
-                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Matriz de Tenacidad en Seguimiento</h4>
+                                                <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Matriz de Tenacidad en Seguimiento</h4>
                                             </div>
                                             
                                             <div className="space-y-3.5">
                                                 {[
-                                                    { label: "Seguimiento en Cualificación (Qual FU)", s: stats.totals.qualification_fu, r: stats.totals.qualification_fur, rate: stats.percentages.rates.qualification_fur, color: 'text-violet-400' },
-                                                    { label: "Seguimiento en Dolor (Pain FU)", s: stats.totals.pain_fu, r: stats.totals.pain_fur, rate: stats.percentages.rates.pain_fur, color: 'text-blue-400' },
-                                                    { label: "Seguimiento en Oferta (Offer FU)", s: stats.totals.offer_fu, r: stats.totals.offer_fur, rate: stats.percentages.rates.offer_fur, color: 'text-fuchsia-400' },
-                                                    { label: "Seguimiento en Link (Link FU)", s: stats.totals.link_fu, r: stats.totals.link_fur, rate: stats.percentages.rates.link_fur, color: 'text-indigo-400' },
-                                                    { label: "Seguimiento post-Agenda (Agenda FU)", s: stats.totals.agenda_fu, r: stats.totals.agenda_fur, rate: stats.percentages.rates.agenda_fur, color: 'text-emerald-400' },
+                                                    { label: "Seguimiento en Cualificación (Qual FU)", s: stats.totals.qualification_fu, sPrev: stats.comparison?.totals?.qualification_fu, r: stats.totals.qualification_fur, rPrev: stats.comparison?.totals?.qualification_fur, rate: stats.percentages.rates.qualification_fur, ratePrev: stats.comparison?.percentages?.rates?.qualification_fur, color: 'text-violet-400' },
+                                                    { label: "Seguimiento en Dolor (Pain FU)", s: stats.totals.pain_fu, sPrev: stats.comparison?.totals?.pain_fu, r: stats.totals.pain_fur, rPrev: stats.comparison?.totals?.pain_fur, rate: stats.percentages.rates.pain_fur, ratePrev: stats.comparison?.percentages?.rates?.pain_fur, color: 'text-blue-400' },
+                                                    { label: "Seguimiento en Oferta (Offer FU)", s: stats.totals.offer_fu, sPrev: stats.comparison?.totals?.offer_fu, r: stats.totals.offer_fur, rPrev: stats.comparison?.totals?.offer_fur, rate: stats.percentages.rates.offer_fu_r, ratePrev: stats.comparison?.percentages?.rates?.offer_fu_r, color: 'text-fuchsia-400' },
+                                                    { label: "Seguimiento en Link (Link FU)", s: stats.totals.link_fu, sPrev: stats.comparison?.totals?.link_fu, r: stats.totals.link_fur, rPrev: stats.comparison?.totals?.link_fur, rate: stats.percentages.rates.link_fur, ratePrev: stats.comparison?.percentages?.rates?.link_fur, color: 'text-indigo-400' },
+                                                    { label: "Seguimiento post-Agenda (Agenda FU)", s: stats.totals.agenda_fu, sPrev: stats.comparison?.totals?.agenda_fu, r: stats.totals.agenda_fur, rPrev: stats.comparison?.totals?.agenda_fur, rate: stats.percentages.rates.agenda_fur, ratePrev: stats.comparison?.percentages?.rates?.agenda_fur, color: 'text-emerald-400' },
                                                 ].map((fu, idx) => {
                                                     const semaphoricColor = fu.rate >= 40 
                                                         ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                                                         : fu.rate >= 15 
                                                         ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
                                                         : 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
-
+ 
                                                     return (
                                                         <div key={idx} className="flex justify-between items-center bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800/80 shadow-sm">
                                                             <div className="flex flex-col text-left space-y-1">
-                                                                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{fu.label}</span>
-                                                                <span className="text-[10px] font-black text-slate-300">
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{fu.label}</span>
+                                                                <span className="text-xs font-black text-slate-350">
                                                                     Env: <span className="text-white tabular-nums">
                                                                         <StatTooltip
                                                                             label={`Enviados - ${fu.label}`}
@@ -850,9 +876,14 @@ const PublicSetterStatsPage = () => {
                                                                         </StatTooltip>
                                                                     </span>
                                                                 </span>
+                                                                {compare && stats.comparison && (
+                                                                    <span className="text-[9px] text-slate-500 font-bold block mt-0.5">
+                                                                        Ant: Env: {fu.sPrev || 0} • Resp: {fu.rPrev || 0}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <div className="text-right">
-                                                                <span className={`px-2 py-1 rounded-xl text-[10px] font-black tabular-nums ${semaphoricColor}`}>
+                                                                <span className={`px-2 py-1 rounded-xl text-xs font-black tabular-nums ${semaphoricColor}`}>
                                                                     <StatTooltip
                                                                         label={`Tasa Respuesta - ${fu.label}`}
                                                                         value={`${fu.rate}%`}
@@ -861,18 +892,23 @@ const PublicSetterStatsPage = () => {
                                                                         {fu.rate}%
                                                                     </StatTooltip>
                                                                 </span>
+                                                                {compare && stats.comparison && (
+                                                                    <span className="text-[9px] text-slate-500 font-bold block mt-1">
+                                                                        Ant: {fu.ratePrev || 0}%
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     );
                                                 })}
                                             </div>
                                         </div>
-
+ 
                                         {/* COLUMNA 3: VISUALIZACIÓN GRÁFICA DEL EMBUDO */}
                                         <div className="lg:col-span-3 bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left">
                                             <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
                                                 <PieChart size={16} className="text-indigo-400" />
-                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gráfico del Embudo</h4>
+                                                <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Gráfico del Embudo</h4>
                                             </div>
                                             <div className="flex-1 flex flex-col items-center justify-center min-h-[300px]">
                                                 <FunnelChart data={funnelData} />
