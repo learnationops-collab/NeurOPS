@@ -16,7 +16,8 @@
   - **SimplificaciÃ³n de la Fecha de CreaciÃ³n (`FinancialAgendasPage.jsx`) [MODIFY]**:
     - Se removiÃ³ la hora y minutos de la visualizaciÃ³n de la fecha de creaciÃ³n ("F. CreaciÃ³n") en el historial de agendas.
     - Se creÃ³ el helper `formatDateOnly` para formatear de forma segura y consistente Ãºnicamente el dÃ­a, mes y aÃ±o en espaÃ±ol (ej. "17 de jun. de 2026").
-  - **IntegraciÃ³n de Formulario de CalificaciÃ³n n8n en Lead Roadmap (`financial_agendas.py`, `lead_roadmap.py`, `client.py`, `LeadRoadmapDetail.jsx`) [NEW / MODIFY]**:
+
+  - **IntegraciÃ³n de Formulario de CalificaciÃ³n n8n en Lead Roadmap (`financial_agendas.py`, `lead_roadmap.py`, `client.py`, `LeadRoadmapDetail.jsx`) [NEW / MODIFY]**:
     - **Base de Datos (SQLite/PostgreSQL)**:
       - Se aÃ±adiÃ³ la columna `form_data` (JSON, nullable) al modelo `Client` en `app/models/client.py`.
       - Se ejecutaron las migraciones: `add_form_data_to_client` (`80c788051ebb`).
@@ -727,3 +728,5 @@
 - Se implementó la visualización de la comparación de periodos anteriores en todas las métricas del componente LeadUnifiedKPI.jsx (Leads entrantes, tasa de respuesta, cualificación, no cualificados, respondidos y sin respuesta).
 
 - Se agregó la comparación del periodo anterior a la Matriz de Pérdida de Pasos y a la Matriz de Tenacidad en Seguimiento. Además, se aumentó el tamaño de las fuentes de los títulos y cifras para una mejor legibilidad en el dashboard de Setters.
+
+- Se rediseñó la visualización de la gráfica del embudo en el dashboard de closers (FunnelChart.jsx) reemplazando el gráfico SVG inestable de Recharts por un componente HTML/CSS personalizado con estética glassmorphic y visualización interactiva de las tasas de conversión paso a paso.
