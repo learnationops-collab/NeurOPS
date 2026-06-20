@@ -332,6 +332,90 @@ class CloserService:
         # New Sale Automation (Discord + WhatsApp)
         CloserService.trigger_sale_automation(enrollment, payment)
 
+        # Propagar venta al modelo financiero y Google Sheets
+        try:
+            from app.services.sheets_service import SheetsService
+            from app.models import Program, User, Appointment
+            
+            closer = User.query.get(closer_id)
+            email_vendedor = closer.email if closer else "Sin asignar"
+            nombre_cliente = client.full_name if client else "Sin nombre"
+            telefono = client.phone.replace("+", "").strip() if (client and client.phone) else ""
+            mail_cliente = client.email if (client and client.email) else ""
+            
+            # Formatear programa y tipo de pago
+            program = Program.query.get(program_id) if program_id else None
+            program_code = "RR"
+            if program:
+                name_lower = program.name.lower()
+                if "ace" in name_lower or "learner" in name_lower:
+                    program_code = "AL"
+                elif "specialist" in name_lower or "initiative" in name_lower:
+                    program_code = "SI"
+                elif "roadmap" in name_lower or "residency" in name_lower:
+                    program_code = "RR"
+                    
+            payment_type_friendly = "completo"
+            pay_type = data.get('payment_type', 'full')
+            if pay_type == 'full':
+                payment_type_friendly = "completo"
+            elif pay_type == 'first_payment':
+                payment_type_friendly = "parcial"
+            elif pay_type == 'down_payment':
+                payment_type_friendly = "Seña"
+            elif pay_type == 'installment':
+                payment_type_friendly = "Cuota"
+            elif pay_type == 'renewal':
+                payment_type_friendly = "Renovacion"
+            elif pay_type == 'upsell':
+                payment_type_friendly = "Upsell"
+                
+            tipo_pago = f"{program_code} - {payment_type_friendly}"
+            
+            # Buscar el metodo de pago
+            metodo_pago = "No Especificado"
+            payment_method_id = data.get('payment_method_id')
+            if payment_method_id:
+                payment_method = PaymentMethod.query.get(payment_method_id)
+                if payment_method:
+                    metodo_pago = payment_method.name
+                    
+            # Obtener setter de la cita mas reciente
+            setter_username = ""
+            last_appt = Appointment.query.filter_by(client_id=client_id).order_by(Appointment.start_time.desc()).first()
+            if last_appt and last_appt.setter:
+                setter_username = last_appt.setter.username or last_appt.setter.name or ""
+                
+            client_instagram = client.instagram.replace("@", "").strip() if (client and client.instagram) else "N/A"
+            
+            payload = {
+                "email_vendedor": email_vendedor,
+                "nombre_cliente": nombre_cliente,
+                "telefono": telefono,
+                "mail_cliente": mail_cliente,
+                "tipo_pago": tipo_pago,
+                "monto": float(payment.amount or 0.0),
+                "segundo_pago": "",
+                "metodo_pago": metodo_pago,
+                "examen": "",
+                "instagram": client_instagram,
+                "setter": setter_username,
+                "estado": "Completada" if payment.status == 'completed' else payment.status,
+                "documento_identidad": "",
+                "marca_temporal": datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+                "enviar_webhook": data.get('trigger_webhook', True),
+                "enviar_mensaje": False # Mensaje ya enviado
+            }
+            
+            # Llamar de forma sincronizada
+            SheetsService.post_to_sheets("Ventas_DB", payload)
+            
+        except Exception as e:
+            # Registrar el error para evitar romper la respuesta del registro local
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[QUICK SALE SYNC ERROR] Error al propagar venta rapida a sheets: {e}")
+
         return enrollment
 
     @staticmethod
