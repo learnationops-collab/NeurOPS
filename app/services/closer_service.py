@@ -794,7 +794,8 @@ class CloserService:
             'Cancelada': 'Cancelada',
             'canceled': 'Cancelada',
             'cancelled': 'Cancelada',
-            'Reprogramada': 'Reprogramada'
+            'Reprogramada': 'Reprogramada',
+            'Cerrada': 'Cerrada'
         }
         
         if new_status in outcome_map:

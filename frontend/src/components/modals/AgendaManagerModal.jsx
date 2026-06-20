@@ -64,6 +64,7 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
         { id: 'Cancelada', label: 'Cancelada', icon: XCircle, color: 'text-muted' },
         { id: 'Reprogramada', label: 'Reprogramada', icon: RefreshCw, color: 'text-primary' },
         { id: 'Primera Agenda', label: 'Protocolo Seg. Agenda', icon: CheckCircle2, color: 'text-success' },
+        { id: 'Cerrada', label: 'Cerrada (Venta)', icon: CheckCircle2, color: 'text-violet-500' },
     ];
 
     useEffect(() => {

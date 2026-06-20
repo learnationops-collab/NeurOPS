@@ -407,6 +407,7 @@ const LeadsManagementPage = () => {
                                 <option value="Asistió">Asistió</option>
                                 <option value="No Show">No Show</option>
                                 <option value="Cancelada">Cancelada</option>
+                                <option value="Cerrada">Cerrada</option>
                             </select>
 
                             <BuscadorGlobalDeck
@@ -522,6 +523,7 @@ const LeadsManagementPage = () => {
                                                                         l.result === 'Asistió' ? 'bg-violet-500/10 text-violet-400' :
                                                                         l.result === 'No Show' ? 'bg-rose-500/10 text-rose-400' :
                                                                         l.result === 'Cancelada' ? 'bg-amber-500/10 text-amber-400' :
+                                                                        l.result === 'Cerrada' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
                                                                         'bg-slate-500/10 text-slate-400'
                                                                     }`}>
                                                                         {l.result || 'Pendiente'}

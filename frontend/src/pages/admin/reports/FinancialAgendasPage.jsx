@@ -57,6 +57,8 @@ const getEstadoBadgeVariant = (estado) => {
             return 'indigo';
         case 'Confirmado':
             return 'success';
+        case 'Cerrada':
+            return 'indigo';
         case 'No show':
         case 'No Show':
             return 'rose';
@@ -541,7 +543,7 @@ const FinancialAgendasPage = () => {
                             className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
                         >
                             <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
-                            {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada'].map(st => (
+                            {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada'].map(st => (
                                 <option key={st} value={st} className="bg-slate-900 text-white font-semibold">{st}</option>
                             ))}
                         </select>
@@ -649,6 +651,7 @@ const FinancialAgendasPage = () => {
                                             <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
                                             <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
                                             <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
+                                            <th className="py-3 px-2 font-black text-center text-violet-400 uppercase tracking-wider">Crd</th>
                                             <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
                                             <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
                                             <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
@@ -671,6 +674,7 @@ const FinancialAgendasPage = () => {
                                                     <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
                                                     <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
                                                     <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
+                                                    <HoverPercentCell value={stats["Cerrada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-violet-400" />
                                                     <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
                                                     <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
                                                     <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
@@ -723,6 +727,7 @@ const FinancialAgendasPage = () => {
                                             <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
                                             <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
                                             <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
+                                            <th className="py-3 px-2 font-black text-center text-violet-400 uppercase tracking-wider">Crd</th>
                                             <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
                                             <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
                                             <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
@@ -745,6 +750,7 @@ const FinancialAgendasPage = () => {
                                                     <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
                                                     <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
                                                     <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
+                                                    <HoverPercentCell value={stats["Cerrada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-violet-400" />
                                                     <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
                                                     <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
                                                     <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
@@ -797,6 +803,7 @@ const FinancialAgendasPage = () => {
                                             <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
                                             <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
                                             <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
+                                            <th className="py-3 px-2 font-black text-center text-violet-400 uppercase tracking-wider">Crd</th>
                                             <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
                                             <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
                                             <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
@@ -819,6 +826,7 @@ const FinancialAgendasPage = () => {
                                                     <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
                                                     <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
                                                     <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
+                                                    <HoverPercentCell value={stats["Cerrada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-violet-400" />
                                                     <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
                                                     <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
                                                     <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
@@ -1014,11 +1022,12 @@ const FinancialAgendasPage = () => {
                                                           ${agenda.estado === 'Confirmado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : ''}
                                                           ${agenda.estado === 'No Show' || agenda.estado === 'No show' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20' : ''}
                                                           ${agenda.estado === 'Reagendada' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : ''}
+                                                          ${agenda.estado === 'Cerrada' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20 hover:bg-violet-500/20' : ''}
                                                           ${agenda.estado === 'Cancelada' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
                                                           ${!agenda.estado || agenda.estado === 'Pendiente' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
                                                       `}
                                                   >
-                                                      {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada'].map(st => (
+                                                      {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada'].map(st => (
                                                           <option key={st} value={st} className="bg-slate-900 text-white font-semibold">
                                                               {st}
                                                           </option>
@@ -1150,7 +1159,7 @@ const FinancialAgendasPage = () => {
                                             onChange={e => setEditForm({...editForm, estado: e.target.value})}
                                             required
                                         >
-                                            {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada'].map(st => (
+                                            {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada'].map(st => (
                                                 <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
                                             ))}
                                         </select>

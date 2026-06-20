@@ -298,6 +298,7 @@ const AddAgendaModal = ({ isOpen, onClose, onSuccess }) => {
                                             <option value="completed">Completada</option>
                                             <option value="no_show">No Show</option>
                                             <option value="canceled">Cancelada</option>
+                                            <option value="cerrada">Cerrada</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">

@@ -507,6 +507,8 @@ class BookingService:
                 result = 'Contactado'
             elif estado_clean == 'confirmado':
                 result = 'Confirmado'
+            elif estado_clean in ('cerrada', 'cerrado'):
+                result = 'Cerrada'
             else:
                 result = agenda.estado
             closer_processed = True

@@ -1,5 +1,19 @@
 # Bitácora - Junio 2026
 
+- **20 de Junio de 2026**:
+  - **Soporte para el Estado "Cerrada" en Agendas [MODIFY]**:
+    - **Backend**:
+      - Se añadió `"Cerrada"` a la lista `"unique_states"` en `app/api/public/financial_agendas.py` y se inicializó con `0` en los desgloses dinámicos por closer, fuente y triage/Call Confirmer.
+      - Se modificó `app/services/booking_service.py` para mapear `"cerrada"` y `"cerrado"` al resultado `'Cerrada'`, marcando la cita como procesada por closer y setter (`closer_processed = True` y `setter_processed = True`).
+      - Se añadió el mapeo `'Cerrada': 'Cerrada'` al diccionario `outcome_map` de `process_agenda` en `app/services/closer_service.py`.
+    - **Frontend**:
+      - Se actualizó el helper `getEstadoBadgeVariant` en `FinancialAgendasPage.jsx` para asignar estilo `indigo` al estado `"Cerrada"`.
+      - Se modificaron las tablas de "Desglose por Closer", "Desglose por Fuente" y "Desglose por Call Confirmer" en `FinancialAgendasPage.jsx` agregando la columna y celda `"Crd"`.
+      - Se añadió la opción `"Cerrada"` al select inline de estados en la tabla de agendas e igualmente al select del modal de edición de agenda.
+      - Se modificó `LeadsManagementPage.jsx` agregando `"Cerrada"` en las opciones de filtro de estado y su correspondiente estilo visual para los badges de leads.
+      - Se modificó `AgendaManagerModal.jsx` para agregar la opción en `statuses` como `{ id: 'Cerrada', label: 'Cerrada (Venta)', icon: CheckCircle2, color: 'text-violet-500' }`.
+      - Se modificó `AddAgendaModal.jsx` para agregar la opción en el select de estados del modal.
+
 - **19 de Junio de 2026**:
   - **Normalización de Codificación de Bitácora [MODIFY]**:
     - Se corrigieron los errores de caracteres corruptos en `docs/bitacora/junio_2026.md` al normalizar y convertir el archivo desde un formato de codificación mixto a UTF-8 estándar.

@@ -282,6 +282,7 @@ def get_financial_agendas():
                     "No show": 0,
                     "Reagendada": 0,
                     "Cancelada": 0,
+                    "Cerrada": 0,
                     "cierres": 0
                 }
             if st_name in by_closer_state[c_name]:
@@ -313,6 +314,7 @@ def get_financial_agendas():
                     "No show": 0,
                     "Reagendada": 0,
                     "Cancelada": 0,
+                    "Cerrada": 0,
                     "cierres": 0
                 }
             if st_name in by_source_state[s_name]:
@@ -336,6 +338,7 @@ def get_financial_agendas():
                     "No show": 0,
                     "Reagendada": 0,
                     "Cancelada": 0,
+                    "Cerrada": 0,
                     "cierres": 0
                 }
             if st_name in by_triage_state[t_name]:
@@ -390,7 +393,7 @@ def get_financial_agendas():
             "by_closer_state": by_closer_state,
             "by_source_state": by_source_state,
             "by_triage_state": by_triage_state,
-            "unique_states": ['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada'],
+            "unique_states": ['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada'],
             "unique_closers": unique_closers,
             "unique_sources": unique_sources,
             "unique_triage": unique_triage,
