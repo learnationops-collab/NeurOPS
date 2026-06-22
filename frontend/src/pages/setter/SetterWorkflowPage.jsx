@@ -460,16 +460,9 @@ const SetterWorkflowPage = () => {
                                                         </div>
                                                     )}
 
-                                                    {/* Paso 3: Link de Agenda */}
+                                                    {/* Paso 2: Link de Agenda */}
                                                     {activeStep === 'link-agenda' && (
                                                         <div className="flex gap-1">
-                                                            <button
-                                                                onClick={(e) => handleCopyLink(l, e)}
-                                                                className="h-8 px-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-black text-[9px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
-                                                                title="Copiar link de booking"
-                                                            >
-                                                                <Copy size={10} /> Link
-                                                            </button>
                                                             <button
                                                                 onClick={(e) => handleQuickAction(l.id, 'Link Enviado', e)}
                                                                 disabled={processingId === l.id}

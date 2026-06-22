@@ -1432,3 +1432,4 @@
     - **Frontend**:
       - Eliminación del botón "Agendado" en el paso 2 (Link de Agenda) para el Setter, delegando la detección del agendamiento al sistema automático de booking.
       - Reemplazo de la acción rápida (tanto individual como en lote) para marcar la cita directamente como "Link Enviado" en lugar de "Agendado" cuando el setter les provee su link de booking.
+      - Eliminación del botón "Link" (que copiaba el enlace al portapapeles) en el renglón del lead del paso 2 (Link de Agenda) para dejar únicamente el botón de acción rápida "Link Enviado".
