@@ -8,7 +8,7 @@ import {
 import toast from 'react-hot-toast';
 import { EditLeadModal } from './LeadRoadmapModals';
 
-const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate }) => {
+const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate, availableKeywords = [], userRole, appointmentId }) => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -362,6 +362,36 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         <div className="text-xs font-black text-violet-400 flex items-center gap-1.5">
                             {channel}
                         </div>
+                    </div>
+                    <div className="space-y-1" title="Anuncio / Keyword asociada al Lead">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Anuncio (Keyword)</div>
+                        {userRole === 'setter' && appointmentId ? (
+                            <select
+                                value={data?.appointment_keyword || lead.keyword || ''}
+                                onChange={async (e) => {
+                                    const newKeyword = e.target.value;
+                                    try {
+                                        await api.post(`/setter/deck/${appointmentId}`, { keyword: newKeyword });
+                                        toast.success("Anuncio actualizado");
+                                        fetchRoadmap();
+                                        if (onUpdate) onUpdate();
+                                    } catch (err) {
+                                        console.error("Error al actualizar anuncio:", err);
+                                        toast.error("Error al actualizar anuncio");
+                                    }
+                                }}
+                                className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[11px] font-black text-slate-200 cursor-pointer outline-none focus:ring-1 focus:ring-violet-500/50"
+                            >
+                                <option value="">Sin anuncio</option>
+                                {availableKeywords.map(k => (
+                                    <option key={k.id} value={k.slug}>{k.name} ({k.slug})</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <div className="text-xs font-black text-white">
+                                {lead.keyword || data?.appointment_keyword || 'Sin anuncio'}
+                            </div>
+                        )}
                     </div>
                     <div className="space-y-1" title="Setter asignado y Closer responsable">
                         <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Asignación</div>

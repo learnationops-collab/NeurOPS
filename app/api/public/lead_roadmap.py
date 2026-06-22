@@ -583,6 +583,9 @@ def get_lead_roadmap():
     frequent_objections = sorted(objection_counts.keys(), key=lambda k: objection_counts[k], reverse=True)[:10]
     frequent_dolores = sorted(dolores_counts.keys(), key=lambda k: dolores_counts[k], reverse=True)[:10]
 
+    # Obtener la keyword de la cita o agenda para mostrarla como anuncio asociado
+    appt_keyword = appointments[0].keyword if appointments else (financial_agendas[0].keyword if financial_agendas else None)
+
     return jsonify({
         "lead": lead_profile,
         "stages": stages,
@@ -592,7 +595,8 @@ def get_lead_roadmap():
         "comments": comments_list,
         "programs": programs_list,
         "frequent_objections": frequent_objections,
-        "frequent_dolores": frequent_dolores
+        "frequent_dolores": frequent_dolores,
+        "appointment_keyword": appt_keyword
     }), 200
 
 @bp.route('/public/lead-roadmap/update-client', methods=['POST'])

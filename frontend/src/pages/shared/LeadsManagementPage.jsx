@@ -78,6 +78,10 @@ const LeadsManagementPage = () => {
     const [filterDateRange, setFilterDateRange] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Selección masiva y keywords de anuncios disponibles
+    const [selectedApptIds, setSelectedApptIds] = useState(new Set());
+    const [availableKeywords, setAvailableKeywords] = useState([]);
+
     // Datos Adicionales (KPIs, Sin asignar, Eventos, Gráfica)
     const [stats, setStats] = useState({ kpis_top: {}, kpis_bottom: {}, chart_data: [] });
     const [unassignedLeads, setUnassignedLeads] = useState([]);
@@ -89,19 +93,34 @@ const LeadsManagementPage = () => {
     // Cliente seleccionado directamente (sin agenda, solo form_data)
     const [selectedClientRoadmap, setSelectedClientRoadmap] = useState(null);
 
+    const step = searchParams.get('step') || (user?.role === 'setter' ? 'entrantes' : '');
+
     // Cargar cola de cartas filtrada
     const fetchQueue = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/${rolePath}/deck?date_range=${filterDateRange}`);
+            const currentStep = searchParams.get('step') || (user?.role === 'setter' ? 'entrantes' : '');
+            const res = await api.get(`/${rolePath}/deck?date_range=${filterDateRange}&step=${currentStep}`);
             setCards(res.data || []);
             setCurrentIndex(0);
             setIsSearchedCard(false);
+            setSelectedApptIds(new Set()); // Limpiar selección al cambiar de cola
         } catch (err) {
             console.error("Error al cargar mazo:", err);
             toast.error("Error al cargar la cola de leads");
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Cargar anuncios disponibles
+    const fetchAvailableKeywords = async () => {
+        try {
+            const res = await api.get('/setter/links');
+            const events = res.data?.events || [];
+            setAvailableKeywords(events);
+        } catch (err) {
+            console.error("Error al cargar anuncios disponibles:", err);
         }
     };
 
@@ -148,15 +167,25 @@ const LeadsManagementPage = () => {
         }
     };
 
+    // Redirección por defecto si falta step para el setter
+    useEffect(() => {
+        if (user?.role === 'setter' && !searchParams.get('step')) {
+            setSearchParams({ step: 'entrantes' });
+        }
+    }, [searchParams, user, setSearchParams]);
+
     useEffect(() => {
         fetchStats();
         fetchUnassignedToday();
+        if (user?.role === 'setter') {
+            fetchAvailableKeywords();
+        }
         if (apptIdParam) {
             handleSelectLead(apptIdParam);
         } else {
             fetchQueue();
         }
-    }, [apptIdParam, filterDateRange]);
+    }, [apptIdParam, filterDateRange, step, user?.role]);
 
     const activeCard = cards[currentIndex];
 
@@ -300,6 +329,51 @@ const LeadsManagementPage = () => {
         } catch (err) {
             console.error("Error al guardar cambios de mazo:", err);
             toast.error("Error al procesar la carta");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const toggleSelectLead = (apptId, e) => {
+        e.stopPropagation();
+        setSelectedApptIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(apptId)) {
+                newSet.delete(apptId);
+            } else {
+                newSet.add(apptId);
+            }
+            return newSet;
+        });
+    };
+
+    const toggleSelectAllLeads = () => {
+        setSelectedApptIds(prev => {
+            if (prev.size === filteredCards.length) {
+                return new Set();
+            } else {
+                return new Set(filteredCards.map(c => c.id));
+            }
+        });
+    };
+
+    const handleBulkUpdate = async (newResult, newKeyword) => {
+        if (selectedApptIds.size === 0) return;
+        setSubmitting(true);
+        try {
+            const payload = {
+                appt_ids: Array.from(selectedApptIds),
+                result: newResult || undefined,
+                keyword: newKeyword || undefined
+            };
+            await api.post(`/setter/deck/bulk-update`, payload);
+            toast.success("Leads actualizados correctamente");
+            setSelectedApptIds(new Set());
+            fetchQueue();
+            fetchStats();
+        } catch (err) {
+            console.error("Error al actualizar en lote:", err);
+            toast.error("Error al procesar la actualización en masa");
         } finally {
             setSubmitting(false);
         }
@@ -459,8 +533,7 @@ const LeadsManagementPage = () => {
                         
                         {/* Columna 1: Panel de Control de Leads (Cola y Sin Asignar) */}
                         <div className={`lg:col-span-1 space-y-6 transition-all duration-300 ${isSidebarOpen ? 'block' : 'hidden'}`}>
-                            
-                            {/* Bloque 1: Mi Cola de Leads */}
+                                     {/* Bloque 1: Mi Cola de Leads */}
                             <div className="space-y-4 text-left bg-[#1a1c23]/95 border border-slate-800/80 rounded-[2.5rem] p-6 shadow-2xl">
                                 <div 
                                     className={`border-b border-slate-800 pb-3 flex justify-between items-center cursor-pointer group select-none transition-colors ${isQueueOpen ? 'mb-4' : ''}`}
@@ -476,6 +549,81 @@ const LeadsManagementPage = () => {
                                     </span>
                                 </div>
                                 
+                                {isQueueOpen && selectedApptIds.size > 0 && (
+                                    <div className="bg-slate-950/80 border border-slate-800 p-3 rounded-2xl mb-3 space-y-2 text-left animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[9px] font-black uppercase text-slate-400">
+                                                {selectedApptIds.size} seleccionados
+                                            </span>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setSelectedApptIds(new Set())}
+                                                className="text-[9px] font-black text-rose-400 hover:underline uppercase cursor-pointer"
+                                            >
+                                                Desmarcar todos
+                                            </button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {step === 'entrantes' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleBulkUpdate('Contactado')}
+                                                    className="flex-1 py-1.5 bg-[#1534ff] hover:bg-blue-600 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition-colors cursor-pointer text-center font-bold"
+                                                >
+                                                    ✓ Contactado
+                                                </button>
+                                            )}
+                                            {step === 'cualificacion' && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleBulkUpdate('Cualificado')}
+                                                        className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition-colors cursor-pointer text-center font-bold"
+                                                    >
+                                                        ✓ Cualificar
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleBulkUpdate('Descualificado')}
+                                                        className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition-colors cursor-pointer text-center font-bold"
+                                                    >
+                                                        ✕ Descualificar
+                                                    </button>
+                                                </>
+                                            )}
+                                            {step === 'link-agenda' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleBulkUpdate('Agendado')}
+                                                    className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition-colors cursor-pointer text-center font-bold"
+                                                >
+                                                    Link Enviado
+                                                </button>
+                                            )}
+                                        </div>
+                                        {/* Selector de Anuncio Masivo */}
+                                        {availableKeywords.length > 0 && (
+                                            <div className="space-y-1 pt-1.5 border-t border-slate-800/60">
+                                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block">Asociar Anuncio en Lote</label>
+                                                <select
+                                                    onChange={(e) => {
+                                                        if (e.target.value) {
+                                                            handleBulkUpdate(null, e.target.value);
+                                                            e.target.value = '';
+                                                        }
+                                                    }}
+                                                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[9px] font-black text-slate-350 cursor-pointer outline-none focus:ring-1 focus:ring-primary/50 font-bold"
+                                                >
+                                                    <option value="">Seleccionar anuncio...</option>
+                                                    {availableKeywords.map(k => (
+                                                        <option key={k.id} value={k.slug}>{k.name} ({k.slug})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 <AnimatePresence initial={false}>
                                     {isQueueOpen && (
                                         <motion.div
@@ -492,46 +640,76 @@ const LeadsManagementPage = () => {
                                                         Tu cola está vacía
                                                     </p>
                                                 ) : (
-                                                    filteredCards.map((l) => {
-                                                        const isActive = activeFilteredCard?.id === l.id;
-                                                        return (
-                                                            <div 
-                                                                key={l.id} 
-                                                                onClick={() => handleSelectFilteredCard(l)}
-                                                                className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-1 group text-left ${
-                                                                    isActive 
-                                                                        ? 'bg-[#1534ff]/10 border-[#1534ff]/40 shadow-[0_0_15px_rgba(21,52,255,0.15)]' 
-                                                                        : 'bg-black/30 border-slate-800/50 hover:bg-white/5 hover:border-slate-700/50'
-                                                                }`}
-                                                            >
-                                                                <div className="flex justify-between items-start gap-2">
-                                                                    <h4 className={`text-[11px] font-black leading-tight truncate ${isActive ? 'text-primary' : 'text-white group-hover:text-primary transition-colors'}`}>
-                                                                        {l.lead_name || l.instagram || 'Sin Nombre'}
-                                                                    </h4>
-                                                                    <span className="text-[8px] font-bold text-slate-500 shrink-0">
-                                                                        {formatTimeOnly(l.created_at)}
-                                                                    </span>
-                                                                </div>
-
-                                                                <div className="flex justify-between items-center gap-2">
-                                                                    <span className="text-[8px] font-black uppercase text-slate-500 group-hover:text-slate-400 tracking-widest truncate">
-                                                                        {l.origin}
-                                                                    </span>
-                                                                    
-                                                                    <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${
-                                                                        l.result === 'Agendado' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                                        l.result === 'Asistió' ? 'bg-violet-500/10 text-violet-400' :
-                                                                        l.result === 'No Show' ? 'bg-rose-500/10 text-rose-400' :
-                                                                        l.result === 'Cancelada' ? 'bg-amber-500/10 text-amber-400' :
-                                                                        l.result === 'Cerrada' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
-                                                                        'bg-slate-500/10 text-slate-400'
-                                                                    }`}>
-                                                                        {l.result || 'Pendiente'}
-                                                                    </span>
-                                                                </div>
+                                                    <div className="space-y-2">
+                                                        {user?.role === 'setter' && filteredCards.length > 1 && (
+                                                            <div className="flex items-center gap-2 px-1 py-1 border-b border-slate-800/40 select-none">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedApptIds.size === filteredCards.length}
+                                                                    onChange={toggleSelectAllLeads}
+                                                                    className="rounded bg-slate-950 border-slate-800 text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer h-3.5 w-3.5"
+                                                                />
+                                                                <span 
+                                                                    className="text-[9px] font-black text-slate-500 uppercase tracking-widest cursor-pointer hover:text-white transition-colors font-bold" 
+                                                                    onClick={toggleSelectAllLeads}
+                                                                >
+                                                                    Seleccionar Todos
+                                                                </span>
                                                             </div>
-                                                        );
-                                                    })
+                                                        )}
+                                                        {filteredCards.map((l) => {
+                                                            const isActive = activeFilteredCard?.id === l.id;
+                                                            const isSelected = selectedApptIds.has(l.id);
+                                                            return (
+                                                                <div 
+                                                                    key={l.id} 
+                                                                    onClick={() => handleSelectFilteredCard(l)}
+                                                                    className={`p-3 rounded-2xl border transition-all cursor-pointer text-left flex items-start gap-2.5 ${
+                                                                        isActive 
+                                                                            ? 'bg-[#1534ff]/10 border-[#1534ff]/40 shadow-[0_0_15px_rgba(21,52,255,0.15)]' 
+                                                                            : 'bg-black/30 border-slate-800/50 hover:bg-white/5 hover:border-slate-700/50'
+                                                                    }`}
+                                                                >
+                                                                    {user?.role === 'setter' && (
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={isSelected}
+                                                                            onChange={(e) => toggleSelectLead(l.id, e)}
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                            className="rounded bg-slate-950 border-slate-800 text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer mt-0.5 h-3.5 w-3.5"
+                                                                        />
+                                                                    )}
+                                                                    <div className="flex-1 min-w-0 space-y-1">
+                                                                        <div className="flex justify-between items-start gap-2">
+                                                                            <h4 className={`text-[11px] font-black leading-tight truncate ${isActive ? 'text-primary' : 'text-white group-hover:text-primary transition-colors font-bold'}`}>
+                                                                                {l.lead_name || l.instagram || 'Sin Nombre'}
+                                                                            </h4>
+                                                                            <span className="text-[8px] font-bold text-slate-500 shrink-0">
+                                                                                {formatTimeOnly(l.created_at)}
+                                                                            </span>
+                                                                        </div>
+    
+                                                                        <div className="flex justify-between items-center gap-2">
+                                                                            <span className="text-[8px] font-black uppercase text-slate-500 group-hover:text-slate-400 tracking-widest truncate">
+                                                                                {l.origin} {l.keyword ? `• ${l.keyword}` : ''}
+                                                                            </span>
+                                                                            
+                                                                            <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${
+                                                                                l.result === 'Agendado' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                                                l.result === 'Asistió' ? 'bg-violet-500/10 text-violet-400' :
+                                                                                l.result === 'No Show' ? 'bg-rose-500/10 text-rose-400' :
+                                                                                l.result === 'Cancelada' ? 'bg-amber-500/10 text-amber-400' :
+                                                                                l.result === 'Cerrada' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
+                                                                                'bg-slate-500/10 text-slate-400'
+                                                                            }`}>
+                                                                                {l.result || 'Pendiente'}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 )}
                                             </div>
                                         </motion.div>
@@ -624,6 +802,9 @@ const LeadsManagementPage = () => {
                             {selectedClientRoadmap ? (
                                 <LeadRoadmapDetail
                                     clientId={selectedClientRoadmap.client_id}
+                                    availableKeywords={availableKeywords}
+                                    userRole={user?.role}
+                                    appointmentId={activeFilteredCard?.id}
                                     onUpdate={() => {}}
                                 />
                             ) : activeFilteredCard ? (
@@ -631,6 +812,9 @@ const LeadsManagementPage = () => {
                                     instagram={instagram || activeFilteredCard.instagram}
                                     email={activeFilteredCard.email}
                                     phone={activeFilteredCard.phone}
+                                    availableKeywords={availableKeywords}
+                                    userRole={user?.role}
+                                    appointmentId={activeFilteredCard.id}
                                     onUpdate={() => {
                                         fetchQueue();
                                         if (activeFilteredCard.id) {

@@ -862,6 +862,7 @@ def get_setter_deck():
     from datetime import date, timedelta, datetime
     
     date_range = request.args.get('date_range', 'all')
+    step = request.args.get('step')
     start_date = None
     today = date.today()
     if date_range == 'today':
@@ -871,10 +872,29 @@ def get_setter_deck():
     elif date_range == 'month':
         start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
     from sqlalchemy import or_
-    query = Appointment.query.filter(
-        or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
-        Appointment.setter_processed == False
-    )
+    
+    # Filtrar según el paso del flujo de trabajo
+    if step == 'entrantes':
+        # Leads entrantes sin contactar (result es vacío, nulo o Pendiente)
+        query = Appointment.query.filter(
+            or_(Appointment.result == None, Appointment.result == '', Appointment.result == 'Pendiente')
+        )
+    elif step == 'cualificacion':
+        # Leads contactados que no estén ni cualificados ni descualificados
+        query = Appointment.query.filter(
+            Appointment.result == 'Contactado'
+        )
+    elif step == 'link-agenda':
+        # Leads cualificados a la espera de agendamiento/envío de link
+        query = Appointment.query.filter(
+            Appointment.result == 'Cualificado'
+        )
+    else:
+        # Consulta por defecto para mantener compatibilidad
+        query = Appointment.query.filter(
+            or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
+            Appointment.setter_processed == False
+        )
     
     if start_date:
         query = query.filter(Appointment.start_time >= start_date)
@@ -892,7 +912,7 @@ def get_setter_deck():
         "instagram": a.client.instagram if a.client else "",
         "start_time": a.start_time.isoformat(),
         "origin": a.origin,
-        "result": a.result or "Agendado",
+        "result": a.result or "Pendiente",
         "ig_chat_link": a.ig_chat_link or "",
         "keyword": a.keyword or "",
         "setter_notes": a.setter_notes or ""
@@ -920,7 +940,8 @@ def process_setter_card(appt_id):
         appt.keyword = data['keyword']
     if 'setter_notes' in data:
         appt.setter_notes = data['setter_notes']
-    # El setter ya no selecciona estados (result no se edita)
+    if 'result' in data:
+        appt.result = data['result']
         
     appt.setter_processed = True
     
@@ -934,6 +955,43 @@ def process_setter_card(appt_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar: {str(e)}"}), 500
+
+
+@bp.route('/deck/bulk-update', methods=['POST'])
+@role_required(ROLE_SETTER)
+def bulk_update_setter_cards():
+    data = request.get_json() or {}
+    appt_ids = data.get('appt_ids', [])
+    result = data.get('result')
+    keyword = data.get('keyword')
+    
+    if not appt_ids:
+        return jsonify({"message": "No se proporcionaron IDs de citas"}), 400
+        
+    appointments = Appointment.query.filter(Appointment.id.in_(appt_ids)).all()
+    
+    from app.services.booking_service import BookingService
+    
+    for appt in appointments:
+        if current_user.role != 'admin' and appt.setter_id != current_user.id:
+            continue  # Evitar modificar lo que no pertenece al setter
+            
+        if result:
+            appt.result = result
+            description = f"Setter {current_user.username} actualizó estado masivamente a: {result}"
+            BookingService.log_lead_event(appt.id, current_user.id, 'status_change', description)
+            
+        if keyword:
+            appt.keyword = keyword
+            description = f"Setter {current_user.username} actualizó anuncio asociado masivamente a: {keyword}"
+            BookingService.log_lead_event(appt.id, current_user.id, 'keyword_change', description)
+            
+    try:
+        db.session.commit()
+        return jsonify({"message": f"Se actualizaron {len(appointments)} citas con éxito"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error al actualizar en masa: {str(e)}"}), 500
 
 
 @bp.route('/deck/search', methods=['GET'])

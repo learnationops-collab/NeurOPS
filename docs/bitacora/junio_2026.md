@@ -1398,3 +1398,22 @@
       - Al integrarse los gráficos circulares directamente en las tablas correspondientes, se eliminaron los gráficos duplicados de *"Tipo de Cierre"* y *"Estado de Agendas"* de la fila inferior general.
 
       - Se reorganizó la fila inferior (`BOTTOM ROW`) en un grid de 2 columnas centrado exclusivamente en la distribución de la tenacidad de los seguimientos: **Re-engagement (Hot)** y **Re-engagement (Cold)**, logrando un dashboard sumamente limpio, simétrico y de altísimo valor analítico.
+
+- **22 de Junio de 2026**:
+  - **Reestructuración de la Barra Inferior (Dock) y Flujo de Trabajo Secuencial para Setters**:
+    - **API Backend (`app/api/setter.py`) [MODIFY]**:
+      - Modificación del endpoint `/api/setter/deck` para aceptar un parámetro `step` (`entrantes`, `cualificacion`, `link-agenda`).
+      - Filtrado dinámico de los leads en la cola según el paso del flujo secuencial en el que se encuentren (sin contactar, contactados sin cualificar, cualificados sin link).
+      - Habilitación del guardado de `result` en `process_setter_card`.
+      - Creación del nuevo endpoint `POST /api/setter/deck/bulk-update` para procesar actualizaciones en lote del estado y la keyword (anuncio) de múltiples citas.
+    - **API Backend (`app/api/public/lead_roadmap.py`) [MODIFY]**:
+      - Inyección de `appointment_keyword` en la respuesta de `/public/lead-roadmap` para exponer el anuncio asociado a la cita activa.
+    - **Interfaz Frontend (`useDockNavigation.js`) [MODIFY]**:
+      - Configuración de 5 pasos numerados para el Setter (1. Leads Entrantes, 2. Cualificación, 3. Link de Agenda, 4. Reporte Diario, 5. Dashboard).
+      - Adaptación de la detección del elemento activo para soportar parámetros de consulta (`location.search`), permitiendo destacar el paso correcto en el Dock inferior.
+    - **Interfaz Frontend (`LeadRoadmapDetail.jsx`) [MODIFY]**:
+      - Adición de un selector interactivo dinámico en la sección de Metadatos de Adquisición para editar la keyword (anuncio) en caliente desde la ficha del lead si el usuario es un setter y hay una cita activa.
+    - **Interfaz Frontend (`LeadsManagementPage.jsx`) [MODIFY]**:
+      - Corrección de un error de sintaxis JSX que duplicaba la etiqueta `div` y rompía el layout de la columna izquierda de leads.
+      - Integración de los checkboxes de selección múltiple y botones de acciones masivas en la cola del setter correspondientes a cada paso.
+      - Pasaje de propiedades de anuncios (`availableKeywords`, `userRole` y `appointmentId`) a `LeadRoadmapDetail` para posibilitar el cambio del anuncio asociado en caliente.

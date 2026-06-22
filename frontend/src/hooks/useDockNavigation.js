@@ -51,10 +51,11 @@ const useDockNavigation = () => {
             ];
         } else if (isSetter) {
             return [
-                { id: 'stats', icon: BarChart3, label: 'Dashboard', path: '/setter/statistics' },
-                { id: 'deck', icon: Layers, label: 'Gestión de Leads', path: '/setter/deck' },
-                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/setter/report' },
-                { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' }
+                { id: 'step-1', icon: Users, label: '1. Leads Entrantes', path: '/setter/deck?step=entrantes' },
+                { id: 'step-2', icon: Layers, label: '2. Cualificación', path: '/setter/deck?step=cualificacion' },
+                { id: 'step-3', icon: Activity, label: '3. Link de Agenda', path: '/setter/deck?step=link-agenda' },
+                { id: 'step-4', icon: ClipboardList, label: '4. Reporte Diario', path: '/setter/report' },
+                { id: 'step-5', icon: BarChart3, label: '5. Dashboard', path: '/setter/statistics' }
             ];
         } else if (isTriage) {
             return [
@@ -82,11 +83,17 @@ const useDockNavigation = () => {
         return [];
     }, [user?.role]);
 
-    // Detectar página activa desde la URL
+    // Detectar página activa desde la URL considerando query string para pasos
     const activePageIndex = useMemo(() => {
-        const index = pages.findIndex(page => location.pathname.startsWith(page.path));
+        const currentFull = location.pathname + location.search;
+        const index = pages.findIndex(page => {
+            if (page.path.includes('?')) {
+                return currentFull.startsWith(page.path);
+            }
+            return location.pathname.startsWith(page.path);
+        });
         return index >= 0 ? index : 0;
-    }, [location.pathname, pages]);
+    }, [location.pathname, location.search, pages]);
 
     const activePage = pages[activePageIndex];
 
