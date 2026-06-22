@@ -24,8 +24,8 @@
 
   - **Depuración de Scripts Locales Innecesarios [DELETE]**:
     - Se eliminó el script utilitario de depuración de clientes `fix_prod_db.py` de la raíz del proyecto.
-    - Se eliminaron del directorio `scripts/` los scripts y herramientas de mantenimiento que no son necesarios para el funcionamiento diario en producción: `adaptar_datos_historicos.py`, `apply_form_data.py`, `db/migrate_leads.py` y `db/seed.py`, removiendo asimismo el directorio `scripts/db/`.
-    - Se preservó únicamente el script de sincronización local `scripts/actualizar_db.py` y el cron del servidor `scripts/sync_sheets.py`.
+    - Se eliminaron del directorio `scripts/` los scripts y herramientas de mantenimiento que no son necesarios para el funcionamiento diario en producción: `adaptar_datos_historicos.py`, `apply_form_data.py`, `db/migrate_leads.py`, `db/seed.py` (removiendo asimismo el directorio `scripts/db/`) y el script obsoleto de lectura de Google Sheets `sync_sheets.py` (puesto que el registro de agendas se realiza mediante webhook externo de n8n y las ventas se registran directamente desde la aplicación hacia Sheets).
+    - Se preservó únicamente el script de sincronización local `scripts/actualizar_db.py`.
 
 - **20 de Junio de 2026**:
   - **Soporte para el Estado "Cerrada" en Agendas [MODIFY]**:
