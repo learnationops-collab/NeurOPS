@@ -1413,7 +1413,7 @@
       - Adaptación de la detección del elemento activo para soportar parámetros de consulta (`location.search`), permitiendo destacar el paso correcto en el Dock inferior.
     - **Interfaz Frontend (`LeadRoadmapDetail.jsx`) [MODIFY]**:
       - Adición de un selector interactivo dinámico en la sección de Metadatos de Adquisición para editar la keyword (anuncio) en caliente desde la ficha del lead si el usuario es un setter y hay una cita activa.
-    - **Interfaz Frontend (`LeadsManagementPage.jsx`) [MODIFY]**:
-      - Corrección de un error de sintaxis JSX que duplicaba la etiqueta `div` y rompía el layout de la columna izquierda de leads.
-      - Integración de los checkboxes de selección múltiple y botones de acciones masivas en la cola del setter correspondientes a cada paso.
-      - Pasaje de propiedades de anuncios (`availableKeywords`, `userRole` y `appointmentId`) a `LeadRoadmapDetail` para posibilitar el cambio del anuncio asociado en caliente.
+    - **Interfaz Frontend [REDESIGN] (`SetterWorkflowPage.jsx` [NEW] y `App.jsx` [MODIFY])**:
+      - Creación del nuevo componente de productividad y espacio de trabajo `SetterWorkflowPage.jsx` con diseño de alta densidad, checkboxes de selección masiva y panel de herramientas para lotes.
+      - Incorporación de botones de acción de un solo clic por fila en la lista de leads (Paso 1: Contactado, Paso 2: Cualificar/Descualificar, Paso 3: Copiar Link / Agendado).
+      - Redireccionamiento de la ruta `/setter/deck` en `App.jsx` hacia este nuevo espacio de trabajo enfocado del Setter.
