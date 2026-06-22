@@ -21,7 +21,9 @@ from app.models import (
     TriageDailyReport, TriageTrackerReport, WorkshopTemplate, 
     WorkshopButton, WorkshopTemplateSent, WorkshopInteraction,
     GoogleCalendarToken, UTMLog, LandingTracking, ConversationalMessage,
-    LeadEventLog, ExcludedSale, ClientComment, event_closers
+    LeadEventLog, ExcludedSale, ClientComment, event_closers,
+    TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving,
+    AlertRule, Alert
 )
 
 def actualizar():
@@ -41,7 +43,6 @@ def actualizar():
         ProdSession = sessionmaker(bind=prod_engine)
         prod_session = ProdSession()
 
-        # Lista de modelos ordenados por jerarquía para evitar errores de FK
         modelos = [
             # Independientes / Base
             User, EventGroup, Program, WorkshopTemplate, Pipeline, 
@@ -49,15 +50,16 @@ def actualizar():
             Campaign, ManychatLead, Integration,
             LandingTracking, ConversationalMessage, ExcludedSale,
             PaymentMethod, ManychatAdLead,
+            TeamMember, MonthlyPaymentMethodBalance, MonthlySaving, AlertRule,
             
             # Dependencia Nivel 1
             Event, WorkshopButton, PipelineStage, Client, AdSet, 
             MarketingBudget, PublicRegistration, GoogleCalendarToken, UTMLog,
-            Availability, WeeklyAvailability,
+            Availability, WeeklyAvailability, Alert,
             
             # Dependencia Nivel 2
             Lead, Ad, WorkshopTemplateSent, UserViewSetting,
-            SurveyQuestion, ClientComment,
+            SurveyQuestion, ClientComment, MonthlyPayroll,
             
             # Dependencia Nivel 3
             Appointment, Enrollment, AdPeriodSpend, LeadAnswer, 

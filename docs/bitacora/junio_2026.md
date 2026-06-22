@@ -8,6 +8,11 @@
       - En `FinancialAgendasPage.jsx`, se cambió el visualizador del closer en la tabla por un selector desplegable (`select`) que actualiza la base de datos asíncronamente en línea.
       - En el modal de edición de agendas, se reemplazaron las entradas de texto libre de `Closer` y `Call Confirmer` (encargado triage) por selectores desplegables dinámicos que utilizan `uniqueClosers` y `uniqueTriage` para prevenir errores de escritura manual.
 
+  - **Actualización de Script de Sincronización de Base de Datos (`actualizar_db.py`) [MODIFY]**:
+    - Se incorporaron las importaciones y la sincronización de los nuevos modelos creados recientemente (`TeamMember`, `MonthlyPayroll`, `MonthlyPaymentMethodBalance`, `MonthlySaving`, `AlertRule` y `Alert`).
+    - Se ordenó la lista de modelos por dependencias de claves foráneas para asegurar un vaciado e inserción limpios (evitando errores UNIQUE y violaciones de integridad).
+    - Se ejecutó el script con éxito para actualizar la base de datos local SQLite con los datos de producción de PostgreSQL.
+
 - **20 de Junio de 2026**:
   - **Soporte para el Estado "Cerrada" en Agendas [MODIFY]**:
     - **Backend**:
