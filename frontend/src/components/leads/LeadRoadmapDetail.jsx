@@ -8,10 +8,11 @@ import {
 import toast from 'react-hot-toast';
 import { EditLeadModal } from './LeadRoadmapModals';
 
-const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate, availableKeywords = [], userRole, appointmentId }) => {
+const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate, availableKeywords = [], userRole, appointmentId, compact = false }) => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [activeTab, setActiveTab] = useState('formulario'); // 'formulario' o 'calificacion'
     
     // Calificación en caliente
     const [objeciones, setObjeciones] = useState('');
@@ -295,216 +296,325 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
     const stageIcons = [Sparkles, MessageCircle, User, Calendar, Phone, DollarSign];
 
     return (
-        <div className="space-y-8 bg-slate-950 text-slate-200 p-6 rounded-[2rem] border border-slate-800 shadow-2xl relative">
+        <div className={compact ? "space-y-4 text-slate-200 text-left" : "space-y-8 bg-slate-950 text-slate-200 p-6 rounded-[2rem] border border-slate-800 shadow-2xl relative"}>
             {/* BARRA DE NAVEGACIÓN SUPERIOR */}
-            <div className="flex justify-between items-center pb-4 border-b border-slate-800/50">
-                <div className="flex items-center gap-3">
-                    {onBack && (
+            {!compact && (
+                <div className="flex justify-between items-center pb-4 border-b border-slate-800/50">
+                    <div className="flex items-center gap-3">
+                        {onBack && (
+                            <button 
+                                onClick={onBack}
+                                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                            >
+                                ← Volver
+                            </button>
+                        )}
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                            Leads / <span className="text-slate-350">Lead Roadmap</span>
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
                         <button 
-                            onClick={onBack}
-                            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                            onClick={() => setShowEditModal(true)}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
                         >
-                            ← Volver
+                            <Edit size={12} /> Editar Lead
                         </button>
-                    )}
-                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                        Leads / <span className="text-slate-350">Lead Roadmap</span>
                     </div>
                 </div>
-                
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setShowEditModal(true)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
-                    >
-                        <Edit size={12} /> Editar Lead
-                    </button>
-                </div>
-            </div>
+            )}
 
             {/* CABECERA PRINCIPAL DEL LEAD */}
-            <div className="flex flex-col lg:flex-row justify-between gap-6 p-2 mb-4">
-                <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 bg-gradient-to-br from-violet-600/30 to-amber-600/10 rounded-2xl flex items-center justify-center text-violet-400 font-black text-2xl border border-violet-500/20 shadow-xl">
-                        {lead.full_name ? lead.full_name.substring(0, 2).toUpperCase() : 'LD'}
+            {compact ? (
+                <div className="space-y-3 pb-3 border-b border-slate-900">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1">
+                            <h2 className="text-xl font-black text-white italic tracking-tight">{lead.full_name}</h2>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold text-slate-400">
+                                {lead.phone && (
+                                    <a href={`tel:${lead.phone}`} className="flex items-center gap-1 hover:text-white transition-colors">
+                                        <Phone size={10} className="text-violet-500" /> {lead.phone}
+                                    </a>
+                                )}
+                                {lead.email && (
+                                    <a href={`mailto:${lead.email}`} className="flex items-center gap-1 hover:text-white transition-colors">
+                                        <Mail size={10} className="text-violet-500" /> {lead.email}
+                                    </a>
+                                )}
+                                {lead.instagram && (
+                                    <a href={`https://instagram.com/${lead.instagram}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-white transition-colors">
+                                        <Instagram size={10} className="text-violet-500" /> @{lead.instagram}
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                        <span className={`px-2 py-0.5 text-[8px] font-black rounded-full uppercase tracking-wider ${statusColors[lead.status] || 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+                            {lead.status}
+                        </span>
                     </div>
-                    <div className="space-y-1.5">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-3xl font-black text-white italic tracking-tighter leading-none">{lead.full_name}</h2>
-                            <span className={`px-2.5 py-1 text-[9px] font-black rounded-full uppercase tracking-widest ${statusColors[lead.status] || 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
-                                {lead.status}
+
+                    {/* METADATOS COMPACTOS */}
+                    <div className="grid grid-cols-2 gap-3 text-[10px] bg-slate-900/30 p-3 rounded-xl border border-slate-850">
+                        <div>
+                            <span className="text-slate-550 block font-bold uppercase tracking-wider text-[8px]">Origen</span>
+                            <span className="font-black text-violet-400">{channel}</span>
+                        </div>
+                        <div>
+                            <span className="text-slate-550 block font-bold uppercase tracking-wider text-[8px]">Edad</span>
+                            <span className="font-black text-white">{lead.created_at ? getDaysSinceCreated(lead.created_at) : 'N/A'}</span>
+                        </div>
+                        <div>
+                            <span className="text-slate-550 block font-bold uppercase tracking-wider text-[8px]">Asignación</span>
+                            <span className="font-black text-slate-300">
+                                <span className="text-amber-500">{setter}</span> / <span className="text-emerald-450">{closer}</span>
                             </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-bold text-slate-400">
-                            {lead.phone && (
-                                <a href={`tel:${lead.phone}`} className="flex items-center gap-1.5 hover:text-white transition-colors">
-                                    <Phone size={12} className="text-violet-500" /> {lead.phone}
-                                </a>
-                            )}
-                            {lead.email && (
-                                <a href={`mailto:${lead.email}`} className="flex items-center gap-1.5 hover:text-white transition-colors">
-                                    <Mail size={12} className="text-violet-500" /> {lead.email}
-                                </a>
-                            )}
-                            {lead.instagram && (
-                                <a href={`https://instagram.com/${lead.instagram}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-white transition-colors">
-                                    <Instagram size={12} className="text-violet-500" /> @{lead.instagram}
-                                </a>
+                        <div>
+                            <span className="text-slate-550 block font-bold uppercase tracking-wider text-[8px] mb-0.5">Anuncio (Keyword)</span>
+                            {userRole === 'setter' && appointmentId ? (
+                                <select
+                                    value={data?.appointment_keyword || lead.keyword || ''}
+                                    onChange={async (e) => {
+                                        const newKeyword = e.target.value;
+                                        try {
+                                            await api.post(`/setter/deck/${appointmentId}`, { keyword: newKeyword });
+                                            toast.success("Anuncio actualizado");
+                                            fetchRoadmap();
+                                            if (onUpdate) onUpdate();
+                                        } catch (err) {
+                                            console.error("Error al actualizar anuncio:", err);
+                                            toast.error("Error al actualizar anuncio");
+                                        }
+                                    }}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-2 py-0.5 text-[9px] font-bold text-slate-200 cursor-pointer outline-none"
+                                >
+                                    <option value="">Sin anuncio</option>
+                                    {availableKeywords.map(k => (
+                                        <option key={k.id} value={k.slug}>{k.name}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <span className="font-black text-white">{lead.keyword || data?.appointment_keyword || 'Sin anuncio'}</span>
                             )}
                         </div>
                     </div>
                 </div>
-
-                {/* METADATOS DE ADQUISICIÓN */}
-                <div className="flex flex-wrap gap-8 items-center self-center w-full lg:w-auto mt-4 lg:mt-0">
-                    <div className="space-y-1" title="Canal de Adquisición">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Origen</div>
-                        <div className="text-xs font-black text-violet-400 flex items-center gap-1.5">
-                            {channel}
+            ) : (
+                <div className="flex flex-col lg:flex-row justify-between gap-6 p-2 mb-4">
+                    <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 bg-gradient-to-br from-violet-600/30 to-amber-600/10 rounded-2xl flex items-center justify-center text-violet-400 font-black text-2xl border border-violet-500/20 shadow-xl">
+                            {lead.full_name ? lead.full_name.substring(0, 2).toUpperCase() : 'LD'}
                         </div>
-                    </div>
-                    <div className="space-y-1" title="Anuncio / Keyword asociada al Lead">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Anuncio (Keyword)</div>
-                        {userRole === 'setter' && appointmentId ? (
-                            <select
-                                value={data?.appointment_keyword || lead.keyword || ''}
-                                onChange={async (e) => {
-                                    const newKeyword = e.target.value;
-                                    try {
-                                        await api.post(`/setter/deck/${appointmentId}`, { keyword: newKeyword });
-                                        toast.success("Anuncio actualizado");
-                                        fetchRoadmap();
-                                        if (onUpdate) onUpdate();
-                                    } catch (err) {
-                                        console.error("Error al actualizar anuncio:", err);
-                                        toast.error("Error al actualizar anuncio");
-                                    }
-                                }}
-                                className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[11px] font-black text-slate-200 cursor-pointer outline-none focus:ring-1 focus:ring-violet-500/50"
-                            >
-                                <option value="">Sin anuncio</option>
-                                {availableKeywords.map(k => (
-                                    <option key={k.id} value={k.slug}>{k.name} ({k.slug})</option>
-                                ))}
-                            </select>
-                        ) : (
-                            <div className="text-xs font-black text-white">
-                                {lead.keyword || data?.appointment_keyword || 'Sin anuncio'}
+                        <div className="space-y-1.5">
+                            <div className="flex items-center gap-3">
+                                <h2 className="text-3xl font-black text-white italic tracking-tighter leading-none">{lead.full_name}</h2>
+                                <span className={`px-2.5 py-1 text-[9px] font-black rounded-full uppercase tracking-widest ${statusColors[lead.status] || 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+                                    {lead.status}
+                                </span>
                             </div>
-                        )}
-                    </div>
-                    <div className="space-y-1" title="Setter asignado y Closer responsable">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Asignación</div>
-                        <div className="text-xs font-black text-white">
-                            <span className="text-amber-500">{setter}</span>
-                            <span className="mx-1 text-slate-600">/</span>
-                            <span className="text-emerald-450">{closer}</span>
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-bold text-slate-400">
+                                {lead.phone && (
+                                    <a href={`tel:${lead.phone}`} className="flex items-center gap-1.5 hover:text-white transition-colors">
+                                        <Phone size={12} className="text-violet-500" /> {lead.phone}
+                                    </a>
+                                )}
+                                {lead.email && (
+                                    <a href={`mailto:${lead.email}`} className="flex items-center gap-1.5 hover:text-white transition-colors">
+                                        <Mail size={12} className="text-violet-500" /> {lead.email}
+                                    </a>
+                                )}
+                                {lead.instagram && (
+                                    <a href={`https://instagram.com/${lead.instagram}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-white transition-colors">
+                                        <Instagram size={12} className="text-violet-500" /> @{lead.instagram}
+                                    </a>
+                                )}
+                            </div>
                         </div>
                     </div>
-                    <div className="space-y-1" title="Tiempo de retención desde la creación del lead">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Edad</div>
-                        <div className="text-xs font-black text-white flex items-center gap-1">
-                            <Clock size={12} className="text-slate-550" />
-                            {lead.created_at ? getDaysSinceCreated(lead.created_at) : 'N/A'}
+
+                    {/* METADATOS DE ADQUISICIÓN */}
+                    <div className="flex flex-wrap gap-8 items-center self-center w-full lg:w-auto mt-4 lg:mt-0">
+                        <div className="space-y-1" title="Canal de Adquisición">
+                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Origen</div>
+                            <div className="text-xs font-black text-violet-400 flex items-center gap-1.5">
+                                {channel}
+                            </div>
+                        </div>
+                        <div className="space-y-1" title="Anuncio / Keyword asociada al Lead">
+                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Anuncio (Keyword)</div>
+                            {userRole === 'setter' && appointmentId ? (
+                                <select
+                                    value={data?.appointment_keyword || lead.keyword || ''}
+                                    onChange={async (e) => {
+                                        const newKeyword = e.target.value;
+                                        try {
+                                            await api.post(`/setter/deck/${appointmentId}`, { keyword: newKeyword });
+                                            toast.success("Anuncio actualizado");
+                                            fetchRoadmap();
+                                            if (onUpdate) onUpdate();
+                                        } catch (err) {
+                                            console.error("Error al actualizar anuncio:", err);
+                                            toast.error("Error al actualizar anuncio");
+                                        }
+                                    }}
+                                    className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[11px] font-black text-slate-200 cursor-pointer outline-none focus:ring-1 focus:ring-violet-500/50"
+                                >
+                                    <option value="">Sin anuncio</option>
+                                    {availableKeywords.map(k => (
+                                        <option key={k.id} value={k.slug}>{k.name} ({k.slug})</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <div className="text-xs font-black text-white">
+                                    {lead.keyword || data?.appointment_keyword || 'Sin anuncio'}
+                                </div>
+                            )}
+                        </div>
+                        <div className="space-y-1" title="Setter asignado y Closer responsable">
+                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Asignación</div>
+                            <div className="text-xs font-black text-white">
+                                <span className="text-amber-500">{setter}</span>
+                                <span className="mx-1 text-slate-600">/</span>
+                                <span className="text-emerald-450">{closer}</span>
+                            </div>
+                        </div>
+                        <div className="space-y-1" title="Tiempo de retención desde la creación del lead">
+                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Edad</div>
+                            <div className="text-xs font-black text-white flex items-center gap-1">
+                                <Clock size={12} className="text-slate-550" />
+                                {lead.created_at ? getDaysSinceCreated(lead.created_at) : 'N/A'}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* SECCIÓN LEAD ROADMAP (EMBUDO HORIZONTAL) */}
-            <div className="space-y-6 mb-8">
-                <div className="space-y-1">
-                    <h3 className="text-lg font-black text-white tracking-tight uppercase">Lead Roadmap</h3>
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Paso a paso del recorrido del lead en el embudo</p>
-                </div>
+            {!compact && (
+                <div className="space-y-6 mb-8">
+                    <div className="space-y-1">
+                        <h3 className="text-lg font-black text-white tracking-tight uppercase">Lead Roadmap</h3>
+                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Paso a paso del recorrido del lead en el embudo</p>
+                    </div>
 
-                <div className="relative pt-6 pb-2">
-                    <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-slate-800 -translate-y-1/2 z-0" />
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-6 gap-8 relative z-10">
-                        {stages.map((stage, idx) => {
-                            const IconComp = stageIcons[idx] || Sparkles;
-                            const isCompleted = stage.completed;
-                            
-                            return (
-                                <div key={stage.name} className="relative flex flex-col items-center text-center space-y-4 group">
-                                    <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ${
-                                        isCompleted 
-                                            ? 'bg-violet-650 text-white shadow-lg shadow-violet-600/30 border-2 border-violet-500' 
-                                            : 'bg-slate-900 text-slate-600 border border-slate-800'
-                                    }`}>
-                                        <IconComp size={22} className={isCompleted ? 'animate-pulse' : ''} />
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <div className="text-xs font-black text-white">{stage.name}</div>
-                                        <span className={`inline-block px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-widest ${
-                                            isCompleted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800/40 text-slate-550'
+                    <div className="relative pt-6 pb-2">
+                        <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-slate-800 -translate-y-1/2 z-0" />
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-6 gap-8 relative z-10">
+                            {stages.map((stage, idx) => {
+                                const IconComp = stageIcons[idx] || Sparkles;
+                                const isCompleted = stage.completed;
+                                
+                                return (
+                                    <div key={stage.name} className="relative flex flex-col items-center text-center space-y-4 group">
+                                        <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                            isCompleted 
+                                                ? 'bg-violet-650 text-white shadow-lg shadow-violet-600/30 border-2 border-violet-500' 
+                                                : 'bg-slate-900 text-slate-600 border border-slate-800'
                                         }`}>
-                                            {isCompleted ? 'Completado' : 'Pendiente'}
-                                        </span>
-                                        {isCompleted && stage.date && (
-                                            <div className="text-[9px] font-medium text-slate-500">{formatTime(stage.date)}</div>
-                                        )}
-                                    </div>
+                                            <IconComp size={22} className={isCompleted ? 'animate-pulse' : ''} />
+                                        </div>
 
-                                    {/* Tooltip con información detallada, visible al hacer hover */}
-                                    <div className="absolute top-[85%] left-1/2 -translate-x-1/2 mt-4 w-48 bg-slate-950/95 border border-slate-800 p-3.5 rounded-2xl shadow-2xl shadow-black/50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-300 z-50 text-left text-[10px] space-y-1.5 font-bold scale-95 group-hover:scale-100 origin-top">
-                                        {idx === 0 && (
-                                            <>
-                                                <div className="text-slate-550">Origen: <span className="text-slate-350">{stage.details?.origen || 'Instagram'}</span></div>
-                                                <div className="text-slate-550">Canal: <span className="text-slate-350">{stage.details?.canal}</span></div>
-                                                <div className="text-slate-550 flex flex-col">Campaña: <span className="text-slate-350 truncate">{stage.details?.campaña}</span></div>
-                                            </>
-                                        )}
-                                        {idx === 1 && (
-                                            <>
-                                                <div className="text-slate-550">Acción: <span className="text-slate-350">{stage.details?.accion}</span></div>
-                                                <div className="text-slate-550">Medio: <span className="text-slate-350">{stage.details?.medio}</span></div>
-                                                <div className="text-slate-550 text-slate-350 italic break-words">{stage.details?.mensaje}</div>
-                                            </>
-                                        )}
-                                        {idx === 2 && (
-                                            <>
-                                                <div className="text-slate-550">Dolores:</div>
-                                                <ul className="list-disc pl-3 text-slate-300 space-y-0.5 max-h-24 overflow-y-auto custom-scrollbar">
-                                                    {(stage.details?.dolores || []).map((d, i) => (
-                                                        <li key={i} className="break-words">{d}</li>
-                                                    ))}
-                                                </ul>
-                                            </>
-                                        )}
-                                        {idx === 3 && (
-                                            <>
-                                                <div className="text-slate-550">Tipo: <span className="text-slate-350">{stage.details?.tipo || 'Reunión'}</span></div>
-                                                <div className="text-slate-550">Fecha: <span className="text-slate-350">{stage.details?.fecha_agendada ? stage.details.fecha_agendada.split('T')[0] : 'N/A'}</span></div>
-                                            </>
-                                        )}
-                                        {idx === 4 && (
-                                            <>
-                                                <div className="text-slate-550">Resultado: <span className="text-slate-300">{stage.details?.resultado || 'Pendiente'}</span></div>
-                                                <div className="text-slate-550 text-slate-350 italic break-words">{stage.details?.notes}</div>
-                                            </>
-                                        )}
-                                        {idx === 5 && (
-                                            <>
-                                                <div className="text-slate-550">Monto: <span className="text-emerald-400 font-bold">${stage.details?.monto || '0.00'}</span></div>
-                                                <div className="text-slate-550">Método: <span className="text-slate-300">{stage.details?.metodo_pago}</span></div>
-                                            </>
-                                        )}
+                                        <div className="space-y-1">
+                                            <div className="text-xs font-black text-white">{stage.name}</div>
+                                            <span className={`inline-block px-2 py-0.5 text-[8px] font-black rounded-md uppercase tracking-widest ${
+                                                isCompleted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800/40 text-slate-550'
+                                            }`}>
+                                                {isCompleted ? 'Completado' : 'Pendiente'}
+                                            </span>
+                                            {isCompleted && stage.date && (
+                                                <div className="text-[9px] font-medium text-slate-500">{formatTime(stage.date)}</div>
+                                            )}
+                                        </div>
+
+                                        {/* Tooltip con información detallada, visible al hacer hover */}
+                                        <div className="absolute top-[85%] left-1/2 -translate-x-1/2 mt-4 w-48 bg-slate-950/95 border border-slate-800 p-3.5 rounded-2xl shadow-2xl shadow-black/50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-300 z-50 text-left text-[10px] space-y-1.5 font-bold scale-95 group-hover:scale-100 origin-top">
+                                            {idx === 0 && (
+                                                <>
+                                                    <div className="text-slate-550">Origen: <span className="text-slate-350">{stage.details?.origen || 'Instagram'}</span></div>
+                                                    <div className="text-slate-550">Canal: <span className="text-slate-350">{stage.details?.canal}</span></div>
+                                                    <div className="text-slate-550 flex flex-col">Campaña: <span className="text-slate-350 truncate">{stage.details?.campaña}</span></div>
+                                                </>
+                                            )}
+                                            {idx === 1 && (
+                                                <>
+                                                    <div className="text-slate-550">Acción: <span className="text-slate-350">{stage.details?.accion}</span></div>
+                                                    <div className="text-slate-550">Medio: <span className="text-slate-350">{stage.details?.medio}</span></div>
+                                                    <div className="text-slate-550 text-slate-350 italic break-words">{stage.details?.mensaje}</div>
+                                                </>
+                                            )}
+                                            {idx === 2 && (
+                                                <>
+                                                    <div className="text-slate-550">Dolores:</div>
+                                                    <ul className="list-disc pl-3 text-slate-300 space-y-0.5 max-h-24 overflow-y-auto custom-scrollbar">
+                                                        {(stage.details?.dolores || []).map((d, i) => (
+                                                            <li key={i} className="break-words">{d}</li>
+                                                        ))}
+                                                    </ul>
+                                                </>
+                                            )}
+                                            {idx === 3 && (
+                                                <>
+                                                    <div className="text-slate-550">Tipo: <span className="text-slate-350">{stage.details?.tipo || 'Reunión'}</span></div>
+                                                    <div className="text-slate-550">Fecha: <span className="text-slate-350">{stage.details?.fecha_agendada ? stage.details.fecha_agendada.split('T')[0] : 'N/A'}</span></div>
+                                                </>
+                                            )}
+                                            {idx === 4 && (
+                                                <>
+                                                    <div className="text-slate-550">Resultado: <span className="text-slate-300">{stage.details?.resultado || 'Pendiente'}</span></div>
+                                                    <div className="text-slate-550 text-slate-350 italic break-words">{stage.details?.notes}</div>
+                                                </>
+                                            )}
+                                            {idx === 5 && (
+                                                <>
+                                                    <div className="text-slate-550">Monto: <span className="text-emerald-400 font-bold">${stage.details?.monto || '0.00'}</span></div>
+                                                    <div className="text-slate-550">Método: <span className="text-slate-300">{stage.details?.metodo_pago}</span></div>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
+
+            {/* PESTAÑAS PARA INTERFAZ COMPACTA */}
+            {compact && (
+                <div className="flex border-b border-slate-800/80 mb-2">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('formulario')}
+                        className={`flex-1 pb-2 text-[10px] font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                            activeTab === 'formulario'
+                                ? 'border-violet-500 text-white'
+                                : 'border-transparent text-slate-500 hover:text-slate-355'
+                        }`}
+                    >
+                        Respuestas Bot
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('calificacion')}
+                        className={`flex-1 pb-2 text-[10px] font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                            activeTab === 'calificacion'
+                                ? 'border-violet-500 text-white'
+                                : 'border-transparent text-slate-500 hover:text-slate-355'
+                        }`}
+                    >
+                        Calificar Lead
+                    </button>
+                </div>
+            )}
 
             {/* SECCIÓN INFERIOR: CALIFICACIÓN Y FORMULARIO */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div className={compact ? "space-y-4 mb-4" : "grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"}>
                 
                 {/* COLUMNA 1: CALIFICACIÓN FORMULARIO (n8n) */}
-                <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4 flex flex-col shadow-xl relative overflow-hidden">
+                {(!compact || activeTab === 'formulario') && (
+                    <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-4 flex flex-col shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-blue-500 to-violet-500" />
                     <div className="flex justify-between items-center">
                         <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -580,9 +690,11 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* COLUMNA 2: CALIFICACIÓN EN CALIENTE (MANUAL) */}
-                <div className="bg-slate-900/40 p-6 rounded-3xl border border-violet-950/40 space-y-4 shadow-xl relative overflow-hidden">
+                {(!compact || activeTab === 'calificacion') && (
+                    <div className="bg-slate-900/40 p-6 rounded-3xl border border-violet-950/40 space-y-4 shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-violet-500 to-amber-500" />
                     <div className="flex justify-between items-center">
                         <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -666,87 +778,91 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Call Confirmer</label>
-                        <textarea
-                            className="w-full h-20 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
-                            placeholder="Notas de call confirmer, facturación, socio, etc..."
-                            value={observaciones}
-                            onChange={(e) => setObservaciones(e.target.value)}
-                        />
-                    </div>
+                    {userRole !== 'setter' && (
+                        <>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Call Confirmer</label>
+                                <textarea
+                                    className="w-full h-20 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
+                                    placeholder="Notas de call confirmer, facturación, socio, etc..."
+                                    value={observaciones}
+                                    onChange={(e) => setObservaciones(e.target.value)}
+                                />
+                            </div>
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objeciones</label>
-                        
-                        <div className="flex flex-wrap gap-1 mb-1.5">
-                            {objeciones.split(',').map(o => o.trim()).filter(Boolean).map((tag, idx) => (
-                                <span
-                                    key={idx}
-                                    className="text-[9px] font-bold bg-violet-655/20 text-violet-300 border border-violet-500/30 px-2 py-1 rounded-md flex items-center gap-1"
-                                >
-                                    {tag}
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleObjectionTag(tag)}
-                                        className="text-violet-400 hover:text-rose-450 transition-colors ml-0.5 font-black text-xs"
-                                    >
-                                        ×
-                                    </button>
-                                </span>
-                            ))}
-                        </div>
-
-                        <div className="flex gap-1 mb-2">
-                            <input
-                                type="text"
-                                placeholder="Agregar objeción manualmente..."
-                                value={newObjectionInput}
-                                onChange={(e) => setNewObjectionInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        addManualObjection();
-                                    }
-                                }}
-                                className="flex-1 px-3 py-1.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold"
-                            />
-                            <button
-                                type="button"
-                                onClick={addManualObjection}
-                                className="px-3 bg-slate-950/80 hover:bg-slate-900 border border-transparent text-white rounded-xl text-xs font-black transition-colors"
-                            >
-                                +
-                            </button>
-                        </div>
-
-                        {frequentObjections.length > 0 && (
-                            <div className="space-y-1 mb-2">
-                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Frecuentes:</span>
-                                <div className="flex flex-wrap gap-1">
-                                    {frequentObjections
-                                        .filter(tag => !objeciones.split(',').map(o => o.trim().toLowerCase()).includes(tag.toLowerCase()))
-                                        .map((tag) => (
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objeciones</label>
+                                
+                                <div className="flex flex-wrap gap-1 mb-1.5">
+                                    {objeciones.split(',').map(o => o.trim()).filter(Boolean).map((tag, idx) => (
+                                        <span
+                                            key={idx}
+                                            className="text-[9px] font-bold bg-violet-655/20 text-violet-300 border border-violet-500/30 px-2 py-1 rounded-md flex items-center gap-1"
+                                        >
+                                            {tag}
                                             <button
-                                                key={tag}
                                                 type="button"
                                                 onClick={() => toggleObjectionTag(tag)}
-                                                className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-slate-900/50 hover:bg-slate-800 text-slate-400 border border-transparent hover:text-white transition-all"
+                                                className="text-violet-400 hover:text-rose-450 transition-colors ml-0.5 font-black text-xs"
                                             >
-                                                {tag}
+                                                ×
                                             </button>
-                                        ))}
+                                        </span>
+                                    ))}
                                 </div>
-                            </div>
-                        )}
 
-                        <textarea
-                            className="w-full h-16 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
-                            placeholder="Notas de objeción (separadas por comas)..."
-                            value={objeciones}
-                            onChange={(e) => setObjeciones(e.target.value)}
-                        />
-                    </div>
+                                <div className="flex gap-1 mb-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Agregar objeción manualmente..."
+                                        value={newObjectionInput}
+                                        onChange={(e) => setNewObjectionInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                addManualObjection();
+                                            }
+                                        }}
+                                        className="flex-1 px-3 py-1.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={addManualObjection}
+                                        className="px-3 bg-slate-950/80 hover:bg-slate-900 border border-transparent text-white rounded-xl text-xs font-black transition-colors"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+
+                                {frequentObjections.length > 0 && (
+                                    <div className="space-y-1 mb-2">
+                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Frecuentes:</span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {frequentObjections
+                                                .filter(tag => !objeciones.split(',').map(o => o.trim().toLowerCase()).includes(tag.toLowerCase()))
+                                                .map((tag) => (
+                                                    <button
+                                                        key={tag}
+                                                        type="button"
+                                                        onClick={() => toggleObjectionTag(tag)}
+                                                        className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-slate-900/50 hover:bg-slate-800 text-slate-400 border border-transparent hover:text-white transition-all"
+                                                    >
+                                                        {tag}
+                                                    </button>
+                                                ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <textarea
+                                    className="w-full h-16 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
+                                    placeholder="Notas de objeción (separadas por comas)..."
+                                    value={objeciones}
+                                    onChange={(e) => setObjeciones(e.target.value)}
+                                />
+                            </div>
+                        </>
+                    )}
 
                     <button
                         type="button"
@@ -762,156 +878,161 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         Guardar Calificación
                     </button>
                 </div>
+                )}
             </div>
 
             {/* SECCIÓN INFERIOR: MEMBRESÍAS, VENTAS Y NOTAS INTERNAS */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                
-                {/* COLUMNA 1: PROGRAMAS */}
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center px-1">
-                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Membresías</h4>
-                    </div>
-                    {programs && programs.length > 0 ? (
-                        <div className="space-y-3">
-                            {programs.map((prog, i) => (
-                                <div key={i} className="bg-slate-900/30 px-4 py-3 rounded-2xl space-y-2 relative overflow-hidden group">
-                                    <div className="flex justify-between items-start">
-                                        <div className="space-y-0.5">
-                                            <span className="text-xs font-black text-white italic uppercase tracking-wide flex items-center gap-1.5">
-                                                <Award size={14} className="text-amber-500" />
-                                                {prog.program_name}
-                                            </span>
-                                            <span className="text-[9px] text-slate-500 block font-bold" title={prog.source ? `Fuente: ${prog.source}` : ''}>
-                                                Inscrito: {prog.enrollment_date ? new Date(prog.enrollment_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
-                                            </span>
+            {!compact && (
+                <>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                        
+                        {/* COLUMNA 1: PROGRAMAS */}
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center px-1">
+                                <h4 className="text-sm font-black text-white uppercase tracking-wider">Membresías</h4>
+                            </div>
+                            {programs && programs.length > 0 ? (
+                                <div className="space-y-3">
+                                    {programs.map((prog, i) => (
+                                        <div key={i} className="bg-slate-900/30 px-4 py-3 rounded-2xl space-y-2 relative overflow-hidden group">
+                                            <div className="flex justify-between items-start">
+                                                <div className="space-y-0.5">
+                                                    <span className="text-xs font-black text-white italic uppercase tracking-wide flex items-center gap-1.5">
+                                                        <Award size={14} className="text-amber-500" />
+                                                        {prog.program_name}
+                                                    </span>
+                                                    <span className="text-[9px] text-slate-500 block font-bold" title={prog.source ? `Fuente: ${prog.source}` : ''}>
+                                                        Inscrito: {prog.enrollment_date ? new Date(prog.enrollment_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                                                    </span>
+                                                </div>
+                                                <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                                                    ${prog.total_paid || '0.00'}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                                            ${prog.total_paid || '0.00'}
-                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-6 px-4 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl bg-slate-950/20">
+                                    Sin programas
+                                </div>
+                            )}
+                        </div>
+
+                        {/* COLUMNA 2: RESUMEN DE VENTAS */}
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-black text-white uppercase tracking-wider px-1">Ventas Totales</h4>
+                            {sales_summary ? (
+                                <div className="bg-slate-900/30 p-5 rounded-2xl space-y-4">
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="text-2xl font-black text-emerald-400">${sales_summary.monto}</span>
+                                        <span className="text-[10px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">{sales_summary.estado}</span>
+                                    </div>
+                                    <div className="space-y-1.5 text-xs font-bold text-slate-300">
+                                        <div className="flex justify-between"><span className="text-slate-500">Producto</span> <span>{sales_summary.producto}</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-500">Método</span> <span>{sales_summary.metodo_pago}</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-500">Próximo</span> <span className="text-amber-500">{sales_summary.proximo_pago}</span></div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-6 px-4 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl bg-slate-950/20">
-                            Sin programas
-                        </div>
-                    )}
-                </div>
-
-                {/* COLUMNA 2: RESUMEN DE VENTAS */}
-                <div className="space-y-4">
-                    <h4 className="text-sm font-black text-white uppercase tracking-wider px-1">Ventas Totales</h4>
-                    {sales_summary ? (
-                        <div className="bg-slate-900/30 p-5 rounded-2xl space-y-4">
-                            <div className="flex justify-between items-baseline">
-                                <span className="text-2xl font-black text-emerald-400">${sales_summary.monto}</span>
-                                <span className="text-[10px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">{sales_summary.estado}</span>
-                            </div>
-                            <div className="space-y-1.5 text-xs font-bold text-slate-300">
-                                <div className="flex justify-between"><span className="text-slate-500">Producto</span> <span>{sales_summary.producto}</span></div>
-                                <div className="flex justify-between"><span className="text-slate-500">Método</span> <span>{sales_summary.metodo_pago}</span></div>
-                                <div className="flex justify-between"><span className="text-slate-500">Próximo</span> <span className="text-amber-500">{sales_summary.proximo_pago}</span></div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="text-center py-6 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl">
-                            Sin ventas
-                        </div>
-                    )}
-                </div>
-
-                {/* COLUMNA 3: NOTAS INTERNAS */}
-                <div className="space-y-4 flex flex-col max-h-[350px]">
-                    <h4 className="text-sm font-black text-white uppercase tracking-wider px-1">Notas Internas</h4>
-                    
-                    <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
-                        {notesList.map((n) => (
-                            <div key={n.id} className="bg-slate-900/30 p-3 rounded-xl space-y-1">
-                                <div className="flex justify-between text-[8px] text-slate-500 font-bold uppercase tracking-wider">
-                                    <span>{n.author}</span>
-                                    <span>{formatTime(n.created_at)}</span>
+                            ) : (
+                                <div className="text-center py-6 text-slate-550 text-xs font-bold italic border border-dashed border-slate-850 rounded-2xl">
+                                    Sin ventas
                                 </div>
-                                <p className="text-xs text-slate-300 font-medium">{n.text}</p>
-                            </div>
-                        ))}
-                        {notesList.length === 0 && (
-                            <div className="text-center py-6 text-slate-550 text-xs font-bold italic">
-                                Sin comentarios
-                            </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
 
-                    {lead.id && (
-                        <form onSubmit={handleAddComment} className="flex gap-2 pt-2 border-t border-slate-800">
-                            <input 
-                                type="text"
-                                placeholder="Añadir nota interna..."
-                                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-550 focus:outline-none focus:border-violet-500 font-bold"
-                                value={newComment}
-                                onChange={(e) => setNewComment(e.target.value)}
-                                disabled={submittingComment}
-                            />
-                            <button 
-                                type="submit"
-                                disabled={submittingComment || !newComment.trim()}
-                                className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white font-black uppercase text-[10px] tracking-wider rounded-xl disabled:opacity-30 transition-colors"
-                            >
-                                Enviar
-                            </button>
-                        </form>
-                    )}
-                </div>
-            </div>
-
-            {/* FILA INFERIOR: DETALLE DE ACTIVIDAD (ANCHO COMPLETO - lg:col-span-3) */}
-            <div className="lg:col-span-3 bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-6 flex flex-col">
-                <div className="flex justify-between items-center">
-                    <div className="space-y-0.5">
-                        <h4 className="text-base font-black text-white uppercase tracking-tight">Detalle de Actividad</h4>
-                        <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Historial completo del prospecto</p>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
-                        {activity.length} Eventos
-                    </span>
-                </div>
-
-                <div className="overflow-x-auto flex-1 max-h-[500px] custom-scrollbar">
-                        <table className="w-full text-left text-xs border-collapse">
-                            <thead>
-                                <tr className="border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                    <th className="py-3 px-2">Fecha</th>
-                                    <th className="py-3 px-2">Evento</th>
-                                    <th className="py-3 px-2">Detalle</th>
-                                    <th className="py-3 px-2 text-right">Origen</th>
-                                    <th className="py-3 px-2 text-center w-12">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-850/50">
-                                {activity.map((act, i) => (
-                                    <tr key={i} className="hover:bg-slate-900/30 transition-all">
-                                        <td className="py-3 px-2 text-slate-500 font-bold whitespace-nowrap">{formatTime(act.date, act.event_type)}</td>
-                                        <td className="py-3 px-2 font-black text-white italic">{act.event}</td>
-                                        <td className="py-3 px-2 text-slate-350">{act.detail}</td>
-                                        <td className="py-3 px-2 text-right font-medium text-slate-400">{act.origin}</td>
-                                        <td className="py-3 px-2 text-center">
-                                            {act.event_type && act.id && (
-                                                <button
-                                                    onClick={() => handleDeleteActivity(act.event_type, act.id)}
-                                                    className="p-1.5 text-rose-500 hover:text-rose-450 hover:bg-rose-500/10 rounded-lg transition-all"
-                                                    title={`Eliminar ${act.event_type === 'agenda' ? 'agenda' : 'venta'}`}
-                                                >
-                                                    <Trash2 size={13} />
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
+                        {/* COLUMNA 3: NOTAS INTERNAS */}
+                        <div className="space-y-4 flex flex-col max-h-[350px]">
+                            <h4 className="text-sm font-black text-white uppercase tracking-wider px-1">Notas Internas</h4>
+                            
+                            <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+                                {notesList.map((n) => (
+                                    <div key={n.id} className="bg-slate-900/30 p-3 rounded-xl space-y-1">
+                                        <div className="flex justify-between text-[8px] text-slate-500 font-bold uppercase tracking-wider">
+                                            <span>{n.author}</span>
+                                            <span>{formatTime(n.created_at)}</span>
+                                        </div>
+                                        <p className="text-xs text-slate-300 font-medium">{n.text}</p>
+                                    </div>
                                 ))}
-                            </tbody>
-                        </table>
+                                {notesList.length === 0 && (
+                                    <div className="text-center py-6 text-slate-550 text-xs font-bold italic">
+                                        Sin comentarios
+                                    </div>
+                                )}
+                            </div>
+
+                            {lead.id && (
+                                <form onSubmit={handleAddComment} className="flex gap-2 pt-2 border-t border-slate-800">
+                                    <input 
+                                        type="text"
+                                        placeholder="Añadir nota interna..."
+                                        className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-555 focus:outline-none focus:border-violet-500 font-bold"
+                                        value={newComment}
+                                        onChange={(e) => setNewComment(e.target.value)}
+                                        disabled={submittingComment}
+                                    />
+                                    <button 
+                                        type="submit"
+                                        disabled={submittingComment || !newComment.trim()}
+                                        className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white font-black uppercase text-[10px] tracking-wider rounded-xl disabled:opacity-30 transition-colors"
+                                    >
+                                        Enviar
+                                    </button>
+                                </form>
+                            )}
+                        </div>
                     </div>
-                </div>
+
+                    {/* FILA INFERIOR: DETALLE DE ACTIVIDAD (ANCHO COMPLETO - lg:col-span-3) */}
+                    <div className="lg:col-span-3 bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-6 flex flex-col">
+                        <div className="flex justify-between items-center">
+                            <div className="space-y-0.5">
+                                <h4 className="text-base font-black text-white uppercase tracking-tight">Detalle de Actividad</h4>
+                                <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Historial completo del prospecto</p>
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+                                {activity.length} Eventos
+                            </span>
+                        </div>
+
+                        <div className="overflow-x-auto flex-1 max-h-[500px] custom-scrollbar">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                        <th className="py-3 px-2">Fecha</th>
+                                        <th className="py-3 px-2">Evento</th>
+                                        <th className="py-3 px-2">Detalle</th>
+                                        <th className="py-3 px-2 text-right">Origen</th>
+                                        <th className="py-3 px-2 text-center w-12">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-850/50">
+                                    {activity.map((act, i) => (
+                                        <tr key={i} className="hover:bg-slate-900/30 transition-all">
+                                            <td className="py-3 px-2 text-slate-550 font-bold whitespace-nowrap">{formatTime(act.date, act.event_type)}</td>
+                                            <td className="py-3 px-2 font-black text-white italic">{act.event}</td>
+                                            <td className="py-3 px-2 text-slate-350">{act.detail}</td>
+                                            <td className="py-3 px-2 text-right font-medium text-slate-400">{act.origin}</td>
+                                            <td className="py-3 px-2 text-center">
+                                                {act.event_type && act.id && (
+                                                    <button
+                                                        onClick={() => handleDeleteActivity(act.event_type, act.id)}
+                                                        className="p-1.5 text-rose-500 hover:text-rose-450 hover:bg-rose-500/10 rounded-lg transition-all"
+                                                        title={`Eliminar ${act.event_type === 'agenda' ? 'agenda' : 'venta'}`}
+                                                    >
+                                                        <Trash2 size={13} />
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* MODAL DE EDICIÓN DE DATOS DEL CLIENTE */}
             <EditLeadModal 

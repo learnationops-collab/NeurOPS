@@ -1417,3 +1417,13 @@
       - Creación del nuevo componente de productividad y espacio de trabajo `SetterWorkflowPage.jsx` con diseño de alta densidad, checkboxes de selección masiva y panel de herramientas para lotes.
       - Remoción de la etapa inicial de "Leads Entrantes", estructurando el espacio de trabajo del Setter a partir de "1. Cualificación" (Leads contactados que se deben cualificar/descualificar en un clic).
       - Redireccionamiento de la ruta `/setter/deck` en `App.jsx` hacia este nuevo espacio de trabajo enfocado del Setter.
+
+  - **Rediseño Compacto del Detalle del Lead y Pestañas de Calificación (`LeadRoadmapDetail.jsx`, `SetterWorkflowPage.jsx`) [MODIFY]**:
+    - **Frontend (`LeadRoadmapDetail.jsx`)**:
+      - Implementación de la propiedad `compact`. Si está activa (como en el visor lateral del flujo del Setter), se renderiza una cabecera simplificada con datos esenciales de contacto y un grid de metadatos de 2 columnas de alta densidad.
+      - Ocultamiento de la sección horizontal de pasos del lead (`Lead Roadmap`) en modo compacto.
+      - Creación de pestañas de alternancia rápida ("Respuestas Bot" y "Calificar Lead") para separar de forma limpia la visualización del formulario n8n y el formulario de calificación manual, eliminando el solapamiento visual.
+      - Ocultamiento completo de las secciones de membresías, resumen de ventas, notas internas e historial de actividad en modo compacto para liberar espacio de pantalla vertical.
+      - Restricción de acceso en la calificación en caliente para que los usuarios con rol de `setter` no visualicen las secciones de "Observaciones de Call Confirmer" ni "Objeciones" (específicos de otros roles), reduciendo la pantalla al registro de los dolores del prospecto.
+    - **Frontend (`SetterWorkflowPage.jsx`)**:
+      - Activación de la propiedad `compact={true}` al invocar a `<LeadRoadmapDetail>` en la ficha lateral del Setter.

@@ -514,6 +514,7 @@ const SetterWorkflowPage = () => {
                                 availableKeywords={availableKeywords}
                                 userRole={user?.role}
                                 appointmentId={selectedLead.id}
+                                compact={true}
                                 onUpdate={() => {
                                     fetchLeads();
                                 }}
