@@ -1,5 +1,13 @@
 # Bitácora - Junio 2026
 
+- **22 de Junio de 2026**:
+  - **Selector de Closer Asignado y Call Confirmer en Registro de Agendas [MODIFY]**:
+    - **Backend**:
+      - Se modificó la consulta de `unique_closers` en `get_financial_agendas()` de `app/api/public/financial_agendas.py` para combinar los closers de agendas históricas con todos los usuarios registrados y activos que tienen el rol de `closer`.
+    - **Frontend**:
+      - En `FinancialAgendasPage.jsx`, se cambió el visualizador del closer en la tabla por un selector desplegable (`select`) que actualiza la base de datos asíncronamente en línea.
+      - En el modal de edición de agendas, se reemplazaron las entradas de texto libre de `Closer` y `Call Confirmer` (encargado triage) por selectores desplegables dinámicos que utilizan `uniqueClosers` y `uniqueTriage` para prevenir errores de escritura manual.
+
 - **20 de Junio de 2026**:
   - **Soporte para el Estado "Cerrada" en Agendas [MODIFY]**:
     - **Backend**:

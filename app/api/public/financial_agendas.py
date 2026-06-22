@@ -360,7 +360,11 @@ def get_financial_agendas():
             FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
         ).all()
         
-        unique_closers = sorted(list(set([c[0].strip() for c in closers_query if c[0] and c[0].strip()])))
+        # Combinar closers historicos en BD con todos los usuarios closer activos
+        closer_names_db = [c[0].strip() for c in closers_query if c[0] and c[0].strip()]
+        closer_users = User.query.filter_by(role='closer', is_active=True).all()
+        closer_usernames = [u.username for u in closer_users]
+        unique_closers = sorted(list(set(closer_names_db + closer_usernames)))
         
         # Combinar encargados de triage actuales en BD con todos los usuarios triage activos
         triage_names_db = [t[0].strip() for t in triage_query if t[0] and t[0].strip()]

@@ -998,9 +998,28 @@ const FinancialAgendasPage = () => {
                                                 </select>
                                             </td>
                                             <td className="py-4 px-4">
-                                                <Badge variant="amber" className="rounded-lg px-2 py-0.5 text-[10px] uppercase font-black tracking-wider border-amber-500/30">
-                                                    {agenda.closer}
-                                                </Badge>
+                                                <select
+                                                    value={agenda.closer || ''}
+                                                    onChange={async (e) => {
+                                                        const nuevoCloser = e.target.value;
+                                                        try {
+                                                            const response = await api.put(`/public/financial-agendas/${agenda.id}`, { closer: nuevoCloser });
+                                                            const updated = response.data.agenda;
+                                                            setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
+                                                        } catch (err) {
+                                                            console.error("Error updating agenda closer in-line:", err);
+                                                            alert("Error al actualizar el closer");
+                                                        }
+                                                    }}
+                                                    className={`rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-wider border cursor-pointer outline-none focus:ring-1 focus:ring-amber-500/50 transition-all text-left bg-slate-950 text-slate-350 border-slate-800 hover:bg-slate-900/60
+                                                        ${agenda.closer && agenda.closer !== 'Sin asignar' ? 'bg-amber-950/40 text-amber-300 border-amber-500/30' : 'bg-slate-950/20 text-slate-500 border-dashed border-slate-850'}
+                                                    `}
+                                                >
+                                                    <option value="Sin asignar" className="bg-slate-900 text-slate-500 font-semibold">Sin Asignar</option>
+                                                    {uniqueClosers.map(cl => (
+                                                        <option key={cl} value={cl} className="bg-slate-900 text-white font-semibold">{cl}</option>
+                                                    ))}
+                                                </select>
                                             </td>
                                             <td className="py-4 px-4 text-center">
                                                 <select
@@ -1143,13 +1162,17 @@ const FinancialAgendasPage = () => {
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Closer</label>
-                                        <input 
-                                            type="text"
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
+                                        <select 
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
                                             value={editForm.closer}
                                             onChange={e => setEditForm({...editForm, closer: e.target.value})}
                                             required
-                                        />
+                                        >
+                                            <option value="Sin asignar" className="bg-slate-900 text-slate-500">Sin Asignar</option>
+                                            {uniqueClosers.map(cl => (
+                                                <option key={cl} value={cl} className="bg-slate-900 text-white">{cl}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
@@ -1166,12 +1189,16 @@ const FinancialAgendasPage = () => {
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Call Confirmer</label>
-                                        <input 
-                                            type="text"
-                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-indigo-500 text-sm font-semibold"
-                                            value={editForm.encargado_triage}
+                                        <select 
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
+                                            value={editForm.encargado_triage || ''}
                                             onChange={e => setEditForm({...editForm, encargado_triage: e.target.value})}
-                                        />
+                                        >
+                                            <option value="" className="bg-slate-900 text-slate-500">Sin Asignar</option>
+                                            {uniqueTriage.map(tg => (
+                                                <option key={tg} value={tg} className="bg-slate-900 text-white">{tg}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
                             </div>
