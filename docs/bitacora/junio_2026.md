@@ -1409,11 +1409,11 @@
     - **API Backend (`app/api/public/lead_roadmap.py`) [MODIFY]**:
       - Inyección de `appointment_keyword` en la respuesta de `/public/lead-roadmap` para exponer el anuncio asociado a la cita activa.
     - **Interfaz Frontend (`useDockNavigation.js`) [MODIFY]**:
-      - Configuración de 5 pasos numerados para el Setter (1. Leads Entrantes, 2. Cualificación, 3. Link de Agenda, 4. Reporte Diario, 5. Dashboard).
+      - Configuración de 4 pasos numerados para el Setter iniciando directamente desde Cualificación (1. Cualificación, 2. Link de Agenda, 3. Reporte Diario, 4. Dashboard).
       - Adaptación de la detección del elemento activo para soportar parámetros de consulta (`location.search`), permitiendo destacar el paso correcto en el Dock inferior.
     - **Interfaz Frontend (`LeadRoadmapDetail.jsx`) [MODIFY]**:
       - Adición de un selector interactivo dinámico en la sección de Metadatos de Adquisición para editar la keyword (anuncio) en caliente desde la ficha del lead si el usuario es un setter y hay una cita activa.
     - **Interfaz Frontend [REDESIGN] (`SetterWorkflowPage.jsx` [NEW] y `App.jsx` [MODIFY])**:
       - Creación del nuevo componente de productividad y espacio de trabajo `SetterWorkflowPage.jsx` con diseño de alta densidad, checkboxes de selección masiva y panel de herramientas para lotes.
-      - Incorporación de botones de acción de un solo clic por fila en la lista de leads (Paso 1: Contactado, Paso 2: Cualificar/Descualificar, Paso 3: Copiar Link / Agendado).
+      - Remoción de la etapa inicial de "Leads Entrantes", estructurando el espacio de trabajo del Setter a partir de "1. Cualificación" (Leads contactados que se deben cualificar/descualificar en un clic).
       - Redireccionamiento de la ruta `/setter/deck` en `App.jsx` hacia este nuevo espacio de trabajo enfocado del Setter.

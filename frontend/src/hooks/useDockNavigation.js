@@ -51,11 +51,10 @@ const useDockNavigation = () => {
             ];
         } else if (isSetter) {
             return [
-                { id: 'step-1', icon: Users, label: '1. Leads Entrantes', path: '/setter/deck?step=entrantes' },
-                { id: 'step-2', icon: Layers, label: '2. Cualificación', path: '/setter/deck?step=cualificacion' },
-                { id: 'step-3', icon: Activity, label: '3. Link de Agenda', path: '/setter/deck?step=link-agenda' },
-                { id: 'step-4', icon: ClipboardList, label: '4. Reporte Diario', path: '/setter/report' },
-                { id: 'step-5', icon: BarChart3, label: '5. Dashboard', path: '/setter/statistics' }
+                { id: 'step-1', icon: Layers, label: '1. Cualificación', path: '/setter/deck?step=cualificacion' },
+                { id: 'step-2', icon: Activity, label: '2. Link de Agenda', path: '/setter/deck?step=link-agenda' },
+                { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/setter/report' },
+                { id: 'step-4', icon: BarChart3, label: '4. Dashboard', path: '/setter/statistics' }
             ];
         } else if (isTriage) {
             return [

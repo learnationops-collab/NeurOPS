@@ -16,7 +16,7 @@ const SetterWorkflowPage = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     
-    const activeStep = searchParams.get('step') || 'entrantes';
+    const activeStep = searchParams.get('step') || 'cualificacion';
 
     // Leads y carga
     const [leads, setLeads] = useState([]);
@@ -182,11 +182,10 @@ const SetterWorkflowPage = () => {
 
     // Pasos del Asistente
     const stepsConfig = [
-        { key: 'entrantes', label: '1. Leads Entrantes', icon: Users, desc: 'Contactar leads nuevos' },
-        { key: 'cualificacion', label: '2. Cualificación', icon: Layers, desc: 'Cualificar o descualificar' },
-        { key: 'link-agenda', label: '3. Link de Agenda', icon: Activity, desc: 'Enviar enlace de agendamiento' },
-        { key: 'reporte', label: '4. Reporte Diario', icon: ClipboardList, desc: 'Registrar datos diarios' },
-        { key: 'dashboard', label: '5. Dashboard', icon: BarChart3, desc: 'Ver estadísticas de rendimiento' }
+        { key: 'cualificacion', label: '1. Cualificación', icon: Layers, desc: 'Cualificar o descualificar' },
+        { key: 'link-agenda', label: '2. Link de Agenda', icon: Activity, desc: 'Enviar enlace de agendamiento' },
+        { key: 'reporte', label: '3. Reporte Diario', icon: ClipboardList, desc: 'Registrar datos diarios' },
+        { key: 'dashboard', label: '4. Dashboard', icon: BarChart3, desc: 'Ver estadísticas de rendimiento' }
     ];
 
     return (
@@ -220,7 +219,7 @@ const SetterWorkflowPage = () => {
 
             {/* Barra de Pasos Superior (Wizard) */}
             <div className="bg-slate-950/30 border-b border-slate-900/60 py-4 px-6">
-                <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3">
                     {stepsConfig.map((s, idx) => {
                         const isActive = activeStep === s.key;
                         const StepIcon = s.icon;
@@ -283,15 +282,6 @@ const SetterWorkflowPage = () => {
 
                             <div className="flex items-center gap-2.5 flex-wrap md:flex-nowrap">
                                 {/* Acciones en Lote según el paso */}
-                                {activeStep === 'entrantes' && (
-                                    <button
-                                        onClick={() => handleBulkUpdate('Contactado')}
-                                        disabled={submittingBulk}
-                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-blue-600/20"
-                                    >
-                                        ✓ Marcar Contactados
-                                    </button>
-                                )}
                                 {activeStep === 'cualificacion' && (
                                     <>
                                         <button
@@ -446,17 +436,6 @@ const SetterWorkflowPage = () => {
                                                 {/* Acciones directas a la derecha de la tarjeta */}
                                                 <div className="flex items-center gap-2 shrink-0">
                                                     
-                                                    {/* Paso 1: Contactados */}
-                                                    {activeStep === 'entrantes' && (
-                                                        <button
-                                                            onClick={(e) => handleQuickAction(l.id, 'Contactado', e)}
-                                                            disabled={processingId === l.id}
-                                                            className="h-8 px-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-[9px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-blue-600/15 flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
-                                                        >
-                                                            {processingId === l.id ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
-                                                            Contactado
-                                                        </button>
-                                                    )}
 
                                                     {/* Paso 2: Cualificar / Descualificar */}
                                                     {activeStep === 'cualificacion' && (
