@@ -47,7 +47,7 @@ const COLORS = ['#1534ff', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b'
 const LeadsManagementPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const apptIdParam = searchParams.get('appt_id');
     const rolePath = useMemo(() => user?.role === 'closer' ? 'closer' : 'setter', [user?.role]);
 
