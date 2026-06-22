@@ -477,8 +477,8 @@ const PublicSetterReportPage = () => {
                                 {/* FUNNEL CHART PREVIEW */}
                                 <div className="bg-slate-900/70 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl flex flex-col items-center justify-center">
                                     <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-slate-800 pb-2 w-full text-center">Conversion Graphics</h3>
-                                    <div className="w-full aspect-square max-h-[300px]">
-                                        <FunnelChart data={liveMetrics.funnelData} height="100%" />
+                                    <div className="w-full flex flex-col items-center justify-center min-h-[400px]">
+                                        <FunnelChart data={liveMetrics.funnelData} />
                                     </div>
                                     <div className="mt-6 grid grid-cols-2 gap-4 w-full">
                                         <div className="bg-slate-800/50 p-4 rounded-3xl text-center border border-slate-700">

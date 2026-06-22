@@ -1439,3 +1439,10 @@
       - Eliminación completa de la barra de navegación superior (Wizard/Asistente) redundante en `SetterWorkflowPage.jsx` para centralizar toda la navegación en la barra inferior (Dock).
       - Limpieza de código eliminando la variable inactiva `stepsConfig` y la función `handleStepChange` en `SetterWorkflowPage.jsx`.
       - Configuración y ordenamiento de las páginas en el Dock para el Setter en `useDockNavigation.js`: 1. Cualificación, 2. Link de Agenda, 3. Reporte Diario, y 4. Dashboard (estadísticas).
+
+  - **Corrección del Gráfico de Embudo en la Vista del Reporte Diario (`PublicSetterReportPage.jsx`) [MODIFY]**:
+    - **Frontend**:
+      - Se reemplazó el contenedor restrictivo del gráfico de embudo (`w-full aspect-square max-h-[300px]`) por un contenedor flexible con altura mínima adecuada (`w-full flex flex-col items-center justify-center min-h-[400px]`). Esto evita que el embudo colapse verticalmente y que se superpongan o corten las etapas y las tasas de conversión intermedias.
+      - Se eliminó la propiedad no soportada `height="100%"` de la instancia del componente `<FunnelChart />`.
+      - El gráfico de embudo en la vista general del Dashboard se mantuvo intacto sin verse afectado.
+
