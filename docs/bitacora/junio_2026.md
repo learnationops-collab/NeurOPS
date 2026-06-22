@@ -1427,3 +1427,8 @@
       - Restricción de acceso en la calificación en caliente para que los usuarios con rol de `setter` no visualicen las secciones de "Observaciones de Call Confirmer" ni "Objeciones" (específicos de otros roles), reduciendo la pantalla al registro de los dolores del prospecto.
     - **Frontend (`SetterWorkflowPage.jsx`)**:
       - Activación de la propiedad `compact={true}` al invocar a `<LeadRoadmapDetail>` en la ficha lateral del Setter.
+
+  - **Ajuste en la Etapa Link de Agenda (`SetterWorkflowPage.jsx`) [MODIFY]**:
+    - **Frontend**:
+      - Eliminación del botón "Agendado" en el paso 2 (Link de Agenda) para el Setter, delegando la detección del agendamiento al sistema automático de booking.
+      - Reemplazo de la acción rápida (tanto individual como en lote) para marcar la cita directamente como "Link Enviado" en lugar de "Agendado" cuando el setter les provee su link de booking.
