@@ -170,10 +170,8 @@ const FinancialAgendasPage = () => {
     const [uniqueClosers, setUniqueClosers] = useState([]);
     const [uniqueSources, setUniqueSources] = useState([]);
     const [uniqueTriage, setUniqueTriage] = useState([]);
-
-    const [closerTableMinimized, setCloserTableMinimized] = useState(false);
-    const [sourceTableMinimized, setSourceTableMinimized] = useState(false);
-    const [triageTableMinimized, setTriageTableMinimized] = useState(false);
+    const [isSummaryMinimized, setIsSummaryMinimized] = useState(true);
+    const [activeSummaryTab, setActiveSummaryTab] = useState('fuente');
 
     // Estados para edición
     const [editingAgenda, setEditingAgenda] = useState(null);
@@ -617,237 +615,257 @@ const FinancialAgendasPage = () => {
                 </div>
             </div>
 
-            {/* Summary by Closer Section */}
-            {/* Grid de Desgloses por Closer y por Fuente - Organizado en vertical */}
-            <div className="grid grid-cols-1 gap-8">
-                {/* Desglose por Closer */}
-                <Card variant="surface" className="p-6 space-y-6 rounded-[2rem] border-base relative overflow-hidden">
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
-                            <Users className="text-primary" size={16} />
-                            Desglose por Closer
-                        </h3>
-                        <button
-                            type="button"
-                            onClick={() => setCloserTableMinimized(!closerTableMinimized)}
-                            className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
-                            title={closerTableMinimized ? "Maximizar tabla" : "Minimizar tabla"}
-                        >
-                            {closerTableMinimized ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                        </button>
-                    </div>
-                    
-                    {!closerTableMinimized && (
-                        Object.keys(byCloserState).length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr className="border-b border-base/60">
-                                            <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Closer</th>
-                                            <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
-                                            <th className="py-3 px-2 font-black text-center text-indigo-400 uppercase tracking-wider">Cto</th>
-                                            <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cfm</th>
-                                            <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
-                                            <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
-                                            <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
-                                            <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
-                                            <th className="py-3 px-2 font-black text-center text-violet-400 uppercase tracking-wider">Crd</th>
-                                            <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
-                                            <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
-                                            <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-base/40">
-                                        {Object.entries(byCloserState).map(([closerName, stats]) => {
-                                            const showUp = stats["Show Up"] || 0;
-                                            const noShow = (stats["No Show"] || 0) + (stats["No show"] || 0);
-                                            const totalAttended = showUp + noShow;
-                                            const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
-                                            
-                                            return (
-                                                <tr key={closerName} className="hover:bg-white/5 transition-colors">
-                                                    <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{closerName}</td>
-                                                    <HoverPercentCell value={stats["Pendiente"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-400" />
-                                                    <HoverPercentCell value={stats["Contactado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-indigo-400" />
-                                                    <HoverPercentCell value={stats["Confirmado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-emerald-400" />
-                                                    <HoverPercentCell value={stats["Show Up"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-bold text-primary" />
-                                                    <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
-                                                    <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
-                                                    <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
-                                                    <HoverPercentCell value={stats["Cerrada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-violet-400" />
-                                                    <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
-                                                    <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
-                                                    <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
-                                                        {showRate}%
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            !loading && (
-                                <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
-                                    Sin datos en el periodo
-                                </div>
-                            )
-                        )
-                    )}
-                </Card>
+            {/* Desgloses de Rendimiento */}
+            <Card variant="surface" className="p-6 space-y-6 rounded-[2rem] border-base relative overflow-hidden">
+                <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
+                        <Activity className="text-primary" size={16} />
+                        Desglose de Rendimiento
+                    </h3>
+                    <button
+                        type="button"
+                        onClick={() => setIsSummaryMinimized(!isSummaryMinimized)}
+                        className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+                        title={isSummaryMinimized ? "Maximizar desgloses" : "Minimizar desgloses"}
+                    >
+                        {isSummaryMinimized ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                    </button>
+                </div>
+                
+                {!isSummaryMinimized && (
+                    <div className="space-y-6">
+                        {/* Selector de Pestañas */}
+                        <div className="flex flex-wrap gap-2 p-1.5 bg-slate-950/60 border border-slate-800/80 rounded-2xl max-w-max">
+                            {[
+                                { id: 'fuente', label: 'Fuente' },
+                                { id: 'call_confirmer', label: 'Call Confirmer' },
+                                { id: 'closer', label: 'Closer' },
+                                { id: 'todos', label: 'Todos' }
+                            ].map((tab) => {
+                                const isActive = activeSummaryTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        onClick={() => setActiveSummaryTab(tab.id)}
+                                        className={`text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all cursor-pointer ${
+                                            isActive
+                                                ? 'bg-white/5 border border-white/10 text-white shadow-md'
+                                                : 'border border-transparent text-slate-400 hover:text-white hover:bg-white/5'
+                                        }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
 
-                {/* Desglose por Fuente */}
-                <Card variant="surface" className="p-6 space-y-6 rounded-[2rem] border-base relative overflow-hidden">
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
-                            <Activity className="text-primary" size={16} />
-                            Desglose por Fuente
-                        </h3>
-                        <button
-                            type="button"
-                            onClick={() => setSourceTableMinimized(!sourceTableMinimized)}
-                            className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
-                            title={sourceTableMinimized ? "Maximizar tabla" : "Minimizar tabla"}
-                        >
-                            {sourceTableMinimized ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                        </button>
-                    </div>
-                    
-                    {!sourceTableMinimized && (
-                        Object.keys(bySourceState).length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr className="border-b border-base/60">
-                                            <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Fuente</th>
-                                            <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
-                                            <th className="py-3 px-2 font-black text-center text-indigo-400 uppercase tracking-wider">Cto</th>
-                                            <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cfm</th>
-                                            <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
-                                            <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
-                                            <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
-                                            <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
-                                            <th className="py-3 px-2 font-black text-center text-violet-400 uppercase tracking-wider">Crd</th>
-                                            <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
-                                            <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
-                                            <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-base/40">
-                                        {Object.entries(bySourceState).map(([sourceName, stats]) => {
-                                            const showUp = stats["Show Up"] || 0;
-                                            const noShow = (stats["No Show"] || 0) + (stats["No show"] || 0);
-                                            const totalAttended = showUp + noShow;
-                                            const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
-                                            
-                                            return (
-                                                <tr key={sourceName} className="hover:bg-white/5 transition-colors">
-                                                    <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{sourceName}</td>
-                                                    <HoverPercentCell value={stats["Pendiente"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-400" />
-                                                    <HoverPercentCell value={stats["Contactado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-indigo-400" />
-                                                    <HoverPercentCell value={stats["Confirmado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-emerald-400" />
-                                                    <HoverPercentCell value={stats["Show Up"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-bold text-primary" />
-                                                    <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
-                                                    <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
-                                                    <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
-                                                    <HoverPercentCell value={stats["Cerrada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-violet-400" />
-                                                    <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
-                                                    <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
-                                                    <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
-                                                        {showRate}%
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            !loading && (
-                                <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
-                                    Sin datos en el periodo
+                        {/* Renderizado de tablas según pestaña activa */}
+                        <div className="space-y-8">
+                            {/* Pestaña: Fuente */}
+                            {(activeSummaryTab === 'fuente' || activeSummaryTab === 'todos') && (
+                                <div className="space-y-4">
+                                    {activeSummaryTab === 'todos' && (
+                                        <h4 className="text-[9px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 pl-1">
+                                            <Activity size={12} />
+                                            Desglose por Fuente
+                                        </h4>
+                                    )}
+                                    {Object.keys(bySourceState).length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left border-collapse text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-base/60">
+                                                        <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Fuente</th>
+                                                        <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
+                                                        <th className="py-3 px-2 font-black text-center text-indigo-400 uppercase tracking-wider">Cto</th>
+                                                        <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cfm</th>
+                                                        <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
+                                                        <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
+                                                        <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
+                                                        <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
+                                                        <th className="py-3 px-2 font-black text-center text-violet-400 uppercase tracking-wider">Crd</th>
+                                                        <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
+                                                        <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
+                                                        <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-base/40">
+                                                    {Object.entries(bySourceState).map(([sourceName, stats]) => {
+                                                        const showUp = stats["Show Up"] || 0;
+                                                        const noShow = (stats["No Show"] || 0) + (stats["No show"] || 0);
+                                                        const totalAttended = showUp + noShow;
+                                                        const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
+                                                        
+                                                        return (
+                                                            <tr key={sourceName} className="hover:bg-white/5 transition-colors">
+                                                                <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{sourceName}</td>
+                                                                <HoverPercentCell value={stats["Pendiente"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-400" />
+                                                                <HoverPercentCell value={stats["Contactado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-indigo-400" />
+                                                                <HoverPercentCell value={stats["Confirmado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-emerald-400" />
+                                                                <HoverPercentCell value={stats["Show Up"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-bold text-primary" />
+                                                                <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
+                                                                <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
+                                                                <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
+                                                                <HoverPercentCell value={stats["Cerrada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-violet-400" />
+                                                                <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
+                                                                <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
+                                                                <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
+                                                                    {showRate}%
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        !loading && (
+                                            <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
+                                                Sin datos de Fuente en el periodo
+                                            </div>
+                                        )
+                                    )}
                                 </div>
-                            )
-                        )
-                    )}
-                </Card>
+                            )}
 
-                {/* Desglose por Call Confirmer */}
-                <Card variant="surface" className="p-6 space-y-6 rounded-[2rem] border-base relative overflow-hidden">
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
-                            <Users className="text-primary" size={16} />
-                            Desglose por Call Confirmer
-                        </h3>
-                        <button
-                            type="button"
-                            onClick={() => setTriageTableMinimized(!triageTableMinimized)}
-                            className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
-                            title={triageTableMinimized ? "Maximizar tabla" : "Minimizar tabla"}
-                        >
-                            {triageTableMinimized ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                        </button>
-                    </div>
-                    
-                    {!triageTableMinimized && (
-                        Object.keys(byTriageState).length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr className="border-b border-base/60">
-                                            <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Call Confirmer</th>
-                                            <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
-                                            <th className="py-3 px-2 font-black text-center text-indigo-400 uppercase tracking-wider">Cto</th>
-                                            <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cfm</th>
-                                            <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
-                                            <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
-                                            <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
-                                            <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
-                                            <th className="py-3 px-2 font-black text-center text-violet-400 uppercase tracking-wider">Crd</th>
-                                            <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
-                                            <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
-                                            <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-base/40">
-                                        {Object.entries(byTriageState).map(([triageName, stats]) => {
-                                            const showUp = stats["Show Up"] || 0;
-                                            const noShow = (stats["No Show"] || 0) + (stats["No show"] || 0);
-                                            const totalAttended = showUp + noShow;
-                                            const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
-                                            
-                                            return (
-                                                <tr key={triageName} className="hover:bg-white/5 transition-colors">
-                                                    <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{triageName}</td>
-                                                    <HoverPercentCell value={stats["Pendiente"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-400" />
-                                                    <HoverPercentCell value={stats["Contactado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-indigo-400" />
-                                                    <HoverPercentCell value={stats["Confirmado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-emerald-400" />
-                                                    <HoverPercentCell value={stats["Show Up"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-bold text-primary" />
-                                                    <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
-                                                    <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
-                                                    <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
-                                                    <HoverPercentCell value={stats["Cerrada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-violet-400" />
-                                                    <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
-                                                    <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
-                                                    <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
-                                                        {showRate}%
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            !loading && (
-                                <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
-                                    Sin datos de Call Confirmer en el periodo
+                            {/* Pestaña: Call Confirmer */}
+                            {(activeSummaryTab === 'call_confirmer' || activeSummaryTab === 'todos') && (
+                                <div className="space-y-4">
+                                    {activeSummaryTab === 'todos' && (
+                                        <h4 className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5 pl-1">
+                                            <Users size={12} />
+                                            Desglose por Call Confirmer
+                                        </h4>
+                                    )}
+                                    {Object.keys(byTriageState).length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left border-collapse text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-base/60">
+                                                        <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Call Confirmer</th>
+                                                        <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
+                                                        <th className="py-3 px-2 font-black text-center text-indigo-400 uppercase tracking-wider">Cto</th>
+                                                        <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cfm</th>
+                                                        <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
+                                                        <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
+                                                        <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
+                                                        <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
+                                                        <th className="py-3 px-2 font-black text-center text-violet-400 uppercase tracking-wider">Crd</th>
+                                                        <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
+                                                        <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
+                                                        <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-base/40">
+                                                    {Object.entries(byTriageState).map(([triageName, stats]) => {
+                                                        const showUp = stats["Show Up"] || 0;
+                                                        const noShow = (stats["No Show"] || 0) + (stats["No show"] || 0);
+                                                        const totalAttended = showUp + noShow;
+                                                        const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
+                                                        
+                                                        return (
+                                                            <tr key={triageName} className="hover:bg-white/5 transition-colors">
+                                                                <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{triageName}</td>
+                                                                <HoverPercentCell value={stats["Pendiente"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-400" />
+                                                                <HoverPercentCell value={stats["Contactado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-indigo-400" />
+                                                                <HoverPercentCell value={stats["Confirmado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-emerald-400" />
+                                                                <HoverPercentCell value={stats["Show Up"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-bold text-primary" />
+                                                                <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
+                                                                <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
+                                                                <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
+                                                                <HoverPercentCell value={stats["Cerrada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-violet-400" />
+                                                                <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
+                                                                <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
+                                                                <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
+                                                                    {showRate}%
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        !loading && (
+                                            <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
+                                                Sin datos de Call Confirmer en el periodo
+                                            </div>
+                                        )
+                                    )}
                                 </div>
-                            )
-                        )
-                    )}
-                </Card>
-            </div>
+                            )}
+
+                            {/* Pestaña: Closer */}
+                            {(activeSummaryTab === 'closer' || activeSummaryTab === 'todos') && (
+                                <div className="space-y-4">
+                                    {activeSummaryTab === 'todos' && (
+                                        <h4 className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-1.5 pl-1">
+                                            <Users size={12} />
+                                            Desglose por Closer
+                                        </h4>
+                                    )}
+                                    {Object.keys(byCloserState).length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left border-collapse text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-base/60">
+                                                        <th className="py-3 px-2 font-black text-muted uppercase tracking-wider">Closer</th>
+                                                        <th className="py-3 px-2 font-black text-center text-slate-400 uppercase tracking-wider">Pnd</th>
+                                                        <th className="py-3 px-2 font-black text-center text-indigo-400 uppercase tracking-wider">Cto</th>
+                                                        <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cfm</th>
+                                                        <th className="py-3 px-2 font-black text-center text-primary uppercase tracking-wider">Shw</th>
+                                                        <th className="py-3 px-2 font-black text-center text-rose-400 uppercase tracking-wider">Nsh</th>
+                                                        <th className="py-3 px-2 font-black text-center text-amber-400 uppercase tracking-wider">Rea</th>
+                                                        <th className="py-3 px-2 font-black text-center text-slate-500 uppercase tracking-wider">Can</th>
+                                                        <th className="py-3 px-2 font-black text-center text-violet-400 uppercase tracking-wider">Crd</th>
+                                                        <th className="py-3 px-2 font-black text-center text-white uppercase tracking-wider">Total</th>
+                                                        <th className="py-3 px-2 font-black text-center text-emerald-400 uppercase tracking-wider">Cierres</th>
+                                                        <th className="py-3 px-2 font-black text-right text-emerald-400 uppercase tracking-wider">Show Rate</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-base/40">
+                                                    {Object.entries(byCloserState).map(([closerName, stats]) => {
+                                                        const showUp = stats["Show Up"] || 0;
+                                                        const noShow = (stats["No Show"] || 0) + (stats["No show"] || 0);
+                                                        const totalAttended = showUp + noShow;
+                                                        const showRate = totalAttended > 0 ? ((showUp / totalAttended) * 100).toFixed(0) : 0;
+                                                        
+                                                        return (
+                                                            <tr key={closerName} className="hover:bg-white/5 transition-colors">
+                                                                <td className="py-3 px-2 font-bold text-slate-200 uppercase tracking-wider">{closerName}</td>
+                                                                <HoverPercentCell value={stats["Pendiente"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-400" />
+                                                                <HoverPercentCell value={stats["Contactado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-indigo-400" />
+                                                                <HoverPercentCell value={stats["Confirmado"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-emerald-400" />
+                                                                <HoverPercentCell value={stats["Show Up"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-bold text-primary" />
+                                                                <HoverPercentCell value={noShow} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-rose-400" />
+                                                                <HoverPercentCell value={stats["Reagendada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-amber-400" />
+                                                                <HoverPercentCell value={stats["Cancelada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-slate-500" />
+                                                                <HoverPercentCell value={stats["Cerrada"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-semibold text-violet-400" />
+                                                                <HoverPercentCell value={stats["total"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-white italic" />
+                                                                <HoverPercentCell value={stats["cierres"] || 0} total={stats["total"] || 0} className="py-3 px-2 text-center font-black text-emerald-400 italic" />
+                                                                <td className="py-3 px-2 text-right font-black text-emerald-400 italic">
+                                                                    {showRate}%
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        !loading && (
+                                            <div className="py-8 text-center text-muted text-xs font-bold tracking-widest uppercase">
+                                                Sin datos de Closer en el periodo
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </Card>
 
             {/* List Section */}
             <Card variant="surface" className="p-8 space-y-6 rounded-[2.5rem] border-base relative">

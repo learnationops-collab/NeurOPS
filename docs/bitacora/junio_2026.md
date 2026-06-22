@@ -27,6 +27,11 @@
     - Se eliminaron del directorio `scripts/` los scripts y herramientas de mantenimiento que no son necesarios para el funcionamiento diario en producción: `adaptar_datos_historicos.py`, `apply_form_data.py`, `db/migrate_leads.py`, `db/seed.py` (removiendo asimismo el directorio `scripts/db/`) y el script obsoleto de lectura de Google Sheets `sync_sheets.py` (puesto que el registro de agendas se realiza mediante webhook externo de n8n y las ventas se registran directamente desde la aplicación hacia Sheets).
     - Se preservó únicamente el script de sincronización local `scripts/actualizar_db.py`.
 
+  - **Fusión de Desgloses de Rendimiento con Pestañas (`FinancialAgendasPage.jsx`) [MODIFY]**:
+    - Se unificaron las tres tablas de desgloses de rendimiento (por Closer, por Fuente y por Call Confirmer) en una sola tarjeta Glassmorphic colapsable.
+    - Por defecto, toda la sección de desgloses se presenta contraída (minimizada) para optimizar el espacio de visualización al entrar al tablero.
+    - Se implementó un selector de pestañas interactivo ("Fuente", "Call Confirmer", "Closer", "Todos") para permitir la conmutación fluida y el renderizado condicional de los desgloses según la necesidad del operador.
+
 - **20 de Junio de 2026**:
   - **Soporte para el Estado "Cerrada" en Agendas [MODIFY]**:
     - **Backend**:
