@@ -1436,5 +1436,9 @@
 
   - **Eliminación del Paso Dashboard para el Setter (`SetterWorkflowPage.jsx`, `useDockNavigation.js`) [MODIFY]**:
     - **Frontend**:
-      - Eliminación de la opción "4. Dashboard" en el Wizard superior de `SetterWorkflowPage.jsx` y reconfiguración a 3 columnas simétricas (`grid-cols-1 md:grid-cols-3`).
-      - Eliminación del paso de estadísticas ("4. Dashboard") del Dock de navegación en `useDockNavigation.js` para simplificar la interfaz diaria de trabajo.
+      - Eliminación de la opción "4. Dashboard" del Dock de navegación en `useDockNavigation.js` para simplificar la interfaz diaria de trabajo.
+
+  - **Unificación de Navegación en Barra Inferior (Dock) y Remoción de Wizard Superior (`SetterWorkflowPage.jsx`) [MODIFY]**:
+    - **Frontend**:
+      - Eliminación completa de la barra de navegación superior (Wizard/Asistente) redundante en `SetterWorkflowPage.jsx` para centralizar toda la navegación en la barra inferior (Dock), dejando más espacio de trabajo limpio para la gestión de leads.
+      - Limpieza de código eliminando la variable inactiva `stepsConfig` y la función `handleStepChange`.

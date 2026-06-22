@@ -77,16 +77,7 @@ const SetterWorkflowPage = () => {
         );
     }, [leads, searchQuery]);
 
-    // Navegar entre pasos del Dock
-    const handleStepChange = (stepKey) => {
-        if (stepKey === 'reporte') {
-            navigate('/setter/report');
-        } else if (stepKey === 'dashboard') {
-            navigate('/setter/statistics');
-        } else {
-            setSearchParams({ step: stepKey });
-        }
-    };
+
 
     // Procesar acción individual (de un solo clic)
     const handleQuickAction = async (leadId, nextResult, e) => {
@@ -180,12 +171,7 @@ const SetterWorkflowPage = () => {
         }
     };
 
-    // Pasos del Asistente
-    const stepsConfig = [
-        { key: 'cualificacion', label: '1. Cualificación', icon: Layers, desc: 'Cualificar o descualificar' },
-        { key: 'link-agenda', label: '2. Link de Agenda', icon: Activity, desc: 'Enviar enlace de agendamiento' },
-        { key: 'reporte', label: '3. Reporte Diario', icon: ClipboardList, desc: 'Registrar datos diarios' }
-    ];
+
 
     return (
         <div className="h-screen overflow-y-auto bg-slate-950 text-slate-100 flex flex-col custom-scrollbar pb-32">
@@ -217,46 +203,7 @@ const SetterWorkflowPage = () => {
             </div>
 
             {/* Barra de Pasos Superior (Wizard) */}
-            <div className="bg-slate-950/30 border-b border-slate-900/60 py-4 px-6">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {stepsConfig.map((s, idx) => {
-                        const isActive = activeStep === s.key;
-                        const StepIcon = s.icon;
-                        return (
-                            <button
-                                key={s.key}
-                                onClick={() => handleStepChange(s.key)}
-                                className={`p-3.5 rounded-2xl border text-left transition-all duration-300 relative overflow-hidden flex flex-col justify-between group cursor-pointer ${
-                                    isActive
-                                        ? 'bg-gradient-to-br from-violet-650/20 to-blue-600/5 border-violet-500 shadow-[0_0_20px_rgba(139,92,246,0.15)]'
-                                        : 'bg-slate-900/40 border-slate-900 hover:border-slate-800 hover:bg-slate-900/80'
-                                }`}
-                            >
-                                <div className="flex items-center justify-between w-full mb-1">
-                                    <div className={`p-2 rounded-xl shrink-0 ${
-                                        isActive ? 'bg-violet-600 text-white' : 'bg-slate-950 text-slate-400 group-hover:text-white transition-colors'
-                                    }`}>
-                                        <StepIcon size={16} />
-                                    </div>
-                                    {isActive && (
-                                        <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-ping absolute top-4 right-4" />
-                                    )}
-                                </div>
-                                <div>
-                                    <span className={`text-[11px] font-black uppercase tracking-wider block ${
-                                        isActive ? 'text-violet-300' : 'text-slate-350'
-                                    }`}>
-                                        {s.label}
-                                    </span>
-                                    <span className="text-[9px] text-slate-500 block truncate font-medium">
-                                        {s.desc}
-                                    </span>
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
+
 
             {/* Área de Trabajo Principal (Grid 2 Columnas) */}
             <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
