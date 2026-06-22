@@ -14,6 +14,10 @@
     - Se ejecutó el script con éxito para actualizar la base de datos local SQLite con los datos de producción de PostgreSQL.
     - Se reubicó el script dentro del directorio `scripts/` adaptando dinámicamente la resolución del path raíz del proyecto, y se removió la versión duplicada de la raíz.
 
+  - **Organización de Script de Carga de Formularios (`scripts/apply_form_data.py`) [NEW / DELETE]**:
+    - Se reubicó el script manual `apply_form_data.py` (utilizado para importar datos de formularios históricos desde un markdown local) a la carpeta `scripts/` para mantener limpia la raíz del proyecto para producción.
+    - Se adaptó el script para resolver dinámicamente la ruta del archivo de configuración `.env` y el path de importación de la aplicación.
+
 - **20 de Junio de 2026**:
   - **Soporte para el Estado "Cerrada" en Agendas [MODIFY]**:
     - **Backend**:
