@@ -5,7 +5,11 @@ from sqlalchemy.orm import sessionmaker, make_transient
 from dotenv import load_dotenv
 
 # Añadir el directorio raíz al path para importar la app
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+current_dir = os.path.abspath(os.path.dirname(__file__))
+if os.path.basename(current_dir) == 'scripts':
+    sys.path.append(os.path.abspath(os.path.join(current_dir, '..')))
+else:
+    sys.path.append(current_dir)
 
 from app import create_app, db
 from app.models import (
