@@ -1434,11 +1434,8 @@
       - Reemplazo de la acción rápida (tanto individual como en lote) para marcar la cita directamente como "Link Enviado" en lugar de "Agendado" cuando el setter les provee su link de booking.
       - Eliminación del botón "Link" (que copiaba el enlace al portapapeles) en el renglón del lead del paso 2 (Link de Agenda) para dejar únicamente el botón de acción rápida "Link Enviado".
 
-  - **Eliminación del Paso Dashboard para el Setter (`SetterWorkflowPage.jsx`, `useDockNavigation.js`) [MODIFY]**:
+  - **Unificación de Navegación en Barra Inferior (Dock) y Remoción de Wizard Superior (`SetterWorkflowPage.jsx`, `useDockNavigation.js`) [MODIFY]**:
     - **Frontend**:
-      - Eliminación de la opción "4. Dashboard" del Dock de navegación en `useDockNavigation.js` para simplificar la interfaz diaria de trabajo.
-
-  - **Unificación de Navegación en Barra Inferior (Dock) y Remoción de Wizard Superior (`SetterWorkflowPage.jsx`) [MODIFY]**:
-    - **Frontend**:
-      - Eliminación completa de la barra de navegación superior (Wizard/Asistente) redundante en `SetterWorkflowPage.jsx` para centralizar toda la navegación en la barra inferior (Dock), dejando más espacio de trabajo limpio para la gestión de leads.
-      - Limpieza de código eliminando la variable inactiva `stepsConfig` y la función `handleStepChange`.
+      - Eliminación completa de la barra de navegación superior (Wizard/Asistente) redundante en `SetterWorkflowPage.jsx` para centralizar toda la navegación en la barra inferior (Dock).
+      - Limpieza de código eliminando la variable inactiva `stepsConfig` y la función `handleStepChange` en `SetterWorkflowPage.jsx`.
+      - Configuración y ordenamiento de las páginas en el Dock para el Setter en `useDockNavigation.js`: 1. Cualificación, 2. Link de Agenda, 3. Reporte Diario, y 4. Dashboard (estadísticas).
