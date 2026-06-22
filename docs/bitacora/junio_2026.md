@@ -22,6 +22,11 @@
     - Se establece la regla obligatoria de mantener la raíz del repositorio lo más limpia posible, limitándola estrictamente a los archivos necesarios para el despliegue de producción.
     - No se deben subir ni mantener en la raíz scripts de uso manual, de mantenimiento o utilitarios que no sean indispensables para el funcionamiento diario en producción; este tipo de herramientas secundarias deben ser ubicadas ordenadamente dentro del directorio `scripts/`.
 
+  - **Depuración de Scripts Locales Innecesarios [DELETE]**:
+    - Se eliminó el script utilitario de depuración de clientes `fix_prod_db.py` de la raíz del proyecto.
+    - Se eliminaron del directorio `scripts/` los scripts y herramientas de mantenimiento que no son necesarios para el funcionamiento diario en producción: `adaptar_datos_historicos.py`, `apply_form_data.py`, `db/migrate_leads.py` y `db/seed.py`, removiendo asimismo el directorio `scripts/db/`.
+    - Se preservó únicamente el script de sincronización local `scripts/actualizar_db.py` y el cron del servidor `scripts/sync_sheets.py`.
+
 - **20 de Junio de 2026**:
   - **Soporte para el Estado "Cerrada" en Agendas [MODIFY]**:
     - **Backend**:
