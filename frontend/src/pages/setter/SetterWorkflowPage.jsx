@@ -184,8 +184,7 @@ const SetterWorkflowPage = () => {
     const stepsConfig = [
         { key: 'cualificacion', label: '1. Cualificación', icon: Layers, desc: 'Cualificar o descualificar' },
         { key: 'link-agenda', label: '2. Link de Agenda', icon: Activity, desc: 'Enviar enlace de agendamiento' },
-        { key: 'reporte', label: '3. Reporte Diario', icon: ClipboardList, desc: 'Registrar datos diarios' },
-        { key: 'dashboard', label: '4. Dashboard', icon: BarChart3, desc: 'Ver estadísticas de rendimiento' }
+        { key: 'reporte', label: '3. Reporte Diario', icon: ClipboardList, desc: 'Registrar datos diarios' }
     ];
 
     return (
@@ -219,7 +218,7 @@ const SetterWorkflowPage = () => {
 
             {/* Barra de Pasos Superior (Wizard) */}
             <div className="bg-slate-950/30 border-b border-slate-900/60 py-4 px-6">
-                <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-3">
                     {stepsConfig.map((s, idx) => {
                         const isActive = activeStep === s.key;
                         const StepIcon = s.icon;
