@@ -18,6 +18,10 @@
     - Se reubicó el script manual `apply_form_data.py` (utilizado para importar datos de formularios históricos desde un markdown local) a la carpeta `scripts/` para mantener limpia la raíz del proyecto para producción.
     - Se adaptó el script para resolver dinámicamente la ruta del archivo de configuración `.env` y el path de importación de la aplicación.
 
+  - **Directiva de Limpieza de la Raíz del Proyecto [POLICY]**:
+    - Se establece la regla obligatoria de mantener la raíz del repositorio lo más limpia posible, limitándola estrictamente a los archivos necesarios para el despliegue de producción.
+    - No se deben subir ni mantener en la raíz scripts de uso manual, de mantenimiento o utilitarios que no sean indispensables para el funcionamiento diario en producción; este tipo de herramientas secundarias deben ser ubicadas ordenadamente dentro del directorio `scripts/`.
+
 - **20 de Junio de 2026**:
   - **Soporte para el Estado "Cerrada" en Agendas [MODIFY]**:
     - **Backend**:
