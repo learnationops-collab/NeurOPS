@@ -1068,14 +1068,25 @@ class CloserService:
         if 'full_name' in data:
             client.full_name = data['full_name']
         if 'email' in data:
-            client.email = data['email']
+            email_val = data['email']
+            if email_val:
+                email_val = email_val.strip().lower()
+                if email_val in ('n/a', 'na', 'none', 'null', '') or '@' not in email_val:
+                    email_val = None
+            client.email = email_val
         if 'phone' in data:
-            client.phone = data['phone']
+            phone_val = data['phone']
+            if phone_val:
+                phone_val = phone_val.strip()
+                if phone_val.lower() in ('n/a', 'na', 'none', 'null', ''):
+                    phone_val = None
+            client.phone = phone_val
         if 'instagram' in data:
-            # Limpiar @ si viene con él
             val = data['instagram']
             if val:
                 val = val.strip().strip('@')
+                if val.lower() in ('n/a', 'na', 'none', 'null', ''):
+                    val = None
             client.instagram = val
             
         db.session.commit()

@@ -367,6 +367,7 @@ def get_triage_notifications():
         targets = n.target_users
         
         if targets == 'all': is_target = True
+        elif isinstance(targets, list) and "all" in targets: is_target = True
         elif isinstance(targets, str) and targets.startswith("role:") and targets == f"role:{current_user.role}": is_target = True
         elif isinstance(targets, list) and (current_user.id in targets or f"role:{current_user.role}" in targets): is_target = True
         
@@ -422,6 +423,7 @@ def read_all_triage_notifications():
         targets = n.target_users
         
         if targets == 'all': is_target = True
+        elif isinstance(targets, list) and "all" in targets: is_target = True
         elif isinstance(targets, str) and targets.startswith("role:") and targets == f"role:{current_user.role}": is_target = True
         elif isinstance(targets, list) and (current_user.id in targets or f"role:{current_user.role}" in targets): is_target = True
         

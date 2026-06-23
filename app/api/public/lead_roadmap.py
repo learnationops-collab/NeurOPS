@@ -604,7 +604,17 @@ def update_client_roadmap():
     data = request.get_json() or {}
     client_id = data.get('client_id')
     email = data.get('email')
+    if email:
+        email = email.strip().lower()
+        if is_generic_val(email) or '@' not in email:
+            email = None
+
     phone = data.get('phone')
+    if phone:
+        phone = phone.strip()
+        if is_generic_val(phone):
+            phone = None
+
     instagram = data.get('instagram')
     full_name = data.get('full_name')
     objeciones = data.get('objeciones')
@@ -636,6 +646,7 @@ def update_client_roadmap():
             dolores=dolores
         )
         db.session.add(client)
+        db.session.flush()
     else:
         # Actualizar campos existentes
         if full_name:
@@ -658,7 +669,7 @@ def update_client_roadmap():
         notif = Notification(
             subject=f"Calificación de Lead Actualizada: {client.full_name or client.instagram or 'Desconocido'}",
             content=f"Se actualizaron los datos de calificación del lead.\nDolores: {client.dolores or 'N/A'}\nObjeciones: {client.objeciones or 'N/A'}\nObservaciones: {client.observaciones or 'N/A'}",
-            target_users="all",
+            target_users=["all"],
             associated_id=client.id,
             associated_type="lead"
         )
@@ -682,6 +693,8 @@ def update_client_roadmap():
         }), 200
     except Exception as e:
         db.session.rollback()
+        import logging
+        logging.getLogger(__name__).error(f"Error al guardar calificación del lead: {e}")
         return jsonify({"error": str(e)}), 500
 
 @bp.route('/public/lead-roadmap/relate-event', methods=['POST'])

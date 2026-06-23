@@ -1288,6 +1288,7 @@ def get_admin_notifications():
     for n in notifications:
         is_target = False
         if n.target_users == 'all': is_target = True
+        elif isinstance(n.target_users, list) and 'all' in n.target_users: is_target = True
         elif n.target_users == 'role:admin': is_target = True
         elif isinstance(n.target_users, list) and current_user.id in n.target_users: is_target = True
         
@@ -1330,6 +1331,7 @@ def read_all_admin_notifications():
     for n in notifications:
         is_target = False
         if n.target_users == 'all': is_target = True
+        elif isinstance(n.target_users, list) and 'all' in n.target_users: is_target = True
         elif n.target_users == 'role:admin': is_target = True
         elif isinstance(n.target_users, list) and current_user.id in n.target_users: is_target = True
         

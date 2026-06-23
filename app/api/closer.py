@@ -825,7 +825,7 @@ def add_lead_comment(id):
         notif = Notification(
             subject=f"Nueva nota interna en el lead: {client.full_name or client.instagram or 'Desconocido'}",
             content=f"{current_user.username} agregó una nota:\n\n{text}",
-            target_users="all",
+            target_users=["all"],
             associated_id=client.id,
             associated_type="lead"
         )
@@ -1016,7 +1016,7 @@ def get_notifications():
         is_target = False
         
         if isinstance(targets, list):
-            if current_user.id in targets or f"role:{current_user.role}" in targets:
+            if current_user.id in targets or f"role:{current_user.role}" in targets or "all" in targets:
                 is_target = True
         elif targets == "all":
             is_target = True
@@ -1083,7 +1083,7 @@ def mark_all_notifications_read():
         is_target = False
         
         if isinstance(targets, list):
-            if current_user.id in targets or f"role:{current_user.role}" in targets:
+            if current_user.id in targets or f"role:{current_user.role}" in targets or "all" in targets:
                 is_target = True
         elif targets == "all":
             is_target = True

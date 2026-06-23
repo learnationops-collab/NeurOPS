@@ -787,6 +787,8 @@ def get_notifications():
         # Check target
         if n.target_users == "all":
             is_target = True
+        elif isinstance(n.target_users, list) and "all" in n.target_users:
+            is_target = True
         elif isinstance(n.target_users, str) and (n.target_users == f"role:{ROLE_SETTER}" or n.target_users == "role:setter"):
             is_target = True
         elif isinstance(n.target_users, list) and current_user.id in n.target_users:
@@ -836,6 +838,8 @@ def mark_all_notifications_read():
     for n in all_notifs:
         is_target = False
         if n.target_users == "all":
+            is_target = True
+        elif isinstance(n.target_users, list) and "all" in n.target_users:
             is_target = True
         elif isinstance(n.target_users, str) and (n.target_users == f"role:{ROLE_SETTER}" or n.target_users == "role:setter"):
             is_target = True

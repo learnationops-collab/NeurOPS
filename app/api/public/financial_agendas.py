@@ -450,7 +450,7 @@ def update_financial_agenda(agenda_id):
             notif = Notification(
                 subject=f"Estado de Agenda Actualizado: {agenda.lead or agenda.nombre or 'Desconocido'}",
                 content=f"La agenda con @{agenda.instagram or 'sin_ig'} ha cambiado de estado a '{agenda.estado}'.",
-                target_users="all",
+                target_users=["all"],
                 associated_id=agenda.id,
                 associated_type="agenda"
             )
