@@ -1463,6 +1463,19 @@ def create_admin_appointment():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@bp.route('/admin/closer-aliases/options', methods=['GET'])
+@login_required
+@operator_required
+def get_closer_alias_options():
+    from app.models.financial import FinancialAgenda
+    # Obtener valores únicos de closer en la tabla FinancialAgenda, omitiendo nulos o vacíos
+    results = db.session.query(FinancialAgenda.closer).distinct().all()
+    options = sorted(list(set(
+        str(r[0]).strip() for r in results 
+        if r[0] and str(r[0]).strip().lower() not in ('n/a', 'none', 'undefined', 'sin asignar', 'sin_asignar', '')
+    )))
+    return jsonify(options), 200
+
 @bp.route('/admin/closer-aliases', methods=['GET', 'POST'])
 @login_required
 @operator_required

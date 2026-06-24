@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    UserCheck, Trash2, Plus, Loader2, RefreshCw, AlertCircle, Check
+    UserCheck, Trash2, Plus, Loader2, RefreshCw, AlertCircle
 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 const CloserAliasesPanel = () => {
     const [users, setUsers] = useState([]);
     const [aliases, setAliases] = useState([]);
+    const [aliasOptions, setAliasOptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
     
@@ -16,20 +17,22 @@ const CloserAliasesPanel = () => {
     const [aliasName, setAliasName] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    // Cargar usuarios y alias
+    // Cargar usuarios, alias y opciones registradas en Google Sheets
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [usersRes, aliasesRes] = await Promise.all([
+            const [usersRes, aliasesRes, optionsRes] = await Promise.all([
                 api.get('/admin/users'),
-                api.get('/admin/closer-aliases')
+                api.get('/admin/closer-aliases'),
+                api.get('/admin/closer-aliases/options')
             ]);
-            // Filtrar closers y admins (para que aparezcan Sebastian, Mary, Jean Carlo)
+            // Filtrar closers y admins
             const closersOrAdmins = (usersRes.data || []).filter(u => 
                 u.role === 'closer' || u.role === 'admin' || u.role === 'setter'
             );
             setUsers(closersOrAdmins);
             setAliases(aliasesRes.data || []);
+            setAliasOptions(optionsRes.data || []);
         } catch (err) {
             console.error("Error al cargar datos:", err);
             toast.error("Error al cargar datos de asignación");
@@ -49,8 +52,8 @@ const CloserAliasesPanel = () => {
             toast.error("Selecciona un usuario del CRM");
             return;
         }
-        if (!aliasName.trim()) {
-            toast.error("Ingresa el alias de Sheets");
+        if (!aliasName) {
+            toast.error("Selecciona el nombre de closer registrado");
             return;
         }
 
@@ -58,13 +61,13 @@ const CloserAliasesPanel = () => {
         try {
             await api.post('/admin/closer-aliases', {
                 user_id: parseInt(selectedUserId),
-                alias_name: aliasName.trim()
+                alias_name: aliasName
             });
-            toast.success("Alias agregado con éxito");
+            toast.success("Alias vinculado con éxito");
             setAliasName('');
             fetchData();
         } catch (err) {
-            console.error("Error al agregar alias:", err);
+            console.error("Error al vincular alias:", err);
             const errMsg = err.response?.data?.message || "Error al agregar alias";
             toast.error(errMsg);
         } finally {
@@ -74,11 +77,11 @@ const CloserAliasesPanel = () => {
 
     // Eliminar alias
     const handleDeleteAlias = async (aliasId) => {
-        if (!window.confirm("¿Seguro que deseas eliminar este alias?")) return;
+        if (!window.confirm("¿Seguro que deseas eliminar esta vinculación?")) return;
         
         try {
             await api.delete(`/admin/closer-aliases/${aliasId}`);
-            toast.success("Alias eliminado");
+            toast.success("Vinculación eliminada");
             fetchData();
         } catch (err) {
             console.error("Error al eliminar alias:", err);
@@ -170,17 +173,22 @@ const CloserAliasesPanel = () => {
 
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                                Alias en Google Sheets
+                                Nombre en Google Sheets (Closer)
                             </label>
-                            <input
-                                type="text"
-                                placeholder="Ej: Jean Carlo Perez"
+                            <select
                                 value={aliasName}
                                 onChange={(e) => setAliasName(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-900 rounded-xl px-4 py-3 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
-                            />
+                                className="w-full bg-slate-950 border border-slate-900 rounded-xl px-4 py-3 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all cursor-pointer"
+                            >
+                                <option value="">Selecciona una opción detectada...</option>
+                                {aliasOptions.map(opt => (
+                                    <option key={opt} value={opt}>
+                                        {opt}
+                                    </option>
+                                ))}
+                            </select>
                             <p className="text-[9px] font-bold text-slate-600 uppercase tracking-wide">
-                                Se pueden asignar múltiples alias diferentes al mismo usuario
+                                Lista de nombres únicos detectados en la base de agendas
                             </p>
                         </div>
 
