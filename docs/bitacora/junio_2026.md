@@ -9,6 +9,12 @@
       - Fusión de las tarjetas superiores de Facturación y Cierre en una sola tarjeta premium de "Facturación y Flujo de Caja", detallando New Cash, Installments, Reservas, Upsells, Renovaciones, y el Ticket Promedio.
       - Creación de la tarjeta "Productividad de Reportes" utilizando SVG Circular Progress animado y listado detallado de closers activos con badges de estado y fecha de último reporte.
       - Actualización de la tarjeta de "Conversiones de Embudo", eliminando conversiones financieras redundantes y agregando los ratios de Inasistencias (No Show Rate) y Cancelaciones (Cancel Rate).
+  - **Corrección de Bugs Críticos en Dashboard de Closers [HOTFIX]**:
+    - **API Backend (`app/services/closer_service.py`) [FIX]**:
+      - Corregido `UnboundLocalError: cannot access local variable 'User'` en `get_comprehensive_stats`. La causa era un import local de `User` dentro del bloque `reports_productivity` que impedía a Python resolver la variable en el scope anterior del mismo método. Se movió el import de `User` y `CloserDailyReport` al inicio del método, eliminando el import duplicado.
+    - **Interfaz Frontend (`PublicCloserStatsPage.jsx`) [FIX]**:
+      - Corregido el valor por defecto de `closer_id` de `'3'` (ID inexistente) a `''` (todo el equipo).
+      - Agregada validación post-carga: si el `closer_id` persistido en `localStorage` no existe en la lista de closers activos, se resetea automáticamente a `''` para evitar resultados vacíos silenciosos.
 
 - **23 de Junio de 2026**:
   - **Reestructuración de la Barra Inferior (Dock) y Flujo de Trabajo Secuencial para Closers**:
