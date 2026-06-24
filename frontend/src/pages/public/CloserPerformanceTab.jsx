@@ -137,7 +137,7 @@ const MetricWithTooltip = ({ children, tooltip, className = "flex items-center j
     return (
         <div className={`relative group/metric cursor-help ${className}`}>
             {children}
-            <div className={`absolute ${position === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-slate-800 text-slate-200 text-[10px] leading-relaxed font-bold normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/metric:opacity-100 transition-all pointer-events-none z-[9999] shadow-2xl text-center`}>
+            <div className={`absolute ${position === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-slate-800 text-slate-200 text-sm leading-relaxed font-bold normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/metric:opacity-100 transition-all pointer-events-none z-[9999] shadow-2xl text-center`}>
                 {tooltip}
                 <div className={`absolute left-1/2 -translate-x-1/2 border-4 border-transparent ${position === 'bottom' ? 'bottom-full border-b-slate-900' : 'top-full border-t-slate-900'}`}></div>
             </div>
@@ -187,7 +187,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
         if (prevVal === 0) {
             return (
-                <div className="flex items-center justify-end gap-1.5 text-[9px] font-black uppercase text-slate-500 mt-0.5">
+                <div className="flex items-center justify-end gap-1.5 text-xs font-black uppercase text-slate-500 mt-0.5">
                     <span>Ant: {fmtPrev}</span>
                     {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
                 </div>
@@ -199,7 +199,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
 
         return (
-            <div className="flex items-center justify-end gap-1.5 text-[9px] font-black uppercase text-slate-500 mt-0.5 animate-in fade-in duration-300">
+            <div className="flex items-center justify-end gap-1.5 text-xs font-black uppercase text-slate-500 mt-0.5 animate-in fade-in duration-300">
                 <span>Ant: {fmtPrev}</span>
                 <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
             </div>
@@ -217,7 +217,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
         if (prevVal === 0) {
             return (
-                <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500">
+                <div className="flex items-center gap-1.5 mt-1 text-xs font-black uppercase text-slate-500">
                     <span>Ant: {fmtPrev}</span>
                     {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
                 </div>
@@ -229,7 +229,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
 
         return (
-            <div className="flex items-center gap-1.5 mt-1 text-[9px] font-black uppercase text-slate-500 animate-in fade-in duration-300">
+            <div className="flex items-center gap-1.5 mt-1 text-xs font-black uppercase text-slate-500 animate-in fade-in duration-300">
                 <span>Ant: {fmtPrev}</span>
                 <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
             </div>
@@ -245,7 +245,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
             <div className="flex items-start justify-between relative z-10">
                 <div className="space-y-1">
                     <div className="flex items-center gap-1.5">
-                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{title}</p>
+                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{title}</p>
                         {tooltip && (
                             <StatTooltip label={title} calculation={tooltip}>
                                 <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-slate-300 transition-colors" />
@@ -253,7 +253,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         )}
                     </div>
                     <h3 className="text-3xl font-black text-white italic tracking-tighter">{value}</h3>
-                    {subtitle && <p className="text-[9px] text-slate-600 font-bold uppercase mt-1">{subtitle}</p>}
+                    {subtitle && <p className="text-xs text-slate-600 font-bold uppercase mt-1">{subtitle}</p>}
                 </div>
                 <div className={`p-3 rounded-2xl bg-slate-800 border border-slate-700/50 ${colorClass}`}>
                     <Icon size={18} />
@@ -266,13 +266,13 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         <div className="space-y-2 relative">
             <div className="flex justify-between items-end">
                 <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+                    <span className="text-sm font-black text-slate-400 uppercase tracking-widest">{label}</span>
                     {tooltip && (
                         <StatTooltip label={label} calculation={tooltip}>
                             <Info size={10} className="text-slate-500 cursor-help hover:text-white transition-colors" />
                         </StatTooltip>
                     )}
-                    {absolute !== undefined && <span className="text-[10px] font-bold text-slate-600 ml-0.5">({absolute})</span>}
+                    {absolute !== undefined && <span className="text-sm font-bold text-slate-600 ml-0.5">({absolute})</span>}
                 </div>
                 <span className={`text-xs font-black ${colorClass}`}>{(percentage || 0).toFixed(1)}%</span>
             </div>
@@ -314,7 +314,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
     const ChartTable = ({ data, colors }) => (
         <div className="w-full mt-2 bg-slate-950/50 rounded-xl overflow-hidden border border-slate-800/50">
-            <table className="w-full text-left text-[10px] text-slate-300">
+            <table className="w-full text-left text-sm text-slate-300">
                 <thead className="bg-slate-800/50 text-slate-400 uppercase tracking-widest">
                     <tr>
                         <th className="px-3 py-2 font-black">Métrica</th>
@@ -355,7 +355,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
         return (
             <div className="bg-slate-950/40 p-4 rounded-3xl border border-slate-800/50 flex flex-col items-center space-y-4">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{title}</h4>
+                <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest text-center">{title}</h4>
                 <div className="h-32 w-full flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -379,7 +379,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
-                <div className="w-full space-y-2 text-[9px] font-bold text-slate-300">
+                <div className="w-full space-y-2 text-xs font-bold text-slate-300">
                     <div className="flex justify-between items-center bg-slate-950/60 p-2 rounded-xl border border-slate-900">
                         <div className="flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -431,7 +431,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
         return (
             <div className="bg-slate-950/40 p-4 rounded-3xl border border-slate-800/50 flex flex-col items-center space-y-4">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">{title}</h4>
+                <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest text-center">{title}</h4>
                 <div className="h-32 w-full flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -455,7 +455,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
-                <div className="w-full space-y-2 text-[9px] font-bold text-slate-300">
+                <div className="w-full space-y-2 text-xs font-bold text-slate-300">
                     <div className="flex justify-between items-center bg-slate-950/60 p-2 rounded-xl border border-slate-900">
                         <div className="flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -705,20 +705,20 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-emerald-500 group-hover:opacity-20 transition-opacity duration-300" />
                     </div>
                     <div className="flex justify-between items-center relative z-10">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Facturación y Flujo de Caja</span>
+                        <span className="text-sm font-black text-slate-500 uppercase tracking-[0.2em]">Facturación y Flujo de Caja</span>
                         <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                             <DollarSign size={16} />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 relative z-10">
                         <MetricWithTooltip tooltip="Total de dinero bruto facturado o recaudado en el período, incluyendo nuevos cierres, señas, cuotas, upsells y renovaciones, sin descontar comisiones." className="block cursor-help">
-                            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT BRUTO</h4>
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT BRUTO</h4>
                             <h2 className="text-3xl font-black text-white italic tracking-tighter leading-none mt-1.5">{fmtCash(totalCashCollected)}</h2>
                             {renderComparisonSubdataLeft(totalCashCollected, compTotalCashCollected, true)}
                         </MetricWithTooltip>
                         
                         <MetricWithTooltip tooltip="Total de dinero neto recaudado tras descontar comisiones de pasarelas (Stripe: 4.5%, Hotmart: 8.9%)." className="block cursor-help border-l border-slate-800/60 pl-4">
-                            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT NETO</h4>
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT NETO</h4>
                             <h2 className="text-3xl font-black text-emerald-400 italic tracking-tighter leading-none mt-1.5">{fmtCash(totalCashCollectedNeto)}</h2>
                             {renderComparisonSubdataLeft(totalCashCollectedNeto, compTotalCashCollectedNeto, true)}
                         </MetricWithTooltip>
@@ -726,9 +726,9 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                     
                     <div className="pt-5 border-t border-slate-800 space-y-2.5 relative z-10">
                         <MetricWithTooltip tooltip="Recaudación bruta de pagos únicos o iniciales de nuevos contratos (PIF + Splits)." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nuevas Ventas (New Cash)</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Nuevas Ventas (New Cash)</span>
                             <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-bold text-slate-500">({realSalesCount} u.)</span>
+                                <span className="text-sm font-bold text-slate-500">({realSalesCount} u.)</span>
                                 <div className="text-right">
                                     <span className="text-xs font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash)}</span>
                                     {renderComparisonSubdata(realSalesCash, compRealSalesCash, true)}
@@ -736,9 +736,9 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             </div>
                         </MetricWithTooltip>
                         <MetricWithTooltip tooltip="Recaudación bruta de cobros de cuotas de alumnos inscritos previamente." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cobro de Cuotas (Installments)</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Cobro de Cuotas (Installments)</span>
                             <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-bold text-slate-500">({installmentCount} u.)</span>
+                                <span className="text-sm font-bold text-slate-500">({installmentCount} u.)</span>
                                 <div className="text-right">
                                     <span className="text-xs font-black text-white tabular-nums">{fmtCash(installmentCash)}</span>
                                     {renderComparisonSubdata(installmentCash, compInstallmentCash, true)}
@@ -746,9 +746,9 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             </div>
                         </MetricWithTooltip>
                         <MetricWithTooltip tooltip="Recaudación bruta de reservas o señas de llamadas." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reservas (Cash Señas)</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Reservas (Cash Señas)</span>
                             <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-bold text-slate-500">({depositCount} u.)</span>
+                                <span className="text-sm font-bold text-slate-500">({depositCount} u.)</span>
                                 <div className="text-right">
                                     <span className="text-xs font-black text-fuchsia-400 tabular-nums">{fmtCash(depositCash)}</span>
                                     {renderComparisonSubdata(depositCash, compDepositCash, true)}
@@ -756,9 +756,9 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             </div>
                         </MetricWithTooltip>
                         <MetricWithTooltip tooltip="Recaudación bruta por ventas adicionales (Upsells)." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Upsells</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Upsells</span>
                             <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-bold text-slate-500">({upsellCount} u.)</span>
+                                <span className="text-sm font-bold text-slate-500">({upsellCount} u.)</span>
                                 <div className="text-right">
                                     <span className="text-xs font-black text-amber-400 tabular-nums">{fmtCash(upsellCash)}</span>
                                     {renderComparisonSubdata(upsellCash, compUpsellCash, true)}
@@ -766,9 +766,9 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             </div>
                         </MetricWithTooltip>
                         <MetricWithTooltip tooltip="Recaudación bruta por renovaciones de contrato." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Renovaciones</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Renovaciones</span>
                             <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-bold text-slate-500">({renovacionCount} u.)</span>
+                                <span className="text-sm font-bold text-slate-500">({renovacionCount} u.)</span>
                                 <div className="text-right">
                                     <span className="text-xs font-black text-sky-400 tabular-nums">{fmtCash(renovacionCash)}</span>
                                     {renderComparisonSubdata(renovacionCash, compRenovacionCash, true)}
@@ -779,7 +779,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                     <div className="pt-4 border-t border-slate-800/60 flex justify-between items-center relative z-10">
                         <MetricWithTooltip tooltip="Monto promedio cobrado por cada nuevo contrato (PIF + Split) concretado en el período." className="cursor-help">
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Ticket Promedio Real</span>
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest block">Ticket Promedio Real</span>
                             <span className="text-base font-black text-white tabular-nums">{fmtNum(ticketPromedioReal, false, true)}</span>
                         </MetricWithTooltip>
                         <div className="text-right">
@@ -794,48 +794,48 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-sky-500 group-hover:opacity-20 transition-opacity duration-300" />
                     </div>
                     <div className="flex justify-between items-center relative z-10">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Agendas y Asistencias</span>
+                        <span className="text-sm font-black text-slate-500 uppercase tracking-[0.2em]">Agendas y Asistencias</span>
                         <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/20">
                             <CalendarDays size={16} />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 relative z-10">
                         <MetricWithTooltip tooltip="Cantidad total de citas agendadas creadas en el periodo." className="block cursor-help">
-                            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">AGENDAS TOTALES</h4>
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">AGENDAS TOTALES</h4>
                             <h2 className="text-3xl font-black text-white italic tracking-tighter leading-none mt-1.5">{fmt(stats.agendas.totals.scheduled)}</h2>
                             {renderComparisonSubdataLeft(stats.agendas.totals.scheduled, compStats?.agendas?.totals?.scheduled)}
                         </MetricWithTooltip>
                         
                         <MetricWithTooltip tooltip="Cantidad total de reuniones uno a uno que fueron asistidas y completadas por el closer." className="block cursor-help border-l border-slate-800/60 pl-4">
-                            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">ASISTENCIAS REALES</h4>
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">ASISTENCIAS REALES</h4>
                             <h2 className="text-3xl font-black text-emerald-400 italic tracking-tighter leading-none mt-1.5">{fmt(stats.agendas.totals.attended)}</h2>
                             {renderComparisonSubdataLeft(stats.agendas.totals.attended, compStats?.agendas?.totals?.attended)}
                         </MetricWithTooltip>
                     </div>
                     <div className="pt-5 border-t border-slate-800 space-y-3 relative z-10">
                         <MetricWithTooltip tooltip="Porcentaje de citas agendadas que asistieron a la llamada." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Show Rate (Asistencia %)</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Show Rate (Asistencia %)</span>
                             <div className="text-right">
                                 <span className="text-xs font-black text-emerald-400 tabular-nums">{stats.percentages.show_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.show_rate, compStats?.percentages?.show_rate, false, true)}
                             </div>
                         </MetricWithTooltip>
                         <MetricWithTooltip tooltip="Porcentaje de citas agendadas que no asistieron ni cancelaron." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Show Rate (Inasistencias %)</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">No Show Rate (Inasistencias %)</span>
                             <div className="text-right">
                                 <span className="text-xs font-black text-rose-400 tabular-nums">{stats.percentages.no_show_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.no_show_rate, compStats?.percentages?.no_show_rate, false, true)}
                             </div>
                         </MetricWithTooltip>
                         <MetricWithTooltip tooltip="Porcentaje de citas agendadas que cancelaron la llamada." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cancel Rate (Cancelaciones %)</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Cancel Rate (Cancelaciones %)</span>
                             <div className="text-right">
                                 <span className="text-xs font-black text-amber-400 tabular-nums">{stats.percentages.cancel_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.cancel_rate, compStats?.percentages?.cancel_rate, false, true)}
                             </div>
                         </MetricWithTooltip>
                         <MetricWithTooltip tooltip="Porcentaje de llamadas atendidas en las que el closer logró realizar la presentación de la oferta." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pitch Rate (Presentación)</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Pitch Rate (Presentación)</span>
                             <div className="text-right">
                                 <span className="text-xs font-black text-fuchsia-400 tabular-nums">{stats.percentages.pitch_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.pitch_rate, compStats?.percentages?.pitch_rate, false, true)}
@@ -850,7 +850,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-violet-500 group-hover:opacity-20 transition-opacity duration-300" />
                     </div>
                     <div className="flex justify-between items-center relative z-10">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Productividad de Reportes</span>
+                        <span className="text-sm font-black text-slate-500 uppercase tracking-[0.2em]">Productividad de Reportes</span>
                         <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-500 border border-violet-500/20">
                             <List size={16} />
                         </div>
@@ -864,11 +864,11 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                     <circle className="text-slate-800" strokeWidth="4" stroke="currentColor" fill="transparent" r="20" cx="25" cy="25" />
                                     <circle className="text-emerald-500" strokeWidth="4" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={2 * Math.PI * 20 - (stats.reports_productivity.al_dia_pct / 100) * (2 * Math.PI * 20)} strokeLinecap="round" stroke="currentColor" fill="transparent" r="20" cx="25" cy="25" />
                                 </svg>
-                                <span className="absolute text-[8px] font-black text-emerald-400">{stats.reports_productivity.al_dia_pct.toFixed(0)}%</span>
+                                <span className="absolute text-xs font-black text-emerald-400">{stats.reports_productivity.al_dia_pct.toFixed(0)}%</span>
                             </div>
                             <div>
-                                <p className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">Al día</p>
-                                <p className="text-[8px] text-slate-500 font-bold uppercase">{stats.reports_productivity.al_dia_count} closers</p>
+                                <p className="text-xs font-black text-emerald-400 uppercase tracking-wider">Al día</p>
+                                <p className="text-xs text-slate-500 font-bold uppercase">{stats.reports_productivity.al_dia_count} closers</p>
                             </div>
                         </div>
                         <div className="w-px h-8 bg-slate-800" />
@@ -878,11 +878,11 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                     <circle className="text-slate-800" strokeWidth="4" stroke="currentColor" fill="transparent" r="20" cx="25" cy="25" />
                                     <circle className="text-rose-500" strokeWidth="4" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={2 * Math.PI * 20 - (stats.reports_productivity.vencidos_pct / 100) * (2 * Math.PI * 20)} strokeLinecap="round" stroke="currentColor" fill="transparent" r="20" cx="25" cy="25" />
                                 </svg>
-                                <span className="absolute text-[8px] font-black text-rose-400">{stats.reports_productivity.vencidos_pct.toFixed(0)}%</span>
+                                <span className="absolute text-xs font-black text-rose-400">{stats.reports_productivity.vencidos_pct.toFixed(0)}%</span>
                             </div>
                             <div>
-                                <p className="text-[9px] font-black text-rose-400 uppercase tracking-wider">Con retraso</p>
-                                <p className="text-[8px] text-slate-500 font-bold uppercase">{stats.reports_productivity.vencidos_count} pendientes</p>
+                                <p className="text-xs font-black text-rose-400 uppercase tracking-wider">Con retraso</p>
+                                <p className="text-xs text-slate-500 font-bold uppercase">{stats.reports_productivity.vencidos_count} pendientes</p>
                             </div>
                         </div>
                     </div>
@@ -909,15 +909,15 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             return (
                                 <div key={closer.closer_id} className="flex items-center justify-between bg-slate-950/30 px-3 py-2.5 rounded-2xl border border-slate-800/80">
                                     <div className="flex items-center gap-2.5">
-                                        <div className={`w-7 h-7 rounded-full bg-slate-800 border border-slate-700/60 flex items-center justify-center text-[9px] font-black uppercase ${avatarClass}`}>
+                                        <div className={`w-7 h-7 rounded-full bg-slate-800 border border-slate-700/60 flex items-center justify-center text-xs font-black uppercase ${avatarClass}`}>
                                             {closer.closer_name.substring(0, 2)}
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-white leading-tight">{closer.closer_name}</p>
-                                            <p className="text-[8px] text-slate-600 font-bold uppercase">Último: {closer.last_report}</p>
+                                            <p className="text-sm font-black text-white leading-tight">{closer.closer_name}</p>
+                                            <p className="text-xs text-slate-600 font-bold uppercase">Último: {closer.last_report}</p>
                                         </div>
                                     </div>
-                                    <span className={`px-2 py-1 rounded-lg text-[7px] font-black uppercase border ${badgeClass}`}>
+                                    <span className={`px-2 py-1 rounded-lg text-sm font-black uppercase border ${badgeClass}`}>
                                         {closer.status}
                                     </span>
                                 </div>
@@ -942,8 +942,8 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                     <div className="space-y-4 flex-1 flex flex-col justify-center">
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
                             <div>
-                                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest leading-none">Agendamiento General</p>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Slots → Agendas Totales</span>
+                                <p className="text-xs font-black text-emerald-500 uppercase tracking-widest leading-none">Agendamiento General</p>
+                                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider block mt-1">Slots → Agendas Totales</span>
                             </div>
                             <div className="text-right">
                                 <span className="text-2xl font-black text-white italic tabular-nums">
@@ -960,8 +960,8 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
                             <div>
-                                <p className="text-[9px] font-black text-sky-500 uppercase tracking-widest leading-none">Asistencia (Show Rate)</p>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Agendas → Asistencias</span>
+                                <p className="text-xs font-black text-sky-500 uppercase tracking-widest leading-none">Asistencia (Show Rate)</p>
+                                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider block mt-1">Agendas → Asistencias</span>
                             </div>
                             <div className="text-right">
                                 <span className="text-2xl font-black text-white italic tabular-nums">
@@ -978,8 +978,8 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
                             <div>
-                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest leading-none">Inasistencias (No Show Rate)</p>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Agendas → No Shows</span>
+                                <p className="text-xs font-black text-rose-500 uppercase tracking-widest leading-none">Inasistencias (No Show Rate)</p>
+                                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider block mt-1">Agendas → No Shows</span>
                             </div>
                             <div className="text-right">
                                 <span className="text-2xl font-black text-white italic tabular-nums">
@@ -991,8 +991,8 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
                             <div>
-                                <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Cancelaciones (Cancel Rate)</p>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Agendas → Cancelados</span>
+                                <p className="text-xs font-black text-amber-500 uppercase tracking-widest leading-none">Cancelaciones (Cancel Rate)</p>
+                                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider block mt-1">Agendas → Cancelados</span>
                             </div>
                             <div className="text-right">
                                 <span className="text-2xl font-black text-white italic tabular-nums">
@@ -1004,8 +1004,8 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
                             <div>
-                                <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest leading-none">Presentación (Pitch Rate)</p>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Asistencias → Ofertas</span>
+                                <p className="text-xs font-black text-fuchsia-500 uppercase tracking-widest leading-none">Presentación (Pitch Rate)</p>
+                                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider block mt-1">Asistencias → Ofertas</span>
                             </div>
                             <div className="text-right">
                                 <span className="text-2xl font-black text-white italic tabular-nums">
@@ -1022,8 +1022,8 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
                             <div>
-                                <p className="text-[9px] font-black text-amber-500/80 uppercase tracking-widest leading-none">Cierre Real sobre Propuesta</p>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Ofertas → Ventas</span>
+                                <p className="text-xs font-black text-amber-500/80 uppercase tracking-widest leading-none">Cierre Real sobre Propuesta</p>
+                                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider block mt-1">Ofertas → Ventas</span>
                             </div>
                             <div className="text-right">
                                 <span className="text-2xl font-black text-white italic tabular-nums">
@@ -1040,8 +1040,8 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
                             <div>
-                                <p className="text-[9px] font-black text-fuchsia-400 uppercase tracking-widest leading-none">Show a Seña (Reserva)</p>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Ofertas → Promesas</span>
+                                <p className="text-xs font-black text-fuchsia-400 uppercase tracking-widest leading-none">Show a Seña (Reserva)</p>
+                                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider block mt-1">Ofertas → Promesas</span>
                             </div>
                             <div className="text-right">
                                 <span className="text-2xl font-black text-white italic tabular-nums">
@@ -1114,7 +1114,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             <div className="flex items-start justify-between relative z-10">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1.5">
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{kpi.title}</p>
+                                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{kpi.title}</p>
                                         {kpi.tooltip && (
                                             <StatTooltip label={kpi.title} calculation={kpi.tooltip}>
                                                 <HelpCircle size={10} className="text-slate-650 cursor-help hover:text-slate-300 transition-colors" />
@@ -1123,7 +1123,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                     </div>
                                     <h3 className="text-3xl font-black text-white italic tracking-tighter">{fmtCash(kpi.val)}</h3>
                                     {renderComparisonSubdataLeft(kpi.val, kpi.compVal, true)}
-                                    <p className="text-[9px] text-slate-600 font-bold uppercase mt-2">
+                                    <p className="text-xs text-slate-600 font-bold uppercase mt-2">
                                         {kpi.count > 0 ? `Sobre ${fmt(kpi.count)} ${kpi.label}` : `Sin ${kpi.label}`}
                                     </p>
                                 </div>
@@ -1147,7 +1147,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             </div>
                             <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Agenda Breakdown</h3>
                         </div>
-                        <div className="text-[10px] font-black text-slate-500 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+                        <div className="text-sm font-black text-slate-500 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
                             {stats.metadata.days_analyzed} DÍAS
                         </div>
                     </div>
@@ -1156,13 +1156,13 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         <div className="grid grid-cols-4 gap-0">
                             <div className="p-3 bg-slate-700/50" />
                             <div className="p-3 text-center bg-emerald-900/30">
-                                <p className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">1ra</p>
+                                <p className="text-xs font-black text-emerald-400 uppercase tracking-wider">1ra</p>
                             </div>
                             <div className="p-3 text-center bg-sky-900/30">
-                                <p className="text-[9px] font-black text-sky-400 uppercase tracking-wider">2da</p>
+                                <p className="text-xs font-black text-sky-400 uppercase tracking-wider">2da</p>
                             </div>
                             <div className="p-3 text-center bg-violet-900/30">
-                                <p className="text-[9px] font-black text-violet-400 uppercase tracking-wider">Total</p>
+                                <p className="text-xs font-black text-violet-400 uppercase tracking-wider">Total</p>
                             </div>
                         </div>
 
@@ -1176,7 +1176,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             <div key={row.key} className={`grid grid-cols-4 gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
                                 <div className="p-3 flex items-center gap-2 border-r border-slate-800/50">
                                     <row.icon size={12} className="text-slate-500" />
-                                    <p className="text-[10px] font-bold text-slate-300">{row.label}</p>
+                                    <p className="text-sm font-bold text-slate-300">{row.label}</p>
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
                                     <p className="text-sm font-black text-emerald-400 tabular-nums">{fmt(stats.agendas.first_call[row.key])}</p>
@@ -1224,7 +1224,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         {discrepancies.length > 0 && (
                             <button
                                 onClick={() => setShowDiscrepanciesModal(true)}
-                                className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 px-4 py-2 rounded-2xl font-black uppercase text-[9px] tracking-widest transition-all cursor-pointer shadow-lg shadow-amber-500/5"
+                                className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 px-4 py-2 rounded-2xl font-black uppercase text-xs tracking-widest transition-all cursor-pointer shadow-lg shadow-amber-500/5"
                             >
                                 <Activity size={12} className="animate-pulse text-amber-500" />
                                 {discrepancies.length} {discrepancies.length === 1 ? 'Discrepancia' : 'Discrepancias'}
@@ -1236,16 +1236,16 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         <div className="grid grid-cols-5 gap-0">
                             <div className="p-3 bg-slate-700/50" />
                             <div className="p-3 text-center bg-amber-900/20">
-                                <p className="text-[8px] font-black text-amber-400 uppercase tracking-wider">Cantidad</p>
+                                <p className="text-xs font-black text-amber-400 uppercase tracking-wider">Cantidad</p>
                             </div>
                             <div className="p-3 text-center bg-emerald-900/20">
-                                <p className="text-[8px] font-black text-emerald-400 uppercase tracking-wider">Cash en llamada</p>
+                                <p className="text-xs font-black text-emerald-400 uppercase tracking-wider">Cash en llamada</p>
                             </div>
                             <div className="p-3 text-center bg-blue-900/20">
-                                <p className="text-[8px] font-black text-blue-400 uppercase tracking-wider">Cash fuera de llamada</p>
+                                <p className="text-xs font-black text-blue-400 uppercase tracking-wider">Cash fuera de llamada</p>
                             </div>
                             <div className="p-3 text-center bg-indigo-900/20">
-                                <p className="text-[8px] font-black text-indigo-400 uppercase tracking-wider">Cash Total</p>
+                                <p className="text-xs font-black text-indigo-400 uppercase tracking-wider">Cash Total</p>
                             </div>
                         </div>
 
@@ -1297,7 +1297,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         ].map((row, i) => (
                             <div key={row.label} className={`grid grid-cols-5 gap-0 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}>
                                 <div className="p-3 flex items-center gap-2 border-r border-slate-800/50">
-                                    <p className="text-[9px] font-bold text-slate-300">{row.label}</p>
+                                    <p className="text-xs font-bold text-slate-300">{row.label}</p>
                                 </div>
                                 <div className="p-3 text-center border-r border-slate-800/50">
                                     <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(row.valCount)}</p>
@@ -1320,7 +1320,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                         <div className="grid grid-cols-5 gap-0 bg-slate-900/50 border-t border-slate-800 font-bold">
                             <div className="p-3 border-r border-slate-800/50">
-                                <p className="text-[9px] font-black text-white uppercase tracking-widest">Totales</p>
+                                <p className="text-xs font-black text-white uppercase tracking-widest">Totales</p>
                             </div>
                             <div className="p-3 text-center border-r border-slate-800/50">
                                 <p className="text-sm font-black text-amber-400 tabular-nums">{fmt(realSalesCount + depositCount + installmentCount)}</p>
@@ -1396,11 +1396,11 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         </div>
                         <div className="space-y-4">
                             <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enviados</span>
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Enviados</span>
                                 <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.hot_sent)}</span>
                             </div>
                             <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Respondidos</span>
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Respondidos</span>
                                 <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.hot_replied)}</span>
                             </div>
                             <ProgressRow
@@ -1422,11 +1422,11 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         </div>
                         <div className="space-y-4">
                             <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enviados</span>
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Enviados</span>
                                 <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.cold_sent)}</span>
                             </div>
                             <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Respondidos</span>
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Respondidos</span>
                                 <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.cold_replied)}</span>
                             </div>
                             <ProgressRow
@@ -1442,11 +1442,11 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
                     <div className="p-5 bg-blue-600/10 rounded-2xl border border-blue-600/20 text-center space-y-1">
-                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Total Re-engagement Enviados</p>
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-tighter">Total Re-engagement Enviados</p>
                         <p className="text-2xl font-black text-white italic">{fmt(stats.follow_ups?.sent)}</p>
                     </div>
                     <div className="p-5 bg-blue-600/10 rounded-2xl border border-blue-600/20 text-center space-y-1">
-                        <p className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Total Re-engagement Respondidos</p>
+                        <p className="text-xs font-black text-blue-400 uppercase tracking-tighter">Total Re-engagement Respondidos</p>
                         <p className="text-2xl font-black text-white italic">{fmt(stats.follow_ups?.replied)}</p>
                     </div>
                 </div>
@@ -1456,26 +1456,26 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Hot Follow Ups Distribution */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center relative group">
-                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Re-engagement (Hot)</h4>
+                    <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Re-engagement (Hot)</h4>
                     <SimplePieChart data={fuHotData} colors={fuHotColors} />
                     <ChartTable data={fuHotData} colors={fuHotColors} />
                     <div className="absolute top-4 left-4 right-4 md:right-auto md:w-56 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                         <div className="bg-slate-800 p-3 border border-slate-700 rounded-xl flex items-start gap-2 shadow-2xl">
                             <Info size={14} className="text-amber-500 mt-0.5 shrink-0" />
-                            <p className="text-[9px] text-slate-300">Flujo Caliente (Leads que ya respondieron en el pasado o mostraron interés de compra).</p>
+                            <p className="text-xs text-slate-300">Flujo Caliente (Leads que ya respondieron en el pasado o mostraron interés de compra).</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Cold Follow Ups Distribution */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center relative group">
-                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Re-engagement (Cold)</h4>
+                    <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Re-engagement (Cold)</h4>
                     <SimplePieChart data={fuColdData} colors={fuColdColors} />
                     <ChartTable data={fuColdData} colors={fuColdColors} />
                     <div className="absolute top-4 left-4 right-4 md:right-auto md:w-56 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                         <div className="bg-slate-800 p-3 border border-slate-700 rounded-xl flex items-start gap-2 shadow-2xl">
                             <Info size={14} className="text-amber-500 mt-0.5 shrink-0" />
-                            <p className="text-[9px] text-slate-300">Flujo Frío (Leads antiguos abandonados o prospección nueva).</p>
+                            <p className="text-xs text-slate-300">Flujo Frío (Leads antiguos abandonados o prospección nueva).</p>
                         </div>
                     </div>
                 </div>
@@ -1495,24 +1495,24 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-black text-white italic uppercase tracking-tight">Discrepancias Diarias</h3>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Reportes de llamadas vs Ventas registradas</p>
+                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-0.5">Reportes de llamadas vs Ventas registradas</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setShowDiscrepanciesModal(false)}
-                                className="text-slate-500 hover:text-white transition-colors text-[9px] font-black uppercase tracking-widest px-3 py-1.5 bg-slate-800 hover:bg-slate-750 rounded-xl border border-slate-750 cursor-pointer"
+                                className="text-slate-500 hover:text-white transition-colors text-xs font-black uppercase tracking-widest px-3 py-1.5 bg-slate-800 hover:bg-slate-750 rounded-xl border border-slate-750 cursor-pointer"
                             >
                                 Cerrar
                             </button>
                         </div>
 
-                        <div className="text-[10px] text-slate-400 font-medium leading-relaxed bg-slate-950/60 p-4 rounded-2xl border border-slate-850">
+                        <div className="text-sm text-slate-400 font-medium leading-relaxed bg-slate-950/60 p-4 rounded-2xl border border-slate-850">
                             <p className="font-bold text-amber-400 mb-1">¿Por qué ocurre esto?</p>
                             Estas discrepancias ocurren cuando el **Cash en Llamada** declarado por el closer en su reporte diario supera al **Cash Total** bruto de ventas registradas oficialmente en un mismo día. Indica que pueden faltar ventas por declarar o registrar en la planilla.
                         </div>
 
                         <div className="max-h-[300px] overflow-y-auto bg-slate-950/40 rounded-2xl border border-slate-800/60">
-                            <table className="w-full text-left text-[10px] text-slate-300">
+                            <table className="w-full text-left text-sm text-slate-300">
                                 <thead className="bg-slate-950 text-slate-400 uppercase tracking-widest sticky top-0 z-10">
                                     <tr>
                                         <th className="px-4 py-3 font-black">Fecha</th>
@@ -1550,7 +1550,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                                             setActiveTab('sales_log');
                                                             setShowDiscrepanciesModal(false);
                                                         }}
-                                                        className="bg-violet-600 hover:bg-violet-700 text-white font-black uppercase text-[8px] tracking-widest px-3 py-1.5 rounded-xl cursor-pointer transition-colors shadow-md shadow-violet-600/10"
+                                                        className="bg-violet-600 hover:bg-violet-700 text-white font-black uppercase text-xs tracking-widest px-3 py-1.5 rounded-xl cursor-pointer transition-colors shadow-md shadow-violet-600/10"
                                                     >
                                                         Ir a Ventas
                                                     </button>
@@ -1569,3 +1569,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 };
 
 export default CloserPerformanceTab;
+
+
+
+

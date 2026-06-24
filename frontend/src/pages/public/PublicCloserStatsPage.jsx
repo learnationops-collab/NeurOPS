@@ -155,7 +155,7 @@ const PublicCloserStatsPage = () => {
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === id
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase text-sm tracking-widest transition-all ${activeTab === id
                 ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
                 : 'text-slate-500 hover:bg-slate-800'
                 }`}
@@ -179,13 +179,13 @@ const PublicCloserStatsPage = () => {
                                 Closer <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-amber-500">Dashboard</span>
                             </h1>
                         </div>
-                        <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]">NeurOPS Closer Performance Analytics</p>
+                        <p className="text-slate-500 font-bold text-sm uppercase tracking-[0.2em]">NeurOPS Closer Performance Analytics</p>
                     </div>
 
                     {user.role === 'closer' && (
                         <button
                             onClick={() => navigate('/closer/report')}
-                            className="flex items-center gap-2 bg-violet-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-violet-600/20 hover:bg-violet-700 transition-colors"
+                            className="flex items-center gap-2 bg-violet-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-sm tracking-widest shadow-lg shadow-violet-600/20 hover:bg-violet-700 transition-colors"
                         >
                             <PenTool size={16} />
                             Completar Reporte Diario
@@ -206,7 +206,7 @@ const PublicCloserStatsPage = () => {
                     <div className="flex flex-wrap items-center gap-6 bg-slate-900/80 p-6 rounded-[2rem] border border-slate-800 shadow-2xl">
                         {/* Closer Selector */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Closer / Equipo</label>
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Closer / Equipo</label>
                             <select
                                 className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-violet-500 transition-all cursor-pointer min-w-[200px]"
                                 value={filters.closer_id}
@@ -219,7 +219,7 @@ const PublicCloserStatsPage = () => {
 
                         {/* Date Range Selector */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Rango de Fechas</label>
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Rango de Fechas</label>
                             <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-xs text-white">
                                 <input
                                     type="date"
@@ -239,7 +239,7 @@ const PublicCloserStatsPage = () => {
 
                         {/* Quick Preset Buttons */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodos Rápidos</label>
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Periodos Rápidos</label>
                             <div className="flex flex-wrap items-center gap-1.5">
                                 {[
                                     { id: 'today', label: 'Hoy' },
@@ -254,7 +254,7 @@ const PublicCloserStatsPage = () => {
                                             key={preset.id}
                                             type="button"
                                             onClick={() => applyDatePreset(preset.id)}
-                                            className={`text-[9px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all ${
+                                            className={`text-xs font-black uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all ${
                                                 isActive
                                                     ? 'bg-violet-650/30 border-violet-500/50 text-violet-300 shadow-lg shadow-violet-600/10'
                                                     : 'bg-slate-850/40 border-slate-800 text-slate-500 hover:text-slate-300 hover:border-slate-700'
@@ -269,9 +269,9 @@ const PublicCloserStatsPage = () => {
 
                         {/* Switch de Comparación */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Comparación</label>
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Comparación</label>
                             <div className="flex items-center gap-2.5 bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 min-h-[38px]">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Comparar</span>
+                                <span className="text-xs font-black uppercase tracking-widest text-slate-400">Comparar</span>
                                 <button
                                     onClick={() => setFilters({ compare: !filters.compare })}
                                     type="button"
@@ -338,7 +338,7 @@ const PublicCloserStatsPage = () => {
                 )}
 
                 <div className="text-center pt-20 pb-10">
-                    <p className="text-[9px] text-slate-600 font-black tracking-[0.4em] uppercase">NeurOPS Closer Intelligence Board • © 2026 • AI Powered Dashboard</p>
+                    <p className="text-xs text-slate-600 font-black tracking-[0.4em] uppercase">NeurOPS Closer Intelligence Board • © 2026 • AI Powered Dashboard</p>
                 </div>
             </div>
         </div >
@@ -346,3 +346,4 @@ const PublicCloserStatsPage = () => {
 };
 
 export default PublicCloserStatsPage;
+
