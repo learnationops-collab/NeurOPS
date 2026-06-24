@@ -857,7 +857,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                     </div>
                     
                     {/* Anillos de progreso circulares */}
-                    <div className="flex justify-around items-center gap-4 bg-slate-950/50 p-4 rounded-3xl border border-slate-850 relative z-10">
+                    <div className="flex justify-around items-center gap-4 bg-slate-950/50 p-4 rounded-3xl border border-slate-800/60 relative z-10">
                         <div className="flex items-center gap-3">
                             <div className="relative flex items-center justify-center">
                                 <svg width="50" height="50" className="transform -rotate-90">
@@ -871,7 +871,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                 <p className="text-[8px] text-slate-500 font-bold uppercase">{stats.reports_productivity.al_dia_count} closers</p>
                             </div>
                         </div>
-                        <div className="w-px h-8 bg-slate-850" />
+                        <div className="w-px h-8 bg-slate-800" />
                         <div className="flex items-center gap-3">
                             <div className="relative flex items-center justify-center">
                                 <svg width="50" height="50" className="transform -rotate-90">
@@ -881,50 +881,48 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                 <span className="absolute text-[8px] font-black text-rose-400">{stats.reports_productivity.vencidos_pct.toFixed(0)}%</span>
                             </div>
                             <div>
-                                <p className="text-[9px] font-black text-rose-400 uppercase tracking-wider">Vencidos</p>
+                                <p className="text-[9px] font-black text-rose-400 uppercase tracking-wider">Con retraso</p>
                                 <p className="text-[8px] text-slate-500 font-bold uppercase">{stats.reports_productivity.vencidos_count} pendientes</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Detalle por closer */}
-                    <div className="space-y-3 relative z-10 max-h-[190px] overflow-y-auto pr-1">
-                        {stats.reports_productivity.details.map((closer) => (
-                            <div key={closer.closer_id} className="flex items-center justify-between bg-slate-950/30 p-3 rounded-2xl border border-slate-800/80">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-full bg-slate-850 border border-slate-700/60 flex items-center justify-center text-xs font-black uppercase text-violet-400">
-                                        {closer.closer_name.substring(0, 2)}
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-white">{closer.closer_name}</p>
-                                        <p className="text-[8px] text-slate-500 font-bold uppercase">Último: {closer.last_report}</p>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-1">
-                                    <span className={`px-2 py-0.5 rounded-lg text-[7px] font-black uppercase ${
-                                        closer.status_type === 'al_dia' 
-                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse'
-                                    }`}>
-                                        {closer.status_type === 'al_dia' ? 'Al día' : 'Vencido'}
-                                    </span>
-                                    {closer.status_type !== 'al_dia' && (
-                                        <span className="text-[7px] text-slate-500 font-bold uppercase">
-                                            {closer.status_type === 'vencido_hoy' ? 'Sin reportar hoy' : 'Sin reportar ayer'}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <div className="space-y-2.5 relative z-10 max-h-[200px] overflow-y-auto pr-1">
+                        {stats.reports_productivity.details.map((closer) => {
+                            const isAlDia = closer.status_type === 'al_dia';
+                            const isSinReporte = closer.status_type === 'sin_reporte';
+                            const daysLate = closer.days_late || 0;
 
-                    <div className="pt-2 border-t border-slate-800 flex justify-end relative z-10">
-                        <button
-                            onClick={() => setActiveTab('history')}
-                            className="flex items-center gap-1.5 text-violet-400 hover:text-violet-300 text-[9px] font-black uppercase tracking-widest bg-violet-500/10 hover:bg-violet-500/20 px-4 py-2 rounded-xl border border-violet-500/20 cursor-pointer transition-all"
-                        >
-                            Ver Historial de reportes
-                        </button>
+                            // Color del badge escalado por urgencia
+                            const badgeClass = isAlDia
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : isSinReporte
+                                    ? 'bg-red-900/30 text-red-300 border-red-500/30 animate-pulse'
+                                    : daysLate >= 3
+                                        ? 'bg-rose-500/15 text-rose-300 border-rose-500/30 animate-pulse'
+                                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+
+                            // Color del avatar
+                            const avatarClass = isAlDia ? 'text-emerald-400' : daysLate >= 3 ? 'text-rose-400' : 'text-amber-400';
+
+                            return (
+                                <div key={closer.closer_id} className="flex items-center justify-between bg-slate-950/30 px-3 py-2.5 rounded-2xl border border-slate-800/80">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className={`w-7 h-7 rounded-full bg-slate-800 border border-slate-700/60 flex items-center justify-center text-[9px] font-black uppercase ${avatarClass}`}>
+                                            {closer.closer_name.substring(0, 2)}
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-white leading-tight">{closer.closer_name}</p>
+                                            <p className="text-[8px] text-slate-600 font-bold uppercase">Último: {closer.last_report}</p>
+                                        </div>
+                                    </div>
+                                    <span className={`px-2 py-1 rounded-lg text-[7px] font-black uppercase border ${badgeClass}`}>
+                                        {closer.status}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

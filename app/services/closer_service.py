@@ -1632,22 +1632,23 @@ class CloserService:
             
             if last_report:
                 last_date = last_report.date
-                if last_date >= today_local:
+                # Al día = hizo el reporte de ayer o hoy
+                if last_date >= yesterday_local:
                     status_text = "Al día"
                     status_type = "al_dia"
+                    days_late = 0
                     al_dia_count += 1
-                elif last_date == yesterday_local:
-                    status_text = "Sin reportar hoy"
-                    status_type = "vencido_hoy"
-                    vencidos_count += 1
                 else:
-                    status_text = "Sin reportar ayer"
-                    status_type = "vencido_ayer"
+                    # Días de retraso = días desde ayer que no ha reportado
+                    days_late = (yesterday_local - last_date).days
+                    status_text = f"{days_late} día{'s' if days_late != 1 else ''} de retraso"
+                    status_type = "vencido"
                     vencidos_count += 1
                 last_report_str = last_date.strftime('%d/%m/%Y')
             else:
-                status_text = "Sin reportar ayer"
-                status_type = "vencido_ayer"
+                days_late = 999
+                status_text = "Sin reportes"
+                status_type = "sin_reporte"
                 vencidos_count += 1
                 last_report_str = "Nunca"
                 
@@ -1656,8 +1657,12 @@ class CloserService:
                 "closer_name": c.username,
                 "last_report": last_report_str,
                 "status": status_text,
-                "status_type": status_type
+                "status_type": status_type,
+                "days_late": days_late if last_report else 999
             })
+            
+        # Ordenar: vencidos primero (mayor retraso arriba), luego al día
+        closer_reports_status.sort(key=lambda x: -(x.get('days_late', 0)))
             
         total_active_closers = len(active_closers)
         pct_al_dia = round((al_dia_count / total_active_closers) * 100, 1) if total_active_closers > 0 else 0.0
@@ -1671,6 +1676,7 @@ class CloserService:
             "total_closers": total_active_closers,
             "details": closer_reports_status
         }
+
 
         return {
             "metadata": {
