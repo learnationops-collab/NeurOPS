@@ -1450,6 +1450,7 @@
   - **Reestructuración de la Barra Inferior (Dock) y Flujo de Trabajo Secuencial para Closers**:
     - **API Backend (`app/api/closer.py`) [MODIFY]**:
       - Modificación del endpoint `/api/closer/deck` para admitir el parámetro `step`. Si es `'agendas'`, devuelve las citas de hoy del closer (permitiendo que sigan visibles para ajustes dinámicos durante el día).
+      - **Corrección de Zona Horaria en Deck**: Se adaptó el cálculo de "Hoy" en `step == 'agendas'` para usar la zona horaria del usuario (`current_user.timezone`) y convertir el rango a UTC naive para buscar citas en la base de datos de manera precisa.
       - Incorporación del endpoint `POST /api/closer/deck/bulk-update` para actualizar estados de citas en lote usando la lógica de negocio de `CloserService.process_agenda`.
     - **Navegación Frontend (`useDockNavigation.js`) [MODIFY]**:
       - Reconfiguración del Dock de closers para guiar en 4 pasos (1. Agendas del Día, 2. Declarar Venta, 3. Reporte Diario, 4. Dashboard), conservando el acceso opcional a "Sin Anuncio".
@@ -1459,5 +1460,8 @@
       - Creación del nuevo espacio de trabajo interactivo del Closer bajo la estética Dark Glassmorphism.
       - Implementación de la lista de agendas del día, selección múltiple, buscador y botones de acción rápidos de un solo clic para registrar asistencia (Asistió, No Show, Canceló) o abrir selector local de reagendas/segundas llamadas.
       - Integración del panel lateral derecho con el visor compacto de la ficha de calificación del lead.
+    - **Corrección de Fechas en Tablero de Agendas (`FinancialAgendasPage.jsx`) [MODIFY]**:
+      - Se implementó `toLocalDateString` para resolver el bug donde el filtro de "Hoy" y el de inicio de mes usaban `toISOString()` (que provocaba el desfase de zona horaria, mostrando agendas de mañana en lugar de las de hoy).
+
 
 

@@ -39,14 +39,20 @@ const HoverPercentCell = ({ value, total, className = "" }) => {
 };
 
 
+const toLocalDateString = (d) => {
+    if (!d) return '';
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
+};
+
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    return toLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1));
 };
 
 const getTodayDate = () => {
-    const now = new Date();
-    return now.toISOString().split('T')[0];
+    return toLocalDateString(new Date());
 };
 
 const getEstadoBadgeVariant = (estado) => {
@@ -256,7 +262,7 @@ const FinancialAgendasPage = () => {
 
     const applyDatePreset = (preset) => {
         const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = toLocalDateString(today);
         let start = '';
         let end = todayStr;
 
@@ -266,16 +272,16 @@ const FinancialAgendasPage = () => {
         } else if (preset === 'yesterday') {
             const yesterday = new Date();
             yesterday.setDate(today.getDate() - 1);
-            start = yesterday.toISOString().split('T')[0];
+            start = toLocalDateString(yesterday);
             end = start;
         } else if (preset === 'this_month') {
-            start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            start = toLocalDateString(new Date(today.getFullYear(), today.getMonth(), 1));
             end = todayStr;
         } else if (preset === 'last_month') {
             const firstOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
             const lastOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-            start = firstOfLastMonth.toISOString().split('T')[0];
-            end = lastOfLastMonth.toISOString().split('T')[0];
+            start = toLocalDateString(firstOfLastMonth);
+            end = toLocalDateString(lastOfLastMonth);
         } else if (preset === 'upcoming') {
             start = todayStr;
             end = '';
@@ -286,18 +292,18 @@ const FinancialAgendasPage = () => {
 
     const getActiveDatePreset = () => {
         const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = toLocalDateString(today);
         
         const yesterday = new Date();
         yesterday.setDate(today.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const yesterdayStr = toLocalDateString(yesterday);
 
-        const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        const thisMonthStart = toLocalDateString(new Date(today.getFullYear(), today.getMonth(), 1));
         
         const lastMonthFirst = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         const lastMonthLast = new Date(today.getFullYear(), today.getMonth(), 0);
-        const lastMonthStartStr = lastMonthFirst.toISOString().split('T')[0];
-        const lastMonthEndStr = lastMonthLast.toISOString().split('T')[0];
+        const lastMonthStartStr = toLocalDateString(lastMonthFirst);
+        const lastMonthEndStr = toLocalDateString(lastMonthLast);
         
         if (startDate === todayStr && endDate === todayStr) return 'today';
         if (startDate === yesterdayStr && endDate === yesterdayStr) return 'yesterday';

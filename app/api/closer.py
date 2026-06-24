@@ -1220,12 +1220,25 @@ def get_closer_deck():
     from sqlalchemy import or_
     
     if step == 'agendas':
-        # Citas programadas para hoy
-        today_start = datetime.combine(today, datetime.min.time())
-        today_end = datetime.combine(today, datetime.max.time())
+        # Citas de hoy en la zona horaria del usuario
+        import pytz
+        from datetime import time
+        tz_name = current_user.timezone or 'America/La_Paz'
+        try:
+            user_tz = pytz.timezone(tz_name)
+        except:
+            user_tz = pytz.timezone('America/La_Paz')
+            
+        now_local = datetime.now(user_tz)
+        today_local = now_local.date()
+        
+        # Rango del dia local convertido a UTC naive
+        start_utc = user_tz.localize(datetime.combine(today_local, time.min)).astimezone(pytz.UTC).replace(tzinfo=None)
+        end_utc = user_tz.localize(datetime.combine(today_local, time.max)).astimezone(pytz.UTC).replace(tzinfo=None)
+        
         query = Appointment.query.filter(
-            Appointment.start_time >= today_start,
-            Appointment.start_time <= today_end
+            Appointment.start_time >= start_utc,
+            Appointment.start_time <= end_utc
         )
     else:
         # Cola por defecto de leads pendientes
