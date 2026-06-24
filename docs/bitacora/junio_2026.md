@@ -1,5 +1,26 @@
 # Bitácora - Junio 2026
 
+- **23 de Junio de 2026**:
+  - **Reestructuración de la Barra Inferior (Dock) y Flujo de Trabajo Secuencial para Closers**:
+    - **API Backend (`app/api/closer.py`) [MODIFY]**:
+      - Modificación del endpoint `/api/closer/deck` para admitir el parámetro `step`. Si es `'agendas'`, devuelve las citas de hoy del closer (permitiendo que sigan visibles para ajustes dinámicos durante el día).
+      - **Corrección de Zona Horaria en Deck**: Se adaptó el cálculo de "Hoy" en `step == 'agendas'` para usar la zona horaria del usuario (`current_user.timezone`) y convertir el rango a UTC naive para buscar citas en la base de datos de manera precisa.
+      - Incorporación del endpoint `POST /api/closer/deck/bulk-update` para actualizar estados de citas en lote usando la lógica de negocio de `CloserService.process_agenda`.
+    - **Navegación Frontend (`useDockNavigation.js`) [MODIFY]**:
+      - Reconfiguración del Dock de closers para guiar en 4 pasos (1. Agendas del Día, 2. Declarar Venta, 3. Reporte Diario, 4. Dashboard), conservando el acceso opcional a "Sin Anuncio".
+    - **Enrutamiento Frontend (`App.jsx`) [MODIFY]**:
+      - Vinculación de la ruta `/closer/deck` a la nueva interfaz `CloserWorkflowPage` en lugar de la vista compartida.
+    - **Interfaz Frontend [REDESIGN] (`CloserWorkflowPage.jsx` [NEW])**:
+      - Creación del nuevo espacio de trabajo interactivo del Closer bajo la estética Dark Glassmorphism.
+      - Implementación de la lista de agendas del día, selección múltiple, buscador y botones de acción rápidos de un solo clic para registrar asistencia (Asistió, No Show, Canceló) o abrir selector local de reagendas/segundas llamadas.
+      - Integración del panel lateral derecho con el visor compacto de la ficha de calificación del lead.
+    - **Corrección de Fechas en Tablero de Agendas (`FinancialAgendasPage.jsx`) [MODIFY]**:
+      - Se implementó `toLocalDateString` para resolver el bug donde el filtro de "Hoy" y el de inicio de mes usaban `toISOString()` (que provocaba el desfase de zona horaria, mostrando agendas de mañana en lugar de las de hoy).
+    - **Resolución de Closers y Sincronización de Citas en el Deck (`booking_service.py`, `financial_agendas.py`) [MODIFY]**:
+      - Corrección de la lógica de resolución en [resolve_user_by_name](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py#L372) para remover espacios adicionales de los nombres, permitiendo vincular citas de Google Sheets asignadas a "Jean Carlo Pérez" al usuario "Jean Carlo" (ID 4) del CRM.
+      - Optimización de [sync_all_financial_agendas](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py#L571) para permitir una sincronización selectiva temporal rápida (últimos 14 días por defecto) al procesar peticiones HTTP en producción, previniendo Gateway Timeouts y permitiendo resincronizar toda la historia únicamente al proveer el parámetro `all=true`.
+      - Ejecución de la resincronización selectiva de los últimos 7 días de agendas para resolver retroactivamente el `closer_id` de las citas activas. Esto corrige el problema de la cola vacía en `/closer/deck?step=agendas`.
+
 - **22 de Junio de 2026**:
   - **Selector de Closer Asignado y Call Confirmer en Registro de Agendas [MODIFY]**:
     - **Backend**:
@@ -31,6 +52,52 @@
     - Se unificaron las tres tablas de desgloses de rendimiento (por Closer, por Fuente y por Call Confirmer) en una sola tarjeta Glassmorphic colapsable.
     - Por defecto, toda la sección de desgloses se presenta contraída (minimizada) para optimizar el espacio de visualización al entrar al tablero.
     - Se implementó un selector de pestañas interactivo ("Fuente", "Call Confirmer", "Closer", "Todos") para permitir la conmutación fluida y el renderizado condicional de los desgloses según la necesidad del operador.
+
+  - **Reestructuración de la Barra Inferior (Dock) y Flujo de Trabajo Secuencial para Setters**:
+    - **API Backend (`app/api/setter.py`) [MODIFY]**:
+      - Modificación del endpoint `/api/setter/deck` para aceptar un parámetro `step` (`entrantes`, `cualificacion`, `link-agenda`).
+      - Filtrado dinámico de los leads en la cola según el paso del flujo secuencial en el que se encuentren (sin contactar, contactados sin cualificar, cualificados sin link).
+      - Habilitación del guardado de `result` en `process_setter_card`.
+      - Creación del nuevo endpoint `POST /api/setter/deck/bulk-update` para procesar actualizaciones en lote del estado y la keyword (anuncio) de múltiples citas.
+    - **API Backend (`app/api/public/lead_roadmap.py`) [MODIFY]**:
+      - Inyección de `appointment_keyword` en la respuesta de `/public/lead-roadmap` para exponer el anuncio asociado a la cita activa.
+    - **Interfaz Frontend (`useDockNavigation.js`) [MODIFY]**:
+      - Configuración de 4 pasos numerados para el Setter iniciando directamente desde Cualificación (1. Cualificación, 2. Link de Agenda, 3. Reporte Diario, 4. Dashboard).
+      - Adaptación de la detección del elemento activo para soportar parámetros de consulta (`location.search`), permitiendo destacar el paso correcto en el Dock inferior.
+    - **Interfaz Frontend (`LeadRoadmapDetail.jsx`) [MODIFY]**:
+      - Adición de un selector interactivo dinámico en la sección de Metadatos de Adquisición para editar la keyword (anuncio) en caliente desde la ficha del lead si el usuario es un setter y hay una cita activa.
+    - **Interfaz Frontend [REDESIGN] (`SetterWorkflowPage.jsx` [NEW] y `App.jsx` [MODIFY])**:
+      - Creación del nuevo componente de productividad y espacio de trabajo `SetterWorkflowPage.jsx` con diseño de alta densidad, checkboxes de selección masiva y panel de herramientas para lotes.
+      - Remoción de la etapa inicial de "Leads Entrantes", estructurando el espacio de trabajo del Setter a partir de "1. Cualificación" (Leads contactados que se deben cualificar/descualificar en un clic).
+      - Redireccionamiento de la ruta `/setter/deck` en `App.jsx` hacia este nuevo espacio de trabajo enfocado del Setter.
+
+  - **Rediseño Compacto del Detalle del Lead y Pestañas de Calificación (`LeadRoadmapDetail.jsx`, `SetterWorkflowPage.jsx`) [MODIFY]**:
+    - **Frontend (`LeadRoadmapDetail.jsx`)**:
+      - Implementación de la propiedad `compact`. Si está activa (como en el visor lateral del flujo del Setter), se renderiza una cabecera simplificada con datos esenciales de contacto y un grid de metadatos de 2 columnas de alta densidad.
+      - Ocultamiento de la sección horizontal de pasos del lead (`Lead Roadmap`) en modo compacto.
+      - Creación de pestañas de alternancia rápida ("Respuestas Bot" y "Calificar Lead") para separar de forma limpia la visualización del formulario n8n y el formulario de calificación manual, eliminando el solapamiento visual.
+      - Ocultamiento completo de las secciones de membresías, resumen de ventas, notas internas e historial de actividad en modo compacto para liberar espacio de pantalla vertical.
+      - Restricción de acceso en la calificación en caliente para que los usuarios con rol de `setter` no visualicen las secciones de "Observaciones de Call Confirmer" ni "Objeciones" (específicos de otros roles), reduciendo la pantalla al registro de los dolores del prospecto.
+    - **Frontend (`SetterWorkflowPage.jsx`)**:
+      - Activación de la propiedad `compact={true}` al invocar a `<LeadRoadmapDetail>` en la ficha lateral del Setter.
+
+  - **Ajuste en la Etapa Link de Agenda (`SetterWorkflowPage.jsx`) [MODIFY]**:
+    - **Frontend**:
+      - Eliminación del botón "Agendado" en el paso 2 (Link de Agenda) para el Setter, delegando la detección del agendamiento al sistema automático de booking.
+      - Reemplazo de la acción rápida (tanto individual como en lote) para marcar la cita directamente como "Link Enviado" en lugar de "Agendado" cuando el setter les provee su link de booking.
+      - Eliminación del botón "Link" (que copiaba el enlace al portapapeles) en el renglón del lead del paso 2 (Link de Agenda) para dejar únicamente el botón de acción rápida "Link Enviado".
+
+  - **Unificación de Navegación en Barra Inferior (Dock) y Remoción de Wizard Superior (`SetterWorkflowPage.jsx`, `useDockNavigation.js`) [MODIFY]**:
+    - **Frontend**:
+      - Eliminación completa de la barra de navegación superior (Wizard/Asistente) redundante en `SetterWorkflowPage.jsx` para centralizar toda la navegación en la barra inferior (Dock).
+      - Limpieza de código eliminando la variable inactiva `stepsConfig` y la función `handleStepChange` en `SetterWorkflowPage.jsx`.
+      - Configuración y ordenamiento de las páginas en el Dock para el Setter en `useDockNavigation.js`: 1. Cualificación, 2. Link de Agenda, 3. Reporte Diario, y 4. Dashboard (estadísticas).
+
+  - **Corrección del Gráfico de Embudo en la Vista del Reporte Diario (`PublicSetterReportPage.jsx`) [MODIFY]**:
+    - **Frontend**:
+      - Se reemplazó el contenedor restrictivo del gráfico de embudo (`w-full aspect-square max-h-[300px]`) por un contenedor flexible con altura mínima adecuada (`w-full flex flex-col items-center justify-center min-h-[400px]`). Esto evita que el embudo colapse verticalmente y que se superpongan o corten las etapas y las tasas de conversión intermedias.
+      - Se eliminó la propiedad no soportada `height="100%"` de la instancia del componente `<FunnelChart />`.
+      - El gráfico de embudo en la vista general del Dashboard se mantuvo intacto sin verse afectado.
 
 - **20 de Junio de 2026**:
   - **Soporte para el Estado "Cerrada" en Agendas [MODIFY]**:
@@ -1398,74 +1465,3 @@
       - Al integrarse los gráficos circulares directamente en las tablas correspondientes, se eliminaron los gráficos duplicados de *"Tipo de Cierre"* y *"Estado de Agendas"* de la fila inferior general.
 
       - Se reorganizó la fila inferior (`BOTTOM ROW`) en un grid de 2 columnas centrado exclusivamente en la distribución de la tenacidad de los seguimientos: **Re-engagement (Hot)** y **Re-engagement (Cold)**, logrando un dashboard sumamente limpio, simétrico y de altísimo valor analítico.
-
-- **22 de Junio de 2026**:
-  - **Reestructuración de la Barra Inferior (Dock) y Flujo de Trabajo Secuencial para Setters**:
-    - **API Backend (`app/api/setter.py`) [MODIFY]**:
-      - Modificación del endpoint `/api/setter/deck` para aceptar un parámetro `step` (`entrantes`, `cualificacion`, `link-agenda`).
-      - Filtrado dinámico de los leads en la cola según el paso del flujo secuencial en el que se encuentren (sin contactar, contactados sin cualificar, cualificados sin link).
-      - Habilitación del guardado de `result` en `process_setter_card`.
-      - Creación del nuevo endpoint `POST /api/setter/deck/bulk-update` para procesar actualizaciones en lote del estado y la keyword (anuncio) de múltiples citas.
-    - **API Backend (`app/api/public/lead_roadmap.py`) [MODIFY]**:
-      - Inyección de `appointment_keyword` en la respuesta de `/public/lead-roadmap` para exponer el anuncio asociado a la cita activa.
-    - **Interfaz Frontend (`useDockNavigation.js`) [MODIFY]**:
-      - Configuración de 4 pasos numerados para el Setter iniciando directamente desde Cualificación (1. Cualificación, 2. Link de Agenda, 3. Reporte Diario, 4. Dashboard).
-      - Adaptación de la detección del elemento activo para soportar parámetros de consulta (`location.search`), permitiendo destacar el paso correcto en el Dock inferior.
-    - **Interfaz Frontend (`LeadRoadmapDetail.jsx`) [MODIFY]**:
-      - Adición de un selector interactivo dinámico en la sección de Metadatos de Adquisición para editar la keyword (anuncio) en caliente desde la ficha del lead si el usuario es un setter y hay una cita activa.
-    - **Interfaz Frontend [REDESIGN] (`SetterWorkflowPage.jsx` [NEW] y `App.jsx` [MODIFY])**:
-      - Creación del nuevo componente de productividad y espacio de trabajo `SetterWorkflowPage.jsx` con diseño de alta densidad, checkboxes de selección masiva y panel de herramientas para lotes.
-      - Remoción de la etapa inicial de "Leads Entrantes", estructurando el espacio de trabajo del Setter a partir de "1. Cualificación" (Leads contactados que se deben cualificar/descualificar en un clic).
-      - Redireccionamiento de la ruta `/setter/deck` en `App.jsx` hacia este nuevo espacio de trabajo enfocado del Setter.
-
-  - **Rediseño Compacto del Detalle del Lead y Pestañas de Calificación (`LeadRoadmapDetail.jsx`, `SetterWorkflowPage.jsx`) [MODIFY]**:
-    - **Frontend (`LeadRoadmapDetail.jsx`)**:
-      - Implementación de la propiedad `compact`. Si está activa (como en el visor lateral del flujo del Setter), se renderiza una cabecera simplificada con datos esenciales de contacto y un grid de metadatos de 2 columnas de alta densidad.
-      - Ocultamiento de la sección horizontal de pasos del lead (`Lead Roadmap`) en modo compacto.
-      - Creación de pestañas de alternancia rápida ("Respuestas Bot" y "Calificar Lead") para separar de forma limpia la visualización del formulario n8n y el formulario de calificación manual, eliminando el solapamiento visual.
-      - Ocultamiento completo de las secciones de membresías, resumen de ventas, notas internas e historial de actividad en modo compacto para liberar espacio de pantalla vertical.
-      - Restricción de acceso en la calificación en caliente para que los usuarios con rol de `setter` no visualicen las secciones de "Observaciones de Call Confirmer" ni "Objeciones" (específicos de otros roles), reduciendo la pantalla al registro de los dolores del prospecto.
-    - **Frontend (`SetterWorkflowPage.jsx`)**:
-      - Activación de la propiedad `compact={true}` al invocar a `<LeadRoadmapDetail>` en la ficha lateral del Setter.
-
-  - **Ajuste en la Etapa Link de Agenda (`SetterWorkflowPage.jsx`) [MODIFY]**:
-    - **Frontend**:
-      - Eliminación del botón "Agendado" en el paso 2 (Link de Agenda) para el Setter, delegando la detección del agendamiento al sistema automático de booking.
-      - Reemplazo de la acción rápida (tanto individual como en lote) para marcar la cita directamente como "Link Enviado" en lugar de "Agendado" cuando el setter les provee su link de booking.
-      - Eliminación del botón "Link" (que copiaba el enlace al portapapeles) en el renglón del lead del paso 2 (Link de Agenda) para dejar únicamente el botón de acción rápida "Link Enviado".
-
-  - **Unificación de Navegación en Barra Inferior (Dock) y Remoción de Wizard Superior (`SetterWorkflowPage.jsx`, `useDockNavigation.js`) [MODIFY]**:
-    - **Frontend**:
-      - Eliminación completa de la barra de navegación superior (Wizard/Asistente) redundante en `SetterWorkflowPage.jsx` para centralizar toda la navegación en la barra inferior (Dock).
-      - Limpieza de código eliminando la variable inactiva `stepsConfig` y la función `handleStepChange` en `SetterWorkflowPage.jsx`.
-      - Configuración y ordenamiento de las páginas en el Dock para el Setter en `useDockNavigation.js`: 1. Cualificación, 2. Link de Agenda, 3. Reporte Diario, y 4. Dashboard (estadísticas).
-
-  - **Corrección del Gráfico de Embudo en la Vista del Reporte Diario (`PublicSetterReportPage.jsx`) [MODIFY]**:
-    - **Frontend**:
-      - Se reemplazó el contenedor restrictivo del gráfico de embudo (`w-full aspect-square max-h-[300px]`) por un contenedor flexible con altura mínima adecuada (`w-full flex flex-col items-center justify-center min-h-[400px]`). Esto evita que el embudo colapse verticalmente y que se superpongan o corten las etapas y las tasas de conversión intermedias.
-      - Se eliminó la propiedad no soportada `height="100%"` de la instancia del componente `<FunnelChart />`.
-      - El gráfico de embudo en la vista general del Dashboard se mantuvo intacto sin verse afectado.
-
-- **23 de Junio de 2026**:
-  - **Reestructuración de la Barra Inferior (Dock) y Flujo de Trabajo Secuencial para Closers**:
-    - **API Backend (`app/api/closer.py`) [MODIFY]**:
-      - Modificación del endpoint `/api/closer/deck` para admitir el parámetro `step`. Si es `'agendas'`, devuelve las citas de hoy del closer (permitiendo que sigan visibles para ajustes dinámicos durante el día).
-      - **Corrección de Zona Horaria en Deck**: Se adaptó el cálculo de "Hoy" en `step == 'agendas'` para usar la zona horaria del usuario (`current_user.timezone`) y convertir el rango a UTC naive para buscar citas en la base de datos de manera precisa.
-      - Incorporación del endpoint `POST /api/closer/deck/bulk-update` para actualizar estados de citas en lote usando la lógica de negocio de `CloserService.process_agenda`.
-    - **Navegación Frontend (`useDockNavigation.js`) [MODIFY]**:
-      - Reconfiguración del Dock de closers para guiar en 4 pasos (1. Agendas del Día, 2. Declarar Venta, 3. Reporte Diario, 4. Dashboard), conservando el acceso opcional a "Sin Anuncio".
-    - **Enrutamiento Frontend (`App.jsx`) [MODIFY]**:
-      - Vinculación de la ruta `/closer/deck` a la nueva interfaz `CloserWorkflowPage` en lugar de la vista compartida.
-    - **Interfaz Frontend [REDESIGN] (`CloserWorkflowPage.jsx` [NEW])**:
-      - Creación del nuevo espacio de trabajo interactivo del Closer bajo la estética Dark Glassmorphism.
-      - Implementación de la lista de agendas del día, selección múltiple, buscador y botones de acción rápidos de un solo clic para registrar asistencia (Asistió, No Show, Canceló) o abrir selector local de reagendas/segundas llamadas.
-      - Integración del panel lateral derecho con el visor compacto de la ficha de calificación del lead.
-    - **Corrección de Fechas en Tablero de Agendas (`FinancialAgendasPage.jsx`) [MODIFY]**:
-      - Se implementó `toLocalDateString` para resolver el bug donde el filtro de "Hoy" y el de inicio de mes usaban `toISOString()` (que provocaba el desfase de zona horaria, mostrando agendas de mañana en lugar de las de hoy).
-    - **Resolución de Closers y Sincronización de Citas en el Deck (`booking_service.py`, `financial_agendas.py`) [MODIFY]**:
-      - Corrección de la lógica de resolución en [resolve_user_by_name](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py#L372) para remover espacios adicionales de los nombres, permitiendo vincular citas de Google Sheets asignadas a "Jean Carlo Pérez" al usuario "Jean Carlo" (ID 4) del CRM.
-      - Optimización de [sync_all_financial_agendas](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py#L571) para permitir una sincronización selectiva temporal rápida (últimos 14 días por defecto) al procesar peticiones HTTP en producción, previniendo Gateway Timeouts y permitiendo resincronizar toda la historia únicamente al proveer el parámetro `all=true`.
-      - Ejecución de la resincronización selectiva de los últimos 7 días de agendas para resolver retroactivamente el `closer_id` de las citas activas. Esto corrige el problema de la cola vacía en `/closer/deck?step=agendas`.
-
-
-

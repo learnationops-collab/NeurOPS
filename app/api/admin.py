@@ -1520,3 +1520,123 @@ def delete_closer_alias(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+@bp.route('/admin/bitacora', methods=['GET'])
+@login_required
+@operator_required
+def get_bitacora():
+    import re
+    import os
+    from flask import current_app
+    
+    file_path = os.path.abspath(os.path.join(current_app.root_path, '..', 'docs', 'bitacora', 'junio_2026.md'))
+    
+    if not os.path.exists(file_path):
+        return jsonify({"error": "El archivo de bitácora no existe."}), 404
+        
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        return jsonify({"error": f"Error al leer la bitácora: {str(e)}"}), 500
+        
+    pattern = r"(^-\s*\*\*(?P<dia>\d+)\s+de\s+(?P<mes>[a-zA-Z]+)\s+de\s+(?P<anio>\d{4})\*\*:\s*)"
+    matches = list(re.finditer(pattern, content, re.MULTILINE))
+    
+    MESES = {
+        'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
+        'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
+        'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'
+    }
+    
+    entradas = []
+    for i, match in enumerate(matches):
+        dia = match.group("dia")
+        mes_name = match.group("mes").lower()
+        anio = match.group("anio")
+        
+        mes = MESES.get(mes_name, '06')
+        fecha_iso = f"{anio}-{mes}-{int(dia):02d}"
+        fecha_str = f"{dia} de {match.group('mes')} de {anio}"
+        
+        start_idx = match.start()
+        end_idx = matches[i+1].start() if i + 1 < len(matches) else len(content)
+        
+        match_len = match.end() - match.start()
+        bloque_content = content[start_idx + match_len:end_idx].strip()
+        
+        html_content = markdown_to_html_premium(bloque_content)
+        
+        tipos_cambio = []
+        if "[MODIFY]" in bloque_content: tipos_cambio.append("MODIFY")
+        if "[NEW]" in bloque_content: tipos_cambio.append("NEW")
+        if "[DELETE]" in bloque_content: tipos_cambio.append("DELETE")
+        if "[POLICY]" in bloque_content: tipos_cambio.append("POLICY")
+        if "[NEW / DELETE]" in bloque_content:
+            if "NEW" not in tipos_cambio: tipos_cambio.append("NEW")
+            if "DELETE" not in tipos_cambio: tipos_cambio.append("DELETE")
+            
+        entradas.append({
+            "fecha_str": fecha_str,
+            "fecha_iso": fecha_iso,
+            "html": html_content,
+            "raw": bloque_content,
+            "types": list(set(tipos_cambio))
+        })
+        
+    return jsonify(entradas), 200
+
+def markdown_to_html_premium(text):
+    import re
+    lines = text.splitlines()
+    html_parts = []
+    current_level = 0
+    levels_stack = []
+    
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+            
+        indent = len(line) - len(line.lstrip())
+        level = (indent // 2) + 1 if indent > 0 else 1
+        
+        if stripped.startswith('- '):
+            content = stripped[2:]
+        elif stripped.startswith('* '):
+            content = stripped[2:]
+        else:
+            content = stripped
+            
+        content = re.sub(r'\*\*(.*?)\*\*', r'<strong class="text-white font-bold">\1</strong>', content)
+        content = re.sub(r'`(.*?)`', r'<code class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 font-mono text-[11px] text-violet-400">\1</code>', content)
+        
+        content = re.sub(r'\[MODIFY\]', r'<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">MODIFY</span>', content)
+        content = re.sub(r'\[NEW\]', r'<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">NEW</span>', content)
+        content = re.sub(r'\[DELETE\]', r'<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">DELETE</span>', content)
+        content = re.sub(r'\[POLICY\]', r'<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">POLICY</span>', content)
+        content = re.sub(r'\[NEW / DELETE\]', r'<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20">NEW / DELETE</span>', content)
+
+        if level > current_level:
+            ul_class = "space-y-2 list-none pl-4 mt-2 border-l border-white/5" if level > 1 else "space-y-3 list-none pl-0 mt-3"
+            html_parts.append(f'<ul class="{ul_class}">')
+            levels_stack.append('</ul>')
+            current_level = level
+        elif level < current_level:
+            while current_level > level and levels_stack:
+                html_parts.append(levels_stack.pop())
+                current_level -= 1
+                
+        if level == 1:
+            li_class = "relative pl-6 before:content-[\'\'] before:absolute before:left-2 before:top-2.5 before:w-1.5 before:h-1.5 before:bg-indigo-500 before:rounded-full text-sm text-base-content font-medium"
+        elif level >= 2:
+            li_class = "relative pl-6 before:content-[\'\'] before:absolute before:left-2 before:top-2.5 before:w-1 before:h-1 before:bg-indigo-400/50 before:rounded-full text-xs text-muted"
+        else:
+            li_class = "text-xs text-muted"
+            
+        html_parts.append(f'<li class="{li_class}">{content}</li>')
+        
+    while levels_stack:
+        html_parts.append(levels_stack.pop())
+        
+    return "\n".join(html_parts)
