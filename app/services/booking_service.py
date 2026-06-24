@@ -388,18 +388,18 @@ class BookingService:
         if user:
             return user
             
-        # 3. Coincidencia parcial priorizando rol
+        # 3. Coincidencia parcial priorizando rol (removiendo espacios de ambos)
         users = User.query.all()
         for u in users:
-            u_name = u.username.lower()
-            if u_name in name_no_spaces or name_no_spaces in u_name:
+            u_name_no_spaces = u.username.lower().replace(' ', '')
+            if u_name_no_spaces in name_no_spaces or name_no_spaces in u_name_no_spaces:
                 if default_role and u.role == default_role:
                     return u
                     
         # 4. Fallback de coincidencia parcial simple
         for u in users:
-            u_name = u.username.lower()
-            if u_name in name_no_spaces or name_no_spaces in u_name:
+            u_name_no_spaces = u.username.lower().replace(' ', '')
+            if u_name_no_spaces in name_no_spaces or name_no_spaces in u_name_no_spaces:
                 return u
                 
         return None
