@@ -69,10 +69,7 @@ const FunnelChart = ({ data }) => {
                                 <span className="text-xs text-slate-500 font-bold">Valor</span>
                                 <span className="text-xs font-black text-white tabular-nums">{Number(entry.value).toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500 font-bold">% vs {data[0].name}</span>
-                                <span className="text-xs font-black tabular-nums" style={{ color: entry.fill }}>{pctOfTotal.toFixed(1)}%</span>
-                            </div>
+
                             {entry.formula && (
                                 <div className="pt-1.5 border-t border-slate-700/40">
                                     <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider block mb-1">Fuente</span>
@@ -164,12 +161,7 @@ const FunnelChart = ({ data }) => {
                                         </span>
                                     </div>
 
-                                    {/* % vs total */}
-                                    <div className="text-right z-10">
-                                        <span className="text-xs font-black text-slate-500 group-hover/funnel-step:text-slate-300 transition-colors tabular-nums">
-                                            {pctOfTotal.toFixed(1)}%
-                                        </span>
-                                    </div>
+
                                 </div>
                             </div>
                         </div>
