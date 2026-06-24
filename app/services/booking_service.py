@@ -376,7 +376,13 @@ class BookingService:
         name_clean = str(name_str).strip().lower()
         if name_clean in ('n/a', 'none', 'undefined', 'sin asignar', 'sin_asignar', 'equipo', ''):
             return None
-        
+            
+        # 0. Buscar por alias explícito (CloserAlias)
+        from app.models import CloserAlias
+        alias = CloserAlias.query.filter(db.func.lower(CloserAlias.alias_name) == name_clean).first()
+        if alias and alias.user:
+            return alias.user
+            
         # 1. Coincidencia exacta por username
         user = User.query.filter(User.username.ilike(name_clean)).first()
         if user:

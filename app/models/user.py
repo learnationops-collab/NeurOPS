@@ -99,3 +99,21 @@ class GoogleCalendarToken(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user = db.relationship('User', backref=db.backref('google_token', uselist=False, cascade="all, delete-orphan"))
+
+class CloserAlias(db.Model):
+    __tablename__ = 'closer_aliases'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    alias_name = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('aliases', lazy='dynamic', cascade="all, delete-orphan"))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "username": self.user.username if self.user else "",
+            "alias_name": self.alias_name,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }

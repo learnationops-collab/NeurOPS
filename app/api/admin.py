@@ -1462,3 +1462,48 @@ def create_admin_appointment():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+@bp.route('/admin/closer-aliases', methods=['GET', 'POST'])
+@login_required
+@operator_required
+def manage_closer_aliases():
+    from app.models import CloserAlias
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        user_id = data.get('user_id')
+        alias_name = data.get('alias_name', '').strip()
+        
+        if not user_id or not alias_name:
+            return jsonify({"message": "Faltan datos requeridos (user_id, alias_name)"}), 400
+            
+        # Validar si el alias ya existe
+        existing = CloserAlias.query.filter(db.func.lower(CloserAlias.alias_name) == alias_name.lower()).first()
+        if existing:
+            return jsonify({"message": f"El alias '{alias_name}' ya está registrado."}), 409
+            
+        alias = CloserAlias(user_id=user_id, alias_name=alias_name)
+        db.session.add(alias)
+        try:
+            db.session.commit()
+            return jsonify({"message": "Alias creado con éxito", "alias": alias.to_dict()}), 201
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 500
+            
+    # GET
+    aliases = CloserAlias.query.all()
+    return jsonify([a.to_dict() for a in aliases]), 200
+
+@bp.route('/admin/closer-aliases/<int:id>', methods=['DELETE'])
+@login_required
+@operator_required
+def delete_closer_alias(id):
+    from app.models import CloserAlias
+    alias = CloserAlias.query.get_or_404(id)
+    try:
+        db.session.delete(alias)
+        db.session.commit()
+        return jsonify({"message": "Alias eliminado con éxito"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
