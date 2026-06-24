@@ -495,13 +495,44 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         const split = stats.sales.split?.count ?? stats.sales.totals?.split_count ?? 0;
         const realSales = pif + split;
         return [
-            { name: 'Slots', value: stats.general.slots, fill: '#8b5cf6' },
-            { name: 'Agendas', value: stats.agendas.totals.scheduled, fill: '#10b981' },
-            { name: 'Asistencias', value: stats.agendas.first_call.attended, fill: '#0ea5e9' },
-            { name: 'Ofertas', value: stats.general.offers_made, fill: '#d946ef' },
-            { name: 'Ventas', value: realSales, fill: '#f59e0b' }
+            {
+                name: 'Slots',
+                value: stats.general.slots,
+                fill: '#8b5cf6',
+                tooltip: 'Espacios disponibles en la agenda del closer declarados en el reporte diario. Es el techo máximo de capacidad del equipo.',
+                formula: 'Suma de "slots" en reportes diarios'
+            },
+            {
+                name: 'Agendas',
+                value: stats.agendas.totals.scheduled,
+                fill: '#10b981',
+                tooltip: 'Total de citas agendadas (1ª y 2ª llamada) en el período. Indica qué tan bien se está llenando la agenda vs. la capacidad disponible.',
+                formula: 'FC Agendadas + SC Agendadas'
+            },
+            {
+                name: 'Asistencias',
+                value: stats.agendas.first_call.attended,
+                fill: '#0ea5e9',
+                tooltip: 'Cantidad de prospectos que efectivamente asistieron a la primera llamada. La diferencia respecto a Agendas son los No Show y Cancelaciones.',
+                formula: 'FC Asistencias (1ª llamada asistida)'
+            },
+            {
+                name: 'Ofertas',
+                value: stats.general.offers_made,
+                fill: '#d946ef',
+                tooltip: 'Cantidad de llamadas en las que el closer llegó a presentar la oferta al prospecto. No siempre se puede hacer pitch si el prospecto no es decisor o si hay objeciones bloqueantes.',
+                formula: 'Suma de "offers_made" en reportes diarios'
+            },
+            {
+                name: 'Ventas',
+                value: realSales,
+                fill: '#f59e0b',
+                tooltip: 'Cierres reales: contratos PIF (pago único) + Split Pay. No incluye señas/reservas ni cuotas de alumnos previos, ya que esos no representan nuevos cierres.',
+                formula: 'PIF Ventas + Split Pay Ventas'
+            }
         ];
     }, [stats]);
+
 
     // Optimizacion de Rendimiento: Calculo unificado con useMemo
     const salesMetrics = useMemo(() => {
