@@ -1341,6 +1341,12 @@ class CloserService:
         official_installment_count = 0.0
         official_installment_cash = 0.0
         official_installment_cash_neto = 0.0
+        official_upsell_count = 0.0
+        official_upsell_cash = 0.0
+        official_upsell_cash_neto = 0.0
+        official_renovacion_count = 0.0
+        official_renovacion_cash = 0.0
+        official_renovacion_cash_neto = 0.0
         
         for tipo, count, cash, cash_neto in sales_rows:
             tipo_lower = (tipo or '').lower()
@@ -1348,7 +1354,15 @@ class CloserService:
             cash_neto_val = float(cash_neto or 0.0)
             count_val = float(count or 0.0)
             
-            if 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower:
+            if 'upsell' in tipo_lower:
+                official_upsell_count += count_val
+                official_upsell_cash += cash_val
+                official_upsell_cash_neto += cash_neto_val
+            elif 'renovacion' in tipo_lower or 'renovación' in tipo_lower:
+                official_renovacion_count += count_val
+                official_renovacion_cash += cash_val
+                official_renovacion_cash_neto += cash_neto_val
+            elif 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower:
                 official_pif_count += count_val
                 official_pif_cash += cash_val
                 official_pif_cash_neto += cash_neto_val
@@ -1399,6 +1413,14 @@ class CloserService:
         final_installment_count = round(official_installment_count / days_count, 2) if agg_type == 'avg' else official_installment_count
         final_installment_cash = round(official_installment_cash / days_count, 2) if agg_type == 'avg' else official_installment_cash
         final_installment_cash_neto = round(official_installment_cash_neto / days_count, 2) if agg_type == 'avg' else official_installment_cash_neto
+
+        final_upsell_count = round(official_upsell_count / days_count, 2) if agg_type == 'avg' else official_upsell_count
+        final_upsell_cash = round(official_upsell_cash / days_count, 2) if agg_type == 'avg' else official_upsell_cash
+        final_upsell_cash_neto = round(official_upsell_cash_neto / days_count, 2) if agg_type == 'avg' else official_upsell_cash_neto
+
+        final_renovacion_count = round(official_renovacion_count / days_count, 2) if agg_type == 'avg' else official_renovacion_count
+        final_renovacion_cash = round(official_renovacion_cash / days_count, 2) if agg_type == 'avg' else official_renovacion_cash
+        final_renovacion_cash_neto = round(official_renovacion_cash_neto / days_count, 2) if agg_type == 'avg' else official_renovacion_cash_neto
 
         # Calcular conversión de señas en venta real (PIF o Split)
         señas_convertidas = 0
@@ -1454,10 +1476,10 @@ class CloserService:
         total_canceled = val(stats.fc_canceled) + val(stats.sc_canceled)
 
         # Cierres reales excluyen las cuotas
-        total_sales = final_pif_count + final_split_count + final_deposit_count
-        # Efectivo total recaudado incluye las cuotas
-        total_cash = final_pif_cash + final_split_cash + final_deposit_cash + final_installment_cash
-        total_cash_neto = final_pif_cash_neto + final_split_cash_neto + final_deposit_cash_neto + final_installment_cash_neto
+        total_sales = final_pif_count + final_split_count + final_deposit_count + final_upsell_count + final_renovacion_count
+        # Efectivo total recaudado incluye las cuotas, upsells y renovaciones
+        total_cash = final_pif_cash + final_split_cash + final_deposit_cash + final_installment_cash + final_upsell_cash + final_renovacion_cash
+        total_cash_neto = final_pif_cash_neto + final_split_cash_neto + final_deposit_cash_neto + final_installment_cash_neto + final_upsell_cash_neto + final_renovacion_cash_neto
         total_ic_sales = val(stats.pif_ic_count) + val(stats.split_ic_count) + val(stats.deposit_ic_count)
         total_ic_cash = val(stats.pif_ic_cash) + val(stats.split_ic_cash) + val(stats.deposit_ic_cash)
 
@@ -1587,11 +1609,76 @@ class CloserService:
             scaled_general_avg = general_average_ticket
             scaled_program_tickets = program_tickets
 
+        # Obtener cumplimiento de reportes diarios
+        import pytz
+        from datetime import datetime, date, timedelta
+        from app.models import User, CloserDailyReport
+        
+        try:
+            tz = pytz.timezone('America/La_Paz')
+        except Exception:
+            tz = pytz.UTC
+            
+        today_local = datetime.now(tz).date()
+        yesterday_local = today_local - timedelta(days=1)
+        
+        active_closers = User.query.filter_by(role='closer', is_active=True).all()
+        
+        closer_reports_status = []
+        al_dia_count = 0
+        vencidos_count = 0
+        
+        for c in active_closers:
+            last_report = CloserDailyReport.query.filter_by(closer_id=c.id).order_by(CloserDailyReport.date.desc()).first()
+            
+            if last_report:
+                last_date = last_report.date
+                if last_date >= today_local:
+                    status_text = "Al día"
+                    status_type = "al_dia"
+                    al_dia_count += 1
+                elif last_date == yesterday_local:
+                    status_text = "Sin reportar hoy"
+                    status_type = "vencido_hoy"
+                    vencidos_count += 1
+                else:
+                    status_text = "Sin reportar ayer"
+                    status_type = "vencido_ayer"
+                    vencidos_count += 1
+                last_report_str = last_date.strftime('%d/%m/%Y')
+            else:
+                status_text = "Sin reportar ayer"
+                status_type = "vencido_ayer"
+                vencidos_count += 1
+                last_report_str = "Nunca"
+                
+            closer_reports_status.append({
+                "closer_id": c.id,
+                "closer_name": c.username,
+                "last_report": last_report_str,
+                "status": status_text,
+                "status_type": status_type
+            })
+            
+        total_active_closers = len(active_closers)
+        pct_al_dia = round((al_dia_count / total_active_closers) * 100, 1) if total_active_closers > 0 else 0.0
+        pct_vencidos = round((vencidos_count / total_active_closers) * 100, 1) if total_active_closers > 0 else 0.0
+        
+        reports_productivity = {
+            "al_dia_pct": pct_al_dia,
+            "al_dia_count": al_dia_count,
+            "vencidos_pct": pct_vencidos,
+            "vencidos_count": vencidos_count,
+            "total_closers": total_active_closers,
+            "details": closer_reports_status
+        }
+
         return {
             "metadata": {
                 "days_analyzed": days_count,
                 "agg_type": agg_type
             },
+            "reports_productivity": reports_productivity,
             "operational": {
                 "pending": pending_count,
                 "outcomes": outcomes
@@ -1621,6 +1708,8 @@ class CloserService:
                 "split": {"count": final_split_count, "cash": final_split_cash, "cash_neto": final_split_cash_neto, "in_call_count": val(stats.split_ic_count), "in_call_cash": val(stats.split_ic_cash)},
                 "deposit": {"count": final_deposit_count, "cash": final_deposit_cash, "cash_neto": final_deposit_cash_neto, "in_call_count": val(stats.deposit_ic_count), "in_call_cash": val(stats.deposit_ic_cash)},
                 "installment": {"count": final_installment_count, "cash": final_installment_cash, "cash_neto": final_installment_cash_neto, "in_call_count": 0, "in_call_cash": 0},
+                "upsell": {"count": final_upsell_count, "cash": final_upsell_cash, "cash_neto": final_upsell_cash_neto, "in_call_count": 0, "in_call_cash": 0},
+                "renovacion": {"count": final_renovacion_count, "cash": final_renovacion_cash, "cash_neto": final_renovacion_cash_neto, "in_call_count": 0, "in_call_cash": 0},
                 "deposit_conversions": {"total": total_señas, "converted": señas_convertidas, "rate": conversion_señas_rate},
                 "general_average_ticket": scaled_general_avg,
                 "program_tickets": scaled_program_tickets,

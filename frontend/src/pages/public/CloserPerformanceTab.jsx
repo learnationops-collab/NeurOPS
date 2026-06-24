@@ -71,6 +71,16 @@ const normalizeStats = (s) => {
                 in_call_count: s.sales?.installment?.in_call_count ?? 0,
                 in_call_cash: s.sales?.installment?.in_call_cash ?? 0,
             },
+            upsell: {
+                count: s.sales?.upsell?.count ?? 0,
+                cash: s.sales?.upsell?.cash ?? 0,
+                cash_neto: s.sales?.upsell?.cash_neto ?? 0,
+            },
+            renovacion: {
+                count: s.sales?.renovacion?.count ?? 0,
+                cash: s.sales?.renovacion?.cash ?? 0,
+                cash_neto: s.sales?.renovacion?.cash_neto ?? 0,
+            },
             deposit_conversions: {
                 total: s.sales?.deposit_conversions?.total ?? 0,
                 converted: s.sales?.deposit_conversions?.converted ?? 0,
@@ -110,6 +120,14 @@ const normalizeStats = (s) => {
         metadata: {
             days_analyzed: s.metadata?.days_analyzed ?? 1,
             agg_type: s.metadata?.agg_type ?? 'sum',
+        },
+        reports_productivity: s.reports_productivity ?? {
+            al_dia_pct: 0,
+            al_dia_count: 0,
+            vencidos_pct: 0,
+            vencidos_count: 0,
+            total_closers: 0,
+            details: []
         },
         comparison: s.comparison ? normalizeStats(s.comparison) : null
     };
@@ -493,21 +511,27 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         const splitCount = stats.sales.split?.count ?? stats.sales.totals?.split_count ?? 0;
         const depositCount = stats.sales.deposit?.count ?? stats.sales.totals?.deposit_count ?? stats.sales.totals?.seña_count ?? 0;
         const installmentCount = stats.sales.installment?.count ?? stats.sales.totals?.installment_count ?? 0;
+        const upsellCount = stats.sales.upsell?.count ?? 0;
+        const renovacionCount = stats.sales.renovacion?.count ?? 0;
         
         const pifCash = stats.sales.pif?.cash ?? stats.sales.totals?.pif_cash_collected ?? stats.sales.totals?.pif_cash ?? 0;
         const splitCash = stats.sales.split?.cash ?? stats.sales.totals?.split_cash_collected ?? stats.sales.totals?.split_cash ?? 0;
         const depositCash = stats.sales.deposit?.cash ?? stats.sales.totals?.deposit_cash_collected ?? stats.sales.totals?.deposit_cash ?? stats.sales.totals?.seña_cash ?? 0;
         const installmentCash = stats.sales.installment?.cash ?? stats.sales.totals?.installment_cash ?? stats.sales.totals?.installment_cash_collected ?? 0;
+        const upsellCash = stats.sales.upsell?.cash ?? 0;
+        const renovacionCash = stats.sales.renovacion?.cash ?? 0;
 
         const pifCashNeto = stats.sales.pif?.cash_neto ?? 0;
         const splitCashNeto = stats.sales.split?.cash_neto ?? 0;
         const depositCashNeto = stats.sales.deposit?.cash_neto ?? 0;
         const installmentCashNeto = stats.sales.installment?.cash_neto ?? 0;
+        const upsellCashNeto = stats.sales.upsell?.cash_neto ?? 0;
+        const renovacionCashNeto = stats.sales.renovacion?.cash_neto ?? 0;
 
         const realSalesCount = pifCount + splitCount;
         const realSalesCash = pifCash + splitCash;
-        const totalCashCollected = pifCash + splitCash + installmentCash + depositCash;
-        const totalCashCollectedNeto = pifCashNeto + splitCashNeto + installmentCashNeto + depositCashNeto;
+        const totalCashCollected = stats.sales.totals?.cash ?? (pifCash + splitCash + installmentCash + depositCash + upsellCash + renovacionCash);
+        const totalCashCollectedNeto = stats.sales.totals?.cash_neto ?? (pifCashNeto + splitCashNeto + installmentCashNeto + depositCashNeto + upsellCashNeto + renovacionCashNeto);
 
         const ticketPromedioReal = realSalesCount > 0 ? (realSalesCash / realSalesCount) : 0;
 
@@ -517,21 +541,27 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         const compSplitCount = compStats?.sales?.split?.count ?? compStats?.sales?.totals?.split_count ?? 0;
         const compDepositCount = compStats?.sales?.deposit?.count ?? compStats?.sales?.totals?.deposit_count ?? compStats?.sales?.totals?.seña_count ?? 0;
         const compInstallmentCount = compStats?.sales?.installment?.count ?? compStats?.sales?.totals?.installment_count ?? 0;
+        const compUpsellCount = compStats?.sales?.upsell?.count ?? 0;
+        const compRenovacionCount = compStats?.sales?.renovacion?.count ?? 0;
 
         const compPifCash = compStats?.sales?.pif?.cash ?? compStats?.sales?.totals?.pif_cash_collected ?? compStats?.sales?.totals?.pif_cash ?? 0;
         const compSplitCash = compStats?.sales?.split?.cash ?? compStats?.sales?.totals?.split_cash_collected ?? compStats?.sales?.totals?.split_cash ?? 0;
         const compDepositCash = compStats?.sales?.deposit?.cash ?? compStats?.sales?.totals?.deposit_cash_collected ?? compStats?.sales?.totals?.deposit_cash ?? compStats?.sales?.totals?.seña_cash ?? 0;
         const compInstallmentCash = compStats?.sales?.installment?.cash ?? compStats?.sales?.totals?.installment_cash ?? compStats?.sales?.totals?.installment_cash_collected ?? 0;
+        const compUpsellCash = compStats?.sales?.upsell?.cash ?? 0;
+        const compRenovacionCash = compStats?.sales?.renovacion?.cash ?? 0;
 
         const compPifCashNeto = compStats?.sales?.pif?.cash_neto ?? 0;
         const compSplitCashNeto = compStats?.sales?.split?.cash_neto ?? 0;
         const compDepositCashNeto = compStats?.sales?.deposit?.cash_neto ?? 0;
         const compInstallmentCashNeto = compStats?.sales?.installment?.cash_neto ?? 0;
+        const compUpsellCashNeto = compStats?.sales?.upsell?.cash_neto ?? 0;
+        const compRenovacionCashNeto = compStats?.sales?.renovacion?.cash_neto ?? 0;
 
         const compRealSalesCount = compPifCount + compSplitCount;
         const compRealSalesCash = compPifCash + compSplitCash;
-        const compTotalCashCollected = compPifCash + compSplitCash + compInstallmentCash + compDepositCash;
-        const compTotalCashCollectedNeto = compPifCashNeto + compSplitCashNeto + compInstallmentCashNeto + compDepositCashNeto;
+        const compTotalCashCollected = compStats?.sales?.totals?.cash ?? (compPifCash + compSplitCash + compInstallmentCash + compDepositCash + compUpsellCash + compRenovacionCash);
+        const compTotalCashCollectedNeto = compStats?.sales?.totals?.cash_neto ?? (compPifCashNeto + compSplitCashNeto + compInstallmentCashNeto + compDepositCashNeto + compUpsellCashNeto + compRenovacionCashNeto);
 
         const compTicketPromedioReal = compRealSalesCount > 0 ? (compRealSalesCash / compRealSalesCount) : 0;
 
@@ -570,12 +600,12 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         const compGeneralAverageTicket = compStats?.sales?.general_average_ticket || 0;
 
         return {
-            pifCount, splitCount, depositCount, installmentCount,
-            pifCash, splitCash, depositCash, installmentCash,
+            pifCount, splitCount, depositCount, installmentCount, upsellCount, renovacionCount,
+            pifCash, splitCash, depositCash, installmentCash, upsellCash, renovacionCash,
             realSalesCount, realSalesCash, totalCashCollected, totalCashCollectedNeto, ticketPromedioReal,
             compStats,
-            compPifCount, compSplitCount, compDepositCount, compInstallmentCount,
-            compPifCash, compSplitCash, compDepositCash, compInstallmentCash,
+            compPifCount, compSplitCount, compDepositCount, compInstallmentCount, compUpsellCount, compRenovacionCount,
+            compPifCash, compSplitCash, compDepositCash, compInstallmentCash, compUpsellCash, compRenovacionCash,
             compRealSalesCount, compRealSalesCash, compTotalCashCollected, compTotalCashCollectedNeto, compTicketPromedioReal,
             pifInCall, splitInCall, depositInCall, installmentInCall,
             compPifInCall, compSplitInCall, compDepositInCall, compInstallmentInCall,
@@ -601,12 +631,12 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
     }
 
     const {
-        pifCount = 0, splitCount = 0, depositCount = 0, installmentCount = 0,
-        pifCash = 0, splitCash = 0, depositCash = 0, installmentCash = 0,
+        pifCount = 0, splitCount = 0, depositCount = 0, installmentCount = 0, upsellCount = 0, renovacionCount = 0,
+        pifCash = 0, splitCash = 0, depositCash = 0, installmentCash = 0, upsellCash = 0, renovacionCash = 0,
         realSalesCount = 0, realSalesCash = 0, totalCashCollected = 0, totalCashCollectedNeto = 0, ticketPromedioReal = 0,
         compStats,
-        compPifCount = 0, compSplitCount = 0, compDepositCount = 0, compInstallmentCount = 0,
-        compPifCash = 0, compSplitCash = 0, compDepositCash = 0, compInstallmentCash = 0,
+        compPifCount = 0, compSplitCount = 0, compDepositCount = 0, compInstallmentCount = 0, compUpsellCount = 0, compRenovacionCount = 0,
+        compPifCash = 0, compSplitCash = 0, compDepositCash = 0, compInstallmentCash = 0, compUpsellCash = 0, compRenovacionCash = 0,
         compRealSalesCount = 0, compRealSalesCash = 0, compTotalCashCollected = 0, compTotalCashCollectedNeto = 0, compTicketPromedioReal = 0,
         pifInCall = 0, splitInCall = 0, depositInCall = 0, installmentInCall = 0,
         compPifInCall = 0, compSplitInCall = 0, compDepositInCall = 0, compInstallmentInCall = 0,
@@ -669,8 +699,7 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
         <div className="space-y-10 animate-in fade-in duration-500">
             {/* 1. EJECUTIVO DASHBOARD: 3 PILARES ESTRATÉGICOS (C-LEVEL VIEW) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                {/* PILAR 1: INGRESO CONSOLIDADO (CASH COLLECT) */}
+                         {/* Tarjeta 1: Facturación y Flujo de Caja (Fusionada con Cierre) */}
                 <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
                     <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
                         <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-emerald-500 group-hover:opacity-20 transition-opacity duration-300" />
@@ -681,159 +710,223 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             <DollarSign size={16} />
                         </div>
                     </div>
-                    <div className="space-y-4 relative z-10">
-                        <MetricWithTooltip tooltip="Total de dinero bruto facturado o recaudado en el período, incluyendo nuevos cierres (PIF/Splits), señas y cobro de cuotas, sin descontar comisiones de pasarelas." className="block cursor-help">
-                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT BRUTO</h4>
-                            <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none mt-1">{fmtCash(totalCashCollected)}</h2>
+                    <div className="grid grid-cols-2 gap-4 relative z-10">
+                        <MetricWithTooltip tooltip="Total de dinero bruto facturado o recaudado en el período, incluyendo nuevos cierres, señas, cuotas, upsells y renovaciones, sin descontar comisiones." className="block cursor-help">
+                            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT BRUTO</h4>
+                            <h2 className="text-3xl font-black text-white italic tracking-tighter leading-none mt-1.5">{fmtCash(totalCashCollected)}</h2>
                             {renderComparisonSubdataLeft(totalCashCollected, compTotalCashCollected, true)}
                         </MetricWithTooltip>
-                        <div className="pt-3 border-t border-slate-800/60">
-                            <MetricWithTooltip tooltip="Total de dinero neto recaudado tras descontar comisiones de pasarelas (Stripe: 4.5%, Hotmart: 8.9%)." className="block cursor-help">
-                                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT NETO</h4>
-                                <h2 className="text-4xl font-black text-emerald-400 italic tracking-tighter leading-none mt-1">{fmtCash(totalCashCollectedNeto)}</h2>
-                                {renderComparisonSubdataLeft(totalCashCollectedNeto, compTotalCashCollectedNeto, true)}
-                            </MetricWithTooltip>
-                        </div>
+                        
+                        <MetricWithTooltip tooltip="Total de dinero neto recaudado tras descontar comisiones de pasarelas (Stripe: 4.5%, Hotmart: 8.9%)." className="block cursor-help border-l border-slate-800/60 pl-4">
+                            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">CASH COLLECT NETO</h4>
+                            <h2 className="text-3xl font-black text-emerald-400 italic tracking-tighter leading-none mt-1.5">{fmtCash(totalCashCollectedNeto)}</h2>
+                            {renderComparisonSubdataLeft(totalCashCollectedNeto, compTotalCashCollectedNeto, true)}
+                        </MetricWithTooltip>
                     </div>
-                    <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
-                        <MetricWithTooltip tooltip="Recaudación bruta de pagos únicos o iniciales de nuevos contratos." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
+                    
+                    <div className="pt-5 border-t border-slate-800 space-y-2.5 relative z-10">
+                        <MetricWithTooltip tooltip="Recaudación bruta de pagos únicos o iniciales de nuevos contratos (PIF + Splits)." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nuevas Ventas (New Cash)</span>
-                            <div className="text-right">
-                                <span className="text-sm font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash)}</span>
-                                {renderComparisonSubdata(realSalesCash, compRealSalesCash, true)}
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-slate-500">({realSalesCount} u.)</span>
+                                <div className="text-right">
+                                    <span className="text-xs font-black text-emerald-400 tabular-nums">{fmtCash(realSalesCash)}</span>
+                                    {renderComparisonSubdata(realSalesCash, compRealSalesCash, true)}
+                                </div>
                             </div>
                         </MetricWithTooltip>
-                        <MetricWithTooltip tooltip="Recaudación bruta de cobros de cuotas de alumnos inscritos previamente." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
+                        <MetricWithTooltip tooltip="Recaudación bruta de cobros de cuotas de alumnos inscritos previamente." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cobro de Cuotas (Installments)</span>
-                            <div className="text-right">
-                                <span className="text-sm font-black text-white tabular-nums">{fmtCash(installmentCash)}</span>
-                                {renderComparisonSubdata(installmentCash, compInstallmentCash, true)}
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-slate-500">({installmentCount} u.)</span>
+                                <div className="text-right">
+                                    <span className="text-xs font-black text-white tabular-nums">{fmtCash(installmentCash)}</span>
+                                    {renderComparisonSubdata(installmentCash, compInstallmentCash, true)}
+                                </div>
                             </div>
                         </MetricWithTooltip>
-                        <MetricWithTooltip tooltip="Recaudación bruta de reservas o señas de llamadas." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
+                        <MetricWithTooltip tooltip="Recaudación bruta de reservas o señas de llamadas." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Reservas (Cash Señas)</span>
-                            <div className="text-right">
-                                <span className="text-sm font-black text-fuchsia-400 tabular-nums">{fmtCash(depositCash)}</span>
-                                {renderComparisonSubdata(depositCash, compDepositCash, true)}
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-slate-500">({depositCount} u.)</span>
+                                <div className="text-right">
+                                    <span className="text-xs font-black text-fuchsia-400 tabular-nums">{fmtCash(depositCash)}</span>
+                                    {renderComparisonSubdata(depositCash, compDepositCash, true)}
+                                </div>
+                            </div>
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="Recaudación bruta por ventas adicionales (Upsells)." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Upsells</span>
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-slate-500">({upsellCount} u.)</span>
+                                <div className="text-right">
+                                    <span className="text-xs font-black text-amber-400 tabular-nums">{fmtCash(upsellCash)}</span>
+                                    {renderComparisonSubdata(upsellCash, compUpsellCash, true)}
+                                </div>
+                            </div>
+                        </MetricWithTooltip>
+                        <MetricWithTooltip tooltip="Recaudación bruta por renovaciones de contrato." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Renovaciones</span>
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-slate-500">({renovacionCount} u.)</span>
+                                <div className="text-right">
+                                    <span className="text-xs font-black text-sky-400 tabular-nums">{fmtCash(renovacionCash)}</span>
+                                    {renderComparisonSubdata(renovacionCash, compRenovacionCash, true)}
+                                </div>
                             </div>
                         </MetricWithTooltip>
                     </div>
-                </div>
 
-                {/* PILAR 2: CIERRE Y EFICIENCIA DE VENTAS (NUEVOS CLIENTES) */}
-                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-amber-500/30 transition-all duration-300">
-                    <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
-                        <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-amber-500 group-hover:opacity-20 transition-opacity duration-300" />
-                    </div>
-                    <div className="flex justify-between items-center relative z-10">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Cierre y Eficiencia Comercial</span>
-                        <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                            <Target size={16} />
+                    <div className="pt-4 border-t border-slate-800/60 flex justify-between items-center relative z-10">
+                        <MetricWithTooltip tooltip="Monto promedio cobrado por cada nuevo contrato (PIF + Split) concretado en el período." className="cursor-help">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Ticket Promedio Real</span>
+                            <span className="text-base font-black text-white tabular-nums">{fmtNum(ticketPromedioReal, false, true)}</span>
+                        </MetricWithTooltip>
+                        <div className="text-right">
+                            {renderComparisonSubdata(ticketPromedioReal, compTicketPromedioReal, true)}
                         </div>
                     </div>
-                    <div className="space-y-1 relative z-10">
-                        <MetricWithTooltip tooltip="Cantidad de nuevos contratos o alumnos cerrados (incluye solo transacciones iniciales PIF y Split Pay)." className="block cursor-help">
-                            <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">NUEVOS CLIENTES (VENTAS)</h4>
-                            <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none mt-1">{fmt(realSalesCount)}</h2>
-                            {renderComparisonSubdataLeft(realSalesCount, compRealSalesCount)}
-                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Contratos PIF + Split Concretados</p>
-                        </MetricWithTooltip>
-                    </div>
-                    <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
-                        <MetricWithTooltip tooltip="Porcentaje de cierres de ventas sobre el total de llamadas atendidas en primera llamada." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Close Rate (Asistencias)</span>
-                            <div className="text-right">
-                                <span className="text-sm font-black text-amber-400 tabular-nums">
-                                    {fmtNum(calcDiv(realSalesCount, stats.agendas.first_call.attended, true), true)}
-                                </span>
-                                {renderComparisonSubdata(
-                                    calcDiv(realSalesCount, stats.agendas.first_call.attended, true),
-                                    calcDiv(compRealSalesCount, compStats?.agendas?.first_call?.attended, true),
-                                    false,
-                                    true
-                                )}
-                            </div>
-                        </MetricWithTooltip>
-                        <MetricWithTooltip tooltip="Monto promedio cobrado por cada nuevo contrato (PIF + Split) concretado en el período." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ticket Promedio Real</span>
-                            <div className="text-right">
-                                <span className="text-sm font-black text-sky-400 tabular-nums">{fmtNum(ticketPromedioReal, false, true)}</span>
-                                {renderComparisonSubdata(ticketPromedioReal, compTicketPromedioReal, true)}
-                            </div>
-                        </MetricWithTooltip>
-                        <MetricWithTooltip tooltip="Porcentaje de señas del período que se convirtieron en un contrato cerrado (PIF o Split)." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conversión de Señas</span>
-                            <div className="text-right">
-                                <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.sales.deposit_conversions?.rate ?? 0}%</span>
-                                {renderComparisonSubdata(
-                                    stats.sales.deposit_conversions?.rate ?? 0,
-                                    compStats?.sales?.deposit_conversions?.rate ?? 0,
-                                    false,
-                                    true
-                                )}
-                            </div>
-                        </MetricWithTooltip>
-                    </div>
                 </div>
 
-                {/* PILAR 3: PRODUCTIVIDAD Y AGENDA (LLAMADAS Y SHOW RATE) */}
+                {/* Tarjeta 2: Agendas y Asistencias */}
                 <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-sky-500/30 transition-all duration-300">
                     <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
                         <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-sky-500 group-hover:opacity-20 transition-opacity duration-300" />
                     </div>
                     <div className="flex justify-between items-center relative z-10">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Productividad y Agendamiento</span>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Agendas y Asistencias</span>
                         <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/20">
-                            <Phone size={16} />
+                            <CalendarDays size={16} />
                         </div>
                     </div>
-                    <div className="space-y-1 relative z-10">
-                        <MetricWithTooltip tooltip="Cantidad total de reuniones uno a uno que fueron atendidas en el período." className="block cursor-help">
-                            <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">ASISTENCIAS REALES</h4>
-                            <h2 className="text-5xl font-black text-white italic tracking-tighter leading-none mt-1">{fmt(stats.agendas.totals.attended)}</h2>
+                    <div className="grid grid-cols-2 gap-4 relative z-10">
+                        <MetricWithTooltip tooltip="Cantidad total de citas agendadas creadas en el periodo." className="block cursor-help">
+                            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">AGENDAS TOTALES</h4>
+                            <h2 className="text-3xl font-black text-white italic tracking-tighter leading-none mt-1.5">{fmt(stats.agendas.totals.scheduled)}</h2>
+                            {renderComparisonSubdataLeft(stats.agendas.totals.scheduled, compStats?.agendas?.totals?.scheduled)}
+                        </MetricWithTooltip>
+                        
+                        <MetricWithTooltip tooltip="Cantidad total de reuniones uno a uno que fueron asistidas y completadas por el closer." className="block cursor-help border-l border-slate-800/60 pl-4">
+                            <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">ASISTENCIAS REALES</h4>
+                            <h2 className="text-3xl font-black text-emerald-400 italic tracking-tighter leading-none mt-1.5">{fmt(stats.agendas.totals.attended)}</h2>
                             {renderComparisonSubdataLeft(stats.agendas.totals.attended, compStats?.agendas?.totals?.attended)}
-                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Reuniones Uno a Uno Completadas</p>
                         </MetricWithTooltip>
                     </div>
-                    <div className="pt-6 border-t border-slate-800 space-y-3 relative z-10">
-                        <MetricWithTooltip tooltip="Porcentaje de citas agendadas que asistieron a la llamada." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
+                    <div className="pt-5 border-t border-slate-800 space-y-3 relative z-10">
+                        <MetricWithTooltip tooltip="Porcentaje de citas agendadas que asistieron a la llamada." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Show Rate (Asistencia %)</span>
                             <div className="text-right">
-                                <span className="text-sm font-black text-emerald-400 tabular-nums">{stats.percentages.show_rate.toFixed(1)}%</span>
+                                <span className="text-xs font-black text-emerald-400 tabular-nums">{stats.percentages.show_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.show_rate, compStats?.percentages?.show_rate, false, true)}
                             </div>
                         </MetricWithTooltip>
-                        <MetricWithTooltip tooltip="Porcentaje de citas agendadas que no asistieron ni cancelaron." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
+                        <MetricWithTooltip tooltip="Porcentaje de citas agendadas que no asistieron ni cancelaron." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Show Rate (Inasistencias %)</span>
                             <div className="text-right">
-                                <span className="text-sm font-black text-rose-400 tabular-nums">{stats.percentages.no_show_rate.toFixed(1)}%</span>
+                                <span className="text-xs font-black text-rose-400 tabular-nums">{stats.percentages.no_show_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.no_show_rate, compStats?.percentages?.no_show_rate, false, true)}
                             </div>
                         </MetricWithTooltip>
-                        <MetricWithTooltip tooltip="Porcentaje de citas agendadas que cancelaron la llamada." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
+                        <MetricWithTooltip tooltip="Porcentaje de citas agendadas que cancelaron la llamada." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cancel Rate (Cancelaciones %)</span>
                             <div className="text-right">
-                                <span className="text-sm font-black text-amber-400 tabular-nums">{stats.percentages.cancel_rate.toFixed(1)}%</span>
+                                <span className="text-xs font-black text-amber-400 tabular-nums">{stats.percentages.cancel_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.cancel_rate, compStats?.percentages?.cancel_rate, false, true)}
                             </div>
                         </MetricWithTooltip>
-                        <MetricWithTooltip tooltip="Porcentaje de llamadas atendidas en las que el closer logró realizar la presentación de la oferta." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
+                        <MetricWithTooltip tooltip="Porcentaje de llamadas atendidas en las que el closer logró realizar la presentación de la oferta." className="flex justify-between items-center bg-slate-950/40 px-4 py-2.5 rounded-xl border border-slate-800/80 cursor-help">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pitch Rate (Presentación)</span>
                             <div className="text-right">
-                                <span className="text-sm font-black text-fuchsia-400 tabular-nums">{stats.percentages.pitch_rate.toFixed(1)}%</span>
+                                <span className="text-xs font-black text-fuchsia-400 tabular-nums">{stats.percentages.pitch_rate.toFixed(1)}%</span>
                                 {renderComparisonSubdata(stats.percentages.pitch_rate, compStats?.percentages?.pitch_rate, false, true)}
-                            </div>
-                        </MetricWithTooltip>
-                        <MetricWithTooltip tooltip="Cantidad total de citas agendadas que no se concretaron (No Shows + Cancelaciones)." className="flex justify-between items-center bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80 cursor-help">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No Shows / Canceladas (Cant.)</span>
-                            <div className="text-right">
-                                <span className="text-sm font-black text-rose-400 tabular-nums">{fmt(totalNoShow + totalCanceled)}</span>
-                                {renderComparisonSubdata(totalNoShow + totalCanceled, (compStats?.agendas?.totals?.no_show ?? 0) + (compStats?.agendas?.totals?.canceled ?? 0))}
                             </div>
                         </MetricWithTooltip>
                     </div>
                 </div>
-                
+
+                {/* Tarjeta 3: Productividad de Reportes (Nueva tarjeta) */}
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group hover:border-violet-500/30 transition-all duration-300">
+                    <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+                        <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 bg-violet-500 group-hover:opacity-20 transition-opacity duration-300" />
+                    </div>
+                    <div className="flex justify-between items-center relative z-10">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Productividad de Reportes</span>
+                        <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-500 border border-violet-500/20">
+                            <List size={16} />
+                        </div>
+                    </div>
+                    
+                    {/* Anillos de progreso circulares */}
+                    <div className="flex justify-around items-center gap-4 bg-slate-950/50 p-4 rounded-3xl border border-slate-850 relative z-10">
+                        <div className="flex items-center gap-3">
+                            <div className="relative flex items-center justify-center">
+                                <svg width="50" height="50" className="transform -rotate-90">
+                                    <circle className="text-slate-800" strokeWidth="4" stroke="currentColor" fill="transparent" r="20" cx="25" cy="25" />
+                                    <circle className="text-emerald-500" strokeWidth="4" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={2 * Math.PI * 20 - (stats.reports_productivity.al_dia_pct / 100) * (2 * Math.PI * 20)} strokeLinecap="round" stroke="currentColor" fill="transparent" r="20" cx="25" cy="25" />
+                                </svg>
+                                <span className="absolute text-[8px] font-black text-emerald-400">{stats.reports_productivity.al_dia_pct.toFixed(0)}%</span>
+                            </div>
+                            <div>
+                                <p className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">Al día</p>
+                                <p className="text-[8px] text-slate-500 font-bold uppercase">{stats.reports_productivity.al_dia_count} closers</p>
+                            </div>
+                        </div>
+                        <div className="w-px h-8 bg-slate-850" />
+                        <div className="flex items-center gap-3">
+                            <div className="relative flex items-center justify-center">
+                                <svg width="50" height="50" className="transform -rotate-90">
+                                    <circle className="text-slate-800" strokeWidth="4" stroke="currentColor" fill="transparent" r="20" cx="25" cy="25" />
+                                    <circle className="text-rose-500" strokeWidth="4" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={2 * Math.PI * 20 - (stats.reports_productivity.vencidos_pct / 100) * (2 * Math.PI * 20)} strokeLinecap="round" stroke="currentColor" fill="transparent" r="20" cx="25" cy="25" />
+                                </svg>
+                                <span className="absolute text-[8px] font-black text-rose-400">{stats.reports_productivity.vencidos_pct.toFixed(0)}%</span>
+                            </div>
+                            <div>
+                                <p className="text-[9px] font-black text-rose-400 uppercase tracking-wider">Vencidos</p>
+                                <p className="text-[8px] text-slate-500 font-bold uppercase">{stats.reports_productivity.vencidos_count} pendientes</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Detalle por closer */}
+                    <div className="space-y-3 relative z-10 max-h-[190px] overflow-y-auto pr-1">
+                        {stats.reports_productivity.details.map((closer) => (
+                            <div key={closer.closer_id} className="flex items-center justify-between bg-slate-950/30 p-3 rounded-2xl border border-slate-800/80">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-full bg-slate-850 border border-slate-700/60 flex items-center justify-center text-xs font-black uppercase text-violet-400">
+                                        {closer.closer_name.substring(0, 2)}
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-white">{closer.closer_name}</p>
+                                        <p className="text-[8px] text-slate-500 font-bold uppercase">Último: {closer.last_report}</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className={`px-2 py-0.5 rounded-lg text-[7px] font-black uppercase ${
+                                        closer.status_type === 'al_dia' 
+                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse'
+                                    }`}>
+                                        {closer.status_type === 'al_dia' ? 'Al día' : 'Vencido'}
+                                    </span>
+                                    {closer.status_type !== 'al_dia' && (
+                                        <span className="text-[7px] text-slate-500 font-bold uppercase">
+                                            {closer.status_type === 'vencido_hoy' ? 'Sin reportar hoy' : 'Sin reportar ayer'}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800 flex justify-end relative z-10">
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className="flex items-center gap-1.5 text-violet-400 hover:text-violet-300 text-[9px] font-black uppercase tracking-widest bg-violet-500/10 hover:bg-violet-500/20 px-4 py-2 rounded-xl border border-violet-500/20 cursor-pointer transition-all"
+                        >
+                            Ver Historial de reportes
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* 2. GRÁFICO DE EMBUDO Y CONVERSIONES CRÍTICAS (EJECUTIVO) */}
@@ -887,6 +980,32 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
                             <div>
+                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest leading-none">Inasistencias (No Show Rate)</p>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Agendas → No Shows</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-2xl font-black text-white italic tabular-nums">
+                                    {stats.percentages.no_show_rate.toFixed(1)}%
+                                </span>
+                                {renderComparisonSubdata(stats.percentages.no_show_rate, compStats?.percentages?.no_show_rate, false, true)}
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
+                            <div>
+                                <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Cancelaciones (Cancel Rate)</p>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Agendas → Cancelados</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-2xl font-black text-white italic tabular-nums">
+                                    {stats.percentages.cancel_rate.toFixed(1)}%
+                                </span>
+                                {renderComparisonSubdata(stats.percentages.cancel_rate, compStats?.percentages?.cancel_rate, false, true)}
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
+                            <div>
                                 <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest leading-none">Presentación (Pitch Rate)</p>
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Asistencias → Ofertas</span>
                             </div>
@@ -897,24 +1016,6 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                 {renderComparisonSubdata(
                                     stats.agendas.totals.attended ? ((stats.general.offers_made / stats.agendas.totals.attended) * 100) : 0,
                                     compStats?.agendas?.totals?.attended ? ((compStats?.general?.offers_made / compStats?.agendas?.totals?.attended) * 100) : 0,
-                                    false,
-                                    true
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
-                            <div>
-                                <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Cierre Real sobre Asistencia</p>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mt-1">Asistencias → Ventas</span>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-2xl font-black text-white italic tabular-nums">
-                                    {stats.agendas.first_call.attended ? ((realSalesCount / stats.agendas.first_call.attended) * 100).toFixed(1) : 0}%
-                                </span>
-                                {renderComparisonSubdata(
-                                    stats.agendas.first_call.attended ? ((realSalesCount / stats.agendas.first_call.attended) * 100) : 0,
-                                    compStats?.agendas?.first_call?.attended ? ((compRealSalesCount / compStats?.agendas?.first_call?.attended) * 100) : 0,
                                     false,
                                     true
                                 )}
@@ -955,34 +1056,6 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                                     true
                                 )}
                             </div>
-                        </div>
-
-                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex flex-col justify-center space-y-2 relative group overflow-visible">
-                            <div className="flex items-center gap-1.5 relative">
-                                <StatTooltip label="Efectividad de Cobro Señas" calculation="Tasa de conversión de señas en ventas reales (PIF o Split Pay). Mide la efectividad del closer para concretar el cobro total posterior a la reserva.">
-                                    <span className="flex items-center gap-1.5">
-                                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest leading-none">Efectividad de Cobro Señas</span>
-                                        <Info size={10} className="text-emerald-400/50 cursor-help" />
-                                    </span>
-                                </StatTooltip>
-                            </div>
-                            <div className="flex justify-between items-center mt-1">
-                                <span className="text-[10px] font-bold text-slate-500">Señas → Ventas Reales</span>
-                                <div className="text-right">
-                                    <span className="text-lg font-black text-white italic tabular-nums">
-                                        {stats.sales.deposit_conversions?.rate ?? 0}%
-                                    </span>
-                                    {renderComparisonSubdata(
-                                        stats.sales.deposit_conversions?.rate ?? 0,
-                                        compStats?.sales?.deposit_conversions?.rate ?? 0,
-                                        false,
-                                        true
-                                    )}
-                                </div>
-                            </div>
-                            <p className="text-[9px] text-slate-600 font-bold uppercase tracking-wider text-right">
-                                {stats.sales.deposit_conversions?.converted ?? 0} de {stats.sales.deposit_conversions?.total ?? 0} señas convertidas
-                            </p>
                         </div>
                     </div>
                 </div>

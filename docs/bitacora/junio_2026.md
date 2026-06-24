@@ -1,5 +1,15 @@
 # Bitácora - Junio 2026
 
+- **24 de Junio de 2026**:
+  - **Mejora del Dashboard de Rendimiento de Closers**:
+    - **API Backend (`app/services/closer_service.py`) [MODIFY]**:
+      - Separación explícita de las transacciones de tipo "Upsell" y "Renovacion" en `get_comprehensive_stats`, evitando que se acumulen en los Split Pays.
+      - Implementación del cálculo dinámico de `reports_productivity` para evaluar el cumplimiento de reportes diarios de todos los closers activos (Clasificación: Al día, Sin reportar hoy, Sin reportar ayer).
+    - **Interfaz Frontend (`CloserPerformanceTab.jsx`) [REDESIGN]**:
+      - Fusión de las tarjetas superiores de Facturación y Cierre en una sola tarjeta premium de "Facturación y Flujo de Caja", detallando New Cash, Installments, Reservas, Upsells, Renovaciones, y el Ticket Promedio.
+      - Creación de la tarjeta "Productividad de Reportes" utilizando SVG Circular Progress animado y listado detallado de closers activos con badges de estado y fecha de último reporte.
+      - Actualización de la tarjeta de "Conversiones de Embudo", eliminando conversiones financieras redundantes y agregando los ratios de Inasistencias (No Show Rate) y Cancelaciones (Cancel Rate).
+
 - **23 de Junio de 2026**:
   - **Reestructuración de la Barra Inferior (Dock) y Flujo de Trabajo Secuencial para Closers**:
     - **API Backend (`app/api/closer.py`) [MODIFY]**:
