@@ -570,20 +570,32 @@ def repair_financial_agendas_db():
 
 @bp.route('/public/financial-agendas/sync-appointments', methods=['POST'])
 def sync_all_financial_agendas():
-    """Sincroniza masivamente todas las agendas financieras con Appointments."""
+    """Sincroniza masivamente las agendas financieras con Appointments, con filtro temporal por defecto."""
     try:
         from app.services.booking_service import BookingService
-        agendas = FinancialAgenda.query.all()
+        from datetime import date, timedelta
+        
+        sync_all = request.args.get('all', 'false').lower() == 'true'
+        days = request.args.get('days', 14, type=int)
+        
+        query = FinancialAgenda.query
+        if not sync_all:
+            limit_date = date.today() - timedelta(days=days)
+            query = query.filter(FinancialAgenda.date >= limit_date)
+            
+        agendas = query.all()
         synced_count = 0
         for agenda in agendas:
             appt = BookingService.sync_financial_agenda_to_appointment(agenda)
             if appt:
                 synced_count += 1
+                
         return jsonify({
             "status": "success",
-            "message": f"Sincronización masiva completada. {synced_count} agendas sincronizadas con Appointments.",
-            "total_agendas": len(agendas),
-            "synced": synced_count
+            "message": f"Sincronización completada. {synced_count} agendas procesadas.",
+            "total_processed": len(agendas),
+            "synced": synced_count,
+            "filtered_by_days": None if sync_all else days
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

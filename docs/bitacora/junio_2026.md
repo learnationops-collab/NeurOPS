@@ -1462,8 +1462,9 @@
       - Integración del panel lateral derecho con el visor compacto de la ficha de calificación del lead.
     - **Corrección de Fechas en Tablero de Agendas (`FinancialAgendasPage.jsx`) [MODIFY]**:
       - Se implementó `toLocalDateString` para resolver el bug donde el filtro de "Hoy" y el de inicio de mes usaban `toISOString()` (que provocaba el desfase de zona horaria, mostrando agendas de mañana en lugar de las de hoy).
-    - **Resolución de Closers y Sincronización de Citas en el Deck (`booking_service.py`) [MODIFY]**:
+    - **Resolución de Closers y Sincronización de Citas en el Deck (`booking_service.py`, `financial_agendas.py`) [MODIFY]**:
       - Corrección de la lógica de resolución en [resolve_user_by_name](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py#L372) para remover espacios adicionales de los nombres, permitiendo vincular citas de Google Sheets asignadas a "Jean Carlo Pérez" al usuario "Jean Carlo" (ID 4) del CRM.
+      - Optimización de [sync_all_financial_agendas](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py#L571) para permitir una sincronización selectiva temporal rápida (últimos 14 días por defecto) al procesar peticiones HTTP en producción, previniendo Gateway Timeouts y permitiendo resincronizar toda la historia únicamente al proveer el parámetro `all=true`.
       - Ejecución de la resincronización selectiva de los últimos 7 días de agendas para resolver retroactivamente el `closer_id` de las citas activas. Esto corrige el problema de la cola vacía en `/closer/deck?step=agendas`.
 
 
