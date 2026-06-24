@@ -1446,3 +1446,18 @@
       - Se eliminó la propiedad no soportada `height="100%"` de la instancia del componente `<FunnelChart />`.
       - El gráfico de embudo en la vista general del Dashboard se mantuvo intacto sin verse afectado.
 
+- **23 de Junio de 2026**:
+  - **Reestructuración de la Barra Inferior (Dock) y Flujo de Trabajo Secuencial para Closers**:
+    - **API Backend (`app/api/closer.py`) [MODIFY]**:
+      - Modificación del endpoint `/api/closer/deck` para admitir el parámetro `step`. Si es `'agendas'`, devuelve las citas de hoy del closer (permitiendo que sigan visibles para ajustes dinámicos durante el día).
+      - Incorporación del endpoint `POST /api/closer/deck/bulk-update` para actualizar estados de citas en lote usando la lógica de negocio de `CloserService.process_agenda`.
+    - **Navegación Frontend (`useDockNavigation.js`) [MODIFY]**:
+      - Reconfiguración del Dock de closers para guiar en 4 pasos (1. Agendas del Día, 2. Declarar Venta, 3. Reporte Diario, 4. Dashboard), conservando el acceso opcional a "Sin Anuncio".
+    - **Enrutamiento Frontend (`App.jsx`) [MODIFY]**:
+      - Vinculación de la ruta `/closer/deck` a la nueva interfaz `CloserWorkflowPage` en lugar de la vista compartida.
+    - **Interfaz Frontend [REDESIGN] (`CloserWorkflowPage.jsx` [NEW])**:
+      - Creación del nuevo espacio de trabajo interactivo del Closer bajo la estética Dark Glassmorphism.
+      - Implementación de la lista de agendas del día, selección múltiple, buscador y botones de acción rápidos de un solo clic para registrar asistencia (Asistió, No Show, Canceló) o abrir selector local de reagendas/segundas llamadas.
+      - Integración del panel lateral derecho con el visor compacto de la ficha de calificación del lead.
+
+

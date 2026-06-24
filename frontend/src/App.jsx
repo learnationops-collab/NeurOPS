@@ -25,6 +25,7 @@ import SetterStatisticsPage from './pages/setter/dashboard/StatisticsPage';
 import SetterAgendasPage from './pages/setter/agendas/SetterAgendasPage';
 import LeadsManagementPage from './pages/shared/LeadsManagementPage';
 import SetterWorkflowPage from './pages/setter/SetterWorkflowPage';
+import CloserWorkflowPage from './pages/closer/CloserWorkflowPage';
 import OperationsPage from './pages/admin/database/OperationsPage';
 import OperationsDashboard from './pages/operations/dashboard/OperationsDashboard';
 import OperationsSettingsPage from './pages/operations/settings/OperationsSettingsPage';
@@ -231,7 +232,7 @@ function App() {
               element={
                 <ProtectedRoute roles={['closer']}>
                   <MainLayout>
-                    <LeadsManagementPage />
+                    <CloserWorkflowPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

@@ -43,10 +43,10 @@ const useDockNavigation = () => {
 
         if (isCloser) {
             return [
-                { id: 'stats', icon: BarChart3, label: 'Dashboard', path: '/closer/stats' },
-                { id: 'deck', icon: Layers, label: 'Gestión de Leads', path: '/closer/deck' },
-                { id: 'new-sale', icon: DollarSign, label: 'Declarar Venta', path: '/closer/sales/new' },
-                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/closer/report' },
+                { id: 'step-1', icon: Layers, label: '1. Agendas del Día', path: '/closer/deck?step=agendas' },
+                { id: 'step-2', icon: DollarSign, label: '2. Declarar Venta', path: '/closer/sales/new' },
+                { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/closer/report' },
+                { id: 'step-4', icon: BarChart3, label: '4. Dashboard', path: '/closer/stats' },
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' }
             ];
         } else if (isSetter) {

@@ -1207,6 +1207,7 @@ def get_closer_deck():
         return jsonify({"message": "Forbidden"}), 403
         
     date_range = request.args.get('date_range', 'all')
+    step = request.args.get('step')
     start_date = None
     today = date.today()
     if date_range == 'today':
@@ -1215,13 +1216,25 @@ def get_closer_deck():
         start_date = datetime.combine(today - timedelta(days=7), datetime.min.time())
     elif date_range == 'month':
         start_date = datetime.combine(today - timedelta(days=30), datetime.min.time())
+    
     from sqlalchemy import or_
-    query = Appointment.query.filter(
-        or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
-        Appointment.closer_processed == False
-    )
-    if start_date:
-        query = query.filter(Appointment.start_time >= start_date)
+    
+    if step == 'agendas':
+        # Citas programadas para hoy
+        today_start = datetime.combine(today, datetime.min.time())
+        today_end = datetime.combine(today, datetime.max.time())
+        query = Appointment.query.filter(
+            Appointment.start_time >= today_start,
+            Appointment.start_time <= today_end
+        )
+    else:
+        # Cola por defecto de leads pendientes
+        query = Appointment.query.filter(
+            or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
+            Appointment.closer_processed == False
+        )
+        if start_date:
+            query = query.filter(Appointment.start_time >= start_date)
 
     if current_user.role != 'admin':
         query = query.filter_by(closer_id=current_user.id)
@@ -1243,7 +1256,7 @@ def process_closer_card(appt_id):
         
     data = request.get_json() or {}
     
-    # El closer puede editar/verificar la palabra clave y el resultado de la agenda (Asistió, No Show, etc)
+    # Actualizar campos de la agenda
     if 'keyword' in data:
         appt.keyword = data['keyword']
     if 'linked_call' in data:
@@ -1267,6 +1280,43 @@ def process_closer_card(appt_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al guardar: {str(e)}"}), 500
+
+
+@bp.route('/deck/bulk-update', methods=['POST'])
+@login_required
+def bulk_update_closer_cards():
+    if current_user.role not in ['closer', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    data = request.get_json() or {}
+    appt_ids = data.get('appt_ids', [])
+    result = data.get('result')
+    
+    if not appt_ids:
+        return jsonify({"message": "No se proporcionaron IDs de citas"}), 400
+        
+    appointments = Appointment.query.filter(Appointment.id.in_(appt_ids)).all()
+    
+    from app.services.closer_service import CloserService
+    
+    for appt in appointments:
+        if current_user.role != 'admin' and appt.closer_id != current_user.id:
+            continue
+            
+        if result:
+            # Procesar individualmente para ejecutar logica de negocio
+            try:
+                CloserService.process_agenda(current_user.id, appt.id, {"status": result})
+            except Exception as e:
+                print(f"Error al procesar en lote para {appt.id}: {e}")
+                
+    try:
+        db.session.commit()
+        return jsonify({"message": f"Se actualizaron {len(appointments)} citas con éxito"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error al actualizar en masa: {str(e)}"}), 500
+
 
 
 @bp.route('/deck/search', methods=['GET'])
