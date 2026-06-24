@@ -1166,7 +1166,7 @@ class CloserService:
     @staticmethod
     def get_comprehensive_stats(closer_id=None, start_date=None, end_date=None, agg_type='sum'):
         """Retorna estadísticas agregadas de closers con soporte de suma/promedio."""
-        from app.models import CloserDailyReport, Appointment
+        from app.models import CloserDailyReport, Appointment, User
         from sqlalchemy import func, or_
         from datetime import datetime, timedelta
 
@@ -1612,7 +1612,6 @@ class CloserService:
         # Obtener cumplimiento de reportes diarios
         import pytz
         from datetime import datetime, date, timedelta
-        from app.models import User, CloserDailyReport
         
         try:
             tz = pytz.timezone('America/La_Paz')

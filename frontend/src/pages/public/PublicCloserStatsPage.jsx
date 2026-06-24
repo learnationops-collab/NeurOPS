@@ -37,7 +37,7 @@ const PublicCloserStatsPage = () => {
     const [closers, setClosers] = useState([]);
 
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_closer_stats', {
-        closer_id: user.role === 'closer' && user.id ? user.id.toString() : '3',
+        closer_id: user.role === 'closer' && user.id ? user.id.toString() : '',
         start_date: getFirstDayOfCurrentMonth(),
         end_date: getTodayDate(),
         agg_type: 'sum',
@@ -106,12 +106,19 @@ const PublicCloserStatsPage = () => {
         }
     }, [filters.start_date, filters.end_date]);
 
-    // Fetch closers
+    // Fetch closers y validar que el closer_id guardado sea válido
     useEffect(() => {
         const fetchClosers = async () => {
             try {
                 const res = await api.get('/public/active-closers');
                 setClosers(res.data);
+                // Si el closer_id guardado no existe entre los activos, limpiar filtro
+                if (filters.closer_id && user.role !== 'closer') {
+                    const validIds = res.data.map(c => c.id.toString());
+                    if (!validIds.includes(filters.closer_id.toString())) {
+                        setFilters({ closer_id: '' });
+                    }
+                }
             } catch (e) { console.error(e); }
         };
         fetchClosers();
