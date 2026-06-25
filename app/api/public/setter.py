@@ -613,41 +613,186 @@ def _prepare_setter_report_data(stat):
     p_op_sub = stat.pain_opening_submitted or 0
     p_op_res = stat.pain_opening_responded or 0
 
+    def generate_sparkline_points(values, width=75, height=25):
+        if not values:
+            return ""
+        vals = [float(v) for v in values]
+        min_val = min(vals)
+        max_val = max(vals)
+        range_val = max_val - min_val
+        
+        points = []
+        n = len(vals)
+        for i, val in enumerate(vals):
+            x = (i / (n - 1)) * width if n > 1 else 0
+            if range_val > 0:
+                y = height - ((val - min_val) / range_val) * height
+            else:
+                y = height / 2
+            points.append(f"{x:.1f},{y:.1f}")
+        return " ".join(points)
+
     from app.models import SetterDailyStats
-    last_reports = SetterDailyStats.query.filter(
+    from datetime import timedelta
+
+    # Calcular las tasas actuales
+    openings_actual = (stat.qualification_opening_submitted or 0) + (stat.pain_opening_submitted or 0)
+    if openings_actual == 0:
+        openings_actual = stat.opening_submitted or 0
+    openings_tasa = safe_percent(openings_actual, inbox_entrantes)
+    qual_tasa = safe_percent(qual, inbox_entrantes)
+    conv_tasa = safe_percent(agenda, qual)
+
+    last_10_reports = SetterDailyStats.query.filter(
         SetterDailyStats.setter_id == stat.setter_id,
         SetterDailyStats.date <= stat.date
-    ).order_by(SetterDailyStats.date.desc()).limit(7).all()
+    ).order_by(SetterDailyStats.date.desc()).limit(10).all()
     
-    avg_metrics = {
-        "entrantes": 0,
-        "openings": 0,
-        "agendas": 0,
-        "conversion": 0
-    }
-    
-    if last_reports:
-        r_count = len(last_reports)
-        t_entrantes = sum(r.inbox_entrantes or 0 for r in last_reports)
-        t_openings = sum(
-            ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)) 
-            if ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)) > 0 
-            else (r.opening_submitted or 0) 
-            for r in last_reports
-        )
-        t_agendas = sum(r.funnel_agenda or 0 for r in last_reports)
-        t_net_leads = sum(r.inbox_leads or 0 for r in last_reports)
+    last_7_reports = last_10_reports[:7] if len(last_10_reports) >= 7 else last_10_reports
+
+    r10_count = len(last_10_reports)
+    if r10_count > 0:
+        avg_entrantes_10 = round(sum(r.inbox_entrantes or 0 for r in last_10_reports) / r10_count, 1)
         
-        avg_metrics = {
-            "entrantes": round(t_entrantes / r_count, 1),
-            "openings": round(t_openings / r_count, 1),
-            "agendas": round(t_agendas / r_count, 1),
-            "conversion": safe_percent(t_agendas, t_net_leads)
+        t_entrantes_10 = sum(r.inbox_entrantes or 0 for r in last_10_reports)
+        t_openings_10 = sum(
+            ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0))
+            if ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)) > 0
+            else (r.opening_submitted or 0)
+            for r in last_10_reports
+        )
+        avg_apertura_10 = safe_percent(t_openings_10, t_entrantes_10)
+        
+        t_qual_10 = sum(r.funnel_qualification or 0 for r in last_10_reports)
+        avg_cual_10 = safe_percent(t_qual_10, t_entrantes_10)
+        
+        t_agendas_10 = sum(r.funnel_agenda or 0 for r in last_10_reports)
+        avg_conv_10 = safe_percent(t_agendas_10, t_qual_10)
+    else:
+        avg_entrantes_10 = 0
+        avg_apertura_10 = 0
+        avg_cual_10 = 0
+        avg_conv_10 = 0
+
+    r7_count = len(last_7_reports)
+    if r7_count > 0:
+        avg_agendas_7 = round(sum(r.funnel_agenda or 0 for r in last_7_reports) / r7_count, 1)
+    else:
+        avg_agendas_7 = 0
+
+    target_date_prev = stat.date - timedelta(days=7)
+    stat_prev = SetterDailyStats.query.filter_by(
+        setter_id=stat.setter_id,
+        date=target_date_prev
+    ).first()
+
+    comp_data = {}
+    if stat_prev:
+        entrantes_prev = stat_prev.inbox_entrantes or 0
+        diff_entrantes = inbox_entrantes - entrantes_prev
+        pct_entrantes = round((diff_entrantes / entrantes_prev) * 100) if entrantes_prev > 0 else 0
+
+        openings_prev_val = (stat_prev.qualification_opening_submitted or 0) + (stat_prev.pain_opening_submitted or 0)
+        if openings_prev_val == 0:
+            openings_prev_val = stat_prev.opening_submitted or 0
+        tasa_apertura_prev = safe_percent(openings_prev_val, stat_prev.inbox_entrantes or 0)
+        diff_tasa_apertura = openings_tasa - tasa_apertura_prev
+        pct_tasa_apertura = round((diff_tasa_apertura / tasa_apertura_prev) * 100) if tasa_apertura_prev > 0 else 0
+
+        tasa_cual_prev = safe_percent(stat_prev.funnel_qualification or 0, stat_prev.inbox_entrantes or 0)
+        diff_tasa_cual = qual_tasa - tasa_cual_prev
+        pct_tasa_cual = round((diff_tasa_cual / tasa_cual_prev) * 100) if tasa_cual_prev > 0 else 0
+
+        tasa_conv_prev = safe_percent(stat_prev.funnel_agenda or 0, stat_prev.funnel_qualification or 0)
+        diff_tasa_conv = conv_tasa - tasa_conv_prev
+        pct_tasa_conv = round((diff_tasa_conv / tasa_conv_prev) * 100) if tasa_conv_prev > 0 else 0
+
+        agendas_prev = stat_prev.funnel_agenda or 0
+        diff_agendas = agenda - agendas_prev
+        pct_agendas = round((diff_agendas / agendas_prev) * 100) if agendas_prev > 0 else 0
+
+        comp_data = {
+            "entrantes": {"prev": entrantes_prev, "diff": diff_entrantes, "pct": pct_entrantes},
+            "apertura": {"prev": tasa_apertura_prev, "diff": diff_tasa_apertura, "pct": pct_tasa_apertura},
+            "cualificacion": {"prev": tasa_cual_prev, "diff": diff_tasa_cual, "pct": pct_tasa_cual},
+            "conversion_cual": {"prev": tasa_conv_prev, "diff": diff_tasa_conv, "pct": pct_tasa_conv},
+            "agendas": {"prev": agendas_prev, "diff": diff_agendas, "pct": pct_agendas}
         }
+    else:
+        comp_data = {
+            "entrantes": None,
+            "apertura": None,
+            "cualificacion": None,
+            "conversion_cual": None,
+            "agendas": None
+        }
+
+    kpi_metrics = {
+        "entrantes": {
+            "val": inbox_entrantes,
+            "avg_10": avg_entrantes_10,
+            "comp": comp_data["entrantes"]
+        },
+        "apertura": {
+            "val": openings_tasa,
+            "avg_10": avg_apertura_10,
+            "comp": comp_data["apertura"]
+        },
+        "cualificacion": {
+            "val": qual_tasa,
+            "avg_10": avg_cual_10,
+            "comp": comp_data["cualificacion"]
+        },
+        "conversion_cual": {
+            "val": conv_tasa,
+            "avg_10": avg_conv_10,
+            "comp": comp_data["conversion_cual"]
+        },
+        "agendas": {
+            "val": agenda,
+            "avg_7": avg_agendas_7,
+            "comp": comp_data["agendas"]
+        }
+    }
+
+    # Invertir para sparkline (cronológico ascendente)
+    chronological_reports = list(reversed(last_10_reports))
+    
+    entrantes_vals = []
+    apertura_vals = []
+    cual_vals = []
+    conv_vals = []
+    agendas_vals = []
+    
+    for r in chronological_reports:
+        e_val = r.inbox_entrantes or 0
+        entrantes_vals.append(e_val)
+        
+        op_val = (r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)
+        if op_val == 0:
+            op_val = r.opening_submitted or 0
+        apertura_vals.append(safe_percent(op_val, e_val))
+        
+        q_val = r.funnel_qualification or 0
+        cual_vals.append(safe_percent(q_val, e_val))
+        
+        a_val = r.funnel_agenda or 0
+        conv_vals.append(safe_percent(a_val, q_val))
+        agendas_vals.append(a_val)
+        
+    sparklines = {
+        "entrantes": generate_sparkline_points(entrantes_vals),
+        "apertura": generate_sparkline_points(apertura_vals),
+        "cualificacion": generate_sparkline_points(cual_vals),
+        "conversion_cual": generate_sparkline_points(conv_vals),
+        "agendas": generate_sparkline_points(agendas_vals[-7:])
+    }
 
     return {
         "setter_name": setter_name,
         "date_str": stat.date.strftime('%d/%m/%Y'),
+        "kpi_metrics": kpi_metrics,
+        "sparklines": sparklines,
         
         "inbox": {
             "entrantes": inbox_entrantes,
