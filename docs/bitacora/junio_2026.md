@@ -6,6 +6,7 @@
       - Se implementó en `_prepare_setter_report_data` el cálculo y recopilación de métricas históricas de los últimos 10 reportes para Entrantes, Tasa de Apertura, Tasa de Cualificación y Conversión por Cualificado, y de los últimos 7 reportes para Agendas.
       - Se añadió la lógica de comparación con el mismo día de la semana anterior (7 días antes), calculando diferencias absolutas, diferencias en puntos porcentuales (pp) y variaciones relativas.
       - Se generaron las coordenadas SVG para dibujar sparklines dinámicos de los últimos 10 reportes para cada KPI.
+      - **Corrección de NameError [FIX]**: Se reintrodujo la variable `avg_metrics` en el diccionario de retorno para mantener compatibilidad y evitar errores en la carga de datos.
     - **Plantilla HTML (`app/templates/reports/setter_report.html`) [MODIFY]**:
       - Se rediseñó la sección de estadísticas principales para mostrar un panel horizontal de 5 KPIs (Entrantes, Tasa de Apertura, Tasa de Cualificación, Conversión por Cualificado y Agendas) con estética glassmorphism premium.
       - Se incorporaron visualizaciones de tendencias (flechas de variación), valores de la semana anterior y gráficos sparklines dinámicos.

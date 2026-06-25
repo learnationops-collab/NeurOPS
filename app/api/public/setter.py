@@ -788,6 +788,13 @@ def _prepare_setter_report_data(stat):
         "agendas": generate_sparkline_points(agendas_vals[-7:])
     }
 
+    avg_metrics = {
+        "entrantes": avg_entrantes_10,
+        "openings": avg_apertura_10,
+        "agendas": avg_agendas_7,
+        "conversion": avg_conv_10
+    }
+
     return {
         "setter_name": setter_name,
         "date_str": stat.date.strftime('%d/%m/%Y'),
