@@ -27,6 +27,7 @@ const CloserWorkflowPage = () => {
     // Selección masiva y búsqueda local
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState('');
+    const [decisionMakerPrompt, setDecisionMakerPrompt] = useState({ apptId: null });
     
     // Cita seleccionada para el visor de la derecha
     const [selectedLead, setSelectedLead] = useState(null);
@@ -68,24 +69,47 @@ const CloserWorkflowPage = () => {
         );
     }, [agendas, searchQuery]);
 
-    // Procesar acción individual (Asistió, No Show, Canceló)
+    // Procesar acción rápida (Asistió, No Show, Canceló)
     const handleQuickAction = async (leadId, nextStatus, e) => {
         if (e) e.stopPropagation();
+        
+        if (nextStatus === 'Completada') {
+            setDecisionMakerPrompt({ apptId: leadId });
+            return;
+        }
+        
+        await executeQuickAction(leadId, nextStatus, null);
+    };
+
+    const executeQuickAction = async (leadId, nextStatus, withDecisionMaker) => {
         setProcessingId(leadId);
         try {
-            await api.post(`/closer/appointments/${leadId}/process`, { status: nextStatus });
+            const payload = { status: nextStatus };
+            if (withDecisionMaker !== null && withDecisionMaker !== undefined) {
+                payload.with_decision_maker = withDecisionMaker;
+            }
+            await api.post(`/closer/appointments/${leadId}/process`, payload);
             toast.success("Agenda actualizada correctamente");
             
             // Actualizar lista local
-            setAgendas(prev => prev.map(a => a.id === leadId ? { ...a, result: nextStatus === 'Completada' ? 'Terminada' : nextStatus } : a));
+            setAgendas(prev => prev.map(a => a.id === leadId ? { 
+                ...a, 
+                result: nextStatus === 'Completada' ? 'Terminada' : nextStatus,
+                with_decision_maker: withDecisionMaker
+            } : a));
             if (selectedLead?.id === leadId) {
-                setSelectedLead(prev => ({ ...prev, result: nextStatus === 'Completada' ? 'Terminada' : nextStatus }));
+                setSelectedLead(prev => ({ 
+                    ...prev, 
+                    result: nextStatus === 'Completada' ? 'Terminada' : nextStatus,
+                    with_decision_maker: withDecisionMaker
+                }));
             }
         } catch (err) {
             console.error("Error al procesar acción rápida:", err);
             toast.error("Error al actualizar el estado");
         } finally {
             setProcessingId(null);
+            setDecisionMakerPrompt({ apptId: null });
         }
     };
 
@@ -473,6 +497,48 @@ const CloserWorkflowPage = () => {
                 </div>
 
             </div>
+
+            {/* Modal de decisión: Con / Sin Decisor */}
+            <AnimatePresence>
+                {decisionMakerPrompt.apptId && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-200"
+                        >
+                            <div className="mx-auto w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                <Users size={22} />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-lg font-black text-white uppercase italic tracking-tight">¿Asistió con Decisor?</h3>
+                                <p className="text-xs text-slate-400 font-bold uppercase">Indica si el tomador de decisiones estuvo presente en la llamada.</p>
+                            </div>
+                            <div className="flex flex-col gap-2.5 pt-2">
+                                <button
+                                    onClick={() => executeQuickAction(decisionMakerPrompt.apptId, 'Completada', true)}
+                                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer"
+                                >
+                                    Sí, con Decisor
+                                </button>
+                                <button
+                                    onClick={() => executeQuickAction(decisionMakerPrompt.apptId, 'Completada', false)}
+                                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black text-xs uppercase tracking-widest rounded-xl border border-slate-700 transition-all cursor-pointer"
+                                >
+                                    No, sin Decisor
+                                </button>
+                                <button
+                                    onClick={() => setDecisionMakerPrompt({ apptId: null })}
+                                    className="w-full py-2.5 text-slate-500 hover:text-slate-400 font-black text-[10px] uppercase tracking-widest transition-all cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

@@ -30,6 +30,7 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
     const [status, setStatus] = useState('');
     const [rescheduleDate, setRescheduleDate] = useState('');
     const [slots, setSlots] = useState([]);
+    const [withDecisionMaker, setWithDecisionMaker] = useState(null);
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
@@ -114,6 +115,10 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
             setError("Debes seleccionar una fecha para la nueva llamada");
             return;
         }
+        if ((status === 'Terminada' || status === 'Primera Agenda') && withDecisionMaker === null) {
+            setError("Debes indicar si la llamada fue con o sin decisor");
+            return;
+        }
 
         setSubmitting(true);
         setError(null);
@@ -121,7 +126,8 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
             await api.post(`/closer/appointments/${appointment.id}/process`, {
                 status,
                 reschedule_date: rescheduleDate,
-                last_stage: selectedStage
+                last_stage: selectedStage,
+                with_decision_maker: withDecisionMaker
             });
             onSuccess();
             onClose();
@@ -283,6 +289,37 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
                                                 </AnimatePresence>
                                             </div>
                                         </div>
+
+                                        {/* Selector de Decisor */}
+                                        {(status === 'Terminada' || status === 'Primera Agenda') && (
+                                            <div className="space-y-2 p-4 bg-[#181922] border border-slate-800 rounded-3xl animate-in slide-in-from-top-4 duration-300 text-left">
+                                                <label className="text-[9px] font-black text-slate-400 tracking-widest block uppercase">¿Asistió con Decisor? *</label>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setWithDecisionMaker(true)}
+                                                        className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-widest rounded-xl border transition-all cursor-pointer ${
+                                                            withDecisionMaker === true 
+                                                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20' 
+                                                                : 'bg-main border-base text-muted hover:text-base hover:bg-surface-hover'
+                                                        }`}
+                                                    >
+                                                        Con Decisor
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setWithDecisionMaker(false)}
+                                                        className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-widest rounded-xl border transition-all cursor-pointer ${
+                                                            withDecisionMaker === false 
+                                                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20' 
+                                                                : 'bg-main border-base text-muted hover:text-base hover:bg-surface-hover'
+                                                        }`}
+                                                    >
+                                                        Sin Decisor
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Reschedule Calendar */}
                                         {showReschedule && (

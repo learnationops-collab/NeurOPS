@@ -773,6 +773,12 @@ class CloserService:
         # Actualizar etapa del lead si se proporciona
         if last_stage:
             appt.last_stage = last_stage
+
+        if 'with_decision_maker' in data:
+            if data['with_decision_maker'] is None or data['with_decision_maker'] == '':
+                appt.with_decision_maker = None
+            else:
+                appt.with_decision_maker = data['with_decision_maker'] == True or data['with_decision_maker'] in ('true', 'True', '1', 1)
             
         # Logic: 
         # - "Completada" -> status 'completed'

@@ -605,3 +605,236 @@ def preview_closer_report_discord(report_id):
     return render_template_string(template_content, **img_data)
 
 
+@bp.route('/public/closer-report/prefill', methods=['GET'])
+def prefill_closer_report():
+    """Calcula y retorna los datos automáticos para pre-rellenar el reporte diario de un closer."""
+    closer_id_str = request.args.get('closer_id')
+    date_str = request.args.get('date')
+
+    if not closer_id_str or not date_str:
+        return jsonify({"message": "closer_id y date son obligatorios"}), 400
+
+    try:
+        closer_id = int(closer_id_str)
+        report_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({"message": "Parámetros inválidos"}), 400
+
+    user = User.query.get(closer_id)
+    if not user:
+        return jsonify({"message": "Closer no encontrado"}), 404
+
+    from app.models.booking import Appointment
+    from app.models.financial import FinancialSale
+    from datetime import datetime as dt_class, time, timedelta
+    from sqlalchemy import func
+
+    start_dt = dt_class.combine(report_date, time.min)
+    end_dt = dt_class.combine(report_date, time.max)
+
+    # 1. Calcular métricas de agendas (citas del closer para este día)
+    day_appointments = Appointment.query.filter(
+        Appointment.closer_id == closer_id,
+        Appointment.start_time >= start_dt,
+        Appointment.start_time <= end_dt
+    ).all()
+
+    first_call_scheduled = 0
+    first_call_attended = 0
+    first_call_no_show = 0
+    first_call_rescheduled = 0
+    first_call_canceled = 0
+
+    second_call_scheduled = 0
+    second_call_attended = 0
+    second_call_no_show = 0
+    second_call_rescheduled = 0
+    second_call_canceled = 0
+
+    decision_makers = 0
+    rescheduled_calls = 0
+
+    for appt in day_appointments:
+        # Clasificar como Primera vs Segunda llamada basándonos en si tiene citas previas
+        prev_count = Appointment.query.filter(
+            Appointment.client_id == appt.client_id,
+            Appointment.id != appt.id,
+            Appointment.start_time < appt.start_time
+        ).count()
+        is_first = (prev_count == 0)
+
+        if appt.with_decision_maker == True:
+            decision_makers += 1
+
+        res = appt.result
+        if is_first:
+            first_call_scheduled += 1
+            if res in ('Terminada', 'Completada', 'Cerrada'):
+                first_call_attended += 1
+            elif res == 'No Show':
+                first_call_no_show += 1
+            elif res == 'Reprogramada':
+                first_call_rescheduled += 1
+                rescheduled_calls += 1
+            elif res == 'Cancelada':
+                first_call_canceled += 1
+        else:
+            second_call_scheduled += 1
+            if res in ('Terminada', 'Completada', 'Cerrada'):
+                second_call_attended += 1
+            elif res == 'No Show':
+                second_call_no_show += 1
+            elif res == 'Reprogramada':
+                second_call_rescheduled += 1
+                rescheduled_calls += 1
+            elif res == 'Cancelada':
+                second_call_canceled += 1
+
+    # 2. Calcular métricas de ventas
+    pif_count = 0
+    pif_cash_collected = 0.0
+    pif_in_call_count = 0
+    pif_in_call_cash = 0.0
+
+    split_count = 0
+    split_cash_collected = 0.0
+    split_in_call_count = 0
+    split_in_call_cash = 0.0
+
+    deposit_count = 0
+    deposit_cash_collected = 0.0
+    deposit_in_call_count = 0
+    deposit_in_call_cash = 0.0
+
+    installment_count = 0
+    installment_cash_collected = 0.0
+    installment_in_call_count = 0
+    installment_in_call_cash = 0.0
+
+    sales_filters = [
+        FinancialSale.date >= start_dt,
+        FinancialSale.date <= end_dt
+    ]
+    if user.email:
+        sales_filters.append(func.lower(FinancialSale.email_vendedor) == user.email.strip().lower())
+
+    day_sales = FinancialSale.query.filter(*sales_filters).all()
+
+    for sale in day_sales:
+        tipo_lower = (sale.tipo_pago or '').lower()
+        monto_val = float(sale.monto or 0.0)
+        in_call = sale.sold_in_call == True
+
+        if 'upsell' in tipo_lower:
+            if 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower:
+                pif_count += 1
+                pif_cash_collected += monto_val
+                if in_call:
+                    pif_in_call_count += 1
+                    pif_in_call_cash += monto_val
+            else:
+                split_count += 1
+                split_cash_collected += monto_val
+                if in_call:
+                    split_in_call_count += 1
+                    split_in_call_cash += monto_val
+        elif 'renovacion' in tipo_lower or 'renovación' in tipo_lower:
+            if 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower:
+                pif_count += 1
+                pif_cash_collected += monto_val
+                if in_call:
+                    pif_in_call_count += 1
+                    pif_in_call_cash += monto_val
+            else:
+                split_count += 1
+                split_cash_collected += monto_val
+                if in_call:
+                    split_in_call_count += 1
+                    split_in_call_cash += monto_val
+        elif 'completo' in tipo_lower or 'unico' in tipo_lower or 'pif' in tipo_lower:
+            pif_count += 1
+            pif_cash_collected += monto_val
+            if in_call:
+                pif_in_call_count += 1
+                pif_in_call_cash += monto_val
+        elif 'seña' in tipo_lower or 'deposito' in tipo_lower or 'deposit' in tipo_lower:
+            deposit_count += 1
+            deposit_cash_collected += monto_val
+            if in_call:
+                deposit_in_call_count += 1
+                deposit_in_call_cash += monto_val
+        elif 'primer pago' in tipo_lower or 'split' in tipo_lower:
+            split_count += 1
+            split_cash_collected += monto_val
+            if in_call:
+                split_in_call_count += 1
+                split_in_call_cash += monto_val
+        elif 'cuota' in tipo_lower or 'installment' in tipo_lower or 'pago 2' in tipo_lower or 'pago 3' in tipo_lower or 'pago 4' in tipo_lower:
+            installment_count += 1
+            installment_cash_collected += monto_val
+            if in_call:
+                installment_in_call_count += 1
+                installment_in_call_cash += monto_val
+        else:
+            is_subsequent = False
+            import re
+            match = re.search(r'pago\s*(\d+)', tipo_lower)
+            if match:
+                num = int(match.group(1))
+                if num > 1:
+                    is_subsequent = True
+            
+            if is_subsequent:
+                installment_count += 1
+                installment_cash_collected += monto_val
+                if in_call:
+                    installment_in_call_count += 1
+                    installment_in_call_cash += monto_val
+            else:
+                split_count += 1
+                split_cash_collected += monto_val
+                if in_call:
+                    split_in_call_count += 1
+                    split_in_call_cash += monto_val
+
+    return jsonify({
+        "slots": 0,
+        "offers_made": 0,
+        "decision_makers": decision_makers,
+        "rescheduled_calls": rescheduled_calls,
+        
+        "first_call_scheduled": first_call_scheduled,
+        "first_call_attended": first_call_attended,
+        "first_call_no_show": first_call_no_show,
+        "first_call_rescheduled": first_call_rescheduled,
+        "first_call_canceled": first_call_canceled,
+        
+        "second_call_scheduled": second_call_scheduled,
+        "second_call_attended": second_call_attended,
+        "second_call_no_show": second_call_no_show,
+        "second_call_rescheduled": second_call_rescheduled,
+        "second_call_canceled": second_call_canceled,
+        
+        "pif_count": pif_count,
+        "pif_cash_collected": pif_cash_collected,
+        "pif_in_call_count": pif_in_call_count,
+        "pif_in_call_cash": pif_in_call_cash,
+        
+        "split_count": split_count,
+        "split_cash_collected": split_cash_collected,
+        "split_in_call_count": split_in_call_count,
+        "split_in_call_cash": split_in_call_cash,
+        
+        "deposit_count": deposit_count,
+        "deposit_cash_collected": deposit_cash_collected,
+        "deposit_in_call_count": deposit_in_call_count,
+        "deposit_in_call_cash": deposit_in_call_cash,
+        
+        "installment_count": installment_count,
+        "installment_cash_collected": installment_cash_collected,
+        "installment_in_call_count": installment_in_call_count,
+        "installment_in_call_cash": installment_in_call_cash
+    }), 200
+
+
+

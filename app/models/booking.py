@@ -13,6 +13,7 @@ class Appointment(db.Model):
     google_event_id = db.Column(db.String(255))
     last_stage = db.Column(db.String(100))
     result = db.Column(db.String(100))
+    with_decision_maker = db.Column(db.Boolean, nullable=True)
     linked_call = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

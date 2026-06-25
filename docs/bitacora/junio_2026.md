@@ -1,5 +1,22 @@
 # Bitácora - Junio 2026
 
+- **25 de Junio de 2026**:
+  - **Automatización de Reporte Diario de Closers y Registro de Decisiones**:
+    - **Base de Datos (SQLite/PostgreSQL) [MODIFY]**:
+      - Se agregaron las columnas `with_decision_maker` (Boolean, nullable=True) a la tabla `appointments` y `sold_in_call` (Boolean, nullable=True) a la tabla `financial_sales`.
+      - Se crearon y aplicaron las migraciones correspondientes en la base de datos local SQLite.
+    - **API Backend (`app/services/sheets_service.py` y `app/services/closer_service.py`) [MODIFY]**:
+      - Actualización de `SheetsService.post_to_sheets` y `_rebuild_sales` para poblar el campo `sold_in_call` en `FinancialSale`.
+      - Actualización de `CloserService.process_agenda` para registrar `with_decision_maker` en `Appointment`.
+    - **API Backend (`app/api/public/closer.py`) [NEW]**:
+      - Creación del endpoint `GET /api/public/closer-report/prefill` que calcula dinámicamente las agendas del día del closer (clasificándolas en primera/segunda llamada y agrupándolas por estado) y las ventas (PIF, Split Pay, Señas, Cuotas y su modalidad in-call) para pre-rellenar el reporte diario.
+    - **Interfaz Frontend (`CloserWorkflowPage.jsx` e `AgendaManagerModal.jsx`) [MODIFY]**:
+      - Integración de modal en `CloserWorkflowPage.jsx` y toggle en `AgendaManagerModal.jsx` para calificar si la llamada asistida (Show Up) fue "Con decisor" o "Sin decisor".
+    - **Interfaz Frontend (`NewSalePage.jsx`) [MODIFY]**:
+      - Inclusión de un switch interactivo para marcar si una venta manual fue cerrada "Dentro de la llamada (In-Call)".
+    - **Interfaz Frontend (`PublicCloserReportPage.jsx`) [MODIFY]**:
+      - Integración de llamada automática al endpoint de pre-relleno al cambiar el closer o la fecha, autocompletando la gran mayoría de métricas operativas del día con un banner premium indicando el éxito de la operación.
+
 - **24 de Junio de 2026**:
   - **Mejora del Dashboard de Rendimiento de Closers**:
     - **API Backend (`app/services/closer_service.py`) [MODIFY]**:

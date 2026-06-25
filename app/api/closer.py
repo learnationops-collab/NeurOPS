@@ -1279,6 +1279,12 @@ def process_closer_card(appt_id):
     if 'result' in data:
         appt.result = data['result']
         
+    if 'with_decision_maker' in data:
+        if data['with_decision_maker'] is None or data['with_decision_maker'] == '':
+            appt.with_decision_maker = None
+        else:
+            appt.with_decision_maker = data['with_decision_maker'] == True or data['with_decision_maker'] in ('true', 'True', '1', 1)
+
     appt.closer_processed = True
     
     from app.services.booking_service import BookingService

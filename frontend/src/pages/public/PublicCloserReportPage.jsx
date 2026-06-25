@@ -140,10 +140,55 @@ const PublicCloserReportPage = () => {
 
     const [formData, setFormData] = useState(initialFormData);
     const [openSection, setOpenSection] = useState('agendas');
+    const [loadingPrefill, setLoadingPrefill] = useState(false);
+    const [prefilledMessage, setPrefilledMessage] = useState('');
 
     useEffect(() => {
         fetchClosers();
     }, []);
+
+    useEffect(() => {
+        if (editReport) return;
+        
+        const prefillData = async () => {
+            if (!formData.closer_id || !formData.date) return;
+            
+            setLoadingPrefill(true);
+            setPrefilledMessage('');
+            try {
+                const res = await api.get(`/public/closer-report/prefill?closer_id=${formData.closer_id}&date=${formData.date}`);
+                
+                // Mapear los datos al formulario
+                setFormData(prev => {
+                    const updated = { ...prev };
+                    
+                    const fieldsToPrefill = [
+                        'decision_makers', 'rescheduled_calls',
+                        'first_call_scheduled', 'first_call_attended', 'first_call_no_show', 'first_call_rescheduled', 'first_call_canceled',
+                        'second_call_scheduled', 'second_call_attended', 'second_call_no_show', 'second_call_rescheduled', 'second_call_canceled',
+                        
+                        'pif_count', 'pif_cash_collected', 'pif_in_call_count', 'pif_in_call_cash',
+                        'split_count', 'split_cash_collected', 'split_in_call_count', 'split_in_call_cash',
+                        'deposit_count', 'deposit_cash_collected', 'deposit_in_call_count', 'deposit_in_call_cash',
+                        'installment_count', 'installment_cash_collected', 'installment_in_call_count', 'installment_in_call_cash'
+                    ];
+                    
+                    fieldsToPrefill.forEach(f => {
+                        updated[f] = res.data[f] !== undefined ? res.data[f] : '';
+                    });
+                    
+                    return updated;
+                });
+                setPrefilledMessage('Métricas de agendas y ventas del día autocompletadas correctamente.');
+            } catch (err) {
+                console.error("Error al prefill de reporte de closer:", err);
+            } finally {
+                setLoadingPrefill(false);
+            }
+        };
+        
+        prefillData();
+    }, [formData.closer_id, formData.date, editReport]);
 
     const fetchClosers = async () => {
         setLoading(true);
@@ -413,6 +458,22 @@ const PublicCloserReportPage = () => {
                                         <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${calculateProgress()}%` }}></div>
                                     </div>
                                 </div>
+
+                                {/* Banner de Pre-llenado */}
+                                {loadingPrefill && (
+                                    <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-3xl flex items-center gap-3 text-indigo-450 animate-pulse text-left">
+                                        <Loader2 size={16} className="animate-spin text-indigo-400 shrink-0" />
+                                        <p className="font-bold text-xs uppercase tracking-wider leading-none">Cargando métricas y ventas automáticas del día...</p>
+                                    </div>
+                                )}
+                                {prefilledMessage && !loadingPrefill && (
+                                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl flex items-center gap-3 text-emerald-450 text-left animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-emerald-400 shrink-0">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                                        </svg>
+                                        <p className="font-bold text-[10px] uppercase tracking-wider leading-none">{prefilledMessage}</p>
+                                    </div>
+                                )}
 
                                 {/* Identificación */}
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-xl grid grid-cols-1 md:grid-cols-2 gap-6">

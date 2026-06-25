@@ -47,6 +47,7 @@ const CloserNewSalePage = () => {
         setter: '',
         documento_identidad: '',
         enviar_mensaje: true,
+        sold_in_call: true,
         date: new Date().toISOString().split('T')[0]
     });
 
@@ -189,7 +190,8 @@ const CloserNewSalePage = () => {
                 return selectedDate.toLocaleString("es-ES");
             })(), // Fecha/hora de la venta con hora actual
             enviar_webhook: true,
-            enviar_mensaje: form.enviar_mensaje
+            enviar_mensaje: form.enviar_mensaje,
+            sold_in_call: form.sold_in_call
         };
 
         try {
@@ -611,6 +613,27 @@ const CloserNewSalePage = () => {
                                     onChange={e => setForm({ ...form, notas: e.target.value })}
                                 />
                             </div>
+                        </div>
+
+                        {/* Switch de Venta en Llamada */}
+                        <div className="space-y-2 md:col-span-2 flex items-center justify-between bg-slate-950/20 p-4 rounded-2xl border border-slate-800/80">
+                            <div className="space-y-0.5 text-left">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Venta Cerrada en Llamada (In-Call)</label>
+                                <span className="text-[10px] text-slate-500 font-bold uppercase">Indica si la transacción se completó dentro de la sesión de Zoom/Llamada</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setForm({ ...form, sold_in_call: !form.sold_in_call })}
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                    form.sold_in_call ? 'bg-indigo-600' : 'bg-slate-700'
+                                }`}
+                            >
+                                <span
+                                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                        form.sold_in_call ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                />
+                            </button>
                         </div>
 
                         {/* Switch de Automatización */}
