@@ -14,6 +14,7 @@
     - **Interfaz Frontend (`CloserWorkflowPage.jsx` e `AgendaManagerModal.jsx`) [MODIFY]**:
       - Integración de modal en `CloserWorkflowPage.jsx` y toggle en `AgendaManagerModal.jsx` para calificar si la llamada asistida (Show Up) fue "Con decisor" o "Sin decisor".
       - Incorporación de un input de tipo fecha (`type="date"`) en la cabecera de `CloserWorkflowPage.jsx` para cambiar dinámicamente la fecha y recargar las agendas de ese día en el deck.
+      - **Mejora de Reagendas**: Se implementó una grilla interactiva de cupos de disponibilidad (`slots`) en el panel de reprogramación / segunda llamada de `CloserWorkflowPage.jsx` consultando dinámicamente a la API, complementada con un selector de fecha/hora manual alternativo.
     - **Interfaz Frontend (`NewSalePage.jsx`) [MODIFY]**:
       - Inclusión de un switch interactivo para marcar si una venta manual fue cerrada "Dentro de la llamada (In-Call)".
     - **Interfaz Frontend (`PublicCloserReportPage.jsx`) [MODIFY]**:

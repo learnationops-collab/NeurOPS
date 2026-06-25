@@ -29,6 +29,8 @@ const CloserWorkflowPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [decisionMakerPrompt, setDecisionMakerPrompt] = useState({ apptId: null });
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [slots, setSlots] = useState([]);
+    const [loadingSlots, setLoadingSlots] = useState(false);
     
     // Cita seleccionada para el visor de la derecha
     const [selectedLead, setSelectedLead] = useState(null);
@@ -61,6 +63,27 @@ const CloserWorkflowPage = () => {
     useEffect(() => {
         fetchAgendas();
     }, [activeStep, selectedDate]);
+
+    useEffect(() => {
+        const fetchSlots = async () => {
+            if (!rescheduleData.apptId) return;
+            setLoadingSlots(true);
+            try {
+                const res = await api.get('/closer/slots', { skipAuthError: true });
+                if (Array.isArray(res.data)) {
+                    setSlots(res.data);
+                } else {
+                    setSlots([]);
+                }
+            } catch (err) {
+                console.error("Error fetching slots:", err);
+                setSlots([]);
+            } finally {
+                setLoadingSlots(false);
+            }
+        };
+        fetchSlots();
+    }, [rescheduleData.apptId]);
 
     // Filtrar localmente por búsqueda
     const filteredAgendas = useMemo(() => {
@@ -426,38 +449,82 @@ const CloserWorkflowPage = () => {
                                                     </div>
                                                 )}
 
-                                                {/* Panel de Reprogramación */}
-                                                {isRescheduling && (
-                                                    <div className="flex flex-col gap-2.5 p-3.5 bg-slate-900 border border-slate-800 rounded-xl mt-1" onClick={(e) => e.stopPropagation()}>
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-[9px] font-black uppercase text-violet-400 tracking-wider flex items-center gap-1">
-                                                                <CalendarDays size={11} />
-                                                                {rescheduleData.status === 'Reprogramada' ? 'Reprogramar Cita' : 'Agendar 2ª Llamada'}
-                                                            </span>
-                                                            <button 
-                                                                onClick={() => setRescheduleData({ apptId: null, date: '', status: '' })}
-                                                                className="text-slate-500 hover:text-white"
-                                                            >
-                                                                <X size={12} />
-                                                            </button>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <input
-                                                                type="datetime-local"
-                                                                value={rescheduleData.date}
-                                                                onChange={(e) => setRescheduleData(prev => ({ ...prev, date: e.target.value }))}
-                                                                className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 font-bold flex-1 outline-none focus:border-violet-500/50"
-                                                            />
-                                                            <button
-                                                                onClick={handleConfirmReschedule}
-                                                                disabled={processingId === a.id}
-                                                                className="px-3.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-lg cursor-pointer"
-                                                            >
-                                                                {processingId === a.id ? <Loader2 size={11} className="animate-spin" /> : 'Confirmar'}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                 {/* Panel de Reprogramación */}
+                                                 {isRescheduling && (
+                                                     <div className="flex flex-col gap-3.5 p-4 bg-slate-900 border border-slate-800 rounded-2xl mt-2 text-left" onClick={(e) => e.stopPropagation()}>
+                                                         <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                                                             <span className="text-[9px] font-black uppercase text-violet-400 tracking-widest flex items-center gap-1">
+                                                                 <CalendarDays size={11} />
+                                                                 {rescheduleData.status === 'Reprogramada' ? 'Reprogramar Cita' : 'Agendar 2ª Llamada'}
+                                                             </span>
+                                                             <button 
+                                                                 onClick={() => setRescheduleData({ apptId: null, date: '', status: '' })}
+                                                                 className="text-slate-500 hover:text-white"
+                                                             >
+                                                                 <X size={12} />
+                                                             </button>
+                                                         </div>
+                                                         
+                                                         {loadingSlots ? (
+                                                             <div className="py-4 flex flex-col items-center gap-2">
+                                                                 <Loader2 className="animate-spin text-violet-500" size={14} />
+                                                                 <p className="text-[8px] font-bold text-slate-500 tracking-widest uppercase">Buscando cupos...</p>
+                                                             </div>
+                                                         ) : (
+                                                             <div className="space-y-3">
+                                                                 {slots.length > 0 ? (
+                                                                     <div className="space-y-1.5">
+                                                                         <label className="text-[8px] font-black text-slate-500 tracking-widest uppercase block">Cupos Disponibles</label>
+                                                                         <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+                                                                             {slots.map(slot => {
+                                                                                 const dt = new Date(slot.utc_iso);
+                                                                                 const isSelected = rescheduleData.date === slot.utc_iso;
+                                                                                 return (
+                                                                                     <button
+                                                                                         key={slot.utc_iso}
+                                                                                         type="button"
+                                                                                         onClick={() => setRescheduleData(prev => ({ ...prev, date: slot.utc_iso }))}
+                                                                                         className={`p-2 rounded-xl border text-[8px] font-black tracking-widest transition-all cursor-pointer ${
+                                                                                             isSelected 
+                                                                                                 ? 'bg-violet-600 border-violet-600 text-white shadow-lg shadow-violet-650/20' 
+                                                                                                 : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-900'
+                                                                                         }`}
+                                                                                     >
+                                                                                         {dt.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} - {dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                                     </button>
+                                                                                 );
+                                                                             })}
+                                                                         </div>
+                                                                     </div>
+                                                                 ) : (
+                                                                     <div className="py-2 text-center bg-slate-950/50 rounded-xl border border-slate-900">
+                                                                         <p className="text-[8px] font-black text-rose-500/60 tracking-widest uppercase">Sin cupos configurados</p>
+                                                                     </div>
+                                                                 )}
+                                                                 
+                                                                 {/* Selector manual de respaldo */}
+                                                                 <div className="space-y-1.5 pt-1 border-t border-slate-900/60">
+                                                                     <label className="text-[8px] font-black text-slate-500 tracking-widest uppercase block">O ingresar fecha manual</label>
+                                                                     <div className="flex gap-2">
+                                                                         <input
+                                                                             type="datetime-local"
+                                                                             value={rescheduleData.date ? (rescheduleData.date.includes('Z') ? rescheduleData.date.substring(0, 16) : rescheduleData.date) : ''}
+                                                                             onChange={(e) => setRescheduleData(prev => ({ ...prev, date: e.target.value }))}
+                                                                             className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-100 font-bold flex-1 outline-none focus:border-violet-500/50 font-bold"
+                                                                         />
+                                                                         <button
+                                                                             onClick={handleConfirmReschedule}
+                                                                             disabled={processingId === a.id || !rescheduleData.date}
+                                                                             className="px-4 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[9px] font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-lg shadow-violet-650/20"
+                                                                         >
+                                                                             {processingId === a.id ? <Loader2 size={11} className="animate-spin" /> : 'Confirmar'}
+                                                                         </button>
+                                                                     </div>
+                                                                 </div>
+                                                             </div>
+                                                         )}
+                                                     </div>
+                                                 )}
                                             </motion.div>
                                         );
                                     })}
