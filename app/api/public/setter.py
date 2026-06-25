@@ -1028,7 +1028,8 @@ def _prepare_setter_report_data(stat):
             }
         },
         "qualitative": qualitative_callouts,
-        "reflections": stat.reflections or {}
+        "reflections": stat.reflections or {},
+        "safe_percent": safe_percent
     }
 
 
