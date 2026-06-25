@@ -50,7 +50,7 @@ const PerformanceTable = ({ dataMap, labelName }) => {
         const totalRow = {
             Pendiente: 0, Contactado: 0, Confirmado: 0, Reagendada: 0, Cancelada: 0, Cerrada: 0,
             "Show Up": 0, "No Show": 0, "2TH Call": 0,
-            Deals: 0, Depósitos: 0, "Follow Ups": 0, "No Leads": 0,
+            Ventas: 0, Depósitos: 0, "Follow Ups": 0, "No Leads": 0,
             total: 0
         };
         Object.values(statesMap).forEach(stats => {
@@ -63,7 +63,7 @@ const PerformanceTable = ({ dataMap, labelName }) => {
             totalRow["Show Up"] += stats["Show Up"] || 0;
             totalRow["No Show"] += stats["No Show"] || 0;
             totalRow["2TH Call"] += stats["2TH Call"] || 0;
-            totalRow.Deals += stats.Deals || 0;
+            totalRow.Ventas += stats.Ventas || 0;
             totalRow.Depósitos += stats.Depósitos || 0;
             totalRow["Follow Ups"] += stats["Follow Ups"] || 0;
             totalRow["No Leads"] += stats["No Leads"] || 0;
@@ -102,7 +102,7 @@ const PerformanceTable = ({ dataMap, labelName }) => {
                 <HoverPercentCell value={stats["2TH Call"] || 0} total={rowTotal} className="py-3 px-1 text-center text-indigo-400 border-r-2 border-slate-800" />
                 
                 {/* RESULTS */}
-                <HoverPercentCell value={stats.Deals || 0} total={showUp} className="py-3 px-1 text-center text-emerald-400 border-r border-slate-900/40 font-bold" />
+                <HoverPercentCell value={stats.Ventas || 0} total={showUp} className="py-3 px-1 text-center text-emerald-400 border-r border-slate-900/40 font-bold" />
                 <HoverPercentCell value={stats.Depósitos || 0} total={showUp} className="py-3 px-1 text-center text-violet-400 border-r border-slate-900/40" />
                 <HoverPercentCell value={stats["Follow Ups"] || 0} total={showUp} className="py-3 px-1 text-center text-amber-500 border-r border-slate-900/40" />
                 <HoverPercentCell value={stats["No Leads"] || 0} total={showUp} className="py-3 px-1 text-center text-slate-500" />
@@ -164,7 +164,7 @@ const PerformanceTable = ({ dataMap, labelName }) => {
                             <th className="py-2 px-1 text-indigo-400 border-r-2 border-slate-800">2TH Call</th>
                             
                             {/* RESULTS */}
-                            <th className="py-2 px-1 text-emerald-450 border-r border-slate-900/40">Deals</th>
+                            <th className="py-2 px-1 text-emerald-450 border-r border-slate-900/40">Ventas</th>
                             <th className="py-2 px-1 text-violet-400 border-r border-slate-900/40">Depósitos</th>
                             <th className="py-2 px-1 text-amber-500 border-r border-slate-900/40">Follow Ups</th>
                             <th className="py-2 px-1 text-slate-500">No Leads</th>

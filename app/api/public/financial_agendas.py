@@ -291,7 +291,7 @@ def get_financial_agendas():
                     "Show Up": 0,
                     "No Show": 0,
                     "2TH Call": 0,
-                    "Deals": 0,
+                    "Ventas": 0,
                     "Depósitos": 0,
                     "Follow Ups": 0,
                     "No Leads": 0
@@ -304,11 +304,10 @@ def get_financial_agendas():
             elif st_name in ('Reagendada', 'Reprogramada', 'Reagendado', 'Reprogramado'): state_key = 'Reagendada'
             elif st_name in ('Cancelada', 'Cancelado'): state_key = 'Cancelada'
             elif st_name in ('Cerrada', 'Cerrado'): state_key = 'Cerrada'
-            elif st_name in ('Show Up', 'Show up', 'completada', 'Completada'): state_key = 'Show Up'
             elif st_name.lower() == 'no show': state_key = 'No Show'
             elif st_name in ('2TH Call', '2da Call', '2nd Call', '2da call', '2TH call', 'Segunda llamada', 'Segunda agenda'): state_key = '2TH Call'
-            elif st_name in ('No Lead', 'No Leads', 'no_lead'): state_key = 'No Leads'
-            elif st_name in ('Follow Up', 'Follow Ups', 'follow_up'): state_key = 'Follow Ups'
+            elif st_name in ('Show Up', 'Show up', 'completada', 'Completada', 'Follow Up', 'Follow Ups', 'follow_up', 'No Lead', 'No Leads', 'no_lead'):
+                state_key = 'Show Up'
             
             if state_key:
                 by_closer_state[c_name][state_key] += 1
@@ -318,7 +317,7 @@ def get_financial_agendas():
                     if has_deposit:
                         by_closer_state[c_name]["Depósitos"] += 1
                     else:
-                        by_closer_state[c_name]["Deals"] += 1
+                        by_closer_state[c_name]["Ventas"] += 1
                 else:
                     if st_name in ('No Lead', 'No Leads', 'no_lead'):
                         by_closer_state[c_name]["No Leads"] += 1
@@ -349,7 +348,7 @@ def get_financial_agendas():
                     "Show Up": 0,
                     "No Show": 0,
                     "2TH Call": 0,
-                    "Deals": 0,
+                    "Ventas": 0,
                     "Depósitos": 0,
                     "Follow Ups": 0,
                     "No Leads": 0
@@ -362,7 +361,7 @@ def get_financial_agendas():
                     if has_deposit:
                         by_source_state[s_name]["Depósitos"] += 1
                     else:
-                        by_source_state[s_name]["Deals"] += 1
+                        by_source_state[s_name]["Ventas"] += 1
                 else:
                     if st_name in ('No Lead', 'No Leads', 'no_lead'):
                         by_source_state[s_name]["No Leads"] += 1
