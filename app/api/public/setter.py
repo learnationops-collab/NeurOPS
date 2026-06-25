@@ -788,6 +788,100 @@ def _prepare_setter_report_data(stat):
         "agendas": generate_sparkline_points(agendas_vals[-7:])
     }
 
+    # Obtener los 7 reportes previos (excluyendo el actual)
+    prev_7_reports = SetterDailyStats.query.filter(
+        SetterDailyStats.setter_id == stat.setter_id,
+        SetterDailyStats.date < stat.date
+    ).order_by(SetterDailyStats.date.desc()).limit(7).all()
+
+    avg_entrantes_7 = 0
+    avg_apertura_7 = 0
+    avg_cual_7 = 0
+    avg_conv_7 = 0
+
+    p7_count = len(prev_7_reports)
+    if p7_count > 0:
+        avg_entrantes_7 = sum(r.inbox_entrantes or 0 for r in prev_7_reports) / p7_count
+        
+        t_entrantes_7 = sum(r.inbox_entrantes or 0 for r in prev_7_reports)
+        t_openings_7 = sum(
+            ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0))
+            if ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)) > 0
+            else (r.opening_submitted or 0)
+            for r in prev_7_reports
+        )
+        avg_apertura_7 = safe_percent(t_openings_7, t_entrantes_7)
+        
+        t_qual_7 = sum(r.funnel_qualification or 0 for r in prev_7_reports)
+        avg_cual_7 = safe_percent(t_qual_7, t_entrantes_7)
+        
+        t_agendas_7 = sum(r.funnel_agenda or 0 for r in prev_7_reports)
+        avg_conv_7 = safe_percent(t_agendas_7, t_qual_7)
+
+    # Insight 1: Entrantes vs promedio 7 días
+    if avg_entrantes_7 > 0:
+        diff_entrantes = inbox_entrantes - avg_entrantes_7
+        pct_entrantes = round((diff_entrantes / avg_entrantes_7) * 100)
+        if pct_entrantes > 0:
+            insight_entrantes = {"dir": "up", "title": f"La tasa de entrantes subió {pct_entrantes}%", "subtitle": "vs el promedio de los últimos 7 días."}
+        elif pct_entrantes < 0:
+            insight_entrantes = {"dir": "down", "title": f"La tasa de entrantes bajó {abs(pct_entrantes)}%", "subtitle": "vs el promedio de los últimos 7 días."}
+        else:
+            insight_entrantes = {"dir": "neutral", "title": "La tasa de entrantes se mantuvo", "subtitle": "vs el promedio de los últimos 7 días."}
+    else:
+        insight_entrantes = {"dir": "neutral", "title": "Tasa de entrantes", "subtitle": f"Hoy: {inbox_entrantes} (sin promedio previo)"}
+
+    # Insight 2: Tasa de apertura vs promedio 7 días
+    if avg_apertura_7 > 0:
+        diff_apertura = openings_tasa - avg_apertura_7
+        if diff_apertura > 0:
+            insight_apertura = {"dir": "up", "title": f"La tasa de apertura subió {diff_apertura}%", "subtitle": "vs el promedio de los últimos 7 días."}
+        elif diff_apertura < 0:
+            insight_apertura = {"dir": "down", "title": f"La tasa de apertura bajó {abs(diff_apertura)}%", "subtitle": "vs el promedio de los últimos 7 días."}
+        else:
+            insight_apertura = {"dir": "neutral", "title": "La tasa de apertura se mantuvo", "subtitle": "vs el promedio de los últimos 7 días."}
+    else:
+        insight_apertura = {"dir": "neutral", "title": "Tasa de apertura", "subtitle": f"Hoy: {openings_tasa}% (sin promedio previo)"}
+
+    # Insight 3: Tasa de cualificación vs promedio 7 días
+    if avg_cual_7 > 0:
+        diff_cual = qual_tasa - avg_cual_7
+        if diff_cual > 0:
+            insight_cual = {"dir": "up", "title": f"La tasa de cualificación subió {diff_cual}%", "subtitle": "vs el promedio de los últimos 7 días."}
+        elif diff_cual < 0:
+            insight_cual = {"dir": "down", "title": f"La tasa de cualificación bajó {abs(diff_cual)}%", "subtitle": "vs el promedio de los últimos 7 días."}
+        else:
+            insight_cual = {"dir": "neutral", "title": "La tasa de cualificación se mantuvo", "subtitle": "vs el promedio de los últimos 7 días."}
+    else:
+        insight_cual = {"dir": "neutral", "title": "Tasa de cualificación", "subtitle": f"Hoy: {qual_tasa}% (sin promedio previo)"}
+
+    # Insight 4: Conversión por lead cualificado vs promedio 7 días
+    if avg_conv_7 > 0:
+        diff_conv = conv_tasa - avg_conv_7
+        if diff_conv > 0:
+            insight_conv = {"dir": "up", "title": f"La conversión por lead cualificado subió {diff_conv}%", "subtitle": "vs el promedio de 7 días."}
+        elif diff_conv < 0:
+            insight_conv = {"dir": "down", "title": f"La conversión por lead cualificado bajó {abs(diff_conv)}%", "subtitle": "vs el promedio de 7 días."}
+        else:
+            insight_conv = {"dir": "neutral", "title": "La conversión por lead cualificado se mantuvo", "subtitle": "vs el promedio de 7 días."}
+    else:
+        insight_conv = {"dir": "neutral", "title": "Conversión por cualificado", "subtitle": f"Hoy: {conv_tasa}% (sin promedio previo)"}
+
+    # Insight 5: Agendas vs semana anterior
+    if stat_prev:
+        agendas_prev = stat_prev.funnel_agenda or 0
+        diff_agendas = agenda - agendas_prev
+        if diff_agendas > 0:
+            insight_agendas = {"dir": "up", "title": "Más agendas que la semana anterior", "subtitle": f"({agenda} vs {agendas_prev})."}
+        elif diff_agendas < 0:
+            insight_agendas = {"dir": "down", "title": "Menos agendas que la semana anterior", "subtitle": f"({agenda} vs {agendas_prev})."}
+        else:
+            insight_agendas = {"dir": "neutral", "title": "Mismas agendas que la semana anterior", "subtitle": f"({agenda} vs {agendas_prev})."}
+    else:
+        insight_agendas = {"dir": "neutral", "title": "Agendas generadas", "subtitle": f"Hoy: {agenda} (sin semana anterior)"}
+
+    insights_rapidos = [insight_entrantes, insight_apertura, insight_cual, insight_conv, insight_agendas]
+
     avg_metrics = {
         "entrantes": avg_entrantes_10,
         "openings": avg_apertura_10,
@@ -800,6 +894,7 @@ def _prepare_setter_report_data(stat):
         "date_str": stat.date.strftime('%d/%m/%Y'),
         "kpi_metrics": kpi_metrics,
         "sparklines": sparklines,
+        "insights": insights_rapidos,
         
         "inbox": {
             "entrantes": inbox_entrantes,

@@ -6,11 +6,13 @@
       - Se implementó en `_prepare_setter_report_data` el cálculo y recopilación de métricas históricas de los últimos 10 reportes para Entrantes, Tasa de Apertura, Tasa de Cualificación y Conversión por Cualificado, y de los últimos 7 reportes para Agendas.
       - Se añadió la lógica de comparación con el mismo día de la semana anterior (7 días antes), calculando diferencias absolutas, diferencias en puntos porcentuales (pp) y variaciones relativas.
       - Se generaron las coordenadas SVG para dibujar sparklines dinámicos de los últimos 10 reportes para cada KPI.
+      - Se implementó el cálculo dinámico de **Insights Rápidos** en Python, comparando las métricas de hoy contra los promedios de los últimos 7 días (para Entrantes, Apertura, Cualificación y Conversión) y el volumen de agendas contra la semana anterior.
       - **Corrección de NameError [FIX]**: Se reintrodujo la variable `avg_metrics` en el diccionario de retorno para mantener compatibilidad y evitar errores en la carga de datos.
     - **Plantilla HTML (`app/templates/reports/setter_report.html`) [MODIFY]**:
       - Se rediseñó la sección de estadísticas principales para mostrar un panel horizontal de 5 KPIs (Entrantes, Tasa de Apertura, Tasa de Cualificación, Conversión por Cualificado y Agendas) con estética glassmorphism premium.
       - Se incorporaron visualizaciones de tendencias (flechas de variación), valores de la semana anterior y gráficos sparklines dinámicos.
       - Se removieron las secciones redundantes e inactivas como `averages-row`, la columna de conversión de la derecha y "Eficacia de Preguntas", optimizando el embudo a ancho completo.
+      - Se diseñó e integró una sección horizontal de **Insights Rápidos** con badges circulares semafóricos (flechas de subida/bajada/neutral) y textos explicativos dinámicos.
       - **Mejora de Legibilidad y Tipografía [MODIFY]**: Se importó la tipografía premium `Plus Jakarta Sans` desde Google Fonts como la fuente por defecto del reporte. Se incrementaron significativamente los tamaños de fuente de las cabeceras, tarjetas, tablas, textos cualitativos y pie de página para mejorar drásticamente su lectura cuando el HTML es renderizado a imagen.
 
   - **Eliminación de la Pestaña de Comparación en Performance Center de Setters**:
