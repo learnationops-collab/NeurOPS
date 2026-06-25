@@ -35,8 +35,17 @@ def _trigger_setter_report_webhook(stat):
         import json
         from app.services.image_service import ImageService
         
-        # Webhook URL provided by user
-        url = "https://discord.com/api/webhooks/1482070325641347288/fFK0OKoDIRngTIzh1kl81_Um8GrtFg62Z3TK4Rq0qgjQtU3jNqlOOLZ4lw1c_0qV0drX"
+        import os
+        url = os.environ.get('DISCORD_REPORTS_WEBHOOK')
+        if not url:
+            from app.models import Integration
+            integration = Integration.query.filter_by(key='discord_reports').first()
+            if integration and integration.payload_config:
+                url = integration.payload_config.get('webhook_url')
+
+        if not url:
+            print("[Discord Setter] No webhook URL configured in environment or database.")
+            return
         
         # 1. Prepare Data for Image
         setter_name = stat.setter.username if stat.setter else "Setter"

@@ -68,8 +68,17 @@ def _trigger_triage_report_webhook(report):
         import json
         from app.services.image_service import ImageService
         
-        # Webhook URL (mismo que setter/closer según solicitud)
-        url = "https://discord.com/api/webhooks/1482070325641347288/fFK0OKoDIRngTIzh1kl81_Um8GrtFg62Z3TK4Rq0qgjQtU3jNqlOOLZ4lw1c_0qV0drX"
+        import os
+        url = os.environ.get('DISCORD_REPORTS_WEBHOOK')
+        if not url:
+            from app.models import Integration
+            integration = Integration.query.filter_by(key='discord_reports').first()
+            if integration and integration.payload_config:
+                url = integration.payload_config.get('webhook_url')
+
+        if not url:
+            print("[Discord Triage] No webhook URL configured in environment or database.")
+            return
         
         # Calcular tasas para la imagen
         nuevas = report.agendas_nuevas or 0

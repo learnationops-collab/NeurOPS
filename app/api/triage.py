@@ -167,7 +167,17 @@ def submit_triage_tracker():
 
             img_buf = ImageService.generate_triage_tracker_card(render_data)
             
-            webhook_url = "https://discord.com/api/webhooks/1482070325641347288/fFK0OKoDIRngTIzh1kl81_Um8GrtFg62Z3TK4Rq0qgjQtU3jNqlOOLZ4lw1c_0qV0drX"
+            import os
+            webhook_url = os.environ.get('DISCORD_REPORTS_WEBHOOK')
+            if not webhook_url:
+                from app.models import Integration
+                integration = Integration.query.filter_by(key='discord_reports').first()
+                if integration and integration.payload_config:
+                    webhook_url = integration.payload_config.get('webhook_url')
+
+            if not webhook_url:
+                print("[Discord Triage Tracker] No webhook URL configured in environment or database.")
+                return
             payload = {
                 "content": f"🎯 **NUEVO REPORTE DE TRIAGE TRACKER**\n**Triage:** {report.triage_name}\n**Fecha:** {render_data['date_str']}",
                 "username": "NeurOPS Triage AI",

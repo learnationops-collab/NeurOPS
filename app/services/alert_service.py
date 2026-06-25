@@ -346,7 +346,15 @@ class AlertService:
 
             # Fallback al canal predeterminado de reportes si no hay ninguno configurado
             if not webhook_url:
-                webhook_url = "https://discord.com/api/webhooks/1482070325641347288/fFK0OKoDIRngTIzh1kl81_Um8GrtFg62Z3TK4Rq0qgjQtU3jNqlOOLZ4lw1c_0qV0drX"
+                webhook_url = os.environ.get('DISCORD_REPORTS_WEBHOOK')
+                if not webhook_url:
+                    integration = Integration.query.filter_by(key='discord_reports').first()
+                    if integration and integration.payload_config:
+                        webhook_url = integration.payload_config.get('webhook_url')
+
+            if not webhook_url:
+                print("[AlertService] No webhook URL configured in environment or database.")
+                return
 
             # Elegir color del embed según severidad
             colors = {

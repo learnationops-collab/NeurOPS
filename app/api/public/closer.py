@@ -276,8 +276,17 @@ def _trigger_closer_report_discord(report):
         from datetime import datetime
         from app.services.image_service import ImageService
 
-        # Mismo webhook que los setters
-        url = "https://discord.com/api/webhooks/1482070325641347288/fFK0OKoDIRngTIzh1kl81_Um8GrtFg62Z3TK4Rq0qgjQtU3jNqlOOLZ4lw1c_0qV0drX"
+        import os
+        url = os.environ.get('DISCORD_REPORTS_WEBHOOK')
+        if not url:
+            from app.models import Integration
+            integration = Integration.query.filter_by(key='discord_reports').first()
+            if integration and integration.payload_config:
+                url = integration.payload_config.get('webhook_url')
+
+        if not url:
+            print("[Discord Closer] No webhook URL configured in environment or database.")
+            return
 
         closer_name = report.closer.username if report.closer else "Closer"
         date_str = report.date.strftime('%d/%m/%Y')
