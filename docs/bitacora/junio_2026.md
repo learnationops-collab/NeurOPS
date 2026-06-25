@@ -1531,3 +1531,15 @@
       - Al integrarse los gráficos circulares directamente en las tablas correspondientes, se eliminaron los gráficos duplicados de *"Tipo de Cierre"* y *"Estado de Agendas"* de la fila inferior general.
 
       - Se reorganizó la fila inferior (`BOTTOM ROW`) en un grid de 2 columnas centrado exclusivamente en la distribución de la tenacidad de los seguimientos: **Re-engagement (Hot)** y **Re-engagement (Cold)**, logrando un dashboard sumamente limpio, simétrico y de altísimo valor analítico.
+
+  - **Rediseño Estético y de Layout del Reporte Diario de Setters para Discord (`setter_report.html`) [MODIFY]**:
+
+    - **Reestructuración de Grilla Principal**: Se implementó una cuadrícula de dos columnas en `.main-grid` (`1.62fr 1.38fr`) alineada a la parte superior. Esto compactó el layout de una altura excesiva (~2000px) a un formato simétrico (~1150px), previniendo que Discord comprima y arruine la nitidez del reporte.
+
+    - **Columna Izquierda (Datos Cuantitativos)**: Agrupa el análisis unificado del embudo y del inbox, maximizando el espacio de la tabla de stages.
+
+    - **Columna Derecha (Datos Cualitativos e Insights)**: Agrupa el bloque de "Insights Rápidos" reestructurado como una lista vertical (eliminando colisiones de texto horizontales) junto a las "Reflexiones de Alto Rendimiento" y "Respuestas Cualitativas del Día" formateadas como pilas verticales con bordes con acentos de color.
+
+    - **Reubicación de Sparklines**: Se movieron los sparklines SVG de la parte inferior de las `.stat-card` para situarse al lado derecho de su respectivo valor numérico principal. Esto redujo el alto mínimo de las tarjetas a `180px` conservando la densidad y el aspecto premium.
+
+    - **Legibilidad y Tipografía**: Se incrementaron y afinaron los tamaños de fuente de títulos, etiquetas, badges de tendencia y valores de texto libre en toda la interfaz para una lectura 100% clara en Discord.
