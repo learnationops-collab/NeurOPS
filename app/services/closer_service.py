@@ -851,19 +851,64 @@ class CloserService:
 
         elif new_status == 'Primera Agenda':
             if not reschedule_date: raise Exception("Fecha de segunda agenda requerida")
-            # Note: For 'Primera Agenda' protocol, we don't necessarily set a 'result' yet 
-            # because there's a follow up. But if the user wants it off the board, 
-            # we should probably set result='Sig. Agenda' or similar?
-            # Actually, "Terminada" implies result is set. 
-            # If they just do 'Primera Agenda', it stays active in their workflow?
-            # Let's stick to the core outcomes mentioned.
             
+            # Cambiar el result de la cita actual a 'Follow Up'
+            appt.result = 'Follow Up'
+            
+            # Intentar actualizar el estado de la FinancialAgenda correspondiente en la BD a 'Follow Up'
+            try:
+                from app.models.financial import FinancialAgenda
+                from sqlalchemy import or_
+                from datetime import time
+                start_of_day = datetime.combine(appt.start_time.date(), time.min)
+                end_of_day = datetime.combine(appt.start_time.date(), time.max)
+                
+                client = appt.client
+                financial_agenda = None
+                filters = []
+                if client.email:
+                    filters.append(FinancialAgenda.mail == client.email)
+                if client.instagram:
+                    filters.append(FinancialAgenda.instagram == client.instagram)
+                    
+                if filters:
+                    financial_agenda = FinancialAgenda.query.filter(
+                        or_(*filters),
+                        FinancialAgenda.date >= start_of_day,
+                        FinancialAgenda.date <= end_of_day
+                    ).first()
+                    
+                if financial_agenda:
+                    financial_agenda.estado = 'Follow Up'
+            except Exception as e:
+                print(f"Error al actualizar estado de FinancialAgenda a Follow Up: {e}")
+
             # Create new Segunda Agenda
             new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
             new_appt = BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
             
             if new_appt:
+                new_appt.result = '2TH Call' # Etiqueta al crear la segunda agenda
                 db.session.add(new_appt) # Ensure attached
+                
+                # Intentar crear una FinancialAgenda correspondiente a esta segunda llamada
+                try:
+                    from app.models.financial import FinancialAgenda
+                    new_fa = FinancialAgenda(
+                        nombre=appt.origin or '2TH Call',
+                        lead=client.full_name,
+                        mail=client.email,
+                        instagram=client.instagram,
+                        whatsapp=client.phone,
+                        closer=appt.closer.username if appt.closer else None,
+                        estado='2TH Call',
+                        date=new_dt,
+                        fecha_meet=new_dt.isoformat()
+                    )
+                    db.session.add(new_fa)
+                except Exception as e:
+                    print(f"Error al crear FinancialAgenda para la segunda llamada: {e}")
+                
                 # Create GCal Event for the SECOND APPOINTMENT
                 try:
                     from app.services.google_service import GoogleService
@@ -872,6 +917,38 @@ class CloserService:
                         new_appt.google_event_id = evt_id
                 except Exception as e:
                     print(f"Error syncing second agenda event: {e}")
+
+        elif new_status == 'No Lead':
+            # Cambiar el result de la cita actual a 'No Lead'
+            appt.result = 'No Lead'
+            
+            # Intentar actualizar el estado de la FinancialAgenda correspondiente en la BD a 'No Lead'
+            try:
+                from app.models.financial import FinancialAgenda
+                from sqlalchemy import or_
+                from datetime import time
+                start_of_day = datetime.combine(appt.start_time.date(), time.min)
+                end_of_day = datetime.combine(appt.start_time.date(), time.max)
+                
+                client = appt.client
+                financial_agenda = None
+                filters = []
+                if client.email:
+                    filters.append(FinancialAgenda.mail == client.email)
+                if client.instagram:
+                    filters.append(FinancialAgenda.instagram == client.instagram)
+                    
+                if filters:
+                    financial_agenda = FinancialAgenda.query.filter(
+                        or_(*filters),
+                        FinancialAgenda.date >= start_of_day,
+                        FinancialAgenda.date <= end_of_day
+                    ).first()
+                    
+                if financial_agenda:
+                    financial_agenda.estado = 'No Lead'
+            except Exception as e:
+                print(f"Error al actualizar estado de FinancialAgenda a No Lead: {e}")
         
         db.session.commit()
         return appt

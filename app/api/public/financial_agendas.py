@@ -240,15 +240,23 @@ def get_financial_agendas():
                     if ig not in sales_by_ig: sales_by_ig[ig] = []
                     sales_by_ig[ig].append(s)
                     
-        def get_agenda_sales_count(agenda):
+        def get_agenda_sales_info(agenda):
             ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
             mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
-            associated_sales = set()
+            
+            associated_sales = []
             if ig_clean and ig_clean in sales_by_ig:
-                for s in sales_by_ig[ig_clean]: associated_sales.add(s.id)
+                associated_sales.extend(sales_by_ig[ig_clean])
             if mail_clean and mail_clean in sales_by_email:
-                for s in sales_by_email[mail_clean]: associated_sales.add(s.id)
-            return len(associated_sales)
+                associated_sales.extend(sales_by_email[mail_clean])
+            
+            has_deposit = False
+            for s in associated_sales:
+                tp = (s.tipo_pago or "").lower()
+                if any(w in tp for w in ["seña", "sena", "deposito", "deposit"]):
+                    has_deposit = True
+                    break
+            return len(associated_sales), has_deposit
 
         # Agrupaciones en memoria en Python
         by_closer = {}
@@ -264,8 +272,8 @@ def get_financial_agendas():
         
         for a in all_agendas:
             c_name = (a.closer or 'Sin Asignar').strip()
-            st_name = a.estado or 'Pendiente'
-            s_count = get_agenda_sales_count(a)
+            st_name = (a.estado or 'Pendiente').strip()
+            s_count, has_deposit = get_agenda_sales_info(a)
             
             # by_closer
             by_closer[c_name] = by_closer.get(c_name, 0) + 1
@@ -277,21 +285,47 @@ def get_financial_agendas():
                     "Pendiente": 0,
                     "Contactado": 0,
                     "Confirmado": 0,
-                    "Show Up": 0,
-                    "No Show": 0,
-                    "No show": 0,
                     "Reagendada": 0,
                     "Cancelada": 0,
                     "Cerrada": 0,
-                    "cierres": 0
+                    "Show Up": 0,
+                    "No Show": 0,
+                    "2TH Call": 0,
+                    "Deals": 0,
+                    "Depósitos": 0,
+                    "Follow Ups": 0,
+                    "No Leads": 0
                 }
-            if st_name in by_closer_state[c_name]:
-                by_closer_state[c_name][st_name] += 1
-            elif st_name.lower() == 'no show':
-                by_closer_state[c_name]["No Show"] += 1
-                by_closer_state[c_name]["No show"] += 1
+            
+            state_key = None
+            if st_name == 'Pendiente': state_key = 'Pendiente'
+            elif st_name == 'Contactado': state_key = 'Contactado'
+            elif st_name == 'Confirmado': state_key = 'Confirmado'
+            elif st_name in ('Reagendada', 'Reprogramada', 'Reagendado', 'Reprogramado'): state_key = 'Reagendada'
+            elif st_name in ('Cancelada', 'Cancelado'): state_key = 'Cancelada'
+            elif st_name in ('Cerrada', 'Cerrado'): state_key = 'Cerrada'
+            elif st_name in ('Show Up', 'Show up', 'completada', 'Completada'): state_key = 'Show Up'
+            elif st_name.lower() == 'no show': state_key = 'No Show'
+            elif st_name in ('2TH Call', '2da Call', '2nd Call', '2da call', '2TH call', 'Segunda llamada', 'Segunda agenda'): state_key = '2TH Call'
+            elif st_name in ('No Lead', 'No Leads', 'no_lead'): state_key = 'No Leads'
+            elif st_name in ('Follow Up', 'Follow Ups', 'follow_up'): state_key = 'Follow Ups'
+            
+            if state_key:
+                by_closer_state[c_name][state_key] += 1
+            
+            if state_key == 'Show Up':
+                if s_count > 0:
+                    if has_deposit:
+                        by_closer_state[c_name]["Depósitos"] += 1
+                    else:
+                        by_closer_state[c_name]["Deals"] += 1
+                else:
+                    if st_name in ('No Lead', 'No Leads', 'no_lead'):
+                        by_closer_state[c_name]["No Leads"] += 1
+                    else:
+                        by_closer_state[c_name]["Follow Ups"] += 1
+            
             by_closer_state[c_name]["total"] += 1
-            by_closer_state[c_name]["cierres"] += s_count
             
             # by_source_state
             s_name = (a.nombre or 'Sin Asignar').strip()
@@ -309,54 +343,39 @@ def get_financial_agendas():
                     "Pendiente": 0,
                     "Contactado": 0,
                     "Confirmado": 0,
-                    "Show Up": 0,
-                    "No Show": 0,
-                    "No show": 0,
                     "Reagendada": 0,
                     "Cancelada": 0,
                     "Cerrada": 0,
-                    "cierres": 0
+                    "Show Up": 0,
+                    "No Show": 0,
+                    "2TH Call": 0,
+                    "Deals": 0,
+                    "Depósitos": 0,
+                    "Follow Ups": 0,
+                    "No Leads": 0
                 }
-            if st_name in by_source_state[s_name]:
-                by_source_state[s_name][st_name] += 1
-            elif st_name.lower() == 'no show':
-                by_source_state[s_name]["No Show"] += 1
-                by_source_state[s_name]["No show"] += 1
-            by_source_state[s_name]["total"] += 1
-            by_source_state[s_name]["cierres"] += s_count
+            if state_key:
+                by_source_state[s_name][state_key] += 1
+                
+            if state_key == 'Show Up':
+                if s_count > 0:
+                    if has_deposit:
+                        by_source_state[s_name]["Depósitos"] += 1
+                    else:
+                        by_source_state[s_name]["Deals"] += 1
+                else:
+                    if st_name in ('No Lead', 'No Leads', 'no_lead'):
+                        by_source_state[s_name]["No Leads"] += 1
+                    else:
+                        by_source_state[s_name]["Follow Ups"] += 1
             
-            # by_triage_state
-            t_name = (a.encargado_triage or 'Sin Asignar').strip()
-            if t_name not in by_triage_state:
-                by_triage_state[t_name] = {
-                    "total": 0,
-                    "Pendiente": 0,
-                    "Contactado": 0,
-                    "Confirmado": 0,
-                    "Show Up": 0,
-                    "No Show": 0,
-                    "No show": 0,
-                    "Reagendada": 0,
-                    "Cancelada": 0,
-                    "Cerrada": 0,
-                    "cierres": 0
-                }
-            if st_name in by_triage_state[t_name]:
-                by_triage_state[t_name][st_name] += 1
-            elif st_name.lower() == 'no show':
-                by_triage_state[t_name]["No Show"] += 1
-                by_triage_state[t_name]["No show"] += 1
-            by_triage_state[t_name]["total"] += 1
-            by_triage_state[t_name]["cierres"] += s_count
+            by_source_state[s_name]["total"] += 1
         
         # Obtener closers y fuentes únicas para el periodo de fechas seleccionado
         closers_query = db.session.query(FinancialAgenda.closer).distinct().filter(
             FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
         ).all()
         sources_query = db.session.query(FinancialAgenda.nombre).distinct().filter(
-            FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
-        ).all()
-        triage_query = db.session.query(FinancialAgenda.encargado_triage).distinct().filter(
             FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
         ).all()
         
@@ -366,11 +385,7 @@ def get_financial_agendas():
         closer_usernames = [u.username for u in closer_users]
         unique_closers = sorted(list(set(closer_names_db + closer_usernames)))
         
-        # Combinar encargados de triage actuales en BD con todos los usuarios triage activos
-        triage_names_db = [t[0].strip() for t in triage_query if t[0] and t[0].strip()]
-        triage_users = User.query.filter_by(role='triage', is_active=True).all()
-        triage_usernames = [u.username for u in triage_users]
-        unique_triage = sorted(list(set(triage_names_db + triage_usernames)))
+        unique_triage = []
         
         raw_sources = [s[0].strip() for s in sources_query if s[0] and s[0].strip()]
         unique_sources = []
@@ -396,8 +411,8 @@ def get_financial_agendas():
             "by_closer": by_closer,
             "by_closer_state": by_closer_state,
             "by_source_state": by_source_state,
-            "by_triage_state": by_triage_state,
-            "unique_states": ['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada'],
+            "by_triage_state": {},
+            "unique_states": ['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada', '2TH Call', 'No Lead', 'Follow Up'],
             "unique_closers": unique_closers,
             "unique_sources": unique_sources,
             "unique_triage": unique_triage,

@@ -436,6 +436,29 @@ const CloserWorkflowPage = () => {
                                                         >
                                                             2ª Llamada
                                                         </button>
+                                                        <button
+                                                            onClick={async (e) => {
+                                                                if (e) e.stopPropagation();
+                                                                if (!window.confirm("¿Seguro que deseas marcar este prospecto como No Lead?")) return;
+                                                                setProcessingId(a.id);
+                                                                try {
+                                                                    await api.post(`/closer/appointments/${a.id}/process`, {
+                                                                        status: 'No Lead'
+                                                                    });
+                                                                    toast.success("Prospecto marcado como No Lead");
+                                                                    fetchAgendas();
+                                                                } catch (err) {
+                                                                    console.error("Error al calificar como No Lead:", err);
+                                                                    toast.error("Error al calificar");
+                                                                } finally {
+                                                                    setProcessingId(null);
+                                                                }
+                                                            }}
+                                                            disabled={processingId === a.id}
+                                                            className="h-7 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-350 font-black text-[9px] uppercase tracking-wider rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 border border-slate-750"
+                                                        >
+                                                            No Lead
+                                                        </button>
                                                     </div>
                                                 )}
 

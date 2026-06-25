@@ -19,6 +19,15 @@
       - Inclusión de un switch interactivo para marcar si una venta manual fue cerrada "Dentro de la llamada (In-Call)".
     - **Interfaz Frontend (`PublicCloserReportPage.jsx`) [MODIFY]**:
       - Integración de llamada automática al endpoint de pre-relleno al cambiar el closer o la fecha, autocompletando la gran mayoría de métricas operativas del día con un banner premium indicando el éxito de la operación.
+  - **Rediseño de Desglose de Rendimiento y Nuevos Estados (2TH Call, No Lead, Follow Up) [MODIFY]**:
+    - **Backend API (`app/api/public/financial_agendas.py` y `app/services/closer_service.py`)**:
+      - Reestructuración de la agregación de métricas de agendas agrupándolas en 3 bloques lógicos: `PREPARATION` (Pendiente, Contactado, Confirmado, Reagendada, Cancelada, Cerrada), `EXECUTION` (Show Up, No Show, 2TH Call) y `RESULTS` (Deals, Depósitos, Follow Ups, No Leads).
+      - Remoción del cálculo de desgloses para "Call Confirmer" para simplificar y optimizar la respuesta de la API.
+      - Implementación de etiquetado automático: al agendar una 2ª llamada en el CRM, la cita actual pasa automáticamente al estado `Follow Up` y la nueva se crea pre-etiquetada como `2TH Call` en `appointments` y `financial_agendas`. Se integró también soporte completo para el estado `No Lead`.
+    - **Frontend (`FinancialAgendasPage.jsx` y `CloserWorkflowPage.jsx`)**:
+      - Creación del componente `PerformanceTable` en `FinancialAgendasPage.jsx` con el diseño exacto en tres columnas con sub-encabezados, iconos y tooltips de información.
+      - Remoción de la pestaña e informes de Call Confirmer en el historial de agendas.
+      - Inclusión del botón de acción rápida **No Lead** en el deck de closers (`CloserWorkflowPage.jsx`) para descartar prospectos directamente.
 
 - **24 de Junio de 2026**:
   - **Mejora del Dashboard de Rendimiento de Closers**:
