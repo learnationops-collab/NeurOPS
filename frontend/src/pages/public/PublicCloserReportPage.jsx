@@ -318,7 +318,7 @@ const PublicCloserReportPage = () => {
     const agendaComplete = isSectionComplete([...generalFields, ...agendaFields]);
     const followUpsComplete = isSectionComplete(followUpsFields);
     const salesComplete = isSectionComplete(salesFields);
-    const reflectionComplete = Object.keys(formData.reflections).length >= 5;
+    const reflectionComplete = Object.keys(formData.reflections).length >= 2;
 
     // Auto-colapsar logica (solo una vez por sección)
     const autoAdvancedRef = useRef({ agendas: false, llamadas: false, seguimientos: false, ventas: false });

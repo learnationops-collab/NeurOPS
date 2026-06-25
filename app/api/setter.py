@@ -367,6 +367,10 @@ def submit_daily_report():
         stat.qualification_opening_responded = int(data.get('qualification_opening_responded') or 0)
         stat.pain_opening_submitted = int(data.get('pain_opening_submitted') or 0)
         stat.pain_opening_responded = int(data.get('pain_opening_responded') or 0)
+        stat.offer_opening_submitted = int(data.get('offer_opening_submitted') or 0)
+        stat.offer_opening_responded = int(data.get('offer_opening_responded') or 0)
+        stat.link_opening_submitted = int(data.get('link_opening_submitted') or 0)
+        stat.link_opening_responded = int(data.get('link_opening_responded') or 0)
         stat.q1_useful = int(data.get('q1_useful') or 0)
         stat.q1_unuseful = int(data.get('q1_unuseful') or 0)
         stat.q2_useful = int(data.get('q2_useful') or 0)
@@ -402,6 +406,10 @@ def submit_daily_report():
             qualification_opening_responded=int(data.get('qualification_opening_responded') or 0),
             pain_opening_submitted=int(data.get('pain_opening_submitted') or 0),
             pain_opening_responded=int(data.get('pain_opening_responded') or 0),
+            offer_opening_submitted=int(data.get('offer_opening_submitted') or 0),
+            offer_opening_responded=int(data.get('offer_opening_responded') or 0),
+            link_opening_submitted=int(data.get('link_opening_submitted') or 0),
+            link_opening_responded=int(data.get('link_opening_responded') or 0),
             q1_useful=int(data.get('q1_useful') or 0),
             q1_unuseful=int(data.get('q1_unuseful') or 0),
             q2_useful=int(data.get('q2_useful') or 0),

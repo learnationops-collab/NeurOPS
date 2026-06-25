@@ -1543,3 +1543,19 @@
     - **Reubicación de Sparklines**: Se movieron los sparklines SVG de la parte inferior de las `.stat-card` para situarse al lado derecho de su respectivo valor numérico principal. Esto redujo el alto mínimo de las tarjetas a `180px` conservando la densidad y el aspecto premium.
 
     - **Legibilidad y Tipografía**: Se incrementaron y afinaron los tamaños de fuente de títulos, etiquetas, badges de tendencia y valores de texto libre en toda la interfaz para una lectura 100% clara en Discord.
+
+  - **Mejora del Unified Funnel Analysis y Simplificación de Reflexiones (`setter_report.html`, React Forms, Backend) [MODIFY]**:
+
+    - **Embudo Horizontal Visual con 6 Etapas**:
+      - Se implementó en el template Jinja2 (`setter_report.html`) un embudo horizontal visual de alta gama compuesto por una tarjeta para **Entrantes** (con su valor y 100%) y 6 chevrons con iconos premium representativos de cada paso: Cualificación, **Leads Netos** (mostrando la cantidad intermedia y la conversión relativa), Dolor, Oferta, Link y Agenda.
+      - Se integró un grid de 5 tarjetas inferiores que comparan en puntos porcentuales (pp) cada tasa de conversión actual con su promedio correspondiente de los últimos 7 días.
+
+    - **Tablas Stacked Detalladas de Follow-ups y Openings**:
+      - Se dividió el análisis de interacciones en dos tablas apiladas y ordenadas: **Follow-ups por Etapa** (con columnas de Enviados, Respondidos, Efectividad y barras de progreso de color por etapa) y **Openings por Etapa** (añadiendo soporte y guardado para Oferta y Link, cubriendo las 4 etapas y mostrando % Respuesta con barras de progreso).
+      - Se modificaron los modelos de base de datos (`SetterDailyStats`) agregando los 4 campos de openings correspondientes y se ejecutó la migración correspondiente.
+      - Se actualizó el endpoint de API para persistir y calcular promedios de estos nuevos campos tanto en el flujo público (`app/api/public/setter.py`) como privado (`app/api/setter.py`).
+
+    - **Simplificación del Formulario de Reflexiones Cualitativas**:
+      - Se modificó `DailyReflectionSection.jsx` reduciendo el formulario cualitativo de 6 a solo 2 preguntas: **Reflexión Diaria** y **Victoria del Día**, eliminando preguntas redundantes.
+      - Se ajustó la validación en `PublicCloserReportPage.jsx` para que apruebe la sección de reflexiones con `>= 2` elementos.
+      - Se actualizó `reflectionKeys` en `SetterReportModal.jsx` a solo 2 claves.

@@ -110,7 +110,7 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
             .filter(a => a.answer && a.answer.trim() !== '');
 
         // Preguntas de Daily Reflection (claves string)
-        const reflectionKeys = ['daily_reflection', 'win_of_day', 'explain_why', 'opportunity', 'learning_process', 'the_plan'];
+        const reflectionKeys = ['daily_reflection', 'win_of_day'];
         const reflectionAnswers = {};
         reflectionKeys.forEach(key => {
             if (answers[key]) reflectionAnswers[key] = answers[key];

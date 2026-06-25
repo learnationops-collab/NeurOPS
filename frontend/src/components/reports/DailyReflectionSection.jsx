@@ -18,38 +18,6 @@ const CLOSER_QUESTIONS = [
         description: 'Victoria del día',
         info: 'Puede ser un cierre, una conversación difícil que manejaste bien, una objeción que enfrentaste mejor que antes...',
         placeholder: 'Ej: Mi victoria del día fue hacerle pitch a un lead que inicialmente dijo que solo tenía 13 USD de presupuesto...'
-    },
-    {
-        key: 'explain_why',
-        title: 'Why',
-        icon: <Target size={16} />,
-        description: 'Por qué fue victoria',
-        info: 'No te quedes solo en lo que pasó: cuenta qué obstáculo, creencia, miedo o incomodidad atravesaste...',
-        placeholder: 'Lo considero una victoria porque rompí la creencia de que un lead sin presupuesto inicial no merece una presentación...'
-    },
-    {
-        key: 'opportunity',
-        title: 'Opportunity',
-        icon: <Lightbulb size={16} />,
-        description: 'Mejora continua',
-        info: 'Piensa en el punto más importante que, si lo mejoras, puede impactar directamente tu performance comercial.',
-        placeholder: 'Ej: Mi principal oportunidad de mejora fue el premanejo de la objeción de precio...'
-    },
-    {
-        key: 'learning_process',
-        title: 'Learning',
-        icon: <TrendingUp size={16} />,
-        description: 'Aprendizaje',
-        info: '¿Qué aprendiste hoy sobre los leads, las objeciones, el pitch, la oferta o tu forma de vender?',
-        placeholder: 'Ej: Aprendí que cuando no construyo suficiente valor antes de presentar el precio, los leads interpretan la inversión como un gasto...'
-    },
-    {
-        key: 'the_plan',
-        title: 'Plan',
-        icon: <Rocket size={16} />,
-        description: 'Acción Concreta',
-        info: 'Escribe una acción específica, observable y ejecutable. Define qué vas a hacer, cuándo lo vas a hacer.',
-        placeholder: 'Ej: Mañana antes de mis llamadas voy a escribir 3 frases de premanejo de precio y practicarlas durante 10 minutos...'
     }
 ];
 
@@ -69,38 +37,6 @@ const SETTER_QUESTIONS = [
         description: 'Victoria del día',
         info: 'Puede ser haber agendado a un "pez gordo", rescatar a un lead que ya no respondía, manejar una objeción con éxito...',
         placeholder: 'Ej: Mi victoria fue reactivar a un lead que llevaba 10 días sin responder...'
-    },
-    {
-        key: 'explain_why',
-        title: 'Why',
-        icon: <Target size={16} />,
-        description: 'Por qué fue victoria',
-        info: 'Describe qué barrera mental rompiste, qué técnica nueva probaste o qué cambio de enfoque te permitió avanzar.',
-        placeholder: 'Lo considero una victoria porque vencí la pereza de hacer contenido personalizado para un solo lead "perdido"...'
-    },
-    {
-        key: 'opportunity',
-        title: 'Opportunity',
-        icon: <Lightbulb size={16} />,
-        description: 'Cuello de botella',
-        info: 'Identifica el punto técnico donde te trabaste. ¿Mala calificación? ¿Lentitud en respuesta?',
-        placeholder: 'Ej: Mi oportunidad de mejora es la fase de diagnóstico en el chat. Salto demasiado rápido al link de agenda...'
-    },
-    {
-        key: 'learning_process',
-        title: 'Learning',
-        icon: <TrendingUp size={16} />,
-        description: 'Patrones vistos',
-        info: 'Describe qué disparadores funcionaron mejor o qué objeción se repitió más en el chat.',
-        placeholder: 'Ej: He notado que cuando pregunto por facturación antes de generar confianza, el lead se pone a la defensiva...'
-    },
-    {
-        key: 'the_plan',
-        title: 'Plan',
-        icon: <Rocket size={16} />,
-        description: 'Mañana mejor',
-        info: 'Escribe una acción táctica, medible y ejecutable. Define qué cambio harás en tu script.',
-        placeholder: 'Ej: Mañana voy a modificar mi script de calificación: implementaré la pregunta de consecuencia...'
     }
 ];
 

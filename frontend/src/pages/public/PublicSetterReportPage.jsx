@@ -73,6 +73,10 @@ const PublicSetterReportPage = () => {
         qualification_opening_responded: '',
         pain_opening_submitted: '',
         pain_opening_responded: '',
+        offer_opening_submitted: '',
+        offer_opening_responded: '',
+        link_opening_submitted: '',
+        link_opening_responded: '',
         answers: [],
         reflections: {},
         frequent_questions: [{ number: '', is_good: false }]
@@ -157,6 +161,10 @@ const PublicSetterReportPage = () => {
                 qualification_opening_responded: '',
                 pain_opening_submitted: '',
                 pain_opening_responded: '',
+                offer_opening_submitted: '',
+                offer_opening_responded: '',
+                link_opening_submitted: '',
+                link_opening_responded: '',
                 answers: [],
                 reflections: {}
             }));
@@ -175,7 +183,9 @@ const PublicSetterReportPage = () => {
             'qualification_fu', 'pain_fu', 'offer_fu', 'link_fu', 'agenda_fu',
             'qualification_fur', 'pain_fur', 'offer_fur', 'link_fur', 'agenda_fur',
             'qualification_opening_submitted', 'qualification_opening_responded',
-            'pain_opening_submitted', 'pain_opening_responded'
+            'pain_opening_submitted', 'pain_opening_responded',
+            'offer_opening_submitted', 'offer_opening_responded',
+            'link_opening_submitted', 'link_opening_responded'
         ];
 
         let filledFields = 0;
@@ -402,8 +412,8 @@ const PublicSetterReportPage = () => {
                                                 {[
                                                     { label: 'Cualificación', id: 'qualification', hasOpening: true },
                                                     { label: 'Dolor', id: 'pain', hasOpening: true },
-                                                    { label: 'Oferta', id: 'offer', hasOpening: false },
-                                                    { label: 'Link', id: 'link', hasOpening: false },
+                                                    { label: 'Oferta', id: 'offer', hasOpening: true },
+                                                    { label: 'Link', id: 'link', hasOpening: true },
                                                     { label: 'Agenda', id: 'agenda', hasOpening: false }
                                                 ].map((stage, idx) => (
                                                     <tr key={stage.id} className="group hover:bg-slate-800/30 transition-colors rounded-2xl">

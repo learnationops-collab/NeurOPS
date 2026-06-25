@@ -83,6 +83,10 @@ def submit_public_setter_report():
         stat.qualification_opening_responded = int(data.get('qualification_opening_responded') or 0)
         stat.pain_opening_submitted = int(data.get('pain_opening_submitted') or 0)
         stat.pain_opening_responded = int(data.get('pain_opening_responded') or 0)
+        stat.offer_opening_submitted = int(data.get('offer_opening_submitted') or 0)
+        stat.offer_opening_responded = int(data.get('offer_opening_responded') or 0)
+        stat.link_opening_submitted = int(data.get('link_opening_submitted') or 0)
+        stat.link_opening_responded = int(data.get('link_opening_responded') or 0)
         stat.q1_useful = int(data.get('q1_useful') or 0)
         stat.q1_unuseful = int(data.get('q1_unuseful') or 0)
         stat.q2_useful = int(data.get('q2_useful') or 0)
@@ -116,6 +120,10 @@ def submit_public_setter_report():
             qualification_opening_responded=int(data.get('qualification_opening_responded') or 0),
             pain_opening_submitted=int(data.get('pain_opening_submitted') or 0),
             pain_opening_responded=int(data.get('pain_opening_responded') or 0),
+            offer_opening_submitted=int(data.get('offer_opening_submitted') or 0),
+            offer_opening_responded=int(data.get('offer_opening_responded') or 0),
+            link_opening_submitted=int(data.get('link_opening_submitted') or 0),
+            link_opening_responded=int(data.get('link_opening_responded') or 0),
             q1_useful=int(data.get('q1_useful') or 0),
             q1_unuseful=int(data.get('q1_unuseful') or 0),
             q2_useful=int(data.get('q2_useful') or 0),
@@ -798,6 +806,10 @@ def _prepare_setter_report_data(stat):
     avg_apertura_7 = 0
     avg_cual_7 = 0
     avg_conv_7 = 0
+    avg_net_leads_tasa_7 = 0
+    avg_leads_to_pain_tasa_7 = 0
+    avg_pain_to_offer_tasa_7 = 0
+    avg_offer_to_agenda_tasa_7 = 0
 
     p7_count = len(prev_7_reports)
     if p7_count > 0:
@@ -818,6 +830,70 @@ def _prepare_setter_report_data(stat):
         t_agendas_7 = sum(r.funnel_agenda or 0 for r in prev_7_reports)
         avg_conv_7 = safe_percent(t_agendas_7, t_qual_7)
 
+        sum_net_leads = 0
+        sum_leads_to_pain = 0
+        sum_pain_to_offer = 0
+        sum_offer_to_agenda = 0
+        for r in prev_7_reports:
+            r_entrantes = r.inbox_entrantes or 0
+            r_qual = r.funnel_qualification or 0
+            r_net = r.inbox_leads or 0
+            r_pain = r.funnel_pain or 0
+            r_offer = r.funnel_offer or 0
+            r_link = r.funnel_link or 0
+            r_agenda = r.funnel_agenda or 0
+            
+            sum_net_leads += safe_percent(r_net, r_entrantes)
+            sum_leads_to_pain += safe_percent(r_pain, r_net)
+            sum_pain_to_offer += safe_percent(r_offer, r_pain)
+            sum_offer_to_agenda += safe_percent(r_agenda, r_link)
+            
+        avg_net_leads_tasa_7 = round(sum_net_leads / p7_count)
+        avg_leads_to_pain_tasa_7 = round(sum_leads_to_pain / p7_count)
+        avg_pain_to_offer_tasa_7 = round(sum_pain_to_offer / p7_count)
+        avg_offer_to_agenda_tasa_7 = round(sum_offer_to_agenda / p7_count)
+
+    # Tasas de conversión actuales del embudo
+    net_leads_tasa = safe_percent(stat.inbox_leads or 0, inbox_entrantes)
+    leads_to_pain_tasa = safe_percent(pain, stat.inbox_leads or 0)
+    pain_to_offer_tasa = safe_percent(offer, pain)
+    offer_to_agenda_tasa = safe_percent(agenda, link)
+
+    # Diferencias
+    diff_qual = qual_tasa - avg_cual_7
+    diff_net_leads = net_leads_tasa - avg_net_leads_tasa_7
+    diff_leads_to_pain = leads_to_pain_tasa - avg_leads_to_pain_tasa_7
+    diff_pain_to_offer = pain_to_offer_tasa - avg_pain_to_offer_tasa_7
+    diff_offer_to_agenda = offer_to_agenda_tasa - avg_offer_to_agenda_tasa_7
+
+    funnel_comparisons = {
+        "qual": {
+            "val": qual_tasa,
+            "avg": avg_cual_7,
+            "diff": diff_qual
+        },
+        "net_leads": {
+            "val": net_leads_tasa,
+            "avg": avg_net_leads_tasa_7,
+            "diff": diff_net_leads
+        },
+        "leads_to_pain": {
+            "val": leads_to_pain_tasa,
+            "avg": avg_leads_to_pain_tasa_7,
+            "diff": diff_leads_to_pain
+        },
+        "pain_to_offer": {
+            "val": pain_to_offer_tasa,
+            "avg": avg_pain_to_offer_tasa_7,
+            "diff": diff_pain_to_offer
+        },
+        "offer_to_agenda": {
+            "val": offer_to_agenda_tasa,
+            "avg": avg_offer_to_agenda_tasa_7,
+            "diff": diff_offer_to_agenda
+        }
+    }
+
     # Insight 1: Entrantes vs promedio 7 días
     if avg_entrantes_7 > 0:
         diff_entrantes = inbox_entrantes - avg_entrantes_7
@@ -835,9 +911,9 @@ def _prepare_setter_report_data(stat):
     if avg_apertura_7 > 0:
         diff_apertura = openings_tasa - avg_apertura_7
         if diff_apertura > 0:
-            insight_apertura = {"dir": "up", "title": f"La tasa de apertura subió {diff_apertura}%", "subtitle": "vs el promedio de los últimos 7 días."}
+            insight_apertura = {"dir": "up", "title": f"La tasa de apertura subió {diff_apertura} pp", "subtitle": "vs el promedio de los últimos 7 días."}
         elif diff_apertura < 0:
-            insight_apertura = {"dir": "down", "title": f"La tasa de apertura bajó {abs(diff_apertura)}%", "subtitle": "vs el promedio de los últimos 7 días."}
+            insight_apertura = {"dir": "down", "title": f"La tasa de apertura bajó {abs(diff_apertura)} pp", "subtitle": "vs el promedio de los últimos 7 días."}
         else:
             insight_apertura = {"dir": "neutral", "title": "La tasa de apertura se mantuvo", "subtitle": "vs el promedio de los últimos 7 días."}
     else:
@@ -847,21 +923,21 @@ def _prepare_setter_report_data(stat):
     if avg_cual_7 > 0:
         diff_cual = qual_tasa - avg_cual_7
         if diff_cual > 0:
-            insight_cual = {"dir": "up", "title": f"La tasa de cualificación subió {diff_cual}%", "subtitle": "vs el promedio de los últimos 7 días."}
+            insight_cual = {"dir": "up", "title": f"La conversión Entrantes → Cualificación mejoró {diff_cual} pp", "subtitle": "vs el promedio de los últimos 7 días."}
         elif diff_cual < 0:
-            insight_cual = {"dir": "down", "title": f"La tasa de cualificación bajó {abs(diff_cual)}%", "subtitle": "vs el promedio de los últimos 7 días."}
+            insight_cual = {"dir": "down", "title": f"La conversión Entrantes → Cualificación bajó {abs(diff_cual)} pp", "subtitle": "vs el promedio de los últimos 7 días."}
         else:
-            insight_cual = {"dir": "neutral", "title": "La tasa de cualificación se mantuvo", "subtitle": "vs el promedio de los últimos 7 días."}
+            insight_cual = {"dir": "neutral", "title": "La conversión Entrantes → Cualificación se mantuvo", "subtitle": "vs el promedio de los últimos 7 días."}
     else:
-        insight_cual = {"dir": "neutral", "title": "Tasa de cualificación", "subtitle": f"Hoy: {qual_tasa}% (sin promedio previo)"}
+        insight_cual = {"dir": "neutral", "title": "Conversión Entrantes → Cualificación", "subtitle": f"Hoy: {qual_tasa}% (sin promedio previo)"}
 
     # Insight 4: Conversión por lead cualificado vs promedio 7 días
     if avg_conv_7 > 0:
         diff_conv = conv_tasa - avg_conv_7
         if diff_conv > 0:
-            insight_conv = {"dir": "up", "title": f"La conversión por lead cualificado subió {diff_conv}%", "subtitle": "vs el promedio de 7 días."}
+            insight_conv = {"dir": "up", "title": f"La conversión por lead cualificado subió {diff_conv} pp", "subtitle": "vs el promedio de 7 días."}
         elif diff_conv < 0:
-            insight_conv = {"dir": "down", "title": f"La conversión por lead cualificado bajó {abs(diff_conv)}%", "subtitle": "vs el promedio de 7 días."}
+            insight_conv = {"dir": "down", "title": f"La conversión por lead cualificado bajó {abs(diff_conv)} pp", "subtitle": "vs el promedio de 7 días."}
         else:
             insight_conv = {"dir": "neutral", "title": "La conversión por lead cualificado se mantuvo", "subtitle": "vs el promedio de 7 días."}
     else:
@@ -908,11 +984,14 @@ def _prepare_setter_report_data(stat):
         "openings": {
             "qualification": {"submitted": q_op_sub, "responded": q_op_res, "pct": safe_percent(q_op_res, q_op_sub)},
             "pain": {"submitted": p_op_sub, "responded": p_op_res, "pct": safe_percent(p_op_res, p_op_sub)},
+            "offer": {"submitted": stat.offer_opening_submitted or 0, "responded": stat.offer_opening_responded or 0, "pct": safe_percent(stat.offer_opening_responded or 0, stat.offer_opening_submitted or 0)},
+            "link": {"submitted": stat.link_opening_submitted or 0, "responded": stat.link_opening_responded or 0, "pct": safe_percent(stat.link_opening_responded or 0, stat.link_opening_submitted or 0)},
             "legacy": {"submitted": opened, "responded": op_resp, "pct": safe_percent(op_resp, opened)}
         },
         
         "funnel": {
             "qualification": qual,
+            "leads_netos": stat.inbox_leads or 0,
             "pain": pain,
             "offer": offer,
             "link": link,
@@ -923,22 +1002,17 @@ def _prepare_setter_report_data(stat):
             "link_to_agenda": safe_percent(agenda, link),
             "conversion_leads_pct": safe_percent(agenda, stat.inbox_leads or 0)
         },
-        
         "follow_up": {
-            "qualification": fu_qual,
-            "qualification_fur": fur_qual,
-            "pain": fu_pain,
-            "pain_fur": fur_pain,
-            "offer": fu_offer,
-            "offer_fur": fur_offer,
-            "link": fu_link,
-            "link_fur": fur_link,
-            "agenda": fu_agenda,
-            "agenda_fur": fur_agenda,
+            "qualification": {"submitted": fu_qual, "responded": fur_qual, "pct": safe_percent(fur_qual, fu_qual)},
+            "pain": {"submitted": fu_pain, "responded": fur_pain, "pct": safe_percent(fur_pain, fu_pain)},
+            "offer": {"submitted": fu_offer, "responded": fur_offer, "pct": safe_percent(fur_offer, fu_offer)},
+            "link": {"submitted": fu_link, "responded": fur_link, "pct": safe_percent(fur_link, fu_link)},
+            "agenda": {"submitted": fu_agenda, "responded": fur_agenda, "pct": safe_percent(fur_agenda, fu_agenda)},
             "total_fu": fu_qual + fu_pain + fu_offer + fu_link + fu_agenda,
-            "total_fur": fur_qual + fur_pain + fu_offer + fur_link + fur_agenda,
+            "total_fur": fur_qual + fur_pain + fur_offer + fur_link + fur_agenda,
             "response_pct": safe_percent(fur_qual + fur_pain + fur_offer + fur_link + fur_agenda, fu_qual + fu_pain + fu_offer + fu_link + fu_agenda)
         },
+        "funnel_comparisons": funnel_comparisons,
         
         "averages": avg_metrics,
         "questions_efficacy": {

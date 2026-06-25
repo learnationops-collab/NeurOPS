@@ -598,6 +598,190 @@
             margin-top: 2px;
             font-weight: 500;
         }
+
+        /* Visual Funnel Styles */
+        .funnel-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 24px;
+            background: rgba(15, 23, 42, 0.45);
+            padding: 16px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .funnel-entrantes-card {
+            background: rgba(10, 15, 30, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 12px 8px;
+            width: 100px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 120px;
+        }
+
+        .funnel-entrantes-title {
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .funnel-entrantes-val {
+            font-size: 28px;
+            font-weight: 900;
+            color: #ffffff;
+            margin: 6px 0;
+        }
+
+        .funnel-entrantes-pct {
+            font-size: 11px;
+            color: var(--text-light);
+            font-weight: 700;
+        }
+
+        .funnel-chevron-wrapper {
+            display: flex;
+            flex: 1;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .funnel-chevron {
+            flex: 1;
+            background: rgba(30, 41, 59, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 12px 4px;
+            min-height: 120px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-radius: 12px;
+        }
+
+        .chevron-cualificacion { border-color: rgba(59, 130, 246, 0.25); background: rgba(59, 130, 246, 0.04); }
+        .chevron-leads-netos { border-color: rgba(139, 92, 246, 0.25); background: rgba(139, 92, 246, 0.04); }
+        .chevron-dolor { border-color: rgba(168, 85, 247, 0.25); background: rgba(168, 85, 247, 0.04); }
+        .chevron-oferta { border-color: rgba(236, 72, 153, 0.25); background: rgba(236, 72, 153, 0.04); }
+        .chevron-link { border-color: rgba(6, 182, 212, 0.25); background: rgba(6, 182, 212, 0.04); }
+        .chevron-agenda { border-color: rgba(16, 185, 129, 0.25); background: rgba(16, 185, 129, 0.04); }
+
+        .funnel-chevron-label {
+            font-size: 8px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .chevron-cualificacion .funnel-chevron-label { color: #60a5fa; }
+        .chevron-leads-netos .funnel-chevron-label { color: #c084fc; }
+        .chevron-dolor .funnel-chevron-label { color: #e879f9; }
+        .chevron-oferta .funnel-chevron-label { color: #fb7185; }
+        .chevron-link .funnel-chevron-label { color: #22d3ee; }
+        .chevron-agenda .funnel-chevron-label { color: #34d399; }
+
+        .funnel-chevron-val {
+            font-size: 22px;
+            font-weight: 900;
+            color: #ffffff;
+            margin: 4px 0;
+        }
+
+        .funnel-chevron-pct {
+            font-size: 11px;
+            font-weight: 750;
+            color: var(--text-muted);
+        }
+
+        .funnel-arrow {
+            color: rgba(255, 255, 255, 0.12);
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        /* Bottom Rates Styles */
+        .funnel-rates-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .funnel-rate-card {
+            background: rgba(10, 15, 30, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            padding: 10px 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 95px;
+        }
+
+        .funnel-rate-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            line-height: 1.2;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .funnel-rate-val {
+            font-size: 18px;
+            font-weight: 900;
+            margin: 2px 0;
+        }
+        .rate-blue { color: #60a5fa; }
+        .rate-purple { color: #c084fc; }
+        .rate-pink { color: #fb7185; }
+        .rate-cyan { color: #22d3ee; }
+        .rate-green { color: #34d399; }
+
+        .funnel-rate-trend {
+            font-size: 10px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            margin-top: 2px;
+        }
+
+        .funnel-rate-comparison {
+            font-size: 8px;
+            color: var(--text-light);
+            margin-top: 1px;
+            font-weight: 600;
+        }
+
+        /* Detailed Tables progress bar */
+        .progress-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .progress-bar-bg {
+            width: 60px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
     </style>
 </head>
 
@@ -822,85 +1006,182 @@
                     <div class="panel-icon">📊</div>
                     <div class="panel-title">Unified Funnel Analysis</div>
                 </div>
-                
-                <!-- Inbox Restoration -->
-                <p style="font-size: 9px; font-weight: 900; color: var(--text-light); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px;">Inbox Analysis</p>
-                <div class="inbox-grid">
-                    <div class="inbox-field">
-                        <div class="inbox-val">{{ inbox.entrantes }}</div>
-                        <div class="inbox-label">Entrantes</div>
+
+                <!-- Embudo Horizontal Visual -->
+                <div class="funnel-container">
+                    <!-- Entrantes Box -->
+                    <div class="funnel-entrantes-card">
+                        <div class="funnel-entrantes-title">Entrantes</div>
+                        <div class="funnel-entrantes-val">{{ inbox.entrantes }}</div>
+                        <div class="funnel-entrantes-pct">100%</div>
                     </div>
-                    <div class="inbox-field">
-                        <div class="inbox-val">{{ inbox.not_lead }}</div>
-                        <div class="inbox-label">No Lead</div>
-                    </div>
-                    <div class="inbox-field">
-                        <div class="inbox-val">{{ inbox.inabribles }}</div>
-                        <div class="inbox-label">In-abribles</div>
+                    
+                    <div class="funnel-arrow">➔</div>
+                    
+                    <div class="funnel-chevron-wrapper">
+                        <!-- Cualificación -->
+                        <div class="funnel-chevron chevron-cualificacion">
+                            <div class="funnel-chevron-label">1. Cualificación</div>
+                            <div class="funnel-chevron-val" style="color: #60a5fa;">👥 {{ funnel.qualification }}</div>
+                            <div class="funnel-chevron-pct">{{ safe_percent(funnel.qualification, inbox.entrantes) }}%</div>
+                        </div>
+                        
+                        <div class="funnel-arrow">➔</div>
+                        
+                        <!-- Leads Netos -->
+                        <div class="funnel-chevron chevron-leads-netos">
+                            <div class="funnel-chevron-label">2. Leads Netos</div>
+                            <div class="funnel-chevron-val" style="color: #c084fc;">🎯 {{ funnel.leads_netos }}</div>
+                            <div class="funnel-chevron-pct">{{ safe_percent(funnel.leads_netos, funnel.qualification) }}%</div>
+                        </div>
+                        
+                        <div class="funnel-arrow">➔</div>
+                        
+                        <!-- Dolor -->
+                        <div class="funnel-chevron chevron-dolor">
+                            <div class="funnel-chevron-label">3. Dolor</div>
+                            <div class="funnel-chevron-val" style="color: #e879f9;">🩺 {{ funnel.pain }}</div>
+                            <div class="funnel-chevron-pct">{{ safe_percent(funnel.pain, funnel.leads_netos) }}%</div>
+                        </div>
+                        
+                        <div class="funnel-arrow">➔</div>
+                        
+                        <!-- Oferta -->
+                        <div class="funnel-chevron chevron-oferta">
+                            <div class="funnel-chevron-label">4. Oferta</div>
+                            <div class="funnel-chevron-val" style="color: #fb7185;">🏷️ {{ funnel.offer }}</div>
+                            <div class="funnel-chevron-pct">{{ safe_percent(funnel.offer, funnel.pain) }}%</div>
+                        </div>
+                        
+                        <div class="funnel-arrow">➔</div>
+                        
+                        <!-- Link -->
+                        <div class="funnel-chevron chevron-link">
+                            <div class="funnel-chevron-label">5. Link</div>
+                            <div class="funnel-chevron-val" style="color: #22d3ee;">🔗 {{ funnel.link }}</div>
+                            <div class="funnel-chevron-pct">{{ safe_percent(funnel.link, funnel.pain) }}%</div>
+                        </div>
+                        
+                        <div class="funnel-arrow">➔</div>
+                        
+                        <!-- Agenda -->
+                        <div class="funnel-chevron chevron-agenda">
+                            <div class="funnel-chevron-label">6. Agenda</div>
+                            <div class="funnel-chevron-val" style="color: #34d399;">📅 {{ funnel.agenda }}</div>
+                            <div class="funnel-chevron-pct">{{ safe_percent(funnel.agenda, funnel.link) }}%</div>
+                        </div>
                     </div>
                 </div>
-                <div class="net-leads-banner">
+
+                <!-- Bottom Rates Grid -->
+                <div class="funnel-rates-grid">
+                    {% for rate_key, label, color_class in [
+                        ('qual', 'Conv. Entrantes a Cualificación', 'rate-blue'),
+                        ('net_leads', 'Leads Netos (No Lead filtrados)', 'rate-purple'),
+                        ('leads_to_pain', 'Leads a Dolor', 'rate-pink'),
+                        ('pain_to_offer', 'Dolor a Oferta', 'rate-cyan'),
+                        ('offer_to_agenda', 'Oferta a Agenda', 'rate-green')
+                    ] %}
+                        {% set comp = funnel_comparisons[rate_key] %}
+                        <div class="funnel-rate-card">
+                            <div class="funnel-rate-label">{{ label }}</div>
+                            <div class="funnel-rate-val {{ color_class }}">{{ comp.val }}%</div>
+                            <div>
+                                <div class="funnel-rate-trend {% if comp.diff > 0 %}trend-up{% elif comp.diff < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                                    {% if comp.diff > 0 %}▲ {{ comp.diff }} pp{% elif comp.diff < 0 %}▼ {{ comp.diff|abs }} pp{% else %}▬ 0 pp{% endif %}
+                                </div>
+                                <div class="funnel-rate-comparison">vs prom. 7 días ({{ comp.avg }}%)</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- DETAILED CONVERSIONS TABLES (Follow-ups & Openings) -->
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <!-- Follow-ups por Etapa -->
                     <div>
-                        <span class="inbox-label">Leads Netos:</span>
-                        <span style="font-size: 24px; font-weight: 900; color: var(--rose); margin-left: 10px;">{{ inbox.leads }}</span>
+                        <p style="font-size: 10px; font-weight: 900; color: var(--indigo); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px;">Follow-ups por Etapa</p>
+                        <table class="standings-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 35%; text-align: left;">Etapa</th>
+                                    <th style="width: 20%; text-align: right;">Enviados</th>
+                                    <th style="width: 20%; text-align: right;">Respondidos</th>
+                                    <th style="width: 25%; text-align: right;">Efectividad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stage_key, label, bar_color in [
+                                    ('qualification', 'Cualificación', '#3b82f6'),
+                                    ('pain', 'Dolor', '#a855f7'),
+                                    ('offer', 'Oferta', '#fb7185'),
+                                    ('link', 'Link', '#22d3ee')
+                                ] %}
+                                <tr class="stage-table-row">
+                                    <td style="text-align: left;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="font-size: 10px; color: {{ bar_color }};">●</span>
+                                            <span style="font-weight: 700; font-size: 12px; color: var(--text-main);">{{ label }}</span>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: right; font-weight: 800; color: var(--text-main);">{{ follow_up[stage_key].submitted }}</td>
+                                    <td style="text-align: right; font-weight: 800; color: var(--text-muted);">{{ follow_up[stage_key].responded }}</td>
+                                    <td style="text-align: right;">
+                                        <div class="progress-bar-container">
+                                            <span style="font-weight: 800; font-size: 12px; color: var(--text-main);">{{ follow_up[stage_key].pct }}%</span>
+                                            <div class="progress-bar-bg">
+                                                <div class="progress-bar-fill" style="width: {{ follow_up[stage_key].pct }}%; background-color: {{ bar_color }};"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                    <div style="display: flex; gap: 20px;">
-                        <div style="text-align: center;">
-                            <p class="inbox-label">% No Lead</p>
-                            <p style="font-size: 14px; font-weight: 900; color: var(--text-main);">{{ inbox.no_lead_pct }}%</p>
-                        </div>
-                        <div style="text-align: center;">
-                            <p class="inbox-label">% Inabrible</p>
-                            <p style="font-size: 14px; font-weight: 900; color: var(--text-main);">{{ inbox.inabribles_pct }}%</p>
-                        </div>
+
+                    <!-- Openings por Etapa -->
+                    <div>
+                        <p style="font-size: 10px; font-weight: 900; color: var(--teal); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px;">Openings por Etapa</p>
+                        <table class="standings-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 35%; text-align: left;">Etapa</th>
+                                    <th style="width: 20%; text-align: right;">Enviados</th>
+                                    <th style="width: 20%; text-align: right;">Respondidos</th>
+                                    <th style="width: 25%; text-align: right;">% Respuesta</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stage_key, label, bar_color in [
+                                    ('qualification', 'Cualificación', '#3b82f6'),
+                                    ('pain', 'Dolor', '#a855f7'),
+                                    ('offer', 'Oferta', '#fb7185'),
+                                    ('link', 'Link', '#22d3ee')
+                                ] %}
+                                <tr class="stage-table-row">
+                                    <td style="text-align: left;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="font-size: 10px; color: {{ bar_color }};">●</span>
+                                            <span style="font-weight: 700; font-size: 12px; color: var(--text-main);">{{ label }}</span>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: right; font-weight: 800; color: var(--text-main);">{{ openings[stage_key].submitted }}</td>
+                                    <td style="text-align: right; font-weight: 800; color: var(--text-muted);">{{ openings[stage_key].responded }}</td>
+                                    <td style="text-align: right;">
+                                        <div class="progress-bar-container">
+                                            <span style="font-weight: 800; font-size: 12px; color: var(--text-main);">{{ openings[stage_key].pct }}%</span>
+                                            <div class="progress-bar-bg">
+                                                <div class="progress-bar-fill" style="width: {{ openings[stage_key].pct }}%; background-color: {{ bar_color }};"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-
-                <div style="height: 30px;"></div>
-
-                <table class="standings-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 25%">Stage</th>
-                            <th style="width: 20%">Leads</th>
-                            <th style="width: 25%">FU (I/R)</th>
-                            <th style="width: 25%">Open (I/R)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for stage_key, label in [
-                            ('qualification', 'Cualificación'),
-                            ('pain', 'Dolor'),
-                            ('offer', 'Oferta'),
-                            ('link', 'Link'),
-                            ('agenda', 'Agenda')
-                        ] %}
-                        <tr class="stage-table-row">
-                            <td>
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <div class="row-idx">{{ loop.index }}</div>
-                                    <div class="stage-name">{{ label }}</div>
-                                </div>
-                            </td>
-                            <td><div class="stage-val-main val-indigo">{{ funnel[stage_key] }}</div></td>
-                            <td>
-                                <div class="stage-val-main val-rose">
-                                    {{ follow_up[stage_key] }}<span class="sep">/</span>{{ follow_up[stage_key + '_fur'] }}
-                                </div>
-                            </td>
-                            <td>
-                                {% if stage_key in ['qualification', 'pain'] %}
-                                <div class="stage-val-main val-fuchsia">
-                                    {{ openings[stage_key].submitted }}<span class="sep">/</span>{{ openings[stage_key].responded }}
-                                </div>
-                                {% else %}
-                                <span style="font-weight: 800; color: #e2e8f0">—</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
             </div>
 
             <!-- COLUMNA DERECHA (SIDEBAR CUALITATIVO) -->
@@ -948,34 +1229,6 @@
                         <div class="qa-card">
                             <div class="qa-label" style="color: var(--teal); font-size: 11px;">Victoria del Día</div>
                             <div class="qa-content" style="border-left: 4px solid var(--teal); padding: 12px 16px; font-size: 13px; min-height: auto;">{{ reflections.win_of_day }}</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if reflections.explain_why %}
-                        <div class="qa-card">
-                            <div class="qa-label" style="color: var(--teal); font-size: 11px;">¿Por qué fue una victoria?</div>
-                            <div class="qa-content" style="border-left: 4px solid var(--teal); padding: 12px 16px; font-size: 13px; min-height: auto;">{{ reflections.explain_why }}</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if reflections.opportunity %}
-                        <div class="qa-card">
-                            <div class="qa-label" style="color: var(--rose); font-size: 11px;">Oportunidad de Mejora</div>
-                            <div class="qa-content" style="border-left: 4px solid var(--rose); padding: 12px 16px; font-size: 13px; min-height: auto;">{{ reflections.opportunity }}</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if reflections.learning_process %}
-                        <div class="qa-card">
-                            <div class="qa-label" style="color: var(--indigo); font-size: 11px;">Proceso de Aprendizaje</div>
-                            <div class="qa-content" style="border-left: 4px solid var(--indigo); padding: 12px 16px; font-size: 13px; min-height: auto;">{{ reflections.learning_process }}</div>
-                        </div>
-                        {% endif %}
-                        
-                        {% if reflections.the_plan %}
-                        <div class="qa-card">
-                            <div class="qa-label" style="color: var(--fuchsia); font-size: 11px;">Plan para Mañana</div>
-                            <div class="qa-content" style="border-left: 4px solid var(--fuchsia); padding: 12px 16px; font-size: 13px; min-height: auto;">{{ reflections.the_plan }}</div>
                         </div>
                         {% endif %}
                     </div>

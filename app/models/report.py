@@ -59,6 +59,10 @@ class SetterDailyStats(db.Model):
     qualification_opening_responded = db.Column(db.Integer, default=0)
     pain_opening_submitted = db.Column(db.Integer, default=0)
     pain_opening_responded = db.Column(db.Integer, default=0)
+    offer_opening_submitted = db.Column(db.Integer, default=0)
+    offer_opening_responded = db.Column(db.Integer, default=0)
+    link_opening_submitted = db.Column(db.Integer, default=0)
+    link_opening_responded = db.Column(db.Integer, default=0)
     
     funnel_qualification = db.Column(db.Integer, default=0)
     funnel_pain = db.Column(db.Integer, default=0)
