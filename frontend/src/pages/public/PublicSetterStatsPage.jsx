@@ -15,7 +15,6 @@ import usePersistentFilters from '../../hooks/usePersistentFilters';
 import FunnelChart from '../../components/charts/FunnelChart';
 import EvolutionChart from '../../components/charts/EvolutionChart';
 import SetterReportsTable from './SetterReportsTable';
-import SetterComparisonView from './SetterComparisonView';
 import ConversationalStatsTab from './ConversationalStatsTab';
 import IncomingLeadsTab from './IncomingLeadsTab';
 import LeadUnifiedKPI from '../../components/shared/LeadUnifiedKPI';
@@ -406,9 +405,6 @@ const PublicSetterStatsPage = () => {
                 {/* TABS */}
                 <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit shadow-sm backdrop-blur-sm">
                     <TabButton id="general" label="Vista General" icon={BarChart3} />
-                    {user.role !== 'setter' && (
-                        <TabButton id="comparison" label="Comparación" icon={ArrowRightLeft} />
-                    )}
                     <TabButton id="reports" label="Registros" icon={Table} />
                     <TabButton id="conv_stats" label="Rend. Conversacional" icon={MessageSquare} />
                     <TabButton id="incoming_leads" label="Leads Entrantes" icon={Users} />
@@ -951,10 +947,7 @@ const PublicSetterStatsPage = () => {
                     </div>
                 )}
 
-                {/* --- TAB: COMPARACIÓN --- */}
-                {activeTab === 'comparison' && (
-                    <SetterComparisonView setters={setters} />
-                )}
+
 
                 {/* --- TAB: REGISTROS (LOG) --- */}
                 {activeTab === 'reports' && (

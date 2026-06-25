@@ -1,6 +1,11 @@
 # Bitácora - Junio 2026
 
 - **25 de Junio de 2026**:
+  - **Eliminación de la Pestaña de Comparación en Performance Center de Setters**:
+    - **Interfaz Frontend (`PublicSetterStatsPage.jsx`) [MODIFY]**:
+      - Se eliminó la pestaña de "Comparación" de la barra de pestañas superior en la vista de Setters (accesible para administradores).
+      - Se removió el renderizado del componente `SetterComparisonView` y su correspondiente importación, simplificando el panel y removiendo redundancias.
+
   - **Automatización de Reporte Diario de Closers y Registro de Decisiones**:
     - **Base de Datos (SQLite/PostgreSQL) [MODIFY]**:
       - Se agregaron las columnas `with_decision_maker` (Boolean, nullable=True) a la tabla `appointments` y `sold_in_call` (Boolean, nullable=True) a la tabla `financial_sales`.
