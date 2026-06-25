@@ -28,6 +28,7 @@ const CloserWorkflowPage = () => {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [decisionMakerPrompt, setDecisionMakerPrompt] = useState({ apptId: null });
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     
     // Cita seleccionada para el visor de la derecha
     const [selectedLead, setSelectedLead] = useState(null);
@@ -39,7 +40,10 @@ const CloserWorkflowPage = () => {
     const fetchAgendas = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/closer/deck?step=${activeStep}`);
+            const url = activeStep === 'agendas'
+                ? `/closer/deck?step=${activeStep}&selected_date=${selectedDate}`
+                : `/closer/deck?step=${activeStep}`;
+            const res = await api.get(url);
             setAgendas(res.data || []);
             setSelectedIds(new Set());
             // Si el lead actualmente seleccionado ya no está en la cola, deseleccionarlo
@@ -48,7 +52,7 @@ const CloserWorkflowPage = () => {
             }
         } catch (err) {
             console.error("Error al cargar agendas:", err);
-            toast.error("Error al cargar las agendas del día");
+            toast.error("Error al cargar las agendas");
         } finally {
             setLoading(false);
         }
@@ -56,7 +60,7 @@ const CloserWorkflowPage = () => {
 
     useEffect(() => {
         fetchAgendas();
-    }, [activeStep]);
+    }, [activeStep, selectedDate]);
 
     // Filtrar localmente por búsqueda
     const filteredAgendas = useMemo(() => {
@@ -207,16 +211,28 @@ const CloserWorkflowPage = () => {
                         </p>
                     </div>
 
-                    {/* Buscador */}
-                    <div className="relative w-full md:w-72">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                        <input
-                            type="text"
-                            placeholder="Buscar lead por nombre o IG..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-800/80 rounded-xl pl-10 pr-4 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all font-bold"
-                        />
+                    {/* Controles de Búsqueda y Filtro de Fecha */}
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                        {activeStep === 'agendas' && (
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    className="bg-slate-900 border border-slate-800/80 rounded-xl px-4 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all cursor-pointer font-bold"
+                                />
+                            </div>
+                        )}
+                        <div className="relative w-full md:w-64">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                            <input
+                                type="text"
+                                placeholder="Buscar lead por nombre o IG..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-800/80 rounded-xl pl-10 pr-4 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all font-bold"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

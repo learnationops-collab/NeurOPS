@@ -1220,7 +1220,7 @@ def get_closer_deck():
     from sqlalchemy import or_
     
     if step == 'agendas':
-        # Citas de hoy en la zona horaria del usuario
+        # Citas del día seleccionado (o hoy) en la zona horaria del usuario
         import pytz
         from datetime import time
         tz_name = current_user.timezone or 'America/La_Paz'
@@ -1231,6 +1231,13 @@ def get_closer_deck():
             
         now_local = datetime.now(user_tz)
         today_local = now_local.date()
+        
+        selected_date_str = request.args.get('selected_date')
+        if selected_date_str:
+            try:
+                today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
         
         # Rango del dia local convertido a UTC naive
         start_utc = user_tz.localize(datetime.combine(today_local, time.min)).astimezone(pytz.UTC).replace(tzinfo=None)

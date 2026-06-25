@@ -8,10 +8,12 @@
     - **API Backend (`app/services/sheets_service.py` y `app/services/closer_service.py`) [MODIFY]**:
       - Actualización de `SheetsService.post_to_sheets` y `_rebuild_sales` para poblar el campo `sold_in_call` en `FinancialSale`.
       - Actualización de `CloserService.process_agenda` para registrar `with_decision_maker` en `Appointment`.
-    - **API Backend (`app/api/public/closer.py`) [NEW]**:
-      - Creación del endpoint `GET /api/public/closer-report/prefill` que calcula dinámicamente las agendas del día del closer (clasificándolas en primera/segunda llamada y agrupándolas por estado) y las ventas (PIF, Split Pay, Señas, Cuotas y su modalidad in-call) para pre-rellenar el reporte diario.
+    - **API Backend (`app/api/public/closer.py` y `app/api/closer.py`) [NEW / MODIFY]**:
+      - Creación del endpoint `GET /api/public/closer-report/prefill` para pre-rellenar el reporte diario del closer de manera automatizada.
+      - Modificación de `GET /api/closer/deck` para admitir el parámetro opcional `selected_date` y permitir filtrar las agendas por cualquier fecha seleccionada.
     - **Interfaz Frontend (`CloserWorkflowPage.jsx` e `AgendaManagerModal.jsx`) [MODIFY]**:
       - Integración de modal en `CloserWorkflowPage.jsx` y toggle en `AgendaManagerModal.jsx` para calificar si la llamada asistida (Show Up) fue "Con decisor" o "Sin decisor".
+      - Incorporación de un input de tipo fecha (`type="date"`) en la cabecera de `CloserWorkflowPage.jsx` para cambiar dinámicamente la fecha y recargar las agendas de ese día en el deck.
     - **Interfaz Frontend (`NewSalePage.jsx`) [MODIFY]**:
       - Inclusión de un switch interactivo para marcar si una venta manual fue cerrada "Dentro de la llamada (In-Call)".
     - **Interfaz Frontend (`PublicCloserReportPage.jsx`) [MODIFY]**:
