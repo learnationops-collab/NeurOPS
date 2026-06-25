@@ -384,7 +384,13 @@ def get_financial_agendas():
         closer_usernames = [u.username for u in closer_users]
         unique_closers = sorted(list(set(closer_names_db + closer_usernames)))
         
-        unique_triage = []
+        triage_query = db.session.query(FinancialAgenda.encargado_triage).distinct().filter(
+            FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
+        ).all()
+        triage_names_db = [t[0].strip() for t in triage_query if t[0] and t[0].strip()]
+        triage_users = User.query.filter_by(role='triage', is_active=True).all()
+        triage_usernames = [u.username for u in triage_users]
+        unique_triage = sorted(list(set(triage_names_db + triage_usernames)))
         
         raw_sources = [s[0].strip() for s in sources_query if s[0] and s[0].strip()]
         unique_sources = []

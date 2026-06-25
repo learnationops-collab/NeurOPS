@@ -22,7 +22,7 @@
   - **Rediseño de Desglose de Rendimiento y Nuevos Estados (2TH Call, No Lead, Follow Up) [MODIFY]**:
     - **Backend API (`app/api/public/financial_agendas.py` y `app/services/closer_service.py`)**:
       - Reestructuración de la agregación de métricas de agendas agrupándolas en 3 bloques lógicos: `PREPARATION` (Pendiente, Contactado, Confirmado, Reagendada, Cancelada, Cerrada), `EXECUTION` (Show Up, No Show, 2TH Call) y `RESULTS` (Ventas, Depósitos, Follow Ups, No Leads).
-      - Remoción del cálculo de desgloses para "Call Confirmer" para simplificar y optimizar la respuesta de la API.
+      - Remoción del cálculo de desgloses para "Call Confirmer" para simplificar y optimizar la respuesta de la API (manteniendo la recolección de `unique_triage` para poblar correctamente las asignaciones visuales y selectores del historial).
       - Implementación de etiquetado automático: al agendar una 2ª llamada en el CRM, la cita actual pasa automáticamente al estado `Follow Up` y la nueva se crea pre-etiquetada como `2TH Call` en `appointments` y `financial_agendas`. Se integró también soporte completo para el estado `No Lead`.
       - **Consistencia Matemática de Show Up**: Ajustada la clasificación para que estados como `Follow Up` y `No Lead` se computen dentro de la columna `Show Up` en `EXECUTION`. De este modo, la sumatoria en `RESULTS` ($\text{Show Up} = \text{Ventas} + \text{Depósitos} + \text{Follow Ups} + \text{No Leads}$) es coherente y los porcentajes no presentan desfases ni superan el 100%.
     - **Frontend (`FinancialAgendasPage.jsx` y `CloserWorkflowPage.jsx`)**:
