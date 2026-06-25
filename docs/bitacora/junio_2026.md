@@ -11,6 +11,7 @@
       - Se rediseñó la sección de estadísticas principales para mostrar un panel horizontal de 5 KPIs (Entrantes, Tasa de Apertura, Tasa de Cualificación, Conversión por Cualificado y Agendas) con estética glassmorphism premium.
       - Se incorporaron visualizaciones de tendencias (flechas de variación), valores de la semana anterior y gráficos sparklines dinámicos.
       - Se removieron las secciones redundantes e inactivas como `averages-row`, la columna de conversión de la derecha y "Eficacia de Preguntas", optimizando el embudo a ancho completo.
+      - **Mejora de Legibilidad y Tipografía [MODIFY]**: Se importó la tipografía premium `Plus Jakarta Sans` desde Google Fonts como la fuente por defecto del reporte. Se incrementaron significativamente los tamaños de fuente de las cabeceras, tarjetas, tablas, textos cualitativos y pie de página para mejorar drásticamente su lectura cuando el HTML es renderizado a imagen.
 
   - **Eliminación de la Pestaña de Comparación en Performance Center de Setters**:
     - **Interfaz Frontend (`PublicSetterStatsPage.jsx`) [MODIFY]**:
