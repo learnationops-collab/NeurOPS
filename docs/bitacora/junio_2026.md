@@ -1561,3 +1561,10 @@
       - Se modificó `DailyReflectionSection.jsx` reduciendo el formulario cualitativo de 6 a solo 2 preguntas: **Reflexión Diaria** y **Victoria del Día**, eliminando preguntas redundantes.
       - Se ajustó la validación en `PublicCloserReportPage.jsx` para que apruebe la sección de reflexiones con `>= 2` elementos.
       - Se actualizó `reflectionKeys` en `SetterReportModal.jsx` a solo 2 claves.
+
+    - **Corrección en la Tasa de Apertura (Openings)**:
+      - Se modificó el cálculo de la Tasa de Apertura (`openings_tasa`) en `app/api/public/setter.py` para evitar porcentajes superiores al 100%.
+      - La fórmula cambió de `aperturas_enviadas / entrantes` a una tasa de respuesta real: `aperturas_respondidas / aperturas_enviadas` considerando las cuatro etapas de openings.
+      - Se adaptaron los cálculos de los promedios de los últimos 10 y 7 días (`avg_apertura_10`, `avg_apertura_7`) y la comparación con el día previo.
+      - Se actualizó el label descriptor en `setter_report.html` a "% de respuesta sobre aperturas".
+

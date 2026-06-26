@@ -644,10 +644,12 @@ def _prepare_setter_report_data(stat):
     from datetime import timedelta
 
     # Calcular las tasas actuales
-    openings_actual = (stat.qualification_opening_submitted or 0) + (stat.pain_opening_submitted or 0)
-    if openings_actual == 0:
-        openings_actual = stat.opening_submitted or 0
-    openings_tasa = safe_percent(openings_actual, inbox_entrantes)
+    openings_sub = (stat.qualification_opening_submitted or 0) + (stat.pain_opening_submitted or 0) + (stat.offer_opening_submitted or 0) + (stat.link_opening_submitted or 0)
+    openings_res = (stat.qualification_opening_responded or 0) + (stat.pain_opening_responded or 0) + (stat.offer_opening_responded or 0) + (stat.link_opening_responded or 0)
+    if openings_sub == 0:
+        openings_sub = stat.opening_submitted or 0
+        openings_res = stat.opening_responded or 0
+    openings_tasa = safe_percent(openings_res, openings_sub)
     qual_tasa = safe_percent(qual, inbox_entrantes)
     conv_tasa = safe_percent(agenda, qual)
 
@@ -662,15 +664,19 @@ def _prepare_setter_report_data(stat):
     if r10_count > 0:
         avg_entrantes_10 = round(sum(r.inbox_entrantes or 0 for r in last_10_reports) / r10_count, 1)
         
-        t_entrantes_10 = sum(r.inbox_entrantes or 0 for r in last_10_reports)
-        t_openings_10 = sum(
-            ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0))
-            if ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)) > 0
-            else (r.opening_submitted or 0)
-            for r in last_10_reports
-        )
-        avg_apertura_10 = safe_percent(t_openings_10, t_entrantes_10)
+        t_openings_sub_10 = 0
+        t_openings_res_10 = 0
+        for r in last_10_reports:
+            r_sub = (r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0) + (r.offer_opening_submitted or 0) + (r.link_opening_submitted or 0)
+            r_res = (r.qualification_opening_responded or 0) + (r.pain_opening_responded or 0) + (r.offer_opening_responded or 0) + (r.link_opening_responded or 0)
+            if r_sub == 0:
+                r_sub = r.opening_submitted or 0
+                r_res = r.opening_responded or 0
+            t_openings_sub_10 += r_sub
+            t_openings_res_10 += r_res
+        avg_apertura_10 = safe_percent(t_openings_res_10, t_openings_sub_10)
         
+        t_entrantes_10 = sum(r.inbox_entrantes or 0 for r in last_10_reports)
         t_qual_10 = sum(r.funnel_qualification or 0 for r in last_10_reports)
         avg_cual_10 = safe_percent(t_qual_10, t_entrantes_10)
         
@@ -700,10 +706,12 @@ def _prepare_setter_report_data(stat):
         diff_entrantes = inbox_entrantes - entrantes_prev
         pct_entrantes = round((diff_entrantes / entrantes_prev) * 100) if entrantes_prev > 0 else 0
 
-        openings_prev_val = (stat_prev.qualification_opening_submitted or 0) + (stat_prev.pain_opening_submitted or 0)
-        if openings_prev_val == 0:
-            openings_prev_val = stat_prev.opening_submitted or 0
-        tasa_apertura_prev = safe_percent(openings_prev_val, stat_prev.inbox_entrantes or 0)
+        openings_prev_sub = (stat_prev.qualification_opening_submitted or 0) + (stat_prev.pain_opening_submitted or 0) + (stat_prev.offer_opening_submitted or 0) + (stat_prev.link_opening_submitted or 0)
+        openings_prev_res = (stat_prev.qualification_opening_responded or 0) + (stat_prev.pain_opening_responded or 0) + (stat_prev.offer_opening_responded or 0) + (stat_prev.link_opening_responded or 0)
+        if openings_prev_sub == 0:
+            openings_prev_sub = stat_prev.opening_submitted or 0
+            openings_prev_res = stat_prev.opening_responded or 0
+        tasa_apertura_prev = safe_percent(openings_prev_res, openings_prev_sub)
         diff_tasa_apertura = openings_tasa - tasa_apertura_prev
         pct_tasa_apertura = round((diff_tasa_apertura / tasa_apertura_prev) * 100) if tasa_apertura_prev > 0 else 0
 
@@ -815,15 +823,19 @@ def _prepare_setter_report_data(stat):
     if p7_count > 0:
         avg_entrantes_7 = sum(r.inbox_entrantes or 0 for r in prev_7_reports) / p7_count
         
-        t_entrantes_7 = sum(r.inbox_entrantes or 0 for r in prev_7_reports)
-        t_openings_7 = sum(
-            ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0))
-            if ((r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0)) > 0
-            else (r.opening_submitted or 0)
-            for r in prev_7_reports
-        )
-        avg_apertura_7 = safe_percent(t_openings_7, t_entrantes_7)
+        t_openings_sub_7 = 0
+        t_openings_res_7 = 0
+        for r in prev_7_reports:
+            r_sub = (r.qualification_opening_submitted or 0) + (r.pain_opening_submitted or 0) + (r.offer_opening_submitted or 0) + (r.link_opening_submitted or 0)
+            r_res = (r.qualification_opening_responded or 0) + (r.pain_opening_responded or 0) + (r.offer_opening_responded or 0) + (r.link_opening_responded or 0)
+            if r_sub == 0:
+                r_sub = r.opening_submitted or 0
+                r_res = r.opening_responded or 0
+            t_openings_sub_7 += r_sub
+            t_openings_res_7 += r_res
+        avg_apertura_7 = safe_percent(t_openings_res_7, t_openings_sub_7)
         
+        t_entrantes_7 = sum(r.inbox_entrantes or 0 for r in prev_7_reports)
         t_qual_7 = sum(r.funnel_qualification or 0 for r in prev_7_reports)
         avg_cual_7 = safe_percent(t_qual_7, t_entrantes_7)
         
