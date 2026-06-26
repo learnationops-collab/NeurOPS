@@ -1071,6 +1071,24 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
 
                         <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
                             <div>
+                                <p className="text-xs font-black text-teal-400 uppercase tracking-widest leading-none">Cierre Real sobre Asistencia</p>
+                                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider block mt-1">Asistencias → Ventas</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-2xl font-black text-white italic tabular-nums">
+                                    {stats.agendas.totals.attended ? ((realSalesCount / stats.agendas.totals.attended) * 100).toFixed(1) : 0}%
+                                </span>
+                                {renderComparisonSubdata(
+                                    stats.agendas.totals.attended ? ((realSalesCount / stats.agendas.totals.attended) * 100) : 0,
+                                    compStats?.agendas?.totals?.attended ? ((compRealSalesCount / compStats?.agendas?.totals?.attended) * 100) : 0,
+                                    false,
+                                    true
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 flex justify-between items-center relative group overflow-hidden">
+                            <div>
                                 <p className="text-xs font-black text-fuchsia-400 uppercase tracking-widest leading-none">Show a Seña (Reserva)</p>
                                 <span className="text-sm font-bold text-slate-500 uppercase tracking-wider block mt-1">Ofertas → Promesas</span>
                             </div>

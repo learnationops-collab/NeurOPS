@@ -1568,3 +1568,9 @@
       - Se adaptaron los cálculos de los promedios de los últimos 10 y 7 días (`avg_apertura_10`, `avg_apertura_7`) y la comparación con el día previo.
       - Se actualizó el label descriptor en `setter_report.html` a "% de respuesta sobre aperturas".
 
+  - **Dashboard de Closers - Conversiones de Embudo (`CloserPerformanceTab.jsx`) [MODIFY]**:
+    - Se agregó el KPI **Cierre Real sobre Asistencia** (`Asistencias → Ventas`) a la lista de conversiones críticas del embudo de closers.
+    - Se calcula de forma dinámica como la relación de ventas reales frente a agendas asistidas (`realSalesCount / stats.agendas.totals.attended`), incluyendo el cálculo comparativo con el periodo anterior.
+    - Se vistió con el color de acento HSL `text-teal-400` manteniendo consistencia con los demás KPIs del panel.
+
+
