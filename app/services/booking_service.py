@@ -351,8 +351,21 @@ class BookingService:
 
     @staticmethod
     def log_lead_event(appt_id, user_id, action_type, description):
-        from app.models import LeadEventLog
+        from app.models import LeadEventLog, User
+        from flask import has_request_context, session
         
+        # Validar trazabilidad si se realiza bajo suplantación de identidad
+        if has_request_context() and session.get('is_impersonating'):
+            original_user_id = session.get('original_user_id')
+            original_user = db.session.get(User, original_user_id)
+            target_user = db.session.get(User, user_id)
+            
+            orig_name = original_user.username if original_user else f"Usuario {original_user_id}"
+            target_name = target_user.username if target_user else f"Usuario {user_id}"
+            
+            suffix = f" (Acción ejecutada por {orig_name} actuando en nombre de {target_name})"
+            description = f"{description}{suffix}"
+            
         log = LeadEventLog(
             appointment_id=appt_id,
             user_id=user_id,

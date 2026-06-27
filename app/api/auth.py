@@ -188,3 +188,13 @@ def debug_auth():
         "referer": request.headers.get('Referer'),
         "headers": headers
     }), 200
+
+@bp.route('/auth/csrf-token', methods=['GET'])
+def get_csrf_token():
+    """
+    Suministra un token CSRF valido al cliente.
+    Indispensable para futuras validaciones de peticiones POST/PUT/DELETE.
+    """
+    from flask_wtf.csrf import generate_csrf
+    return jsonify({"csrf_token": generate_csrf()}), 200
+

@@ -46,7 +46,7 @@ graph TD
 - **ORM**: SQLAlchemy via Flask-SQLAlchemy para la definición y consulta de base de datos relacional.
 - **Migraciones**: Flask-Migrate (basado en Alembic) para gestionar versiones del esquema de base de datos.
 - **Autenticación**: Flask-Login para el manejo de sesiones basadas en cookies seguras.
-- **Seguridad**: CSRFProtect de Flask-WTF activo para las vistas del sitio, exceptuando selectivamente los endpoints API REST que utilizan mecanismos de autenticación específicos.
+- **Seguridad**: CSRFProtect de Flask-WTF activo para las vistas del sitio. Se expone el endpoint `GET /api/auth/csrf-token` para suministrar tokens CSRF válidos a la SPA. Adicionalmente, cuenta con trazabilidad integrada de auditoría: si un operador ejecuta acciones bajo suplantación de identidad (`is_impersonating`), los logs en `LeadEventLog` documentan al operador original actuando en nombre del usuario suplantado.
 - **CORS**: Configurado en [app/\_\_init\_\_.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/__init__.py) para permitir credenciales y controlar los orígenes permitidos durante el desarrollo local y de staging.
 
 ### Frontend (SPA)
