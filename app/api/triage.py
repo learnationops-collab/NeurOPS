@@ -451,3 +451,117 @@ def read_all_triage_notifications():
     db.session.commit()
     return jsonify({"message": "Todas marcadas como leídas"}), 200
 
+@bp.route('/qualified-forms', methods=['GET'])
+@login_required
+def get_qualified_forms():
+    """Devuelve la lista de leads/clientes con respuestas de formulario (form_data) y si tienen citas."""
+    from app.models.client import Client
+    from app.models.booking import Appointment
+    from flask_login import current_user
+    
+    if current_user.role not in ['triage', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    unlinked_only = request.args.get('unlinked_only', 'true').lower() == 'true'
+    search = request.args.get('search', '').strip()
+    
+    # Filtrar clientes que tienen form_data no vacio
+    query = Client.query.filter(Client.form_data != None, Client.form_data != {})
+    
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(db.or_(
+            Client.full_name.ilike(search_pattern),
+            Client.instagram.ilike(search_pattern),
+            Client.phone.ilike(search_pattern),
+            Client.email.ilike(search_pattern)
+        ))
+        
+    clients = query.all()
+    
+    result = []
+    for c in clients:
+        # Contar citas asociadas
+        appointments_count = Appointment.query.filter_by(client_id=c.id).count()
+        
+        if unlinked_only and appointments_count > 0:
+            continue
+            
+        result.append({
+            "id": c.id,
+            "full_name": c.full_name,
+            "email": c.email,
+            "phone": c.phone,
+            "instagram": c.instagram,
+            "form_data": c.form_data,
+            "appointments_count": appointments_count
+        })
+        
+    # Ordenar por id descendente (mas recientes primero)
+    result.sort(key=lambda x: x["id"], reverse=True)
+    return jsonify(result), 200
+
+@bp.route('/merge-clients', methods=['POST'])
+@login_required
+def merge_clients():
+    """Fusiona el form_data del cliente origen en el destino y reasigna citas."""
+    from app.models.client import Client
+    from app.models.booking import Appointment
+    from app.models.financial import FinancialSale
+    from app.models.payment import Enrollment
+    from flask_login import current_user
+    
+    if current_user.role not in ['triage', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    data = request.get_json() or {}
+    source_id = data.get('source_client_id')
+    target_id = data.get('target_client_id')
+    
+    if not source_id or not target_id:
+        return jsonify({"message": "source_client_id y target_client_id son obligatorios"}), 400
+        
+    if source_id == target_id:
+        return jsonify({"message": "Los clientes de origen y destino no pueden ser el mismo"}), 400
+        
+    source_client = Client.query.get(source_id)
+    target_client = Client.query.get(target_id)
+    
+    if not source_client or not target_client:
+        return jsonify({"message": "Cliente origen o destino no encontrado"}), 404
+        
+    try:
+        # 1. Fusionar form_data incrementalmente
+        sf_data = dict(source_client.form_data or {})
+        tf_data = dict(target_client.form_data or {})
+        tf_data.update(sf_data)
+        target_client.form_data = tf_data
+        
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(target_client, 'form_data')
+        
+        # 2. Transferir citas (Appointments) del origen al destino
+        appts = Appointment.query.filter_by(client_id=source_id).all()
+        for appt in appts:
+            appt.client_id = target_id
+            
+        # 3. Transferir inscripciones (Enrollments)
+        enrolls = Enrollment.query.filter_by(client_id=source_id).all()
+        for enr in enrolls:
+            enr.client_id = target_id
+            
+        # 4. Eliminar el cliente origen duplicado
+        db.session.delete(source_client)
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Formulario y citas de '{source_client.full_name}' fusionados exitosamente en '{target_client.full_name}'."
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error al fusionar clientes: {e}")
+        return jsonify({"error": str(e)}), 500
+
+

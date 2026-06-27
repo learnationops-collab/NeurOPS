@@ -94,7 +94,7 @@ def get_assigned_leads():
 @bp.route('/leads/search', methods=['GET'])
 @login_required
 def search_closer_leads():
-    if current_user.role not in ['closer', 'admin', 'setter']:
+    if current_user.role not in ['closer', 'admin', 'setter', 'triage']:
         return jsonify({"message": "Forbidden"}), 403
         
     query_str = request.args.get('q', '')

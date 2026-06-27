@@ -145,6 +145,7 @@ sequenceDiagram
 
 ### D. Flujo de Triage (Calificación)
 - El rol de `Triage` actúa como filtro de control de calidad. Evalúa los detalles de la cita agendada, valida las respuestas de los prospectos y asigna el prospecto al Closer más calificado para ese perfil de venta en el panel de agendas financieras.
+- Cuenta con una herramienta de **Gestión de Formularios** para auditar y conectar manualmente cuestionarios de calificación perdidos (leads con `form_data` que ingresaron duplicados o separados de su cita original debido a discrepancias en datos de contacto) con el lead real en el CRM, inyectando la información y deduplicando la base de datos de forma automática.
 
 ### E. Flujo de Closers (Cierre de Ventas)
 1. **Deck y Agenda Diaria**: A través de su espacio de trabajo interactivo ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx)), los Closers visualizan en tiempo real sus agendas del día cargadas y sincronizadas.

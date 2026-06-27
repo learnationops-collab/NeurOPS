@@ -1,6 +1,16 @@
 # Bitácora - Junio 2026
 
 - **27 de Junio de 2026**:
+  - **Gestión de Formularios de Calificación Perdidos**:
+    - **API Backend (`app/api/triage.py`) [MODIFY]**:
+      - Se implementaron los endpoints `GET /api/triage/qualified-forms` (para listar y buscar clientes con respuestas de formulario, permitiendo filtrar por "huérfanos" sin citas) y `POST /api/triage/merge-clients` (para fusionar incrementalmente el `form_data` de un cliente origen en el destino, reasignar citas/inscripciones y eliminar el origen duplicado).
+    - **API Backend (`app/api/closer.py`) [MODIFY]**:
+      - Se dio acceso al rol `triage` al endpoint `/leads/search` para permitir la búsqueda de leads destino para fusiones.
+    - **Interfaz Frontend (`FormsManagementPage.jsx` [NEW])**:
+      - Creación de la interfaz de administración de formularios huérfanos con estética Glassmorphism, que permite ver las respuestas detalladas del lead y lanzar el flujo de fusión manual a través del CRM.
+    - **Navegación e Rutas (`App.jsx` y `useDockNavigation.js`) [MODIFY]**:
+      - Se registraron las rutas `/triage/formularios` y `/admin/formularios`, y se integró la pestaña "Formularios" en el Dock para los roles `triage` (Call Confirmer) y `admin`.
+
   - **Atribución Consistente de Agendas en Base al Primer Pago**:
     - **Servicio de Atribución (`app/services/attribution_service.py`) [NEW]**:
       - Se implementó `AttributionService.get_sales_attribution()` utilizando una estructura *Union-Find* para agrupar ventas y agendas por Lead (Instagram y Correo normalizados).

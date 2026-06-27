@@ -58,7 +58,8 @@ const useDockNavigation = () => {
             ];
         } else if (isTriage) {
             return [
-                { id: 'agendas', icon: CalendarDays, label: 'Registro de Agendas', path: '/triage/agendas' }
+                { id: 'agendas', icon: CalendarDays, label: 'Registro de Agendas', path: '/triage/agendas' },
+                { id: 'formularios', icon: ClipboardList, label: 'Formularios', path: '/triage/formularios' }
             ];
         } else if (user?.role === 'operator') {
             return [
@@ -71,7 +72,8 @@ const useDockNavigation = () => {
                 { id: 'marketing', icon: Target, label: 'Marketing', path: '/admin/marketing' },
                 { id: 'alerts', icon: Bell, label: 'Alertas', path: '/admin/alerts' },
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' },
-                { id: 'sheets', icon: CalendarDays, label: 'Importaciones Sheets', path: '/admin/sheets' }
+                { id: 'sheets', icon: CalendarDays, label: 'Importaciones Sheets', path: '/admin/sheets' },
+                { id: 'formularios', icon: ClipboardList, label: 'Formularios', path: '/admin/formularios' }
             ];
             if (user?.can_view_finance) {
                 adminPages.push({ id: 'finance', icon: DollarSign, label: 'Finanzas', path: '/admin/finance' });

@@ -45,6 +45,7 @@ import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
 import UnattributedLeadsPage from './pages/admin/marketing/UnattributedLeadsPage';
 import AlertsHubPage from './pages/admin/alerts/AlertsHubPage';
+import FormsManagementPage from './pages/shared/FormsManagementPage';
 
 import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
@@ -165,6 +166,16 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/formularios"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <MainLayout>
+                    <FormsManagementPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
 
             {/* Protected Role-Specific Routes */}
             <Route
@@ -263,6 +274,16 @@ function App() {
                 <ProtectedRoute roles={['triage']}>
                   <MainLayout>
                     <FinancialAgendasPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/triage/formularios"
+              element={
+                <ProtectedRoute roles={['triage']}>
+                  <MainLayout>
+                    <FormsManagementPage />
                   </MainLayout>
                 </ProtectedRoute>
               }
