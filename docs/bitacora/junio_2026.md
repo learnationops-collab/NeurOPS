@@ -8,6 +8,7 @@
       - Se modificó `FinancialAgenda.to_dict()` para aceptar el parámetro opcional `sales_count` precalculado, eliminando la consulta N+1.
       - Se reestructuró la consulta fallback optimizándola con comparaciones de tipo `ilike` en lugar de funciones de base de datos sobre texto (`func.lower(func.replace(...))`), erradicando escaneos completos de tabla (full table scans).
       - Se adaptaron ambas ramas del endpoint de obtención de agendas (`get_financial_agendas`) para mapear y pasar los conteos de ventas ya precalculados en lote, logrando cero consultas redundantes durante la serialización.
+      - **Hotfix:** Se eliminó un import local redundante de `sqlalchemy` en la rama `else` de `get_financial_agendas` que sombreaba la variable de nivel de módulo `func` y causaba un `UnboundLocalError` (error 500) en peticiones de listados completos.
     - **Esquema e Indexación de Base de Datos (`app/models/crm.py` y `app/models/payment.py`) [MODIFY]**:
       - Se inyectaron índices explícitos (`index=True`) a las claves foráneas en `LeadEventLog` (`appointment_id`, `user_id`), `Payment` (`enrollment_id`, `payment_method_id`) y `Enrollment` (`client_id`, `program_id`, `closer_id`), acelerando significativamente los JOINs y filtros frecuentes del CRM.
     - **Migración de Base de Datos [NEW]**:
