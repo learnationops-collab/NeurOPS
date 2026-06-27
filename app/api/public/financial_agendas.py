@@ -255,12 +255,14 @@ def get_financial_agendas():
             associated_sales = list(sales_dict.values())
             
             has_deposit = False
+            has_full_sale = False
             for s in associated_sales:
                 tp = (s.tipo_pago or "").lower()
                 if any(w in tp for w in ["seña", "sena", "deposito", "deposit"]):
                     has_deposit = True
-                    break
-            return len(associated_sales), has_deposit
+                else:
+                    has_full_sale = True
+            return len(associated_sales), has_deposit, has_full_sale
 
         # Agrupaciones en memoria en Python
         by_closer = {}
@@ -277,7 +279,7 @@ def get_financial_agendas():
         for a in all_agendas:
             c_name = (a.closer or 'Sin Asignar').strip()
             st_name = (a.estado or 'Pendiente').strip()
-            s_count, has_deposit = get_agenda_sales_info(a)
+            s_count, has_deposit, has_full_sale = get_agenda_sales_info(a)
             
             # by_closer
             by_closer[c_name] = by_closer.get(c_name, 0) + 1
@@ -318,10 +320,10 @@ def get_financial_agendas():
             
             if state_key == 'Show Up':
                 if s_count > 0:
-                    if has_deposit:
-                        by_closer_state[c_name]["Depósitos"] += 1
-                    else:
+                    if has_full_sale:
                         by_closer_state[c_name]["Ventas"] += 1
+                    elif has_deposit:
+                        by_closer_state[c_name]["Depósitos"] += 1
                 else:
                     if st_name in ('No Lead', 'No Leads', 'no_lead'):
                         by_closer_state[c_name]["No Leads"] += 1
@@ -362,10 +364,10 @@ def get_financial_agendas():
                 
             if state_key == 'Show Up':
                 if s_count > 0:
-                    if has_deposit:
-                        by_source_state[s_name]["Depósitos"] += 1
-                    else:
+                    if has_full_sale:
                         by_source_state[s_name]["Ventas"] += 1
+                    elif has_deposit:
+                        by_source_state[s_name]["Depósitos"] += 1
                 else:
                     if st_name in ('No Lead', 'No Leads', 'no_lead'):
                         by_source_state[s_name]["No Leads"] += 1
@@ -415,7 +417,7 @@ def get_financial_agendas():
         
         serialized_data = []
         for a in agendas_pagination.items:
-            s_count, _ = get_agenda_sales_info(a)
+            s_count, _, _ = get_agenda_sales_info(a)
             serialized_data.append(a.to_dict(sales_count=s_count))
         
         return jsonify({
