@@ -14,6 +14,15 @@
       - Se actualizó el endpoint `/manychat-webhook/stats/dashboard` para usar la agenda de la primera venta al calcular el rendimiento global por Setter.
     - **Pruebas y Diagnóstico (`scratch/test_attribution.py`) [NEW]**:
       - Creación de script de pruebas unitarias en memoria para comprobar el algoritmo de Union-Find y las reglas de negocio de atribución.
+
+  - **Mejora en la Atribución Automática por Instagram o Email y Clasificación de Múltiples Pagos**:
+    - **Modelos y consultas (`app/models/financial.py` y `app/api/public/financial_agendas.py`) [MODIFY]**:
+      - Se modificaron los endpoints de ventas en `financial_sales.py` para admitir atribución dual de ventas a agendas por Instagram o por Correo Electrónico. De igual forma, se deduplicaron los listados de ventas asociadas en `financial_agendas.py` por ID único para evitar montos o conteos inflados cuando coinciden ambos campos.
+      - Se optimizó la lógica de clasificación de agendas en `by_closer_state` y `by_source_state` de `get_financial_agendas` de manera que si un lead tiene múltiples pagos atribuidos (por ejemplo, una seña/depósito y una venta completa/upsell), la agenda compute correctamente bajo `"Ventas"` en lugar de clasificarse permanentemente bajo `"Depósitos"`, permitiendo una atribución completa de cierres al equipo.
+    - **Ajuste de Desempaquetado [FIX]**:
+      - Se ajustó el desempaquetado de `get_agenda_sales_info` a 3 elementos y se clasificaron múltiples pagos como Ventas.
+
+- **26 de Junio de 2026**:
   - **Fase 2: Optimización de Rendimiento**:
     - **React Context (`frontend/src/contexts/AuthContext.jsx`) [MODIFY]**:
       - Se implementó `useMemo` para memorizar el objeto literal de valor del proveedor de `AuthContext`, reduciendo renderizados redundantes de la SPA y mejorando el desempeño general.
@@ -22,12 +31,11 @@
       - Se reestructuró la consulta fallback optimizándola con comparaciones de tipo `ilike` en lugar de funciones de base de datos sobre texto (`func.lower(func.replace(...))`), erradicando escaneos completos de tabla (full table scans).
       - Se adaptaron ambas ramas del endpoint de obtención de agendas (`get_financial_agendas`) para mapear y pasar los conteos de ventas ya precalculados en lote, logrando cero consultas redundantes durante la serialización.
       - **Hotfix:** Se eliminó un import local redundante de `sqlalchemy` en la rama `else` de `get_financial_agendas` que sombreaba la variable de nivel de módulo `func` y causaba un `UnboundLocalError` (error 500) en peticiones de listados completos.
-      - **Atribución y Deduplicación:** Se modificaron los endpoints de ventas en `financial_sales.py` para admitir atribución dual de ventas a agendas por Instagram o por Correo Electrónico. De igual forma, se deduplicaron los listados de ventas asociadas en `financial_agendas.py` por ID único para evitar montos o conteos inflados cuando coinciden ambos campos.
-      - **Clasificación de Múltiples Pagos:** Se optimizó la lógica de clasificación de agendas en `by_closer_state` y `by_source_state` de `get_financial_agendas` de manera que si un lead tiene múltiples pagos atribuidos (por ejemplo, una seña/depósito y una venta completa/upsell), la agenda compute correctamente bajo `"Ventas"` en lugar de clasificarse permanentemente bajo `"Depósitos"`, permitiendo una atribución completa de cierres al equipo.
     - **Esquema e Indexación de Base de Datos (`app/models/crm.py` y `app/models/payment.py`) [MODIFY]**:
       - Se inyectaron índices explícitos (`index=True`) a las claves foráneas en `LeadEventLog` (`appointment_id`, `user_id`), `Payment` (`enrollment_id`, `payment_method_id`) y `Enrollment` (`client_id`, `program_id`, `closer_id`), acelerando significativamente los JOINs y filtros frecuentes del CRM.
     - **Migración de Base de Datos [NEW]**:
       - Se generó y aplicó la migración `f83ef7f1cc72` ("Optimizacion de indices y rendimiento") mediante Alembic/Flask-Migrate.
+
   - **Fase 1: Blindaje de Seguridad Crítica**:
     - **API Backend (`app/api/auth.py`) [MODIFY]**:
       - Se eliminó por completo la ruta `/auth/emergency-create` que permitía la creación no autorizada de usuarios administradores mediante un secreto hardcodeado en el backend.
@@ -38,17 +46,23 @@
       - Se modificaron los manejadores globales de error 500 y excepciones generales para retornar un JSON genérico limpio en producción. Se restringe el volcado detallado de trazas (`traceback.format_exc()`) únicamente a entornos donde `app.debug` sea verdadero, previniendo fuga de información técnica sensible.
     - **Documentación (`docs/arquitectura_y_funcionamiento.md`) [MODIFY]**:
       - Se documentaron las variables de entorno críticas de seguridad en la sección de Entorno de Despliegue.
+
   - **Fase 3: Activación de CSRF Segura**:
     - **Instancia de Axios Frontend (`frontend/src/services/api.js`) [MODIFY]**:
       - Se implementó un esquema de obtención perezosa (lazy) del token CSRF mediante una solicitud a `/api/auth/csrf-token` usando una instancia limpia de Axios, guardándolo en memoria y evitando bucles redundantes.
       - Se actualizó el interceptor de peticiones (`api.interceptors.request.use`) para que resuelva de forma asíncrona dicho token e inyecte la cabecera `X-CSRFToken` en todas las llamadas que muten estado (POST, PUT, DELETE, PATCH).
     - **API Backend Factory (`app/__init__.py`) [MODIFY]**:
       - Se eliminaron las exenciones globales de CSRF (`csrf.exempt`) en todos los blueprints internos consumidos por la SPA (como `api_bp`, `closer_api_bp`, `setter_api_bp`, `analytics_bp`, `marketing_bp`, `comments_bp`, `triage_bp`, `workshop_bp`, `conversational_bp` y `alerts_bp`), forzando una validación estricta de CSRF en el backend. Se conservaron exentos únicamente los endpoints consumidos por automatizaciones o integraciones externas independientes de navegador (n8n webhooks, ManyChat API, etc.).
+
   - **Fase 1.5: Trazabilidad y Preparación para CSRF**:
     - **Servicio de Agendamiento (`app/services/booking_service.py`) [MODIFY]**:
       - Se inyectó trazabilidad de auditoría en la función estática `log_lead_event` para comprobar si existe una suplantación activa (`session.get('is_impersonating')`). Si es así, se añade de manera automática una leyenda descriptiva especificando la identidad del operador original actuando en nombre del usuario suplantado. Se añadió también un control `has_request_context()` para garantizar la estabilidad del servicio en webhooks y scripts CLI.
     - **API Backend (`app/api/auth.py`) [MODIFY]**:
       - Se creó el endpoint `GET /api/auth/csrf-token` que genera un token de seguridad CSRF válido y lo expone a la SPA de React.
+
+  - **Métricas de Conversión y Rendimiento del Dashboard**:
+    - **Métricas de Closers (`app/services/closer_service.py` y `app/api/manychat.py`) [MODIFY]**:
+      - Se incorporó el KPI Cierre Real sobre Asistencia en el dashboard de closers y el recálculo de la tasa de apertura (`openings_tasa`) como tasa de respuesta para evitar valores superiores al 100%.
 
 - **25 de Junio de 2026**:
   - **Rediseño y Optimización de KPIs de Reporte Diario de Setters**:
@@ -64,12 +78,15 @@
       - Se removieron las secciones redundantes e inactivas como `averages-row`, la columna de conversión de la derecha y "Eficacia de Preguntas", optimizando el embudo a ancho completo.
       - Se diseñó e integró una sección horizontal de **Insights Rápidos** con badges circulares semafóricos (flechas de subida/bajada/neutral) y textos explicativos dinámicos.
       - **Mejora de Legibilidad y Tipografía [MODIFY]**: Se importó la tipografía premium `Plus Jakarta Sans` desde Google Fonts como la fuente por defecto del reporte. Se incrementaron significativamente los tamaños de fuente de las cabeceras, tarjetas, tablas, textos cualitativos y pie de página para mejorar drásticamente su lectura cuando el HTML es renderizado a imagen.
+    - **Manejo de safe_percent en el Contexto de Renderizado [MODIFY]**:
+      - Definición de `safe_percent` en el contexto de renderizado de Jinja2.
 
   - **Eliminación de la Pestaña de Comparación en Performance Center de Setters**:
     - **Interfaz Frontend (`PublicSetterStatsPage.jsx`) [MODIFY]**:
       - Se eliminó la pestaña de "Comparación" de la barra de pestañas superior en la vista de Setters (accesible para administradores).
       - Se removió el renderizado del componente `SetterComparisonView` y su correspondiente importación, simplificando el panel y removiendo redundancias.
 
+- **24 de Junio de 2026**:
   - **Automatización de Reporte Diario de Closers y Registro de Decisiones**:
     - **Base de Datos (SQLite/PostgreSQL) [MODIFY]**:
       - Se agregaron las columnas `with_decision_maker` (Boolean, nullable=True) a la tabla `appointments` y `sold_in_call` (Boolean, nullable=True) a la tabla `financial_sales`.
@@ -85,9 +102,10 @@
       - Incorporación de un input de tipo fecha (`type="date"`) en la cabecera de `CloserWorkflowPage.jsx` para cambiar dinámicamente la fecha y recargar las agendas de ese día en el deck.
       - **Simplificación de Reagendas y Segundas Llamadas**: Remoción del flujo de slots de disponibilidad y reemplazo del panel de reprogramación por un input `datetime-local` en línea idéntico al del registro de agendas, añadiendo un botón de **Confirmar** al lado para validar la selección y prevenir la creación accidental de agendas por error.
     - **Interfaz Frontend (`NewSalePage.jsx`) [MODIFY]**:
-      - Inclusión de un switch interactivo para marcar si una venta manual fue cerrada "Dentro de la llamada (In-Call)".
+      - Inclusión del switch interactivo para marcar si una venta manual fue cerrada "Dentro de la llamada (In-Call)".
     - **Interfaz Frontend (`PublicCloserReportPage.jsx`) [MODIFY]**:
       - Integración de llamada automática al endpoint de pre-relleno al cambiar el closer o la fecha, autocompletando la gran mayoría de métricas operativas del día con un banner premium indicando el éxito de la operación.
+
   - **Rediseño de Desglose de Rendimiento y Nuevos Estados (2TH Call, No Lead, Follow Up) [MODIFY]**:
     - **Backend API (`app/api/public/financial_agendas.py` y `app/services/closer_service.py`)**:
       - Reestructuración de la agregación de métricas de agendas agrupándolas en 3 bloques lógicos: `PREPARATION` (Pendiente, Contactado, Confirmado, Reagendada, Cancelada, Cerrada), `EXECUTION` (Show Up, No Show, 2TH Call) y `RESULTS` (Ventas, Depósitos, Follow Ups, No Leads).
@@ -100,7 +118,6 @@
       - Remoción de la pestaña e informes de Call Confirmer en el historial de agendas.
       - Inclusión del botón de acción rápida **No Lead** en el deck de closers (`CloserWorkflowPage.jsx`) para descartar prospectos directamente.
 
-- **24 de Junio de 2026**:
   - **Mejora del Dashboard de Rendimiento de Closers**:
     - **API Backend (`app/services/closer_service.py`) [MODIFY]**:
       - Separación explícita de las transacciones de tipo "Upsell" y "Renovacion" en `get_comprehensive_stats`, evitando que se acumulen en los Split Pays.
