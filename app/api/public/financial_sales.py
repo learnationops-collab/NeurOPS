@@ -459,11 +459,17 @@ def get_financial_sales():
     all_agendas = FinancialAgenda.query.all()
 
     agenda_map = {}
+    agenda_email_map = {}
     for a in all_agendas:
         ig_norm = normalize_ig(a.instagram)
         if ig_norm:
             if ig_norm not in agenda_map or (a.date and agenda_map[ig_norm].date and a.date > agenda_map[ig_norm].date):
                 agenda_map[ig_norm] = a
+        if a.mail:
+            m_norm = a.mail.strip().lower()
+            if m_norm and m_norm not in ('n/a', ''):
+                if m_norm not in agenda_email_map or (a.date and agenda_email_map[m_norm].date and a.date > agenda_email_map[m_norm].date):
+                    agenda_email_map[m_norm] = a
 
     # Métricas y totales in-memory
     total_monto = 0.0
@@ -490,11 +496,17 @@ def get_financial_sales():
     for s in subquery_sales:
         s_dict = s.to_dict()
         ig_norm = normalize_ig(s.instagram)
+        mail_norm = s.mail_cliente.strip().lower() if s.mail_cliente and s.mail_cliente.lower() not in ('n/a', '') else None
         resolved_setter = None
         has_agenda_match = False
         
+        agenda = None
         if ig_norm and ig_norm in agenda_map:
             agenda = agenda_map[ig_norm]
+        elif mail_norm and mail_norm in agenda_email_map:
+            agenda = agenda_email_map[mail_norm]
+            
+        if agenda:
             has_agenda_match = True
             
             is_valid_lead_source = (
@@ -735,11 +747,17 @@ def get_financial_sales_payroll():
     all_agendas = FinancialAgenda.query.all()
         
     agenda_map = {}
+    agenda_email_map = {}
     for a in all_agendas:
         ig_norm = normalize_ig(a.instagram)
         if ig_norm:
             if ig_norm not in agenda_map or (a.date and agenda_map[ig_norm].date and a.date > agenda_map[ig_norm].date):
                 agenda_map[ig_norm] = a
+        if a.mail:
+            m_norm = a.mail.strip().lower()
+            if m_norm and m_norm not in ('n/a', ''):
+                if m_norm not in agenda_email_map or (a.date and agenda_email_map[m_norm].date and a.date > agenda_email_map[m_norm].date):
+                    agenda_email_map[m_norm] = a
                 
     elias_sales = []
     jeancarlo_sales = []
@@ -755,10 +773,16 @@ def get_financial_sales_payroll():
             continue
             
         ig_norm = normalize_ig(s.instagram)
+        mail_norm = s.mail_cliente.strip().lower() if s.mail_cliente and s.mail_cliente.lower() not in ('n/a', '') else None
         resolved_setter = None
         
+        agenda = None
         if ig_norm and ig_norm in agenda_map:
             agenda = agenda_map[ig_norm]
+        elif mail_norm and mail_norm in agenda_email_map:
+            agenda = agenda_email_map[mail_norm]
+            
+        if agenda:
             is_valid_lead_source = (
                 agenda.nombre and 
                 agenda.nombre.strip() and 

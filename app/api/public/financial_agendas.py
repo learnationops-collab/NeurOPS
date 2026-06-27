@@ -244,11 +244,15 @@ def get_financial_agendas():
             ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
             mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
             
-            associated_sales = []
+            sales_dict = {}
             if ig_clean and ig_clean in sales_by_ig:
-                associated_sales.extend(sales_by_ig[ig_clean])
+                for s in sales_by_ig[ig_clean]:
+                    sales_dict[s.id] = s
             if mail_clean and mail_clean in sales_by_email:
-                associated_sales.extend(sales_by_email[mail_clean])
+                for s in sales_by_email[mail_clean]:
+                    sales_dict[s.id] = s
+                    
+            associated_sales = list(sales_dict.values())
             
             has_deposit = False
             for s in associated_sales:
@@ -461,12 +465,14 @@ def get_financial_agendas():
             ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
             mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
             
-            associated_sales = []
+            sales_dict = {}
             if ig_clean and ig_clean in sales_by_ig:
-                associated_sales.extend(sales_by_ig[ig_clean])
+                for s in sales_by_ig[ig_clean]:
+                    sales_dict[s.id] = s
             if mail_clean and mail_clean in sales_by_email:
-                associated_sales.extend(sales_by_email[mail_clean])
-            return len(associated_sales)
+                for s in sales_by_email[mail_clean]:
+                    sales_dict[s.id] = s
+            return len(sales_dict)
 
         serialized_data = []
         for a in agendas:
