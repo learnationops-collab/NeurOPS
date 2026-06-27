@@ -182,6 +182,9 @@ La infraestructura de producción está diseñada para la entrega ágil y contin
 - **Dominio**: Las peticiones de producción se resuelven a través de un subdominio configurado y administrado en **Hostinger** (ej. `work.thelearnation.com`), el cual apunta mediante registros DNS a la aplicación expuesta por Railway.
 - **Base de Datos**: PostgreSQL gestionada en la nube con conexión cifrada mediante la variable de entorno `DATABASE_URL`.
 - **Detección de HTTPS**: Se implementa `ProxyFix` en [app/\_\_init\_\_.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/__init__.py) para la detección y redirección correcta del protocolo seguro (HTTPS) detrás de los proxies reversos de Railway.
+- **Variables de Entorno Críticas**:
+  - `SECRET_KEY`: Requerida obligatoriamente en producción. Si no está configurada, el sistema detendrá su ejecución (`RuntimeError`) para evitar fallos de seguridad por claves por defecto. En desarrollo local, se utiliza una clave de fallback segura.
+  - `FLASK_ENV` / `ENV`: Si están establecidos en `production` (o en Railway), el sistema activa automáticamente cookies seguras (`SESSION_COOKIE_SECURE = True` y `REMEMBER_COOKIE_SECURE = True`) y suprime la exposición de trazas detalladas de errores (`traceback.format_exc()`) en respuestas JSON para prevenir fugas de información.
 
 ---
 

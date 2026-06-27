@@ -145,24 +145,30 @@ def create_app(config_class=Config):
     def internal_error(error):
         from flask import jsonify
         import traceback
-        return jsonify({
-            "message": "Internal Server Error",
-            "error": str(error),
-            "trace": traceback.format_exc()
-        }), 500
+        response = {
+            "message": "Internal Server Error"
+        }
+        # Solo exponemos trazas en modo desarrollo/debug
+        if app.debug or app.config.get('DEBUG', False):
+            response["error"] = str(error)
+            response["trace"] = traceback.format_exc()
+        return jsonify(response), 500
 
     @app.errorhandler(Exception)
     def handle_exception(e):
         from flask import jsonify
         import traceback
-        # pass through HTTP errors
+        # pass through HTTP errors (como 404, 403, 400)
         if hasattr(e, 'code') and e.code < 500:
             return e
         
-        return jsonify({
-            "message": "Unhandled Exception",
-            "error": str(e),
-            "trace": traceback.format_exc()
-        }), 500
+        response = {
+            "message": "Unhandled Exception"
+        }
+        # Solo exponemos detalles en desarrollo
+        if app.debug or app.config.get('DEBUG', False):
+            response["error"] = str(e)
+            response["trace"] = traceback.format_exc()
+        return jsonify(response), 500
 
     return app

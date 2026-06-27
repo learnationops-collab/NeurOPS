@@ -4,8 +4,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # HARDCODED SECRET KEY TO PREVENT ENV ISSUES DURING DEBUG
-    SECRET_KEY = 'neurops-secret-key-fixed-2024'
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY:
+        if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('ENV') == 'production':
+            raise RuntimeError("La variable de entorno SECRET_KEY es obligatoria en produccion.")
+        SECRET_KEY = 'neurops-secret-key-development-fallback-2026'
     
     # Database Config
     # Default to sqlite for local dev, but prepared for PostgreSQL
@@ -29,9 +32,8 @@ class Config:
     REMEMBER_COOKIE_NAME = 'learnation_workers_remember'
     
     # Production Security
-    # If running on HTTPS (Railway usually puts behind proxy), we need Secure cookies
-    # But locally we don't use HTTPS usually.
-    # Flask-Login/Sessions usually need this for cross-domain iframes or modern browsers on HTTPS.
-    SESSION_COOKIE_SECURE = False 
-    REMEMBER_COOKIE_SECURE = False
+    # Habilitar cookies seguras solo si se ejecuta en entorno de produccion.
+    _is_prod = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('ENV') == 'production' or os.environ.get('RAILWAY_ENVIRONMENT') is not None
+    SESSION_COOKIE_SECURE = _is_prod
+    REMEMBER_COOKIE_SECURE = _is_prod
     SESSION_COOKIE_SAMESITE = 'Lax'
