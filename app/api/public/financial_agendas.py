@@ -434,7 +434,6 @@ def get_financial_agendas():
         agendas = query.all()
         # Precalcular ventas asociadas para evitar N+1
         from app.models import FinancialSale
-        from sqlalchemy import or_, func
         emails = {a.mail.strip().lower() for a in agendas if a.mail and a.mail.lower() not in ('n/a', '')}
         instagrams = {a.instagram.strip().replace('@', '').lower() for a in agendas if a.instagram and a.instagram.lower() not in ('n/a', '')}
         
