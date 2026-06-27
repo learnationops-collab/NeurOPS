@@ -131,6 +131,7 @@ sequenceDiagram
 1. **Captura de Leads**: Integrado con **ManyChat Webhooks** e inputs directos en landing pages. Cuando un usuario interactúa, se crea un registro de `Lead` en la base de datos con los datos recopilados (teléfono, Instagram, respuestas clave).
 2. **Atribución de UTM**: El modelo `UTMLog` y `LandingTracking` registran los parámetros UTM (`utm_source`, `utm_medium`, `utm_campaign`, etc.) de procedencia de cada prospecto para calcular el ROI de las campañas.
 3. **Control de Presupuestos**: Los administradores registran los gastos de anuncios por períodos (`AdPeriodSpend`, `MarketingBudget`), permitiendo cruzar la inversión publicitaria con el volumen de ventas generado.
+4. **Regla de Atribución Consistente por Primer Pago**: Cuando un Lead realiza múltiples pagos (por ejemplo, una seña, un pago split y luego cuotas), todos los pagos subsiguientes se asocian de forma consistente a la misma agenda que originó ese primer pago (seña, split o completo) mediante la agrupación de identidades en caliente con `AttributionService` (que utiliza Union-Find sobre Instagram y correo). Los pagos de tipo `upsell` quedan exceptuados y se atribuyen de forma independiente a la agenda más reciente del lead para reflejar el cambio de programa.
 
 ### B. Flujo de Captación 1: Setters (Agendamiento)
 1. **Asignación y Prospección**: Los Setters interactúan directamente con los leads asignados o entrantes mediante el panel de trabajo.

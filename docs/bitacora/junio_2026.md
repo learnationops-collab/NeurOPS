@@ -1,6 +1,19 @@
 # Bitácora - Junio 2026
 
 - **27 de Junio de 2026**:
+  - **Atribución Consistente de Agendas en Base al Primer Pago**:
+    - **Servicio de Atribución (`app/services/attribution_service.py`) [NEW]**:
+      - Se implementó `AttributionService.get_sales_attribution()` utilizando una estructura *Union-Find* para agrupar ventas y agendas por Lead (Instagram y Correo normalizados).
+      - Se definió la regla del primer pago: la agenda del primer pago calificado (`split`, `seña`, `completo`) se propaga a todos los pagos posteriores del mismo lead.
+      - Se integró la excepción para pagos tipo `upsell`, que continúan asociándose a su agenda más reciente.
+    - **Endpoints de Ventas (`app/api/public/financial_sales.py`) [MODIFY]**:
+      - Se integró `AttributionService` en `get_financial_sales` y `get_financial_sales_payroll` para calcular y aplicar la atribución unificada de agendas a las ventas y nóminas.
+    - **Cálculo de Comisiones (`app/api/public/finance.py`) [MODIFY]**:
+      - Se adaptó `get_commissions_calculated` para utilizar `AttributionService` al calcular las comisiones de Setters y Closers basadas en cobros reales.
+    - **Standings de Setters (`app/api/manychat.py`) [MODIFY]**:
+      - Se actualizó el endpoint `/manychat-webhook/stats/dashboard` para usar la agenda de la primera venta al calcular el rendimiento global por Setter.
+    - **Pruebas y Diagnóstico (`scratch/test_attribution.py`) [NEW]**:
+      - Creación de script de pruebas unitarias en memoria para comprobar el algoritmo de Union-Find y las reglas de negocio de atribución.
   - **Fase 2: Optimización de Rendimiento**:
     - **React Context (`frontend/src/contexts/AuthContext.jsx`) [MODIFY]**:
       - Se implementó `useMemo` para memorizar el objeto literal de valor del proveedor de `AuthContext`, reduciendo renderizados redundantes de la SPA y mejorando el desempeño general.

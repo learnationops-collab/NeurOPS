@@ -943,25 +943,9 @@ def get_ad_dashboard_stats():
     # Global Setter Stats (Agendas + Ventas)
     global_setters = {}
     
-    # Construir mapa completo de Instagram normalizado -> Setter/Fuente de la Agenda
     all_agendas_db = FinancialAgenda.query.all()
-    agenda_setter_map = {}
-    for ag in all_agendas_db:
-        ig_val = ag.instagram or (ag.raw_data or {}).get('instagram') or (ag.raw_data or {}).get('ig')
-        ig_c = normalize_ig(ig_val)
-        if ig_c:
-            # Validar si el nombre (fuente/setter) de la agenda es una fuente/setter de marketing válida
-            is_valid_lead_source = (
-                ag.nombre and 
-                ag.nombre.strip() and 
-                ag.nombre.lower() not in ('s/f', 'n/a', '') and 
-                'entrevista' not in ag.nombre.lower() and 
-                'diagnostica' not in ag.nombre.lower() and
-                'diagnóstica' not in ag.nombre.lower()
-            )
-            if is_valid_lead_source:
-                if ig_c not in agenda_setter_map or (ag.date and agenda_setter_map[ig_c].date and ag.date > agenda_setter_map[ig_c].date):
-                    agenda_setter_map[ig_c] = ag
+    from app.services.attribution_service import AttributionService
+    attribution_map = AttributionService.get_sales_attribution(sales=sales_in_period, agendas=all_agendas_db)
     
     # Agendas por Setter/Fuente
     for ag in agendas_all:
@@ -972,12 +956,10 @@ def get_ad_dashboard_stats():
         
     # Ventas por Setter resuelto
     for sale in sales_in_period:
-        ig_val = sale.instagram or (sale.raw_data or {}).get('instagram') or (sale.raw_data or {}).get('ig')
-        ig_n = normalize_ig(ig_val)
-        
         resolved_setter = None
-        if ig_n and ig_n in agenda_setter_map:
-            resolved_setter = agenda_setter_map[ig_n].nombre
+        agenda = attribution_map.get(sale.id)
+        if agenda:
+            resolved_setter = agenda.nombre
             
         if not resolved_setter:
             s_setter = sale.setter

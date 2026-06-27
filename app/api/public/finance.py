@@ -129,12 +129,8 @@ def get_commissions_calculated(month_str):
     ).all()
     
     all_agendas = FinancialAgenda.query.all()
-    agenda_map = {}
-    for a in all_agendas:
-        ig_norm = normalize_ig(a.instagram)
-        if ig_norm:
-            if ig_norm not in agenda_map or (a.date and agenda_map[ig_norm].date and a.date > agenda_map[ig_norm].date):
-                agenda_map[ig_norm] = a
+    from app.services.attribution_service import AttributionService
+    attribution_map = AttributionService.get_sales_attribution(sales=sales, agendas=all_agendas)
                 
     elias_recaudado = 0.0
     jeancarlo_recaudado = 0.0
@@ -145,11 +141,10 @@ def get_commissions_calculated(month_str):
         if not sale_is_completed:
             continue
             
-        ig_norm = normalize_ig(s.instagram)
         resolved_setter = None
         
-        if ig_norm and ig_norm in agenda_map:
-            agenda = agenda_map[ig_norm]
+        agenda = attribution_map.get(s.id)
+        if agenda:
             is_valid_lead_source = (
                 agenda.nombre and 
                 agenda.nombre.strip() and 
