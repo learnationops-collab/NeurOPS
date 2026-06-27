@@ -67,71 +67,61 @@ def create_app(config_class=Config):
 
     from app.api import bp as api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
-    csrf.exempt(api_bp)
 
     from app.api.closer import bp as closer_api_bp
     app.register_blueprint(closer_api_bp, url_prefix='/api/closer')
-    csrf.exempt(closer_api_bp)
 
     from app.api.public import bp as public_api_bp
     app.register_blueprint(public_api_bp, url_prefix='/api')
-    csrf.exempt(public_api_bp)
+    csrf.exempt(public_api_bp) # Exento para llamadas publicas / webhooks de n8n
 
     from app.api.setter import bp as setter_api_bp
     app.register_blueprint(setter_api_bp, url_prefix='/api/setter')
-    csrf.exempt(setter_api_bp)
 
     from app.api.google_calendar import bp as google_calendar_bp
     app.register_blueprint(google_calendar_bp)
-    csrf.exempt(google_calendar_bp)
+    csrf.exempt(google_calendar_bp) # Exento para webhooks de Google Calendar
 
     from app.api.webhooks import bp as webhooks_bp
     app.register_blueprint(webhooks_bp, url_prefix='/api/webhooks')
-    csrf.exempt(webhooks_bp)
+    csrf.exempt(webhooks_bp) # Exento para webhooks de Calendly/n8n
 
     from app.api.analytics import bp as analytics_bp
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
-    csrf.exempt(analytics_bp)
 
     from app.api.marketing import bp as marketing_bp
     app.register_blueprint(marketing_bp, url_prefix='/api/marketing')
-    csrf.exempt(marketing_bp)
 
     from app.api.backup import bp as backup_bp
     app.register_blueprint(backup_bp, url_prefix='/api/backup')
-    csrf.exempt(backup_bp)
+    csrf.exempt(backup_bp) # Exento para tareas externas de backup
 
     from app.api.comments import bp as comments_bp
     app.register_blueprint(comments_bp, url_prefix='/api/comments')
-    csrf.exempt(comments_bp)
 
     from app.api.manychat import bp as manychat_bp
     app.register_blueprint(manychat_bp, url_prefix='/api')
-    csrf.exempt(manychat_bp)
+    csrf.exempt(manychat_bp) # Exento para webhooks de ManyChat
 
     from app.api.triage import bp as triage_bp
     app.register_blueprint(triage_bp, url_prefix='/api/triage')
-    csrf.exempt(triage_bp)
 
     from app.api.sheets import bp as sheets_bp
     app.register_blueprint(sheets_bp, url_prefix='/api/sheets')
-    csrf.exempt(sheets_bp)
+    csrf.exempt(sheets_bp) # Exento para scripts externos de Google Sheets
 
     from app.api.workshop import bp as workshop_bp
     app.register_blueprint(workshop_bp, url_prefix='/api/workshop')
-    csrf.exempt(workshop_bp)
 
     from app.api.metrics import bp as metrics_bp
     app.register_blueprint(metrics_bp, url_prefix='/api/v1/metrics')
-    csrf.exempt(metrics_bp)
+    csrf.exempt(metrics_bp) # Exento para sistemas de monitorizacion
 
     from app.api.conversational import bp as conversational_bp
     app.register_blueprint(conversational_bp, url_prefix='/api/conversational')
-    csrf.exempt(conversational_bp)
 
     from app.api.alerts import bp as alerts_bp
     app.register_blueprint(alerts_bp, url_prefix='/api')
-    csrf.exempt(alerts_bp)
 
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')

@@ -1,5 +1,28 @@
 # Bitácora - Junio 2026
 
+- **27 de Junio de 2026**:
+  - **Fase 1: Blindaje de Seguridad Crítica**:
+    - **API Backend (`app/api/auth.py`) [MODIFY]**:
+      - Se eliminó por completo la ruta `/auth/emergency-create` que permitía la creación no autorizada de usuarios administradores mediante un secreto hardcodeado en el backend.
+    - **Configuración de la Aplicación (`config.py`) [MODIFY]**:
+      - Se modificó `SECRET_KEY` para que provenga obligatoriamente de la variable de entorno `SECRET_KEY` en producción (arrojando un `RuntimeError` en su ausencia para forzar despliegues seguros), con un fallback seguro únicamente para desarrollo.
+      - Se definieron `SESSION_COOKIE_SECURE` y `REMEMBER_COOKIE_SECURE` de forma dinámica (`True` en producción/Railway, y `False` en desarrollo local sobre HTTP).
+    - **Manejadores de Excepciones (`app/__init__.py`) [MODIFY]**:
+      - Se modificaron los manejadores globales de error 500 y excepciones generales para retornar un JSON genérico limpio en producción. Se restringe el volcado detallado de trazas (`traceback.format_exc()`) únicamente a entornos donde `app.debug` sea verdadero, previniendo fuga de información técnica sensible.
+    - **Documentación (`docs/arquitectura_y_funcionamiento.md`) [MODIFY]**:
+      - Se documentaron las variables de entorno críticas de seguridad en la sección de Entorno de Despliegue.
+  - **Fase 3: Activación de CSRF Segura**:
+    - **Instancia de Axios Frontend (`frontend/src/services/api.js`) [MODIFY]**:
+      - Se implementó un esquema de obtención perezosa (lazy) del token CSRF mediante una solicitud a `/api/auth/csrf-token` usando una instancia limpia de Axios, guardándolo en memoria y evitando bucles redundantes.
+      - Se actualizó el interceptor de peticiones (`api.interceptors.request.use`) para que resuelva de forma asíncrona dicho token e inyecte la cabecera `X-CSRFToken` en todas las llamadas que muten estado (POST, PUT, DELETE, PATCH).
+    - **API Backend Factory (`app/__init__.py`) [MODIFY]**:
+      - Se eliminaron las exenciones globales de CSRF (`csrf.exempt`) en todos los blueprints internos consumidos por la SPA (como `api_bp`, `closer_api_bp`, `setter_api_bp`, `analytics_bp`, `marketing_bp`, `comments_bp`, `triage_bp`, `workshop_bp`, `conversational_bp` y `alerts_bp`), forzando una validación estricta de CSRF en el backend. Se conservaron exentos únicamente los endpoints consumidos por automatizaciones o integraciones externas independientes de navegador (n8n webhooks, ManyChat API, etc.).
+  - **Fase 1.5: Trazabilidad y Preparación para CSRF**:
+    - **Servicio de Agendamiento (`app/services/booking_service.py`) [MODIFY]**:
+      - Se inyectó trazabilidad de auditoría en la función estática `log_lead_event` para comprobar si existe una suplantación activa (`session.get('is_impersonating')`). Si es así, se añade de manera automática una leyenda descriptiva especificando la identidad del operador original actuando en nombre del usuario suplantado. Se añadió también un control `has_request_context()` para garantizar la estabilidad del servicio en webhooks y scripts CLI.
+    - **API Backend (`app/api/auth.py`) [MODIFY]**:
+      - Se creó el endpoint `GET /api/auth/csrf-token` que genera un token de seguridad CSRF válido y lo expone a la SPA de React.
+
 - **25 de Junio de 2026**:
   - **Rediseño y Optimización de KPIs de Reporte Diario de Setters**:
     - **API Backend (`app/api/public/setter.py`) [MODIFY]**:

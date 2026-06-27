@@ -46,7 +46,11 @@ graph TD
 - **ORM**: SQLAlchemy via Flask-SQLAlchemy para la definición y consulta de base de datos relacional.
 - **Migraciones**: Flask-Migrate (basado en Alembic) para gestionar versiones del esquema de base de datos.
 - **Autenticación**: Flask-Login para el manejo de sesiones basadas en cookies seguras.
-- **Seguridad**: CSRFProtect de Flask-WTF activo para las vistas del sitio. Se expone el endpoint `GET /api/auth/csrf-token` para suministrar tokens CSRF válidos a la SPA. Adicionalmente, cuenta con trazabilidad integrada de auditoría: si un operador ejecuta acciones bajo suplantación de identidad (`is_impersonating`), los logs en `LeadEventLog` documentan al operador original actuando en nombre del usuario suplantado.
+- **Seguridad**: CSRFProtect de Flask-WTF activo y validado estrictamente en todos los endpoints internos consumidos por la SPA (como `/api/closer`, `/api/setter`, etc.). El flujo interactúa de la siguiente forma:
+    1. El frontend obtiene de forma diferida (lazy) el token CSRF consultando `GET /api/auth/csrf-token` al disparar la primera petición de mutación.
+    2. La instancia centralizada de Axios ([api.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/services/api.js)) intercepta de forma asíncrona todas las peticiones que no sean de lectura (`GET`, `HEAD`, `OPTIONS`) e inyecta dinámicamente el token CSRF obtenido en la cabecera `X-CSRFToken`.
+    3. El backend valida de forma estricta la firma del token CSRF contrastándolo con la cookie de sesión del navegador.
+    4. Adicionalmente, cuenta con trazabilidad integrada de auditoría: si un operador ejecuta acciones bajo suplantación de identidad (`is_impersonating`), los logs en `LeadEventLog` documentan al operador original actuando en nombre del usuario suplantado. Los endpoints externos consumidos por servidores y automatizaciones (webhooks de n8n, ManyChat, Google Calendar y Sheets) se mantienen exentos de la validación CSRF para garantizar la integración.
 - **CORS**: Configurado en [app/\_\_init\_\_.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/__init__.py) para permitir credenciales y controlar los orígenes permitidos durante el desarrollo local y de staging.
 
 ### Frontend (SPA)
