@@ -70,8 +70,8 @@ class Comment(db.Model):
 class LeadEventLog(db.Model):
     __tablename__ = 'lead_event_logs'
     id = db.Column(db.Integer, primary_key=True)
-    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) # None si es ManyChat/sistema
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True) # None si es ManyChat/sistema
     action_type = db.Column(db.String(100), nullable=False) # e.g. 'comment', 'setter_notes', 'closing_notes', 'status_changed', 'incoming_lead'
     description = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

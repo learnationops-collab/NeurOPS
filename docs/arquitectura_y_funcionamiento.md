@@ -63,6 +63,9 @@ graph TD
 ### Bases de Datos
 - **Entorno Local**: SQLite (`instance/local.db`) para agilizar el desarrollo y pruebas unitarias.
 - **Entorno Producción**: PostgreSQL para persistencia escalable y soporte de transacciones concurrentes.
+- **Estrategias de Optimización de Rendimiento**:
+  - **Indexación de Llaves Foráneas**: Se definieron índices explícitos (`index=True`) en tablas de alto crecimiento como `lead_event_logs` (`appointment_id`, `user_id`), `payments` (`enrollment_id`, `payment_method_id`) y `enrollments` (`client_id`, `program_id`, `closer_id`). Esto reduce la complejidad temporal de los JOINs frecuentes y filtros de reportes.
+  - **Mitigación de Consultas N+1 en Serializadores**: Para evitar consultas recurrentes en listados (problema N+1), métodos de serialización como `FinancialAgenda.to_dict()` admiten parámetros de conteo precalculados en lote (`sales_count`). Las búsquedas individuales de fallback se optimizaron usando comparaciones indexadas de tipo `ilike`, erradicando el uso de funciones SQL sobre texto (`func.lower(...)`) que invalidan los índices.
 
 ---
 

@@ -1,6 +1,17 @@
 # Bitácora - Junio 2026
 
 - **27 de Junio de 2026**:
+  - **Fase 2: Optimización de Rendimiento**:
+    - **React Context (`frontend/src/contexts/AuthContext.jsx`) [MODIFY]**:
+      - Se implementó `useMemo` para memorizar el objeto literal de valor del proveedor de `AuthContext`, reduciendo renderizados redundantes de la SPA y mejorando el desempeño general.
+    - **Modelos y consultas (`app/models/financial.py` y `app/api/public/financial_agendas.py`) [MODIFY]**:
+      - Se modificó `FinancialAgenda.to_dict()` para aceptar el parámetro opcional `sales_count` precalculado, eliminando la consulta N+1.
+      - Se reestructuró la consulta fallback optimizándola con comparaciones de tipo `ilike` en lugar de funciones de base de datos sobre texto (`func.lower(func.replace(...))`), erradicando escaneos completos de tabla (full table scans).
+      - Se adaptaron ambas ramas del endpoint de obtención de agendas (`get_financial_agendas`) para mapear y pasar los conteos de ventas ya precalculados en lote, logrando cero consultas redundantes durante la serialización.
+    - **Esquema e Indexación de Base de Datos (`app/models/crm.py` y `app/models/payment.py`) [MODIFY]**:
+      - Se inyectaron índices explícitos (`index=True`) a las claves foráneas en `LeadEventLog` (`appointment_id`, `user_id`), `Payment` (`enrollment_id`, `payment_method_id`) y `Enrollment` (`client_id`, `program_id`, `closer_id`), acelerando significativamente los JOINs y filtros frecuentes del CRM.
+    - **Migración de Base de Datos [NEW]**:
+      - Se generó y aplicó la migración `f83ef7f1cc72` ("Optimizacion de indices y rendimiento") mediante Alembic/Flask-Migrate.
   - **Fase 1: Blindaje de Seguridad Crítica**:
     - **API Backend (`app/api/auth.py`) [MODIFY]**:
       - Se eliminó por completo la ruta `/auth/emergency-create` que permitía la creación no autorizada de usuarios administradores mediante un secreto hardcodeado en el backend.

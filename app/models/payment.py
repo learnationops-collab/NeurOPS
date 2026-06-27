@@ -4,9 +4,9 @@ from app import db
 class Enrollment(db.Model):
     __tablename__ = 'enrollments'
     id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
-    program_id = db.Column(db.Integer, db.ForeignKey('programs.id'), nullable=False)
-    closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False, index=True)
+    program_id = db.Column(db.Integer, db.ForeignKey('programs.id'), nullable=False, index=True)
+    closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
     enrollment_date = db.Column(db.DateTime, default=datetime.utcnow)
 
     payments = db.relationship('Payment', backref='enrollment', lazy='dynamic', cascade="all, delete-orphan")
@@ -30,8 +30,8 @@ class PaymentMethod(db.Model):
 class Payment(db.Model):
     __tablename__ = 'payments'
     id = db.Column(db.Integer, primary_key=True)
-    enrollment_id = db.Column(db.Integer, db.ForeignKey('enrollments.id'), nullable=False)
-    payment_method_id = db.Column(db.Integer, db.ForeignKey('payment_methods.id'), nullable=True)
+    enrollment_id = db.Column(db.Integer, db.ForeignKey('enrollments.id'), nullable=False, index=True)
+    payment_method_id = db.Column(db.Integer, db.ForeignKey('payment_methods.id'), nullable=True, index=True)
     amount = db.Column(db.Float, nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     payment_type = db.Column(db.String(20))

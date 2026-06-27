@@ -63,21 +63,23 @@ class FinancialAgenda(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     date = db.Column(db.DateTime, default=datetime.utcnow) # Fecha de la cita oficial
 
-    def to_dict(self):
-        # Calcular ventas asociadas en financial_sales
-        from sqlalchemy import or_, func
-        ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
-        mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
-        
-        sales_count = 0
-        filters = []
-        if ig_clean:
-            filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_clean)
-        if mail_clean:
-            filters.append(func.lower(FinancialSale.mail_cliente) == mail_clean)
+    def to_dict(self, sales_count=None):
+        if sales_count is None:
+            # Fallback optimizado sin funciones de base de datos sobre las columnas para permitir uso de indices
+            sales_count = 0
+            ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
+            mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
             
-        if filters:
-            sales_count = FinancialSale.query.filter(or_(*filters)).count()
+            filters = []
+            if ig_clean:
+                # Usar ilike para evitar full table scans en SQLite/PostgreSQL
+                filters.append(FinancialSale.instagram.ilike(f"%{ig_clean}%"))
+            if mail_clean:
+                filters.append(FinancialSale.mail_cliente.ilike(mail_clean))
+                
+            if filters:
+                from sqlalchemy import or_
+                sales_count = FinancialSale.query.filter(or_(*filters)).count()
 
         return {
             "id": self.id,

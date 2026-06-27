@@ -409,8 +409,13 @@ def get_financial_agendas():
                     
         unique_sources = sorted(list(set(unique_sources)))
         
+        serialized_data = []
+        for a in agendas_pagination.items:
+            s_count, _ = get_agenda_sales_info(a)
+            serialized_data.append(a.to_dict(sales_count=s_count))
+        
         return jsonify({
-            "data": [a.to_dict() for a in agendas_pagination.items],
+            "data": serialized_data,
             "total": total_count,
             "upcoming_count": upcoming_count,
             "by_closer": by_closer,
@@ -427,7 +432,49 @@ def get_financial_agendas():
         }), 200
     else:
         agendas = query.all()
-        return jsonify([a.to_dict() for a in agendas]), 200
+        # Precalcular ventas asociadas para evitar N+1
+        from app.models import FinancialSale
+        from sqlalchemy import or_, func
+        emails = {a.mail.strip().lower() for a in agendas if a.mail and a.mail.lower() not in ('n/a', '')}
+        instagrams = {a.instagram.strip().replace('@', '').lower() for a in agendas if a.instagram and a.instagram.lower() not in ('n/a', '')}
+        
+        sales_by_email = {}
+        sales_by_ig = {}
+        if emails or instagrams:
+            sales_filters = []
+            if instagrams:
+                sales_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(list(instagrams)))
+            if emails:
+                sales_filters.append(func.lower(FinancialSale.mail_cliente).in_(list(emails)))
+            
+            sales = FinancialSale.query.filter(or_(*sales_filters)).all()
+            for s in sales:
+                if s.mail_cliente:
+                    m = s.mail_cliente.strip().lower()
+                    if m not in sales_by_email: sales_by_email[m] = []
+                    sales_by_email[m].append(s)
+                if s.instagram:
+                    ig = s.instagram.strip().replace('@', '').lower()
+                    if ig not in sales_by_ig: sales_by_ig[ig] = []
+                    sales_by_ig[ig].append(s)
+                    
+        def get_agenda_sales_info_local(agenda):
+            ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
+            mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
+            
+            associated_sales = []
+            if ig_clean and ig_clean in sales_by_ig:
+                associated_sales.extend(sales_by_ig[ig_clean])
+            if mail_clean and mail_clean in sales_by_email:
+                associated_sales.extend(sales_by_email[mail_clean])
+            return len(associated_sales)
+
+        serialized_data = []
+        for a in agendas:
+            s_count = get_agenda_sales_info_local(a)
+            serialized_data.append(a.to_dict(sales_count=s_count))
+            
+        return jsonify(serialized_data), 200
 
 @bp.route('/public/financial-agendas/<int:agenda_id>', methods=['PUT', 'OPTIONS'])
 def update_financial_agenda(agenda_id):
