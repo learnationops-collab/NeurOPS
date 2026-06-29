@@ -614,6 +614,24 @@ def preview_closer_report_discord(report_id):
     return render_template_string(template_content, **img_data)
 
 
+@bp.route('/public/closer-reports/<int:report_id>/resend-discord', methods=['POST'])
+def resend_closer_report_discord(report_id):
+    """Reenvía un reporte de Closer a Discord."""
+    from app.models import CloserDailyReport, User
+    from flask_login import current_user
+    from app.api.public.closer import _trigger_closer_report_discord
+
+    if not current_user.is_authenticated or current_user.role != 'admin':
+        return jsonify({"error": "No autorizado"}), 403
+
+    report = CloserDailyReport.query.get_or_404(report_id)
+    try:
+        _trigger_closer_report_discord(report)
+        return jsonify({"message": "Reporte reenviado a Discord exitosamente"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @bp.route('/public/closer-report/prefill', methods=['GET'])
 def prefill_closer_report():
     """Calcula y retorna los datos automáticos para pre-rellenar el reporte diario de un closer."""

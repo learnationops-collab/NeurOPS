@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import {
     Search, Trash2, Edit3, Loader2, Calendar,
-    ChevronLeft, ChevronRight, X, Save, AlertCircle, PhoneCall, Flag, Activity, Users, Eye
+    ChevronLeft, ChevronRight, X, Save, AlertCircle, PhoneCall, Flag, Activity, Users, Eye, Send
 } from 'lucide-react';
 
 // Componente Principal de la Tabla
@@ -16,6 +16,7 @@ const CloserReportsTable = ({ closers }) => {
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [resendingId, setResendingId] = useState(null);
 
     // Filters
     const [filters, setFilters] = useState({
@@ -81,6 +82,19 @@ const CloserReportsTable = ({ closers }) => {
             fetchReports();
         } catch (err) {
             alert("Error al borrar");
+        }
+    };
+
+    const handleResendDiscord = async (id) => {
+        setResendingId(id);
+        try {
+            await api.post(`/public/closer-reports/${id}/resend-discord`);
+            alert("Reporte reenviado a Discord con éxito");
+        } catch (err) {
+            console.error("Error resending report:", err);
+            alert("Error al reenviar el reporte a Discord");
+        } finally {
+            setResendingId(null);
         }
     };
 
@@ -230,16 +244,26 @@ const CloserReportsTable = ({ closers }) => {
                                         <td className="p-4 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 {user.role === 'admin' && (
-                                                    <button 
-                                                        onClick={() => {
-                                                            const token = localStorage.getItem('auth_token');
-                                                            window.open(`/api/public/closer-reports/${r.id}/preview?token=${token}`, '_blank');
-                                                        }} 
-                                                        className="p-2 bg-violet-600/20 text-violet-400 border border-violet-600/30 rounded-lg hover:bg-violet-600 hover:text-white transition-colors cursor-pointer" 
-                                                        title="Vista Previa de Discord"
-                                                    >
-                                                        <Eye size={14} />
-                                                    </button>
+                                                    <>
+                                                        <button 
+                                                            onClick={() => {
+                                                                const token = localStorage.getItem('auth_token');
+                                                                window.open(`/api/public/closer-reports/${r.id}/preview?token=${token}`, '_blank');
+                                                            }} 
+                                                            className="p-2 bg-violet-600/20 text-violet-400 border border-violet-600/30 rounded-lg hover:bg-violet-600 hover:text-white transition-colors cursor-pointer" 
+                                                            title="Vista Previa de Discord"
+                                                        >
+                                                            <Eye size={14} />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleResendDiscord(r.id)} 
+                                                            disabled={resendingId === r.id}
+                                                            className="p-2 bg-sky-600/20 text-sky-400 border border-sky-600/30 rounded-lg hover:bg-sky-600 hover:text-white transition-colors cursor-pointer disabled:opacity-50" 
+                                                            title="Reenviar a Discord"
+                                                        >
+                                                            {resendingId === r.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                                        </button>
+                                                    </>
                                                 )}
                                                 <button onClick={() => navigate('/closer/report', { state: { editReport: r } })} className="p-2 bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer" title="Editar Reporte Completo">
                                                     <Edit3 size={14} />

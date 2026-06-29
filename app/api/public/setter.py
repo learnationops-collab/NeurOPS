@@ -1085,6 +1085,24 @@ def preview_setter_report_discord(report_id):
     return render_template_string(template_content, **img_data)
 
 
+@bp.route('/public/setter-reports/<int:report_id>/resend-discord', methods=['POST'])
+def resend_setter_report_discord(report_id):
+    """Reenvía un reporte de Setter a Discord."""
+    from app.models import SetterDailyStats, User
+    from flask_login import current_user
+    from app.api.setter import _trigger_setter_report_webhook
+
+    if not current_user.is_authenticated or current_user.role != 'admin':
+        return jsonify({"error": "No autorizado"}), 403
+
+    stat = SetterDailyStats.query.get_or_404(report_id)
+    try:
+        _trigger_setter_report_webhook(stat)
+        return jsonify({"message": "Reporte reenviado a Discord exitosamente"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ============================================================
 # FINANCIAL ANALYSIS (EXCEL DATA)
 # ============================================================
