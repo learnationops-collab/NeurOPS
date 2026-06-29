@@ -1092,10 +1092,16 @@ def resend_setter_report_discord(report_id):
     from flask_login import current_user
     from app.api.setter import _trigger_setter_report_webhook
 
-    if not current_user.is_authenticated or current_user.role != 'admin':
+    if not current_user.is_authenticated:
+        return jsonify({"error": "No autorizado"}), 401
+
+    if current_user.role not in ['admin', 'setter']:
         return jsonify({"error": "No autorizado"}), 403
 
     stat = SetterDailyStats.query.get_or_404(report_id)
+
+    if current_user.role == 'setter' and stat.setter_id != current_user.id:
+        return jsonify({"error": "No autorizado"}), 403
     try:
         _trigger_setter_report_webhook(stat)
         return jsonify({"message": "Reporte reenviado a Discord exitosamente"}), 200

@@ -302,26 +302,26 @@ const SetterReportsTable = ({ setters }) => {
                                             ) : (
                                                 <>
                                                     {user.role === 'admin' && (
-                                                        <>
-                                                            <button 
-                                                                onClick={() => {
-                                                                    const token = localStorage.getItem('auth_token');
-                                                                    window.open(`/api/public/setter-reports/${r.id}/preview?token=${token}`, '_blank');
-                                                                }} 
-                                                                className="p-2 bg-violet-600/20 text-violet-400 border border-violet-600/30 rounded-lg hover:bg-violet-600 hover:text-white transition-colors cursor-pointer" 
-                                                                title="Vista Previa de Discord"
-                                                            >
-                                                                <Eye size={14} />
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => handleResendDiscord(r.id)} 
-                                                                disabled={resendingId === r.id}
-                                                                className="p-2 bg-sky-600/20 text-sky-400 border border-sky-600/30 rounded-lg hover:bg-sky-600 hover:text-white transition-colors cursor-pointer disabled:opacity-50" 
-                                                                title="Reenviar a Discord"
-                                                            >
-                                                                {resendingId === r.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                                                            </button>
-                                                        </>
+                                                        <button 
+                                                            onClick={() => {
+                                                                const token = localStorage.getItem('auth_token');
+                                                                window.open(`/api/public/setter-reports/${r.id}/preview?token=${token}`, '_blank');
+                                                            }} 
+                                                            className="p-2 bg-violet-600/20 text-violet-400 border border-violet-600/30 rounded-lg hover:bg-violet-600 hover:text-white transition-colors cursor-pointer" 
+                                                            title="Vista Previa de Discord"
+                                                        >
+                                                            <Eye size={14} />
+                                                        </button>
+                                                    )}
+                                                    {(user.role === 'admin' || user.role === 'setter') && (
+                                                        <button 
+                                                            onClick={() => handleResendDiscord(r.id)} 
+                                                            disabled={resendingId === r.id}
+                                                            className="p-2 bg-sky-600/20 text-sky-400 border border-sky-600/30 rounded-lg hover:bg-sky-600 hover:text-white transition-colors cursor-pointer disabled:opacity-50" 
+                                                            title="Reenviar a Discord"
+                                                        >
+                                                            {resendingId === r.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                                        </button>
                                                     )}
                                                     <button onClick={() => startEdit(r)} className="p-2 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-100" title="Editar Reporte Completo">
                                                         <Edit3 size={14} />

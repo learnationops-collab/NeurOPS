@@ -621,10 +621,16 @@ def resend_closer_report_discord(report_id):
     from flask_login import current_user
     from app.api.public.closer import _trigger_closer_report_discord
 
-    if not current_user.is_authenticated or current_user.role != 'admin':
+    if not current_user.is_authenticated:
+        return jsonify({"error": "No autorizado"}), 401
+
+    if current_user.role not in ['admin', 'closer']:
         return jsonify({"error": "No autorizado"}), 403
 
     report = CloserDailyReport.query.get_or_404(report_id)
+
+    if current_user.role == 'closer' and report.closer_id != current_user.id:
+        return jsonify({"error": "No autorizado"}), 403
     try:
         _trigger_closer_report_discord(report)
         return jsonify({"message": "Reporte reenviado a Discord exitosamente"}), 200

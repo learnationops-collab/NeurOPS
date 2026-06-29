@@ -3,13 +3,13 @@
 - **29 de Junio de 2026**:
   - **Funcionalidad de Reenvío de Reportes a Discord**:
     - **API Backend (`app/api/public/setter.py`) [MODIFY]**:
-      - Registro del endpoint `POST /public/setter-reports/<report_id>/resend-discord` para administradores que activa el webhook de Discord del reporte de un setter específico.
+      - Registro y protección del endpoint `POST /public/setter-reports/<report_id>/resend-discord`. Permite que administradores o el setter dueño del reporte reenvíen sus estadísticas a Discord.
     - **API Backend (`app/api/public/closer.py`) [MODIFY]**:
-      - Registro del endpoint `POST /public/closer-reports/<report_id>/resend-discord` para administradores que activa el webhook de Discord del reporte de un closer específico.
+      - Registro y protección del endpoint `POST /public/closer-reports/<report_id>/resend-discord`. Permite que administradores o el closer dueño del reporte reenvíen sus estadísticas a Discord.
     - **Interfaz Frontend (`SetterReportsTable.jsx` [MODIFY])**:
-      - Integración de botón de reenvío por Discord con icono `Send` al lado del botón de vista previa. Muestra un spinner de carga (`Loader2`) y se deshabilita mientras se procesa.
+      - Integración de botón de reenvío por Discord con icono `Send` al lado del botón de vista previa. Visible para administradores y setters. Muestra un spinner de carga (`Loader2`) y se deshabilita mientras se procesa.
     - **Interfaz Frontend (`CloserReportsTable.jsx` [MODIFY])**:
-      - Integración de botón de reenvío por Discord con icono `Send` al lado del botón de vista previa. Muestra un spinner de carga (`Loader2`) y se deshabilita mientras se procesa.
+      - Integración de botón de reenvío por Discord con icono `Send` al lado del botón de vista previa. Visible para administradores y closers. Muestra un spinner de carga (`Loader2`) y se deshabilita mientras se procesa.
   - **Corrección de Reporte Diario de Setters**:
     - **API Backend (`app/api/setter.py`) [MODIFY]**:
       - Se refactorizó la función `_trigger_setter_report_webhook` para importar y utilizar la función unificada de datos `_prepare_setter_report_data` de `app/api/public/setter.py`. Esto unifica la estructura de datos enviada a la plantilla de reporte de setters (`setter_report.html`), solucionando el error `'kpi_metrics' is undefined` de Jinja2 y restableciendo el envío correcto de reportes al webhook de Discord.
