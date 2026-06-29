@@ -1,5 +1,10 @@
 # Bitácora - Junio 2026
 
+- **29 de Junio de 2026**:
+  - **Corrección de Reporte Diario de Setters**:
+    - **API Backend (`app/api/setter.py`) [MODIFY]**:
+      - Se refactorizó la función `_trigger_setter_report_webhook` para importar y utilizar la función unificada de datos `_prepare_setter_report_data` de `app/api/public/setter.py`. Esto unifica la estructura de datos enviada a la plantilla de reporte de setters (`setter_report.html`), solucionando el error `'kpi_metrics' is undefined` de Jinja2 y restableciendo el envío correcto de reportes al webhook de Discord.
+
 - **27 de Junio de 2026**:
   - **Gestión de Formularios de Calificación Perdidos**:
     - **API Backend (`app/api/triage.py`) [MODIFY]**:
