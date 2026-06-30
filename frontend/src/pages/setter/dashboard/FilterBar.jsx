@@ -28,7 +28,9 @@ const FilterBar = ({
   setCustomRange,
   loading,
   compare,
-  setCompare
+  setCompare,
+  compareMode,
+  setCompareMode
 }) => (
   <div className="flex flex-wrap items-center gap-3 p-4 bg-surface border border-base rounded-2xl shadow-xl">
     <Filter size={14} className="text-muted ml-1" />
@@ -115,22 +117,46 @@ const FilterBar = ({
     <div className="w-px h-5 bg-base" />
 
     {/* Comparar con el Período Anterior */}
-    <div className="flex items-center gap-2.5 bg-main/30 px-3.5 py-1.5 rounded-xl border border-base/40">
-      <span className="text-[9px] font-black uppercase tracking-widest text-muted">Comparar</span>
-      <button
-        onClick={() => setCompare(!compare)}
-        type="button"
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none ${
-          compare ? 'bg-primary shadow-lg shadow-primary/20' : 'bg-surface-hover border border-base'
-        }`}
-      >
-        <motion.span
-          layout
-          className="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-md"
-          animate={{ x: compare ? 16 : 2 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        />
-      </button>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2.5 bg-main/30 px-3.5 py-1.5 rounded-xl border border-base/40">
+        <span className="text-[9px] font-black uppercase tracking-widest text-muted">Comparar</span>
+        <button
+          onClick={() => setCompare(!compare)}
+          type="button"
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none ${
+            compare ? 'bg-primary shadow-lg shadow-primary/20' : 'bg-surface-hover border border-base'
+          }`}
+        >
+          <motion.span
+            layout
+            className="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-md"
+            animate={{ x: compare ? 16 : 2 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+          />
+        </button>
+      </div>
+      {/* Modo de comparación */}
+      {compare && setCompareMode && (
+        <div className="flex gap-1">
+          {[
+            { id: 'period', label: 'Periodo ant.' },
+            { id: 'month', label: 'Mes ant.' }
+          ].map(m => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setCompareMode(m.id)}
+              className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border transition-all ${
+                (compareMode || 'period') === m.id
+                  ? 'bg-primary/20 border-primary/40 text-primary'
+                  : 'bg-surface border-base text-muted hover:text-base'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
 
     {loading && <Loader2 size={14} className="animate-spin text-primary ml-auto" />}

@@ -12,6 +12,21 @@
       - Se integró un banner informativo premium que muestra el rango de fechas comparado cuando la opción de comparación está activa.
     - **Interfaz Frontend (`StatisticsPage.jsx` [MODIFY])**:
       - Se integró un banner informativo premium para el dashboard de rendimiento conversacional de setters que indica las fechas del periodo de comparación activo.
+  - **Selector de Modo de Comparación (Periodo Anterior vs Mes Anterior)**:
+    - **API Backend (`app/api/public/setter.py`) [MODIFY]**:
+      - Se agregó el parámetro `compare_mode` (`period` | `month`). Con `period`, el backend calcula el bloque de días exactamente anterior al periodo seleccionado (misma cantidad de días). Con `month`, aplica la lógica anterior de restar un mes calendario.
+    - **API Backend (`app/api/public/closer.py`) [MODIFY]**:
+      - Mismo soporte de `compare_mode` implementado para el endpoint de estadísticas de closers.
+    - **API Backend (`app/api/conversational.py`) [MODIFY]**:
+      - Mismo soporte de `compare_mode` implementado para el endpoint de estadísticas conversacionales.
+    - **Interfaz Frontend (`PublicCloserStatsPage.jsx` [MODIFY])**:
+      - Selector de modo visible debajo del toggle de comparación. Permite cambiar entre "Periodo anterior" y "Mes anterior". El modo se persiste en filtros y se envía al backend.
+    - **Interfaz Frontend (`PublicSetterStatsPage.jsx` [MODIFY])**:
+      - Mismo selector de modo integrado en el bloque de comparación del dashboard de setters.
+    - **Interfaz Frontend (`FilterBar.jsx` [MODIFY])**:
+      - Se extendió el componente con las props `compareMode` y `setCompareMode`. Muestra los botones de selección de modo solo cuando la comparación está activa.
+    - **Interfaz Frontend (`StatisticsPage.jsx` [MODIFY])**:
+      - Se agregó el estado `compareMode` y se pasa como prop al `FilterBar` y como parámetro al fetch del endpoint conversacional.
 
 - **29 de Junio de 2026**:
   - **Funcionalidad de Reenvío de Reportes a Discord**:

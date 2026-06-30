@@ -20,6 +20,7 @@ const SetterStatisticsPage = () => {
   const [category, setCategory] = useState('all');
   const [adId, setAdId] = useState('');
   const [compare, setCompare] = useState(false);
+  const [compareMode, setCompareMode] = useState('period');
   const [customRange, setCustomRange] = useState({
     start: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -31,7 +32,7 @@ const SetterStatisticsPage = () => {
 
   useEffect(() => {
     fetchStats();
-  }, [period, category, adId, customRange, compare]);
+  }, [period, category, adId, customRange, compare, compareMode]);
 
   const fetchAds = async () => {
     try {
@@ -47,7 +48,10 @@ const SetterStatisticsPage = () => {
     try {
       const params = { category: category !== 'all' ? category : undefined };
       if (adId) params.ad_id = adId;
-      if (compare) params.compare = 'true';
+      if (compare) {
+        params.compare = 'true';
+        params.compare_mode = compareMode;
+      }
 
       if (period === 'custom') {
         params.start_date = customRange.start;
@@ -128,6 +132,8 @@ const SetterStatisticsPage = () => {
           loading={loading}
           compare={compare}
           setCompare={setCompare}
+          compareMode={compareMode}
+          setCompareMode={setCompareMode}
         />
 
         {/* ── Contenido ── */}

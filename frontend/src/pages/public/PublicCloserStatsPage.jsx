@@ -41,7 +41,8 @@ const PublicCloserStatsPage = () => {
         start_date: getFirstDayOfCurrentMonth(),
         end_date: getTodayDate(),
         agg_type: 'sum',
-        compare: false
+        compare: false,
+        compare_mode: 'period'
     });
 
     const applyDatePreset = (preset) => {
@@ -141,7 +142,10 @@ const PublicCloserStatsPage = () => {
             if (filters.start_date) params.append('start_date', filters.start_date);
             if (filters.end_date) params.append('end_date', filters.end_date);
             params.append('agg_type', filters.agg_type);
-            if (filters.compare) params.append('compare', 'true');
+            if (filters.compare) {
+                params.append('compare', 'true');
+                params.append('compare_mode', filters.compare_mode || 'period');
+            }
 
             const res = await api.get(`/public/closer-stats?${params.toString()}`);
             setStats(res.data);
@@ -287,6 +291,28 @@ const PublicCloserStatsPage = () => {
                                     />
                                 </button>
                             </div>
+                            {/* Modo de comparación */}
+                            {filters.compare && (
+                                <div className="flex gap-1 mt-1">
+                                    {[
+                                        { id: 'period', label: 'Periodo anterior' },
+                                        { id: 'month', label: 'Mes anterior' }
+                                    ].map(m => (
+                                        <button
+                                            key={m.id}
+                                            type="button"
+                                            onClick={() => setFilters({ compare_mode: m.id })}
+                                            className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border transition-all ${
+                                                (filters.compare_mode || 'period') === m.id
+                                                    ? 'bg-violet-600/30 border-violet-500/50 text-violet-300'
+                                                    : 'bg-slate-900 border-slate-700 text-slate-500 hover:text-slate-300'
+                                            }`}
+                                        >
+                                            {m.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                     </div>

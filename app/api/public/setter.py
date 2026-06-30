@@ -430,6 +430,7 @@ def get_public_setter_stats():
     setter_id = request.args.get('setter_id')
     agg_type = request.args.get('agg_type', 'sum') # 'sum' or 'avg'
     compare = request.args.get('compare') == 'true'
+    compare_mode = request.args.get('compare_mode', 'month')
 
     res = _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type)
 
@@ -437,13 +438,18 @@ def get_public_setter_stats():
         try:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            
-            prev_start_date = _subtract_one_month(start_date)
-            prev_end_date = _subtract_one_month(end_date)
-            
+
+            if compare_mode == 'period':
+                delta = (end_date - start_date) + timedelta(days=1)
+                prev_start_date = start_date - delta
+                prev_end_date = end_date - delta
+            else:
+                prev_start_date = _subtract_one_month(start_date)
+                prev_end_date = _subtract_one_month(end_date)
+
             prev_start_str = prev_start_date.strftime('%Y-%m-%d')
             prev_end_str = prev_end_date.strftime('%Y-%m-%d')
-            
+
             res['comparison'] = _compute_setter_stats(prev_start_str, prev_end_str, setter_id, agg_type)
             res['comparison_period'] = {'start': prev_start_str, 'end': prev_end_str}
         except Exception as e:

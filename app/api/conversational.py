@@ -394,6 +394,7 @@ def get_conversational_stats():
     category_filter = request.args.get('category')
     ad_id_filter = request.args.get('ad_id')
     compare = request.args.get('compare') == 'true'
+    compare_mode = request.args.get('compare_mode', 'month')
 
     kpis, table_rows = _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter)
 
@@ -404,9 +405,14 @@ def get_conversational_stats():
     }
 
     if compare:
-        prev_start_dt = _subtract_one_month_dt(start_dt)
-        prev_end_dt = _subtract_one_month_dt(end_dt)
-        
+        if compare_mode == 'period':
+            delta = end_dt - start_dt + timedelta(days=1)
+            prev_start_dt = start_dt - delta
+            prev_end_dt = end_dt - delta
+        else:
+            prev_start_dt = _subtract_one_month_dt(start_dt)
+            prev_end_dt = _subtract_one_month_dt(end_dt)
+
         prev_kpis, prev_table_rows = _compute_stats_for_dates(prev_start_dt, prev_end_dt, category_filter, ad_id_filter)
         response_data['comparison'] = {
             'kpis': prev_kpis,

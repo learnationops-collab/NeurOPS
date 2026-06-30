@@ -379,13 +379,20 @@ def get_public_closer_stats():
         agg_type=agg_type
     )
 
+    compare_mode = request.args.get('compare_mode', 'month')
+
     if compare and start_date and end_date:
         try:
             start_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
             end_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
             
-            prev_start_date = _subtract_one_month(start_dt)
-            prev_end_date = _subtract_one_month(end_dt)
+            if compare_mode == 'period':
+                delta = (end_dt - start_dt) + timedelta(days=1)
+                prev_start_date = start_dt - delta
+                prev_end_date = end_dt - delta
+            else:
+                prev_start_date = _subtract_one_month(start_dt)
+                prev_end_date = _subtract_one_month(end_dt)
 
             prev_start_str = prev_start_date.strftime('%Y-%m-%d')
             prev_end_str = prev_end_date.strftime('%Y-%m-%d')

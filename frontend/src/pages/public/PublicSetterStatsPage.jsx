@@ -108,10 +108,11 @@ const PublicSetterStatsPage = () => {
     }, []);
 
     const [compare, setCompare] = useState(false);
+    const [compareMode, setCompareMode] = useState('period');
 
     useEffect(() => {
         if (activeTab === 'general') fetchStats();
-    }, [filters, activeTab, compare]);
+    }, [filters, activeTab, compare, compareMode]);
 
     const fetchStats = async () => {
         setLoading(true);
@@ -121,7 +122,10 @@ const PublicSetterStatsPage = () => {
             if (filters.start_date) params.append('start_date', filters.start_date);
             if (filters.end_date) params.append('end_date', filters.end_date);
             params.append('agg_type', filters.agg_type);
-            if (compare) params.append('compare', 'true');
+            if (compare) {
+                params.append('compare', 'true');
+                params.append('compare_mode', compareMode);
+            }
 
             const res = await api.get(`/public/setter-stats?${params.toString()}`);
             setStats(res.data);
@@ -526,6 +530,28 @@ const PublicSetterStatsPage = () => {
                                     />
                                 </button>
                             </div>
+                            {/* Modo de comparación */}
+                            {compare && (
+                                <div className="flex gap-1 mt-1">
+                                    {[
+                                        { id: 'period', label: 'Periodo anterior' },
+                                        { id: 'month', label: 'Mes anterior' }
+                                    ].map(m => (
+                                        <button
+                                            key={m.id}
+                                            type="button"
+                                            onClick={() => setCompareMode(m.id)}
+                                            className={`text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border transition-all ${
+                                                compareMode === m.id
+                                                    ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300'
+                                                    : 'bg-slate-900 border-slate-700 text-slate-500 hover:text-slate-300'
+                                            }`}
+                                        >
+                                            {m.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
