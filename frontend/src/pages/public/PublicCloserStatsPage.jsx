@@ -293,6 +293,18 @@ const PublicCloserStatsPage = () => {
                 )}
 
                 {/* CONTENIDO PRINCIPAL */}
+                {filters.compare && stats?.comparison_period && activeTab === 'performance' && (
+                    <div className="flex items-center gap-2 bg-violet-950/40 border border-violet-500/30 rounded-2xl px-5 py-3 text-xs text-violet-300 font-bold w-fit animate-in fade-in duration-300">
+                        <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+                        <span>Comparando con el periodo anterior: <span className="text-white underline decoration-violet-500/50">{(() => {
+                            const start = stats.comparison_period.start;
+                            const end = stats.comparison_period.end;
+                            const format = (d) => d ? d.split('-').reverse().join('/') : '';
+                            return `${format(start)} al ${format(end)}`;
+                        })()}</span></span>
+                    </div>
+                )}
+
                 {loading && !stats ? (
                     <div className="flex flex-col items-center justify-center py-40 space-y-4">
                         <Loader2 className="animate-spin text-violet-500" size={48} />

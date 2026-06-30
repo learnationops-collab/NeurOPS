@@ -138,6 +138,17 @@ const SetterStatisticsPage = () => {
           </div>
         ) : (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
+            {compare && data?.comparison?.period && (
+              <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-2xl px-5 py-3 text-xs text-primary font-bold w-fit animate-in fade-in duration-300">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <span>Comparando con el periodo anterior: <span className="text-white underline decoration-primary/50">{(() => {
+                    const start = data.comparison.period.start;
+                    const end = data.comparison.period.end;
+                    const format = (d) => d ? d.split('T')[0].split('-').reverse().join('/') : '';
+                    return `${format(start)} al ${format(end)}`;
+                })()}</span></span>
+              </div>
+            )}
             {/* KPI Cards */}
             <KPIGrid kpis={kpis} comparisonKpis={data?.comparison?.kpis} compareActive={compare} />
 

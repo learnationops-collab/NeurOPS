@@ -1,5 +1,18 @@
 # Bitácora - Junio 2026
 
+- **30 de Junio de 2026**:
+  - **Visualización de Fechas de Comparación en Dashboards**:
+    - **API Backend (`app/api/public/setter.py`) [MODIFY]**:
+      - Se agregó `comparison_period` con las fechas de inicio y fin calculadas para el periodo anterior en el JSON de estadísticas de setters.
+    - **API Backend (`app/api/public/closer.py`) [MODIFY]**:
+      - Se agregó `comparison_period` con las fechas de inicio y fin calculadas para el periodo anterior en el JSON de estadísticas de closers.
+    - **Interfaz Frontend (`PublicSetterStatsPage.jsx` [MODIFY])**:
+      - Se integró un banner informativo premium que muestra el rango de fechas comparado cuando la opción de comparación está activa.
+    - **Interfaz Frontend (`PublicCloserStatsPage.jsx` [MODIFY])**:
+      - Se integró un banner informativo premium que muestra el rango de fechas comparado cuando la opción de comparación está activa.
+    - **Interfaz Frontend (`StatisticsPage.jsx` [MODIFY])**:
+      - Se integró un banner informativo premium para el dashboard de rendimiento conversacional de setters que indica las fechas del periodo de comparación activo.
+
 - **29 de Junio de 2026**:
   - **Funcionalidad de Reenvío de Reportes a Discord**:
     - **API Backend (`app/api/public/setter.py`) [MODIFY]**:

@@ -542,6 +542,17 @@ const PublicSetterStatsPage = () => {
                             <>
                                 {/* GRID PRINCIPAL */}
                                 <div className="space-y-6">
+                                    {compare && stats?.comparison_period && (
+                                        <div className="flex items-center gap-2 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl px-5 py-3 text-xs text-indigo-300 font-bold w-fit animate-in fade-in duration-300">
+                                            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                                            <span>Comparando con el periodo anterior: <span className="text-white underline decoration-indigo-500/50">{(() => {
+                                                const start = stats.comparison_period.start;
+                                                const end = stats.comparison_period.end;
+                                                const format = (d) => d ? d.split('-').reverse().join('/') : '';
+                                                return `${format(start)} al ${format(end)}`;
+                                            })()}</span></span>
+                                        </div>
+                                    )}
                                     <LeadUnifiedKPI stats={stats} compareActive={compare} comparisonStats={stats.comparison} />
                                     {/* 1. TOP ROW: 4 TARJETAS DE IMPACTO Y RENDIMIENTO OPERACIONAL DEL SETTER */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">

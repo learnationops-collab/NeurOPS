@@ -396,6 +396,7 @@ def get_public_closer_stats():
                 end_date=prev_end_str,
                 agg_type=agg_type
             )
+            res['comparison_period'] = {'start': prev_start_str, 'end': prev_end_str}
         except Exception as e:
             pass
 

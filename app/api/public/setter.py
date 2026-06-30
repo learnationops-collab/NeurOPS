@@ -445,6 +445,7 @@ def get_public_setter_stats():
             prev_end_str = prev_end_date.strftime('%Y-%m-%d')
             
             res['comparison'] = _compute_setter_stats(prev_start_str, prev_end_str, setter_id, agg_type)
+            res['comparison_period'] = {'start': prev_start_str, 'end': prev_end_str}
         except Exception as e:
             pass
 
