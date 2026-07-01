@@ -152,54 +152,46 @@ const PublicSetterStatsPage = () => {
 
     const div = (n, d) => (d > 0 ? Number(((n / d) * 100).toFixed(2)) : 0);
 
-    const renderComparisonSubdata = (current, previous) => {
+    const renderComparisonSubdata = (current, previous, isPct = false) => {
         if (!compare || !stats?.comparison) return null;
         const curVal = Number(current || 0);
         const prevVal = Number(previous || 0);
 
-        if (prevVal === 0) {
-            return (
-                <div className="flex items-center gap-1.5 mt-1 text-xs font-black uppercase text-slate-500 justify-end">
-                    <span>Ant: {prevVal}</span>
-                    {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
-                </div>
-            );
-        }
-
-        const diff = ((curVal - prevVal) / prevVal) * 100;
-        const sign = diff > 0 ? '+' : '';
-        const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
+        const diffPct = prevVal === 0 ? (curVal > 0 ? 100 : 0) : ((curVal - prevVal) / prevVal) * 100;
+        const sign = diffPct > 0 ? '+' : '';
+        const color = diffPct > 0 ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'
+                    : diffPct < 0 ? 'text-rose-400 bg-rose-500/15 border-rose-500/30'
+                    : 'text-slate-400 bg-slate-700/30 border-slate-600/30';
+        const arrow = diffPct > 0 ? '↑' : diffPct < 0 ? '↓' : '—';
 
         return (
-            <div className="flex items-center gap-1.5 mt-1 text-xs font-black uppercase text-slate-500 justify-end">
-                <span>Ant: {prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
-                <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
+            <div className="flex items-center justify-end gap-2 mt-2">
+                <span className="text-xs text-slate-400 font-bold">Ant: <span className="text-slate-200">{prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 })}{isPct ? '%' : ''}</span></span>
+                <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg border text-xs font-black ${color}`}>
+                    {arrow} {sign}{diffPct.toFixed(1)}%
+                </span>
             </div>
         );
     };
 
-    const renderComparisonSubdataLeft = (current, previous) => {
+    const renderComparisonSubdataLeft = (current, previous, isPct = false) => {
         if (!compare || !stats?.comparison) return null;
         const curVal = Number(current || 0);
         const prevVal = Number(previous || 0);
 
-        if (prevVal === 0) {
-            return (
-                <div className="flex items-center gap-1.5 mt-1 text-xs font-black uppercase text-slate-500">
-                    <span>Ant: {prevVal}</span>
-                    {curVal > 0 && <span className="text-emerald-400 font-bold">(+100%)</span>}
-                </div>
-            );
-        }
-
-        const diff = ((curVal - prevVal) / prevVal) * 100;
-        const sign = diff > 0 ? '+' : '';
-        const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500';
+        const diffPct = prevVal === 0 ? (curVal > 0 ? 100 : 0) : ((curVal - prevVal) / prevVal) * 100;
+        const sign = diffPct > 0 ? '+' : '';
+        const color = diffPct > 0 ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'
+                    : diffPct < 0 ? 'text-rose-400 bg-rose-500/15 border-rose-500/30'
+                    : 'text-slate-400 bg-slate-700/30 border-slate-600/30';
+        const arrow = diffPct > 0 ? '↑' : diffPct < 0 ? '↓' : '—';
 
         return (
-            <div className="flex items-center gap-1.5 mt-1 text-xs font-black uppercase text-slate-500">
-                <span>Ant: {prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
-                <span className={`${color} font-bold`}>({sign}{diff.toFixed(1)}%)</span>
+            <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs text-slate-400 font-bold">Ant: <span className="text-slate-200">{prevVal.toLocaleString(undefined, { maximumFractionDigits: 1 })}{isPct ? '%' : ''}</span></span>
+                <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg border text-xs font-black ${color}`}>
+                    {arrow} {sign}{diffPct.toFixed(1)}%
+                </span>
             </div>
         );
     };
@@ -651,7 +643,8 @@ const PublicSetterStatsPage = () => {
                                                     </div>
                                                     {renderComparisonSubdataLeft(
                                                         div(stats.totals.funnel_agenda, stats.totals.funnel_qualification),
-                                                        div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.funnel_qualification)
+                                                        div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.funnel_qualification),
+                                                        true
                                                     )}
                                                 </div>
                                                 <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-violet-400 shrink-0">
@@ -691,7 +684,8 @@ const PublicSetterStatsPage = () => {
                                                     </div>
                                                     {renderComparisonSubdataLeft(
                                                         stats.percentages.rates.total_fur,
-                                                        stats.comparison?.percentages?.rates?.total_fur
+                                                        stats.comparison?.percentages?.rates?.total_fur,
+                                                        true
                                                     )}
                                                 </div>
                                                 <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-indigo-400 shrink-0">
@@ -739,7 +733,8 @@ const PublicSetterStatsPage = () => {
                                                     </div>
                                                     {renderComparisonSubdataLeft(
                                                         div(stats.totals.funnel_agenda, stats.totals.entrantes),
-                                                        div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.entrantes)
+                                                        div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.entrantes),
+                                                        true
                                                     )}
                                                 </div>
                                                 <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-amber-400 shrink-0">

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Users, MessageSquare, Target, UserX, 
     ArrowUpRight, HelpCircle, Inbox, 
-    CheckCircle2, AlertCircle, TrendingUp
+    CheckCircle2, AlertCircle
 } from 'lucide-react';
 import StatTooltip from './StatTooltip';
 
@@ -307,10 +307,6 @@ const LeadUnifiedKPI = ({ stats, compareActive, comparisonStats }) => {
                                 </p>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">No Cualificados</p>
                                 {renderComparison(noCualificados, comparisonStats?.totals?.not_lead, false, "justify-start")}
-                            </div>
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2 flex items-center justify-center">
-                                <TrendingUp className="text-emerald-500 mr-2" size={12} />
-                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">High Quality</span>
                             </div>
                         </div>
                     </div>

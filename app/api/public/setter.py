@@ -299,6 +299,8 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
             "link_fur": process_val(stats.fu_l_r),
             "agenda_fu": process_val(stats.fu_a_s),
             "agenda_fur": process_val(stats.fu_a_r),
+            "total_fu_s": process_val(stats.total_fu_s),
+            "total_fu_r": process_val(stats.total_fu_r),
             
             "qualification_opening_submitted": process_val(stats.q_op_s),
             "qualification_opening_responded": process_val(stats.q_op_r),
