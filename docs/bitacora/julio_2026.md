@@ -1,6 +1,10 @@
 # Bitácora - Julio 2026
 
 - **1 de Julio de 2026**:
+  - **Exportación de "Clientes Potenciales" en el Registro de Agendas**:
+    - **Interfaz Frontend ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
+      - Se implementó la función `handleExportPotentialClientsCSV` y se agregó el botón "Exportar Clientes Potenciales" para descargar los leads agendados que no tienen ninguna venta registrada (`sales_count === 0`).
+      - El reporte incluye las columnas: Fecha de cita, Nombre del lead, Telefono, Email e Instagram.
   - **Exportación de "Clientes Nuevos" en Formato CSV**:
     - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
       - Se implementó la función `handleExportNewClientsCSV` que descarga el listado consolidado de Clientes Nuevos en formato CSV.

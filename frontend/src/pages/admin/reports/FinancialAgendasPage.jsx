@@ -19,7 +19,8 @@ import {
     UserX,
     DollarSign,
     Building,
-    RefreshCw
+    RefreshCw,
+    Download
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -303,6 +304,7 @@ const FinancialAgendasPage = () => {
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [syncing, setSyncing] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const [error, setError] = useState(null);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
@@ -348,6 +350,69 @@ const FinancialAgendasPage = () => {
             estado: agenda.estado || 'Pendiente',
             encargado_triage: agenda.encargado_triage || ''
         });
+    };
+
+    const handleExportPotentialClientsCSV = async () => {
+        setExporting(true);
+        try {
+            const response = await api.get('/public/financial-agendas', {
+                params: {
+                    search: searchTerm,
+                    start_date: startDate,
+                    end_date: endDate,
+                    date_filter_by: dateFilterBy,
+                    estado: estado,
+                    closer: closer,
+                    fuente: fuente,
+                    encargado_triage: encargadoTriage
+                }
+            });
+
+            const allAgendas = response.data || [];
+            const potentials = allAgendas.filter(a => (a.sales_count || 0) === 0);
+            
+            if (potentials.length === 0) {
+                alert("No se encontraron clientes potenciales (leads agendados sin ventas registradas) en este periodo.");
+                return;
+            }
+
+            const escapeCSVValue = (val) => {
+                if (val === null || val === undefined) return '';
+                let valStr = String(val).replace(/"/g, '""');
+                if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
+                    return `"${valStr}"`;
+                }
+                return valStr;
+            };
+
+            const headers = ['Fecha', 'Nombre', 'Telefono', 'Email', 'Instagram'];
+            const rows = potentials.map(a => [
+                a.date ? a.date.split('T')[0] : '',
+                a.lead || '',
+                a.whatsapp || '',
+                a.mail || '',
+                a.instagram || ''
+            ]);
+
+            const csvContent = [
+                headers.map(escapeCSVValue).join(','),
+                ...rows.map(row => row.map(escapeCSVValue).join(','))
+            ].join('\n');
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `clientes_potenciales_${startDate}_al_${endDate}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            console.error("Error al exportar clientes potenciales:", err);
+            alert("Error al exportar clientes potenciales a CSV");
+        } finally {
+            setExporting(false);
+        }
     };
 
     const handleEditSubmit = async (e) => {
@@ -857,11 +922,20 @@ const FinancialAgendasPage = () => {
 
             {/* List Section */}
             <Card variant="surface" className="p-8 space-y-6 rounded-[2.5rem] border-base relative">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-wrap gap-4">
                     <h3 className="text-[10px] font-black text-base uppercase tracking-widest flex items-center gap-2">
                         <Table className="text-primary" size={16} />
                         Historial de Agendas
                     </h3>
+                    
+                    <button
+                        onClick={handleExportPotentialClientsCSV}
+                        disabled={exporting}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-800 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-teal-500/20"
+                    >
+                        <Download className="w-4 h-4" />
+                        <span>{exporting ? 'Exportando...' : 'Exportar Clientes Potenciales'}</span>
+                    </button>
                 </div>
 
                 {loading && !syncing ? (
