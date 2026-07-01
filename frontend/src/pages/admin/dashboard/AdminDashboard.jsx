@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { Plus, Settings2, X, Maximize2, Hash, Check, Users, TrendingUp, DollarSign, Trash2, BarChart3, Bell } from 'lucide-react';
+import { Plus, Settings2, X, Maximize2, Hash, Check, Users, TrendingUp, DollarSign, Trash2, BarChart3 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import { useAuth } from '../../../contexts/AuthContext';
 import StatTile from './components/StatTile';
 import ChartTile from './components/ChartTile';
 import { AnimatePresence, motion } from 'framer-motion';
 import HotkeysTable from '../../../components/dashboard/HotkeysTable';
-import NotificationWidget from '../../../components/dashboard/NotificationWidget';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -26,7 +25,6 @@ const AdminDashboard = () => {
   const GAP = 24;
 
   const [activeSection, setActiveSection] = useState(0);
-  const [notifications, setNotifications] = useState([]);
 
 
   useEffect(() => {
@@ -45,27 +43,7 @@ const AdminDashboard = () => {
     window.dispatchEvent(event);
   }, [activeSection]);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await api.get('/admin/notifications');
-      setNotifications(res.data || []);
-    } catch (error) {
-      console.error("Error fetching notifications", error);
-    }
-  };
-
-  const handleMarkAsRead = async (id) => {
-    try {
-      await api.post(`/admin/notifications/${id}/read`);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-    } catch (error) {
-      console.error("Error marking as read", error);
-    }
-  };
 
   const handleBulkDeleteLegacy = async () => {
     if (!window.confirm("¿Estás seguro de que deseas eliminar a TODOS los usuarios excepto Admins y Closers? Esta acción no se puede deshacer.")) return;
@@ -457,8 +435,8 @@ const AdminDashboard = () => {
             </Button>
           </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-[98%] mx-auto">
-            {/* LEFT COLUMN: HOTKEYS */}
+          <div className="grid grid-cols-1 gap-8 max-w-[98%] mx-auto">
+            {/* HOTKEYS */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-primary/20 rounded-xl text-primary">
@@ -469,17 +447,6 @@ const AdminDashboard = () => {
               <div className="glass-panel p-6 rounded-[32px] border border-white/5 bg-[#1a1c23]/80">
                 <HotkeysTable />
               </div>
-            </div>
-
-            {/* RIGHT COLUMN: NOTIFICATIONS */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-amber-500/20 rounded-xl text-amber-500">
-                  <Bell size={24} />
-                </div>
-                <h2 className="text-xl font-bold text-white">Notificaciones</h2>
-              </div>
-              <NotificationWidget notifications={notifications} onMarkAsRead={handleMarkAsRead} />
             </div>
           </div>
         </div>

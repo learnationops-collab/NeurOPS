@@ -1275,75 +1275,7 @@ def execute_import():
     result = ImportService.execute(df, target, mapping, options)
     return jsonify(result), 200
 
-# --- Admin Notifications ---
 
-@bp.route('/admin/notifications', methods=['GET'])
-@login_required
-@admin_required
-def get_admin_notifications():
-    # Fetch latest 50 notifications
-    notifications = Notification.query.order_by(Notification.created_at.desc()).limit(50).all()
-    
-    relevant = []
-    for n in notifications:
-        is_target = False
-        if n.target_users == 'all': is_target = True
-        elif isinstance(n.target_users, list) and 'all' in n.target_users: is_target = True
-        elif n.target_users == 'role:admin': is_target = True
-        elif isinstance(n.target_users, list) and current_user.id in n.target_users: is_target = True
-        
-        if is_target:
-            is_read = current_user.id in (n.read_by or [])
-            if is_read:
-                continue
-                
-            relevant.append({
-                "id": n.id,
-                "subject": n.subject,
-                "content": n.content,
-                "created_at": n.created_at.isoformat(),
-                "is_read": False
-            })
-            
-    return jsonify(relevant), 200
-
-@bp.route('/admin/notifications/<int:id>/read', methods=['POST'])
-@login_required
-@admin_required
-def read_admin_notification(id):
-    n = Notification.query.get_or_404(id)
-    if not n.read_by: n.read_by = []
-    if current_user.id not in n.read_by:
-        # Force list update for SQLAlchemy detection
-        new_read_by = list(n.read_by)
-        new_read_by.append(current_user.id)
-        n.read_by = new_read_by
-        db.session.commit()
-    return jsonify({"message": "Marked as read"}), 200
-
-@bp.route('/admin/notifications/read-all', methods=['POST'])
-@login_required
-@admin_required
-def read_all_admin_notifications():
-    from app.models import Notification
-    
-    notifications = Notification.query.all()
-    for n in notifications:
-        is_target = False
-        if n.target_users == 'all': is_target = True
-        elif isinstance(n.target_users, list) and 'all' in n.target_users: is_target = True
-        elif n.target_users == 'role:admin': is_target = True
-        elif isinstance(n.target_users, list) and current_user.id in n.target_users: is_target = True
-        
-        if is_target:
-            if not n.read_by: n.read_by = []
-            if current_user.id not in n.read_by:
-                new_read_by = list(n.read_by)
-                new_read_by.append(current_user.id)
-                n.read_by = new_read_by
-                
-    db.session.commit()
-    return jsonify({"message": "Todas marcadas como leídas"}), 200
 
 
 # --- Quick Actions (Sales & Support) ---

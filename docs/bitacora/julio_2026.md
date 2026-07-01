@@ -1,7 +1,13 @@
 # Bitácora - Julio 2026
 
 - **1 de Julio de 2026**:
-  - **Exportación de "Clientes Potenciales" en el Registro de Agendas**:
+  - **Eliminación de Notificaciones de Administración**:
+    - **API Backend ([admin.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/admin.py) [MODIFY])**:
+      - Se removieron los endpoints de administración `/admin/notifications`, `/admin/notifications/<id>/read` y `/admin/notifications/read-all`.
+    - **Interfaz Frontend ([AdminDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/dashboard/AdminDashboard.jsx) [MODIFY])**:
+      - Se eliminaron el estado `notifications`, las funciones de obtención (`fetchNotifications`) y marcado (`handleMarkAsRead`), y el import/renderizado del widget de notificaciones (`NotificationWidget`).
+      - Se adaptó la grilla del dashboard para que el panel de atajos de teclado ocupe todo el ancho de forma limpia y equilibrada.
+  - **Exportación de Ventas en Formato CSV en el Registro de Ventas**:
     - **Interfaz Frontend ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
       - Se implementó la función `handleExportPotentialClientsCSV` y se agregó el botón "Exportar Clientes Potenciales" para descargar los leads agendados que no tienen ninguna venta registrada (`sales_count === 0`).
       - El reporte incluye las columnas: Fecha de cita, Nombre del lead, Telefono, Email e Instagram.
