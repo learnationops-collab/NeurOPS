@@ -500,29 +500,29 @@ const PublicFinancialSalesPage = () => {
                 const clientName = sortedSales[sortedSales.length - 1].nombre_cliente || firstSale.nombre_cliente || 'Desconocido';
 
                 const senaSale = sortedSales.find(s => ['seña', 'sena'].includes((s.tipo_pago_simple || '').toLowerCase().trim()));
-                const senaAmount = senaSale ? parseFloat(senaSale.monto || 0) : 0;
+                const senaAmount = senaSale ? parseFloat(senaSale.monto_bruto || senaSale.monto || 0) : 0;
 
                 const completoSale = sortedSales.find(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'completo');
-                const completoAmount = completoSale ? parseFloat(completoSale.monto || 0) : 0;
+                const completoAmount = completoSale ? parseFloat(completoSale.monto_bruto || completoSale.monto || 0) : 0;
 
                 const parcialSale = sortedSales.find(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'parcial');
-                const parcialAmount = parcialSale ? parseFloat(parcialSale.monto || 0) : 0;
+                const parcialAmount = parcialSale ? parseFloat(parcialSale.monto_bruto || parcialSale.monto || 0) : 0;
 
                 const cuotaSales = sortedSales.filter(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'cuota');
-                const totalCuotas = cuotaSales.reduce((sum, s) => sum + parseFloat(s.monto || 0), 0);
+                const totalCuotas = cuotaSales.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
                 const qtyCuotas = cuotaSales.length;
 
                 const renovacionSales = sortedSales.filter(s => ['renovación', 'renovacion'].includes((s.tipo_pago_simple || '').toLowerCase().trim()));
-                const totalRenovaciones = renovacionSales.reduce((sum, s) => sum + parseFloat(s.monto || 0), 0);
+                const totalRenovaciones = renovacionSales.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
                 const qtyRenovaciones = renovacionSales.length;
 
                 const upsellSales = sortedSales.filter(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'upsell');
-                const totalUpsells = upsellSales.reduce((sum, s) => sum + parseFloat(s.monto || 0), 0);
+                const totalUpsells = upsellSales.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
 
                 const latestUpsell = [...sortedSales].reverse().find(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'upsell');
                 const programName = latestUpsell ? latestUpsell.programa : firstSale.programa;
 
-                const totalPaid = sortedSales.reduce((sum, s) => sum + parseFloat(s.monto || 0), 0);
+                const totalPaid = sortedSales.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
 
                 let totalToPay = 0;
                 const cleanProg = (programName || '').toUpperCase().trim();
