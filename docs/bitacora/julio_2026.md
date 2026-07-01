@@ -1,6 +1,12 @@
 # Bitácora - Julio 2026
 
 - **1 de Julio de 2026**:
+  - **Exportación de "Clientes Nuevos" en Formato CSV**:
+    - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
+      - Se implementó la función `handleExportNewClientsCSV` que descarga el listado consolidado de Clientes Nuevos en formato CSV.
+      - Se utiliza el algoritmo de Union-Find en el cliente para agrupar ventas e identificar a aquellos clientes cuyo primer pago califique como ingreso (Seña, Completo o Parcial).
+      - Muestra el detalle financiero consolidado (Seña, Completo, Parcial, Cuotas, Renovaciones, Upsells, Programa final ajustado por Upsells, Total pagado, Total a pagar y Deuda).
+      - Se agregó el botón de acción "Exportar Clientes Nuevos" estilizado en color teal en el panel de herramientas superior.
   - **Corrección en Modificación de Fuente (Setter)**:
     - **API Backend ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:
       - Se corrigió el bug por el cual las actualizaciones individuales o masivas de la fuente (setter) se revertían al recargar.

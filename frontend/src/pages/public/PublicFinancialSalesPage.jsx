@@ -392,6 +392,207 @@ const PublicFinancialSalesPage = () => {
         }
     };
 
+    const handleExportNewClientsCSV = async () => {
+        setExporting(true);
+        const toastId = toast.loading('Generando reporte de clientes nuevos...');
+        try {
+            const res = await api.get('/public/financial-sales', {
+                params: {
+                    search: searchTerm,
+                    start_date: startDate,
+                    end_date: endDate,
+                    programa: programa,
+                    tipo_pago_simple: tipoPagoSimple,
+                    metodo_pago: metodoPago,
+                    closer: closer,
+                    source: source,
+                    sin_atribucion: sinAtribucion
+                }
+            });
+            
+            const allSales = res.data || [];
+            if (allSales.length === 0) {
+                toast.error('No hay ventas registradas en este periodo para exportar', { id: toastId });
+                return;
+            }
+
+            const normalizeIg = (ig) => {
+                if (!ig || typeof ig !== 'string' || ig.trim() === '' || ig.toLowerCase() === 'n/a') return null;
+                return ig.trim().replace(/^@/, '').toLowerCase();
+            };
+
+            const normalizeEmail = (email) => {
+                if (!email || typeof email !== 'string' || email.trim() === '' || email.toLowerCase() === 'n/a') return null;
+                return email.trim().toLowerCase();
+            };
+
+            class UnionFindJS {
+                constructor() {
+                    this.parent = {};
+                }
+                find(item) {
+                    if (!(item in this.parent)) {
+                        this.parent[item] = item;
+                        return item;
+                    }
+                    let path = [];
+                    while (this.parent[item] !== this.parent[this.parent[item]]) {
+                        path.push(item);
+                        item = this.parent[item];
+                    }
+                    for (let node of path) {
+                        this.parent[node] = item;
+                    }
+                    return item;
+                }
+                union(item1, item2) {
+                    let root1 = this.find(item1);
+                    let root2 = this.find(item2);
+                    if (root1 !== root2) {
+                        this.parent[root1] = root2;
+                    }
+                }
+            }
+
+            const uf = new UnionFindJS();
+            allSales.forEach(s => {
+                const ig = normalizeIg(s.instagram);
+                const email = normalizeEmail(s.mail_cliente);
+                if (ig && email) {
+                    uf.union(ig, email);
+                }
+            });
+
+            const leads = {};
+            allSales.forEach(s => {
+                const ig = normalizeIg(s.instagram);
+                const email = normalizeEmail(s.mail_cliente);
+                let key = null;
+                if (ig) {
+                    key = uf.find(ig);
+                } else if (email) {
+                    key = uf.find(email);
+                } else {
+                    key = `sale_${s.id}`;
+                }
+                if (!leads[key]) {
+                    leads[key] = [];
+                }
+                leads[key].push(s);
+            });
+
+            const getSaleDate = (s) => s.date ? new Date(s.date) : (s.created_at ? new Date(s.created_at) : new Date(0));
+            const newClientsRows = [];
+
+            Object.keys(leads).forEach(key => {
+                const salesGroup = leads[key];
+                const sortedSales = salesGroup.sort((a, b) => getSaleDate(a) - getSaleDate(b));
+                
+                const firstSale = sortedSales[0];
+                const firstType = (firstSale.tipo_pago_simple || '').toLowerCase().trim();
+                const isNewClient = ['seña', 'sena', 'completo', 'parcial'].includes(firstType);
+                
+                if (!isNewClient) {
+                    return;
+                }
+
+                const entryDate = firstSale.date ? firstSale.date.split('T')[0] : '';
+                const clientName = sortedSales[sortedSales.length - 1].nombre_cliente || firstSale.nombre_cliente || 'Desconocido';
+
+                const senaSale = sortedSales.find(s => ['seña', 'sena'].includes((s.tipo_pago_simple || '').toLowerCase().trim()));
+                const senaAmount = senaSale ? parseFloat(senaSale.monto || 0) : 0;
+
+                const completoSale = sortedSales.find(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'completo');
+                const completoAmount = completoSale ? parseFloat(completoSale.monto || 0) : 0;
+
+                const parcialSale = sortedSales.find(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'parcial');
+                const parcialAmount = parcialSale ? parseFloat(parcialSale.monto || 0) : 0;
+
+                const cuotaSales = sortedSales.filter(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'cuota');
+                const totalCuotas = cuotaSales.reduce((sum, s) => sum + parseFloat(s.monto || 0), 0);
+                const qtyCuotas = cuotaSales.length;
+
+                const renovacionSales = sortedSales.filter(s => ['renovación', 'renovacion'].includes((s.tipo_pago_simple || '').toLowerCase().trim()));
+                const totalRenovaciones = renovacionSales.reduce((sum, s) => sum + parseFloat(s.monto || 0), 0);
+                const qtyRenovaciones = renovacionSales.length;
+
+                const upsellSales = sortedSales.filter(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'upsell');
+                const totalUpsells = upsellSales.reduce((sum, s) => sum + parseFloat(s.monto || 0), 0);
+
+                const latestUpsell = [...sortedSales].reverse().find(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'upsell');
+                const programName = latestUpsell ? latestUpsell.programa : firstSale.programa;
+
+                const totalPaid = sortedSales.reduce((sum, s) => sum + parseFloat(s.monto || 0), 0);
+
+                let totalToPay = 0;
+                const cleanProg = (programName || '').toUpperCase().trim();
+                if (cleanProg === 'AL') totalToPay = 750;
+                else if (cleanProg === 'RR') totalToPay = 1500;
+                else if (cleanProg === 'SI') totalToPay = 2000;
+
+                const debt = Math.max(0, totalToPay - totalPaid);
+
+                newClientsRows.push([
+                    entryDate,
+                    clientName,
+                    senaAmount > 0 ? senaAmount : '',
+                    completoAmount > 0 ? completoAmount : '',
+                    parcialAmount > 0 ? parcialAmount : '',
+                    totalCuotas > 0 ? totalCuotas : '',
+                    qtyCuotas > 0 ? qtyCuotas : '',
+                    totalRenovaciones > 0 ? totalRenovaciones : '',
+                    qtyRenovaciones > 0 ? qtyRenovaciones : '',
+                    totalUpsells > 0 ? totalUpsells : '',
+                    programName || '',
+                    totalPaid,
+                    totalToPay > 0 ? totalToPay : '',
+                    debt > 0 ? debt : ''
+                ]);
+            });
+
+            if (newClientsRows.length === 0) {
+                toast.error('No hay clientes nuevos registrados en este periodo', { id: toastId });
+                return;
+            }
+
+            const escapeCSVValue = (val) => {
+                if (val === null || val === undefined) return '';
+                let valStr = String(val).replace(/"/g, '""');
+                if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
+                    return `"${valStr}"`;
+                }
+                return valStr;
+            };
+
+            const headers = [
+                'Fecha', 'Nombre', 'Seña', 'Completo', 'Parcial', 'Cuota', 
+                'Cantidad de cuotas', 'Renovación', 'Cantidad de Renovaciones', 
+                'Upsells', 'Programa', 'Total pagado', 'Total a Pagar', 'Deuda'
+            ];
+
+            const csvContent = [
+                headers.map(escapeCSVValue).join(','),
+                ...newClientsRows.map(row => row.map(escapeCSVValue).join(','))
+            ].join('\n');
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `clientes_nuevos_${startDate}_al_${endDate}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success('Reporte de clientes nuevos exportado con éxito', { id: toastId });
+
+        } catch (error) {
+            toast.error('Error al exportar clientes nuevos', { id: toastId });
+            console.error(error);
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const handleBulkUpdate = async () => {
         if (selectedSaleIds.length === 0) return;
         if (!bulkEditField) {
@@ -716,6 +917,15 @@ const PublicFinancialSalesPage = () => {
                     >
                         <Download className="w-4 h-4" />
                         <span>{exporting ? 'Exportando...' : 'Exportar CSV'}</span>
+                    </button>
+
+                    <button
+                        onClick={handleExportNewClientsCSV}
+                        disabled={exporting}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-800 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-teal-500/20"
+                    >
+                        <Download className="w-4 h-4" />
+                        <span>{exporting ? 'Exportando...' : 'Exportar Clientes Nuevos'}</span>
                     </button>
 
                     <button
