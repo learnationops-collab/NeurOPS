@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp, AlertCircle, Plus, Trash2, BookOpen, CreditCard, Wallet, UserCheck, Compass, ChevronDown, Filter, Send } from 'lucide-react';
+import { RefreshCcw, Search, Edit2, Check, X, Calendar, DollarSign, Users, Percent, TrendingUp, AlertCircle, Plus, Trash2, BookOpen, CreditCard, Wallet, UserCheck, Compass, ChevronDown, Filter, Send, Download } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import AttributionModal from '../../components/modals/AttributionModal';
@@ -64,6 +64,7 @@ const PublicFinancialSalesPage = () => {
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [syncing, setSyncing] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
 
@@ -296,6 +297,92 @@ const PublicFinancialSalesPage = () => {
             console.error(error);
         } finally {
             setSyncing(false);
+        }
+    };
+
+    const handleExportCSV = async () => {
+        setExporting(true);
+        const toastId = toast.loading('Generando CSV...');
+        try {
+            const res = await api.get('/public/financial-sales', {
+                params: {
+                    search: searchTerm,
+                    start_date: startDate,
+                    end_date: endDate,
+                    programa: programa,
+                    tipo_pago_simple: tipoPagoSimple,
+                    metodo_pago: metodoPago,
+                    closer: closer,
+                    source: source,
+                    sin_atribucion: sinAtribucion
+                }
+            });
+            
+            const allSales = res.data || [];
+            if (allSales.length === 0) {
+                toast.error('No hay ventas registradas en este periodo para exportar', { id: toastId });
+                return;
+            }
+            
+            const escapeCSVValue = (val) => {
+                if (val === null || val === undefined) return '';
+                let valStr = String(val).replace(/"/g, '""');
+                if (valStr.includes(',') || valStr.includes('\n') || valStr.includes('\r') || valStr.includes('"')) {
+                    return `"${valStr}"`;
+                }
+                return valStr;
+            };
+
+            const headers = [
+                'ID Venta', 'Fecha Pago', 'Marca Temporal', 'Cliente', 'Instagram', 
+                'Email Cliente', 'Teléfono Cliente', 'Programa', 'Tipo Pago Simple', 
+                'Detalle Tipo Pago', 'Monto Bruto', 'Monto Neto', 'Método Pago', 
+                'Closer', 'Email Closer', 'Setter / Fuente', 'Estado', 
+                'Segundo Pago', 'Examen', 'Atribuido a Agenda'
+            ];
+
+            const rows = allSales.map(s => [
+                s.id,
+                s.date ? s.date.split('T')[0] : '',
+                s.marca_temporal || '',
+                s.nombre_cliente || '',
+                s.instagram || '',
+                s.mail_cliente || '',
+                s.telefono || '',
+                s.programa || '',
+                s.tipo_pago_simple || '',
+                s.tipo_pago || '',
+                s.monto_bruto || '',
+                s.monto || '',
+                s.metodo_pago || '',
+                s.closer_name || '',
+                s.email_vendedor || '',
+                s.setter || '',
+                s.estado || '',
+                s.segundo_pago || '',
+                s.examen || '',
+                s.has_agenda ? 'Sí' : 'No'
+            ]);
+
+            const csvContent = [
+                headers.map(escapeCSVValue).join(','),
+                ...rows.map(row => row.map(escapeCSVValue).join(','))
+            ].join('\n');
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `registro_pagos_${startDate}_al_${endDate}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success('CSV exportado con éxito', { id: toastId });
+        } catch (error) {
+            toast.error('Error al exportar a CSV', { id: toastId });
+            console.error(error);
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -579,6 +666,15 @@ const PublicFinancialSalesPage = () => {
                     >
                         <Users className="w-4 h-4" />
                         <span>{sinAtribucion ? 'Ver Todas' : 'Atribuir (Sin Agenda)'}</span>
+                    </button>
+
+                    <button
+                        onClick={handleExportCSV}
+                        disabled={exporting}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-500/20"
+                    >
+                        <Download className="w-4 h-4" />
+                        <span>{exporting ? 'Exportando...' : 'Exportar CSV'}</span>
                     </button>
 
                     <button
