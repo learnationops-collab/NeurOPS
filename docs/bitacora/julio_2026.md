@@ -1,6 +1,10 @@
 # Bitácora - Julio 2026
 
 - **1 de Julio de 2026**:
+  - **Corrección en Modificación de Fuente (Setter)**:
+    - **API Backend ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:
+      - Se corrigió el bug por el cual las actualizaciones individuales o masivas de la fuente (setter) se revertían al recargar.
+      - En lugar de buscar la agenda más reciente por Instagram (lo cual fallaba por arrobas inconsistentes, agendas sin Instagram o atribución por correo), se integró `AttributionService.get_sales_attribution` para identificar con exactitud la agenda atribuida a la venta en caliente y actualizar su nombre.
   - **Modificación Masiva de Ventas**:
     - **API Backend ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:
       - Se implementó el endpoint `POST /public/financial-sales/bulk-update` para actualizar múltiples ventas en lote. Soporta cambios en programa, tipo de pago simple, método de pago, estado, closer y setter, propagando las modificaciones a Google Sheets en tiempo real y persistiendo los cambios en la base de datos local de forma atómica.

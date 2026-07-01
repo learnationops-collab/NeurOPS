@@ -287,14 +287,14 @@ def update_financial_sale(sale_id):
         if 'setter_name' in data:
             new_setter = data['setter_name']
             sale.setter = new_setter
-            # Sincronizar con la agenda asociada si existe
-            ig_norm = normalize_ig(sale.instagram)
-            if ig_norm:
-                agenda = FinancialAgenda.query.filter(
-                    func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm
-                ).order_by(FinancialAgenda.date.desc()).first()
-                if agenda:
-                    agenda.nombre = new_setter
+            # Sincronizar con la agenda atribuida real utilizando AttributionService
+            from app.services.attribution_service import AttributionService
+            all_sales = FinancialSale.query.all()
+            all_agendas = FinancialAgenda.query.all()
+            attribution_map = AttributionService.get_sales_attribution(sales=all_sales, agendas=all_agendas)
+            agenda = attribution_map.get(sale.id)
+            if agenda:
+                agenda.nombre = new_setter
         if 'amount' in data:
             sale.monto = float(data['amount'])
         if 'instagram' in data:
@@ -902,6 +902,15 @@ def bulk_update_financial_sales():
     updated_count = 0
     from app.services.sheets_service import SheetsService
     
+    # Precalcular atribución de agendas si se va a modificar el setter
+    if setter is not None:
+        from app.services.attribution_service import AttributionService
+        all_sales = FinancialSale.query.all()
+        all_agendas = FinancialAgenda.query.all()
+        attribution_map = AttributionService.get_sales_attribution(sales=all_sales, agendas=all_agendas)
+    else:
+        attribution_map = {}
+        
     try:
         for sale in sales:
             curr_prog, curr_tp = split_tipo_pago(sale.tipo_pago)
@@ -917,13 +926,9 @@ def bulk_update_financial_sales():
                 
             if setter is not None:
                 sale.setter = setter
-                ig_norm = normalize_ig(sale.instagram)
-                if ig_norm:
-                    agenda = FinancialAgenda.query.filter(
-                        func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm
-                    ).order_by(FinancialAgenda.date.desc()).first()
-                    if agenda:
-                        agenda.nombre = setter
+                agenda = attribution_map.get(sale.id)
+                if agenda:
+                    agenda.nombre = setter
                         
             if email_vendedor is not None:
                 sale.email_vendedor = email_vendedor
