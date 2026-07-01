@@ -308,7 +308,7 @@ const PublicFinancialSalesPage = () => {
 
     const handleExportCSV = async () => {
         setExporting(true);
-        const toastId = toast.loading('Generando CSV...');
+        const toastId = toast.loading('Generando CSV consolidado por cliente...');
         try {
             const res = await api.get('/public/financial-sales', {
                 params: {
@@ -329,7 +329,134 @@ const PublicFinancialSalesPage = () => {
                 toast.error('No hay ventas registradas en este periodo para exportar', { id: toastId });
                 return;
             }
-            
+
+            const normalizeIg = (ig) => {
+                if (!ig || typeof ig !== 'string' || ig.trim() === '' || ig.toLowerCase() === 'n/a') return null;
+                return ig.trim().replace(/^@/, '').toLowerCase();
+            };
+
+            const normalizeEmail = (email) => {
+                if (!email || typeof email !== 'string' || email.trim() === '' || email.toLowerCase() === 'n/a') return null;
+                return email.trim().toLowerCase();
+            };
+
+            class UnionFindJS {
+                constructor() {
+                    this.parent = {};
+                }
+                find(item) {
+                    if (!(item in this.parent)) {
+                        this.parent[item] = item;
+                        return item;
+                    }
+                    let path = [];
+                    while (this.parent[item] !== this.parent[this.parent[item]]) {
+                        path.push(item);
+                        item = this.parent[item];
+                    }
+                    for (let node of path) {
+                        this.parent[node] = item;
+                    }
+                    return item;
+                }
+                union(item1, item2) {
+                    let root1 = this.find(item1);
+                    let root2 = this.find(item2);
+                    if (root1 !== root2) {
+                        this.parent[root1] = root2;
+                    }
+                }
+            }
+
+            const uf = new UnionFindJS();
+            allSales.forEach(s => {
+                const ig = normalizeIg(s.instagram);
+                const email = normalizeEmail(s.mail_cliente);
+                if (ig && email) {
+                    uf.union(ig, email);
+                }
+            });
+
+            const leads = {};
+            allSales.forEach(s => {
+                const ig = normalizeIg(s.instagram);
+                const email = normalizeEmail(s.mail_cliente);
+                let key = null;
+                if (ig) {
+                    key = uf.find(ig);
+                } else if (email) {
+                    key = uf.find(email);
+                } else {
+                    key = `sale_${s.id}`;
+                }
+                if (!leads[key]) {
+                    leads[key] = [];
+                }
+                leads[key].push(s);
+            });
+
+            const getSaleDate = (s) => s.date ? new Date(s.date) : (s.created_at ? new Date(s.created_at) : new Date(0));
+            const clientsRows = [];
+
+            Object.keys(leads).forEach(key => {
+                const salesGroup = leads[key];
+                const sortedSales = salesGroup.sort((a, b) => getSaleDate(a) - getSaleDate(b));
+                
+                const firstSale = sortedSales[0];
+                const entryDate = firstSale.date ? firstSale.date.split('T')[0] : '';
+                const clientName = sortedSales[sortedSales.length - 1].nombre_cliente || firstSale.nombre_cliente || 'Desconocido';
+
+                const senaSale = sortedSales.find(s => ['seña', 'sena'].includes((s.tipo_pago_simple || '').toLowerCase().trim()));
+                const senaAmount = senaSale ? parseFloat(senaSale.monto_bruto || senaSale.monto || 0) : 0;
+
+                const completoSale = sortedSales.find(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'completo');
+                const completoAmount = completoSale ? parseFloat(completoSale.monto_bruto || completoSale.monto || 0) : 0;
+
+                const parcialSale = sortedSales.find(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'parcial');
+                const parcialAmount = parcialSale ? parseFloat(parcialSale.monto_bruto || parcialSale.monto || 0) : 0;
+
+                const cuotaSales = sortedSales.filter(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'cuota');
+                const totalCuotas = cuotaSales.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
+                const qtyCuotas = cuotaSales.length;
+
+                const renovacionSales = sortedSales.filter(s => ['renovación', 'renovacion'].includes((s.tipo_pago_simple || '').toLowerCase().trim()));
+                const totalRenovaciones = renovacionSales.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
+                const qtyRenovaciones = renovacionSales.length;
+
+                const upsellSales = sortedSales.filter(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'upsell');
+                const totalUpsells = upsellSales.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
+
+                const latestUpsell = [...sortedSales].reverse().find(s => (s.tipo_pago_simple || '').toLowerCase().trim() === 'upsell');
+                const programName = latestUpsell ? latestUpsell.programa : firstSale.programa;
+
+                const totalPaid = sortedSales.reduce((sum, s) => sum + parseFloat(s.monto_bruto || s.monto || 0), 0);
+
+                let totalToPay = 0;
+                const cleanProg = (programName || '').toUpperCase().trim();
+                if (cleanProg === 'AL') totalToPay = 750;
+                else if (cleanProg === 'RR') totalToPay = 1500;
+                else if (cleanProg === 'SI') totalToPay = 2000;
+
+                const debt = Math.max(0, totalToPay - totalPaid);
+
+                clientsRows.push([
+                    entryDate,
+                    clientName,
+                    senaAmount > 0 ? senaAmount : '',
+                    completoAmount > 0 ? completoAmount : '',
+                    parcialAmount > 0 ? parcialAmount : '',
+                    totalCuotas > 0 ? totalCuotas : '',
+                    qtyCuotas > 0 ? qtyCuotas : '',
+                    totalRenovaciones > 0 ? totalRenovaciones : '',
+                    qtyRenovaciones > 0 ? qtyRenovaciones : '',
+                    totalUpsells > 0 ? totalUpsells : '',
+                    programName || '',
+                    totalPaid,
+                    totalToPay > 0 ? totalToPay : '',
+                    debt > 0 ? debt : ''
+                ]);
+            });
+
             const escapeCSVValue = (val) => {
                 if (val === null || val === undefined) return '';
                 let valStr = String(val).replace(/"/g, '""');
@@ -340,39 +467,14 @@ const PublicFinancialSalesPage = () => {
             };
 
             const headers = [
-                'ID Venta', 'Fecha Pago', 'Marca Temporal', 'Cliente', 'Instagram', 
-                'Email Cliente', 'Teléfono Cliente', 'Programa', 'Tipo Pago Simple', 
-                'Detalle Tipo Pago', 'Monto Bruto', 'Monto Neto', 'Método Pago', 
-                'Closer', 'Email Closer', 'Setter / Fuente', 'Estado', 
-                'Segundo Pago', 'Examen', 'Atribuido a Agenda'
+                'Fecha', 'Nombre', 'Seña', 'Completo', 'Parcial', 'Cuota', 
+                'Cantidad de cuotas', 'Renovación', 'Cantidad de Renovaciones', 
+                'Upsells', 'Programa', 'Total pagado', 'Total a Pagar', 'Deuda'
             ];
-
-            const rows = allSales.map(s => [
-                s.id,
-                s.date ? s.date.split('T')[0] : '',
-                s.marca_temporal || '',
-                s.nombre_cliente || '',
-                s.instagram || '',
-                s.mail_cliente || '',
-                s.telefono || '',
-                s.programa || '',
-                s.tipo_pago_simple || '',
-                s.tipo_pago || '',
-                s.monto_bruto || '',
-                s.monto || '',
-                s.metodo_pago || '',
-                s.closer_name || '',
-                s.email_vendedor || '',
-                s.setter || '',
-                s.estado || '',
-                s.segundo_pago || '',
-                s.examen || '',
-                s.has_agenda ? 'Sí' : 'No'
-            ]);
 
             const csvContent = [
                 headers.map(escapeCSVValue).join(','),
-                ...rows.map(row => row.map(escapeCSVValue).join(','))
+                ...clientsRows.map(row => row.map(escapeCSVValue).join(','))
             ].join('\n');
 
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -384,6 +486,7 @@ const PublicFinancialSalesPage = () => {
             link.click();
             document.body.removeChild(link);
             toast.success('CSV exportado con éxito', { id: toastId });
+
         } catch (error) {
             toast.error('Error al exportar a CSV', { id: toastId });
             console.error(error);
