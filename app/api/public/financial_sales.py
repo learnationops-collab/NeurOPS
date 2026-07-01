@@ -876,3 +876,85 @@ def resend_financial_sale_webhook(sale_id):
         current_app.logger.error(f"[N8N WEBHOOK RESEND] Error al reenviar: {e}")
         return jsonify({"error": str(e)}), 500
 
+@bp.route('/public/financial-sales/bulk-update', methods=['POST'])
+def bulk_update_financial_sales():
+    # Realiza la actualizacion de multiples ventas en base de datos local y Google Sheets
+    data = request.get_json() or {}
+    sale_ids = data.get('sale_ids', [])
+    
+    if not sale_ids:
+        return jsonify({"error": "No se proporcionaron IDs de ventas"}), 400
+        
+    programa = data.get('programa')
+    tipo_pago_simple = data.get('tipo_pago_simple')
+    metodo_pago = data.get('metodo_pago')
+    estado = data.get('estado')
+    email_vendedor = data.get('email_vendedor')
+    setter = data.get('setter')
+    
+    if all(x is None for x in [programa, tipo_pago_simple, metodo_pago, estado, email_vendedor, setter]):
+        return jsonify({"error": "No se proporcionaron campos para actualizar"}), 400
+
+    sales = FinancialSale.query.filter(FinancialSale.id.in_(sale_ids)).all()
+    if not sales:
+        return jsonify({"error": "No se encontraron ventas para actualizar"}), 404
+        
+    updated_count = 0
+    from app.services.sheets_service import SheetsService
+    
+    try:
+        for sale in sales:
+            curr_prog, curr_tp = split_tipo_pago(sale.tipo_pago)
+            
+            new_prog = programa if programa is not None else curr_prog
+            new_tp = tipo_pago_simple if tipo_pago_simple is not None else curr_tp
+            
+            if programa is not None or tipo_pago_simple is not None:
+                sale.tipo_pago = f"{new_prog} - {new_tp}"
+                
+            if metodo_pago is not None:
+                sale.metodo_pago = metodo_pago
+                
+            if setter is not None:
+                sale.setter = setter
+                ig_norm = normalize_ig(sale.instagram)
+                if ig_norm:
+                    agenda = FinancialAgenda.query.filter(
+                        func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_norm
+                    ).order_by(FinancialAgenda.date.desc()).first()
+                    if agenda:
+                        agenda.nombre = setter
+                        
+            if email_vendedor is not None:
+                sale.email_vendedor = email_vendedor
+                
+            if estado is not None:
+                sale.estado = "Completada" if not estado or str(estado).strip().lower() in ('completada', 'confirmada') else str(estado)
+                
+            updated_count += 1
+            
+            if sale.marca_temporal:
+                update_payload = {
+                    "email_vendedor": sale.email_vendedor,
+                    "nombre_cliente": sale.nombre_cliente,
+                    "telefono": sale.telefono,
+                    "mail_cliente": sale.mail_cliente,
+                    "tipo_pago": sale.tipo_pago,
+                    "monto": sale.monto,
+                    "segundo_pago": sale.segundo_pago,
+                    "metodo_pago": sale.metodo_pago,
+                    "examen": sale.examen,
+                    "instagram": sale.instagram,
+                    "setter": sale.setter,
+                    "estado": sale.estado
+                }
+                SheetsService.update_in_sheets("Ventas_DB", sale.marca_temporal, update_payload)
+                
+        db.session.commit()
+        return jsonify({"message": f"{updated_count} ventas actualizadas con éxito", "updated_count": updated_count}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+

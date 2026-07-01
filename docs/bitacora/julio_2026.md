@@ -1,6 +1,14 @@
 # Bitácora - Julio 2026
 
 - **1 de Julio de 2026**:
+  - **Modificación Masiva de Ventas**:
+    - **API Backend ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:
+      - Se implementó el endpoint `POST /public/financial-sales/bulk-update` para actualizar múltiples ventas en lote. Soporta cambios en programa, tipo de pago simple, método de pago, estado, closer y setter, propagando las modificaciones a Google Sheets en tiempo real y persistiendo los cambios en la base de datos local de forma atómica.
+    - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
+      - Se implementó la selección masiva de filas en la tabla mediante checkboxes (cabecera y cuerpo).
+      - Se agregó la barra flotante de acciones masivas visible al seleccionar al menos una venta.
+      - Se integró el modal `BulkEditModal` que permite seleccionar qué campo modificar y su nuevo valor (con opciones predeterminadas e inputs personalizados).
+      - Se implementó la función `handleBulkUpdate` que realiza la llamada al endpoint de backend y refresca la tabla al finalizar.
   - **Exportación de Pagos en Formato CSV en el Registro de Ventas**:
     - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
       - Se integró la funcionalidad de exportación a CSV para el listado de ventas filtradas.

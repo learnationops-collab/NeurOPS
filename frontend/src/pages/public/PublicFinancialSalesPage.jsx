@@ -65,6 +65,12 @@ const PublicFinancialSalesPage = () => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [selectedSaleIds, setSelectedSaleIds] = useState([]);
+    const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+    const [bulkEditField, setBulkEditField] = useState('');
+    const [bulkEditValue, setBulkEditValue] = useState('');
+    const [bulkEditValueCustom, setBulkEditValueCustom] = useState(false);
+    const [bulkUpdating, setBulkUpdating] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
 
@@ -383,6 +389,41 @@ const PublicFinancialSalesPage = () => {
             console.error(error);
         } finally {
             setExporting(false);
+        }
+    };
+
+    const handleBulkUpdate = async () => {
+        if (selectedSaleIds.length === 0) return;
+        if (!bulkEditField) {
+            toast.error('Selecciona un campo para actualizar');
+            return;
+        }
+        if (bulkEditValue === '' && !bulkEditValueCustom) {
+            toast.error('Especifica un valor para la modificación masiva');
+            return;
+        }
+        
+        setBulkUpdating(true);
+        const toastId = toast.loading('Actualizando ventas en lote...');
+        try {
+            const payload = {
+                sale_ids: selectedSaleIds,
+                [bulkEditField]: bulkEditValue
+            };
+            const res = await api.post('/public/financial-sales/bulk-update', payload);
+            toast.success(res.data.message || 'Actualización masiva completada', { id: toastId });
+            
+            setSelectedSaleIds([]);
+            setShowBulkEditModal(false);
+            setBulkEditField('');
+            setBulkEditValue('');
+            setBulkEditValueCustom(false);
+            fetchSales(1);
+        } catch (error) {
+            toast.error('Error al realizar la actualización masiva', { id: toastId });
+            console.error(error);
+        } finally {
+            setBulkUpdating(false);
         }
     };
 
@@ -1296,9 +1337,48 @@ const PublicFinancialSalesPage = () => {
                     </div>
                 ) : (
                     <div className="space-y-4">
+                        {selectedSaleIds.length > 0 && (
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-indigo-950/30 border border-indigo-800/50 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                                    <span className="text-sm font-bold text-indigo-200">
+                                        {selectedSaleIds.length} {selectedSaleIds.length === 1 ? 'venta seleccionada' : 'ventas seleccionadas'}
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                    <button
+                                        onClick={() => setShowBulkEditModal(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-indigo-500/10"
+                                    >
+                                        <Edit2 size={12} />
+                                        Modificación Masiva
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedSaleIds([])}
+                                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-350 rounded-xl text-xs font-semibold transition-all"
+                                    >
+                                        Desmarcar Todos
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-400">
+                                    <th className="p-4 font-semibold text-center w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={sales.length > 0 && selectedSaleIds.length === sales.length}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedSaleIds(sales.map(s => s.id));
+                                                } else {
+                                                    setSelectedSaleIds([]);
+                                                }
+                                            }}
+                                            className="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer w-3.5 h-3.5"
+                                        />
+                                    </th>
                                     <th className="p-4 font-semibold">Fecha</th>
                                     <th className="p-4 font-semibold">Cliente</th>
                                     <th className="p-4 font-semibold">Instagram</th>
@@ -1314,9 +1394,24 @@ const PublicFinancialSalesPage = () => {
                             <tbody className="text-sm text-slate-300 divide-y divide-slate-800/50">
                                 {sales.map((sale) => {
                                     const isEditing = editingSale === sale.id;
+                                    const isChecked = selectedSaleIds.includes(sale.id);
                                     
                                     return (
-                                        <tr key={sale.id} className="hover:bg-slate-800/30 transition-colors">
+                                        <tr key={sale.id} className={`hover:bg-slate-800/30 transition-colors ${isChecked ? 'bg-indigo-650/10 hover:bg-indigo-650/15' : ''}`}>
+                                            <td className="p-4 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedSaleIds([...selectedSaleIds, sale.id]);
+                                                        } else {
+                                                            setSelectedSaleIds(selectedSaleIds.filter(id => id !== sale.id));
+                                                        }
+                                                    }}
+                                                    className="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer w-3.5 h-3.5"
+                                                />
+                                            </td>
                                             <td className="p-4 whitespace-nowrap">
                                                 {isEditing ? (
                                                     <input 
@@ -2083,6 +2178,262 @@ const PublicFinancialSalesPage = () => {
                 onClose={() => setSelectedRoadmapLead(null)}
                 onSuccess={() => fetchSales(1)}
             />
+
+            {/* Modal de Modificación Masiva */}
+            {showBulkEditModal && (
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-6 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden animate-in zoom-in duration-300">
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500" />
+                        
+                        <div>
+                            <h2 className="text-xl font-black text-white flex items-center gap-2">
+                                <Edit2 className="text-indigo-400 w-5 h-5" />
+                                Modificación Masiva
+                            </h2>
+                            <p className="text-xs text-slate-400 mt-1">
+                                Estás modificando {selectedSaleIds.length} {selectedSaleIds.length === 1 ? 'venta seleccionada' : 'ventas seleccionadas'}.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Campo a Modificar</label>
+                                <select
+                                    value={bulkEditField}
+                                    onChange={(e) => {
+                                        setBulkEditField(e.target.value);
+                                        setBulkEditValue('');
+                                        setBulkEditValueCustom(false);
+                                    }}
+                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                >
+                                    <option value="">Seleccionar campo...</option>
+                                    <option value="programa">Programa</option>
+                                    <option value="tipo_pago_simple">Tipo de Pago</option>
+                                    <option value="metodo_pago">Método de Pago</option>
+                                    <option value="estado">Estado</option>
+                                    <option value="email_vendedor">Closer (Email Vendedor)</option>
+                                    <option value="setter">Setter (Fuente)</option>
+                                </select>
+                            </div>
+
+                            {bulkEditField && (
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Nuevo Valor</label>
+                                    {bulkEditField === 'programa' && (
+                                        <>
+                                            <select
+                                                value={bulkEditValueCustom ? 'otro' : bulkEditValue}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === 'otro') {
+                                                        setBulkEditValue('');
+                                                        setBulkEditValueCustom(true);
+                                                    } else {
+                                                        setBulkEditValue(val);
+                                                        setBulkEditValueCustom(false);
+                                                    }
+                                                }}
+                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                            >
+                                                <option value="">Seleccionar programa...</option>
+                                                <option value="RR">Residency Roadmap (RR)</option>
+                                                <option value="AL">Ace Learner (AL)</option>
+                                                <option value="SI">Specialist Initiative (SI)</option>
+                                                <option value="otro">Otro / Especificar nuevo...</option>
+                                            </select>
+                                            {bulkEditValueCustom && (
+                                                <input
+                                                    type="text"
+                                                    value={bulkEditValue}
+                                                    onChange={e => setBulkEditValue(e.target.value)}
+                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
+                                                    placeholder="Especificar programa"
+                                                />
+                                            )}
+                                        </>
+                                    )}
+
+                                    {bulkEditField === 'tipo_pago_simple' && (
+                                        <>
+                                            <select
+                                                value={bulkEditValueCustom ? 'otro' : bulkEditValue}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === 'otro') {
+                                                        setBulkEditValue('');
+                                                        setBulkEditValueCustom(true);
+                                                    } else {
+                                                        setBulkEditValue(val);
+                                                        setBulkEditValueCustom(false);
+                                                    }
+                                                }}
+                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                            >
+                                                <option value="">Seleccionar tipo pago...</option>
+                                                <option value="Seña">Seña</option>
+                                                <option value="Parcial">Parcial</option>
+                                                <option value="Cuota">Cuota</option>
+                                                <option value="Completo">Completo</option>
+                                                <option value="Renovación">Renovación</option>
+                                                <option value="Upsell">Upsell</option>
+                                                <option value="otro">Otro / Especificar nuevo...</option>
+                                            </select>
+                                            {bulkEditValueCustom && (
+                                                <input
+                                                    type="text"
+                                                    value={bulkEditValue}
+                                                    onChange={e => setBulkEditValue(e.target.value)}
+                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
+                                                    placeholder="Especificar tipo pago"
+                                                />
+                                            )}
+                                        </>
+                                    )}
+
+                                    {bulkEditField === 'metodo_pago' && (
+                                        <>
+                                            <select
+                                                value={bulkEditValueCustom ? 'otro' : bulkEditValue}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === 'otro') {
+                                                        setBulkEditValue('');
+                                                        setBulkEditValueCustom(true);
+                                                    } else {
+                                                        setBulkEditValue(val);
+                                                        setBulkEditValueCustom(false);
+                                                    }
+                                                }}
+                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                            >
+                                                <option value="">Seleccionar método...</option>
+                                                <option value="Stripe">Stripe</option>
+                                                <option value="PayPal">PayPal</option>
+                                                <option value="Binance">Binance</option>
+                                                <option value="Hotmart">Hotmart</option>
+                                                <option value="otro">Otro / Especificar nuevo...</option>
+                                            </select>
+                                            {bulkEditValueCustom && (
+                                                <input
+                                                    type="text"
+                                                    value={bulkEditValue}
+                                                    onChange={e => setBulkEditValue(e.target.value)}
+                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
+                                                    placeholder="Especificar método"
+                                                />
+                                            )}
+                                        </>
+                                    )}
+
+                                    {bulkEditField === 'estado' && (
+                                        <select
+                                            value={bulkEditValue}
+                                            onChange={e => setBulkEditValue(e.target.value)}
+                                            className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                        >
+                                            <option value="">Seleccionar estado...</option>
+                                            <option value="Completada">Completada</option>
+                                            <option value="Pendiente">Pendiente</option>
+                                            <option value="Reembolsada">Reembolsada</option>
+                                            <option value="Cancelada">Cancelada</option>
+                                        </select>
+                                    )}
+
+                                    {bulkEditField === 'email_vendedor' && (
+                                        <>
+                                            <select
+                                                value={bulkEditValueCustom ? 'otro' : bulkEditValue}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === 'otro') {
+                                                        setBulkEditValue('');
+                                                        setBulkEditValueCustom(true);
+                                                    } else {
+                                                        setBulkEditValue(val);
+                                                        setBulkEditValueCustom(false);
+                                                    }
+                                                }}
+                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                            >
+                                                <option value="">Seleccionar closer...</option>
+                                                <option value="jeancarlo@thelearnation.com">Jean Carlo</option>
+                                                <option value="otro">Otro / Especificar email...</option>
+                                            </select>
+                                            {bulkEditValueCustom && (
+                                                <input
+                                                    type="email"
+                                                    value={bulkEditValue}
+                                                    onChange={e => setBulkEditValue(e.target.value)}
+                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
+                                                    placeholder="ej. closer@neurops.com"
+                                                />
+                                            )}
+                                        </>
+                                    )}
+
+                                    {bulkEditField === 'setter' && (
+                                        <>
+                                            <select
+                                                value={bulkEditValueCustom ? 'otro' : bulkEditValue}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === 'otro') {
+                                                        setBulkEditValue('');
+                                                        setBulkEditValueCustom(true);
+                                                    } else {
+                                                        setBulkEditValue(val);
+                                                        setBulkEditValueCustom(false);
+                                                    }
+                                                }}
+                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold cursor-pointer"
+                                            >
+                                                <option value="">Seleccionar setter...</option>
+                                                <option value="workshop">workshop</option>
+                                                <option value="vsl">vsl</option>
+                                                <option value="Elias">Elias</option>
+                                                <option value="otro">Otro / Especificar nuevo...</option>
+                                            </select>
+                                            {bulkEditValueCustom && (
+                                                <input
+                                                    type="text"
+                                                    value={bulkEditValue}
+                                                    onChange={e => setBulkEditValue(e.target.value)}
+                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-indigo-500 transition-all font-semibold mt-2"
+                                                    placeholder="Especificar setter"
+                                                />
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="pt-4 flex justify-end gap-3 border-t border-slate-805">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowBulkEditModal(false);
+                                    setBulkEditField('');
+                                    setBulkEditValue('');
+                                    setBulkEditValueCustom(false);
+                                }}
+                                disabled={bulkUpdating}
+                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleBulkUpdate}
+                                disabled={bulkUpdating || !bulkEditField || (bulkEditValue === '' && !bulkEditValueCustom)}
+                                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20 disabled:bg-indigo-800 disabled:opacity-50"
+                            >
+                                {bulkUpdating ? 'Actualizando...' : 'Aplicar Cambios'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
