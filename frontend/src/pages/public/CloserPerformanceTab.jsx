@@ -102,8 +102,13 @@ const normalizeStats = (s) => {
             replied: s.follow_ups?.replied ?? 0,
             hot_sent: s.follow_ups?.hot_sent ?? 0,
             hot_replied: s.follow_ups?.hot_replied ?? 0,
+            hot_scheduled: s.follow_ups?.hot_scheduled ?? 0,
             cold_sent: s.follow_ups?.cold_sent ?? 0,
             cold_replied: s.follow_ups?.cold_replied ?? 0,
+            cold_scheduled: s.follow_ups?.cold_scheduled ?? 0,
+            referrals_sourced: s.follow_ups?.referrals_sourced ?? 0,
+            referrals_contacted: s.follow_ups?.referrals_contacted ?? 0,
+            referrals_scheduled: s.follow_ups?.referrals_scheduled ?? 0,
         },
         percentages: {
             show_rate: s.percentages?.show_rate ?? 0,
@@ -1435,25 +1440,29 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                     <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Re-engagement Breakdown</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Hot Flow */}
                     <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 blur-[50px] pointer-events-none" />
                         <div className="flex items-center gap-2 mb-6 border-b border-slate-700/50 pb-4">
                             <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                            <h4 className="text-sm font-black text-rose-400 uppercase tracking-widest">Flujo Caliente</h4>
+                            <h4 className="text-sm font-black text-rose-400 uppercase tracking-widest">SRD Hot (Deudores)</h4>
                         </div>
                         <div className="space-y-4">
                             <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Enviados</span>
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Contactados</span>
                                 <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.hot_sent)}</span>
                             </div>
                             <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Respondidos</span>
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Respondieron</span>
                                 <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.hot_replied)}</span>
                             </div>
+                            <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Agendaron</span>
+                                <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.hot_scheduled)}</span>
+                            </div>
                             <ProgressRow
-                                label="Response Rate (Hot)"
+                                label="Response Rate (SRD Hot)"
                                 percentage={stats.follow_ups?.hot_sent ? ((stats.follow_ups.hot_replied / stats.follow_ups.hot_sent) * 100) : 0}
                                 colorClass="text-rose-500"
                                 absolute={fmt(stats.follow_ups?.hot_replied)}
@@ -1467,19 +1476,23 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                         <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 blur-[50px] pointer-events-none" />
                         <div className="flex items-center gap-2 mb-6 border-b border-slate-700/50 pb-4">
                             <span className="w-2 h-2 rounded-full bg-sky-500"></span>
-                            <h4 className="text-sm font-black text-sky-400 uppercase tracking-widest">Flujo Frío</h4>
+                            <h4 className="text-sm font-black text-sky-400 uppercase tracking-widest">SRD Cold (No Vendidos)</h4>
                         </div>
                         <div className="space-y-4">
                             <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Enviados</span>
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Contactados</span>
                                 <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.cold_sent)}</span>
                             </div>
                             <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Respondidos</span>
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Respondieron</span>
                                 <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.cold_replied)}</span>
                             </div>
+                            <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Agendaron</span>
+                                <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.cold_scheduled)}</span>
+                            </div>
                             <ProgressRow
-                                label="Response Rate (Cold)"
+                                label="Response Rate (SRD Cold)"
                                 percentage={stats.follow_ups?.cold_sent ? ((stats.follow_ups.cold_replied / stats.follow_ups.cold_sent) * 100) : 0}
                                 colorClass="text-sky-500"
                                 absolute={fmt(stats.follow_ups?.cold_replied)}
@@ -1487,15 +1500,38 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
                             />
                         </div>
                     </div>
+
+                    {/* Referidos */}
+                    <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] pointer-events-none" />
+                        <div className="flex items-center gap-2 mb-6 border-b border-slate-700/50 pb-4">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <h4 className="text-sm font-black text-emerald-400 uppercase tracking-widest">Referidos</h4>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Conseguidos</span>
+                                <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.referrals_sourced)}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Contactados</span>
+                                <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.referrals_contacted)}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Agendados</span>
+                                <span className="text-lg font-black text-white tabular-nums">{fmt(stats.follow_ups?.referrals_scheduled)}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
                     <div className="p-5 bg-blue-600/10 rounded-2xl border border-blue-600/20 text-center space-y-1">
-                        <p className="text-xs font-black text-slate-400 uppercase tracking-tighter">Total Re-engagement Enviados</p>
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-tighter">Total Contactados (SRD)</p>
                         <p className="text-2xl font-black text-white italic">{fmt(stats.follow_ups?.sent)}</p>
                     </div>
                     <div className="p-5 bg-blue-600/10 rounded-2xl border border-blue-600/20 text-center space-y-1">
-                        <p className="text-xs font-black text-blue-400 uppercase tracking-tighter">Total Re-engagement Respondidos</p>
+                        <p className="text-xs font-black text-blue-400 uppercase tracking-tighter">Total Respondidos (SRD)</p>
                         <p className="text-2xl font-black text-white italic">{fmt(stats.follow_ups?.replied)}</p>
                     </div>
                 </div>
@@ -1505,26 +1541,26 @@ const CloserPerformanceTab = ({ stats: rawStats, loading, compare, setActiveTab,
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Hot Follow Ups Distribution */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center relative group">
-                    <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Re-engagement (Hot)</h4>
+                    <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">SRD Hot</h4>
                     <SimplePieChart data={fuHotData} colors={fuHotColors} />
                     <ChartTable data={fuHotData} colors={fuHotColors} />
                     <div className="absolute top-4 left-4 right-4 md:right-auto md:w-56 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                         <div className="bg-slate-800 p-3 border border-slate-700 rounded-xl flex items-start gap-2 shadow-2xl">
                             <Info size={14} className="text-amber-500 mt-0.5 shrink-0" />
-                            <p className="text-xs text-slate-300">Flujo Caliente (Leads que ya respondieron en el pasado o mostraron interés de compra).</p>
+                            <p className="text-xs text-slate-300">SRD Hot (Clientes a los que ya se les vendió pero deben dinero).</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Cold Follow Ups Distribution */}
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col items-center relative group">
-                    <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">Re-engagement (Cold)</h4>
+                    <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-2 w-full text-center">SRD Cold</h4>
                     <SimplePieChart data={fuColdData} colors={fuColdColors} />
                     <ChartTable data={fuColdData} colors={fuColdColors} />
                     <div className="absolute top-4 left-4 right-4 md:right-auto md:w-56 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                         <div className="bg-slate-800 p-3 border border-slate-700 rounded-xl flex items-start gap-2 shadow-2xl">
                             <Info size={14} className="text-amber-500 mt-0.5 shrink-0" />
-                            <p className="text-xs text-slate-300">Flujo Frío (Leads antiguos abandonados o prospección nueva).</p>
+                            <p className="text-xs text-slate-300">SRD Cold (Leads que en algún momento agendaron pero no se les vendió).</p>
                         </div>
                     </div>
                 </div>

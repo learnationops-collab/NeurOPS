@@ -184,7 +184,7 @@ const CloserReportsTable = ({ closers }) => {
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Slots</th>
                                 <th className="p-4 text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center" colSpan="2">1ra Llamada</th>
                                 <th className="p-4 text-[9px] font-black text-emerald-500 uppercase tracking-widest text-center" colSpan="2">2da Llamada</th>
-                                <th className="p-4 text-[9px] font-black text-rose-500 uppercase tracking-widest text-center" colSpan="2">Seguimientos</th>
+                                <th className="p-4 text-[9px] font-black text-rose-500 uppercase tracking-widest text-center" colSpan="3">Seguimientos y Referidos</th>
                                 <th className="p-4 text-[9px] font-black text-amber-500 uppercase tracking-widest text-center" colSpan="2">Ventas / Cash</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
                             </tr>
@@ -196,8 +196,9 @@ const CloserReportsTable = ({ closers }) => {
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Asist.</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Agendas</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Asist.</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Hot (R/S)</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Cold (R/S)</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">SRD Hot (C/R/A)</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">SRD Cold (C/R/A)</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Ref (G/C/A)</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Total</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Cash</th>
                                 <th></th>
@@ -206,14 +207,14 @@ const CloserReportsTable = ({ closers }) => {
                         <tbody className="divide-y divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="12" className="py-20 text-center">
+                                    <td colSpan="13" className="py-20 text-center">
                                         <Loader2 className="animate-spin mx-auto text-indigo-500 mb-2" size={32} />
                                         <span className="text-[10px] font-black text-slate-500 uppercase">Cargando registros...</span>
                                     </td>
                                 </tr>
                             ) : reports.length === 0 ? (
                                 <tr>
-                                    <td colSpan="12" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
+                                    <td colSpan="13" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
                                 </tr>
                             ) : reports.map(r => {
                                 const totalSales = (r.pif_count || 0) + (r.split_count || 0) + (r.deposit_count || 0) + (r.installment_count || 0);
@@ -231,11 +232,14 @@ const CloserReportsTable = ({ closers }) => {
                                         <td className="p-4 border-l border-slate-800 text-xs font-black text-emerald-400 tabular-nums text-center">{r.second_call_scheduled || 0}</td>
                                         <td className="p-4 border-r border-slate-800 text-xs font-black text-slate-300 tabular-nums text-center">{r.second_call_attended || 0}</td>
 
-                                        <td className="p-4 text-xs font-black text-rose-400 tabular-nums text-center">
-                                            {r.follow_ups_hot_replied || 0} / {r.follow_ups_hot_sent || 0}
+                                        <td className="p-4 text-[11px] font-black text-rose-400 tabular-nums text-center">
+                                            {r.follow_ups_hot_sent || 0}/{r.follow_ups_hot_replied || 0}/{r.follow_ups_hot_scheduled || 0}
                                         </td>
-                                        <td className="p-4 border-r border-slate-800 text-xs font-black text-sky-400 tabular-nums text-center">
-                                            {r.follow_ups_cold_replied || 0} / {r.follow_ups_cold_sent || 0}
+                                        <td className="p-4 text-[11px] font-black text-sky-400 tabular-nums text-center">
+                                            {r.follow_ups_cold_sent || 0}/{r.follow_ups_cold_replied || 0}/{r.follow_ups_cold_scheduled || 0}
+                                        </td>
+                                        <td className="p-4 border-r border-slate-800 text-[11px] font-black text-emerald-400 tabular-nums text-center">
+                                            {r.referrals_sourced || 0}/{r.referrals_contacted || 0}/{r.referrals_scheduled || 0}
                                         </td>
 
                                         <td className="p-4 text-xs font-black text-amber-500 tabular-nums text-center">{totalSales}</td>

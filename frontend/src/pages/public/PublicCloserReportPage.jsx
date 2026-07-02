@@ -126,13 +126,18 @@ const PublicCloserReportPage = () => {
         installment_in_call_count: '',
         installment_in_call_cash: '',
 
-        // Seguimientos
+        // Seguimientos y Referidos
         follow_ups_sent: '',
         follow_ups_replied: '',
         follow_ups_hot_sent: '',
         follow_ups_hot_replied: '',
+        follow_ups_hot_scheduled: '',
         follow_ups_cold_sent: '',
         follow_ups_cold_replied: '',
+        follow_ups_cold_scheduled: '',
+        referrals_sourced: '',
+        referrals_contacted: '',
+        referrals_scheduled: '',
 
         // Reflexión
         reflections: {},
@@ -241,10 +246,10 @@ const PublicCloserReportPage = () => {
             return;
         }
 
-        // Validar que se haya enviado al menos un seguimiento
-        const totalFuSent = (parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0);
+        // Validar que se haya enviado al menos un seguimiento o contactado un referido
+        const totalFuSent = (parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0) + (parseInt(formData.referrals_contacted) || 0);
         if (totalFuSent === 0) {
-            alert('Debes hacer al menos un seguimiento. Completa la sección de Seguimientos antes de enviar.');
+            alert('Debes hacer al menos un seguimiento o contactar un referido. Completa la sección de Seguimientos antes de enviar.');
             setOpenSection('seguimientos');
             return;
         }
@@ -310,7 +315,11 @@ const PublicCloserReportPage = () => {
         'first_call_scheduled', 'first_call_attended', 'first_call_no_show', 'first_call_rescheduled', 'first_call_canceled',
         'second_call_scheduled', 'second_call_attended', 'second_call_no_show', 'second_call_rescheduled', 'second_call_canceled'
     ];
-    const followUpsFields = ['follow_ups_hot_sent', 'follow_ups_hot_replied', 'follow_ups_cold_sent', 'follow_ups_cold_replied'];
+    const followUpsFields = [
+        'follow_ups_hot_sent', 'follow_ups_hot_replied', 'follow_ups_hot_scheduled',
+        'follow_ups_cold_sent', 'follow_ups_cold_replied', 'follow_ups_cold_scheduled',
+        'referrals_sourced', 'referrals_contacted', 'referrals_scheduled'
+    ];
     const salesFields = ['pif_count', 'pif_cash_collected', 'pif_in_call_count', 'pif_in_call_cash', 'split_count', 'split_cash_collected', 'split_in_call_count', 'split_in_call_cash', 'deposit_count', 'deposit_cash_collected', 'deposit_in_call_count', 'deposit_in_call_cash', 'installment_count', 'installment_cash_collected', 'installment_in_call_count', 'installment_in_call_cash'];
     const reflectionFields = ['reflections'];
 
@@ -660,15 +669,15 @@ const PublicCloserReportPage = () => {
                                     borderColorClass="border-t-blue-600"
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-                                        {/* Flujo Caliente */}
+                                        {/* SRD Hot */}
                                         <div className="p-5 rounded-2xl border bg-rose-950/20 border-rose-900/50">
                                             <div className="flex items-center gap-2 mb-4">
                                                 <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-400">Flujo Caliente</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-400">SRD Hot (Deudores)</span>
                                             </div>
                                             <div className="space-y-4">
                                                 <MetricInput
-                                                    label="Enviados (Hot)"
+                                                    label="Contactados"
                                                     field="follow_ups_hot_sent"
                                                     color="rose"
                                                     value={formData.follow_ups_hot_sent}
@@ -676,25 +685,33 @@ const PublicCloserReportPage = () => {
                                                     placeholder="0"
                                                 />
                                                 <MetricInput
-                                                    label="Respondidos (Hot)"
+                                                    label="Respondieron"
                                                     field="follow_ups_hot_replied"
                                                     color="rose"
                                                     value={formData.follow_ups_hot_replied}
                                                     onChange={handleFieldChange}
                                                     placeholder="0"
                                                 />
+                                                <MetricInput
+                                                    label="Agendaron"
+                                                    field="follow_ups_hot_scheduled"
+                                                    color="rose"
+                                                    value={formData.follow_ups_hot_scheduled}
+                                                    onChange={handleFieldChange}
+                                                    placeholder="0"
+                                                />
                                             </div>
                                         </div>
 
-                                        {/* Flujo Frío */}
+                                        {/* SRD Cold */}
                                         <div className="p-5 rounded-2xl border bg-blue-950/20 border-blue-900/50">
                                             <div className="flex items-center gap-2 mb-4">
                                                 <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Flujo Frío</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">SRD Cold (Agendados no vendidos)</span>
                                             </div>
                                             <div className="space-y-4">
                                                 <MetricInput
-                                                    label="Enviados (Cold)"
+                                                    label="Contactados"
                                                     field="follow_ups_cold_sent"
                                                     color="blue"
                                                     value={formData.follow_ups_cold_sent}
@@ -702,10 +719,18 @@ const PublicCloserReportPage = () => {
                                                     placeholder="0"
                                                 />
                                                 <MetricInput
-                                                    label="Respondidos (Cold)"
+                                                    label="Respondieron"
                                                     field="follow_ups_cold_replied"
                                                     color="blue"
                                                     value={formData.follow_ups_cold_replied}
+                                                    onChange={handleFieldChange}
+                                                    placeholder="0"
+                                                />
+                                                <MetricInput
+                                                    label="Agendaron"
+                                                    field="follow_ups_cold_scheduled"
+                                                    color="blue"
+                                                    value={formData.follow_ups_cold_scheduled}
                                                     onChange={handleFieldChange}
                                                     placeholder="0"
                                                 />
@@ -713,26 +738,60 @@ const PublicCloserReportPage = () => {
                                         </div>
                                     </div>
 
+                                    {/* Referidos */}
+                                    <div className="mt-6 p-5 rounded-2xl border bg-emerald-950/20 border-emerald-900/50">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Referidos</span>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <MetricInput
+                                                label="Referidos Conseguidos"
+                                                field="referrals_sourced"
+                                                color="emerald"
+                                                value={formData.referrals_sourced}
+                                                onChange={handleFieldChange}
+                                                placeholder="0"
+                                            />
+                                            <MetricInput
+                                                label="Referidos Contactados"
+                                                field="referrals_contacted"
+                                                color="emerald"
+                                                value={formData.referrals_contacted}
+                                                onChange={handleFieldChange}
+                                                placeholder="0"
+                                            />
+                                            <MetricInput
+                                                label="Agendas de Referido"
+                                                field="referrals_scheduled"
+                                                color="emerald"
+                                                value={formData.referrals_scheduled}
+                                                onChange={handleFieldChange}
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </div>
+
                                     <div className="mt-4 bg-slate-800/30 rounded-2xl p-4">
                                         <div className="grid grid-cols-2 gap-4 text-center">
                                             <div>
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Enviados</p>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Contactados (SRD)</p>
                                                 <p className="text-2xl font-black text-slate-400">
                                                     {(parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0)}
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Respondidos</p>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Respondidos (SRD)</p>
                                                 <p className="text-2xl font-black text-blue-500">
                                                     {(parseInt(formData.follow_ups_hot_replied) || 0) + (parseInt(formData.follow_ups_cold_replied) || 0)}
                                                 </p>
                                             </div>
                                         </div>
-                                        {/* Advertencia si no hay seguimientos */}
-                                        {((parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0)) === 0 && (
+                                        {/* Advertencia si no hay seguimientos o referidos */}
+                                        {((parseInt(formData.follow_ups_hot_sent) || 0) + (parseInt(formData.follow_ups_cold_sent) || 0) + (parseInt(formData.referrals_contacted) || 0)) === 0 && (
                                             <div className="mt-3 flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
                                                 <span className="text-amber-400 text-lg">⚠️</span>
-                                                <p className="text-xs font-bold text-amber-400">Debes hacer al menos un seguimiento para enviar el reporte.</p>
+                                                <p className="text-xs font-bold text-amber-400">Debes hacer al menos un seguimiento o contactar a un referido para enviar el reporte.</p>
                                             </div>
                                         )}
                                     </div>

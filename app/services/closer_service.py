@@ -1285,8 +1285,13 @@ class CloserService:
             func.sum(CloserDailyReport.follow_ups_replied).label('fu_replied'),
             func.sum(CloserDailyReport.follow_ups_hot_sent).label('fu_hot_sent'),
             func.sum(CloserDailyReport.follow_ups_hot_replied).label('fu_hot_replied'),
+            func.sum(CloserDailyReport.follow_ups_hot_scheduled).label('fu_hot_scheduled'),
             func.sum(CloserDailyReport.follow_ups_cold_sent).label('fu_cold_sent'),
-            func.sum(CloserDailyReport.follow_ups_cold_replied).label('fu_cold_replied')
+            func.sum(CloserDailyReport.follow_ups_cold_replied).label('fu_cold_replied'),
+            func.sum(CloserDailyReport.follow_ups_cold_scheduled).label('fu_cold_scheduled'),
+            func.sum(CloserDailyReport.referrals_sourced).label('ref_sourced'),
+            func.sum(CloserDailyReport.referrals_contacted).label('ref_contacted'),
+            func.sum(CloserDailyReport.referrals_scheduled).label('ref_scheduled')
         )
 
         filters = []
@@ -1807,7 +1812,12 @@ class CloserService:
             "follow_ups": {
                 "sent": val(stats.fu_sent), "replied": val(stats.fu_replied),
                 "hot_sent": val(stats.fu_hot_sent), "hot_replied": val(stats.fu_hot_replied),
-                "cold_sent": val(stats.fu_cold_sent), "cold_replied": val(stats.fu_cold_replied)
+                "hot_scheduled": val(stats.fu_hot_scheduled),
+                "cold_sent": val(stats.fu_cold_sent), "cold_replied": val(stats.fu_cold_replied),
+                "cold_scheduled": val(stats.fu_cold_scheduled),
+                "referrals_sourced": val(stats.ref_sourced),
+                "referrals_contacted": val(stats.ref_contacted),
+                "referrals_scheduled": val(stats.ref_scheduled)
             },
             "percentages": {
                 "show_rate": div(total_attended, total_scheduled),

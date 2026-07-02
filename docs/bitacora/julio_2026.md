@@ -1,5 +1,25 @@
 # Bitácora - Julio 2026
 
+- **2 de Julio de 2026**:
+  - **Reestructuración de Seguimientos y Referidos en el Reporte de Closers**:
+    - **Modelo de Base de Datos ([closer_report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/closer_report.py) [MODIFY])**:
+      - Se agregaron los campos `follow_ups_cold_scheduled`, `follow_ups_hot_scheduled`, `referrals_sourced`, `referrals_contacted` y `referrals_scheduled` a la tabla `closer_daily_reports` para registrar agendas concretadas de seguimientos SRD y métricas de referidos.
+    - **API del Backend ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/closer.py) [MODIFY])**:
+      - Se actualizaron los endpoints `POST /public/closer-report`, `PUT /public/closer-reports/<id>` y `GET /public/closer-reports` para persistir, actualizar y serializar las nuevas métricas.
+      - Se modificó la función `_prepare_report_data` para pasar los nuevos campos estructurados al reporte de Discord.
+    - **Servicio del Backend ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
+      - Se incluyeron los nuevos campos en la sumatoria/promedio de estadísticas agregadas en `get_comprehensive_stats`.
+    - **Plantilla de Discord ([closer_report.html](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/templates/reports/closer_report.html) [MODIFY])**:
+      - Se renombraron las secciones a "SRD Hot" y "SRD Cold".
+      - Se incorporó la métrica de "Agendados" en el reporte diario visual.
+      - Se agregó la nueva tarjeta de "Referidos" con Conseguidos, Contactados y Agendas.
+    - **Frontend React ([PublicCloserReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicCloserReportPage.jsx) [MODIFY], [CloserReportsTable.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/CloserReportsTable.jsx) [MODIFY], [CloserPerformanceTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/CloserPerformanceTab.jsx) [MODIFY])**:
+      - Se incorporaron inputs para registrar agendas en SRD Hot, SRD Cold y un nuevo bloque dedicado para ingresar Referidos en el formulario.
+      - Se agregaron las columnas y mapeos correspondientes a la tabla general de reportes.
+      - Se adaptó el dashboard de rendimiento para mostrar las nuevas agendas de SRD y consolidar la tarjeta de Referidos en una grilla de tres columnas.
+    - **Migración de Base de Datos**:
+      - Se generó y aplicó la migración `7648b2670011_add_srd_hot_cold_scheduled_and_referrals_metrics.py` en la base de datos SQLite.
+
 - **1 de Julio de 2026**:
   - **Eliminación Integral de la Funcionalidad de Notificaciones y Bandeja de Leads**:
     - **API Backend ([admin.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/admin.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY], [triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/triage.py) [MODIFY])**:
