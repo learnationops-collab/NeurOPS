@@ -355,8 +355,9 @@ def delete_triage_tracker_report(report_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-
-
+from app.api.auth import login_required
+from flask_login import current_user
+import json
 
 @bp.route('/qualified-forms', methods=['GET'])
 @login_required
