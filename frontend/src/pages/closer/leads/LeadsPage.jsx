@@ -36,7 +36,7 @@ const CloserLeadsPage = () => {
     const [selectedDb, setSelectedDb] = useState(null); // 'agendas' or 'sales' or null
     const [kanbanSubTab, setKanbanSubTab] = useState('tracking'); // 'tracking' or 'closing'
     const [kanbanData, setKanbanData] = useState({ stages: [], board: {} });
-    const [data, setData] = useState({ agendas: [], sales: [], notifications: [] });
+    const [data, setData] = useState({ agendas: [], sales: [] });
     const [loading, setLoading] = useState(true);
     const [kanbanLoading, setKanbanLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -126,8 +126,7 @@ const CloserLeadsPage = () => {
         try {
             const endpointMap = {
                 'agendas': '/closer/agendas',
-                'sales': '/closer/sales',
-                'notifications': '/closer/notifications'
+                'sales': '/closer/sales'
             };
             const res = await api.get(endpointMap[selectedDb], {
                 params: {
@@ -142,9 +141,7 @@ const CloserLeadsPage = () => {
 
             setData(prev => ({
                 ...prev,
-                [selectedDb]: selectedDb === 'notifications'
-                    ? (Array.isArray(res.data) ? res.data : [])
-                    : (Array.isArray(res.data.data) ? res.data.data : [])
+                [selectedDb]: Array.isArray(res.data.data) ? res.data.data : []
             }));
             setTotalPages(res.data.pages || 1);
         } catch (err) {
@@ -379,20 +376,6 @@ const CloserLeadsPage = () => {
                                     <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
 
-                                <button
-                                    onClick={() => setSelectedDb('notifications')}
-                                    className="group relative h-[300px] bg-surface border-2 border-base rounded-[3rem] p-12 text-left hover:border-primary/50 transition-all overflow-hidden flex flex-col justify-end"
-                                >
-                                    <div className="absolute top-12 right-12 opacity-5 group-hover:opacity-10 transition-opacity">
-                                        <Database size={180} />
-                                    </div>
-                                    <div className="relative z-10 space-y-4">
-                                        <Badge variant="neutral" className="bg-primary/10 text-primary border-primary/20">Registro Interno</Badge>
-                                        <h2 className="text-5xl font-black tracking-tighter text-base">Avisos</h2>
-                                        <p className="text-sm font-bold text-muted tracking-widest max-w-[250px]">Consulta todas las notificaciones del sistema.</p>
-                                    </div>
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </button>
                             </div>
                         ) : (
                             <>
@@ -470,15 +453,10 @@ const CloserLeadsPage = () => {
                                                                 <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Ultima Etapa</th>
                                                                 <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Resultado</th>
                                                             </>
-                                                        ) : selectedDb === 'sales' ? (
+                                                        ) : (
                                                             <>
                                                                 <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Programa</th>
                                                                 <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Monto</th>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Contenido</th>
-                                                                <th className="px-8 py-6 text-[10px] font-black text-muted tracking-widest">Estado</th>
                                                             </>
                                                         )}
                                                         <th className="px-8 py-6 text-[10px] font-black text-primary tracking-widest text-right">Acción</th>
@@ -511,15 +489,10 @@ const CloserLeadsPage = () => {
                                                                     <td className="px-8 py-6 text-[10px] font-black">{item.last_stage || 'N/A'}</td>
                                                                     <td className="px-8 py-6"><Badge variant={item.result === 'Sold' ? 'success' : 'neutral'}>{item.result || 'Sin resultado'}</Badge></td>
                                                                 </>
-                                                            ) : selectedDb === 'sales' ? (
+                                                            ) : (
                                                                 <>
                                                                     <td className="px-8 py-6 text-[10px] font-black">{item.program_name}</td>
                                                                     <td className="px-8 py-6 text-lg font-black text-success">${item.amount?.toLocaleString()}</td>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <td className="px-8 py-6 text-[10px] text-muted line-clamp-1 max-w-xs">{item.content}</td>
-                                                                    <td className="px-8 py-6"><Badge variant={item.is_read ? 'neutral' : 'success'}>{item.is_read ? 'Leída' : 'Nueva'}</Badge></td>
                                                                 </>
                                                             )}
                                                             <td className="px-8 py-6 text-right">

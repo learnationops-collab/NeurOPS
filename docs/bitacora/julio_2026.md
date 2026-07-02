@@ -1,6 +1,14 @@
 # Bitácora - Julio 2026
 
 - **1 de Julio de 2026**:
+  - **Eliminación Integral de la Funcionalidad de Notificaciones y Bandeja de Leads**:
+    - **API Backend ([admin.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/admin.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY], [triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/triage.py) [MODIFY])**:
+      - Se removieron por completo todos los endpoints de notificaciones de administración, closer, setter y triage del sistema Flask.
+    - **Interfaz Frontend ([MainLayout.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/MainLayout.jsx) [MODIFY], [Dock.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/Dock.jsx) [MODIFY], [CloserDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/dashboard/CloserDashboard.jsx) [MODIFY], [SetterDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/dashboard/SetterDashboard.jsx) [MODIFY], [LeadsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/leads/LeadsPage.jsx) [MODIFY])**:
+      - Se eliminaron el Drawer Lateral, la consulta periódica en segundo plano (polling) de notificaciones y la lógica asociada en `MainLayout.jsx`.
+      - Se quitó el botón/campana e insignia de notificaciones del Dock inferior en `Dock.jsx`.
+      - Se eliminaron los widgets de `NotificationWidget` y el fetching en los dashboards de Closers y Setters, optimizando sus grillas para una visualización limpia.
+      - Se quitó la pestaña y tarjetas correspondientes a "Avisos" (notificaciones) en la vista de base de datos de Leads del closer.
   - **Eliminación de Notificaciones de Administración**:
     - **API Backend ([admin.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/admin.py) [MODIFY])**:
       - Se removieron los endpoints de administración `/admin/notifications`, `/admin/notifications/<id>/read` y `/admin/notifications/read-all`.

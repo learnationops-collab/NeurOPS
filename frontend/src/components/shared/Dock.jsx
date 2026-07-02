@@ -1,10 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, Bell, Palette, Check } from 'lucide-react';
+import { LogOut, Palette, Check } from 'lucide-react';
 import useDockNavigation from '../../hooks/useDockNavigation';
 import { useTheme } from '../../context/ThemeContext';
 
-const Dock = ({ unreadNotificationsCount = 0, onNotificationsClick }) => {
+const Dock = () => {
     const { user, logout } = useAuth();
     const { theme, setTheme } = useTheme();
     const {
@@ -135,23 +135,8 @@ const Dock = ({ unreadNotificationsCount = 0, onNotificationsClick }) => {
                         })}
                     </div>
 
-                    {/* Balanced Right Container (Notifications + Avatar) */}
+                    {/* Balanced Right Container (Avatar + Options) */}
                     <div className="flex items-center gap-2 pr-1.5 shrink-0">
-                        {/* Campana de Notificaciones para Setter y Closer */}
-                        {(user?.role === 'closer' || user?.role === 'setter') && (
-                            <button
-                                onClick={onNotificationsClick}
-                                className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted/60 hover:text-white hover:bg-white/10 transition-all relative"
-                            >
-                                <Bell size={18} />
-                                {unreadNotificationsCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-rose-500 text-white font-black text-[9px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#1a1c23] animate-pulse">
-                                        {unreadNotificationsCount}
-                                    </span>
-                                )}
-                            </button>
-                        )}
-
                         {/* Selector de Tema Rápido */}
                         <div className="relative group">
                             <button className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted/60 hover:text-white hover:bg-white/10 transition-all cursor-pointer">

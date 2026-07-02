@@ -20,7 +20,6 @@ import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import api from '../../../services/api';
 import HotkeysTable from '../../../components/dashboard/HotkeysTable';
-import NotificationWidget from '../../../components/dashboard/NotificationWidget';
 
 import ReportsHistoryModal from './ReportsHistoryModal';
 import SetterReportModal from './SetterReportModal';
@@ -38,7 +37,6 @@ const SetterDashboard = () => {
     const [stages, setStages] = useState([]);
     const [funnelStats, setFunnelStats] = useState({});
     const [summaryStats, setSummaryStats] = useState(null);
-    const [notifications, setNotifications] = useState([]);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [todaysReport, setTodaysReport] = useState(null);
@@ -89,7 +87,6 @@ const SetterDashboard = () => {
             try {
                 await Promise.all([
                     fetchQuestionsAndStats(),
-                    fetchNotifications(),
                     fetchStages()
                 ]);
             } catch (err) {
@@ -128,44 +125,9 @@ const SetterDashboard = () => {
         }
     };
 
-    const fetchNotifications = async () => {
-        try {
-            const res = await api.get('/setter/notifications');
-            setNotifications(res.data || []);
-        } catch (err) {
-            console.error("Error fetching notifications", err);
-        }
-    };
-
-    const handleMarkAsRead = async (id) => {
-        try {
-            await api.post(`/setter/notifications/${id}/read`);
-            fetchNotifications();
-        } catch (err) {
-            console.error("Error marking as read", err);
-        }
-    };
-
     const handleAgendaClick = (appt) => {
         setSelectedAgenda(appt);
         setIsAgendaModalOpen(true);
-    };
-
-    const handleNotificationClick = async (noti) => {
-        if (noti.associated_type === 'deck_comment' && noti.associated_id) {
-            navigate(`/setter/deck?appt_id=${noti.associated_id}`);
-        } else if (noti.associated_type === 'appointment' && noti.associated_id) {
-            try {
-                const res = await api.get(`/closer/appointments/${noti.associated_id}`);
-                setSelectedAgenda(res.data);
-                setIsAgendaModalOpen(true);
-            } catch (err) {
-                console.error("Error fetching appointment for notification", err);
-            }
-        }
-        if (!noti.is_read) {
-            handleMarkAsRead(noti.id);
-        }
     };
 
     const fetchLinks = async () => {
@@ -246,7 +208,7 @@ const SetterDashboard = () => {
                     <header className="flex justify-between items-center border-b border-base pb-8 mb-4">
                         <div className="space-y-1 text-left">
                             <h1 className="text-5xl font-black text-base italic tracking-tighter uppercase leading-none">Dashboard</h1>
-                            <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Resumen y Notificaciones</p>
+                            <p className="text-muted font-medium uppercase text-[10px] tracking-[0.2em]">Resumen y Atajos de Teclado</p>
                         </div>
 
                         <div className="flex items-center gap-4">
@@ -269,15 +231,8 @@ const SetterDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Notifications Widget */}
+                        {/* Report Status Tile */}
                         <div className="space-y-6">
-                            <NotificationWidget
-                                notifications={notifications}
-                                onMarkAsRead={handleMarkAsRead}
-                                onNotificationClick={handleNotificationClick}
-                            />
-
-                            {/* Report Status Tile */}
                             <Card variant="surface" className="p-8 border-base/50 shadow-xl relative overflow-hidden group">
                                 <div className="absolute top-0 right-0 p-8 opacity-5">
                                     <FileText size={80} />

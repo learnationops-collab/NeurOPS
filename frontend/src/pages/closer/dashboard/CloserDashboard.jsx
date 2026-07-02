@@ -9,7 +9,6 @@ import AddAgendaModal from '../../../components/modals/AddAgendaModal';
 import Button from '../../../components/ui/Button';
 import Card, { CardHeader, CardContent } from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
-import NotificationWidget from '../../../components/dashboard/NotificationWidget';
 import HotkeysTable from '../../../components/dashboard/HotkeysTable';
 import BookingLinkModal from '../../../components/dashboard/BookingLinkModal';
 import QuickSaleModal from '../../../components/modals/QuickSaleModal';
@@ -52,7 +51,6 @@ const CloserDashboard = () => {
         today_stats: null,
         report_questions: [],
         recent_clients: [],
-        notifications: [],
         booking_links: []
     });
 
@@ -114,7 +112,6 @@ const CloserDashboard = () => {
         try {
             await Promise.all([
                 fetchDashboard(),
-                fetchNotifications(),
                 fetchBookingLink()
             ]);
         } catch (err) {
@@ -124,14 +121,7 @@ const CloserDashboard = () => {
         }
     };
 
-    const fetchNotifications = async () => {
-        try {
-            const res = await api.get('/closer/notifications');
-            setData(prev => ({ ...prev, notifications: res.data || [] }));
-        } catch (err) {
-            console.error("Error fetching notifications", err);
-        }
-    };
+
 
     const fetchBookingLink = async () => {
         try {
@@ -174,32 +164,7 @@ const CloserDashboard = () => {
         setAnswers(prev => ({ ...prev, [qId]: val }));
     };
 
-    const handleMarkAsRead = async (id) => {
-        try {
-            await api.post(`/closer/notifications/${id}/read`);
-            fetchNotifications();
-        } catch (err) {
-            console.error("Error marking notification as read", err);
-        }
-    };
 
-    const handleNotificationClick = async (noti) => {
-        if (noti.associated_type === 'deck_comment' && noti.associated_id) {
-            navigate(`/closer/deck?appt_id=${noti.associated_id}`);
-        } else if (noti.associated_type === 'appointment' && noti.associated_id) {
-            try {
-                const res = await api.get(`/closer/appointments/${noti.associated_id}`);
-                setSelectedAgenda(res.data);
-                setIsAgendaModalOpen(true);
-            } catch (err) {
-                console.error("Error fetching appointment for notification", err);
-            }
-        }
-        // Mark as read when clicked if not read
-        if (!noti.is_read) {
-            handleMarkAsRead(noti.id);
-        }
-    };
 
     const handleAgendaClick = (appt) => {
         // Here appt is already available from dashboard data
@@ -298,26 +263,12 @@ const CloserDashboard = () => {
                             </div>
                         </header>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        <div className="grid grid-cols-1 gap-12">
                             {/* Hotkeys Table */}
                             <div className="space-y-6">
                                 <div className="h-full">
                                     <HotkeysTable />
                                 </div>
-                            </div>
-
-                            {/* Notifications Widget */}
-                            <div className="space-y-6">
-                                <NotificationWidget
-                                    notifications={data.notifications || []}
-                                    onMarkAsRead={handleMarkAsRead}
-                                    onNotificationClick={handleNotificationClick}
-                                    classNames={{
-                                        container: "glass-panel p-6 border-base",
-                                        title: "text-lg font-black tracking-tight mb-4",
-                                        list: "space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar"
-                                    }}
-                                />
                             </div>
                         </div>
 
