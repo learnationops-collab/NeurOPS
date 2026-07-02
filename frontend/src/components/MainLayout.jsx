@@ -35,10 +35,10 @@ const MainLayout = ({ children }) => {
 
     // Obtener notificaciones
     const fetchNotifications = useCallback(async () => {
-        if (!user || !['closer', 'setter', 'admin', 'triage'].includes(user.role)) return;
+        if (!user || !['closer', 'setter', 'triage'].includes(user.role)) return;
         
         try {
-            const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : user.role === 'admin' ? 'admin' : 'triage';
+            const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : 'triage';
             const res = await api.get(`/${rolePath}/notifications`);
             setNotifications(res.data || []);
         } catch (err) {
@@ -62,7 +62,7 @@ const MainLayout = ({ children }) => {
 
     // Acción de click en notificación
     const handleNotificationClick = async (noti) => {
-        const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : user.role === 'admin' ? 'admin' : 'triage';
+        const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : 'triage';
         
         if (!noti.is_read) {
             try {
@@ -253,7 +253,7 @@ const MainLayout = ({ children }) => {
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={async () => {
-                                            const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : user.role === 'admin' ? 'admin' : 'triage';
+                                            const rolePath = user.role === 'closer' ? 'closer' : user.role === 'setter' ? 'setter' : 'triage';
                                             try {
                                                 await api.post(`/${rolePath}/notifications/read-all`);
                                                 setNotifications(prev => prev.map(n => ({...n, is_read: true})));

@@ -4,8 +4,9 @@
   - **Eliminación de Notificaciones de Administración**:
     - **API Backend ([admin.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/admin.py) [MODIFY])**:
       - Se removieron los endpoints de administración `/admin/notifications`, `/admin/notifications/<id>/read` y `/admin/notifications/read-all`.
-    - **Interfaz Frontend ([AdminDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/dashboard/AdminDashboard.jsx) [MODIFY])**:
-      - Se eliminaron el estado `notifications`, las funciones de obtención (`fetchNotifications`) y marcado (`handleMarkAsRead`), y el import/renderizado del widget de notificaciones (`NotificationWidget`).
+    - **Interfaz Frontend ([AdminDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/dashboard/AdminDashboard.jsx) [MODIFY], [MainLayout.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/MainLayout.jsx) [MODIFY])**:
+      - Se eliminaron el estado `notifications`, las funciones de obtención (`fetchNotifications`) y marcado (`handleMarkAsRead`), y el import/renderizado del widget de notificaciones (`NotificationWidget`) en `AdminDashboard.jsx`.
+      - Se removió al rol `'admin'` del polling y el drawer de notificaciones globales en `MainLayout.jsx` para desactivar por completo las consultas recurrentes a `/admin/notifications`.
       - Se adaptó la grilla del dashboard para que el panel de atajos de teclado ocupe todo el ancho de forma limpia y equilibrada.
   - **Exportación de Ventas en Formato CSV en el Registro de Ventas**:
     - **Interfaz Frontend ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
