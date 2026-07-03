@@ -916,6 +916,53 @@ const PublicSetterStatsPage = () => {
                                                     );
                                                 })}
                                             </div>
+
+                                            {/* Aperturas por Etapa (Openings por Etapa) */}
+                                            <div className="flex items-center gap-2 border-b border-slate-800 pb-4 mt-8">
+                                                <RefreshCw size={16} className="text-teal-400 animate-spin-slow" />
+                                                <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Aperturas por Etapa</h4>
+                                            </div>
+                                            
+                                            <div className="space-y-3.5 mt-4">
+                                                {[
+                                                    { label: "Aperturas en Cualificación", s: stats.totals.qualification_opening_submitted, sPrev: stats.comparison?.totals?.qualification_opening_submitted, r: stats.totals.qualification_opening_responded, rPrev: stats.comparison?.totals?.qualification_opening_responded, rate: stats.percentages.rates.qualification_opening_rate, ratePrev: stats.comparison?.percentages?.rates?.qualification_opening_rate, color: 'text-teal-400' },
+                                                    { label: "Aperturas en Dolor", s: stats.totals.pain_opening_submitted, sPrev: stats.comparison?.totals?.pain_opening_submitted, r: stats.totals.pain_opening_responded, rPrev: stats.comparison?.totals?.pain_opening_responded, rate: stats.percentages.rates.pain_opening_rate, ratePrev: stats.comparison?.percentages?.rates?.pain_opening_rate, color: 'text-sky-400' },
+                                                    { label: "Aperturas en Oferta", s: stats.totals.offer_opening_submitted, sPrev: stats.comparison?.totals?.offer_opening_submitted, r: stats.totals.offer_opening_responded, rPrev: stats.comparison?.totals?.offer_opening_responded, rate: stats.percentages.rates.offer_opening_rate, ratePrev: stats.comparison?.percentages?.rates?.offer_opening_rate, color: 'text-fuchsia-400' },
+                                                    { label: "Aperturas en Link", s: stats.totals.link_opening_submitted, sPrev: stats.comparison?.totals?.link_opening_submitted, r: stats.totals.link_opening_responded, rPrev: stats.comparison?.totals?.link_opening_responded, rate: stats.percentages.rates.link_opening_rate, ratePrev: stats.comparison?.percentages?.rates?.link_opening_rate, color: 'text-indigo-400' },
+                                                ].map((op, idx) => {
+                                                    const semaphoricColor = op.rate >= 40 
+                                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                                        : op.rate >= 15 
+                                                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
+                                                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                                                    
+                                                    return (
+                                                        <div key={idx} className="flex justify-between items-center bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800/80 shadow-sm">
+                                                            <div className="flex flex-col text-left space-y-1">
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{op.label}</span>
+                                                                <span className="text-xs font-black text-slate-350">
+                                                                    Env: <span className="text-white tabular-nums">{op.s}</span> • Resp: <span className="text-white tabular-nums">{op.r}</span>
+                                                                </span>
+                                                                {compare && stats.comparison && (
+                                                                    <span className="text-[9px] text-slate-500 font-bold block mt-0.5">
+                                                                        Ant: Env: {op.sPrev || 0} • Resp: {op.rPrev || 0}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <span className={`px-2 py-1 rounded-xl text-xs font-black tabular-nums ${semaphoricColor}`}>
+                                                                    {op.rate}%
+                                                                </span>
+                                                                {compare && stats.comparison && (
+                                                                    <span className="text-[9px] text-slate-500 font-bold block mt-1">
+                                                                        Ant: {op.ratePrev || 0}%
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
  
                                         {/* COLUMNA 3: VISUALIZACIÓN GRÁFICA DEL EMBUDO */}

@@ -234,6 +234,10 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
         func.sum(SetterDailyStats.qualification_opening_responded).label('q_op_r'),
         func.sum(SetterDailyStats.pain_opening_submitted).label('p_op_s'),
         func.sum(SetterDailyStats.pain_opening_responded).label('p_op_r'),
+        func.sum(SetterDailyStats.offer_opening_submitted).label('o_op_s'),
+        func.sum(SetterDailyStats.offer_opening_responded).label('o_op_r'),
+        func.sum(SetterDailyStats.link_opening_submitted).label('l_op_s'),
+        func.sum(SetterDailyStats.link_opening_responded).label('l_op_r'),
         
         # Question Efficacy
         func.sum(SetterDailyStats.q1_useful).label('q1_u'),
@@ -306,6 +310,10 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
             "qualification_opening_responded": process_val(stats.q_op_r),
             "pain_opening_submitted": process_val(stats.p_op_s),
             "pain_opening_responded": process_val(stats.p_op_r),
+            "offer_opening_submitted": process_val(stats.o_op_s),
+            "offer_opening_responded": process_val(stats.o_op_r),
+            "link_opening_submitted": process_val(stats.l_op_s),
+            "link_opening_responded": process_val(stats.l_op_r),
             
             "q1_useful": process_val(stats.q1_u),
             "q1_unuseful": process_val(stats.q1_i),
@@ -334,7 +342,9 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
                 "agenda_fur": div(float(stats.fu_a_r or 0), float(stats.fu_a_s or 0)),
                 "total_fur": div(float(stats.total_fu_r or 0), float(stats.total_fu_s or 0)),
                 "qualification_opening_rate": div(float(stats.q_op_r or 0), float(stats.q_op_s or 0)),
-                "pain_opening_rate": div(float(stats.p_op_r or 0), float(stats.p_op_s or 0))
+                "pain_opening_rate": div(float(stats.p_op_r or 0), float(stats.p_op_s or 0)),
+                "offer_opening_rate": div(float(stats.o_op_r or 0), float(stats.o_op_s or 0)),
+                "link_opening_rate": div(float(stats.l_op_r or 0), float(stats.l_op_s or 0))
             },
             "funnel_evolution": {
                 "qual_to_pain": div(float(stats.fun_pain or 0), float(stats.leads or 0)),
