@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Loader2, Search, Calendar, Download, TrendingUp, Users, DollarSign,
-    AlertCircle, RefreshCcw, Check, Sparkles
+    AlertCircle, RefreshCcw, Check, Sparkles, Filter, ChevronDown, X
 } from 'lucide-react';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
+import Card from '../../components/ui/Card';
 
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
@@ -21,7 +22,10 @@ const getTodayDate = () => {
 const NewClientsTab = () => {
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [updatingStatus, setUpdatingStatus] = useState(null); // id del cliente que se está actualizando
+    const [updatingStatus, setUpdatingStatus] = useState(null);
+
+    const startDateRef = useRef(null);
+    const endDateRef = useRef(null);
 
     // Filtros persistentes
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_new_clients_view', {
@@ -55,6 +59,50 @@ const NewClientsTab = () => {
         fetchClients();
     }, [filters.startDate, filters.endDate, filters.filterType, filters.searchQuery]);
 
+    // Manejar cambio de follow up
+    const handleFollowUpChange = async (client, newStatus) => {
+        const clientKey = client.instagram || client.email || client.nombre;
+        setUpdatingStatus(clientKey);
+        try {
+            await api.post('/public/clients/follow-up', {
+                instagram: client.instagram,
+                email: client.email,
+                nombre_cliente: client.nombre,
+                follow_up_status: newStatus
+            });
+            toast.success(`Estado de ${client.nombre} actualizado a: ${newStatus}`);
+            // Actualizar localmente el estado
+            setClients(prev => prev.map(c => {
+                const cKey = c.instagram || c.email || c.nombre;
+                if (cKey === clientKey) {
+                    return { ...c, follow_up_status: newStatus };
+                }
+                return c;
+            }));
+        } catch (error) {
+            console.error("Error updating follow-up status:", error);
+            toast.error("No se pudo actualizar el estado.");
+        } finally {
+            setUpdatingStatus(null);
+        }
+    };
+
+    // KPIs Calculados basados en la lista de clientes actual
+    const kpis = useMemo(() => {
+        const totalClients = clients.length;
+        const totalPaid = clients.reduce((acc, curr) => acc + (curr.total_pagado || 0), 0);
+        const totalDebt = clients.reduce((acc, curr) => acc + (curr.deuda || 0), 0);
+        const successfulClients = clients.filter(c => c.follow_up_status === 'Exitoso').length;
+
+        return {
+            totalClients,
+            totalPaid,
+            totalDebt,
+            successfulClients
+        };
+    }, [clients]);
+
+    // Presets de fecha
     const applyDatePreset = (preset) => {
         const today = new Date();
         let start = '';
@@ -106,49 +154,6 @@ const NewClientsTab = () => {
         if (filters.startDate === thirtyDaysAgo && filters.endDate === todayStr) return 'last_30_days';
         return 'custom';
     };
-
-    // Manejar cambio de follow up
-    const handleFollowUpChange = async (client, newStatus) => {
-        const clientKey = client.instagram || client.email || client.nombre;
-        setUpdatingStatus(clientKey);
-        try {
-            await api.post('/public/clients/follow-up', {
-                instagram: client.instagram,
-                email: client.email,
-                nombre_cliente: client.nombre,
-                follow_up_status: newStatus
-            });
-            toast.success(`Estado de ${client.nombre} actualizado a: ${newStatus}`);
-            // Actualizar localmente el estado
-            setClients(prev => prev.map(c => {
-                const cKey = c.instagram || c.email || c.nombre;
-                if (cKey === clientKey) {
-                    return { ...c, follow_up_status: newStatus };
-                }
-                return c;
-            }));
-        } catch (error) {
-            console.error("Error updating follow-up status:", error);
-            toast.error("No se pudo actualizar el estado.");
-        } finally {
-            setUpdatingStatus(null);
-        }
-    };
-
-    // KPIs Calculados basados en la lista de clientes actual
-    const kpis = useMemo(() => {
-        const totalClients = clients.length;
-        const totalPaid = clients.reduce((acc, curr) => acc + (curr.total_pagado || 0), 0);
-        const totalDebt = clients.reduce((acc, curr) => acc + (curr.deuda || 0), 0);
-        const successfulClients = clients.filter(c => c.follow_up_status === 'Exitoso').length;
-
-        return {
-            totalClients,
-            totalPaid,
-            totalDebt,
-            successfulClients
-        };
-    }, [clients]);
 
     // Función para exportar a CSV
     const exportToCSV = () => {
@@ -218,7 +223,7 @@ const NewClientsTab = () => {
                 return 'bg-rose-500/10 border-rose-500/30 text-rose-400 focus:border-rose-500/60';
             case 'Por contactar':
             default:
-                return 'bg-slate-800/80 border-slate-700 text-slate-300 focus:border-slate-500';
+                return 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-300';
         }
     };
 
@@ -230,8 +235,8 @@ const NewClientsTab = () => {
     const formatPaymentWithQty = (monto, cant) => {
         if (!monto || monto === 0) return '-';
         return (
-            <div className="flex flex-col items-center justify-center">
-                <span className="font-bold text-slate-100">{formatCurrency(monto)}</span>
+            <div className="flex flex-col items-end justify-center font-bold">
+                <span className="text-slate-100">{formatCurrency(monto)}</span>
                 {cant > 0 && (
                     <span className="text-[9px] text-slate-500 font-semibold italic">({cant} {cant === 1 ? 'pago' : 'pagos'})</span>
                 )}
@@ -240,31 +245,26 @@ const NewClientsTab = () => {
     };
 
     return (
-        <div className="p-6 md:p-10 space-y-8 bg-slate-950/20 backdrop-blur-xl rounded-[2.5rem]">
+        <div className="w-full p-4 lg:p-8 space-y-6">
             
             {/* Cabecera y Herramientas */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-800/60">
-                <div className="space-y-1.5 text-left">
-                    <h2 className="text-2xl font-black text-white uppercase tracking-tight flex items-center gap-2">
-                        <Sparkles className="text-violet-500" size={20} />
-                        Análisis de Clientes Consolidados
-                    </h2>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
-                        Agrupación atómica por Union-Find sobre ventas e historial financiero.
-                    </p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="text-left">
+                    <h1 className="text-2xl font-black text-white">Clientes Nuevos</h1>
+                    <p className="text-sm text-slate-400">Análisis y seguimiento de clientes consolidados e historial de pagos.</p>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
                     <button
                         onClick={exportToCSV}
-                        className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-black text-[10px] tracking-widest uppercase px-5 py-3.5 rounded-xl shadow-lg shadow-teal-500/10 transition-all active:scale-[0.98]"
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-teal-500/20"
                     >
-                        <Download size={14} />
-                        Exportar CSV
+                        <Download className="w-4 h-4" />
+                        <span>Exportar CSV</span>
                     </button>
                     <button
                         onClick={fetchClients}
-                        className="p-3.5 bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl border border-slate-800 transition-all"
+                        className="p-2.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-350 hover:text-white rounded-xl transition-all shadow-md"
                         title="Refrescar datos"
                     >
                         <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
@@ -272,37 +272,51 @@ const NewClientsTab = () => {
                 </div>
             </div>
 
-            {/* Panel de Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-slate-900/60 p-6 rounded-2xl border border-slate-850 shadow-2xl">
-                {/* Rango de Fechas */}
-                <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodo Evaluado</label>
-                    <div className="flex items-center gap-2 bg-slate-850 border border-slate-800 px-4 py-2.5 rounded-xl text-xs text-white">
-                        <Calendar size={13} className="text-slate-500" />
-                        <input
-                            type="date"
-                            value={filters.startDate}
-                            onChange={e => setFilters({ startDate: e.target.value })}
-                            className="bg-transparent border-none text-xs text-slate-200 focus:outline-none cursor-pointer w-full text-center font-bold"
-                        />
-                        <span className="text-slate-600 text-xs">al</span>
-                        <input
-                            type="date"
-                            value={filters.endDate}
-                            onChange={e => setFilters({ endDate: e.target.value })}
-                            className="bg-transparent border-none text-xs text-slate-200 focus:outline-none cursor-pointer w-full text-center font-bold"
-                        />
-                    </div>
+            {/* Panel de Filtros Reorganizado */}
+            <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 bg-slate-900/20 backdrop-blur-md space-y-5 shadow-2xl relative overflow-hidden">
+                <div className="flex items-center gap-2 text-violet-405">
+                    <Filter size={16} className="text-violet-400" />
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-200">Filtros Inteligentes</span>
                 </div>
 
-                {/* Periodos Rápidos */}
-                <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodos Rápidos</label>
-                    <div className="flex items-center gap-1.5 h-full">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+                    {/* Rango de Fechas */}
+                    <div className="lg:col-span-4">
+                        <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-850 hover:border-slate-700 px-3 py-2 rounded-xl transition-all focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500/30">
+                            <Calendar 
+                                className="w-3.5 h-3.5 text-slate-450 hover:text-white cursor-pointer shrink-0 transition-colors" 
+                                onClick={() => {
+                                    try {
+                                        startDateRef.current?.showPicker();
+                                    } catch (e) {
+                                        startDateRef.current?.focus();
+                                    }
+                                }}
+                            />
+                            <input
+                                ref={startDateRef}
+                                type="date"
+                                value={filters.startDate}
+                                onChange={(e) => setFilters({ startDate: e.target.value })}
+                                className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-full text-center p-0"
+                            />
+                            <span className="text-slate-600 text-xs shrink-0">-</span>
+                            <input
+                                ref={endDateRef}
+                                type="date"
+                                value={filters.endDate}
+                                onChange={(e) => setFilters({ endDate: e.target.value })}
+                                className="bg-transparent border-none text-xs text-slate-200 focus:outline-none focus:ring-0 cursor-pointer w-full text-center p-0"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Atajos de Fecha */}
+                    <div className="flex flex-wrap items-center gap-1.5 lg:col-span-4 justify-start">
                         {[
                             { id: 'today', label: 'Hoy' },
-                            { id: 'this_month', label: 'Este mes' },
-                            { id: 'last_month', label: 'Mes pasado' }
+                            { id: 'this_month', label: 'Este Mes' },
+                            { id: 'last_month', label: 'Mes Anterior' }
                         ].map((preset) => {
                             const isActive = getActiveDatePreset() === preset.id;
                             return (
@@ -310,10 +324,10 @@ const NewClientsTab = () => {
                                     key={preset.id}
                                     type="button"
                                     onClick={() => applyDatePreset(preset.id)}
-                                    className={`flex-1 text-[9px] py-2.5 text-center font-black uppercase tracking-wider rounded-xl border transition-all ${
+                                    className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg border transition-all ${
                                         isActive
-                                            ? 'bg-violet-650/30 border-violet-500/50 text-violet-300 shadow-lg shadow-violet-600/10'
-                                            : 'bg-slate-850 border-slate-800 text-slate-500 hover:text-slate-350 hover:border-slate-700'
+                                            ? 'bg-violet-500/15 border-violet-550/40 text-violet-300 shadow-sm shadow-violet-550/5'
+                                            : 'bg-slate-950/40 border-slate-900 text-slate-500 hover:text-slate-350 hover:border-slate-800 hover:scale-[1.01]'
                                     }`}
                                 >
                                     {preset.label}
@@ -323,88 +337,81 @@ const NewClientsTab = () => {
                     </div>
                 </div>
 
-                {/* Tipo de Filtro / Filtro de Clientes */}
-                <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Clasificación</label>
-                    <div className="flex bg-slate-850 p-1 rounded-xl border border-slate-800">
-                        <button
-                            type="button"
-                            onClick={() => setFilters({ filterType: 'new' })}
-                            className={`flex-1 text-center py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                                filters.filterType === 'new'
-                                    ? 'bg-violet-650/40 border border-violet-500/20 text-violet-300 font-extrabold'
-                                    : 'text-slate-500 hover:text-slate-350'
-                            }`}
-                        >
-                            Clientes Nuevos
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setFilters({ filterType: 'all' })}
-                            className={`flex-1 text-center py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                                filters.filterType === 'all'
-                                    ? 'bg-violet-650/40 border border-violet-500/20 text-violet-300 font-extrabold'
-                                    : 'text-slate-500 hover:text-slate-350'
-                            }`}
-                        >
-                            Todos los Pagos
-                        </button>
-                    </div>
-                </div>
+                <div className="w-full bg-gradient-to-r from-transparent via-slate-800/40 to-transparent h-px" />
 
-                {/* Buscador */}
-                <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Buscar Cliente</label>
-                    <div className="relative flex items-center">
-                        <Search className="absolute left-4 text-slate-500 pointer-events-none" size={14} />
-                        <input
-                            type="text"
-                            placeholder="Nombre, Instagram o Correo..."
-                            value={filters.searchQuery}
-                            onChange={e => setFilters({ searchQuery: e.target.value })}
-                            className="w-full pl-11 pr-5 py-3 bg-slate-850 border border-slate-800 rounded-xl text-xs outline-none text-white focus:border-violet-500/50 font-semibold transition-all placeholder:text-slate-600"
-                        />
+                {/* Fila Secundaria: Selectores */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Clasificación */}
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Clasificación</span>
+                        <div className="relative">
+                            <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                            <select
+                                value={filters.filterType}
+                                onChange={(e) => setFilters({ filterType: e.target.value })}
+                                className="w-full bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-xs text-slate-200 rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-violet-500 cursor-pointer appearance-none transition-all focus:ring-1 focus:ring-violet-500/30 font-semibold"
+                            >
+                                <option value="new">Clientes Nuevos (Iniciaron)</option>
+                                <option value="all">Todos los Pagos (Hicieron Pago)</option>
+                            </select>
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-550 pointer-events-none" />
+                        </div>
+                    </div>
+
+                    {/* Buscador */}
+                    <div className="flex flex-col gap-1 md:col-span-3">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Buscar Cliente</span>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                            <input
+                                type="text"
+                                placeholder="Buscar por nombre, instagram o email..."
+                                value={filters.searchQuery}
+                                onChange={e => setFilters({ searchQuery: e.target.value })}
+                                className="w-full bg-slate-950/80 border border-slate-850 hover:border-slate-700 focus:border-violet-500 rounded-xl pl-8 pr-7 py-2 text-xs text-white focus:outline-none placeholder:text-slate-500 transition-all focus:ring-1 focus:ring-violet-500/30 font-semibold"
+                            />
+                        </div>
                     </div>
                 </div>
-            </div>
+            </Card>
 
             {/* Tarjetas KPI */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Total Alumnos */}
-                <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-850/60 hover:border-slate-800 transition-all flex items-center justify-between">
+                <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 flex items-center justify-between bg-slate-900/40 backdrop-blur-md">
                     <div className="space-y-1 text-left">
                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Alumnos Filtrados</p>
                         <p className="text-2xl font-black text-white tracking-tight">{kpis.totalClients}</p>
                     </div>
                     <div className="p-3 bg-violet-500/10 text-violet-400 rounded-xl">
-                        <Users size={20} />
+                        <Users size={18} />
                     </div>
-                </div>
+                </Card>
 
-                {/* Total Recaudado Historico */}
-                <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-850/60 hover:border-slate-800 transition-all flex items-center justify-between">
+                {/* Total Recaudado */}
+                <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 flex items-center justify-between bg-slate-900/40 backdrop-blur-md">
                     <div className="space-y-1 text-left">
                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Recaudado Histórico</p>
                         <p className="text-2xl font-black text-emerald-400 tracking-tight">{formatCurrency(kpis.totalPaid)}</p>
                     </div>
                     <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
-                        <DollarSign size={20} />
+                        <DollarSign size={18} />
                     </div>
-                </div>
+                </Card>
 
                 {/* Deuda Consolidada */}
-                <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-850/60 hover:border-slate-800 transition-all flex items-center justify-between">
+                <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 flex items-center justify-between bg-slate-900/40 backdrop-blur-md">
                     <div className="space-y-1 text-left">
                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Deuda Pendiente</p>
                         <p className="text-2xl font-black text-rose-400 tracking-tight">{formatCurrency(kpis.totalDebt)}</p>
                     </div>
                     <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl">
-                        <AlertCircle size={20} />
+                        <AlertCircle size={18} />
                     </div>
-                </div>
+                </Card>
 
-                {/* Ratio Exito */}
-                <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-850/60 hover:border-slate-800 transition-all flex items-center justify-between">
+                {/* Casos Exitosos */}
+                <Card variant="surface" className="p-6 rounded-[2rem] border-slate-800 flex items-center justify-between bg-slate-900/40 backdrop-blur-md">
                     <div className="space-y-1 text-left">
                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Casos Exitosos</p>
                         <p className="text-2xl font-black text-sky-400 tracking-tight">
@@ -412,43 +419,43 @@ const NewClientsTab = () => {
                         </p>
                     </div>
                     <div className="p-3 bg-sky-500/10 text-sky-400 rounded-xl">
-                        <TrendingUp size={20} />
+                        <TrendingUp size={18} />
                     </div>
-                </div>
+                </Card>
             </div>
 
             {/* Tabla de Resultados */}
-            <div className="bg-slate-900/30 border border-slate-850 rounded-2xl overflow-hidden shadow-2xl">
+            <div className="space-y-4">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-32 space-y-4">
                         <Loader2 className="animate-spin text-violet-500" size={36} />
                         <p className="text-slate-500 text-xs font-black uppercase tracking-widest">Consolidando historial de clientes...</p>
                     </div>
                 ) : clients.length === 0 ? (
-                    <div className="py-24 text-center text-slate-500 text-xs font-bold uppercase tracking-wider italic">
+                    <div className="py-24 text-center text-slate-500 text-xs font-bold uppercase tracking-wider italic border border-slate-850 rounded-2xl bg-slate-900/10">
                         No se encontraron clientes para el periodo y filtros indicados.
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/10">
                         <table className="w-full text-left border-collapse min-w-[1200px]">
                             <thead>
-                                <tr className="border-b border-slate-850 bg-slate-900/70">
-                                    <th className="py-4.5 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center w-28">Fecha Inicio</th>
-                                    <th className="py-4.5 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Nombre</th>
-                                    <th className="py-4.5 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Programa</th>
-                                    <th className="py-4.5 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Seña</th>
-                                    <th className="py-4.5 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Completo</th>
-                                    <th className="py-4.5 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Parcial</th>
-                                    <th className="py-4.5 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Cuotas</th>
-                                    <th className="py-4.5 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Renovación</th>
-                                    <th className="py-4.5 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Upsells</th>
-                                    <th className="py-4.5 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Total Pagado</th>
-                                    <th className="py-4.5 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Total a Pagar</th>
-                                    <th className="py-4.5 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Deuda</th>
-                                    <th className="py-4.5 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center w-48">Follow Up</th>
+                                <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-400 bg-slate-900/40">
+                                    <th className="p-4 font-semibold text-center w-28">Fecha Inicio</th>
+                                    <th className="p-4 font-semibold">Cliente</th>
+                                    <th className="p-4 font-semibold text-center">Programa</th>
+                                    <th className="p-4 font-semibold text-right">Seña</th>
+                                    <th className="p-4 font-semibold text-right">Completo</th>
+                                    <th className="p-4 font-semibold text-right">Parcial</th>
+                                    <th className="p-4 font-semibold text-right">Cuotas</th>
+                                    <th className="p-4 font-semibold text-right">Renovación</th>
+                                    <th className="p-4 font-semibold text-right">Upsells</th>
+                                    <th className="p-4 font-semibold text-right">Total Pagado</th>
+                                    <th className="p-4 font-semibold text-right">Total a Pagar</th>
+                                    <th className="p-4 font-semibold text-right">Deuda</th>
+                                    <th className="p-4 font-semibold text-center w-48">Follow Up</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="text-xs text-slate-300 divide-y divide-slate-800/50">
                                 <AnimatePresence>
                                     {clients.map((c, idx) => {
                                         const cKey = c.instagram || c.email || c.nombre;
@@ -457,14 +464,14 @@ const NewClientsTab = () => {
                                                 key={cKey}
                                                 initial={{ opacity: 0, y: 4 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                transition={{ duration: 0.2, delay: Math.min(idx * 0.02, 0.3) }}
-                                                className="border-b border-slate-850/60 hover:bg-slate-900/30 transition-all font-semibold"
+                                                transition={{ duration: 0.2, delay: Math.min(idx * 0.015, 0.3) }}
+                                                className="hover:bg-slate-800/30 transition-colors font-medium text-xs"
                                             >
-                                                <td className="py-4.5 px-6 text-center text-xs font-mono text-slate-400">{c.fecha || 'Sin fecha'}</td>
-                                                <td className="py-4.5 px-6">
+                                                <td className="p-4 text-center font-mono text-slate-400">{c.fecha || 'Sin fecha'}</td>
+                                                <td className="p-4">
                                                     <div className="flex flex-col text-left">
-                                                        <span className="text-slate-100 text-xs font-black">{c.nombre}</span>
-                                                        <div className="flex flex-wrap gap-2 mt-1">
+                                                        <span className="font-semibold text-white">{c.nombre}</span>
+                                                        <div className="flex flex-wrap gap-2 mt-0.5">
                                                             {c.instagram && (
                                                                 <a
                                                                     href={`https://instagram.com/${c.instagram.replace('@', '')}`}
@@ -483,25 +490,25 @@ const NewClientsTab = () => {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="py-4.5 px-6 text-center">
+                                                <td className="p-4 text-center">
                                                     <span className="inline-flex items-center justify-center bg-slate-850 border border-slate-800 text-[10px] text-slate-300 font-black px-2.5 py-1 rounded-lg uppercase">
                                                         {c.programa || 'ND'}
                                                     </span>
                                                 </td>
-                                                <td className="py-4.5 px-4 text-center text-xs text-slate-300">{formatCurrency(c.pagos.sena)}</td>
-                                                <td className="py-4.5 px-4 text-center text-xs text-slate-300">{formatCurrency(c.pagos.completo)}</td>
-                                                <td className="py-4.5 px-4 text-center text-xs text-slate-300">{formatCurrency(c.pagos.parcial)}</td>
-                                                <td className="py-4.5 px-4 text-center text-xs text-slate-300">
+                                                <td className="p-4 text-right text-slate-300 font-semibold">{formatCurrency(c.pagos.sena)}</td>
+                                                <td className="p-4 text-right text-slate-300 font-semibold">{formatCurrency(c.pagos.completo)}</td>
+                                                <td className="p-4 text-right text-slate-300 font-semibold">{formatCurrency(c.pagos.parcial)}</td>
+                                                <td className="p-4 text-right text-slate-300">
                                                     {formatPaymentWithQty(c.pagos.cuotas, c.pagos.cuotas_cant)}
                                                 </td>
-                                                <td className="py-4.5 px-4 text-center text-xs text-slate-300">
+                                                <td className="p-4 text-right text-slate-300">
                                                     {formatPaymentWithQty(c.pagos.renovacion, c.pagos.renovacion_cant)}
                                                 </td>
-                                                <td className="py-4.5 px-4 text-center text-xs text-slate-300">{formatCurrency(c.pagos.upsells)}</td>
-                                                <td className="py-4.5 px-6 text-center text-xs font-black text-emerald-400">{formatCurrency(c.total_pagado)}</td>
-                                                <td className="py-4.5 px-6 text-center text-xs text-slate-400">{formatCurrency(c.total_a_pagar)}</td>
-                                                <td className="py-4.5 px-6 text-center text-xs font-black text-rose-400">{formatCurrency(c.deuda)}</td>
-                                                <td className="py-4.5 px-6 text-center">
+                                                <td className="p-4 text-right text-slate-300 font-semibold">{formatCurrency(c.pagos.upsells)}</td>
+                                                <td className="p-4 text-right font-black text-emerald-400">{formatCurrency(c.total_pagado)}</td>
+                                                <td className="p-4 text-right text-slate-400 font-semibold">{formatCurrency(c.total_a_pagar)}</td>
+                                                <td className="p-4 text-right font-black text-rose-400">{formatCurrency(c.deuda)}</td>
+                                                <td className="p-4 text-center">
                                                     <div className="relative inline-flex items-center justify-center w-full">
                                                         {updatingStatus === cKey ? (
                                                             <Loader2 className="animate-spin text-violet-500" size={16} />
