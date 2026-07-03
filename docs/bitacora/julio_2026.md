@@ -11,6 +11,10 @@
       - Se modificó `_prepare_setter_report_data` para calcular `qual` (usado para tasas y KPIs del reporte individual diario) en base a `inbox_leads` (leads cualificados reales: `funnel_qualification - not_lead`) en lugar de `funnel_qualification`.
       - Esto alinea la **Tasa de Cualificación** (tarjeta 3) para calcularse como `leads / entrantes` (37% en lugar del 75%) y la **Conversión por Cualificado** (tarjeta 4) sobre leads reales, unificando criterios con el dashboard.
       - Se actualizaron las medias de 7 y 10 días, y las comparaciones de periodos anteriores.
+    - **Plantilla del Reporte ([setter_report.html](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/templates/reports/setter_report.html) [MODIFY])**:
+      - Se removió por completo la grilla redundante de tasas inferiores `funnel-rates-grid` para simplificar la UI.
+      - Se integraron y fusionaron las comparativas y tendencias de 7 días (`funnel_comparisons`) directamente en cada una de las respectivas cajas del embudo visual horizontal.
+      - Se incrementó la altura mínima de las tarjetas del embudo visual a `155px` en el CSS para acomodar la información de tendencias sin desbordes.
   - **Módulo de Clientes Nuevos y Seguimiento de Pagos (Follow Up)**:
     - **Modelo de Base de Datos ([client.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/client.py) [MODIFY])**:
       - Se añadió la columna `follow_up_status` para registrar y persistir el estado del cliente en el proceso de venta.
