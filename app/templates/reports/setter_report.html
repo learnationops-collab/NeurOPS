@@ -1091,9 +1091,12 @@
                         <div class="funnel-chevron-label">5. Link</div>
                         <div class="funnel-chevron-val" style="color: #22d3ee;">🔗 {{ funnel.link }}</div>
                         <div class="funnel-chevron-pct">{{ safe_percent(funnel.link, funnel.pain) }}%</div>
-                        <div style="font-size: 9px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px; visibility: hidden;">
-                            <span style="font-size: 10px;">▬ 0 pp</span>
-                            <span style="font-size: 8px;">vs prom.</span>
+                        {% set comp = funnel_comparisons.link %}
+                        <div style="font-size: 9px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px;">
+                            <span class="{% if comp.diff > 0 %}trend-up{% elif comp.diff < 0 %}trend-down{% else %}trend-neutral{% endif %}" style="font-size: 10px;">
+                                {% if comp.diff > 0 %}▲ {{ comp.diff }} pp{% elif comp.diff < 0 %}▼ {{ comp.diff|abs }} pp{% else %}▬ 0 pp{% endif %}
+                            </span>
+                            <span style="color: var(--text-light); font-size: 8px;">vs prom. ({{ comp.avg }}%)</span>
                         </div>
                     </div>
                     

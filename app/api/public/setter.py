@@ -827,6 +827,7 @@ def _prepare_setter_report_data(stat):
     avg_leads_to_pain_tasa_7 = 0
     avg_pain_to_offer_tasa_7 = 0
     avg_offer_to_agenda_tasa_7 = 0
+    avg_link_tasa_7 = 0
 
     p7_count = len(prev_7_reports)
     if p7_count > 0:
@@ -854,6 +855,7 @@ def _prepare_setter_report_data(stat):
         sum_net_leads = 0
         sum_leads_to_pain = 0
         sum_pain_to_offer = 0
+        sum_link = 0
         sum_offer_to_agenda = 0
         for r in prev_7_reports:
             r_entrantes = r.inbox_entrantes or 0
@@ -867,17 +869,20 @@ def _prepare_setter_report_data(stat):
             sum_net_leads += safe_percent(r_net, r_entrantes)
             sum_leads_to_pain += safe_percent(r_pain, r_net)
             sum_pain_to_offer += safe_percent(r_offer, r_pain)
+            sum_link += safe_percent(r_link, r_pain)
             sum_offer_to_agenda += safe_percent(r_agenda, r_link)
             
         avg_net_leads_tasa_7 = round(sum_net_leads / p7_count)
         avg_leads_to_pain_tasa_7 = round(sum_leads_to_pain / p7_count)
         avg_pain_to_offer_tasa_7 = round(sum_pain_to_offer / p7_count)
+        avg_link_tasa_7 = round(sum_link / p7_count)
         avg_offer_to_agenda_tasa_7 = round(sum_offer_to_agenda / p7_count)
 
     # Tasas de conversión actuales del embudo
     net_leads_tasa = safe_percent(stat.inbox_leads or 0, inbox_entrantes)
     leads_to_pain_tasa = safe_percent(pain, stat.inbox_leads or 0)
     pain_to_offer_tasa = safe_percent(offer, pain)
+    link_tasa = safe_percent(link, pain)
     offer_to_agenda_tasa = safe_percent(agenda, link)
 
     # Diferencias
@@ -885,6 +890,7 @@ def _prepare_setter_report_data(stat):
     diff_net_leads = net_leads_tasa - avg_net_leads_tasa_7
     diff_leads_to_pain = leads_to_pain_tasa - avg_leads_to_pain_tasa_7
     diff_pain_to_offer = pain_to_offer_tasa - avg_pain_to_offer_tasa_7
+    diff_link = link_tasa - avg_link_tasa_7
     diff_offer_to_agenda = offer_to_agenda_tasa - avg_offer_to_agenda_tasa_7
 
     funnel_comparisons = {
@@ -907,6 +913,11 @@ def _prepare_setter_report_data(stat):
             "val": pain_to_offer_tasa,
             "avg": avg_pain_to_offer_tasa_7,
             "diff": diff_pain_to_offer
+        },
+        "link": {
+            "val": link_tasa,
+            "avg": avg_link_tasa_7,
+            "diff": diff_link
         },
         "offer_to_agenda": {
             "val": offer_to_agenda_tasa,
