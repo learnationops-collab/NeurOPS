@@ -621,7 +621,7 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            min-height: 120px;
+            min-height: 155px;
         }
 
         .funnel-entrantes-title {
@@ -657,7 +657,7 @@
             background: rgba(30, 41, 59, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.04);
             padding: 12px 4px;
-            min-height: 120px;
+            min-height: 155px;
             text-align: center;
             display: flex;
             flex-direction: column;
@@ -1012,6 +1012,10 @@
                     <div class="funnel-entrantes-title">Entrantes</div>
                     <div class="funnel-entrantes-val">{{ inbox.entrantes }}</div>
                     <div class="funnel-entrantes-pct">100%</div>
+                    <div style="font-size: 9px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px; visibility: hidden;">
+                        <span style="font-size: 10px;">▬ 0 pp</span>
+                        <span style="font-size: 8px;">vs prom.</span>
+                    </div>
                 </div>
                 
                 <div class="funnel-arrow">➔</div>
@@ -1022,6 +1026,13 @@
                         <div class="funnel-chevron-label">1. Cualificación</div>
                         <div class="funnel-chevron-val" style="color: #60a5fa;">👥 {{ funnel.qualification }}</div>
                         <div class="funnel-chevron-pct">{{ safe_percent(funnel.qualification, inbox.entrantes) }}%</div>
+                        {% set comp = funnel_comparisons.qual %}
+                        <div style="font-size: 9px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px;">
+                            <span class="{% if comp.diff > 0 %}trend-up{% elif comp.diff < 0 %}trend-down{% else %}trend-neutral{% endif %}" style="font-size: 10px;">
+                                {% if comp.diff > 0 %}▲ {{ comp.diff }} pp{% elif comp.diff < 0 %}▼ {{ comp.diff|abs }} pp{% else %}▬ 0 pp{% endif %}
+                            </span>
+                            <span style="color: var(--text-light); font-size: 8px;">vs prom. ({{ comp.avg }}%)</span>
+                        </div>
                     </div>
                     
                     <div class="funnel-arrow">➔</div>
@@ -1030,7 +1041,15 @@
                     <div class="funnel-chevron chevron-leads-netos">
                         <div class="funnel-chevron-label">2. Leads</div>
                         <div class="funnel-chevron-val" style="color: #c084fc;">🎯 {{ funnel.leads_netos }}</div>
-                        <div class="funnel-chevron-pct">{{ safe_percent(funnel.leads_netos, funnel.qualification) }}%</div>
+                        <div class="funnel-chevron-pct" style="font-size: 9px; opacity: 0.85;">Paso: {{ safe_percent(funnel.leads_netos, funnel.qualification) }}%</div>
+                        {% set comp = funnel_comparisons.net_leads %}
+                        <div style="font-size: 10px; font-weight: 900; color: #c084fc; margin-top: 2px;">Acum: {{ comp.val }}%</div>
+                        <div style="font-size: 9px; font-weight: 800; margin-top: 1px; display: flex; align-items: center; justify-content: center; gap: 2px;">
+                            <span class="{% if comp.diff > 0 %}trend-up{% elif comp.diff < 0 %}trend-down{% else %}trend-neutral{% endif %}" style="font-size: 10px;">
+                                {% if comp.diff > 0 %}▲ {{ comp.diff }} pp{% elif comp.diff < 0 %}▼ {{ comp.diff|abs }} pp{% else %}▬ 0 pp{% endif %}
+                            </span>
+                            <span style="color: var(--text-light); font-size: 8px;">(prom. {{ comp.avg }}%)</span>
+                        </div>
                     </div>
                     
                     <div class="funnel-arrow">➔</div>
@@ -1040,6 +1059,13 @@
                         <div class="funnel-chevron-label">3. Dolor</div>
                         <div class="funnel-chevron-val" style="color: #e879f9;">🩺 {{ funnel.pain }}</div>
                         <div class="funnel-chevron-pct">{{ safe_percent(funnel.pain, funnel.leads_netos) }}%</div>
+                        {% set comp = funnel_comparisons.leads_to_pain %}
+                        <div style="font-size: 9px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px;">
+                            <span class="{% if comp.diff > 0 %}trend-up{% elif comp.diff < 0 %}trend-down{% else %}trend-neutral{% endif %}" style="font-size: 10px;">
+                                {% if comp.diff > 0 %}▲ {{ comp.diff }} pp{% elif comp.diff < 0 %}▼ {{ comp.diff|abs }} pp{% else %}▬ 0 pp{% endif %}
+                            </span>
+                            <span style="color: var(--text-light); font-size: 8px;">vs prom. ({{ comp.avg }}%)</span>
+                        </div>
                     </div>
                     
                     <div class="funnel-arrow">➔</div>
@@ -1049,6 +1075,13 @@
                         <div class="funnel-chevron-label">4. Oferta</div>
                         <div class="funnel-chevron-val" style="color: #fb7185;">🏷️ {{ funnel.offer }}</div>
                         <div class="funnel-chevron-pct">{{ safe_percent(funnel.offer, funnel.pain) }}%</div>
+                        {% set comp = funnel_comparisons.pain_to_offer %}
+                        <div style="font-size: 9px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px;">
+                            <span class="{% if comp.diff > 0 %}trend-up{% elif comp.diff < 0 %}trend-down{% else %}trend-neutral{% endif %}" style="font-size: 10px;">
+                                {% if comp.diff > 0 %}▲ {{ comp.diff }} pp{% elif comp.diff < 0 %}▼ {{ comp.diff|abs }} pp{% else %}▬ 0 pp{% endif %}
+                            </span>
+                            <span style="color: var(--text-light); font-size: 8px;">vs prom. ({{ comp.avg }}%)</span>
+                        </div>
                     </div>
                     
                     <div class="funnel-arrow">➔</div>
@@ -1058,6 +1091,10 @@
                         <div class="funnel-chevron-label">5. Link</div>
                         <div class="funnel-chevron-val" style="color: #22d3ee;">🔗 {{ funnel.link }}</div>
                         <div class="funnel-chevron-pct">{{ safe_percent(funnel.link, funnel.pain) }}%</div>
+                        <div style="font-size: 9px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px; visibility: hidden;">
+                            <span style="font-size: 10px;">▬ 0 pp</span>
+                            <span style="font-size: 8px;">vs prom.</span>
+                        </div>
                     </div>
                     
                     <div class="funnel-arrow">➔</div>
@@ -1067,31 +1104,15 @@
                         <div class="funnel-chevron-label">6. Agenda</div>
                         <div class="funnel-chevron-val" style="color: #34d399;">📅 {{ funnel.agenda }}</div>
                         <div class="funnel-chevron-pct">{{ safe_percent(funnel.agenda, funnel.link) }}%</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bottom Rates Grid -->
-            <div class="funnel-rates-grid">
-                {% for rate_key, label, color_class in [
-                    ('qual', 'Conv. Entrantes a Cualificación', 'rate-blue'),
-                    ('net_leads', 'Leads (No Lead filtrados)', 'rate-purple'),
-                    ('leads_to_pain', 'Leads a Dolor', 'rate-pink'),
-                    ('pain_to_offer', 'Dolor a Oferta', 'rate-cyan'),
-                    ('offer_to_agenda', 'Oferta a Agenda', 'rate-green')
-                ] %}
-                    {% set comp = funnel_comparisons[rate_key] %}
-                    <div class="funnel-rate-card">
-                        <div class="funnel-rate-label">{{ label }}</div>
-                        <div class="funnel-rate-val {{ color_class }}">{{ comp.val }}%</div>
-                        <div>
-                            <div class="funnel-rate-trend {% if comp.diff > 0 %}trend-up{% elif comp.diff < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                        {% set comp = funnel_comparisons.offer_to_agenda %}
+                        <div style="font-size: 9px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px;">
+                            <span class="{% if comp.diff > 0 %}trend-up{% elif comp.diff < 0 %}trend-down{% else %}trend-neutral{% endif %}" style="font-size: 10px;">
                                 {% if comp.diff > 0 %}▲ {{ comp.diff }} pp{% elif comp.diff < 0 %}▼ {{ comp.diff|abs }} pp{% else %}▬ 0 pp{% endif %}
-                            </div>
-                            <div class="funnel-rate-comparison">vs prom. 7 días ({{ comp.avg }}%)</div>
+                            </span>
+                            <span style="color: var(--text-light); font-size: 8px;">vs prom. ({{ comp.avg }}%)</span>
                         </div>
                     </div>
-                {% endfor %}
+                </div>
             </div>
 
             <!-- DETAILED CONVERSIONS TABLES (Follow-ups & Openings) -->
