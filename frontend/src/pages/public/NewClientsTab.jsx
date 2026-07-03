@@ -19,6 +19,21 @@ const getTodayDate = () => {
     return now.toISOString().split('T')[0];
 };
 
+const CellWithTooltip = ({ children, tooltipText, className = "p-4", position = "top", align = "text-left" }) => {
+    if (!tooltipText) {
+        return <td className={className}>{children}</td>;
+    }
+    return (
+        <td className={`${className} relative group/tooltip cursor-pointer`}>
+            {children}
+            <div className={`absolute ${position === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-slate-800 text-slate-200 text-[11px] leading-relaxed font-bold normal-case tracking-normal rounded-xl p-3 opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none z-[9999] shadow-2xl ${align} whitespace-pre-line border-t-2 border-t-violet-500`}>
+                {tooltipText}
+                <div className={`absolute left-1/2 -translate-x-1/2 border-4 border-transparent ${position === 'bottom' ? 'bottom-full border-b-slate-900' : 'top-full border-t-slate-900'}`}></div>
+            </div>
+        </td>
+    );
+};
+
 const NewClientsTab = () => {
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -493,8 +508,10 @@ const NewClientsTab = () => {
                                                 transition={{ duration: 0.2, delay: Math.min(idx * 0.015, 0.3) }}
                                                 className="hover:bg-slate-800/30 transition-colors font-medium text-xs cursor-default"
                                             >
-                                                <td className="p-4 text-center font-mono text-slate-400" title={`Fecha de Inicio del Cliente: ${c.fecha || 'Sin fecha'}`}>{c.fecha || 'Sin fecha'}</td>
-                                                <td className="p-4" title={`Cliente: ${c.nombre}\nContacto: ${c.instagram ? '@' + c.instagram : ''} / ${c.email || ''}`}>
+                                                <CellWithTooltip tooltipText={`Fecha de Inicio del Cliente: ${c.fecha || 'Sin fecha'}`} className="p-4 text-center font-mono text-slate-400" align="text-center">
+                                                    {c.fecha || 'Sin fecha'}
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={`Cliente: ${c.nombre}\nContacto: ${c.instagram ? '@' + c.instagram : ''} / ${c.email || ''}`} className="p-4">
                                                     <div className="flex flex-col text-left">
                                                         <span className="font-semibold text-white">{c.nombre}</span>
                                                         <div className="flex flex-wrap gap-2 mt-0.5">
@@ -515,26 +532,40 @@ const NewClientsTab = () => {
                                                             )}
                                                         </div>
                                                     </div>
-                                                </td>
-                                                <td className="p-4 text-center" title={`Programa actual (Último Upsell o último pago): ${c.programa || 'ND'}`}>
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={`Programa actual (Último Upsell o último pago): ${c.programa || 'ND'}`} className="p-4 text-center" align="text-center">
                                                     <span className="inline-flex items-center justify-center bg-slate-850 border border-slate-800 text-[10px] text-slate-300 font-black px-2.5 py-1 rounded-lg uppercase">
                                                         {c.programa || 'ND'}
                                                     </span>
-                                                </td>
-                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getPaymentTooltip('Seña', c.detalle_pagos?.sena)}>{formatCurrency(c.pagos.sena)}</td>
-                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getPaymentTooltip('Completo', c.detalle_pagos?.completo)}>{formatCurrency(c.pagos.completo)}</td>
-                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getPaymentTooltip('Parcial', c.detalle_pagos?.parcial)}>{formatCurrency(c.pagos.parcial)}</td>
-                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getQtyPaymentTooltip('Cuotas', c.detalle_pagos?.cuotas, c.pagos.cuotas_cant)}>
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={getPaymentTooltip('Seña', c.detalle_pagos?.sena)} className="p-4 text-right text-slate-300 font-semibold">
+                                                    {formatCurrency(c.pagos.sena)}
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={getPaymentTooltip('Completo', c.detalle_pagos?.completo)} className="p-4 text-right text-slate-300 font-semibold">
+                                                    {formatCurrency(c.pagos.completo)}
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={getPaymentTooltip('Parcial', c.detalle_pagos?.parcial)} className="p-4 text-right text-slate-300 font-semibold">
+                                                    {formatCurrency(c.pagos.parcial)}
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={getQtyPaymentTooltip('Cuotas', c.detalle_pagos?.cuotas, c.pagos.cuotas_cant)} className="p-4 text-right text-slate-300 font-semibold">
                                                     {formatPaymentWithQty(c.pagos.cuotas, c.pagos.cuotas_cant)}
-                                                </td>
-                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getQtyPaymentTooltip('Renovación', c.detalle_pagos?.renovacion, c.pagos.renovacion_cant)}>
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={getQtyPaymentTooltip('Renovación', c.detalle_pagos?.renovacion, c.pagos.renovacion_cant)} className="p-4 text-right text-slate-300 font-semibold">
                                                     {formatPaymentWithQty(c.pagos.renovacion, c.pagos.renovacion_cant)}
-                                                </td>
-                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getPaymentTooltip('Upsells', c.detalle_pagos?.upsells)}>{formatCurrency(c.pagos.upsells)}</td>
-                                                <td className="p-4 text-right font-black text-emerald-400" title={getTotalPaidTooltip(c.detalle_pagos?.todos)}>{formatCurrency(c.total_pagado)}</td>
-                                                <td className="p-4 text-right text-slate-400 font-semibold" title={getDebtTooltip(c.total_a_pagar, c.total_pagado, c.deuda, c.programa)}>{formatCurrency(c.total_a_pagar)}</td>
-                                                <td className="p-4 text-right font-black text-rose-400" title={getDebtTooltip(c.total_a_pagar, c.total_pagado, c.deuda, c.programa)}>{formatCurrency(c.deuda)}</td>
-                                                <td className="p-4 text-center" title={`Estado de Follow Up: ${c.follow_up_status}`}>
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={getPaymentTooltip('Upsells', c.detalle_pagos?.upsells)} className="p-4 text-right text-slate-300 font-semibold">
+                                                    {formatCurrency(c.pagos.upsells)}
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={getTotalPaidTooltip(c.detalle_pagos?.todos)} className="p-4 text-right font-black text-emerald-400">
+                                                    {formatCurrency(c.total_pagado)}
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={getDebtTooltip(c.total_a_pagar, c.total_pagado, c.deuda, c.programa)} className="p-4 text-right text-slate-400 font-semibold">
+                                                    {formatCurrency(c.total_a_pagar)}
+                                                </CellWithTooltip>
+                                                <CellWithTooltip tooltipText={getDebtTooltip(c.total_a_pagar, c.total_pagado, c.deuda, c.programa)} className="p-4 text-right font-black text-rose-400">
+                                                    {formatCurrency(c.deuda)}
+                                                </CellWithTooltip>
+                                                <td className="p-4 text-center">
                                                     <div className="relative inline-flex items-center justify-center w-full">
                                                         {updatingStatus === cKey ? (
                                                             <Loader2 className="animate-spin text-violet-500" size={16} />
