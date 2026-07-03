@@ -349,6 +349,7 @@ from . import financial_sales
 from . import financial_agendas
 from . import lead_roadmap
 from . import finance
+from . import new_clients
 
 
 @bp.route('/public/clients/search', methods=['GET'])

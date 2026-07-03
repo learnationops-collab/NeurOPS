@@ -1,5 +1,19 @@
 # Bitácora - Julio 2026
 
+- **3 de Julio de 2026**:
+  - **Módulo de Clientes Nuevos y Seguimiento de Pagos (Follow Up)**:
+    - **Modelo de Base de Datos ([client.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/client.py) [MODIFY])**:
+      - Se añadió la columna `follow_up_status` para registrar y persistir el estado del cliente en el proceso de venta.
+    - **API del Backend ([new_clients.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/new_clients.py) [NEW], [__init__.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/__init__.py) [MODIFY])**:
+      - Se implementó el endpoint `GET /public/new-clients` para la consolidación histórica y por periodos de clientes a través del algoritmo de Union-Find sobre el registro de ventas.
+      - Se implementó el endpoint `POST /public/clients/follow-up` para insertar o actualizar el estado de follow up de forma atómica.
+    - **Frontend React ([NewClientsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/NewClientsTab.jsx) [NEW], [PublicCloserStatsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicCloserStatsPage.jsx) [MODIFY])**:
+      - Se creó el componente `NewClientsTab` que expone la tabla interactiva de clientes consolidados con desglose de tipos de pagos, deuda, buscador, exportación a CSV y filtros específicos.
+      - Se integró un selector dropdown reactivo en cada fila para cambiar el estado del follow up y sincronizarlo al backend.
+      - Se agregó la nueva pestaña "Clientes Nuevos" en el dashboard de closing.
+    - **Migración de Base de Datos**:
+      - Se generó y aplicó la migración `a4c31a66f9b4_add_follow_up_status_to_client.py` en la base de datos local SQLite.
+
 - **2 de Julio de 2026**:
   - **Reestructuración de Seguimientos y Referidos en el Reporte de Closers**:
     - **Modelo de Base de Datos ([closer_report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/closer_report.py) [MODIFY])**:

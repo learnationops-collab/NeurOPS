@@ -11,6 +11,7 @@ import CloserPerformanceTab from './CloserPerformanceTab';
 import CloserReportsTable from './CloserReportsTable';
 import PublicFinancialSalesPage from './PublicFinancialSalesPage';
 import FinancialAgendasPage from '../admin/reports/FinancialAgendasPage';
+import NewClientsTab from './NewClientsTab';
 
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
@@ -201,6 +202,7 @@ const PublicCloserStatsPage = () => {
                 <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 p-2 rounded-[2rem] border border-slate-800 w-fit">
                     <TabButton id="performance" label="Rendimiento" icon={BarChart3} />
                     <TabButton id="history" label="Historial de Reportes" icon={List} />
+                    <TabButton id="new_clients" label="Clientes Nuevos" icon={Users} />
                     <TabButton id="sales_log" label="Registro Ventas" icon={DollarSign} />
                     <TabButton id="agendas_log" label="Registro Agendas" icon={CalendarDays} />
                 </div>
@@ -359,6 +361,13 @@ const PublicCloserStatsPage = () => {
                         {activeTab === 'sales_log' && (
                             <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
                                 <PublicFinancialSalesPage />
+                            </div>
+                        )}
+
+                        {/* TAB CLIENTES NUEVOS */}
+                        {activeTab === 'new_clients' && (
+                            <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
+                                <NewClientsTab />
                             </div>
                         )}
 
