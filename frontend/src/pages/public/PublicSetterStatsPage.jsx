@@ -9,7 +9,8 @@ import {
     Filter, Inbox, MessageSquare, RefreshCw, Layers,
     ChevronRight, ArrowRight, ArrowDownRight, ArrowUpRight,
     Copy, Calendar, Info, ArrowRightLeft, ListChecks, Table,
-    Activity, Zap, BarChart, PenTool, HelpCircle, UserX
+    Activity, Zap, BarChart, PenTool, HelpCircle, UserX,
+    ChevronDown, ChevronUp
 } from 'lucide-react';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import FunnelChart from '../../components/charts/FunnelChart';
@@ -31,9 +32,10 @@ const PublicSetterStatsPage = () => {
     const activeTab = tabFilters.active;
     const setActiveTab = (val) => setTabFilters({ active: val });
 
-    const [stats, setStats] = useState(null);
+        const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [setters, setSetters] = useState([]);
+    const [isEvolutionCollapsed, setIsEvolutionCollapsed] = useState(true);
 
     // Filters for General & Comparison
     const { filters, updateFilter: setFilters } = usePersistentFilters('filters_setter_stats', {
@@ -931,24 +933,35 @@ const PublicSetterStatsPage = () => {
 
 
                                     {/* SECCIÓN: HISTÓRICO DENTRO DE FUNNEL */}
-                                    <div className="bg-slate-900 rounded-[2.5rem] p-8 mt-10 border border-slate-800 shadow-2xl relative overflow-hidden">
+                                    <div className={`bg-slate-900 rounded-[2.5rem] border border-slate-800 shadow-2xl relative overflow-hidden transition-all duration-300 mt-10 ${isEvolutionCollapsed ? 'p-5' : 'p-8'}`}>
                                         <div className="absolute top-0 right-0 w-64 h-64 blur-[120px] opacity-20 bg-indigo-500" />
-                                        <div className="flex items-center gap-2 mb-8 relative z-10">
-                                            <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
-                                                <TrendingUp size={16} />
+                                        <div 
+                                            className={`flex items-center justify-between relative z-10 cursor-pointer select-none hover:opacity-80 transition-all ${isEvolutionCollapsed ? 'mb-0' : 'mb-8'}`}
+                                            onClick={() => setIsEvolutionCollapsed(!isEvolutionCollapsed)}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
+                                                    <TrendingUp size={16} />
+                                                </div>
+                                                <h4 className="text-[10px] font-black text-white uppercase tracking-widest italic">Evolución Histórica del Embudo</h4>
                                             </div>
-                                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest italic">Evolución Histórica del Embudo</h4>
+                                            <div className="text-slate-450 hover:text-white transition-colors mr-2">
+                                                {isEvolutionCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                                            </div>
                                         </div>
-                                        <div className="h-[300px] relative z-10 overflow-hidden rounded-2xl bg-slate-950/50 p-4 border border-slate-800/50">
-                                            <EvolutionChart 
-                                                data={timeSeriesData} 
-                                                variables={[
-                                                    { key: 'entrantes', label: 'Entrantes', color: '#f43f5e' },
-                                                    { key: 'fun_agenda', label: 'Agendas', color: '#10b981' },
-                                                    { key: 'op_sub', label: 'Cualificación', color: '#d946ef' }
-                                                ]} 
-                                            />
-                                        </div>
+                                        
+                                        {!isEvolutionCollapsed && (
+                                            <div className="h-[300px] relative z-10 overflow-hidden rounded-2xl bg-slate-950/50 p-4 border border-slate-800/50">
+                                                <EvolutionChart 
+                                                    data={timeSeriesData} 
+                                                    variables={[
+                                                        { key: 'entrantes', label: 'Entrantes', color: '#f43f5e' },
+                                                        { key: 'fun_agenda', label: 'Agendas', color: '#10b981' },
+                                                        { key: 'op_sub', label: 'Cualificación', color: '#d946ef' }
+                                                    ]} 
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </MetricSection>
 
