@@ -491,7 +491,7 @@ const NewClientsTab = () => {
                                                 initial={{ opacity: 0, y: 4 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ duration: 0.2, delay: Math.min(idx * 0.015, 0.3) }}
-                                                className="hover:bg-slate-800/30 transition-colors font-medium text-xs cursor-help"
+                                                className="hover:bg-slate-800/30 transition-colors font-medium text-xs cursor-default"
                                             >
                                                 <td className="p-4 text-center font-mono text-slate-400" title={`Fecha de Inicio del Cliente: ${c.fecha || 'Sin fecha'}`}>{c.fecha || 'Sin fecha'}</td>
                                                 <td className="p-4" title={`Cliente: ${c.nombre}\nContacto: ${c.instagram ? '@' + c.instagram : ''} / ${c.email || ''}`}>
