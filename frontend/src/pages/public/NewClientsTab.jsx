@@ -55,6 +55,58 @@ const NewClientsTab = () => {
         fetchClients();
     }, [filters.startDate, filters.endDate, filters.filterType, filters.searchQuery]);
 
+    const applyDatePreset = (preset) => {
+        const today = new Date();
+        let start = '';
+        let end = today.toISOString().split('T')[0];
+
+        if (preset === 'today') {
+            start = end;
+        } else if (preset === 'yesterday') {
+            const yesterday = new Date();
+            yesterday.setDate(today.getDate() - 1);
+            start = yesterday.toISOString().split('T')[0];
+            end = start;
+        } else if (preset === 'this_month') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        } else if (preset === 'last_month') {
+            const firstOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+            start = firstOfLastMonth.toISOString().split('T')[0];
+            end = lastOfLastMonth.toISOString().split('T')[0];
+        } else if (preset === 'last_30_days') {
+            const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+            start = thirtyDaysAgo.toISOString().split('T')[0];
+        }
+
+        setFilters({ startDate: start, endDate: end });
+    };
+
+    const getActiveDatePreset = () => {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        
+        const lastMonthFirst = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthLast = new Date(today.getFullYear(), today.getMonth(), 0);
+        const lastMonthStartStr = lastMonthFirst.toISOString().split('T')[0];
+        const lastMonthEndStr = lastMonthLast.toISOString().split('T')[0];
+        
+        const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        if (filters.startDate === todayStr && filters.endDate === todayStr) return 'today';
+        if (filters.startDate === yesterdayStr && filters.endDate === yesterdayStr) return 'yesterday';
+        if (filters.startDate === thisMonthStart && filters.endDate === todayStr) return 'this_month';
+        if (filters.startDate === lastMonthStartStr && filters.endDate === lastMonthEndStr) return 'last_month';
+        if (filters.startDate === thirtyDaysAgo && filters.endDate === todayStr) return 'last_30_days';
+        return 'custom';
+    };
+
     // Manejar cambio de follow up
     const handleFollowUpChange = async (client, newStatus) => {
         const clientKey = client.instagram || client.email || client.nombre;
@@ -243,6 +295,34 @@ const NewClientsTab = () => {
                     </div>
                 </div>
 
+                {/* Periodos Rápidos */}
+                <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Periodos Rápidos</label>
+                    <div className="flex items-center gap-1.5 h-full">
+                        {[
+                            { id: 'today', label: 'Hoy' },
+                            { id: 'this_month', label: 'Este mes' },
+                            { id: 'last_month', label: 'Mes pasado' }
+                        ].map((preset) => {
+                            const isActive = getActiveDatePreset() === preset.id;
+                            return (
+                                <button
+                                    key={preset.id}
+                                    type="button"
+                                    onClick={() => applyDatePreset(preset.id)}
+                                    className={`flex-1 text-[9px] py-2.5 text-center font-black uppercase tracking-wider rounded-xl border transition-all ${
+                                        isActive
+                                            ? 'bg-violet-650/30 border-violet-500/50 text-violet-300 shadow-lg shadow-violet-600/10'
+                                            : 'bg-slate-850 border-slate-800 text-slate-500 hover:text-slate-350 hover:border-slate-700'
+                                    }`}
+                                >
+                                    {preset.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 {/* Tipo de Filtro / Filtro de Clientes */}
                 <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Clasificación</label>
@@ -273,7 +353,7 @@ const NewClientsTab = () => {
                 </div>
 
                 {/* Buscador */}
-                <div className="flex flex-col gap-2 md:col-span-2">
+                <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Buscar Cliente</label>
                     <div className="relative flex items-center">
                         <Search className="absolute left-4 text-slate-500 pointer-events-none" size={14} />

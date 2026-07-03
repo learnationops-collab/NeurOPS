@@ -7,8 +7,9 @@
     - **API del Backend ([new_clients.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/new_clients.py) [NEW], [__init__.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/__init__.py) [MODIFY])**:
       - Se implementó el endpoint `GET /public/new-clients` para la consolidación histórica y por periodos de clientes a través del algoritmo de Union-Find sobre el registro de ventas.
       - Se implementó el endpoint `POST /public/clients/follow-up` para insertar o actualizar el estado de follow up de forma atómica.
-    - **Frontend React ([NewClientsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/NewClientsTab.jsx) [NEW], [PublicCloserStatsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicCloserStatsPage.jsx) [MODIFY])**:
-      - Se creó el componente `NewClientsTab` que expone la tabla interactiva de clientes consolidados con desglose de tipos de pagos, deuda, buscador, exportación a CSV y filtros específicos.
+    - **Frontend React ([NewClientsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/NewClientsTab.jsx) [MODIFY], [PublicCloserStatsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicCloserStatsPage.jsx) [MODIFY])**:
+      - Se creó e integró el componente `NewClientsTab` que expone la tabla interactiva de clientes consolidados con desglose de tipos de pagos, deuda, buscador, exportación a CSV y filtros específicos.
+      - Se añadieron botones de selección de periodo rápido ("Mes pasado", "Este mes", "Hoy") con persistencia reactiva.
       - Se integró un selector dropdown reactivo en cada fila para cambiar el estado del follow up y sincronizarlo al backend.
       - Se agregó la nueva pestaña "Clientes Nuevos" en el dashboard de closing.
     - **Migración de Base de Datos**:
