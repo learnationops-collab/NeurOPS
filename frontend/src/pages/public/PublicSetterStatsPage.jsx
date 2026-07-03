@@ -764,29 +764,28 @@ const PublicSetterStatsPage = () => {
                                                             <th className="pb-3 tracking-wider">Etapa del Embudo</th>
                                                             <th className="pb-3 text-center tracking-wider">Leads</th>
                                                             <th className="pb-3 text-center tracking-wider">Paso a Paso</th>
-                                                            <th className="pb-3 text-right tracking-wider">% Total</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-800/40">
                                                         {[
-                                                            { label: '1. Entrantes (Inbox)', value: stats.totals.entrantes, valuePrev: stats.comparison?.totals?.entrantes, conv: '-', convPrev: '-', pct: 100, pctPrev: 100, color: 'bg-rose-500' },
-                                                            { label: '2. Cualificación', value: stats.totals.funnel_qualification, valuePrev: stats.comparison?.totals?.funnel_qualification, conv: `${div(stats.totals.funnel_qualification, stats.totals.entrantes)}%`, convPrev: stats.comparison ? `${div(stats.comparison.totals.funnel_qualification, stats.comparison.totals.entrantes)}%` : '-', pct: div(stats.totals.funnel_qualification, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.funnel_qualification, stats.comparison.totals.entrantes) : 0, color: 'bg-violet-500' },
-                                                            { label: '3. Cualificados', value: stats.totals.leads, valuePrev: stats.comparison?.totals?.leads, conv: `${div(stats.totals.leads, stats.totals.funnel_qualification)}%`, convPrev: stats.comparison ? `${div(stats.comparison.totals.leads, stats.comparison.totals.funnel_qualification)}%` : '-', pct: div(stats.totals.leads, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.leads, stats.comparison.totals.entrantes) : 0, color: 'bg-purple-500' },
-                                                            { label: '4. Dolor Identificado', value: stats.totals.funnel_pain, valuePrev: stats.comparison?.totals?.funnel_pain, conv: `${stats.percentages.funnel_evolution.qual_to_pain}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.qual_to_pain}%` : '-', pct: div(stats.totals.funnel_pain, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.funnel_pain, stats.comparison.totals.entrantes) : 0, color: 'bg-blue-500' },
-                                                            { label: '5. Oferta Presentada', value: stats.totals.funnel_offer, valuePrev: stats.comparison?.totals?.funnel_offer, conv: `${stats.percentages.funnel_evolution.pain_to_offer}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.pain_to_offer}%` : '-', pct: div(stats.totals.funnel_offer, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.funnel_offer, stats.comparison.totals.entrantes) : 0, color: 'bg-fuchsia-500' },
-                                                            { label: '6. Link de Calendario', value: stats.totals.funnel_link, valuePrev: stats.comparison?.totals?.funnel_link, conv: `${stats.percentages.funnel_evolution.offer_to_link}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.offer_to_link}%` : '-', pct: div(stats.totals.funnel_link, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.funnel_link, stats.comparison.totals.entrantes) : 0, color: 'bg-indigo-500' },
-                                                            { label: '7. Cita Agendada', value: stats.totals.funnel_agenda, valuePrev: stats.comparison?.totals?.funnel_agenda, conv: `${stats.percentages.funnel_evolution.link_to_agenda}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.link_to_agenda}%` : '-', pct: div(stats.totals.funnel_agenda, stats.totals.entrantes), pctPrev: stats.comparison ? div(stats.comparison.totals.funnel_agenda, stats.comparison.totals.entrantes) : 0, color: 'bg-emerald-500' },
+                                                            { label: '1. Entrantes (Inbox)', value: stats.totals.entrantes, valuePrev: stats.comparison?.totals?.entrantes, conv: '-', convPrev: '-' },
+                                                            { label: '2. Cualificación', value: stats.totals.funnel_qualification, valuePrev: stats.comparison?.totals?.funnel_qualification, conv: `${div(stats.totals.funnel_qualification, stats.totals.entrantes)}%`, convPrev: stats.comparison ? `${div(stats.comparison.totals.funnel_qualification, stats.comparison.totals.entrantes)}%` : '-' },
+                                                            { label: '3. Cualificados', value: stats.totals.leads, valuePrev: stats.comparison?.totals?.leads, conv: `${div(stats.totals.leads, stats.totals.funnel_qualification)}%`, convPrev: stats.comparison ? `${div(stats.comparison.totals.leads, stats.comparison.totals.funnel_qualification)}%` : '-' },
+                                                            { label: '4. Dolor Identificado', value: stats.totals.funnel_pain, valuePrev: stats.comparison?.totals?.funnel_pain, conv: `${stats.percentages.funnel_evolution.qual_to_pain}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.qual_to_pain}%` : '-' },
+                                                            { label: '5. Oferta Presentada', value: stats.totals.funnel_offer, valuePrev: stats.comparison?.totals?.funnel_offer, conv: `${stats.percentages.funnel_evolution.pain_to_offer}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.pain_to_offer}%` : '-' },
+                                                            { label: '6. Link de Calendario', value: stats.totals.funnel_link, valuePrev: stats.comparison?.totals?.funnel_link, conv: `${stats.percentages.funnel_evolution.offer_to_link}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.offer_to_link}%` : '-' },
+                                                            { label: '7. Cita Agendada', value: stats.totals.funnel_agenda, valuePrev: stats.comparison?.totals?.funnel_agenda, conv: `${stats.percentages.funnel_evolution.link_to_agenda}%`, convPrev: stats.comparison ? `${stats.comparison.percentages.funnel_evolution.link_to_agenda}%` : '-' },
                                                         ].map((row, idx) => {
                                                             const calculations = {
-                                                                0: { v: "Total de leads ingresados en el periodo.", c: "Suma simple de leads entrantes.", p: "Porcentaje base de entrada (100%)." },
-                                                                1: { v: "Leads en etapa de cualificación.", c: "(Cualificación / Entrantes) * 100", p: "Porcentaje de cualificación sobre el total de entrantes." },
-                                                                2: { v: "Leads que salieron de la etapa de cualificación (Cualificados reales).", c: "(Cualificados / Cualificación) * 100", p: "Porcentaje de cualificados sobre entrantes." },
-                                                                3: { v: "Leads con dolor o necesidad identificada.", c: "(Dolor / Cualificados) * 100", p: "Porcentaje de dolor sobre el total de entrantes." },
-                                                                4: { v: "Leads a los que se les presentó oferta comercial.", c: "(Ofertas / Dolor) * 100", p: "Porcentaje de ofertas sobre el total de entrantes." },
-                                                                5: { v: "Leads que recibieron el link del calendario.", c: "(Links / Ofertas) * 100", p: "Porcentaje de links sobre el total de entrantes." },
-                                                                6: { v: "Leads que agendaron cita final.", c: "(Agendas / Links) * 100", p: "Porcentaje de agendas sobre el total de entrantes." }
+                                                                0: { v: "Total de leads ingresados en el periodo.", c: "Suma simple de leads entrantes." },
+                                                                1: { v: "Leads en etapa de cualificación.", c: "(Cualificación / Entrantes) * 100" },
+                                                                2: { v: "Leads que salieron de la etapa de cualificación (Cualificados reales).", c: "(Cualificados / Cualificación) * 100" },
+                                                                3: { v: "Leads con dolor o necesidad identificada.", c: "(Dolor / Cualificados) * 100" },
+                                                                4: { v: "Leads a los que se les presentó oferta comercial.", c: "(Ofertas / Dolor) * 100" },
+                                                                5: { v: "Leads que recibieron el link del calendario.", c: "(Links / Ofertas) * 100" },
+                                                                6: { v: "Leads que agendaron cita final.", c: "(Agendas / Links) * 100" }
                                                             };
-                                                            const calc = calculations[idx] || { v: "", c: "", p: "" };
+                                                            const calc = calculations[idx] || { v: "", c: "" };
                                                             
                                                             const renderTableCompare = (current, previous, isPct = false) => {
                                                                 if (!compare || !stats?.comparison) return null;
@@ -835,23 +834,6 @@ const PublicSetterStatsPage = () => {
                                                                                 )}
                                                                             </span>
                                                                             {row.conv !== '-' && renderTableCompare(parseFloat(row.conv) || 0, parseFloat(row.convPrev) || 0, true)}
-                                                                        </div>
-                                                                    </td>
-                                                                    <td className="py-3.5 text-right">
-                                                                        <div className="flex flex-col items-end gap-1">
-                                                                            <span className="font-black text-white italic text-xs">
-                                                                                <StatTooltip
-                                                                                    label={`Porcentaje Total: ${row.label}`}
-                                                                                    value={`${row.pct}%`}
-                                                                                    calculation={calc.p}
-                                                                                >
-                                                                                    {row.pct}%
-                                                                                </StatTooltip>
-                                                                            </span>
-                                                                            {renderTableCompare(row.pct, row.pctPrev, true)}
-                                                                            <div className="w-20 h-1.5 bg-slate-900 rounded-full overflow-hidden">
-                                                                                <div className={`h-full ${row.color} rounded-full`} style={{ width: `${row.pct}%` }} />
-                                                                            </div>
                                                                         </div>
                                                                     </td>
                                                                 </tr>
