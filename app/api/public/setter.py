@@ -609,7 +609,7 @@ def _prepare_setter_report_data(stat):
     inabribles = stat.inbox_inabribles or 0
     opened = stat.opening_submitted or 0
     op_resp = stat.opening_responded or 0
-    qual = stat.funnel_qualification or 0
+    qual = stat.inbox_leads or 0
     pain = stat.funnel_pain or 0
     offer = stat.funnel_offer or 0
     link = stat.funnel_link or 0
@@ -686,7 +686,7 @@ def _prepare_setter_report_data(stat):
         avg_apertura_10 = safe_percent(t_openings_res_10, t_openings_sub_10)
         
         t_entrantes_10 = sum(r.inbox_entrantes or 0 for r in last_10_reports)
-        t_qual_10 = sum(r.funnel_qualification or 0 for r in last_10_reports)
+        t_qual_10 = sum(r.inbox_leads or 0 for r in last_10_reports)
         avg_cual_10 = safe_percent(t_qual_10, t_entrantes_10)
         
         t_agendas_10 = sum(r.funnel_agenda or 0 for r in last_10_reports)
@@ -724,11 +724,11 @@ def _prepare_setter_report_data(stat):
         diff_tasa_apertura = openings_tasa - tasa_apertura_prev
         pct_tasa_apertura = round((diff_tasa_apertura / tasa_apertura_prev) * 100) if tasa_apertura_prev > 0 else 0
 
-        tasa_cual_prev = safe_percent(stat_prev.funnel_qualification or 0, stat_prev.inbox_entrantes or 0)
+        tasa_cual_prev = safe_percent(stat_prev.inbox_leads or 0, stat_prev.inbox_entrantes or 0)
         diff_tasa_cual = qual_tasa - tasa_cual_prev
         pct_tasa_cual = round((diff_tasa_cual / tasa_cual_prev) * 100) if tasa_cual_prev > 0 else 0
 
-        tasa_conv_prev = safe_percent(stat_prev.funnel_agenda or 0, stat_prev.funnel_qualification or 0)
+        tasa_conv_prev = safe_percent(stat_prev.funnel_agenda or 0, stat_prev.inbox_leads or 0)
         diff_tasa_conv = conv_tasa - tasa_conv_prev
         pct_tasa_conv = round((diff_tasa_conv / tasa_conv_prev) * 100) if tasa_conv_prev > 0 else 0
 
@@ -798,7 +798,7 @@ def _prepare_setter_report_data(stat):
             op_val = r.opening_submitted or 0
         apertura_vals.append(safe_percent(op_val, e_val))
         
-        q_val = r.funnel_qualification or 0
+        q_val = r.inbox_leads or 0
         cual_vals.append(safe_percent(q_val, e_val))
         
         a_val = r.funnel_agenda or 0
@@ -845,7 +845,7 @@ def _prepare_setter_report_data(stat):
         avg_apertura_7 = safe_percent(t_openings_res_7, t_openings_sub_7)
         
         t_entrantes_7 = sum(r.inbox_entrantes or 0 for r in prev_7_reports)
-        t_qual_7 = sum(r.funnel_qualification or 0 for r in prev_7_reports)
+        t_qual_7 = sum(r.inbox_leads or 0 for r in prev_7_reports)
         avg_cual_7 = safe_percent(t_qual_7, t_entrantes_7)
         
         t_agendas_7 = sum(r.funnel_agenda or 0 for r in prev_7_reports)
