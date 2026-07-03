@@ -610,7 +610,7 @@ def _prepare_setter_report_data(stat):
     inabribles = stat.inbox_inabribles or 0
     opened = stat.opening_submitted or 0
     op_resp = stat.opening_responded or 0
-    qual = stat.inbox_leads or 0
+    qual = stat.funnel_qualification or 0
     pain = stat.funnel_pain or 0
     offer = stat.funnel_offer or 0
     link = stat.funnel_link or 0
@@ -660,8 +660,9 @@ def _prepare_setter_report_data(stat):
         openings_sub = stat.opening_submitted or 0
         openings_res = stat.opening_responded or 0
     openings_tasa = safe_percent(openings_res, openings_sub)
+    kpi_qual_tasa = safe_percent(stat.inbox_leads or 0, inbox_entrantes)
     qual_tasa = safe_percent(qual, inbox_entrantes)
-    conv_tasa = safe_percent(agenda, qual)
+    conv_tasa = safe_percent(agenda, stat.inbox_leads or 0)
 
     last_10_reports = SetterDailyStats.query.filter(
         SetterDailyStats.setter_id == stat.setter_id,
@@ -726,7 +727,7 @@ def _prepare_setter_report_data(stat):
         pct_tasa_apertura = round((diff_tasa_apertura / tasa_apertura_prev) * 100) if tasa_apertura_prev > 0 else 0
 
         tasa_cual_prev = safe_percent(stat_prev.inbox_leads or 0, stat_prev.inbox_entrantes or 0)
-        diff_tasa_cual = qual_tasa - tasa_cual_prev
+        diff_tasa_cual = kpi_qual_tasa - tasa_cual_prev
         pct_tasa_cual = round((diff_tasa_cual / tasa_cual_prev) * 100) if tasa_cual_prev > 0 else 0
 
         tasa_conv_prev = safe_percent(stat_prev.funnel_agenda or 0, stat_prev.inbox_leads or 0)
@@ -765,7 +766,7 @@ def _prepare_setter_report_data(stat):
             "comp": comp_data["apertura"]
         },
         "cualificacion": {
-            "val": qual_tasa,
+            "val": kpi_qual_tasa,
             "avg_10": avg_cual_10,
             "comp": comp_data["cualificacion"]
         },
@@ -847,7 +848,7 @@ def _prepare_setter_report_data(stat):
         avg_apertura_7 = safe_percent(t_openings_res_7, t_openings_sub_7)
         
         t_entrantes_7 = sum(r.inbox_entrantes or 0 for r in prev_7_reports)
-        t_qual_7 = sum(r.inbox_leads or 0 for r in prev_7_reports)
+        t_qual_7 = sum(r.funnel_qualification or 0 for r in prev_7_reports)
         avg_cual_7 = safe_percent(t_qual_7, t_entrantes_7)
         
         t_agendas_7 = sum(r.funnel_agenda or 0 for r in prev_7_reports)
