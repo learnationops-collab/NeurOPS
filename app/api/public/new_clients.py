@@ -171,25 +171,47 @@ def get_new_clients_dashboard():
         upsells_amount = 0.0
         total_pagado = 0.0
 
+        # Detalle de pagos individuales
+        sena_detalle = []
+        completo_detalle = []
+        parcial_detalle = []
+        cuotas_detalle = []
+        renovacion_detalle = []
+        upsells_detalle = []
+
         for s in sorted_sales:
             _, simple_tp = split_tipo_pago(s.tipo_pago)
             tp_lower = simple_tp.lower().strip()
             monto_val = float(s.monto or 0.0)
+            s_date = s.date.strftime('%d/%m/%Y') if s.date else (s.created_at.strftime('%d/%m/%Y') if s.created_at else 'Sin fecha')
+            s_metodo = s.metodo_pago or 'No Especificado'
+            
+            pago_item = {
+                "fecha": s_date,
+                "monto": round(monto_val, 2),
+                "metodo": s_metodo
+            }
             
             if any(x in tp_lower for x in ['seña', 'sena']):
                 sena_amount += monto_val
+                sena_detalle.append(pago_item)
             elif 'completo' in tp_lower:
                 completo_amount += monto_val
+                completo_detalle.append(pago_item)
             elif 'parcial' in tp_lower:
                 parcial_amount += monto_val
+                parcial_detalle.append(pago_item)
             elif 'cuota' in tp_lower:
                 cuotas_amount += monto_val
                 cuotas_count += 1
+                cuotas_detalle.append(pago_item)
             elif 'renovacion' in tp_lower or 'renovación' in tp_lower:
                 renovacion_amount += monto_val
                 renovacion_count += 1
+                renovacion_detalle.append(pago_item)
             elif 'upsell' in tp_lower:
                 upsells_amount += monto_val
+                upsells_detalle.append(pago_item)
             
             total_pagado += monto_val
 
@@ -217,6 +239,18 @@ def get_new_clients_dashboard():
         # Deuda
         debt = max(0.0, total_to_pay - total_pagado)
 
+        # Recopilar todos los pagos historicos del cliente para el tooltip de total_pagado
+        todos_los_pagos = []
+        for s in sorted_sales:
+            _, simple_tp = split_tipo_pago(s.tipo_pago)
+            s_date = s.date.strftime('%d/%m/%Y') if s.date else (s.created_at.strftime('%d/%m/%Y') if s.created_at else 'Sin fecha')
+            todos_los_pagos.append({
+                "fecha": s_date,
+                "monto": round(float(s.monto or 0.0), 2),
+                "tipo": simple_tp,
+                "metodo": s.metodo_pago or 'No Especificado'
+            })
+
         client_row = {
             "fecha": first_date_str,
             "nombre": client_name,
@@ -237,7 +271,16 @@ def get_new_clients_dashboard():
             "total_a_pagar": round(total_to_pay, 2),
             "deuda": round(debt, 2),
             "follow_up_status": follow_up_status,
-            "client_id": client_id
+            "client_id": client_id,
+            "detalle_pagos": {
+                "sena": sena_detalle,
+                "completo": completo_detalle,
+                "parcial": parcial_detalle,
+                "cuotas": cuotas_detalle,
+                "renovacion": renovacion_detalle,
+                "upsells": upsells_detalle,
+                "todos": todos_los_pagos
+            }
         }
 
         # Filtrar por busqueda

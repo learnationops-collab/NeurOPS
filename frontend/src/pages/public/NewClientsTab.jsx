@@ -244,6 +244,32 @@ const NewClientsTab = () => {
         );
     };
 
+    // Funciones formateadoras de Tooltips para UX fluida e informativa
+    const getPaymentTooltip = (label, detalle) => {
+        if (!detalle || detalle.length === 0) return `${label}: Sin pagos registrados`;
+        const lines = detalle.map(p => `• ${p.fecha}: ${formatCurrency(p.monto)} (${p.metodo})`);
+        const total = detalle.reduce((acc, curr) => acc + curr.monto, 0);
+        return `${label}: ${formatCurrency(total)} totales\n\nDetalle de pagos:\n${lines.join('\n')}`;
+    };
+
+    const getQtyPaymentTooltip = (label, detalle, cant) => {
+        if (!detalle || detalle.length === 0) return `${label}: Sin pagos registrados`;
+        const lines = detalle.map(p => `• ${p.fecha}: ${formatCurrency(p.monto)} (${p.metodo})`);
+        const total = detalle.reduce((acc, curr) => acc + curr.monto, 0);
+        return `${label}: ${formatCurrency(total)} totales (${cant} ${cant === 1 ? 'pago' : 'pagos'})\n\nDetalle de pagos:\n${lines.join('\n')}`;
+    };
+
+    const getTotalPaidTooltip = (todos) => {
+        if (!todos || todos.length === 0) return "Total Pagado: Sin pagos";
+        const lines = todos.map(p => `• ${p.fecha}: ${formatCurrency(p.monto)} - ${p.tipo} (${p.metodo})`);
+        const total = todos.reduce((acc, curr) => acc + curr.monto, 0);
+        return `Total Pagado Histórico: ${formatCurrency(total)}\n\nHistorial completo de cobros:\n${lines.join('\n')}`;
+    };
+
+    const getDebtTooltip = (totalToPay, totalPaid, debt, programa) => {
+        return `Programa Activo: ${programa || 'No especificado'}\n\nDetalle Financiero:\n(+) Total a Pagar: ${formatCurrency(totalToPay)}\n(-) Total Pagado: ${formatCurrency(totalPaid)}\n(=) Deuda Pendiente: ${formatCurrency(debt)}`;
+    };
+
     return (
         <div className="w-full p-4 lg:p-8 space-y-6">
             
@@ -436,10 +462,10 @@ const NewClientsTab = () => {
                         No se encontraron clientes para el periodo y filtros indicados.
                     </div>
                 ) : (
-                    <div className="overflow-auto max-h-[650px] rounded-2xl border border-slate-800 bg-slate-900/10 custom-scrollbar">
+                    <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/10">
                         <table className="w-full text-left border-collapse min-w-[1200px]">
-                            <thead className="sticky top-0 z-10 bg-slate-900 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
-                                <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-400 bg-slate-900">
+                            <thead>
+                                <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-400 bg-slate-900/40">
                                     <th className="p-4 font-semibold text-center w-28">Fecha Inicio</th>
                                     <th className="p-4 font-semibold">Cliente</th>
                                     <th className="p-4 font-semibold text-center">Programa</th>
@@ -465,10 +491,10 @@ const NewClientsTab = () => {
                                                 initial={{ opacity: 0, y: 4 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ duration: 0.2, delay: Math.min(idx * 0.015, 0.3) }}
-                                                className="hover:bg-slate-800/30 transition-colors font-medium text-xs"
+                                                className="hover:bg-slate-800/30 transition-colors font-medium text-xs cursor-help"
                                             >
-                                                <td className="p-4 text-center font-mono text-slate-400">{c.fecha || 'Sin fecha'}</td>
-                                                <td className="p-4">
+                                                <td className="p-4 text-center font-mono text-slate-400" title={`Fecha de Inicio del Cliente: ${c.fecha || 'Sin fecha'}`}>{c.fecha || 'Sin fecha'}</td>
+                                                <td className="p-4" title={`Cliente: ${c.nombre}\nContacto: ${c.instagram ? '@' + c.instagram : ''} / ${c.email || ''}`}>
                                                     <div className="flex flex-col text-left">
                                                         <span className="font-semibold text-white">{c.nombre}</span>
                                                         <div className="flex flex-wrap gap-2 mt-0.5">
@@ -490,25 +516,25 @@ const NewClientsTab = () => {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="p-4 text-center">
+                                                <td className="p-4 text-center" title={`Programa actual (Último Upsell o último pago): ${c.programa || 'ND'}`}>
                                                     <span className="inline-flex items-center justify-center bg-slate-850 border border-slate-800 text-[10px] text-slate-300 font-black px-2.5 py-1 rounded-lg uppercase">
                                                         {c.programa || 'ND'}
                                                     </span>
                                                 </td>
-                                                <td className="p-4 text-right text-slate-300 font-semibold">{formatCurrency(c.pagos.sena)}</td>
-                                                <td className="p-4 text-right text-slate-300 font-semibold">{formatCurrency(c.pagos.completo)}</td>
-                                                <td className="p-4 text-right text-slate-300 font-semibold">{formatCurrency(c.pagos.parcial)}</td>
-                                                <td className="p-4 text-right text-slate-300">
+                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getPaymentTooltip('Seña', c.detalle_pagos?.sena)}>{formatCurrency(c.pagos.sena)}</td>
+                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getPaymentTooltip('Completo', c.detalle_pagos?.completo)}>{formatCurrency(c.pagos.completo)}</td>
+                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getPaymentTooltip('Parcial', c.detalle_pagos?.parcial)}>{formatCurrency(c.pagos.parcial)}</td>
+                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getQtyPaymentTooltip('Cuotas', c.detalle_pagos?.cuotas, c.pagos.cuotas_cant)}>
                                                     {formatPaymentWithQty(c.pagos.cuotas, c.pagos.cuotas_cant)}
                                                 </td>
-                                                <td className="p-4 text-right text-slate-300">
+                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getQtyPaymentTooltip('Renovación', c.detalle_pagos?.renovacion, c.pagos.renovacion_cant)}>
                                                     {formatPaymentWithQty(c.pagos.renovacion, c.pagos.renovacion_cant)}
                                                 </td>
-                                                <td className="p-4 text-right text-slate-300 font-semibold">{formatCurrency(c.pagos.upsells)}</td>
-                                                <td className="p-4 text-right font-black text-emerald-400">{formatCurrency(c.total_pagado)}</td>
-                                                <td className="p-4 text-right text-slate-400 font-semibold">{formatCurrency(c.total_a_pagar)}</td>
-                                                <td className="p-4 text-right font-black text-rose-400">{formatCurrency(c.deuda)}</td>
-                                                <td className="p-4 text-center">
+                                                <td className="p-4 text-right text-slate-300 font-semibold" title={getPaymentTooltip('Upsells', c.detalle_pagos?.upsells)}>{formatCurrency(c.pagos.upsells)}</td>
+                                                <td className="p-4 text-right font-black text-emerald-400" title={getTotalPaidTooltip(c.detalle_pagos?.todos)}>{formatCurrency(c.total_pagado)}</td>
+                                                <td className="p-4 text-right text-slate-400 font-semibold" title={getDebtTooltip(c.total_a_pagar, c.total_pagado, c.deuda, c.programa)}>{formatCurrency(c.total_a_pagar)}</td>
+                                                <td className="p-4 text-right font-black text-rose-400" title={getDebtTooltip(c.total_a_pagar, c.total_pagado, c.deuda, c.programa)}>{formatCurrency(c.deuda)}</td>
+                                                <td className="p-4 text-center" title={`Estado de Follow Up: ${c.follow_up_status}`}>
                                                     <div className="relative inline-flex items-center justify-center w-full">
                                                         {updatingStatus === cKey ? (
                                                             <Loader2 className="animate-spin text-violet-500" size={16} />
