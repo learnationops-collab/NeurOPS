@@ -750,10 +750,12 @@ const PublicSetterStatsPage = () => {
 
                                 {/* SECCIÓN: ANÁLISIS PROFUNDO DEL EMBUDO Y PÉRDIDAS */}
                                 <MetricSection title="Análisis del Embudo y Conversión" icon={TrendingUp}>
-                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                                    <div className="flex flex-col gap-8">
+                                        {/* FILA 1: MATRIZ DE PERDIDA Y GRAFICO DEL EMBUDO */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
                                         
                                         {/* COLUMNA 1: TABLA DE PÉRDIDA DE PASOS DEL EMBUDO (Ancha) */}
-                                        <div className="lg:col-span-5 bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left relative overflow-hidden">
+                                        <div className="bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left relative overflow-hidden">
                                             <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
                                                 <ListChecks size={16} className="text-indigo-400" />
                                                 <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Matriz de Pérdida de Pasos</h4>
@@ -845,9 +847,23 @@ const PublicSetterStatsPage = () => {
                                                 </table>
                                             </div>
                                         </div>
- 
-                                        {/* COLUMNA 2: MATRIZ DE TENACIDAD DE SEGUIMIENTO (Delgada) */}
-                                        <div className="lg:col-span-4 bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left">
+
+                                        {/* GRÁFICO DEL EMBUDO */}
+                                        <div className="bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left">
+                                            <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
+                                                <PieChart size={16} className="text-indigo-400" />
+                                                <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Gráfico del Embudo</h4>
+                                            </div>
+                                            <div className="flex-1 flex flex-col items-center justify-center min-h-[300px]">
+                                                <FunnelChart data={funnelData} />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* FILA 2: MATRIZ DE TENACIDAD Y APERTURAS POR ETAPA */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch mt-8">
+                                        {/* MATRIZ DE TENACIDAD EN SEGUIMIENTO */}
+                                        <div className="bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left">
                                             <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
                                                 <RefreshCw size={16} className="text-indigo-400 animate-spin-slow" />
                                                 <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Matriz de Tenacidad en Seguimiento</h4>
@@ -917,8 +933,11 @@ const PublicSetterStatsPage = () => {
                                                 })}
                                             </div>
 
-                                            {/* Aperturas por Etapa (Openings por Etapa) */}
-                                            <div className="flex items-center gap-2 border-b border-slate-800 pb-4 mt-8">
+                                            </div>
+
+                                        {/* APERTURAS POR ETAPA */}
+                                        <div className="bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left">
+                                            <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
                                                 <RefreshCw size={16} className="text-teal-400 animate-spin-slow" />
                                                 <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Aperturas por Etapa</h4>
                                             </div>
@@ -964,19 +983,8 @@ const PublicSetterStatsPage = () => {
                                                 })}
                                             </div>
                                         </div>
- 
-                                        {/* COLUMNA 3: VISUALIZACIÓN GRÁFICA DEL EMBUDO */}
-                                        <div className="lg:col-span-3 bg-slate-950/50 rounded-3xl p-6 border border-slate-800 flex flex-col gap-6 text-left">
-                                            <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
-                                                <PieChart size={16} className="text-indigo-400" />
-                                                <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest">Gráfico del Embudo</h4>
-                                            </div>
-                                            <div className="flex-1 flex flex-col items-center justify-center min-h-[300px]">
-                                                <FunnelChart data={funnelData} />
-                                            </div>
-                                        </div>
-
                                     </div>
+                                </div>
 
 
                                     {/* SECCIÓN: HISTÓRICO DENTRO DE FUNNEL */}
