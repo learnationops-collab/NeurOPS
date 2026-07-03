@@ -965,8 +965,8 @@ const PublicSetterStatsPage = () => {
                                     </div>
                                 </MetricSection>
 
-                                {/* TABLA DE RENDIMIENTO POR SETTER (Solo en vista equipo) */}
-                                {!filters.setter_id && stats.setters_breakdown && stats.setters_breakdown.length > 0 && (
+                                {/* TABLA DE RENDIMIENTO POR SETTER */}
+                                {stats.setters_breakdown && stats.setters_breakdown.length > 0 && (
                                     <SetterPerformanceTable data={stats.setters_breakdown} />
                                 )}
                             </>
