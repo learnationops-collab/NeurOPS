@@ -7,6 +7,10 @@
       - Se renumeraron y desplazaron los pasos restantes de forma lógica a un total de 7 etapas.
       - Se adaptó el objeto `calculations` y se actualizó la explicación en los tooltips paso a paso.
       - Se modificó la descripción del tooltip en la tarjeta KPI de Eficacia a Cita para indicar la fórmula correcta `(Agendas / Cualificación) * 100`, unificando criterios y solucionando la discordancia con el reporte individual diario.
+    - **API del Backend ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/setter.py) [MODIFY])**:
+      - Se modificó `_prepare_setter_report_data` para calcular `qual` (usado para tasas y KPIs del reporte individual diario) en base a `inbox_leads` (leads cualificados reales: `funnel_qualification - not_lead`) en lugar de `funnel_qualification`.
+      - Esto alinea la **Tasa de Cualificación** (tarjeta 3) para calcularse como `leads / entrantes` (37% en lugar del 75%) y la **Conversión por Cualificado** (tarjeta 4) sobre leads reales, unificando criterios con el dashboard.
+      - Se actualizaron las medias de 7 y 10 días, y las comparaciones de periodos anteriores.
   - **Módulo de Clientes Nuevos y Seguimiento de Pagos (Follow Up)**:
     - **Modelo de Base de Datos ([client.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/client.py) [MODIFY])**:
       - Se añadió la columna `follow_up_status` para registrar y persistir el estado del cliente en el proceso de venta.
