@@ -351,34 +351,35 @@ def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
         "setters_breakdown": []
     }
 
-    # Breakdown by setter (only if team view)
-    if not setter_id:
-        breakdown_query = db.session.query(
-            User.username.label('setter_name'),
-            func.sum(SetterDailyStats.inbox_entrantes).label('entrantes'),
-            func.count(SetterDailyStats.id).label('reports_count')
-        ).join(User, SetterDailyStats.setter_id == User.id)
+    # Breakdown by setter
+    breakdown_query = db.session.query(
+        User.username.label('setter_name'),
+        func.sum(SetterDailyStats.inbox_entrantes).label('entrantes'),
+        func.count(SetterDailyStats.id).label('reports_count')
+    ).join(User, SetterDailyStats.setter_id == User.id)
 
-        if start_date_str:
-            breakdown_query = breakdown_query.filter(SetterDailyStats.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
-        if end_date_str:
-            breakdown_query = breakdown_query.filter(SetterDailyStats.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+    if start_date_str:
+        breakdown_query = breakdown_query.filter(SetterDailyStats.date >= datetime.strptime(start_date_str, '%Y-%m-%d').date())
+    if end_date_str:
+        breakdown_query = breakdown_query.filter(SetterDailyStats.date <= datetime.strptime(end_date_str, '%Y-%m-%d').date())
+    if setter_id:
+        breakdown_query = breakdown_query.filter(SetterDailyStats.setter_id == setter_id)
 
-        breakdown_query = breakdown_query.group_by(User.id)
-        
-        total_period_days = days_count
-        if start_date_str and end_date_str:
-            s_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            e_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            total_period_days = (e_date - s_date).days + 1
-        
-        for row in breakdown_query.all():
-            res["setters_breakdown"].append({
-                "setter_name": row.setter_name,
-                "entrantes": int(row.entrantes or 0),
-                "reports_count": row.reports_count,
-                "report_rate": round((row.reports_count / total_period_days) * 100, 2) if total_period_days > 0 else 0
-            })
+    breakdown_query = breakdown_query.group_by(User.id)
+    
+    total_period_days = days_count
+    if start_date_str and end_date_str:
+        s_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        e_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        total_period_days = (e_date - s_date).days + 1
+    
+    for row in breakdown_query.all():
+        res["setters_breakdown"].append({
+            "setter_name": row.setter_name,
+            "entrantes": int(row.entrantes or 0),
+            "reports_count": row.reports_count,
+            "report_rate": round((row.reports_count / total_period_days) * 100, 2) if total_period_days > 0 else 0
+        })
 
     # Time Series Data (Daily Evolution)
     time_series_query = db.session.query(
