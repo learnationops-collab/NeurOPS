@@ -1,6 +1,12 @@
 # Bitácora - Julio 2026
 
 - **3 de Julio de 2026**:
+  - **Alineación de Tasas de Setting y Embudo a 7 Etapas**:
+    - **Frontend React ([PublicSetterStatsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicSetterStatsPage.jsx) [MODIFY])**:
+      - Se reestructuró la Matriz de Pérdida de Pasos del embudo de setting para separar los prospectos ingresados a la etapa de cualificación (**2. Cualificación**, valor `funnel_qualification`) de los leads que la superaron con éxito (**3. Cualificados**, valor `leads`).
+      - Se renumeraron y desplazaron los pasos restantes de forma lógica a un total de 7 etapas.
+      - Se adaptó el objeto `calculations` y se actualizó la explicación en los tooltips paso a paso.
+      - Se modificó la descripción del tooltip en la tarjeta KPI de Eficacia a Cita para indicar la fórmula correcta `(Agendas / Cualificación) * 100`, unificando criterios y solucionando la discordancia con el reporte individual diario.
   - **Módulo de Clientes Nuevos y Seguimiento de Pagos (Follow Up)**:
     - **Modelo de Base de Datos ([client.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/client.py) [MODIFY])**:
       - Se añadió la columna `follow_up_status` para registrar y persistir el estado del cliente en el proceso de venta.
