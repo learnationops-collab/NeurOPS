@@ -436,10 +436,10 @@ const NewClientsTab = () => {
                         No se encontraron clientes para el periodo y filtros indicados.
                     </div>
                 ) : (
-                    <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/10">
+                    <div className="overflow-auto max-h-[650px] rounded-2xl border border-slate-800 bg-slate-900/10 custom-scrollbar">
                         <table className="w-full text-left border-collapse min-w-[1200px]">
-                            <thead>
-                                <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-400 bg-slate-900/40">
+                            <thead className="sticky top-0 z-10 bg-slate-900 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                                <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-400 bg-slate-900">
                                     <th className="p-4 font-semibold text-center w-28">Fecha Inicio</th>
                                     <th className="p-4 font-semibold">Cliente</th>
                                     <th className="p-4 font-semibold text-center">Programa</th>
