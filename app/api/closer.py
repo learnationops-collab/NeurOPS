@@ -1190,7 +1190,10 @@ def process_closer_card(appt_id):
     if 'closer_notes' in data:
         appt.closer_notes = data['closer_notes']
     if 'result' in data:
-        appt.closer_result = data['result']
+        res_val = data['result']
+        if res_val == 'Asistió':
+            res_val = 'Show up'
+        appt.closer_result = res_val
         
     if 'with_decision_maker' in data:
         if data['with_decision_maker'] is None or data['with_decision_maker'] == '':

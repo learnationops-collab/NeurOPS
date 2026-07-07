@@ -78,7 +78,9 @@ const CloserDeckPage = () => {
             setKeyword(activeCard.keyword || '');
             setLinkedCall(activeCard.linked_call || '');
             setCloserNotes(activeCard.closer_notes || '');
-            setResult(activeCard.result || 'Pendiente');
+            let closerRes = activeCard.closer_result || 'Pendiente';
+            if (closerRes === 'Show up') closerRes = 'Asistió';
+            setResult(closerRes);
         }
     }, [cards, currentIndex]);
 
@@ -296,12 +298,15 @@ const CloserDeckPage = () => {
                                                 
                                                 {/* Cabecera de la carta */}
                                                 <div className="space-y-4">
-                                                    <div className="flex justify-between items-start gap-4">
+                                                    <div className="flex justify-between items-start gap-4 flex-wrap">
                                                         <span className="text-[10px] font-black uppercase bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-xl tracking-widest flex items-center gap-1.5">
                                                             <Clock size={12} />
                                                             {formatTime(activeCard.start_time)}
                                                         </span>
-                                                        <span className="text-[10px] font-black uppercase bg-white/5 border border-white/10 text-slate-400 px-3 py-1.5 rounded-xl tracking-widest flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-black uppercase bg-teal-500/10 border border-teal-500/20 text-teal-400 px-3 py-1.5 rounded-xl tracking-widest flex items-center gap-1.5">
+                                                            Confirmer: {activeCard.result || 'Pendiente'}
+                                                        </span>
+                                                        <span className="text-[10px] font-black uppercase bg-white/5 border border-white/10 text-slate-400 px-3 py-1.5 rounded-xl tracking-widest flex items-center gap-1.5 ml-auto">
                                                             <Tag size={12} />
                                                             {activeCard.origin || 'Sin Origen'}
                                                         </span>
