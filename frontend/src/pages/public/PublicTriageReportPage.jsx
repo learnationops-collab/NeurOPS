@@ -49,7 +49,7 @@ const PublicTriageReportPage = () => {
 
     const initialFormData = {
         triage_name: 'Kerwin', // Default or from context if available
-        date: new Date().toISOString().split('T')[0],
+        date: '',
         
         // Starting Process
         starting_1st_call_agendas: '', starting_1st_call_confirmando: '', starting_1st_call_reprogramando: '', starting_1st_call_confirmadas: '', starting_1st_call_canceladas: '',
@@ -76,6 +76,12 @@ const PublicTriageReportPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.date) {
+            alert("Por favor, selecciona la fecha del informe.");
+            return;
+        }
+
         setSubmitting(true);
         try {
             await api.post('/triage/tracker', formData);
@@ -142,6 +148,7 @@ const PublicTriageReportPage = () => {
                             <Calendar className="text-indigo-500" size={20} />
                             <input
                                 type="date"
+                                required
                                 className="bg-transparent border-none outline-none font-bold text-slate-700 cursor-pointer"
                                 value={formData.date}
                                 onChange={e => setFormData({ ...formData, date: e.target.value })}

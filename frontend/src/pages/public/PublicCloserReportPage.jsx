@@ -78,7 +78,7 @@ const PublicCloserReportPage = () => {
 
     const initialFormData = {
         closer_id: '',
-        date: new Date().toISOString().split('T')[0],
+        date: '',
 
         // Generales
         slots: '',
@@ -240,6 +240,11 @@ const PublicCloserReportPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.date) {
+            alert("Por favor, selecciona la fecha del informe.");
+            return;
+        }
 
         if (!formData.closer_id) {
             alert("Por favor, selecciona quién eres.");

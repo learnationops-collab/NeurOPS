@@ -50,7 +50,7 @@ const PublicSetterReportPage = () => {
 
     const [formData, setFormData] = useState({
         setter_id: '',
-        date: new Date().toISOString().split('T')[0],
+        date: '',
 
         // INBOX
         inbox_entrantes: '',
@@ -129,6 +129,11 @@ const PublicSetterReportPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.date) {
+            alert("Por favor, selecciona la fecha del informe.");
+            return;
+        }
 
         if (!formData.setter_id) {
             alert("Por favor, selecciona quién eres.");
@@ -316,6 +321,7 @@ const PublicSetterReportPage = () => {
                             <Calendar className="text-indigo-400" size={20} />
                             <input
                                 type="date"
+                                required
                                 className="bg-transparent border-none outline-none font-bold text-slate-200 cursor-pointer"
                                 value={formData.date}
                                 onChange={e => setFormData({ ...formData, date: e.target.value })}

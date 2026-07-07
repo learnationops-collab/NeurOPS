@@ -48,7 +48,7 @@ const CloserNewSalePage = () => {
         documento_identidad: '',
         enviar_mensaje: true,
         sold_in_call: true,
-        date: new Date().toISOString().split('T')[0]
+        date: ''
     });
 
     useEffect(() => {

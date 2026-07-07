@@ -245,6 +245,12 @@ def update_public_triage_report(report_id):
     data = request.get_json() or {}
 
     try:
+        if 'date' in data and data['date']:
+            try:
+                report.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({"message": "Formato de fecha inválido. Debe ser YYYY-MM-DD"}), 400
+
         report.agendas_nuevas = int(data.get('agendas_nuevas') or report.agendas_nuevas)
         report.agendas_confirmadas = int(data.get('agendas_confirmadas') or report.agendas_confirmadas)
         report.no_contestan = int(data.get('no_contestan') or report.no_contestan)

@@ -528,6 +528,12 @@ def update_public_closer_report(report_id):
         except (ValueError, TypeError): return current
     
     try:
+        if 'date' in data and data['date']:
+            try:
+                stat.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({"message": "Formato de fecha inválido. Debe ser YYYY-MM-DD"}), 400
+                
         stat.slots = get_int('slots', stat.slots)
         stat.offers_made = get_int('offers_made', stat.offers_made)
         

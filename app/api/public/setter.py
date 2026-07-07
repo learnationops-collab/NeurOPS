@@ -544,6 +544,12 @@ def update_public_setter_report(report_id):
     data = request.get_json() or {}
     
     try:
+        if 'date' in data and data['date']:
+            try:
+                stat.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({"message": "Formato de fecha inválido. Debe ser YYYY-MM-DD"}), 400
+
         stat.inbox_entrantes = int(data.get('entrantes') or stat.inbox_entrantes)
         stat.not_lead = int(data.get('not_lead') or stat.not_lead)
         stat.inbox_inabribles = int(data.get('inabribles') or stat.inbox_inabribles)
