@@ -775,6 +775,15 @@ class CloserService:
         role = data.get('role') # 'closer' o 'setter' / 'call_confirmer'
         note = data.get('note') # Razón guardada en Lead Roadmap
 
+        formatted_reschedule = reschedule_date
+        if reschedule_date:
+            try:
+                from datetime import datetime as dt_class
+                dt_obj = dt_class.fromisoformat(reschedule_date.replace('Z', ''))
+                formatted_reschedule = dt_obj.strftime('%d/%m/%Y %H:%M')
+            except Exception:
+                pass
+
         # Actualizar etapa del lead si se proporciona
         if last_stage:
             appt.last_stage = last_stage
@@ -818,7 +827,7 @@ class CloserService:
                 if not reschedule_date:
                     raise Exception("Fecha de reagenda requerida")
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {reschedule_date}")
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}")
                     db.session.add(comment)
                 
                 # Delete GCal
@@ -849,7 +858,7 @@ class CloserService:
                 if not reschedule_date:
                     raise Exception("Fecha de segunda agenda requerida")
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"2da Call agendada por {user_display}. Razón: {note}. Programada para {reschedule_date}")
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"2da Call agendada por {user_display}. Razón: {note}. Programada para {formatted_reschedule}")
                     db.session.add(comment)
 
                 # Intentar actualizar estado de FinancialAgenda actual a Follow Up
@@ -921,7 +930,7 @@ class CloserService:
                 if not reschedule_date:
                     raise Exception("Fecha de reagenda requerida")
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {reschedule_date}")
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}")
                     db.session.add(comment)
 
                 # Delete GCal
