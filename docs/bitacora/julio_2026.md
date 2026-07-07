@@ -53,6 +53,14 @@
   - **Visualización de Correo de Cliente en el Registro de Ventas**:
     - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
       - Se modificó la celda del nombre del cliente en la tabla de ventas para mostrar el correo electrónico (`sale.mail_cliente`) inmediatamente debajo de su nombre. Se usó un estilo reducido (`text-[10px]`) en color gris (`text-slate-400`) y con la clase `select-all` habilitada para facilitar su copiado rápido.
+  - **Desactivación de Ventas en Nómina Administrativa**:
+    - **Modelo de Base de Datos ([financial.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY])**:
+      - Se agregó la columna booleana `is_excluded_from_payroll` (por defecto `False`) a la tabla `financial_sales` y se expuso en el diccionario retornado por `to_dict()`.
+    - **Controlador Backend ([financial_sales.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_sales.py) [MODIFY])**:
+      - Se modificó `get_financial_sales_payroll` para que las ventas con `is_excluded_from_payroll` igual a `True` aparezcan en la lista de transacciones para auditoría, pero no se sumen a las comisiones acumuladas, recaudación neta, ni conteo total de ventas.
+      - Se creó el endpoint `POST /public/financial-sales/<id>/toggle-payroll-exclusion` (actualizado con `silent=True` en `request.get_json()` para tolerar solicitudes vacías sin arrojar error HTTP 400 Bad Request) para alternar la exclusión de una venta en tiempo real.
+    - **Interfaz Frontend ([AdminPayrollPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/AdminPayrollPage.jsx) [MODIFY])**:
+      - Se agregó la columna "Nómina" (oculta al imprimir) con checkboxes interactivos (configurados para enviar un cuerpo vacío `{}` al backend en su llamada Axios por robustez de solicitudes). Al desactivar una venta, se actualiza el backend, se recargan las comisiones de inmediato y la fila de la venta toma un estilo opaco y tachado en color rosa para auditoría visual.
 
 
 - **6 de Julio de 2026**:

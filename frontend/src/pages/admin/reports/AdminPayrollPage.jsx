@@ -142,6 +142,17 @@ const AdminPayrollPage = () => {
         }
     };
 
+    const handleToggleExclusion = async (saleId) => {
+        try {
+            await api.post(`/public/financial-sales/${saleId}/toggle-payroll-exclusion`, {});
+            await fetchPayroll();
+            toast.success('Estado de nómina actualizado');
+        } catch (error) {
+            toast.error('Error al actualizar exclusión de nómina');
+            console.error(error);
+        }
+    };
+
     useEffect(() => {
         fetchPayroll();
     }, [startDate, endDate]);
@@ -439,6 +450,7 @@ const AdminPayrollPage = () => {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-500">
+                                        <th className="p-4 font-semibold text-center print:hidden">Nómina</th>
                                         <th className="p-4 font-semibold">Fecha</th>
                                         <th className="p-4 font-semibold">Cliente</th>
                                         <th className="p-4 font-semibold">Programa</th>
@@ -453,13 +465,27 @@ const AdminPayrollPage = () => {
                                     {payroll[activeTab].sales.map((sale) => {
                                         const rate = payroll[activeTab].porcentaje_comision;
                                         const comisionVal = (sale.monto_neto * rate) / 100;
+                                        const isExcluded = sale.is_excluded_from_payroll;
                                         
                                         return (
-                                            <tr key={sale.id} className="hover:bg-slate-800/20 transition-colors">
+                                            <tr 
+                                                key={sale.id} 
+                                                className={`hover:bg-slate-800/20 transition-colors ${
+                                                    isExcluded ? 'opacity-35 line-through decoration-rose-500/50 text-slate-500' : ''
+                                                }`}
+                                            >
+                                                <td className="p-4 text-center print:hidden">
+                                                    <input 
+                                                        type="checkbox"
+                                                        checked={!isExcluded}
+                                                        onChange={() => handleToggleExclusion(sale.id)}
+                                                        className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-indigo-500/40 focus:ring-offset-slate-950 cursor-pointer"
+                                                    />
+                                                </td>
                                                 <td className="p-4 whitespace-nowrap">
                                                     {formatSaleDate(sale.date)}
                                                 </td>
-                                                <td className="p-4 font-bold text-white">
+                                                <td className={`p-4 font-bold ${isExcluded ? 'text-slate-500' : 'text-white'}`}>
                                                     {sale.nombre_cliente}
                                                 </td>
                                                 <td className="p-4 text-xs font-semibold">
@@ -482,7 +508,7 @@ const AdminPayrollPage = () => {
 
                                     {payroll[activeTab].sales.length === 0 && (
                                         <tr>
-                                            <td colSpan={selectedUserFilter === 'all' ? 6 : 5} className="p-12 text-center text-slate-500 italic">
+                                            <td colSpan={selectedUserFilter === 'all' ? 7 : 6} className="p-12 text-center text-slate-500 italic">
                                                 No se encontraron ventas calificadas en este rango de fecha.
                                             </td>
                                         </tr>

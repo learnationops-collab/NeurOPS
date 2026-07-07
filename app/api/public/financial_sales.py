@@ -788,23 +788,27 @@ def get_financial_sales_payroll():
             "metodo_pago": s.metodo_pago,
             "tipo_pago": s.tipo_pago,
             "closer": final_closer,
-            "setter": final_setter
+            "setter": final_setter,
+            "is_excluded_from_payroll": s.is_excluded_from_payroll or False
         }
         
         if final_setter.lower() == 'elias':
             elias_sales.append(sale_data)
-            elias_recaudado += monto_ajustado
+            if not sale_data["is_excluded_from_payroll"]:
+                elias_recaudado += monto_ajustado
             
         if final_closer.lower() == 'jean carlo':
             jeancarlo_sales.append(sale_data)
-            jeancarlo_recaudado += monto_ajustado
+            if not sale_data["is_excluded_from_payroll"]:
+                jeancarlo_recaudado += monto_ajustado
             
             # Marlon cobra el 5% del cash collect de Jean Carlo sin renovaciones
             prog, simple_tp = split_tipo_pago(s.tipo_pago)
             is_renovacion = simple_tp and ("renovacion" in simple_tp.lower() or "renovación" in simple_tp.lower())
             if not is_renovacion:
                 marlon_sales.append(sale_data)
-                marlon_recaudado += monto_ajustado
+                if not sale_data["is_excluded_from_payroll"]:
+                    marlon_recaudado += monto_ajustado
                 
     elias_comision = elias_recaudado * 0.08
     jeancarlo_comision = jeancarlo_recaudado * 0.10
@@ -816,21 +820,21 @@ def get_financial_sales_payroll():
             "total_recaudado_neto": round(elias_recaudado, 2),
             "porcentaje_comision": 8.0,
             "comision_total": round(elias_comision, 2),
-            "total_ventas": len(elias_sales)
+            "total_ventas": len([x for x in elias_sales if not x["is_excluded_from_payroll"]])
         },
         "jeancarlo": {
             "sales": jeancarlo_sales,
             "total_recaudado_neto": round(jeancarlo_recaudado, 2),
             "porcentaje_comision": 10.0,
             "comision_total": round(jeancarlo_comision, 2),
-            "total_ventas": len(jeancarlo_sales)
+            "total_ventas": len([x for x in jeancarlo_sales if not x["is_excluded_from_payroll"]])
         },
         "marlon": {
             "sales": marlon_sales,
             "total_recaudado_neto": round(marlon_recaudado, 2),
             "porcentaje_comision": 5.0,
             "comision_total": round(marlon_comision, 2),
-            "total_ventas": len(marlon_sales)
+            "total_ventas": len([x for x in marlon_sales if not x["is_excluded_from_payroll"]])
         }
     }), 200
 
@@ -961,5 +965,24 @@ def bulk_update_financial_sales():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion', methods=['POST'])
+def toggle_payroll_exclusion(sale_id):
+    # Alterna la exclusion de una venta para la nomina
+    sale = FinancialSale.query.get_or_404(sale_id)
+    data = request.get_json(silent=True) or {}
+    
+    if 'exclude' in data:
+        sale.is_excluded_from_payroll = bool(data['exclude'])
+    else:
+        sale.is_excluded_from_payroll = not (sale.is_excluded_from_payroll or False)
+        
+    db.session.commit()
+    return jsonify({
+        "message": "Exclusion de nomina actualizada con exito",
+        "sale_id": sale.id,
+        "is_excluded_from_payroll": sale.is_excluded_from_payroll
+    }), 200
 
 
