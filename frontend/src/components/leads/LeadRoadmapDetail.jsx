@@ -7,8 +7,14 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EditLeadModal } from './LeadRoadmapModals';
+import { useAuth } from '../../contexts/AuthContext';
 
 const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate, availableKeywords = [], userRole, appointmentId, compact = false }) => {
+    const { user } = useAuth();
+    const isConfirmer = user?.role === 'triage';
+    const isSetter = user?.role === 'setter';
+    const isAdminOrCloser = user?.role === 'admin' || user?.role === 'closer';
+    
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -708,161 +714,53 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
 
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dolores del Prospecto</label>
-                        
-                        <div className="flex flex-wrap gap-1 mb-1.5">
-                            {dolores.split(',').map(d => d.trim()).filter(Boolean).map((tag, idx) => (
-                                <span
-                                    key={idx}
-                                    className="text-[9px] font-bold bg-violet-650/20 text-violet-300 border border-violet-500/30 px-2 py-1 rounded-md flex items-center gap-1"
-                                >
-                                    {tag}
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleDolorTag(tag)}
-                                        className="text-violet-400 hover:text-rose-450 transition-colors ml-0.5 font-black text-xs"
-                                    >
-                                        ×
-                                    </button>
-                                </span>
-                            ))}
-                        </div>
-
-                        <div className="flex gap-1 mb-2">
-                            <input
-                                type="text"
-                                placeholder="Agregar dolor manualmente..."
-                                value={newDolorInput}
-                                onChange={(e) => setNewDolorInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        addManualDolor();
-                                    }
-                                }}
-                                className="flex-1 px-3 py-1.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold"
-                            />
-                            <button
-                                type="button"
-                                onClick={addManualDolor}
-                                className="px-3 bg-slate-950/80 hover:bg-slate-900 border border-transparent text-white rounded-xl text-xs font-black transition-colors"
-                            >
-                                +
-                            </button>
-                        </div>
-
-                        {frequentDolores.length > 0 && (
-                            <div className="space-y-1 mb-2">
-                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Frecuentes:</span>
-                                <div className="flex flex-wrap gap-1">
-                                    {frequentDolores
-                                        .filter(tag => !dolores.split(',').map(d => d.trim().toLowerCase()).includes(tag.toLowerCase()))
-                                        .map((tag) => (
-                                            <button
-                                                key={tag}
-                                                type="button"
-                                                onClick={() => toggleDolorTag(tag)}
-                                                className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-slate-900/50 hover:bg-slate-800 text-slate-400 border border-transparent hover:text-white transition-all"
-                                            >
-                                                {tag}
-                                            </button>
-                                        ))}
-                                </div>
+                        {isConfirmer ? (
+                            <div className="px-3.5 py-2.5 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-slate-405 font-bold whitespace-pre-wrap min-h-[3.5rem] text-left">
+                                {dolores || "Sin dolores registrados por el setter"}
                             </div>
+                        ) : (
+                            <textarea
+                                className="w-full h-20 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-605 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
+                                placeholder="Ingresa los dolores del prospecto..."
+                                value={dolores}
+                                onChange={(e) => setDolores(e.target.value)}
+                            />
                         )}
-
-                        <textarea
-                            className="w-full h-16 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
-                            placeholder="Notas de dolor del lead (separadas por comas)..."
-                            value={dolores}
-                            onChange={(e) => setDolores(e.target.value)}
-                        />
                     </div>
 
-                    {userRole !== 'setter' && (
-                        <>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Call Confirmer</label>
-                                <textarea
-                                    className="w-full h-20 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
-                                    placeholder="Notas de call confirmer, facturación, socio, etc..."
-                                    value={observaciones}
-                                    onChange={(e) => setObservaciones(e.target.value)}
-                                />
+                    {/* OBJECIONES */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objeciones</label>
+                        {isConfirmer ? (
+                            <div className="px-3.5 py-2.5 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-slate-405 font-bold whitespace-pre-wrap min-h-[3.5rem] text-left">
+                                {objeciones || "Sin objeciones registradas por el setter"}
                             </div>
+                        ) : (
+                            <textarea
+                                className="w-full h-20 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
+                                placeholder="Ingresa las objeciones del prospecto..."
+                                value={objeciones}
+                                onChange={(e) => setObjeciones(e.target.value)}
+                            />
+                        )}
+                    </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Objeciones</label>
-                                
-                                <div className="flex flex-wrap gap-1 mb-1.5">
-                                    {objeciones.split(',').map(o => o.trim()).filter(Boolean).map((tag, idx) => (
-                                        <span
-                                            key={idx}
-                                            className="text-[9px] font-bold bg-violet-655/20 text-violet-300 border border-violet-500/30 px-2 py-1 rounded-md flex items-center gap-1"
-                                        >
-                                            {tag}
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleObjectionTag(tag)}
-                                                className="text-violet-400 hover:text-rose-450 transition-colors ml-0.5 font-black text-xs"
-                                            >
-                                                ×
-                                            </button>
-                                        </span>
-                                    ))}
-                                </div>
-
-                                <div className="flex gap-1 mb-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Agregar objeción manualmente..."
-                                        value={newObjectionInput}
-                                        onChange={(e) => setNewObjectionInput(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                addManualObjection();
-                                            }
-                                        }}
-                                        className="flex-1 px-3 py-1.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={addManualObjection}
-                                        className="px-3 bg-slate-950/80 hover:bg-slate-900 border border-transparent text-white rounded-xl text-xs font-black transition-colors"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-
-                                {frequentObjections.length > 0 && (
-                                    <div className="space-y-1 mb-2">
-                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Frecuentes:</span>
-                                        <div className="flex flex-wrap gap-1">
-                                            {frequentObjections
-                                                .filter(tag => !objeciones.split(',').map(o => o.trim().toLowerCase()).includes(tag.toLowerCase()))
-                                                .map((tag) => (
-                                                    <button
-                                                        key={tag}
-                                                        type="button"
-                                                        onClick={() => toggleObjectionTag(tag)}
-                                                        className="text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-slate-900/50 hover:bg-slate-800 text-slate-400 border border-transparent hover:text-white transition-all"
-                                                    >
-                                                        {tag}
-                                                    </button>
-                                                ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                <textarea
-                                    className="w-full h-16 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
-                                    placeholder="Notas de objeción (separadas por comas)..."
-                                    value={objeciones}
-                                    onChange={(e) => setObjeciones(e.target.value)}
-                                />
+                    {/* OBSERVACIONES */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Call Confirmer</label>
+                        {isConfirmer || isAdminOrCloser ? (
+                            <textarea
+                                className="w-full h-24 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
+                                placeholder="Notas de call confirmer, facturación, socio, etc..."
+                                value={observaciones}
+                                onChange={(e) => setObservaciones(e.target.value)}
+                            />
+                        ) : (
+                            <div className="px-3.5 py-2.5 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-slate-405 font-bold whitespace-pre-wrap min-h-[3.5rem] text-left">
+                                {observaciones || "Sin observaciones del call confirmer"}
                             </div>
-                        </>
-                    )}
+                        )}
+                    </div>
 
                     <button
                         type="button"

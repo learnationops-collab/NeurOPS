@@ -1,5 +1,16 @@
 # Bitácora - Julio 2026
 
+- **7 de Julio de 2026**:
+  - **Simplificación y Restricción del Lead Roadmap por Roles**:
+    - **Frontend React ([LeadRoadmapDetail.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/LeadRoadmapDetail.jsx) [MODIFY])**:
+      - Se eliminaron por completo las "etiquetas rápidas" de dolores y objeciones frecuentes y las opciones/botones para agregarlas manualmente de la sección "Calificación en Caliente".
+      - Se importó `useAuth` y se obtuvieron las variables de rol para el usuario autenticado.
+      - Se restringió la edición de campos de calificación caliente según la jerarquía de roles:
+        - El Call Confirmer (`triage`) solo visualiza dolores y objeciones en modo lectura (texto destacado estático) e ingresa observaciones en modo escritura editable.
+        - El Setter edita dolores y objeciones libremente (textareas directos) y visualiza observaciones en modo lectura.
+        - El Admin y Closer pueden editar dolores, objeciones y observaciones libremente.
+      - Se optimizó y liberó espacio visual para simplificar la navegación en el Lead Roadmap.
+
 - **6 de Julio de 2026**:
   - **Separación de Estados de las Agendas (Call Confirmer vs. Closer)**:
     - **Modelo de Base de Datos ([booking.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/booking.py) [MODIFY])**:
