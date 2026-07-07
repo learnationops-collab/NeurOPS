@@ -1747,17 +1747,24 @@ const PublicFinancialSalesPage = () => {
                                                         className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
                                                     />
                                                 ) : (
-                                                    <span 
-                                                        className="font-medium text-white hover:text-indigo-400 hover:underline cursor-pointer"
-                                                        onClick={() => setSelectedRoadmapLead({ 
-                                                            instagram: sale.instagram, 
-                                                            email: sale.mail_cliente, 
-                                                            phone: sale.telefono,
-                                                            full_name: sale.nombre_cliente
-                                                        })}
-                                                    >
-                                                        {sale.nombre_cliente || 'N/A'}
-                                                    </span>
+                                                    <div className="flex flex-col">
+                                                        <span 
+                                                            className="font-medium text-white hover:text-indigo-400 hover:underline cursor-pointer"
+                                                            onClick={() => setSelectedRoadmapLead({ 
+                                                                instagram: sale.instagram, 
+                                                                email: sale.mail_cliente, 
+                                                                phone: sale.telefono,
+                                                                full_name: sale.nombre_cliente
+                                                            })}
+                                                        >
+                                                            {sale.nombre_cliente || 'N/A'}
+                                                        </span>
+                                                        {sale.mail_cliente && (
+                                                            <span className="text-[10px] text-slate-400 select-all">
+                                                                {sale.mail_cliente}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </td>
                                             

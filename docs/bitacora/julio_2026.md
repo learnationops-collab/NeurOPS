@@ -49,7 +49,10 @@
       - Se corrigieron los endpoints `PUT` de actualización de reportes diarios (`update_public_closer_report`, `update_public_setter_report`, `update_public_triage_report`) para permitir modificar el campo `date` en la base de datos si se envía en el payload JSON.
     - **Interfaz Frontend ([PublicCloserReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicCloserReportPage.jsx) [MODIFY], [PublicSetterReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicSetterReportPage.jsx) [MODIFY], [PublicTriageReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicTriageReportPage.jsx) [MODIFY], [NewSalePage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/records/NewSalePage.jsx) [MODIFY])**:
       - Se removió la precarga de la fecha de hoy por defecto, inicializando el campo `date` en vacío (`''`).
-      - Se añadieron validaciones de obligatoriedad en `handleSubmit` de todos los formularios de reporte y se añadió el atributo `required` a los inputs de fecha en el frontend para forzar que el usuario seleccione la fecha correspondiente manualmente y evitar errores involuntarios.lineado con lo que el usuario Triage visualiza en su interfaz de agendas financieras.
+      - Se añadieron validaciones de obligatoriedad en `handleSubmit` de todos los formularios de reporte y se añadió el atributo `required` a los inputs de fecha en el frontend para forzar que el usuario seleccione la fecha correspondiente manualmente y evitar errores involuntarios.
+  - **Visualización de Correo de Cliente en el Registro de Ventas**:
+    - **Interfaz Frontend ([PublicFinancialSalesPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) [MODIFY])**:
+      - Se modificó la celda del nombre del cliente en la tabla de ventas para mostrar el correo electrónico (`sale.mail_cliente`) inmediatamente debajo de su nombre. Se usó un estilo reducido (`text-[10px]`) en color gris (`text-slate-400`) y con la clase `select-all` habilitada para facilitar su copiado rápido.
 
 
 - **6 de Julio de 2026**:
