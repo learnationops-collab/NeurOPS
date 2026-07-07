@@ -758,18 +758,20 @@ class CloserService:
         return BookingService.get_available_slots_utc(start_date, end_date, preferred_closer_id=closer_id)
 
     @staticmethod
-    def process_agenda(closer_id, appt_id, data):
-        from app.models import Appointment, db
+    def process_agenda(closer_id, appt_id, data, is_admin=False):
+        from app.models import Appointment, db, ClientComment
         from app.services.booking_service import BookingService
         
         appt = Appointment.query.get_or_404(appt_id)
-        if appt.closer_id != closer_id and appt.setter_id != closer_id:
+        if not is_admin and appt.closer_id != closer_id and appt.setter_id != closer_id:
             raise Exception("No tienes permiso sobre esta agenda")
             
-        new_status = data.get('status') # Completada, Primera Agenda, Cancelada, No Show, Reprogramada
+        new_status = data.get('status')
         reschedule_date = data.get('reschedule_date') # ISO string
         last_stage = data.get('last_stage')
-        
+        role = data.get('role') # 'closer' o 'setter' / 'call_confirmer'
+        note = data.get('note') # Razón guardada en Lead Roadmap
+
         # Actualizar etapa del lead si se proporciona
         if last_stage:
             appt.last_stage = last_stage
@@ -779,177 +781,181 @@ class CloserService:
                 appt.with_decision_maker = None
             else:
                 appt.with_decision_maker = data['with_decision_maker'] == True or data['with_decision_maker'] in ('true', 'True', '1', 1)
-            
-        # Logic: 
-        # - "Completada" -> status 'completed'
-        # - "Cancelada" -> status 'canceled'
-        # - "No Show" -> status 'no_show'
-        # - "Reprogramada" -> Old appt becomes 'reprogrammed', new one created as 'Primera agenda'
-        # - "Primera Agenda" -> Old appt becomes 'completed', new one created as 'Segunda agenda'
 
-        if last_stage:
-            appt.last_stage = last_stage
+        print(f"[DEBUG] Processing Agenda {appt_id}, Role: {role}, Status: {new_status}")
 
-        print(f"[DEBUG] Processing Agenda {appt_id}, Status: {new_status}")
-        
-        # Mapeo de estado a resultado para el Kanban (filtro result == Null)
-        outcome_map = {
-            'Completada': 'Terminada',
-            'Terminada': 'Terminada',
-            'No Show': 'No Show',
-            'Cancelada': 'Cancelada',
-            'canceled': 'Cancelada',
-            'cancelled': 'Cancelada',
-            'Reprogramada': 'Reprogramada',
-            'Cerrada': 'Cerrada'
-        }
-        
-        if new_status in outcome_map:
-            appt.result = outcome_map[new_status]
+        if role == 'closer':
+            # Manejo del estado del Closer (closer_result)
+            if new_status:
+                appt.closer_result = new_status
+            
+            if new_status in ['Show up', 'Completada', 'Terminada']:
+                if new_status == 'Completada' or new_status == 'Terminada':
+                    appt.closer_result = 'Show up'
+                appt.closer_processed = True
 
-        if new_status in ['Completada', 'Terminada']:
-            pass
-        elif new_status in ['Cancelada', 'canceled', 'cancelled']:
-            # Delete from GCal
-            if appt.google_event_id:
-                print(f"[DEBUG] Attempting to delete GCal Event: {appt.google_event_id}")
-                try:
-                    from app.services.google_service import GoogleService
-                    res = GoogleService.delete_event(appt.closer_id, appt.google_event_id)
-                    print(f"[DEBUG] Delete Result: {res}")
-                except Exception as e:
-                    print(f"[DEBUG] Error deleting GCal event: {e}")
-            else:
-                 print(f"[DEBUG] No Google Event ID found for appt {appt.id}")
-        elif new_status == 'No Show':
-            pass
-        elif new_status == 'Reprogramada':
-            if not reschedule_date: raise Exception("Fecha de reagenda requerida")
-            
-            # 1. Delete old event
-            if appt.google_event_id:
-                try:
-                    from app.services.google_service import GoogleService
-                    GoogleService.delete_event(appt.closer_id, appt.google_event_id)
-                except Exception as e:
-                    print(f"Error deleting old event on reschedule: {e}")
+            elif new_status == 'No Show':
+                appt.closer_processed = True
 
-            # 2. Create new appointment
-            new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
-            new_appt = BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
-            
-            if new_appt:
-                db.session.add(new_appt) # Ensure attached
-                # 3. Create new GCal event
-                try:
-                    from app.services.google_service import GoogleService
-                    evt_id = GoogleService.create_event(new_appt.closer_id, new_appt)
-                    if evt_id:
-                        new_appt.google_event_id = evt_id
-                except Exception as e:
-                    print(f"Error syncing new rescheduled event: {e}")
+            elif new_status == 'Cancelado':
+                appt.closer_processed = True
+                if note:
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por Closer: {note}")
+                    db.session.add(comment)
+                # Delete GCal
+                if appt.google_event_id:
+                    try:
+                        from app.services.google_service import GoogleService
+                        GoogleService.delete_event(appt.closer_id, appt.google_event_id)
+                    except Exception as e:
+                        print(f"Error deleting GCal event: {e}")
 
-        elif new_status == 'Primera Agenda':
-            if not reschedule_date: raise Exception("Fecha de segunda agenda requerida")
-            
-            # Cambiar el result de la cita actual a 'Follow Up'
-            appt.result = 'Follow Up'
-            
-            # Intentar actualizar el estado de la FinancialAgenda correspondiente en la BD a 'Follow Up'
-            try:
-                from app.models.financial import FinancialAgenda
-                from sqlalchemy import or_
-                from datetime import time
-                start_of_day = datetime.combine(appt.start_time.date(), time.min)
-                end_of_day = datetime.combine(appt.start_time.date(), time.max)
+            elif new_status == 'Reagendado':
+                appt.closer_processed = True
+                if not reschedule_date:
+                    raise Exception("Fecha de reagenda requerida")
+                if note:
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por Closer. Razón: {note}. Nueva cita el {reschedule_date}")
+                    db.session.add(comment)
                 
-                client = appt.client
-                financial_agenda = None
-                filters = []
-                if client.email:
-                    filters.append(FinancialAgenda.mail == client.email)
-                if client.instagram:
-                    filters.append(FinancialAgenda.instagram == client.instagram)
-                    
-                if filters:
-                    financial_agenda = FinancialAgenda.query.filter(
-                        or_(*filters),
-                        FinancialAgenda.date >= start_of_day,
-                        FinancialAgenda.date <= end_of_day
-                    ).first()
-                    
-                if financial_agenda:
-                    financial_agenda.estado = 'Follow Up'
-            except Exception as e:
-                print(f"Error al actualizar estado de FinancialAgenda a Follow Up: {e}")
+                # Delete GCal
+                if appt.google_event_id:
+                    try:
+                        from app.services.google_service import GoogleService
+                        GoogleService.delete_event(appt.closer_id, appt.google_event_id)
+                    except Exception as e:
+                        print(f"Error deleting old GCal event: {e}")
 
-            # Create new Segunda Agenda
-            new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
-            new_appt = BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
-            
-            if new_appt:
-                new_appt.result = '2TH Call' # Etiqueta al crear la segunda agenda
-                db.session.add(new_appt) # Ensure attached
-                
-                # Intentar crear una FinancialAgenda correspondiente a esta segunda llamada
+                # Create new appointment
+                new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
+                new_appt = BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
+                if new_appt:
+                    new_appt.is_rescheduled = True
+                    db.session.add(new_appt)
+                    # Sync GCal
+                    try:
+                        from app.services.google_service import GoogleService
+                        evt_id = GoogleService.create_event(new_appt.closer_id, new_appt)
+                        if evt_id:
+                            new_appt.google_event_id = evt_id
+                    except Exception as e:
+                        print(f"Error syncing GCal event for rescheduled appointment: {e}")
+
+            elif new_status == '2da call':
+                appt.closer_processed = True
+                if not reschedule_date:
+                    raise Exception("Fecha de segunda agenda requerida")
+                if note:
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"2da Call agendada por Closer. Razón: {note}. Programada para {reschedule_date}")
+                    db.session.add(comment)
+
+                # Intentar actualizar estado de FinancialAgenda actual a Follow Up
                 try:
                     from app.models.financial import FinancialAgenda
-                    new_fa = FinancialAgenda(
-                        nombre=appt.origin or '2TH Call',
-                        lead=client.full_name,
-                        mail=client.email,
-                        instagram=client.instagram,
-                        whatsapp=client.phone,
-                        closer=appt.closer.username if appt.closer else None,
-                        estado='2TH Call',
-                        date=new_dt,
-                        fecha_meet=new_dt.isoformat()
-                    )
-                    db.session.add(new_fa)
+                    from sqlalchemy import or_
+                    from datetime import time
+                    start_of_day = datetime.combine(appt.start_time.date(), time.min)
+                    end_of_day = datetime.combine(appt.start_time.date(), time.max)
+                    client = appt.client
+                    financial_agenda = None
+                    filters = []
+                    if client.email:
+                        filters.append(FinancialAgenda.mail == client.email)
+                    if client.instagram:
+                        filters.append(FinancialAgenda.instagram == client.instagram)
+                    if filters:
+                        financial_agenda = FinancialAgenda.query.filter(
+                            or_(*filters),
+                            FinancialAgenda.date >= start_of_day,
+                            FinancialAgenda.date <= end_of_day
+                        ).first()
+                    if financial_agenda:
+                        financial_agenda.estado = 'Follow Up'
                 except Exception as e:
-                    print(f"Error al crear FinancialAgenda para la segunda llamada: {e}")
-                
-                # Create GCal Event for the SECOND APPOINTMENT
-                try:
-                    from app.services.google_service import GoogleService
-                    evt_id = GoogleService.create_event(new_appt.closer_id, new_appt)
-                    if evt_id:
-                        new_appt.google_event_id = evt_id
-                except Exception as e:
-                    print(f"Error syncing second agenda event: {e}")
+                    print(f"Error updating FinancialAgenda status to Follow Up: {e}")
 
-        elif new_status == 'No Lead':
-            # Cambiar el result de la cita actual a 'No Lead'
-            appt.result = 'No Lead'
-            
-            # Intentar actualizar el estado de la FinancialAgenda correspondiente en la BD a 'No Lead'
-            try:
-                from app.models.financial import FinancialAgenda
-                from sqlalchemy import or_
-                from datetime import time
-                start_of_day = datetime.combine(appt.start_time.date(), time.min)
-                end_of_day = datetime.combine(appt.start_time.date(), time.max)
-                
-                client = appt.client
-                financial_agenda = None
-                filters = []
-                if client.email:
-                    filters.append(FinancialAgenda.mail == client.email)
-                if client.instagram:
-                    filters.append(FinancialAgenda.instagram == client.instagram)
+                # Create new Segunda Agenda
+                new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
+                new_appt = BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
+                if new_appt:
+                    new_appt.result = '2TH Call' # Etiqueta al crear la segunda agenda
+                    new_appt.closer_result = 'Pendiente'
+                    db.session.add(new_appt)
                     
-                if filters:
-                    financial_agenda = FinancialAgenda.query.filter(
-                        or_(*filters),
-                        FinancialAgenda.date >= start_of_day,
-                        FinancialAgenda.date <= end_of_day
-                    ).first()
-                    
-                if financial_agenda:
-                    financial_agenda.estado = 'No Lead'
-            except Exception as e:
-                print(f"Error al actualizar estado de FinancialAgenda a No Lead: {e}")
-        
+                    # Intentar crear una FinancialAgenda correspondiente a esta segunda llamada
+                    try:
+                        from app.models.financial import FinancialAgenda
+                        new_fa = FinancialAgenda(
+                            nombre=appt.origin or '2TH Call',
+                            lead=client.full_name,
+                            mail=client.email,
+                            instagram=client.instagram,
+                            whatsapp=client.phone,
+                            closer=appt.closer.username if appt.closer else None,
+                            estado='2TH Call',
+                            date=new_dt,
+                            fecha_meet=new_dt.isoformat()
+                        )
+                        db.session.add(new_fa)
+                    except Exception as e:
+                        print(f"Error creating FinancialAgenda for 2TH Call: {e}")
+
+                    # Sync GCal
+                    try:
+                        from app.services.google_service import GoogleService
+                        evt_id = GoogleService.create_event(new_appt.closer_id, new_appt)
+                        if evt_id:
+                            new_appt.google_event_id = evt_id
+                    except Exception as e:
+                        print(f"Error syncing GCal event for 2nd agenda: {e}")
+
+        else:
+            # Manejo del estado del Call Confirmer (result)
+            if new_status:
+                appt.result = new_status
+
+            if new_status == 'Reagendado':
+                if not reschedule_date:
+                    raise Exception("Fecha de reagenda requerida")
+                if note:
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por Call Confirmer. Razón: {note}. Nueva cita el {reschedule_date}")
+                    db.session.add(comment)
+
+                # Delete GCal
+                if appt.google_event_id:
+                    try:
+                        from app.services.google_service import GoogleService
+                        GoogleService.delete_event(appt.closer_id, appt.google_event_id)
+                    except Exception as e:
+                        print(f"Error deleting GCal event: {e}")
+
+                # Create new appointment
+                new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
+                new_appt = BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
+                if new_appt:
+                    new_appt.is_rescheduled = True
+                    db.session.add(new_appt)
+                    # Sync GCal
+                    try:
+                        from app.services.google_service import GoogleService
+                        evt_id = GoogleService.create_event(new_appt.closer_id, new_appt)
+                        if evt_id:
+                            new_appt.google_event_id = evt_id
+                    except Exception as e:
+                        print(f"Error syncing GCal event for rescheduled appointment: {e}")
+
+            elif new_status == 'Cancelado':
+                if note:
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por Call Confirmer: {note}")
+                    db.session.add(comment)
+                # Delete GCal
+                if appt.google_event_id:
+                    try:
+                        from app.services.google_service import GoogleService
+                        GoogleService.delete_event(appt.closer_id, appt.google_event_id)
+                    except Exception as e:
+                        print(f"Error deleting GCal event: {e}")
+
         db.session.commit()
         return appt
 

@@ -245,6 +245,7 @@ const SetterAgendasPage = () => {
                 appointment={selectedAgenda}
                 onClose={() => setIsAgendaModalOpen(false)}
                 onSuccess={fetchAgendas}
+                mode="setter"
             />
         </div>
     );

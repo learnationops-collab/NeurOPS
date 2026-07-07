@@ -82,15 +82,28 @@ const CloserWorkflowPage = () => {
             return;
         }
         
-        await executeQuickAction(leadId, nextStatus, null);
+        let note = null;
+        if (nextStatus === 'Cancelada') {
+            note = window.prompt("Escribe la razón de la cancelación para el Lead Roadmap:");
+            if (note === null) return;
+            if (!note.trim()) {
+                toast.error("La razón de la cancelación es requerida");
+                return;
+            }
+        }
+        
+        await executeQuickAction(leadId, nextStatus === 'Cancelada' ? 'Cancelado' : nextStatus, null, note);
     };
 
-    const executeQuickAction = async (leadId, nextStatus, withDecisionMaker) => {
+    const executeQuickAction = async (leadId, nextStatus, withDecisionMaker, note = null) => {
         setProcessingId(leadId);
         try {
-            const payload = { status: nextStatus };
+            const payload = { status: nextStatus === 'Completada' ? 'Show up' : nextStatus, role: 'closer' };
             if (withDecisionMaker !== null && withDecisionMaker !== undefined) {
                 payload.with_decision_maker = withDecisionMaker;
+            }
+            if (note) {
+                payload.note = note;
             }
             await api.post(`/closer/appointments/${leadId}/process`, payload);
             toast.success("Agenda actualizada correctamente");
@@ -98,13 +111,13 @@ const CloserWorkflowPage = () => {
             // Actualizar lista local
             setAgendas(prev => prev.map(a => a.id === leadId ? { 
                 ...a, 
-                result: nextStatus === 'Completada' ? 'Terminada' : nextStatus,
+                closer_result: nextStatus === 'Completada' ? 'Show up' : nextStatus,
                 with_decision_maker: withDecisionMaker
             } : a));
             if (selectedLead?.id === leadId) {
                 setSelectedLead(prev => ({ 
                     ...prev, 
-                    result: nextStatus === 'Completada' ? 'Terminada' : nextStatus,
+                    closer_result: nextStatus === 'Completada' ? 'Show up' : nextStatus,
                     with_decision_maker: withDecisionMaker
                 }));
             }
@@ -371,12 +384,20 @@ const CloserWorkflowPage = () => {
                                                                 </h4>
                                                             </div>
                                                             
-                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                            <div className="flex items-center gap-2 flex-wrap mt-1">
                                                                 <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-950 border border-slate-900 px-2 py-0.5 rounded-md">
                                                                     {a.origin || 'Sheets'}
                                                                 </span>
+                                                                <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-md">
+                                                                    Confirmer: {a.result || 'Pendiente'}
+                                                                </span>
+                                                                {a.is_rescheduled && (
+                                                                    <span className="text-[8px] font-black uppercase text-pink-400 bg-pink-500/10 border border-pink-500/20 px-2 py-0.5 rounded-md">
+                                                                        Reagenda
+                                                                    </span>
+                                                                )}
                                                                 {a.instagram && (
-                                                                    <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+                                                                    <span className="text-[10px] text-slate-500 flex items-center gap-0.5 font-mono">
                                                                         @{a.instagram}
                                                                     </span>
                                                                 )}
@@ -387,13 +408,14 @@ const CloserWorkflowPage = () => {
                                                     {/* Estado actual e indicador */}
                                                     <div className="flex items-center gap-3 shrink-0">
                                                         <span className={`text-[9px] font-black px-2 py-1 rounded-xl uppercase tracking-wider ${
-                                                            a.result === 'Terminada' || a.result === 'Completada' ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20' :
-                                                            a.result === 'No Show' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
-                                                            a.result === 'Cancelada' ? 'bg-amber-500/10 text-amber-450 border border-amber-500/20' :
-                                                            a.result === 'Reprogramada' ? 'bg-violet-500/10 text-violet-450 border border-violet-500/20' :
-                                                            'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                                            a.closer_result === 'Show up' ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20' :
+                                                            a.closer_result === 'No Show' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
+                                                            a.closer_result === 'Cancelado' ? 'bg-amber-500/10 text-amber-450 border border-amber-500/20' :
+                                                            a.closer_result === 'Reagendado' ? 'bg-violet-500/10 text-violet-450 border border-violet-500/20' :
+                                                            a.closer_result === '2da call' ? 'bg-blue-500/10 text-blue-450 border border-blue-500/20' :
+                                                            'bg-slate-500/10 text-slate-450 border border-slate-500/20'
                                                         }`}>
-                                                            {a.result || 'Agendado'}
+                                                            {a.closer_result || 'Pendiente'}
                                                         </span>
                                                         <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
                                                     </div>
@@ -482,11 +504,19 @@ const CloserWorkflowPage = () => {
                                                                     toast.error("Selecciona una fecha y hora");
                                                                     return;
                                                                 }
+                                                                const note = window.prompt("Escribe la razón del cambio para el Lead Roadmap:");
+                                                                if (note === null) return;
+                                                                if (!note.trim()) {
+                                                                    toast.error("La razón del cambio es requerida");
+                                                                    return;
+                                                                }
                                                                 setProcessingId(a.id);
                                                                 try {
                                                                     await api.post(`/closer/appointments/${a.id}/process`, {
-                                                                        status: rescheduleData.status,
-                                                                        reschedule_date: rescheduleData.date
+                                                                        status: rescheduleData.status === 'Reprogramada' ? 'Reagendado' : '2da call',
+                                                                        reschedule_date: rescheduleData.date,
+                                                                        role: 'closer',
+                                                                        note: note
                                                                     });
                                                                     toast.success(rescheduleData.status === 'Reprogramada' ? "Cita reprogramada" : "Segunda llamada agendada");
                                                                     setRescheduleData({ apptId: null, date: '', status: '' });

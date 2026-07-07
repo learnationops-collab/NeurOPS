@@ -1,5 +1,31 @@
 # Bitácora - Julio 2026
 
+- **6 de Julio de 2026**:
+  - **Separación de Estados de las Agendas (Call Confirmer vs. Closer)**:
+    - **Modelo de Base de Datos ([booking.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/booking.py) [MODIFY])**:
+      - Se agregaron las columnas `closer_result` e `is_rescheduled` a la tabla `appointments` para almacenar el resultado del closer de forma independiente y saber si la cita proviene de una reagenda.
+    - **Servicio del Backend ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
+      - Se reestructuró `process_agenda` para procesar la cita según el rol del usuario (`role`).
+      - Si es `closer`: actualiza `closer_result` y soporta lógica y validaciones de notas para `Show up`, `No Show`, `Cancelado`, `Reagendado` y `2da call`.
+      - Si es `setter`: actualiza `result` y soporta lógica y notas para `Reagendado` y `Cancelado`.
+      - Para ambos roles, las reagendas, cancelaciones y segundas llamadas crean notas automáticas en el Lead Roadmap mediante la inserción de registros en `ClientComment`.
+      - Se añadió el parámetro opcional `is_admin` para omitir validaciones de propiedad si el usuario tiene rol de administrador.
+    - **APIs del Backend ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - Se adaptó la serialización de citas en `_format_appointment_for_deck`, `get_dashboard` y `get_appointment` en `closer.py` para devolver `closer_result` e `is_rescheduled`.
+      - Se modificó la serialización en `get_setter_agendas` en `setter.py` para incluir también dichos campos.
+      - Se actualizaron los endpoints `/appointments/<id>/process`, `/deck/<id>` y `/deck/bulk-update` para enviar el rol y bypass de admin al servicio de forma consistente.
+    - **Modales del Frontend ([AgendaManagerModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/AgendaManagerModal.jsx) [MODIFY])**:
+      - Se implementó el soporte del prop `mode` ('closer' | 'setter') para alternar dinámicamente las opciones y la lógica de validación de los estados según el rol del usuario.
+      - Se añadió la inicialización correcta de estados y campos de reprogramación/notas al abrir el modal.
+      - Se agregó visualmente un campo textarea para ingresar la razón obligatoria del cambio si el estado es Reagendado, Cancelado o 2da call.
+    - **Workflow del Closer ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se adaptó la renderización para mostrar el estado del closer (`closer_result`), la etiqueta del call confirmer (`result`) y si la cita es una reagenda (`is_rescheduled`).
+      - Se implementó la captura de razones mediante `window.prompt` en las acciones rápidas de cancelación y en el panel de reprogramación inline (reagendar y segunda llamada) para enviarlas al backend y guardarlas en el Lead Roadmap.
+    - **Dashboard e Integración ([CloserDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/dashboard/CloserDashboard.jsx) [MODIFY], [SetterDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/dashboard/SetterDashboard.jsx) [MODIFY], [SetterAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/agendas/SetterAgendasPage.jsx) [MODIFY])**:
+      - Se pasó el prop `mode` correspondiente a las instancias del modal `AgendaManagerModal`.
+    - **Migración de Base de Datos**:
+      - Se generó y aplicó la migración `2aaaf324fb99_add_closer_result_and_is_rescheduled_to_.py` en la base de datos local SQLite.
+
 - **3 de Julio de 2026**:
   - **Alineación de Tasas de Setting y Embudo a 7 Etapas**:
     - **Frontend React ([PublicSetterStatsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicSetterStatsPage.jsx) [MODIFY])**:

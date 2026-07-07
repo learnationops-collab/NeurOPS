@@ -26,7 +26,7 @@ import Badge from '../ui/Badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import CommentsSection from '../shared/CommentsSection';
 
-const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
+const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'closer' }) => {
     const [status, setStatus] = useState('');
     const [rescheduleDate, setRescheduleDate] = useState('');
     const [slots, setSlots] = useState([]);
@@ -35,6 +35,7 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [showStatusOptions, setShowStatusOptions] = useState(false);
+    const [note, setNote] = useState('');
 
     const [selectedStage, setSelectedStage] = useState(appointment?.last_stage || 'Nueva');
 
@@ -59,17 +60,45 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
         }
     };
 
-    const statuses = [
-        { id: 'Terminada', label: 'Terminada', icon: CheckCircle2, color: 'text-emerald-500' },
-        { id: 'No Show', label: 'No Show', icon: XCircle, color: 'text-rose-500' },
-        { id: 'Cancelada', label: 'Cancelada', icon: XCircle, color: 'text-muted' },
-        { id: 'Reprogramada', label: 'Reprogramada', icon: RefreshCw, color: 'text-primary' },
-        { id: 'Primera Agenda', label: 'Protocolo Seg. Agenda', icon: CheckCircle2, color: 'text-success' },
-        { id: 'Cerrada', label: 'Cerrada (Venta)', icon: CheckCircle2, color: 'text-violet-500' },
-    ];
+    const statuses = useMemo(() => {
+        if (mode === 'setter') {
+            const list = [
+                { id: 'Pendiente', label: 'Pendiente', icon: Clock, color: 'text-amber-500' },
+                { id: 'Contactado', label: 'Contactado', icon: MessageSquare, color: 'text-blue-500' },
+                { id: 'Confirmado', label: 'Confirmado', icon: CheckCircle2, color: 'text-emerald-500' },
+                { id: 'Sin respuesta', label: 'Sin respuesta', icon: XCircle, color: 'text-rose-500' },
+                { id: 'Reagendado', label: 'Reagendado', icon: RefreshCw, color: 'text-primary' },
+                { id: 'Cancelado', label: 'Cancelado', icon: XCircle, color: 'text-muted' },
+            ];
+            const currentRes = appointment?.result;
+            if (currentRes && !list.some(x => x.id === currentRes)) {
+                list.push({ id: currentRes, label: currentRes, icon: Target, color: 'text-slate-400' });
+            }
+            return list;
+        } else {
+            return [
+                { id: 'Pendiente', label: 'Pendiente', icon: Clock, color: 'text-amber-500' },
+                { id: 'Show up', label: 'Show up', icon: CheckCircle2, color: 'text-emerald-500' },
+                { id: 'No Show', label: 'No Show', icon: XCircle, color: 'text-rose-500' },
+                { id: '2da call', label: '2da call', icon: RefreshCw, color: 'text-blue-500' },
+                { id: 'Reagendado', label: 'Reagendado', icon: RefreshCw, color: 'text-primary' },
+                { id: 'Cancelado', label: 'Cancelado', icon: XCircle, color: 'text-muted' },
+            ];
+        }
+    }, [mode, appointment?.result]);
 
     useEffect(() => {
-        if (isOpen && (status === 'Reprogramada' || status === 'Primera Agenda')) {
+        if (isOpen && appointment) {
+            setStatus(mode === 'closer' ? (appointment.closer_result || '') : (appointment.result || ''));
+            setWithDecisionMaker(appointment.with_decision_maker !== undefined ? appointment.with_decision_maker : null);
+            setSelectedStage(appointment.last_stage || 'Nueva');
+            setNote('');
+            setRescheduleDate('');
+        }
+    }, [isOpen, appointment, mode]);
+
+    useEffect(() => {
+        if (isOpen && (status === 'Reprogramada' || status === 'Primera Agenda' || status === 'Reagendado' || status === '2da call')) {
             fetchSlots();
         }
     }, [isOpen, status]);
@@ -111,11 +140,24 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
 
     const handleProcess = async () => {
         if (!status) return;
-        if ((status === 'Reprogramada' || status === 'Primera Agenda') && !rescheduleDate) {
+        
+        // Validar reprogramación/segunda llamada
+        const needsReschedule = status === 'Reprogramada' || status === 'Primera Agenda' || status === 'Reagendado' || status === '2da call';
+        if (needsReschedule && !rescheduleDate) {
             setError("Debes seleccionar una fecha para la nueva llamada");
             return;
         }
-        if ((status === 'Terminada' || status === 'Primera Agenda') && withDecisionMaker === null) {
+
+        // Validar notas/razón para estados especiales
+        const needsNote = status === 'Reagendado' || status === 'Cancelado' || status === '2da call';
+        if (needsNote && !note.trim()) {
+            setError("Debes escribir una razón para el cambio");
+            return;
+        }
+
+        // Validar decisor
+        const isShowUp = status === 'Terminada' || status === 'Primera Agenda' || status === 'Show up' || status === '2da call';
+        if (mode === 'closer' && isShowUp && withDecisionMaker === null) {
             setError("Debes indicar si la llamada fue con o sin decisor");
             return;
         }
@@ -127,7 +169,9 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
                 status,
                 reschedule_date: rescheduleDate,
                 last_stage: selectedStage,
-                with_decision_maker: withDecisionMaker
+                with_decision_maker: withDecisionMaker,
+                role: mode,
+                note
             });
             onSuccess();
             onClose();
@@ -140,7 +184,7 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
 
     if (!isOpen || !appointment) return null;
 
-    const showReschedule = status === 'Reprogramada' || status === 'Primera Agenda';
+    const showReschedule = status === 'Reprogramada' || status === 'Primera Agenda' || status === 'Reagendado' || status === '2da call';
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
@@ -320,6 +364,20 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess }) => {
                                                 </div>
                                             </div>
                                         )}
+
+                                         {/* Razón del Cambio (Nota) */}
+                                         {(status === 'Reagendado' || status === 'Cancelado' || status === '2da call') && (
+                                             <div className="space-y-2 p-4 bg-[#181922] border border-slate-800 rounded-3xl animate-in slide-in-from-top-4 duration-300 text-left">
+                                                 <label className="text-[9px] font-black text-slate-400 tracking-widest block uppercase">¿Razón del cambio? *</label>
+                                                 <textarea
+                                                     rows={3}
+                                                     value={note}
+                                                     onChange={(e) => setNote(e.target.value)}
+                                                     placeholder="Escribe la razón para el Lead Roadmap..."
+                                                     className="w-full bg-main border border-base rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all resize-none"
+                                                 />
+                                             </div>
+                                         )}
 
                                         {/* Reschedule Calendar */}
                                         {showReschedule && (

@@ -430,6 +430,7 @@ const CloserDashboard = () => {
                 appointment={selectedAgenda}
                 onClose={() => setIsAgendaModalOpen(false)}
                 onSuccess={fetchAll}
+                mode="closer"
             />
 
             <AddAgendaModal

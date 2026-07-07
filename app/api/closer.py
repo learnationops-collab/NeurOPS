@@ -48,7 +48,10 @@ def get_dashboard():
             "seq_num": seq,
             "client_id": appt.client_id,
             "sales_count": appt.client.enrollments.count() if appt.client else 0,
-            "has_sale": (appt.client.enrollments.count() > 0) if appt.client else False
+            "has_sale": (appt.client.enrollments.count() > 0) if appt.client else False,
+            "result": appt.result or "Pendiente",
+            "closer_result": appt.closer_result or "Pendiente",
+            "is_rescheduled": appt.is_rescheduled
         })
         
     serialized['sales_today'] = data.get('sales_today', [])
@@ -659,6 +662,8 @@ def get_appointment(id):
         "start_time": appt.start_time.isoformat(),
         "last_stage": appt.last_stage,
         "result": appt.result,
+        "closer_result": appt.closer_result,
+        "is_rescheduled": appt.is_rescheduled,
         "phone": appt.client.phone if appt.client else '',
         "type": appt.origin or 'Manual'
     }), 200
@@ -745,8 +750,10 @@ def process_agenda(id):
     if current_user.role not in ['closer', 'admin', 'setter']:
         return jsonify({"message": "Forbidden"}), 403
     data = request.get_json() or {}
+    if 'role' not in data:
+        data['role'] = 'closer' if current_user.role == 'closer' else 'setter'
     try:
-        CloserService.process_agenda(current_user.id, id, data)
+        CloserService.process_agenda(current_user.id, id, data, is_admin=(current_user.role == 'admin'))
         return jsonify({"message": "Agenda procesada"}), 200
     except Exception as e:
         db.session.rollback()
@@ -1085,6 +1092,8 @@ def _format_appointment_for_deck(a):
         "start_time": a.start_time.isoformat() if a.start_time else None,
         "origin": a.origin,
         "result": a.result or "Pendiente",
+        "closer_result": a.closer_result or "Pendiente",
+        "is_rescheduled": a.is_rescheduled,
         "ig_chat_link": a.ig_chat_link or "",
         "keyword": a.keyword or "",
         "setter_notes": a.setter_notes or "",
@@ -1181,7 +1190,7 @@ def process_closer_card(appt_id):
     if 'closer_notes' in data:
         appt.closer_notes = data['closer_notes']
     if 'result' in data:
-        appt.result = data['result']
+        appt.closer_result = data['result']
         
     if 'with_decision_maker' in data:
         if data['with_decision_maker'] is None or data['with_decision_maker'] == '':
@@ -1229,7 +1238,7 @@ def bulk_update_closer_cards():
         if result:
             # Procesar individualmente para ejecutar logica de negocio
             try:
-                CloserService.process_agenda(current_user.id, appt.id, {"status": result})
+                CloserService.process_agenda(current_user.id, appt.id, {"status": result, "role": "closer"}, is_admin=(current_user.role == 'admin'))
             except Exception as e:
                 print(f"Error al procesar en lote para {appt.id}: {e}")
                 

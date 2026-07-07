@@ -406,6 +406,7 @@ const SetterDashboard = () => {
                 appointment={selectedAgenda}
                 onClose={() => setIsAgendaModalOpen(false)}
                 onSuccess={fetchQuestionsAndStats}
+                mode="setter"
             />
 
             <SetterReportModal

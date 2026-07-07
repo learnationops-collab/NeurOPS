@@ -577,6 +577,8 @@ def get_setter_agendas():
         "phone": a.client.phone if a.client else "",
         "last_stage": a.last_stage,
         "result": a.result,
+        "closer_result": a.closer_result,
+        "is_rescheduled": a.is_rescheduled,
         "type": a.origin or 'Manual'
     } for a in appointments]), 200
 
