@@ -49,7 +49,7 @@ def get_dashboard():
             "client_id": appt.client_id,
             "sales_count": appt.client.enrollments.count() if appt.client else 0,
             "has_sale": (appt.client.enrollments.count() > 0) if appt.client else False,
-            "result": appt.result or "Pendiente",
+            "result": appt.result if (appt.result and appt.result.strip().lower() not in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call', 'follow up', 'show_up', 'no_show', 'cerrado/a')) else "Pendiente",
             "closer_result": appt.closer_result or "Pendiente",
             "is_rescheduled": appt.is_rescheduled
         })
@@ -1086,17 +1086,23 @@ def _format_appointment_for_deck(a):
     from sqlalchemy import or_
     from datetime import timedelta
     
-    confirmer_result = a.result or "Pendiente"
+    confirmer_result = "Pendiente"
+    if a.result and a.result.strip().lower() not in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call', 'follow up', 'show_up', 'no_show', 'cerrado/a'):
+        confirmer_result = a.result
     if a.client and a.start_time:
         client = a.client
         start_search = a.start_time - timedelta(hours=12)
         end_search = a.start_time + timedelta(hours=12)
         
+        from sqlalchemy import func
+        ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
+        mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
+        
         filters = []
-        if client.email:
-            filters.append(FinancialAgenda.mail == client.email)
-        if client.instagram:
-            filters.append(FinancialAgenda.instagram == client.instagram)
+        if mail_clean:
+            filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
+        if ig_clean:
+            filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
             
         agenda = None
         if filters:

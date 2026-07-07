@@ -603,12 +603,16 @@ class BookingService:
         start_search = appt.start_time - timedelta(hours=12)
         end_search = appt.start_time + timedelta(hours=12)
         
-        # Buscar agenda financiera existente
+        # Buscar agenda financiera existente (normalizando email e instagram para evitar problemas de matching exacto)
+        from sqlalchemy import func
+        ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
+        mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
+        
         filters = []
-        if client.email:
-            filters.append(FinancialAgenda.mail == client.email)
-        if client.instagram:
-            filters.append(FinancialAgenda.instagram == client.instagram)
+        if mail_clean:
+            filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
+        if ig_clean:
+            filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
             
         agenda = None
         if filters:
@@ -618,23 +622,9 @@ class BookingService:
                 FinancialAgenda.date <= end_search
             ).first()
             
-        # Mapear estado
+        # Mapear estado (ÚNICAMENTE del Confirmer/Triage, es decir, appt.result)
         mapped_state = 'Pendiente'
-        if appt.closer_result and appt.closer_result != 'Pendiente':
-            closer_res = appt.closer_result
-            if closer_res == 'Show up':
-                mapped_state = 'Show Up'
-            elif closer_res == 'No Show':
-                mapped_state = 'No Show'
-            elif closer_res == 'Cancelado':
-                mapped_state = 'Cancelada'
-            elif closer_res == 'Reagendado':
-                mapped_state = 'Reagendada'
-            elif closer_res == '2da call':
-                mapped_state = '2TH Call'
-            else:
-                mapped_state = closer_res
-        elif appt.result and appt.result != 'Pendiente':
+        if appt.result and appt.result != 'Pendiente':
             mapped_state = appt.result
             if mapped_state == 'Cancelado':
                 mapped_state = 'Cancelada'

@@ -870,11 +870,16 @@ class CloserService:
                     end_of_day = datetime.combine(appt.start_time.date(), time.max)
                     client = appt.client
                     financial_agenda = None
+                    # Normalizar email e instagram para evitar problemas de matching exacto
+                    from sqlalchemy import func
+                    ig_clean = client.instagram.strip().replace('@', '').lower() if client.instagram and client.instagram.lower() not in ('n/a', '') else None
+                    mail_clean = client.email.strip().lower() if client.email and client.email.lower() not in ('n/a', '') else None
+
                     filters = []
-                    if client.email:
-                        filters.append(FinancialAgenda.mail == client.email)
-                    if client.instagram:
-                        filters.append(FinancialAgenda.instagram == client.instagram)
+                    if mail_clean:
+                        filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
+                    if ig_clean:
+                        filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
                     if filters:
                         financial_agenda = FinancialAgenda.query.filter(
                             or_(*filters),
