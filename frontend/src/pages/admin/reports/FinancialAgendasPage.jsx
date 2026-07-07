@@ -20,7 +20,8 @@ import {
     DollarSign,
     Building,
     RefreshCw,
-    Download
+    Download,
+    X
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -302,6 +303,15 @@ const FinancialAgendasPage = () => {
     const { user } = useAuth();
     const [agendas, setAgendas] = useState([]);
     const [selectedRoadmapLead, setSelectedRoadmapLead] = useState(null);
+    const [statusActionModal, setStatusActionModal] = useState({
+        isOpen: false,
+        agenda: null,
+        nuevoEstado: '',
+        isConfirmer: false,
+        requiresDate: false,
+        razon: '',
+        fechaHora: ''
+    });
 
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -338,6 +348,39 @@ const FinancialAgendasPage = () => {
         estado: '',
         encargado_triage: ''
     });
+
+    const handleStatusActionSubmit = async (e) => {
+        if (e) e.preventDefault();
+        const { agenda, nuevoEstado, isConfirmer, requiresDate, razon, fechaHora } = statusActionModal;
+        if (!razon || razon.trim() === '') {
+            alert('La razón es obligatoria');
+            return;
+        }
+        if (requiresDate && !fechaHora) {
+            alert('La fecha y hora de reprogramación son obligatorias');
+            return;
+        }
+        
+        const payload = isConfirmer ? {
+            estado: nuevoEstado,
+            note: razon,
+            reschedule_date: fechaHora
+        } : {
+            closer_result: nuevoEstado,
+            note: razon,
+            reschedule_date: fechaHora
+        };
+        
+        try {
+            const response = await api.put(`/public/financial-agendas/${agenda.id}`, payload);
+            const updated = response.data.agenda;
+            setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
+            setStatusActionModal({ isOpen: false, agenda: null, nuevoEstado: '', isConfirmer: false, requiresDate: false, razon: '', fechaHora: '' });
+        } catch (err) {
+            console.error("Error al procesar cambio de estado in-line:", err);
+            alert("Error al actualizar el estado de la agenda");
+        }
+    };
 
     const handleEditClick = (agenda) => {
         setEditingAgenda(agenda);
@@ -1116,6 +1159,23 @@ const FinancialAgendasPage = () => {
                                                             value={selectValue}
                                                             onChange={async (e) => {
                                                                 const nuevoEstado = e.target.value;
+                                                                const isSpecial = isConfirmer 
+                                                                    ? ['Cancelada', 'Reagendada'].includes(nuevoEstado)
+                                                                    : ['Cancelada', 'Reagendada', '2TH Call'].includes(nuevoEstado);
+                                                                    
+                                                                if (isSpecial) {
+                                                                    setStatusActionModal({
+                                                                        isOpen: true,
+                                                                        agenda: agenda,
+                                                                        nuevoEstado: nuevoEstado,
+                                                                        isConfirmer: isConfirmer,
+                                                                        requiresDate: ['Reagendada', '2TH Call'].includes(nuevoEstado),
+                                                                        razon: '',
+                                                                        fechaHora: ''
+                                                                    });
+                                                                    return;
+                                                                }
+                                                                
                                                                 const payload = isConfirmer ? { estado: nuevoEstado } : { closer_result: nuevoEstado };
                                                                 try {
                                                                     const response = await api.put(`/public/financial-agendas/${agenda.id}`, payload);
@@ -1312,6 +1372,73 @@ const FinancialAgendasPage = () => {
                                     className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
                                 >
                                     Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {statusActionModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+                    <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-slate-800/60 flex justify-between items-center bg-slate-950/20 shrink-0">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-white italic">
+                                Confirmar {statusActionModal.nuevoEstado}
+                            </h3>
+                            <button 
+                                onClick={() => setStatusActionModal(prev => ({ ...prev, isOpen: false }))}
+                                className="text-slate-400 hover:text-white transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleStatusActionSubmit} className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+                            <div className="p-6 space-y-5 flex-1">
+                                <div className="space-y-1 text-left">
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Cliente</p>
+                                    <p className="text-sm font-black text-white">{statusActionModal.agenda?.lead}</p>
+                                </div>
+
+                                {statusActionModal.requiresDate && (
+                                    <div className="space-y-1.5 text-left">
+                                        <label className="text-[9px] font-black text-slate-450 uppercase tracking-widest ml-1">Fecha y Hora de Reprogramación</label>
+                                        <input 
+                                            type="datetime-local"
+                                            className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-xs font-semibold cursor-pointer"
+                                            value={statusActionModal.fechaHora}
+                                            onChange={e => setStatusActionModal(prev => ({ ...prev, fechaHora: e.target.value }))}
+                                            required
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="space-y-1.5 text-left">
+                                    <label className="text-[9px] font-black text-slate-455 uppercase tracking-widest ml-1">Razón del cambio (Obligatoria)</label>
+                                    <textarea 
+                                        placeholder="Ingresa detalladamente por qué se está realizando este cambio..."
+                                        className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-xs font-semibold resize-none h-28"
+                                        value={statusActionModal.razon}
+                                        onChange={e => setStatusActionModal(prev => ({ ...prev, razon: e.target.value }))}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-5 border-t border-slate-800/60 bg-slate-950/20 flex gap-3 shrink-0">
+                                <button 
+                                    type="button"
+                                    onClick={() => setStatusActionModal(prev => ({ ...prev, isOpen: false }))}
+                                    className="flex-1 py-3 bg-slate-800 border border-slate-700 text-xs font-black uppercase tracking-widest text-slate-450 rounded-xl hover:text-white transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    type="submit"
+                                    className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
+                                >
+                                    Confirmar
                                 </button>
                             </div>
                         </form>

@@ -530,10 +530,52 @@ def update_financial_agenda(agenda_id):
             )
             db.session.add(notif)
             
+            # Sincronización in-line de razones para Setter (Confirmer)
+            if agenda.estado in ('Cancelada', 'Reagendada'):
+                from app.models import Client, Appointment
+                from app.services.closer_service import CloserService
+                from flask_login import current_user
+                
+                ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
+                mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
+                
+                client_filters = []
+                if ig_clean:
+                    client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
+                if mail_clean:
+                    client_filters.append(func.lower(Client.email) == mail_clean)
+                    
+                client = None
+                if client_filters:
+                    client = Client.query.filter(or_(*client_filters)).first()
+                    
+                if client and agenda.date:
+                    start_of_day = datetime.combine(agenda.date.date(), datetime.min.time())
+                    end_of_day = datetime.combine(agenda.date.date(), datetime.max.time())
+                    
+                    appt = Appointment.query.filter(
+                        Appointment.client_id == client.id,
+                        Appointment.start_time >= start_of_day,
+                        Appointment.start_time <= end_of_day
+                    ).first()
+                    
+                    if appt:
+                        mapped_st = 'Cancelado' if agenda.estado == 'Cancelada' else 'Reagendado'
+                        process_payload = {
+                            'status': mapped_st,
+                            'reschedule_date': data.get('reschedule_date'),
+                            'note': data.get('note'),
+                            'role': 'setter'
+                        }
+                        user_id = current_user.id if (current_user and current_user.is_authenticated) else appt.setter_id
+                        CloserService.process_agenda(closer_id=user_id, appt_id=appt.id, data=process_payload, is_admin=True)
+
         # Si se edita closer_result (desde la vista de admin/closer)
         if 'closer_result' in data:
             from app.models import Client, Appointment
             from app.services.booking_service import BookingService
+            from app.services.closer_service import CloserService
+            from flask_login import current_user
             
             ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
             mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
@@ -570,12 +612,21 @@ def update_financial_agenda(agenda_id):
                     elif new_closer_res == 'Reagendada':
                         new_closer_res = 'Reagendado'
                         
-                    appt.closer_result = new_closer_res
-                    if new_closer_res in ('Show up', 'No Show'):
-                        appt.closer_processed = True
-                        
-                    db.session.add(appt)
-                    BookingService.sync_appointment_to_financial_agenda(appt)
+                    if new_closer_res in ('Cancelado', 'Reagendado', '2da call'):
+                        process_payload = {
+                            'status': new_closer_res,
+                            'reschedule_date': data.get('reschedule_date'),
+                            'note': data.get('note'),
+                            'role': 'closer'
+                        }
+                        user_id = current_user.id if (current_user and current_user.is_authenticated) else appt.closer_id
+                        CloserService.process_agenda(closer_id=user_id, appt_id=appt.id, data=process_payload, is_admin=True)
+                    else:
+                        appt.closer_result = new_closer_res
+                        if new_closer_res in ('Show up', 'No Show'):
+                            appt.closer_processed = True
+                        db.session.add(appt)
+                        BookingService.sync_appointment_to_financial_agenda(appt)
 
         db.session.commit()
 
