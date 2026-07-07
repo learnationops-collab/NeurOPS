@@ -562,3 +562,99 @@ class BookingService:
             print(f"[SYNC ERROR] No se pudo guardar el Appointment: {e}")
             return None
 
+    @staticmethod
+    def sync_appointment_to_financial_agenda(appt):
+        """Sincroniza un Appointment de vuelta a la tabla de FinancialAgenda (BD de agendas financieras)."""
+        from app.models.financial import FinancialAgenda
+        from app.models import User
+        from sqlalchemy import or_
+        
+        if not appt or not appt.client:
+            return None
+            
+        client = appt.client
+        start_of_day = datetime.combine(appt.start_time.date(), datetime.min.time())
+        end_of_day = datetime.combine(appt.start_time.date(), datetime.max.time())
+        
+        # Buscar agenda financiera existente
+        filters = []
+        if client.email:
+            filters.append(FinancialAgenda.mail == client.email)
+        if client.instagram:
+            filters.append(FinancialAgenda.instagram == client.instagram)
+            
+        agenda = None
+        if filters:
+            agenda = FinancialAgenda.query.filter(
+                or_(*filters),
+                FinancialAgenda.date >= start_of_day,
+                FinancialAgenda.date <= end_of_day
+            ).first()
+            
+        # Mapear estado
+        mapped_state = 'Pendiente'
+        if appt.closer_result and appt.closer_result != 'Pendiente':
+            closer_res = appt.closer_result
+            if closer_res == 'Show up':
+                mapped_state = 'Show Up'
+            elif closer_res == 'No Show':
+                mapped_state = 'No Show'
+            elif closer_res == 'Cancelado':
+                mapped_state = 'Cancelada'
+            elif closer_res == 'Reagendado':
+                mapped_state = 'Reagendada'
+            elif closer_res == '2da call':
+                mapped_state = '2TH Call'
+            else:
+                mapped_state = closer_res
+        elif appt.result and appt.result != 'Pendiente':
+            mapped_state = appt.result
+            if mapped_state == 'Cancelado':
+                mapped_state = 'Cancelada'
+            elif mapped_state == 'Reagendado':
+                mapped_state = 'Reagendada'
+                
+        # Buscar nombres de closer y setter
+        closer_name = 'Sin asignar'
+        if appt.closer_id:
+            c_user = User.query.get(appt.closer_id)
+            if c_user:
+                closer_name = c_user.username
+                
+        setter_name = 'Sin asignar'
+        if appt.setter_id:
+            s_user = User.query.get(appt.setter_id)
+            if s_user:
+                setter_name = s_user.username
+                
+        if not agenda:
+            # Crear nueva agenda financiera si no existe
+            agenda = FinancialAgenda(
+                nombre=setter_name,
+                lead=client.full_name or 'Desconocido',
+                closer=closer_name,
+                fecha_meet=appt.start_time.isoformat(),
+                date=appt.start_time,
+                registro=datetime.utcnow().isoformat(),
+                instagram=client.instagram or 'N/A',
+                whatsapp=client.phone or 'N/A',
+                mail=client.email or 'N/A',
+                estado=mapped_state,
+                raw_data={"created_by_sync": True}
+            )
+            db.session.add(agenda)
+        else:
+            # Actualizar datos de existente
+            agenda.nombre = setter_name
+            agenda.closer = closer_name
+            agenda.estado = mapped_state
+            agenda.date = appt.start_time
+            agenda.fecha_meet = appt.start_time.isoformat()
+            
+        try:
+            db.session.flush()
+            return agenda
+        except Exception as e:
+            print(f"[SYNC ERROR] No se pudo guardar la FinancialAgenda: {e}")
+            return None
+

@@ -4,12 +4,14 @@
   - **Separación de Estados de las Agendas (Call Confirmer vs. Closer)**:
     - **Modelo de Base de Datos ([booking.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/booking.py) [MODIFY])**:
       - Se agregaron las columnas `closer_result` e `is_rescheduled` a la tabla `appointments` para almacenar el resultado del closer de forma independiente y saber si la cita proviene de una reagenda.
-    - **Servicio del Backend ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
+    - **Servicio y Sincronización del Backend ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY], [booking_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py) [MODIFY], [financial.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY])**:
       - Se reestructuró `process_agenda` para procesar la cita según el rol del usuario (`role`).
       - Si es `closer`: actualiza `closer_result` y soporta lógica y validaciones de notas para `Show up`, `No Show`, `Cancelado`, `Reagendado` y `2da call`.
       - Si es `setter`: actualiza `result` y soporta lógica y notas para `Reagendado` y `Cancelado`.
       - Para ambos roles, las reagendas, cancelaciones y segundas llamadas crean notas automáticas en el Lead Roadmap mediante la inserción de registros en `ClientComment`.
       - Se añadió el parámetro opcional `is_admin` para omitir validaciones de propiedad si el usuario tiene rol de administrador.
+      - Se implementó `sync_appointment_to_financial_agenda` en `BookingService` y se invocó al finalizar `process_agenda` para propagar en tiempo real los cambios de estado físicos hacia la tabla de agendas financieras (`FinancialAgenda`).
+      - Se modificó `to_dict` en el modelo `FinancialAgenda` para sobreescribir dinámicamente en caliente el campo `"estado"` devolviendo `'Pendiente'` (o el valor real de `closer_result`) en caso de que la cita ya esté asignada a un closer, permitiendo que en el control de closing/administración se visualice correctamente como `"Pendiente"` si el closer aún no la procesa (en lugar del estado `"Confirmado"` del confirmer).
     - **APIs del Backend ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
       - Se adaptó la serialización de citas en `_format_appointment_for_deck`, `get_dashboard` y `get_appointment` en `closer.py` para devolver `closer_result` e `is_rescheduled`.
       - Se modificó la serialización en `get_setter_agendas` en `setter.py` para incluir también dichos campos.

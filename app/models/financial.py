@@ -81,6 +81,59 @@ class FinancialAgenda(db.Model):
                 from sqlalchemy import or_
                 sales_count = FinancialSale.query.filter(or_(*filters)).count()
 
+        # Determinar el estado dinámico de closing
+        display_estado = self.estado or "Pendiente"
+        has_closer = self.closer and self.closer.strip() and self.closer.strip().lower() != 'sin asignar'
+        if has_closer:
+            # Buscar la cita correspondiente para extraer closer_result
+            from app.models import Client, Appointment
+            from sqlalchemy import or_, func
+            
+            ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
+            mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
+            
+            client_filters = []
+            if ig_clean:
+                client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
+            if mail_clean:
+                client_filters.append(func.lower(Client.email) == mail_clean)
+                
+            client = None
+            if client_filters:
+                client = Client.query.filter(or_(*client_filters)).first()
+                
+            if client and self.date:
+                start_of_day = datetime.combine(self.date.date(), datetime.min.time())
+                end_of_day = datetime.combine(self.date.date(), datetime.max.time())
+                
+                appt = Appointment.query.filter(
+                    Appointment.client_id == client.id,
+                    Appointment.start_time >= start_of_day,
+                    Appointment.start_time <= end_of_day
+                ).first()
+                
+                if appt:
+                    closer_res = appt.closer_result
+                    if closer_res:
+                        if closer_res == 'Show up':
+                            display_estado = 'Show Up'
+                        elif closer_res == 'No Show':
+                            display_estado = 'No Show'
+                        elif closer_res == 'Cancelado':
+                            display_estado = 'Cancelada'
+                        elif closer_res == 'Reagendado':
+                            display_estado = 'Reagendada'
+                        elif closer_res == '2da call':
+                            display_estado = '2TH Call'
+                        else:
+                            display_estado = closer_res
+                    else:
+                        display_estado = 'Pendiente'
+                else:
+                    display_estado = 'Pendiente'
+            else:
+                display_estado = 'Pendiente'
+
         return {
             "id": self.id,
             "nombre": self.nombre,
@@ -92,7 +145,7 @@ class FinancialAgenda(db.Model):
             "lead": self.lead,
             "mail": self.mail,
             "instagram": self.instagram,
-            "estado": self.estado or "Pendiente",
+            "estado": display_estado,
             "encargado_triage": self.encargado_triage,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "date": self.date.isoformat() if self.date else None,

@@ -956,6 +956,12 @@ class CloserService:
                     except Exception as e:
                         print(f"Error deleting GCal event: {e}")
 
+        # Sincronizar el Appointment de vuelta a la FinancialAgenda correspondiente
+        try:
+            BookingService.sync_appointment_to_financial_agenda(appt)
+        except Exception as sync_err:
+            print(f"[SYNC ERROR] No se pudo sincronizar de vuelta a FinancialAgenda: {sync_err}")
+
         db.session.commit()
         return appt
 
