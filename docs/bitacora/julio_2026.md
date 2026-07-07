@@ -14,8 +14,14 @@
   - **Corrección de Desfase de Huso Horario en Agendas de Closer Deck**:
     - **Backend API ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
       - Se normalizó el tratamiento de la zona horaria del Closer si está configurada en la base de datos como `'UTC'`. En este caso, hereda el huso horario `'America/La_Paz'` (zona horaria del negocio) para evitar que el desvío hacia el huso horario cero desplace de fecha y oculte las agendas de la noche.
+      - Se modificó la consulta de la cola de pendientes del Closer (`step != 'agendas'`) para excluir las citas que ya hayan sido canceladas o reprogramadas por el Call Confirmer (`result` en `Cancelado`, `Cancelada`, `Reagendado`, `Reagendada`), evitando ruidos y duplicados en el mazo.
     - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
       - Se reemplazó la inicialización de `selectedDate` con base en UTC por un cálculo dinámico de la fecha local real del navegador restando el offset del huso horario (`new Date().getTimezoneOffset()`), evitando que a partir de las 20:00 local el deck muestre por defecto el día de mañana y oculte las agendas activas de hoy.
+  - **Sincronización Correcta y Visibilidad de Estados de Triage (Confirmer)**:
+    - **Servicio Backend ([booking_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py) [MODIFY])**:
+      - Se reestructuró la lógica de `sync_financial_agenda_to_appointment`. 
+      - Se corrigió el mapeo de estados del Confirmer de forma que si la agenda está `'Pendiente'`, se guarda en `result` como `'Pendiente'` (anteriormente se forzaba a `'Agendado'`), permitiendo al Closer ver la etiqueta correcta.
+      - Se resolvió el bug crítico por el cual estados intermedios del Confirmer (como `'Confirmado'`, `'Sin respuesta'` o `'Contactado'`) marcaban la cita como procesada por el Closer (`closer_processed = True`), lo que causaba que desaparecieran automáticamente del deck de pendientes del Closer. Ahora, solo los resultados finales de la llamada de venta (Show up, No Show, Cancelado, Reagendado, etc.) activan la bandera de procesado.
 
 - **6 de Julio de 2026**:
   - **Separación de Estados de las Agendas (Call Confirmer vs. Closer)**:

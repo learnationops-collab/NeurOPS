@@ -508,30 +508,39 @@ class BookingService:
         # 5. Mapear estado
         estado_clean = str(agenda.estado).strip().lower() if agenda.estado else ""
         
-        if estado_clean in ('pendiente', 'agendado', ''):
+        # Mapear estado del confirmer (result)
+        if estado_clean in ('pendiente', ''):
+            result = 'Pendiente'
+        elif estado_clean == 'agendado':
             result = 'Agendado'
-            closer_processed = False
-            setter_processed = False
+        elif estado_clean == 'confirmado':
+            result = 'Confirmado'
+        elif estado_clean == 'sin respuesta':
+            result = 'Sin respuesta'
+        elif estado_clean == 'contactado':
+            result = 'Contactado'
+        elif estado_clean == 'no show':
+            result = 'No Show'
+        elif estado_clean == 'show up':
+            result = 'Show Up'
+        elif estado_clean == 'cancelada':
+            result = 'Cancelada'
+        elif estado_clean == 'reagendada':
+            result = 'Reagendada'
+        elif estado_clean in ('cerrada', 'cerrado'):
+            result = 'Cerrada'
+        elif estado_clean in ('2th call', '2da call'):
+            result = '2da Call'
         else:
-            # Estado procesado (No Show, Show Up, Cancelada, Reagendada, Contactado, Confirmado)
-            if estado_clean == 'no show':
-                result = 'No Show'
-            elif estado_clean == 'show up':
-                result = 'Show Up'
-            elif estado_clean == 'cancelada':
-                result = 'Cancelada'
-            elif estado_clean == 'reagendada':
-                result = 'Reagendada'
-            elif estado_clean == 'contactado':
-                result = 'Contactado'
-            elif estado_clean == 'confirmado':
-                result = 'Confirmado'
-            elif estado_clean in ('cerrada', 'cerrado'):
-                result = 'Cerrada'
-            else:
-                result = agenda.estado
+            result = agenda.estado
+
+        # Determinar si está procesado por el Closer
+        if estado_clean in ('show up', 'no show', 'cancelada', 'reagendada', 'cerrada', 'cerrado', '2th call', '2da call'):
             closer_processed = True
             setter_processed = True
+        else:
+            closer_processed = False
+            setter_processed = False
             
         if not appt:
             appt = Appointment(

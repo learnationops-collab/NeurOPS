@@ -1156,10 +1156,11 @@ def get_closer_deck():
             Appointment.start_time <= end_utc
         )
     else:
-        # Cola por defecto de leads pendientes
+        # Cola por defecto de leads pendientes (excluye canceladas/reagendadas por confirmer)
         query = Appointment.query.filter(
             or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == ''),
-            Appointment.closer_processed == False
+            Appointment.closer_processed == False,
+            or_(Appointment.result.notin_(['Cancelado', 'Cancelada', 'Reagendado', 'Reagendada']), Appointment.result == None, Appointment.result == '')
         )
         if start_date:
             query = query.filter(Appointment.start_time >= start_date)
