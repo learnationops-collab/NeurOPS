@@ -446,9 +446,10 @@ class BookingService:
             
         # 4. Crear si no existe
         if not client:
+            import uuid
             client = Client(
                 full_name=nombre or (email_clean.split('@')[0] if email_clean else "Cliente Nuevo"),
-                email=email_clean or f"no-email-{int(datetime.utcnow().timestamp())}@neurops.com",
+                email=email_clean or f"no-email-{uuid.uuid4().hex[:12]}@neurops.com",
                 phone=phone_clean,
                 instagram=ig_clean
             )

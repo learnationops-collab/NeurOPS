@@ -1081,6 +1081,54 @@ def _format_appointment_for_deck(a):
                 "question": question.text,
                 "answer": answer.answer
             })
+    # Resolver dinámicamente el resultado real del confirmer sin depender de campos corrompidos históricos
+    from app.models.financial import FinancialAgenda
+    from sqlalchemy import or_
+    from datetime import timedelta
+    
+    confirmer_result = a.result or "Pendiente"
+    if a.client and a.start_time:
+        client = a.client
+        start_search = a.start_time - timedelta(hours=12)
+        end_search = a.start_time + timedelta(hours=12)
+        
+        filters = []
+        if client.email:
+            filters.append(FinancialAgenda.mail == client.email)
+        if client.instagram:
+            filters.append(FinancialAgenda.instagram == client.instagram)
+            
+        agenda = None
+        if filters:
+            agenda = FinancialAgenda.query.filter(
+                or_(*filters),
+                FinancialAgenda.date >= start_search,
+                FinancialAgenda.date <= end_search
+            ).first()
+            
+        if agenda:
+            estado_clean = str(agenda.estado).strip().lower() if agenda.estado else ""
+            if estado_clean in ('pendiente', '', 'agendado', 'confirmado', 'sin respuesta', 'contactado', 'cancelada', 'reagendada'):
+                if estado_clean in ('pendiente', ''):
+                    confirmer_result = 'Pendiente'
+                elif estado_clean == 'agendado':
+                    confirmer_result = 'Agendado'
+                elif estado_clean == 'confirmado':
+                    confirmer_result = 'Confirmado'
+                elif estado_clean == 'sin respuesta':
+                    confirmer_result = 'Sin respuesta'
+                elif estado_clean == 'contactado':
+                    confirmer_result = 'Contactado'
+                elif estado_clean == 'cancelada':
+                    confirmer_result = 'Cancelada'
+                elif estado_clean == 'reagendada':
+                    confirmer_result = 'Reagendada'
+                else:
+                    confirmer_result = agenda.estado
+            else:
+                # Si el estado de la agenda es de Closer (ej. No Show), y a.result no es de Closer, lo usamos
+                if a.result and a.result.strip().lower() not in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call'):
+                    confirmer_result = a.result
             
     return {
         "id": a.id,
@@ -1091,7 +1139,7 @@ def _format_appointment_for_deck(a):
         "instagram": a.client.instagram if a.client else "",
         "start_time": a.start_time.isoformat() if a.start_time else None,
         "origin": a.origin,
-        "result": a.result or "Pendiente",
+        "result": confirmer_result,
         "closer_result": a.closer_result or "Pendiente",
         "is_rescheduled": a.is_rescheduled,
         "ig_chat_link": a.ig_chat_link or "",
