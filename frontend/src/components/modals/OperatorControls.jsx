@@ -69,7 +69,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
             } else if (targetUser.role === 'triage') {
                 redirectPath = '/triage/agendas';
             } else if (targetUser.role === 'closer') {
-                redirectPath = '/closer/report';
+                redirectPath = '/closer/deck?step=agendas';
             } else if (targetUser.role === 'operator') {
                 redirectPath = '/ops/dashboard';
             }
@@ -97,7 +97,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
             if (originalUser.role === 'operator') redirectPath = '/ops/dashboard';
             if (originalUser.role === 'setter') redirectPath = '/setter/report';
             if (originalUser.role === 'triage') redirectPath = '/triage/agendas';
-            if (originalUser.role === 'closer') redirectPath = '/closer/report';
+            if (originalUser.role === 'closer') redirectPath = '/closer/deck?step=agendas';
 
             window.location.href = redirectPath;
         } catch (err) {
