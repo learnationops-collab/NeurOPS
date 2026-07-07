@@ -508,31 +508,45 @@ class BookingService:
         # 5. Mapear estado
         estado_clean = str(agenda.estado).strip().lower() if agenda.estado else ""
         
-        # Mapear estado del confirmer (result)
-        if estado_clean in ('pendiente', ''):
-            result = 'Pendiente'
-        elif estado_clean == 'agendado':
-            result = 'Agendado'
-        elif estado_clean == 'confirmado':
-            result = 'Confirmado'
-        elif estado_clean == 'sin respuesta':
-            result = 'Sin respuesta'
-        elif estado_clean == 'contactado':
-            result = 'Contactado'
-        elif estado_clean == 'no show':
-            result = 'No Show'
-        elif estado_clean == 'show up':
-            result = 'Show Up'
-        elif estado_clean == 'cancelada':
-            result = 'Cancelada'
-        elif estado_clean == 'reagendada':
-            result = 'Reagendada'
-        elif estado_clean in ('cerrada', 'cerrado'):
-            result = 'Cerrada'
-        elif estado_clean in ('2th call', '2da call'):
-            result = '2da Call'
-        else:
-            result = agenda.estado
+        # Conservar valores existentes
+        existing_result = appt.result if appt else None
+        existing_closer_result = appt.closer_result if appt else 'Pendiente'
+        
+        result = existing_result
+        closer_result = existing_closer_result
+        
+        # Si es un estado del Call Confirmer (antes de la llamada)
+        if estado_clean in ('pendiente', '', 'agendado', 'confirmado', 'sin respuesta', 'contactado', 'cancelada', 'reagendada'):
+            if estado_clean in ('pendiente', ''):
+                result = 'Pendiente'
+            elif estado_clean == 'agendado':
+                result = 'Agendado'
+            elif estado_clean == 'confirmado':
+                result = 'Confirmado'
+            elif estado_clean == 'sin respuesta':
+                result = 'Sin respuesta'
+            elif estado_clean == 'contactado':
+                result = 'Contactado'
+            elif estado_clean == 'cancelada':
+                result = 'Cancelada'
+            elif estado_clean == 'reagendada':
+                result = 'Reagendada'
+        
+        # Si es un estado del Closer (después de la llamada)
+        elif estado_clean in ('show up', 'no show', 'cerrada', 'cerrado', '2th call', '2da call'):
+            if estado_clean == 'no show':
+                closer_result = 'No Show'
+            elif estado_clean == 'show up':
+                closer_result = 'Show up'
+            elif estado_clean in ('cerrada', 'cerrado'):
+                closer_result = 'Cerrada'
+            elif estado_clean in ('2th call', '2da call'):
+                closer_result = '2da call'
+            
+            # Si se procesa con un estado de Closer pero el result del confirmer estaba vacío,
+            # lo dejamos como Confirmado por defecto.
+            if not result:
+                result = 'Confirmado'
 
         # Determinar si está procesado por el Closer
         if estado_clean in ('show up', 'no show', 'cancelada', 'reagendada', 'cerrada', 'cerrado', '2th call', '2da call'):
@@ -550,6 +564,7 @@ class BookingService:
                 start_time=agenda.date,
                 origin=agenda.nombre or 'n8n',
                 result=result,
+                closer_result=closer_result,
                 closer_processed=closer_processed,
                 setter_processed=setter_processed
             )
@@ -560,6 +575,7 @@ class BookingService:
             appt.start_time = agenda.date
             appt.origin = agenda.nombre or appt.origin
             appt.result = result
+            appt.closer_result = closer_result
             appt.closer_processed = closer_processed
             appt.setter_processed = setter_processed
             

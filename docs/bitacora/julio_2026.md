@@ -22,6 +22,7 @@
       - Se reestructuró la lógica de `sync_financial_agenda_to_appointment`. 
       - Se corrigió el mapeo de estados del Confirmer de forma que si la agenda está `'Pendiente'`, se guarda en `result` como `'Pendiente'` (anteriormente se forzaba a `'Agendado'`), permitiendo al Closer ver la etiqueta correcta.
       - Se resolvió el bug crítico por el cual estados intermedios del Confirmer (como `'Confirmado'`, `'Sin respuesta'` o `'Contactado'`) marcaban la cita como procesada por el Closer (`closer_processed = True`), lo que causaba que desaparecieran automáticamente del deck de pendientes del Closer. Ahora, solo los resultados finales de la llamada de venta (Show up, No Show, Cancelado, Reagendado, etc.) activan la bandera de procesado.
+      - Se desacopló por completo la actualización de estados de la agenda financiera hacia la cita. Los estados de Call Confirmer (Pendiente, Confirmado, Sin respuesta, etc.) solo modifican `result`, mientras que los estados de Closer (Show up, No Show, 2da call, etc.) solo modifican `closer_result`, manteniendo la integridad de ambos campos sin sobreescrituras cruzadas erróneas en la UI.
 
 - **6 de Julio de 2026**:
   - **Separación de Estados de las Agendas (Call Confirmer vs. Closer)**:
