@@ -8,7 +8,7 @@
       - Se reestructuró `process_agenda` para procesar la cita según el rol del usuario (`role`).
       - Si es `closer`: actualiza `closer_result` y soporta lógica y validaciones de notas para `Show up`, `No Show`, `Cancelado`, `Reagendado` y `2da call`.
       - Si es `setter`: actualiza `result` y soporta lógica y notas para `Reagendado` y `Cancelado`.
-      - Para ambos roles, las reagendas, cancelaciones y segundas llamadas crean notas automáticas en el Lead Roadmap mediante la inserción de registros en `ClientComment`.
+      - Para ambos roles, las reagendas, cancelaciones y segundas llamadas crean notas automáticas en el Lead Roadmap mediante la inserción de registros en `ClientComment`, registrando el nombre del usuario (`user.username`) que realizó la acción de forma nominativa en lugar del rol genérico.
       - Se añadió el parámetro opcional `is_admin` para omitir validaciones de propiedad si el usuario tiene rol de administrador.
       - Se implementó `sync_appointment_to_financial_agenda` en `BookingService` y se invocó al finalizar `process_agenda` para propagar en tiempo real los cambios de estado físicos hacia la tabla de agendas financieras (`FinancialAgenda`).
       - Se modificó `to_dict` en el modelo `FinancialAgenda` para separar el estado del call confirmer (`estado`) del estado dinámico del closer (`closer_result`), de modo que ambos campos se envíen de forma independiente en la API.
