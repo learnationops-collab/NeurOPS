@@ -1420,15 +1420,12 @@ const FinancialAgendasPage = () => {
                                         <div className="relative group">
                                             <input 
                                                 type="datetime-local"
-                                                className="custom-datetime-picker w-full pl-4 pr-12 py-3.5 bg-indigo-950/20 border border-indigo-500/40 rounded-xl text-white outline-none focus:border-indigo-500 text-xs font-black cursor-pointer transition-all hover:bg-indigo-950/30 hover:border-indigo-500/60"
+                                                className="custom-datetime-picker w-full px-4 py-3.5 bg-indigo-950/20 border border-indigo-500/40 rounded-xl text-white outline-none focus:border-indigo-500 text-xs font-black cursor-pointer transition-all hover:bg-indigo-950/30 hover:border-indigo-500/60"
                                                 value={statusActionModal.fechaHora}
                                                 onChange={e => setStatusActionModal(prev => ({ ...prev, fechaHora: e.target.value }))}
                                                 required
                                                 style={{ colorScheme: 'dark' }}
                                             />
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none group-hover:text-indigo-300 transition-colors">
-                                                <CalendarIcon size={18} />
-                                            </div>
                                         </div>
                                     </div>
                                 )}
