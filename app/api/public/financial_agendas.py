@@ -530,6 +530,53 @@ def update_financial_agenda(agenda_id):
             )
             db.session.add(notif)
             
+        # Si se edita closer_result (desde la vista de admin/closer)
+        if 'closer_result' in data:
+            from app.models import Client, Appointment
+            from app.services.booking_service import BookingService
+            
+            ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
+            mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
+            
+            client_filters = []
+            if ig_clean:
+                client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
+            if mail_clean:
+                client_filters.append(func.lower(Client.email) == mail_clean)
+                
+            client = None
+            if client_filters:
+                client = Client.query.filter(or_(*client_filters)).first()
+                
+            if client and agenda.date:
+                start_of_day = datetime.combine(agenda.date.date(), datetime.min.time())
+                end_of_day = datetime.combine(agenda.date.date(), datetime.max.time())
+                
+                appt = Appointment.query.filter(
+                    Appointment.client_id == client.id,
+                    Appointment.start_time >= start_of_day,
+                    Appointment.start_time <= end_of_day
+                ).first()
+                
+                if appt:
+                    new_closer_res = data['closer_result']
+                    # Mapear de vuelta al formato interno de closer_result
+                    if new_closer_res == 'Show Up':
+                        new_closer_res = 'Show up'
+                    elif new_closer_res == '2TH Call':
+                        new_closer_res = '2da call'
+                    elif new_closer_res == 'Cancelada':
+                        new_closer_res = 'Cancelado'
+                    elif new_closer_res == 'Reagendada':
+                        new_closer_res = 'Reagendado'
+                        
+                    appt.closer_result = new_closer_res
+                    if new_closer_res in ('Show up', 'No Show'):
+                        appt.closer_processed = True
+                        
+                    db.session.add(appt)
+                    BookingService.sync_appointment_to_financial_agenda(appt)
+
         db.session.commit()
 
         # Sincronizar la agenda editada

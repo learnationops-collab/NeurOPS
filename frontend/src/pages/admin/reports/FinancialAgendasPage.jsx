@@ -27,6 +27,7 @@ import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import usePersistentFilters from '../../../hooks/usePersistentFilters';
 import LeadRoadmapModal from '../../../components/modals/LeadRoadmapModal';
+import { useAuth } from '../../../contexts/AuthContext';
 
 
 // Celda que muestra el número y el porcentaje en lugares diferentes de forma vertical
@@ -298,6 +299,7 @@ const formatToDatetimeLocal = (dateStr) => {
 };
 
 const FinancialAgendasPage = () => {
+    const { user } = useAuth();
     const [agendas, setAgendas] = useState([]);
     const [selectedRoadmapLead, setSelectedRoadmapLead] = useState(null);
 
@@ -1102,37 +1104,50 @@ const FinancialAgendasPage = () => {
                                                 </select>
                                             </td>
                                             <td className="py-4 px-4 text-center">
-                                                <select
-                                                      value={agenda.estado || 'Pendiente'}
-                                                      onChange={async (e) => {
-                                                          const nuevoEstado = e.target.value;
-                                                          try {
-                                                              const response = await api.put(`/public/financial-agendas/${agenda.id}`, { estado: nuevoEstado });
-                                                              const updated = response.data.agenda;
-                                                              setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
-                                                          } catch (err) {
-                                                              console.error("Error updating agenda status in-line:", err);
-                                                              alert("Error al actualizar el estado de la agenda");
-                                                          }
-                                                      }}
-                                                      className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border cursor-pointer outline-none focus:ring-1 focus:ring-primary/50 transition-all text-center border-box
-                                                          ${agenda.estado === 'Show Up' ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : ''}
-                                                          ${agenda.estado === 'Contactado' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20' : ''}
-                                                          ${agenda.estado === 'Confirmado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : ''}
-                                                          ${agenda.estado === 'No Show' || agenda.estado === 'No show' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20' : ''}
-                                                          ${agenda.estado === 'Reagendada' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : ''}
-                                                          ${agenda.estado === 'Cerrada' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20 hover:bg-violet-500/20' : ''}
-                                                          ${agenda.estado === 'Cancelada' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
-                                                          ${!agenda.estado || agenda.estado === 'Pendiente' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
-                                                      `}
-                                                  >
-                                                      {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada'].map(st => (
-                                                          <option key={st} value={st} className="bg-slate-900 text-white font-semibold">
-                                                              {st}
-                                                          </option>
-                                                      ))}
-                                                  </select>
-                                             </td>
+                                                {(() => {
+                                                    const isConfirmer = user?.role === 'triage' || user?.role === 'setter';
+                                                    const selectValue = isConfirmer ? (agenda.estado || 'Pendiente') : (agenda.closer_result || 'Pendiente');
+                                                    const selectOptions = isConfirmer 
+                                                        ? ['Pendiente', 'Contactado', 'Confirmado', 'Sin respuesta', 'Reagendada', 'Cancelada']
+                                                        : ['Pendiente', 'Show Up', 'No Show', '2TH Call', 'Reagendada', 'Cancelada', 'Cerrada'];
+                                                    
+                                                    return (
+                                                        <select
+                                                            value={selectValue}
+                                                            onChange={async (e) => {
+                                                                const nuevoEstado = e.target.value;
+                                                                const payload = isConfirmer ? { estado: nuevoEstado } : { closer_result: nuevoEstado };
+                                                                try {
+                                                                    const response = await api.put(`/public/financial-agendas/${agenda.id}`, payload);
+                                                                    const updated = response.data.agenda;
+                                                                    setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
+                                                                } catch (err) {
+                                                                    console.error("Error updating agenda status in-line:", err);
+                                                                    alert("Error al actualizar el estado de la agenda");
+                                                                }
+                                                            }}
+                                                            className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border cursor-pointer outline-none focus:ring-1 focus:ring-primary/50 transition-all text-center border-box
+                                                                ${selectValue === 'Show Up' || selectValue === 'Show up' ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : ''}
+                                                                ${selectValue === 'Contactado' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20' : ''}
+                                                                ${selectValue === 'Confirmado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : ''}
+                                                                ${selectValue === 'No Show' || selectValue === 'No show' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20' : ''}
+                                                                ${selectValue === 'Reagendada' || selectValue === 'Reagendado' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : ''}
+                                                                ${selectValue === 'Cerrada' || selectValue === 'Cerrado' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20 hover:bg-violet-500/20' : ''}
+                                                                ${selectValue === 'Cancelada' || selectValue === 'Cancelado' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
+                                                                ${selectValue === 'Sin respuesta' ? 'bg-pink-500/10 text-pink-400 border-pink-500/20 hover:bg-pink-500/20' : ''}
+                                                                ${selectValue === '2TH Call' || selectValue === '2da call' ? 'bg-blue-500/10 text-blue-450 border-blue-500/20 hover:bg-blue-500/20' : ''}
+                                                                ${selectValue === 'Pendiente' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
+                                                            `}
+                                                        >
+                                                            {selectOptions.map(st => (
+                                                                <option key={st} value={st} className="bg-slate-900 text-white font-semibold">
+                                                                    {st}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    );
+                                                })()}
+                                            </td>
                                             <td className="py-4 px-4 text-right">
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button 
