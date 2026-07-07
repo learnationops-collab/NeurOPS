@@ -40,10 +40,13 @@
       - Se modificó la función `sync_appointment_to_financial_agenda` para que la columna física `estado` de la tabla `financial_agendas` se asigne únicamente en base al estado de confirmación del Triage (`appt.result`), omitiendo el resultado de closing del Closer (`appt.closer_result`). Esto evita que las acciones del Closer sobrescriban y borren el estado original seleccionado por el usuario con el rol "Triage" en el registro de agendas, manteniendo la coherencia tanto en la tabla administrativa como en el deck del Closer.
   - **Filtrado de Estados de Closer en Etiquetas de Confirmación**:
     - **Controlador Backend ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+
       - Se modificaron `_format_appointment_for_deck` and `get_dashboard` para filtrar y excluir dinámicamente cualquier estado de Closer (como `'Show Up'`, `'No Show'` o `'2TH Call'`) del campo de confirmación (`result` / `confirmer_result`). Esto asegura que si una cita fue inicializada con etiquetas del closer (ej. al agendar una segunda llamada), el Closer siempre vea `'Pendiente'` al lado de la fuente, alineado con lo que el usuario Triage visualiza en su interfaz de agendas financieras.
   - **Redirección del Closer por Defecto a la Cola de Agendas**:
     - **Interfaz Frontend ([LoginPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/auth/LoginPage.jsx) [MODIFY], [App.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx) [MODIFY], [OperatorControls.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/OperatorControls.jsx) [MODIFY])**:
       - Se cambió la redirección por defecto para el rol `'closer'` al iniciar sesión (o al ser bloqueado por `ProtectedRoute`, o al simular/revertir sesión desde el panel de operador) para que navegue directamente a la vista del mazo de agendas del día (`/closer/deck?step=agendas`) en lugar de redireccionarlo a su reporte o estadísticas.
+
+      - Se modificaron `_format_appointment_for_deck` y `get_dashboard` para filtrar y excluir dinámicamente cualquier estado de Closer (como `'Show Up'`, `'No Show'` o `'2TH Call'`) del campo de confirmación (`result` / `confirmer_result`). Esto asegura que si una cita fue inicializada con etiquetas del closer (ej. al agendar una segunda llamada), el Closer siempre vea `'Pendiente'` al lado de la fuente, alineado con lo que el usuario Triage visualiza en su interfaz de agendas financieras.
 
 
 - **6 de Julio de 2026**:
