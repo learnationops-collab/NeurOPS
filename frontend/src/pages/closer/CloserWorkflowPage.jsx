@@ -28,7 +28,11 @@ const CloserWorkflowPage = () => {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [decisionMakerPrompt, setDecisionMakerPrompt] = useState({ apptId: null });
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(() => {
+        const offset = new Date().getTimezoneOffset();
+        const localDate = new Date(new Date().getTime() - (offset * 60 * 1000));
+        return localDate.toISOString().split('T')[0];
+    });
     
     // Cita seleccionada para el visor de la derecha
     const [selectedLead, setSelectedLead] = useState(null);

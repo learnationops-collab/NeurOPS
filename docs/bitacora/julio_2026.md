@@ -10,6 +10,11 @@
         - El Setter edita dolores libremente, visualiza objeciones registradas por el closer en modo lectura (no las registra él) y visualiza observaciones en modo lectura.
         - El Closer y Admin pueden editar dolores, objeciones y observaciones libremente (siendo el Closer el responsable de registrar objeciones).
       - Se optimizó y liberó espacio visual para simplificar la navegación en el Lead Roadmap.
+  - **Corrección de Desfase de Huso Horario en Agendas de Closer Deck**:
+    - **Backend API ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+      - Se normalizó el tratamiento de la zona horaria del Closer si está configurada en la base de datos como `'UTC'`. En este caso, hereda el huso horario `'America/La_Paz'` (zona horaria del negocio) para evitar que el desvío hacia el huso horario cero desplace de fecha y oculte las agendas de la noche.
+    - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se reemplazó la inicialización de `selectedDate` con base en UTC por un cálculo dinámico de la fecha local real del navegador restando el offset del huso horario (`new Date().getTimezoneOffset()`), evitando que a partir de las 20:00 local el deck muestre por defecto el día de mañana y oculte las agendas activas de hoy.
 
 - **6 de Julio de 2026**:
   - **Separación de Estados de las Agendas (Call Confirmer vs. Closer)**:

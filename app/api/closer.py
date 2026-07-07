@@ -1130,6 +1130,8 @@ def get_closer_deck():
         import pytz
         from datetime import time
         tz_name = current_user.timezone or 'America/La_Paz'
+        if tz_name == 'UTC':
+            tz_name = 'America/La_Paz'
         try:
             user_tz = pytz.timezone(tz_name)
         except:
