@@ -759,8 +759,11 @@ class CloserService:
 
     @staticmethod
     def process_agenda(closer_id, appt_id, data, is_admin=False):
-        from app.models import Appointment, db, ClientComment
+        from app.models import Appointment, db, ClientComment, User
         from app.services.booking_service import BookingService
+        
+        user = User.query.get(closer_id)
+        user_display = user.username if user else "Usuario desconocido"
         
         appt = Appointment.query.get_or_404(appt_id)
         if not is_admin and appt.closer_id != closer_id and appt.setter_id != closer_id:
@@ -800,7 +803,7 @@ class CloserService:
             elif new_status == 'Cancelado':
                 appt.closer_processed = True
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por Closer: {note}")
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por {user_display}: {note}")
                     db.session.add(comment)
                 # Delete GCal
                 if appt.google_event_id:
@@ -815,7 +818,7 @@ class CloserService:
                 if not reschedule_date:
                     raise Exception("Fecha de reagenda requerida")
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por Closer. Razón: {note}. Nueva cita el {reschedule_date}")
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {reschedule_date}")
                     db.session.add(comment)
                 
                 # Delete GCal
@@ -846,7 +849,7 @@ class CloserService:
                 if not reschedule_date:
                     raise Exception("Fecha de segunda agenda requerida")
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"2da Call agendada por Closer. Razón: {note}. Programada para {reschedule_date}")
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"2da Call agendada por {user_display}. Razón: {note}. Programada para {reschedule_date}")
                     db.session.add(comment)
 
                 # Intentar actualizar estado de FinancialAgenda actual a Follow Up
@@ -918,7 +921,7 @@ class CloserService:
                 if not reschedule_date:
                     raise Exception("Fecha de reagenda requerida")
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por Call Confirmer. Razón: {note}. Nueva cita el {reschedule_date}")
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {reschedule_date}")
                     db.session.add(comment)
 
                 # Delete GCal
@@ -946,7 +949,7 @@ class CloserService:
 
             elif new_status == 'Cancelado':
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por Call Confirmer: {note}")
+                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por {user_display}: {note}")
                     db.session.add(comment)
                 # Delete GCal
                 if appt.google_event_id:
