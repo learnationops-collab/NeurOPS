@@ -1156,7 +1156,7 @@ def get_closer_deck():
     else:
         # Cola por defecto de leads pendientes
         query = Appointment.query.filter(
-            or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
+            or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == ''),
             Appointment.closer_processed == False
         )
         if start_date:

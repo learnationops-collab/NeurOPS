@@ -14,14 +14,17 @@
       - Se adaptó la serialización de citas en `_format_appointment_for_deck`, `get_dashboard` y `get_appointment` en `closer.py` para devolver `closer_result` e `is_rescheduled`.
       - Se modificó la serialización en `get_setter_agendas` en `setter.py` para incluir también dichos campos.
       - Se actualizaron los endpoints `/appointments/<id>/process`, `/deck/<id>` y `/deck/bulk-update` para enviar el rol y bypass de admin al servicio de forma consistente.
+      - Se modificó el filtro por defecto en la cola del deck (`get_closer_deck`) para que el closer visualice las citas basadas en `closer_result` (su propio estado) y no en `result` (el del confirmer).
+      - Se corrigieron los filtros en `get_setter_agendas` para considerar como citas "Pendientes" aquellas con estados no definitivos (`'Contactado'`, `'Sin respuesta'`, o `'Pendiente'`), evitando que desaparecieran al actualizarse.
     - **Modales del Frontend ([AgendaManagerModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/AgendaManagerModal.jsx) [MODIFY])**:
       - Se implementó el soporte del prop `mode` ('closer' | 'setter') para alternar dinámicamente las opciones y la lógica de validación de los estados según el rol del usuario.
       - Se añadió la inicialización correcta de estados y campos de reprogramación/notas al abrir el modal.
       - Se agregó visualmente un campo textarea para ingresar la razón obligatoria del cambio si el estado es Reagendado, Cancelado o 2da call.
-    - **Workflow del Closer ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+    - **Workflow y Dashboard del Closer ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY], [CloserDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/dashboard/CloserDashboard.jsx) [MODIFY])**:
       - Se adaptó la renderización para mostrar el estado del closer (`closer_result`), la etiqueta del call confirmer (`result`) y si la cita es una reagenda (`is_rescheduled`).
+      - Se implementó la visualización de estas mismas insignias y la etiqueta del confirmer en el widget "Agendas hoy" del Dashboard del Closer.
       - Se implementó la captura de razones mediante `window.prompt` en las acciones rápidas de cancelación y en el panel de reprogramación inline (reagendar y segunda llamada) para enviarlas al backend y guardarlas en el Lead Roadmap.
-    - **Dashboard e Integración ([CloserDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/dashboard/CloserDashboard.jsx) [MODIFY], [SetterDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/dashboard/SetterDashboard.jsx) [MODIFY], [SetterAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/agendas/SetterAgendasPage.jsx) [MODIFY])**:
+    - **Dashboard e Integración ([SetterDashboard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/dashboard/SetterDashboard.jsx) [MODIFY], [SetterAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/agendas/SetterAgendasPage.jsx) [MODIFY])**:
       - Se pasó el prop `mode` correspondiente a las instancias del modal `AgendaManagerModal`.
     - **Migración de Base de Datos**:
       - Se generó y aplicó la migración `2aaaf324fb99_add_closer_result_and_is_rescheduled_to_.py` en la base de datos local SQLite.

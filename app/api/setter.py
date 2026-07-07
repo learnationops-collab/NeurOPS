@@ -560,9 +560,21 @@ def get_setter_agendas():
     query = Appointment.query.filter(Appointment.setter_id == current_user.id)
     
     if status_filter == 'pending':
-        query = query.filter(or_(Appointment.result == None, Appointment.result == ''))
+        query = query.filter(or_(
+            Appointment.result == None,
+            Appointment.result == '',
+            Appointment.result == 'Pendiente',
+            Appointment.result == 'Contactado',
+            Appointment.result == 'Sin respuesta'
+        ))
     elif status_filter == 'completed':
-        query = query.filter(Appointment.result != None, Appointment.result != '')
+        query = query.filter(
+            Appointment.result != None,
+            Appointment.result != '',
+            Appointment.result != 'Pendiente',
+            Appointment.result != 'Contactado',
+            Appointment.result != 'Sin respuesta'
+        )
         
     # Order by start_time descending (newest first)
     appointments = query.order_by(Appointment.start_time.desc()).all()

@@ -376,7 +376,7 @@ const CloserDashboard = () => {
                                                 onClick={() => handleAgendaClick(a)}
                                                 className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${a.has_sale ? 'bg-emerald-500/[0.03] border-emerald-500/10 hover:border-emerald-500/30' : 'bg-main/50 border-base hover:border-primary/30'}`}
                                             >
-                                                <div className="space-y-1">
+                                                <div className="space-y-1 min-w-0">
                                                     <p className="text-[11px] font-black text-main flex items-center gap-1.5 flex-wrap">
                                                         {a.lead_name}
                                                         {a.has_sale && (
@@ -389,6 +389,27 @@ const CloserDashboard = () => {
                                                         <Clock size={10} className="text-primary" />
                                                         {new Date(a.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-md">
+                                                        Confirmer: {a.result || 'Pendiente'}
+                                                    </span>
+                                                    {a.is_rescheduled && (
+                                                        <span className="text-[8px] font-black uppercase text-pink-400 bg-pink-500/10 border border-pink-500/20 px-2 py-0.5 rounded-md">
+                                                            Reagenda
+                                                        </span>
+                                                    )}
+                                                    <span className={`text-[9px] font-black px-2 py-1 rounded-xl uppercase tracking-wider ${
+                                                        a.closer_result === 'Show up' ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20' :
+                                                        a.closer_result === 'No Show' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
+                                                        a.closer_result === 'Cancelado' ? 'bg-amber-500/10 text-amber-450 border border-amber-500/20' :
+                                                        a.closer_result === 'Reagendado' ? 'bg-violet-500/10 text-violet-450 border border-violet-500/20' :
+                                                        a.closer_result === '2da call' ? 'bg-blue-500/10 text-blue-450 border border-blue-500/20' :
+                                                        'bg-slate-500/10 text-slate-450 border border-slate-500/20'
+                                                    }`}>
+                                                        {a.closer_result || 'Pendiente'}
+                                                    </span>
                                                 </div>
                                             </div>
                                         )) : (
