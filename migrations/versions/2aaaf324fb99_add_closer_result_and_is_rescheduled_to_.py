@@ -21,17 +21,31 @@ def upgrade():
     bind = op.get_bind()
     if bind.dialect.name == 'sqlite':
         op.drop_table('_alembic_tmp_appointments')
+        
+    # Obtener columnas existentes en appointments
+    inspector = sa.inspect(bind)
+    columns_appointments = [c['name'] for c in inspector.get_columns('appointments')]
+    
     with op.batch_alter_table('appointments', schema=None) as batch_op:
         batch_op.add_column(sa.Column('closer_result', sa.String(length=100), nullable=True))
         batch_op.add_column(sa.Column('is_rescheduled', sa.Boolean(), nullable=True))
-        batch_op.drop_column('closer_status')
-        batch_op.drop_column('tag')
-        batch_op.drop_column('confirmer_status')
+        if 'closer_status' in columns_appointments:
+            batch_op.drop_column('closer_status')
+        if 'tag' in columns_appointments:
+            batch_op.drop_column('tag')
+        if 'confirmer_status' in columns_appointments:
+            batch_op.drop_column('confirmer_status')
 
+    # Obtener columnas existentes en financial_agendas
+    columns_agendas = [c['name'] for c in inspector.get_columns('financial_agendas')]
+    
     with op.batch_alter_table('financial_agendas', schema=None) as batch_op:
-        batch_op.drop_column('closer_status')
-        batch_op.drop_column('tag')
-        batch_op.drop_column('confirmer_status')
+        if 'closer_status' in columns_agendas:
+            batch_op.drop_column('closer_status')
+        if 'tag' in columns_agendas:
+            batch_op.drop_column('tag')
+        if 'confirmer_status' in columns_agendas:
+            batch_op.drop_column('confirmer_status')
 
     # ### end Alembic commands ###
 
