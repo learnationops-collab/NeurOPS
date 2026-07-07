@@ -495,14 +495,14 @@ class BookingService:
         setter_user = BookingService.resolve_user_by_name(agenda.nombre, default_role='setter')
         setter_id = setter_user.id if setter_user else None
         
-        # 4. Buscar cita del mismo día
-        start_of_day = datetime.combine(agenda.date.date(), datetime.min.time())
-        end_of_day = datetime.combine(agenda.date.date(), datetime.max.time())
+        # 4. Buscar cita del mismo día (rango de +/- 12 horas para tolerar desfases UTC/local)
+        start_search = agenda.date - timedelta(hours=12)
+        end_search = agenda.date + timedelta(hours=12)
         
         appt = Appointment.query.filter(
             Appointment.client_id == client.id,
-            Appointment.start_time >= start_of_day,
-            Appointment.start_time <= end_of_day
+            Appointment.start_time >= start_search,
+            Appointment.start_time <= end_search
         ).first()
         
         # 5. Mapear estado
@@ -598,8 +598,9 @@ class BookingService:
             return None
             
         client = appt.client
-        start_of_day = datetime.combine(appt.start_time.date(), datetime.min.time())
-        end_of_day = datetime.combine(appt.start_time.date(), datetime.max.time())
+        # Buscar agenda financiera existente (rango de +/- 12 horas para tolerar desfases UTC/local)
+        start_search = appt.start_time - timedelta(hours=12)
+        end_search = appt.start_time + timedelta(hours=12)
         
         # Buscar agenda financiera existente
         filters = []
@@ -612,8 +613,8 @@ class BookingService:
         if filters:
             agenda = FinancialAgenda.query.filter(
                 or_(*filters),
-                FinancialAgenda.date >= start_of_day,
-                FinancialAgenda.date <= end_of_day
+                FinancialAgenda.date >= start_search,
+                FinancialAgenda.date <= end_search
             ).first()
             
         # Mapear estado
