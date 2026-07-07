@@ -11,6 +11,9 @@
         - El Closer visualiza dolores y observaciones en modo lectura (puede ver lo que agreguen el setter y el call confirmer respectivamente) y tiene permisos de escritura exclusiva para el campo de objeciones.
         - El Administrador mantiene la facultad de editar todos los campos libremente.
       - Se optimizó y liberó espacio visual para simplificar la navegación en el Lead Roadmap.
+  - **Corrección de Migración de Alembic para Producción (PostgreSQL)**:
+    - **Migración ([2aaaf324fb99_add_closer_result_and_is_rescheduled_to_.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/migrations/versions/2aaaf324fb99_add_closer_result_and_is_rescheduled_to_.py) [MODIFY])**:
+      - Se condicionó el borrado y creación de la tabla temporal `_alembic_tmp_appointments` para que únicamente se ejecute si el dialecto de la base de datos es SQLite (`bind.dialect.name == 'sqlite'`). Esto corrige el fallo en el pre-deploy de Railway (`flask db upgrade`) ocasionado porque PostgreSQL no utiliza el modo batch de Alembic y no tiene dicha tabla temporal.
   - **Corrección de Desfase de Huso Horario en Agendas de Closer Deck**:
     - **Backend API ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
       - Se normalizó el tratamiento de la zona horaria del Closer si está configurada en la base de datos como `'UTC'`. En este caso, hereda el huso horario `'America/La_Paz'` (zona horaria del negocio) para evitar que el desvío hacia el huso horario cero desplace de fecha y oculte las agendas de la noche.
