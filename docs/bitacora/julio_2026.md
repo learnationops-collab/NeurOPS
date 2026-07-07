@@ -8,7 +8,8 @@
       - Se restringió la edición de campos de calificación caliente según la jerarquía de roles:
         - El Call Confirmer (`triage`) solo visualiza dolores en modo lectura y observaciones en modo escritura (las objeciones se ocultan por completo, al no ser de su incumbencia).
         - El Setter edita dolores libremente, visualiza objeciones registradas por el closer en modo lectura (no las registra él) y visualiza observaciones en modo lectura.
-        - El Closer y Admin pueden editar dolores, objeciones y observaciones libremente (siendo el Closer el responsable de registrar objeciones).
+        - El Closer visualiza dolores y observaciones en modo lectura (puede ver lo que agreguen el setter y el call confirmer respectivamente) y tiene permisos de escritura exclusiva para el campo de objeciones.
+        - El Administrador mantiene la facultad de editar todos los campos libremente.
       - Se optimizó y liberó espacio visual para simplificar la navegación en el Lead Roadmap.
   - **Corrección de Desfase de Huso Horario en Agendas de Closer Deck**:
     - **Backend API ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:

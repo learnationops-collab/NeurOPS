@@ -13,7 +13,8 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
     const { user } = useAuth();
     const isConfirmer = user?.role === 'triage';
     const isSetter = user?.role === 'setter';
-    const isAdminOrCloser = user?.role === 'admin' || user?.role === 'closer';
+    const isCloser = user?.role === 'closer';
+    const isAdmin = user?.role === 'admin';
     
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
@@ -714,7 +715,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
 
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dolores del Prospecto</label>
-                        {isConfirmer ? (
+                        {isConfirmer || isCloser ? (
                             <div className="px-3.5 py-2.5 bg-slate-950/60 border border-slate-850 rounded-xl text-xs text-slate-405 font-bold whitespace-pre-wrap min-h-[3.5rem] text-left">
                                 {dolores || "Sin dolores registrados por el setter"}
                             </div>
@@ -750,7 +751,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                     {/* OBSERVACIONES */}
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Observaciones de Call Confirmer</label>
-                        {isConfirmer || isAdminOrCloser ? (
+                        {isConfirmer || isAdmin ? (
                             <textarea
                                 className="w-full h-24 px-3.5 py-2.5 bg-slate-950/50 border border-transparent rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:bg-slate-900 transition-all font-bold resize-none custom-scrollbar"
                                 placeholder="Notas de call confirmer, facturación, socio, etc..."
