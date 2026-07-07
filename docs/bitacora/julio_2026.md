@@ -6,9 +6,9 @@
       - Se eliminaron por completo las "etiquetas rápidas" de dolores y objeciones frecuentes y las opciones/botones para agregarlas manualmente de la sección "Calificación en Caliente".
       - Se importó `useAuth` y se obtuvieron las variables de rol para el usuario autenticado.
       - Se restringió la edición de campos de calificación caliente según la jerarquía de roles:
-        - El Call Confirmer (`triage`) solo visualiza dolores y objeciones en modo lectura (texto destacado estático) e ingresa observaciones en modo escritura editable.
-        - El Setter edita dolores y objeciones libremente (textareas directos) y visualiza observaciones en modo lectura.
-        - El Admin y Closer pueden editar dolores, objeciones y observaciones libremente.
+        - El Call Confirmer (`triage`) solo visualiza dolores en modo lectura y observaciones en modo escritura (las objeciones se ocultan por completo, al no ser de su incumbencia).
+        - El Setter edita dolores libremente, visualiza objeciones registradas por el closer en modo lectura (no las registra él) y visualiza observaciones en modo lectura.
+        - El Closer y Admin pueden editar dolores, objeciones y observaciones libremente (siendo el Closer el responsable de registrar objeciones).
       - Se optimizó y liberó espacio visual para simplificar la navegación en el Lead Roadmap.
 
 - **6 de Julio de 2026**:
