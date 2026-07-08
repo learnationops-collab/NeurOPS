@@ -34,7 +34,12 @@ const ConversationalStatsTab = () => {
     setShowManager(true);
   };
 
-  // Filtros principales y comparación
+  const [sectionVisibility, setSectionVisibility] = useState({
+    opening: true,
+    cualificacion: true,
+    dolor: true,
+    seguimiento: true
+  });
   const [period, setPeriod] = useState('this_month'); // Default "Mes"
   const [category, setCategory] = useState('all');
   const [adId, setAdId] = useState('');
@@ -101,23 +106,42 @@ const ConversationalStatsTab = () => {
     return map;
   }, [data]);
 
-  // Dividir la tabla en Openings (Cualificación / Dolor) y Seguimientos (Seguimiento)
+  // Dividir la tabla en las 4 secciones conversacionales
   const openings = useMemo(() => {
-    return table.filter(row => row.category === 'cualificacion' || row.category === 'dolor' || row.category === 'opening' || !row.category);
+    return table.filter(row => row.category === 'opening' || !row.category);
+  }, [table]);
+
+  const cualificaciones = useMemo(() => {
+    return table.filter(row => row.category === 'cualificacion');
+  }, [table]);
+
+  const dolores = useMemo(() => {
+    return table.filter(row => row.category === 'dolor');
   }, [table]);
 
   const seguimientos = useMemo(() => {
     return table.filter(row => row.category === 'seguimiento');
   }, [table]);
 
-  // Totales Openings
+  // Totales por categoría
   const totalOpenings = useMemo(() => {
     const sends = openings.reduce((acc, curr) => acc + curr.total_sends, 0);
     const responses = openings.reduce((acc, curr) => acc + curr.total_responses, 0);
     return { sends, responses };
   }, [openings]);
 
-  // Totales Seguimientos
+  const totalCualificaciones = useMemo(() => {
+    const sends = cualificaciones.reduce((acc, curr) => acc + curr.total_sends, 0);
+    const responses = cualificaciones.reduce((acc, curr) => acc + curr.total_responses, 0);
+    return { sends, responses };
+  }, [cualificaciones]);
+
+  const totalDolores = useMemo(() => {
+    const sends = dolores.reduce((acc, curr) => acc + curr.total_sends, 0);
+    const responses = dolores.reduce((acc, curr) => acc + curr.total_responses, 0);
+    return { sends, responses };
+  }, [dolores]);
+
   const totalSeguimientos = useMemo(() => {
     const sends = seguimientos.reduce((acc, curr) => acc + curr.total_sends, 0);
     const responses = seguimientos.reduce((acc, curr) => acc + curr.total_responses, 0);
@@ -151,6 +175,167 @@ const ConversationalStatsTab = () => {
       <span className={`text-[9px] font-black uppercase ${color}`}>
         {sign}{diff.toFixed(1)}%
       </span>
+    );
+  const renderSectionTable = ({
+    title,
+    subtitle,
+    dataList,
+    totalData,
+    themeColor,
+    icon: IconComponent,
+    categoryKey,
+    infoText
+  }) => {
+    const themeStyles = {
+      indigo: {
+        text: 'text-indigo-400',
+        bg: 'bg-indigo-500/10 border-indigo-500/20',
+        hoverText: 'group-hover:text-indigo-400',
+        badge: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20'
+      },
+      blue: {
+        text: 'text-blue-400',
+        bg: 'bg-blue-500/10 border-blue-500/20',
+        hoverText: 'group-hover:text-blue-400',
+        badge: 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+      },
+      rose: {
+        text: 'text-rose-400',
+        bg: 'bg-rose-500/10 border-rose-500/20',
+        hoverText: 'group-hover:text-rose-400',
+        badge: 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+      },
+      amber: {
+        text: 'text-amber-400',
+        bg: 'bg-amber-500/10 border-amber-500/20',
+        hoverText: 'group-hover:text-amber-400',
+        badge: 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+      }
+    }[themeColor];
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`p-1.5 rounded-lg border ${themeStyles.bg} ${themeStyles.text}`}>
+              <IconComponent size={13} />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-white uppercase tracking-wider">{title}</h4>
+              <p className="text-[9px] text-slate-500 uppercase font-black">{subtitle}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-950/40 rounded-2xl border border-slate-800/60 overflow-hidden shadow-inner">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="bg-slate-900/30 border-b border-slate-800/80">
+                <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-8">#</th>
+                <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Mensaje</th>
+                <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Enviados</th>
+                <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Respuestas</th>
+                <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-32">% Respuesta</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/30 font-medium">
+              {dataList.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-[10px] text-slate-600 font-black uppercase tracking-widest">
+                    Sin mensajes registrados
+                  </td>
+                </tr>
+              ) : (
+                dataList.map((row, idx) => {
+                  const sendsRel = globalTotalSends > 0 ? pct(row.total_sends, globalTotalSends) : '0%';
+                  return (
+                    <tr key={row.message_id} className="hover:bg-slate-800/20 transition-all group">
+                      <td className="p-3.5 text-[9px] font-bold text-slate-600">{idx + 1}</td>
+                      <td className="p-3.5 max-w-[150px]">
+                        <div className="flex items-center gap-2">
+                          <div className="truncate">
+                            <p className={`font-black text-white ${themeStyles.hoverText} transition-colors truncate`}>{row.title}</p>
+                            <p className="text-[8px] text-slate-500 font-mono mt-0.5 truncate">{row.message_id}</p>
+                          </div>
+                          {row.body && (
+                            <div className="relative group/body flex-shrink-0">
+                              <Eye size={11} className={`text-slate-500 cursor-help hover:${themeStyles.text} transition-colors`} />
+                              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-72 bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-300 rounded-xl p-4 opacity-0 group-hover/body:opacity-100 transition-all pointer-events-none shadow-2xl z-50 leading-relaxed max-h-48 overflow-y-auto break-words whitespace-pre-wrap">
+                                {row.body}
+                              </div>
+                            </div>
+                          )}
+                          {row.is_configured && row.total_sends === 0 && (
+                            <span className={`text-[6px] font-black uppercase px-1 py-0.5 rounded-full flex-shrink-0 ${themeStyles.badge}`}>
+                              Nuevo
+                            </span>
+                          )}
+                          {!row.is_configured && (
+                            <button
+                              onClick={() => handleConfigureMessage(row.message_id, row.category || categoryKey)}
+                              className="text-[7px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full hover:bg-amber-500/20 hover:text-amber-400 active:scale-95 transition-all flex items-center gap-0.5 cursor-pointer flex-shrink-0"
+                              title="Configurar este ID en NeurOPS ahora mismo"
+                            >
+                              <Plus size={8} />
+                              Configurar ID
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <p className="font-black text-white font-mono">{fmt(row.total_sends)}</p>
+                        <p className="text-[8px] text-slate-500 font-mono mt-0.5">{sendsRel}</p>
+                        {compare && comparisonMap[row.message_id] && (
+                          <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].total_sends)}</p>
+                        )}
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <p className="font-black text-white font-mono">{fmt(row.total_responses)}</p>
+                        {compare && comparisonMap[row.message_id] && (
+                          <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].total_responses)}</p>
+                        )}
+                      </td>
+                      <td className="p-3.5">
+                        {(() => {
+                          const colorData = getResponseRateColor(row.response_rate, row.total_sends);
+                          return (
+                            <div className="space-y-1">
+                              <span className={`text-[9px] font-black font-mono ${colorData.text}`}>{row.response_rate}%</span>
+                              <div className="h-1 bg-slate-850 rounded-full overflow-hidden p-px">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${colorData.progress}`}
+                                  style={{ width: `${Math.min(row.response_rate, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+            {dataList.length > 0 && (
+              <tfoot className="border-t border-slate-800 bg-slate-900/20">
+                <tr className="font-black text-[9px] uppercase tracking-wider text-slate-400">
+                  <td colSpan={2} className="p-3.5">Total</td>
+                  <td className="p-3.5 text-center font-mono">{fmt(totalData.sends)}</td>
+                  <td className="p-3.5 text-center font-mono">{fmt(totalData.responses)}</td>
+                  <td className={`p-3.5 font-mono ${themeStyles.text}`}>{pct(totalData.responses, totalData.sends)}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+
+        <div className={`flex items-center gap-2 p-3 ${themeStyles.bg.replace('border-', 'border-').split(' ')[0]} border rounded-xl`}>
+          <Info size={12} className={`${themeStyles.text} flex-shrink-0`} />
+          <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wide leading-relaxed">
+            <span className={`${themeStyles.text} font-black`}>% Respuesta =</span> {infoText}
+          </p>
+        </div>
+      </div>
     );
   };
 
@@ -512,263 +697,124 @@ const ConversationalStatsTab = () => {
           {/* ── RENDIMIENTO DE CONVERSACIONES (Doble Panel) ── */}
           <div className="bg-slate-900/20 border border-slate-800/60 rounded-[2.5rem] p-6 lg:p-8 space-y-6 shadow-2xl backdrop-blur-sm">
             
-            <div className="border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-black text-white italic uppercase tracking-tight">Rendimiento de conversaciones</h3>
-              <p className="text-xs text-slate-500 font-bold uppercase mt-1">
-                Analiza qué tan efectivos son tus openings y seguimientos.
-              </p>
+            <div className="border-b border-slate-800 pb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-black text-white italic uppercase tracking-tight">Rendimiento de conversaciones</h3>
+                <p className="text-xs text-slate-500 font-bold uppercase mt-1">
+                  Analiza la efectividad de tus mensajes por categoría.
+                </p>
+              </div>
+              
+              {/* Controles de visibilidad de secciones */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest mr-1">Secciones visibles:</span>
+                {[
+                  { key: 'opening', label: 'Openings', dot: 'bg-indigo-500' },
+                  { key: 'cualificacion', label: 'Cualificación', dot: 'bg-blue-500' },
+                  { key: 'dolor', label: 'Dolores', dot: 'bg-rose-500' },
+                  { key: 'seguimiento', label: 'Seguimientos', dot: 'bg-amber-500' }
+                ].map(item => {
+                  const visible = sectionVisibility[item.key];
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => setSectionVisibility(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
+                      className={`px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-1.5 cursor-pointer ${
+                        visible
+                          ? 'bg-slate-900 border-slate-700 text-white shadow-md'
+                          : 'bg-slate-950/20 border-slate-800/40 text-slate-600 hover:text-slate-400'
+                      }`}
+                    >
+                      <div className={`w-1.5 h-1.5 rounded-full ${visible ? item.dot : 'bg-slate-700'}`} />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
-              {/* ─ PANEL IZQUIERDO: OPENINGS ─ */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400">
-                      <MessageSquare size={13} />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black text-white uppercase tracking-wider">Openings (Mensajes Iniciales)</h4>
-                      <p className="text-[9px] text-slate-500 uppercase font-black">Mensajes enviados primero al contacto.</p>
-                    </div>
-                  </div>
-                </div>
+              <AnimatePresence>
+                {sectionVisibility.opening && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {renderSectionTable({
+                      title: "Openings (Mensajes Iniciales)",
+                      subtitle: "Mensajes de apertura o contacto inicial.",
+                      dataList: openings,
+                      totalData: totalOpenings,
+                      themeColor: "indigo",
+                      icon: MessageSquare,
+                      categoryKey: "opening",
+                      infoText: "(Respuestas / Enviados) * 100. Mide qué porcentaje de contactos respondió cada opening."
+                    })}
+                  </motion.div>
+                )}
 
-                <div className="bg-slate-950/40 rounded-2xl border border-slate-800/60 overflow-hidden shadow-inner">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-slate-900/30 border-b border-slate-800/80">
-                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-8">#</th>
-                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Opening</th>
-                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Enviados</th>
-                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Respuestas</th>
-                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-32">% Respuesta</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/30 font-medium">
-                      {openings.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="p-8 text-center text-[10px] text-slate-600 font-black uppercase tracking-widest">
-                            Sin openings registrados
-                          </td>
-                        </tr>
-                      ) : (
-                        openings.map((row, idx) => {
-                          const sendsRel = globalTotalSends > 0 ? pct(row.total_sends, globalTotalSends) : '0%';
-                          return (
-                            <tr key={row.message_id} className="hover:bg-slate-800/20 transition-all group">
-                              <td className="p-3.5 text-[9px] font-bold text-slate-600">{idx + 1}</td>
-                              <td className="p-3.5 max-w-[150px]">
-                                <div className="flex items-center gap-2">
-                                  <div className="truncate">
-                                    <p className="font-black text-white group-hover:text-blue-400 transition-colors truncate">{row.title}</p>
-                                    <p className="text-[8px] text-slate-500 font-mono mt-0.5 truncate">{row.message_id}</p>
-                                  </div>
-                                  {row.body && (
-                                    <div className="relative group/body flex-shrink-0">
-                                      <Eye size={11} className="text-slate-500 cursor-help hover:text-blue-400 transition-colors" />
-                                      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-72 bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-300 rounded-xl p-4 opacity-0 group-hover/body:opacity-100 transition-all pointer-events-none shadow-2xl z-50 leading-relaxed max-h-48 overflow-y-auto break-words whitespace-pre-wrap">
-                                        {row.body}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {row.is_configured && row.total_sends === 0 && (
-                                    <span className="text-[6px] font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-1 py-0.5 rounded-full flex-shrink-0">
-                                      Nuevo
-                                    </span>
-                                  )}
-                                  {!row.is_configured && (
-                                    <button
-                                      onClick={() => handleConfigureMessage(row.message_id, row.category || 'cualificacion')}
-                                      className="text-[7px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full hover:bg-amber-500/20 hover:text-amber-400 active:scale-95 transition-all flex items-center gap-0.5 cursor-pointer flex-shrink-0"
-                                      title="Configurar este ID en NeurOPS ahora mismo"
-                                    >
-                                      <Plus size={8} />
-                                      Configurar ID
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3.5 text-center">
-                                <p className="font-black text-white font-mono">{fmt(row.total_sends)}</p>
-                                <p className="text-[8px] text-slate-500 font-mono mt-0.5">{sendsRel}</p>
-                                {compare && comparisonMap[row.message_id] && (
-                                  <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].total_sends)}</p>
-                                )}
-                              </td>
-                              <td className="p-3.5 text-center">
-                                <p className="font-black text-white font-mono">{fmt(row.total_responses)}</p>
-                                {compare && comparisonMap[row.message_id] && (
-                                  <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].total_responses)}</p>
-                                )}
-                              </td>
-                              <td className="p-3.5">
-                                {(() => {
-                                  const colorData = getResponseRateColor(row.response_rate, row.total_sends);
-                                  return (
-                                    <div className="space-y-1">
-                                      <span className={`text-[9px] font-black font-mono ${colorData.text}`}>{row.response_rate}%</span>
-                                      <div className="h-1 bg-slate-850 rounded-full overflow-hidden p-px">
-                                        <div
-                                          className={`h-full rounded-full transition-all duration-500 ${colorData.progress}`}
-                                          style={{ width: `${Math.min(row.response_rate, 100)}%` }}
-                                        />
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                    {openings.length > 0 && (
-                      <tfoot className="border-t border-slate-800 bg-slate-900/20">
-                        <tr className="font-black text-[9px] uppercase tracking-wider text-slate-400">
-                          <td colSpan={2} className="p-3.5">Total</td>
-                          <td className="p-3.5 text-center font-mono">{fmt(totalOpenings.sends)}</td>
-                          <td className="p-3.5 text-center font-mono">{fmt(totalOpenings.responses)}</td>
-                          <td className="p-3.5 font-mono text-blue-400">{pct(totalOpenings.responses, totalOpenings.sends)}</td>
-                        </tr>
-                      </tfoot>
-                    )}
-                  </table>
-                </div>
+                {sectionVisibility.cualificacion && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {renderSectionTable({
+                      title: "Cualificación (Preguntas Filtro)",
+                      subtitle: "Mensajes diseñados para evaluar el perfil del lead.",
+                      dataList: cualificaciones,
+                      totalData: totalCualificaciones,
+                      themeColor: "blue",
+                      icon: MessageSquare,
+                      categoryKey: "cualificacion",
+                      infoText: "(Respuestas / Enviados) * 100. Mide qué porcentaje de contactos respondió cada mensaje de cualificación."
+                    })}
+                  </motion.div>
+                )}
 
-                <div className="flex items-center gap-2 p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl">
-                  <Info size={12} className="text-blue-400 flex-shrink-0" />
-                  <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wide leading-relaxed">
-                    <span className="text-blue-400 font-black">% Respuesta =</span> (Respuestas / Enviados) * 100. Mide qué porcentaje de contactos respondió cada opening.
-                  </p>
-                </div>
-              </div>
+                {sectionVisibility.dolor && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {renderSectionTable({
+                      title: "Dolor (Objeciones)",
+                      subtitle: "Mensajes enfocados en debilidades y dolor.",
+                      dataList: dolores,
+                      totalData: totalDolores,
+                      themeColor: "rose",
+                      icon: MessageSquare,
+                      categoryKey: "dolor",
+                      infoText: "(Respuestas / Enviados) * 100. Mide qué porcentaje de contactos respondió cada mensaje de dolor."
+                    })}
+                  </motion.div>
+                )}
 
-              {/* ─ PANEL DERECHO: SEGUIMIENTOS ─ */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                      <Target size={13} />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black text-white uppercase tracking-wider">Seguimientos (Mensajes de Follow Up)</h4>
-                      <p className="text-[9px] text-slate-500 uppercase font-black">Mensajes enviados después del primer contacto.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-slate-950/40 rounded-2xl border border-slate-800/60 overflow-hidden shadow-inner">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-slate-900/30 border-b border-slate-800/80">
-                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-8">#</th>
-                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Seguimiento</th>
-                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Enviados</th>
-                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Respuestas</th>
-                        <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-32">% Respuesta</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/30 font-medium">
-                      {seguimientos.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="p-8 text-center text-[10px] text-slate-600 font-black uppercase tracking-widest">
-                            Sin seguimientos registrados
-                          </td>
-                        </tr>
-                      ) : (
-                        seguimientos.map((row, idx) => {
-                          const sendsRel = globalTotalSends > 0 ? pct(row.total_sends, globalTotalSends) : '0%';
-                          return (
-                            <tr key={row.message_id} className="hover:bg-slate-800/20 transition-all group">
-                              <td className="p-3.5 text-[9px] font-bold text-slate-600">{idx + 1}</td>
-                              <td className="p-3.5 max-w-[150px]">
-                                <div className="flex items-center gap-2">
-                                  <div className="truncate">
-                                    <p className="font-black text-white group-hover:text-emerald-400 transition-colors truncate">{row.title}</p>
-                                    <p className="text-[8px] text-slate-500 font-mono mt-0.5 truncate">{row.message_id}</p>
-                                  </div>
-                                  {row.body && (
-                                    <div className="relative group/body flex-shrink-0">
-                                      <Eye size={11} className="text-slate-500 cursor-help hover:text-emerald-400 transition-colors" />
-                                      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-72 bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-300 rounded-xl p-4 opacity-0 group-hover/body:opacity-100 transition-all pointer-events-none shadow-2xl z-50 leading-relaxed max-h-48 overflow-y-auto break-words whitespace-pre-wrap">
-                                        {row.body}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {row.is_configured && row.total_sends === 0 && (
-                                    <span className="text-[6px] font-black uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.5 rounded-full flex-shrink-0">
-                                      Nuevo
-                                    </span>
-                                  )}
-                                  {!row.is_configured && (
-                                    <button
-                                      onClick={() => handleConfigureMessage(row.message_id, row.category || 'seguimiento')}
-                                      className="text-[7px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full hover:bg-amber-500/20 hover:text-amber-400 active:scale-95 transition-all flex items-center gap-0.5 cursor-pointer flex-shrink-0"
-                                      title="Configurar este ID en NeurOPS ahora mismo"
-                                    >
-                                      <Plus size={8} />
-                                      Configurar ID
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3.5 text-center">
-                                <p className="font-black text-white font-mono">{fmt(row.total_sends)}</p>
-                                <p className="text-[8px] text-slate-500 font-mono mt-0.5">{sendsRel}</p>
-                                {compare && comparisonMap[row.message_id] && (
-                                  <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].total_sends)}</p>
-                                )}
-                              </td>
-                              <td className="p-3.5 text-center">
-                                <p className="font-black text-white font-mono">{fmt(row.total_responses)}</p>
-                                {compare && comparisonMap[row.message_id] && (
-                                  <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].total_responses)}</p>
-                                )}
-                              </td>
-                              <td className="p-3.5">
-                                {(() => {
-                                  const colorData = getResponseRateColor(row.response_rate, row.total_sends);
-                                  return (
-                                    <div className="space-y-1">
-                                      <span className={`text-[9px] font-black font-mono ${colorData.text}`}>{row.response_rate}%</span>
-                                      <div className="h-1 bg-slate-850 rounded-full overflow-hidden p-px">
-                                        <div
-                                          className={`h-full rounded-full transition-all duration-500 ${colorData.progress}`}
-                                          style={{ width: `${Math.min(row.response_rate, 100)}%` }}
-                                        />
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                    {seguimientos.length > 0 && (
-                      <tfoot className="border-t border-slate-800 bg-slate-900/20">
-                        <tr className="font-black text-[9px] uppercase tracking-wider text-slate-400">
-                          <td colSpan={2} className="p-3.5">Total</td>
-                          <td className="p-3.5 text-center font-mono">{fmt(totalSeguimientos.sends)}</td>
-                          <td className="p-3.5 text-center font-mono">{fmt(totalSeguimientos.responses)}</td>
-                          <td className="p-3.5 font-mono text-emerald-400">{pct(totalSeguimientos.responses, totalSeguimientos.sends)}</td>
-                        </tr>
-                      </tfoot>
-                    )}
-                  </table>
-                </div>
-
-                <div className="flex items-center gap-2 p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
-                  <Info size={12} className="text-emerald-400 flex-shrink-0" />
-                  <p className="text-[8px] text-slate-400 font-semibold uppercase tracking-wide leading-relaxed">
-                    <span className="text-emerald-400 font-black">% Respuesta =</span> (Respuestas / Enviados) * 100. Mide qué porcentaje de contactos respondió cada seguimiento.
-                  </p>
-                </div>
-              </div>
-
+                {sectionVisibility.seguimiento && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {renderSectionTable({
+                      title: "Seguimientos (Follow Up)",
+                      subtitle: "Mensajes enviados después del primer contacto.",
+                      dataList: seguimientos,
+                      totalData: totalSeguimientos,
+                      themeColor: "amber",
+                      icon: Reply,
+                      categoryKey: "seguimiento",
+                      infoText: "(Respuestas / Enviados) * 100. Mide qué porcentaje de contactos respondió cada seguimiento."
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
           </div>

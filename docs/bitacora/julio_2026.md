@@ -14,6 +14,9 @@
       - Se rediseñó el botón "Configurar" haciéndolo más visible y destacado en degradado violeta con el texto "Administrar Mensajes" e icono de `MessageSquare` para asimilar el flujo a la gestión de Ads.
       - Se agregaron indicadores visuales suavizados (insignia `Nuevo` e inactividad en gris de la barra de progreso) para los mensajes recién creados que tienen 0 envíos, evitando generar falsas alarmas de bajo rendimiento.
       - Se incluyó la categoría `'opening'` dentro del filtro de la tabla de Openings (Mensajes Iniciales) para una correcta visualización.
+      - Se dividió el panel de rendimiento en 4 secciones bien delimitadas (Openings, Cualificación, Dolores, Seguimientos) de acuerdo a la categorización de los mensajes.
+      - Se diseñó un panel de botones interactivos tipo toggle en la cabecera ("Secciones visibles") que permite al usuario prender/apagar cada sección dinámicamente con transiciones fluidas mediante `AnimatePresence` de Framer Motion.
+      - Se implementó la función interna `renderSectionTable` para modularizar y optimizar el pintado de las tablas de cada sección, evitando duplicar más de 300 líneas de código JSX y garantizando la mantenibilidad.
     - **Frontend React ([MessageManagerModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/dashboard/MessageManagerModal.jsx) [MODIFY])**:
       - Se añadieron las props `initialMessageId` e `initialCategory` al modal y se configuró para que al abrirse en base a estas propiedades, se auto-inicialice en el modo de creación rápida pre-rellenando los datos del mensaje.
       - Se integró la opción `'opening'` en el listado de categorías (`CATEGORIES`) del formulario del modal de administración.
