@@ -12,7 +12,8 @@ import StatTooltip from '../../components/shared/StatTooltip';
 const pct = (a, b) => (b > 0 ? `${((a / b) * 100).toFixed(1)}%` : '0.0%');
 const fmt = (n) => (n ?? 0).toLocaleString();
 
-const getResponseRateColor = (rate) => {
+const getResponseRateColor = (rate, totalSends = 1) => {
+  if (totalSends === 0) return { text: 'text-slate-500', progress: 'bg-slate-800' };
   if (rate < 15) return { text: 'text-rose-400', progress: 'bg-gradient-to-r from-rose-500 to-rose-400' };
   if (rate < 30) return { text: 'text-amber-400', progress: 'bg-gradient-to-r from-amber-500 to-amber-400' };
   return { text: 'text-emerald-400', progress: 'bg-gradient-to-r from-emerald-500 to-emerald-400' };
@@ -263,11 +264,11 @@ const ConversationalStatsTab = () => {
           {/* Botones de acción */}
           <button
             onClick={() => setShowManager(true)}
-            className="p-2.5 bg-slate-800 hover:bg-slate-750 text-indigo-400 hover:text-indigo-300 rounded-xl transition-all border border-slate-700/60 active:scale-95 shadow-lg flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
-            title="Configurar Mensajes"
+            className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl transition-all active:scale-95 shadow-lg shadow-indigo-500/20 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border border-indigo-400/20 animate-pulse-subtle"
+            title="Crear y Gestionar Mensajes Conversacionales"
           >
-            <Settings2 size={15} />
-            <span className="hidden sm:inline">Configurar</span>
+            <MessageSquare size={14} />
+            <span>Administrar Mensajes</span>
           </button>
 
           <button
@@ -572,6 +573,11 @@ const ConversationalStatsTab = () => {
                                       </div>
                                     </div>
                                   )}
+                                  {row.is_configured && row.total_sends === 0 && (
+                                    <span className="text-[6px] font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-1 py-0.5 rounded-full flex-shrink-0">
+                                      Nuevo
+                                    </span>
+                                  )}
                                   {!row.is_configured && (
                                     <button
                                       onClick={() => handleConfigureMessage(row.message_id, row.category || 'cualificacion')}
@@ -599,7 +605,7 @@ const ConversationalStatsTab = () => {
                               </td>
                               <td className="p-3.5">
                                 {(() => {
-                                  const colorData = getResponseRateColor(row.response_rate);
+                                  const colorData = getResponseRateColor(row.response_rate, row.total_sends);
                                   return (
                                     <div className="space-y-1">
                                       <span className={`text-[9px] font-black font-mono ${colorData.text}`}>{row.response_rate}%</span>
@@ -691,6 +697,11 @@ const ConversationalStatsTab = () => {
                                       </div>
                                     </div>
                                   )}
+                                  {row.is_configured && row.total_sends === 0 && (
+                                    <span className="text-[6px] font-black uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.5 rounded-full flex-shrink-0">
+                                      Nuevo
+                                    </span>
+                                  )}
                                   {!row.is_configured && (
                                     <button
                                       onClick={() => handleConfigureMessage(row.message_id, row.category || 'seguimiento')}
@@ -718,7 +729,7 @@ const ConversationalStatsTab = () => {
                               </td>
                               <td className="p-3.5">
                                 {(() => {
-                                  const colorData = getResponseRateColor(row.response_rate);
+                                  const colorData = getResponseRateColor(row.response_rate, row.total_sends);
                                   return (
                                     <div className="space-y-1">
                                       <span className={`text-[9px] font-black font-mono ${colorData.text}`}>{row.response_rate}%</span>

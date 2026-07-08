@@ -294,7 +294,8 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
     configured_msgs = {m.message_id: m for m in msgs_query.all()}
 
     # ── 5. Construir tabla de resultados ──
-    all_keys = set(sends_map.keys()) | set(resp_map.keys())
+    # Unir las llaves configuradas con las que tienen envíos/respuestas reales
+    all_keys = set(configured_msgs.keys()) | set(sends_map.keys()) | set(resp_map.keys())
     total_sends_all = sum(v['sends'] for v in sends_map.values())
     days_in_range = max(1, (end_dt - start_dt).days + 1)
 
