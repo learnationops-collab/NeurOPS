@@ -176,6 +176,8 @@ const ConversationalStatsTab = () => {
         {sign}{diff.toFixed(1)}%
       </span>
     );
+  };
+
   const renderSectionTable = ({
     title,
     subtitle,
