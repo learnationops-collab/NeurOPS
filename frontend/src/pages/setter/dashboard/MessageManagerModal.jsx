@@ -8,7 +8,8 @@ import api from '../../../services/api';
 const CATEGORIES = [
   { value: 'cualificacion', label: 'Cualificación', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
   { value: 'dolor', label: 'Dolor', color: 'text-rose-400 bg-rose-400/10 border-rose-400/20' },
-  { value: 'seguimiento', label: 'Seguimiento', color: 'text-amber-400 bg-amber-400/10 border-amber-400/20' }
+  { value: 'seguimiento', label: 'Seguimiento', color: 'text-amber-400 bg-amber-400/10 border-amber-400/20' },
+  { value: 'opening', label: 'Opening', color: 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20' }
 ];
 
 const EMPTY_FORM = { message_id: '', title: '', body: '', category: 'cualificacion', is_active: true };

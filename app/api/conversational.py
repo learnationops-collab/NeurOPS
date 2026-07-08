@@ -36,7 +36,7 @@ def create_message():
         return jsonify({'status': 'error', 'message': 'message_id es obligatorio'}), 400
     if not title:
         return jsonify({'status': 'error', 'message': 'title es obligatorio'}), 400
-    if category not in ('cualificacion', 'dolor', 'seguimiento'):
+    if category not in ('cualificacion', 'dolor', 'seguimiento', 'opening'):
         return jsonify({'status': 'error', 'message': 'category inválida'}), 400
 
     if ConversationalMessage.query.filter_by(message_id=message_id).first():
@@ -70,7 +70,7 @@ def update_message(msg_id):
     if 'body' in data:
         msg.body = data['body']
     if 'category' in data:
-        if data['category'] not in ('cualificacion', 'dolor', 'seguimiento'):
+        if data['category'] not in ('cualificacion', 'dolor', 'seguimiento', 'opening'):
             return jsonify({'status': 'error', 'message': 'category inválida'}), 400
         msg.category = data['category']
     if 'is_active' in data:

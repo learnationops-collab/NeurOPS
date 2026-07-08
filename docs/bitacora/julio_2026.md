@@ -6,14 +6,17 @@
       - Se validó la robustez de la lógica de `/manychat-webhook` para soportar payloads minimalistas enviados por Manychat que solo incluyan el `manychat_id`, el identificador del mensaje (`id_option_send` / `id_option`), y opcionalmente el Instagram del lead (`lead_ig`). Esto simplifica de forma contundente la solicitud externa configurada en Manychat sin perder la capacidad de vincular las agendas ni ventas.
     - **Backend API ([conversational.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/conversational.py) [MODIFY])**:
       - Se modificó la consulta en `_compute_stats_for_dates` para que `all_keys` sea la unión de todos los mensajes configurados en la base de datos (`ConversationalMessage`) y aquellos con actividad en `LeadAnswer`. Esto permite que los mensajes recién creados con conteos en 0 aparezcan inmediatamente en las tablas de rendimiento.
+      - Se añadió `'opening'` a las categorías válidas de mensajes conversacionales en la creación (`create_message`) y modificación (`update_message`).
     - **Frontend React ([ConversationalStatsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/ConversationalStatsTab.jsx) [MODIFY])**:
       - Se agregó soporte para pre-visualizar el contenido completo de cada mensaje (`body`) de forma interactiva en la tabla mediante el icono de ojo `Eye` y tooltips enriquecidos, evitando la necesidad de abrir el gestor para recordar el texto del mensaje.
       - Se implementó una barra de progreso horizontal semántica para la tasa de respuesta: si la tasa es menor al 15% se pinta de color rojo/rosa (`from-rose-500 to-rose-400`), si está entre el 15% y el 30% se pinta de amarillo/naranja (`from-amber-500 to-amber-400`), y si es mayor o igual al 30% se pinta de verde (`from-emerald-500 to-emerald-400`), facilitando el análisis visual.
       - Se mejoró la detección de mensajes sin configurar reemplazando la insignia estática por un botón interactivo de "Configurar ID" que abre en caliente el gestor de mensajes cargando de forma automática el ID y categoría del mensaje en el formulario.
       - Se rediseñó el botón "Configurar" haciéndolo más visible y destacado en degradado violeta con el texto "Administrar Mensajes" e icono de `MessageSquare` para asimilar el flujo a la gestión de Ads.
       - Se agregaron indicadores visuales suavizados (insignia `Nuevo` e inactividad en gris de la barra de progreso) para los mensajes recién creados que tienen 0 envíos, evitando generar falsas alarmas de bajo rendimiento.
+      - Se incluyó la categoría `'opening'` dentro del filtro de la tabla de Openings (Mensajes Iniciales) para una correcta visualización.
     - **Frontend React ([MessageManagerModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/dashboard/MessageManagerModal.jsx) [MODIFY])**:
       - Se añadieron las props `initialMessageId` e `initialCategory` al modal y se configuró para que al abrirse en base a estas propiedades, se auto-inicialice en el modo de creación rápida pre-rellenando los datos del mensaje.
+      - Se integró la opción `'opening'` en el listado de categorías (`CATEGORIES`) del formulario del modal de administración.
 
 - **7 de Julio de 2026**:
   - **Simplificación y Restricción del Lead Roadmap por Roles**:

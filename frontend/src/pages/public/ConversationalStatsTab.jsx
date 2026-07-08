@@ -103,7 +103,7 @@ const ConversationalStatsTab = () => {
 
   // Dividir la tabla en Openings (Cualificación / Dolor) y Seguimientos (Seguimiento)
   const openings = useMemo(() => {
-    return table.filter(row => row.category === 'cualificacion' || row.category === 'dolor' || !row.category);
+    return table.filter(row => row.category === 'cualificacion' || row.category === 'dolor' || row.category === 'opening' || !row.category);
   }, [table]);
 
   const seguimientos = useMemo(() => {
