@@ -13,7 +13,7 @@ const CATEGORIES = [
 
 const EMPTY_FORM = { message_id: '', title: '', body: '', category: 'cualificacion', is_active: true };
 
-const MessageManagerModal = ({ isOpen, onClose }) => {
+const MessageManagerModal = ({ isOpen, onClose, initialMessageId, initialCategory }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -23,8 +23,21 @@ const MessageManagerModal = ({ isOpen, onClose }) => {
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    if (isOpen) fetchMessages();
-  }, [isOpen]);
+    if (isOpen) {
+      fetchMessages();
+      if (initialMessageId) {
+        setEditingId(null);
+        setForm({
+          message_id: initialMessageId,
+          title: '',
+          body: '',
+          category: initialCategory || 'cualificacion',
+          is_active: true
+        });
+        setShowForm(true);
+      }
+    }
+  }, [isOpen, initialMessageId, initialCategory]);
 
   const fetchMessages = async () => {
     setLoading(true);

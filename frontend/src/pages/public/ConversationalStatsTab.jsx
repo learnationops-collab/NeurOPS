@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, Reply, Users, Target, CalendarDays, TrendingUp,
-  RefreshCw, Settings2, HelpCircle, Info, Calendar, ChevronDown, Loader2
+  RefreshCw, Settings2, HelpCircle, Info, Calendar, ChevronDown, Loader2, Plus, Eye
 } from 'lucide-react';
 import api from '../../services/api';
 import MessageManagerModal from '../setter/dashboard/MessageManagerModal';
@@ -12,12 +12,26 @@ import StatTooltip from '../../components/shared/StatTooltip';
 const pct = (a, b) => (b > 0 ? `${((a / b) * 100).toFixed(1)}%` : '0.0%');
 const fmt = (n) => (n ?? 0).toLocaleString();
 
+const getResponseRateColor = (rate) => {
+  if (rate < 15) return { text: 'text-rose-400', progress: 'bg-gradient-to-r from-rose-500 to-rose-400' };
+  if (rate < 30) return { text: 'text-amber-400', progress: 'bg-gradient-to-r from-amber-500 to-amber-400' };
+  return { text: 'text-emerald-400', progress: 'bg-gradient-to-r from-emerald-500 to-emerald-400' };
+};
+
 const ConversationalStatsTab = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState(null);
   const [ads, setAds] = useState([]);
   const [showManager, setShowManager] = useState(false);
+  const [initialMessageId, setInitialMessageId] = useState(null);
+  const [initialCategory, setInitialCategory] = useState('cualificacion');
+
+  const handleConfigureMessage = (messageId, category) => {
+    setInitialMessageId(messageId);
+    setInitialCategory(category || 'cualificacion');
+    setShowManager(true);
+  };
 
   // Filtros principales y comparación
   const [period, setPeriod] = useState('this_month'); // Default "Mes"
@@ -552,16 +566,21 @@ const ConversationalStatsTab = () => {
                                   </div>
                                   {row.body && (
                                     <div className="relative group/body flex-shrink-0">
-                                      <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-blue-400 transition-colors" />
-                                      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-64 bg-slate-900 border border-slate-800 text-[10px] font-medium text-slate-300 rounded-xl p-3 opacity-0 group-hover/body:opacity-100 transition-all pointer-events-none shadow-2xl z-50 leading-relaxed">
+                                      <Eye size={11} className="text-slate-500 cursor-help hover:text-blue-400 transition-colors" />
+                                      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-72 bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-300 rounded-xl p-4 opacity-0 group-hover/body:opacity-100 transition-all pointer-events-none shadow-2xl z-50 leading-relaxed max-h-48 overflow-y-auto break-words whitespace-pre-wrap">
                                         {row.body}
                                       </div>
                                     </div>
                                   )}
                                   {!row.is_configured && (
-                                    <span className="text-[6px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded-full flex-shrink-0">
-                                      Sin conf.
-                                    </span>
+                                    <button
+                                      onClick={() => handleConfigureMessage(row.message_id, row.category || 'cualificacion')}
+                                      className="text-[7px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full hover:bg-amber-500/20 hover:text-amber-400 active:scale-95 transition-all flex items-center gap-0.5 cursor-pointer flex-shrink-0"
+                                      title="Configurar este ID en NeurOPS ahora mismo"
+                                    >
+                                      <Plus size={8} />
+                                      Configurar ID
+                                    </button>
                                   )}
                                 </div>
                               </td>
@@ -579,15 +598,20 @@ const ConversationalStatsTab = () => {
                                 )}
                               </td>
                               <td className="p-3.5">
-                                <div className="space-y-1">
-                                  <span className="text-[9px] font-black text-blue-400 font-mono">{row.response_rate}%</span>
-                                  <div className="h-1 bg-slate-850 rounded-full overflow-hidden p-px">
-                                    <div
-                                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                                      style={{ width: `${Math.min(row.response_rate, 100)}%` }}
-                                    />
-                                  </div>
-                                </div>
+                                {(() => {
+                                  const colorData = getResponseRateColor(row.response_rate);
+                                  return (
+                                    <div className="space-y-1">
+                                      <span className={`text-[9px] font-black font-mono ${colorData.text}`}>{row.response_rate}%</span>
+                                      <div className="h-1 bg-slate-850 rounded-full overflow-hidden p-px">
+                                        <div
+                                          className={`h-full rounded-full transition-all duration-500 ${colorData.progress}`}
+                                          style={{ width: `${Math.min(row.response_rate, 100)}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                               </td>
                             </tr>
                           );
@@ -661,16 +685,21 @@ const ConversationalStatsTab = () => {
                                   </div>
                                   {row.body && (
                                     <div className="relative group/body flex-shrink-0">
-                                      <HelpCircle size={10} className="text-slate-600 cursor-help hover:text-emerald-400 transition-colors" />
-                                      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-64 bg-slate-900 border border-slate-800 text-[10px] font-medium text-slate-300 rounded-xl p-3 opacity-0 group-hover/body:opacity-100 transition-all pointer-events-none shadow-2xl z-50 leading-relaxed">
+                                      <Eye size={11} className="text-slate-500 cursor-help hover:text-emerald-400 transition-colors" />
+                                      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-72 bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-300 rounded-xl p-4 opacity-0 group-hover/body:opacity-100 transition-all pointer-events-none shadow-2xl z-50 leading-relaxed max-h-48 overflow-y-auto break-words whitespace-pre-wrap">
                                         {row.body}
                                       </div>
                                     </div>
                                   )}
                                   {!row.is_configured && (
-                                    <span className="text-[6px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded-full flex-shrink-0">
-                                      Sin conf.
-                                    </span>
+                                    <button
+                                      onClick={() => handleConfigureMessage(row.message_id, row.category || 'seguimiento')}
+                                      className="text-[7px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full hover:bg-amber-500/20 hover:text-amber-400 active:scale-95 transition-all flex items-center gap-0.5 cursor-pointer flex-shrink-0"
+                                      title="Configurar este ID en NeurOPS ahora mismo"
+                                    >
+                                      <Plus size={8} />
+                                      Configurar ID
+                                    </button>
                                   )}
                                 </div>
                               </td>
@@ -688,15 +717,20 @@ const ConversationalStatsTab = () => {
                                 )}
                               </td>
                               <td className="p-3.5">
-                                <div className="space-y-1">
-                                  <span className="text-[9px] font-black text-emerald-400 font-mono">{row.response_rate}%</span>
-                                  <div className="h-1 bg-slate-850 rounded-full overflow-hidden p-px">
-                                    <div
-                                      className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                                      style={{ width: `${Math.min(row.response_rate, 100)}%` }}
-                                    />
-                                  </div>
-                                </div>
+                                {(() => {
+                                  const colorData = getResponseRateColor(row.response_rate);
+                                  return (
+                                    <div className="space-y-1">
+                                      <span className={`text-[9px] font-black font-mono ${colorData.text}`}>{row.response_rate}%</span>
+                                      <div className="h-1 bg-slate-850 rounded-full overflow-hidden p-px">
+                                        <div
+                                          className={`h-full rounded-full transition-all duration-500 ${colorData.progress}`}
+                                          style={{ width: `${Math.min(row.response_rate, 100)}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                               </td>
                             </tr>
                           );
@@ -791,8 +825,12 @@ const ConversationalStatsTab = () => {
       {/* ── MODAL DE GESTIÓN DE MENSAJES CONVERSACIONALES ── */}
       <MessageManagerModal
         isOpen={showManager}
+        initialMessageId={initialMessageId}
+        initialCategory={initialCategory}
         onClose={() => {
           setShowManager(false);
+          setInitialMessageId(null);
+          setInitialCategory('cualificacion');
           fetchStats();
         }}
       />

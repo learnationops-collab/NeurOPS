@@ -1,5 +1,16 @@
 # Bitácora - Julio 2026
 
+- **8 de Julio de 2026**:
+  - **Optimización de Rendimiento Conversacional y Simplificación de Webhooks**:
+    - **Backend API ([manychat.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/manychat.py) [VALIDATE])**:
+      - Se validó la robustez de la lógica de `/manychat-webhook` para soportar payloads minimalistas enviados por Manychat que solo incluyan el `manychat_id`, el identificador del mensaje (`id_option_send` / `id_option`), y opcionalmente el Instagram del lead (`lead_ig`). Esto simplifica de forma contundente la solicitud externa configurada en Manychat sin perder la capacidad de vincular las agendas ni ventas.
+    - **Frontend React ([ConversationalStatsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/ConversationalStatsTab.jsx) [MODIFY])**:
+      - Se agregó soporte para pre-visualizar el contenido completo de cada mensaje (`body`) de forma interactiva en la tabla mediante el icono de ojo `Eye` y tooltips enriquecidos, evitando la necesidad de abrir el gestor para recordar el texto del mensaje.
+      - Se implementó una barra de progreso horizontal semántica para la tasa de respuesta: si la tasa es menor al 15% se pinta de color rojo/rosa (`from-rose-500 to-rose-400`), si está entre el 15% y el 30% se pinta de amarillo/naranja (`from-amber-500 to-amber-400`), y si es mayor o igual al 30% se pinta de verde (`from-emerald-500 to-emerald-400`), facilitando el análisis visual.
+      - Se mejoró la detección de mensajes sin configurar reemplazando la insignia estática por un botón interactivo de "Configurar ID" que abre en caliente el gestor de mensajes cargando de forma automática el ID y categoría del mensaje en el formulario.
+    - **Frontend React ([MessageManagerModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/dashboard/MessageManagerModal.jsx) [MODIFY])**:
+      - Se añadieron las props `initialMessageId` e `initialCategory` al modal y se configuró para que al abrirse en base a estas propiedades, se auto-inicialice en el modo de creación rápida pre-rellenando los datos del mensaje.
+
 - **7 de Julio de 2026**:
   - **Simplificación y Restricción del Lead Roadmap por Roles**:
     - **Frontend React ([LeadRoadmapDetail.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/LeadRoadmapDetail.jsx) [MODIFY])**:
