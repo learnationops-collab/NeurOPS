@@ -5,6 +5,14 @@
     - **Backend API ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
       - Se implementó un mecanismo de resolución de usuario fallback en `process_agenda` para buscar un usuario administrador por defecto (o primer usuario del sistema) cuando `closer_id` sea `None` (por ejemplo, en llamadas automáticas, webhooks o integraciones externas donde no hay un usuario autenticado activo).
       - Se envolvieron las inserciones del modelo `ClientComment` para cancelaciones y reagendas en comprobaciones de seguridad `if closer_id:` para proteger el sistema contra caídas por violación de restricción `NOT NULL` en la columna `author_id` de la base de datos PostgreSQL, garantizando la continuidad en la sincronización de citas.
+  - **Visualización de Leads Cualificados y Descualificados en Rendimiento Conversacional**:
+    - **Backend API ([conversational.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/conversational.py) [MODIFY])**:
+      - Se modificó el cálculo estadístico en `_compute_stats_for_dates` para consultar de forma agrupada los leads que resultan descalificados (`qualification == 'false'`).
+      - Se expuso la métrica de leads descualificados (`disqualified_leads`) por cada mensaje y se incluyó en la respuesta agregada de la API.
+    - **Frontend React ([ConversationalStatsTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/ConversationalStatsTab.jsx) [MODIFY])**:
+      - Se añadieron las columnas **Cualificados** y **Descualificados** a las tablas de cada sección (Openings, Cualificación, Dolores y Seguimientos) para visibilizar el comportamiento del funnel.
+      - Se adaptaron los agregados en `useMemo` para computar de forma precisa los totales de leads cualificados y descualificados por sección.
+      - Se incrementó el `colSpan` de la fila de advertencia a `7` para evitar desajustes visuales.
 
 - **8 de Julio de 2026**:
   - **Optimización de Rendimiento Conversacional y Simplificación de Webhooks**:

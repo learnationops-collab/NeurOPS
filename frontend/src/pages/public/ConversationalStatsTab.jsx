@@ -127,25 +127,33 @@ const ConversationalStatsTab = () => {
   const totalOpenings = useMemo(() => {
     const sends = openings.reduce((acc, curr) => acc + curr.total_sends, 0);
     const responses = openings.reduce((acc, curr) => acc + curr.total_responses, 0);
-    return { sends, responses };
+    const leads_generated = openings.reduce((acc, curr) => acc + (curr.leads_generated || 0), 0);
+    const disqualified_leads = openings.reduce((acc, curr) => acc + (curr.disqualified_leads || 0), 0);
+    return { sends, responses, leads_generated, disqualified_leads };
   }, [openings]);
 
   const totalCualificaciones = useMemo(() => {
     const sends = cualificaciones.reduce((acc, curr) => acc + curr.total_sends, 0);
     const responses = cualificaciones.reduce((acc, curr) => acc + curr.total_responses, 0);
-    return { sends, responses };
+    const leads_generated = cualificaciones.reduce((acc, curr) => acc + (curr.leads_generated || 0), 0);
+    const disqualified_leads = cualificaciones.reduce((acc, curr) => acc + (curr.disqualified_leads || 0), 0);
+    return { sends, responses, leads_generated, disqualified_leads };
   }, [cualificaciones]);
 
   const totalDolores = useMemo(() => {
     const sends = dolores.reduce((acc, curr) => acc + curr.total_sends, 0);
     const responses = dolores.reduce((acc, curr) => acc + curr.total_responses, 0);
-    return { sends, responses };
+    const leads_generated = dolores.reduce((acc, curr) => acc + (curr.leads_generated || 0), 0);
+    const disqualified_leads = dolores.reduce((acc, curr) => acc + (curr.disqualified_leads || 0), 0);
+    return { sends, responses, leads_generated, disqualified_leads };
   }, [dolores]);
 
   const totalSeguimientos = useMemo(() => {
     const sends = seguimientos.reduce((acc, curr) => acc + curr.total_sends, 0);
     const responses = seguimientos.reduce((acc, curr) => acc + curr.total_responses, 0);
-    return { sends, responses };
+    const leads_generated = seguimientos.reduce((acc, curr) => acc + (curr.leads_generated || 0), 0);
+    const disqualified_leads = seguimientos.reduce((acc, curr) => acc + (curr.disqualified_leads || 0), 0);
+    return { sends, responses, leads_generated, disqualified_leads };
   }, [seguimientos]);
 
   // Totales globales para cálculo de porcentajes relativos
@@ -237,13 +245,15 @@ const ConversationalStatsTab = () => {
                 <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Mensaje</th>
                 <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Enviados</th>
                 <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Respuestas</th>
-                <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-32">% Respuesta</th>
+                <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest w-24">% Respuesta</th>
+                <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Cualificados</th>
+                <th className="p-3.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Descualificados</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-medium">
               {dataList.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-[10px] text-slate-600 font-black uppercase tracking-widest">
+                  <td colSpan={7} className="p-8 text-center text-[10px] text-slate-600 font-black uppercase tracking-widest">
                     Sin mensajes registrados
                   </td>
                 </tr>
@@ -313,6 +323,18 @@ const ConversationalStatsTab = () => {
                           );
                         })()}
                       </td>
+                      <td className="p-3.5 text-center">
+                        <p className="font-black text-white font-mono">{fmt(row.leads_generated)}</p>
+                        {compare && comparisonMap[row.message_id] && (
+                          <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].leads_generated)}</p>
+                        )}
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <p className="font-black text-white font-mono">{fmt(row.disqualified_leads)}</p>
+                        {compare && comparisonMap[row.message_id] && (
+                          <p className="text-[8px] text-slate-600 font-mono mt-0.5">Ant: {fmt(comparisonMap[row.message_id].disqualified_leads)}</p>
+                        )}
+                      </td>
                     </tr>
                   );
                 })
@@ -325,6 +347,8 @@ const ConversationalStatsTab = () => {
                   <td className="p-3.5 text-center font-mono">{fmt(totalData.sends)}</td>
                   <td className="p-3.5 text-center font-mono">{fmt(totalData.responses)}</td>
                   <td className={`p-3.5 font-mono ${themeStyles.text}`}>{pct(totalData.responses, totalData.sends)}</td>
+                  <td className="p-3.5 text-center font-mono">{fmt(totalData.leads_generated)}</td>
+                  <td className="p-3.5 text-center font-mono">{fmt(totalData.disqualified_leads)}</td>
                 </tr>
               </tfoot>
             )}

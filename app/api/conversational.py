@@ -214,7 +214,8 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
     responses_query = db.session.query(
         LeadAnswer.id_option.label('msg_key'),
         func.count(LeadAnswer.id).label('total_responses'),
-        func.sum(db.case((LeadAnswer.qualification == 'true', 1), else_=0)).label('qualified_resp')
+        func.sum(db.case((LeadAnswer.qualification == 'true', 1), else_=0)).label('qualified_resp'),
+        func.sum(db.case((LeadAnswer.qualification == 'false', 1), else_=0)).label('disqualified_resp')
     ).filter(
         *base_filters,
         LeadAnswer.id_option != None,
@@ -223,7 +224,13 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
     ).group_by(LeadAnswer.id_option).all()
 
     sends_map = {r.msg_key: {'sends': r.total_sends, 'qualified': int(r.qualified or 0)} for r in sends_query}
-    resp_map = {r.msg_key: {'responses': r.total_responses, 'qualified_resp': int(r.qualified_resp or 0)} for r in responses_query}
+    resp_map = {
+        r.msg_key: {
+            'responses': r.total_responses,
+            'qualified_resp': int(r.qualified_resp or 0),
+            'disqualified_resp': int(r.disqualified_resp or 0)
+        } for r in responses_query
+    }
 
     # ── 3. Atribución de Agendas y Ventas ──
     def normalize_ig(val):
@@ -302,7 +309,7 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
     table_rows = []
     for key in all_keys:
         send_data = sends_map.get(key, {'sends': 0, 'qualified': 0})
-        resp_data = resp_map.get(key, {'responses': 0, 'qualified_resp': 0})
+        resp_data = resp_map.get(key, {'responses': 0, 'qualified_resp': 0, 'disqualified_resp': 0})
         msg = configured_msgs.get(key)
 
         # Filtrar por categoría si está configurado el mensaje
@@ -315,6 +322,7 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         sends = send_data['sends']
         responses = resp_data['responses']
         leads = resp_data['qualified_resp']
+        disqualified = resp_data.get('disqualified_resp', 0)
         agendas = agendas_per_msg.get(key, 0)
         ventas = ventas_per_msg.get(key, 0)
 
@@ -335,6 +343,7 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
             'total_responses': responses,
             'response_rate': response_rate,
             'leads_generated': leads,
+            'disqualified_leads': disqualified,
             'qualification_rate': qual_rate,
             'agendas': agendas,
             'agenda_rate': agenda_rate,
@@ -348,6 +357,7 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
     # ── 6. KPIs globales ──
     total_responses_all = sum(v['responses'] for v in resp_map.values())
     total_leads_all = sum(v['qualified_resp'] for v in resp_map.values())
+    total_disqualified_all = sum(v.get('disqualified_resp', 0) for v in resp_map.values())
     total_agendas_all = sum(agendas_per_msg.values())
     total_ventas_all = sum(ventas_per_msg.values())
 
@@ -357,6 +367,7 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         'total_responses': total_responses_all,
         'global_response_rate': round((total_responses_all / total_sends_all) * 100, 1) if total_sends_all > 0 else 0,
         'total_leads': total_leads_all,
+        'total_disqualified': total_disqualified_all,
         'global_qualification_rate': round((total_leads_all / total_responses_all) * 100, 1) if total_responses_all > 0 else 0,
         'total_agendas': total_agendas_all,
         'agenda_rate': round((total_agendas_all / total_leads_all) * 100, 1) if total_leads_all > 0 else 0,
