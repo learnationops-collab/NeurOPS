@@ -762,8 +762,18 @@ class CloserService:
         from app.models import Appointment, db, ClientComment, User
         from app.services.booking_service import BookingService
         
-        user = User.query.get(closer_id)
-        user_display = user.username if user else "Usuario desconocido"
+        user = User.query.get(closer_id) if closer_id else None
+        if not user:
+            # Buscar un administrador o primer usuario como autor fallback
+            user = User.query.filter_by(role='admin').first() or User.query.first()
+            if user:
+                closer_id = user.id
+                user_display = f"Sistema (vía {user.username})"
+            else:
+                closer_id = None
+                user_display = "Sistema"
+        else:
+            user_display = user.username
         
         appt = Appointment.query.get_or_404(appt_id)
         if not is_admin and appt.closer_id != closer_id and appt.setter_id != closer_id:
@@ -812,8 +822,9 @@ class CloserService:
             elif new_status == 'Cancelado':
                 appt.closer_processed = True
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por {user_display}: {note}")
-                    db.session.add(comment)
+                    if closer_id:
+                        comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por {user_display}: {note}")
+                        db.session.add(comment)
                 # Delete GCal
                 if appt.google_event_id:
                     try:
@@ -827,8 +838,9 @@ class CloserService:
                 if not reschedule_date:
                     raise Exception("Fecha de reagenda requerida")
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}")
-                    db.session.add(comment)
+                    if closer_id:
+                        comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}")
+                        db.session.add(comment)
                 
                 # Delete GCal
                 if appt.google_event_id:
@@ -935,8 +947,9 @@ class CloserService:
                 if not reschedule_date:
                     raise Exception("Fecha de reagenda requerida")
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}")
-                    db.session.add(comment)
+                    if closer_id:
+                        comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}")
+                        db.session.add(comment)
 
                 # Delete GCal
                 if appt.google_event_id:
@@ -963,8 +976,9 @@ class CloserService:
 
             elif new_status == 'Cancelado':
                 if note:
-                    comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por {user_display}: {note}")
-                    db.session.add(comment)
+                    if closer_id:
+                        comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Cancelado por {user_display}: {note}")
+                        db.session.add(comment)
                 # Delete GCal
                 if appt.google_event_id:
                     try:

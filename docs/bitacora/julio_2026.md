@@ -1,5 +1,11 @@
 # Bitácora - Julio 2026
 
+- **9 de Julio de 2026**:
+  - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
+    - **Backend API ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
+      - Se implementó un mecanismo de resolución de usuario fallback en `process_agenda` para buscar un usuario administrador por defecto (o primer usuario del sistema) cuando `closer_id` sea `None` (por ejemplo, en llamadas automáticas, webhooks o integraciones externas donde no hay un usuario autenticado activo).
+      - Se envolvieron las inserciones del modelo `ClientComment` para cancelaciones y reagendas en comprobaciones de seguridad `if closer_id:` para proteger el sistema contra caídas por violación de restricción `NOT NULL` en la columna `author_id` de la base de datos PostgreSQL, garantizando la continuidad en la sincronización de citas.
+
 - **8 de Julio de 2026**:
   - **Optimización de Rendimiento Conversacional y Simplificación de Webhooks**:
     - **Backend API ([manychat.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/manychat.py) [VALIDATE])**:
