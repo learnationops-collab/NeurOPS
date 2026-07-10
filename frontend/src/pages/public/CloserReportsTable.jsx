@@ -196,9 +196,9 @@ const CloserReportsTable = ({ closers }) => {
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Asist.</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Agendas</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Asist.</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">SRD Hot (C/R/A)</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">SRD Cold (C/R/A)</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Ref (G/C/A)</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Seguimientos (C/R/Ci)</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Recuperaciones (C/R/A)</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Referidos (P/Co)</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Total</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Cash</th>
                                 <th></th>
@@ -232,14 +232,14 @@ const CloserReportsTable = ({ closers }) => {
                                         <td className="p-4 border-l border-slate-800 text-xs font-black text-emerald-400 tabular-nums text-center">{r.second_call_scheduled || 0}</td>
                                         <td className="p-4 border-r border-slate-800 text-xs font-black text-slate-300 tabular-nums text-center">{r.second_call_attended || 0}</td>
 
-                                        <td className="p-4 text-[11px] font-black text-rose-400 tabular-nums text-center">
-                                            {r.follow_ups_hot_sent || 0}/{r.follow_ups_hot_replied || 0}/{r.follow_ups_hot_scheduled || 0}
+                                        <td className="p-4 text-[11px] font-black text-blue-400 tabular-nums text-center">
+                                            {r.follow_ups_sent || 0}/{r.follow_ups_replied || 0}/{r.follow_ups_closed || 0}
                                         </td>
-                                        <td className="p-4 text-[11px] font-black text-sky-400 tabular-nums text-center">
-                                            {r.follow_ups_cold_sent || 0}/{r.follow_ups_cold_replied || 0}/{r.follow_ups_cold_scheduled || 0}
+                                        <td className="p-4 text-[11px] font-black text-rose-400 tabular-nums text-center">
+                                            {r.recoveries_contacted || 0}/{r.recoveries_replied || 0}/{r.recoveries_scheduled || 0}
                                         </td>
                                         <td className="p-4 border-r border-slate-800 text-[11px] font-black text-emerald-400 tabular-nums text-center">
-                                            {r.referrals_sourced || 0}/{r.referrals_contacted || 0}/{r.referrals_scheduled || 0}
+                                            {r.referrals_sourced || 0}/{r.referrals_scheduled || 0}
                                         </td>
 
                                         <td className="p-4 text-xs font-black text-amber-500 tabular-nums text-center">{totalSales}</td>
