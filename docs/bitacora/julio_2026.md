@@ -1,5 +1,10 @@
 # Bitácora - Julio 2026
 
+- **10 de Julio de 2026**:
+  - **Corrección de Renderizado de Capturas en ImageService (Docker)**:
+    - **Backend API ([image_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/image_service.py) [MODIFY])**:
+      - Se reemplazó la bandera obsoleta `--headless` por la bandera `--headless=new` en los 6 métodos estáticos de generación de imágenes que utilizan `Html2Image`. Esto corrige el fallo `FileNotFoundError` en contenedores de producción (Railway/Docker) provocado porque Chromium fallaba silenciosamente al capturar pantallas en el modo headless antiguo.
+
 - **9 de Julio de 2026**:
   - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
     - **Backend API ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
