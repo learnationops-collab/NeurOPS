@@ -68,6 +68,12 @@ def receive_manychat_ad_lead():
     id_option_send = clean_cuf(data.get('id_option_send'))
     id_question = clean_cuf(data.get('id_question'))
 
+    # Normalizar explícitamente "0" o 0
+    if id_option is not None and str(id_option).strip() in ('0', '0.0'):
+        id_option = '0'
+    if id_option_send is not None and str(id_option_send).strip() in ('0', '0.0'):
+        id_option_send = '0'
+
     # Convertir ad_id a int de forma segura
     ad_id = None
     if ad_id_raw:
