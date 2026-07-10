@@ -7,6 +7,7 @@ import {
     BarChart3,
     Bell,
     ClipboardList,
+    ClipboardCheck,
     TrendingUp,
     Settings,
     Zap,
@@ -59,7 +60,7 @@ const useDockNavigation = () => {
         } else if (isTriage) {
             return [
                 { id: 'agendas', icon: CalendarDays, label: 'Registro de Agendas', path: '/triage/agendas' },
-                { id: 'formularios', icon: ClipboardList, label: 'Formularios', path: '/triage/formularios' },
+                { id: 'formularios', icon: ClipboardCheck, label: 'Formularios', path: '/triage/formularios' },
                 { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/triage/report' }
             ];
         } else if (user?.role === 'operator') {
