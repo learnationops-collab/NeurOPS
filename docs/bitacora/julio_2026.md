@@ -53,6 +53,9 @@
   - **Edición Manual de Métricas Precargadas en Triaje**:
     - **Frontend React ([PublicTriageReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicTriageReportPage.jsx) [MODIFY])**:
       - Se removió la propiedad `readOnly={true}` de las secciones "Confirmaciones del Día" y "Confirmaciones Futuras", permitiendo que los usuarios editen de forma manual cualquier valor precargado de agendas antes de enviar su reporte.
+  - **Soporte de Búsqueda Insensible a Mayúsculas y Variaciones en Estados de Agendas**:
+    - **Backend API ([triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/triage.py) [MODIFY])**:
+      - Se reescribió la consulta del prefill para filtrar las agendas en memoria de Python. Se hace la comparación del nombre del triador en minúscula (`func.lower(FinancialAgenda.encargado_triage) == triage_name.strip().lower()`) y se identifican los estados usando coincidencia parcial de palabras clave (ej. "confirm" para "Confirmado"/"Confirmada", "cancel" para "Cancelado"/"Cancelada") evitando resultados en cero debido a diferencias de capitalización u ortografía en la base de datos.
 
 - **9 de Julio de 2026**:
   - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
