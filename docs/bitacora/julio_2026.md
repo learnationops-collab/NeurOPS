@@ -50,6 +50,9 @@
       - Se agregó el prefijo `/public` a las rutas de las peticiones Axios (`/public/active-triage`, `/public/triage-report/prefill`, `/public/triage-report`), corrigiendo el bloqueo y fallo en la renderización de la página al no encontrar las rutas del backend.
     - **Navegación e Iconografía ([useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
       - Se asignó el icono `ClipboardCheck` a la sección de Formularios de triaje y `ClipboardList` al Reporte Diario para diferenciarlos visualmente en el dock inferior del usuario.
+  - **Edición Manual de Métricas Precargadas en Triaje**:
+    - **Frontend React ([PublicTriageReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicTriageReportPage.jsx) [MODIFY])**:
+      - Se removió la propiedad `readOnly={true}` de las secciones "Confirmaciones del Día" y "Confirmaciones Futuras", permitiendo que los usuarios editen de forma manual cualquier valor precargado de agendas antes de enviar su reporte.
 
 - **9 de Julio de 2026**:
   - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
