@@ -22,6 +22,13 @@
       - Se actualizó el breakdown de re-engagement y los gráficos circulares con el nuevo esquema de métricas.
     - **Base de Datos Migración ([d6d1714a8f87_change_followups_recoveries_and_.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/migrations/versions/d6d1714a8f87_change_followups_recoveries_and_.py) [NEW])**:
       - Se autogeneró y ejecutó exitosamente el script de migración para aplicar el cambio en SQLite local.
+  - **Corrección de Rutas del Triage y Adaptación de la Ortografía a Triaje**:
+    - **Frontend React ([FormsManagementPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/shared/FormsManagementPage.jsx) [MODIFY])**:
+      - Se eliminó el prefijo duplicado `/api` de los endpoints Axios (`api.get` y `api.post`) que generaba peticiones erróneas a `/api/api/...`, permitiendo la correcta carga del fondo y datos en la ruta `/triage/formularios`.
+    - **UI y Textos ([BuscadorGlobalDeck.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/deck/BuscadorGlobalDeck.jsx), [OperatorControls.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/OperatorControls.jsx), [TriageReportsTable.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/TriageReportsTable.jsx) [MODIFY])**:
+      - Se cambió la ortografía de "Triage" a "Triaje" en todas las etiquetas visuales, encabezados de tablas, insignias del buscador global y el modal de personificación de roles para usuarios y administradores.
+    - **Backend API y Templates ([triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/triage.py), [triage_report.html](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/templates/reports/triage_report.html), [triage_tracker_report.html](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/templates/reports/triage_tracker_report.html) [MODIFY])**:
+      - Se actualizó el título de los reportes y metadatos de notificaciones en Discord para sustituir "Triage" por la forma ortográfica en español "Triaje".
 
 - **9 de Julio de 2026**:
   - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
