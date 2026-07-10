@@ -38,30 +38,59 @@ def prefill_triage_report():
     from app.models import FinancialAgenda
     from sqlalchemy import func
 
-    # Agendas de hoy (fecha de cita == target_date)
-    today_agendas_query = FinancialAgenda.query.filter(
-        FinancialAgenda.encargado_triage == triage_name,
-        func.date(FinancialAgenda.date) == target_date
+    triage_name_clean = triage_name.strip().lower()
+
+    # Traer todas las agendas de este triador de forma insensible a mayúsculas
+    all_agendas = FinancialAgenda.query.filter(
+        func.lower(FinancialAgenda.encargado_triage) == triage_name_clean
     ).all()
 
-    today_agendas = len(today_agendas_query)
-    today_contacted = sum(1 for a in today_agendas_query if a.estado == 'Contactado')
-    today_confirmed = sum(1 for a in today_agendas_query if a.estado == 'Confirmado')
-    today_canceled = sum(1 for a in today_agendas_query if a.estado == 'Cancelada')
-    today_rescheduled = sum(1 for a in today_agendas_query if a.estado == 'Reagendada')
+    today_agendas_list = []
+    future_agendas_list = []
 
-    # Agendas futuras (cita > target_date, creadas hoy)
-    future_agendas_query = FinancialAgenda.query.filter(
-        FinancialAgenda.encargado_triage == triage_name,
-        func.date(FinancialAgenda.date) > target_date,
-        func.date(FinancialAgenda.created_at) == target_date
-    ).all()
+    for a in all_agendas:
+        if not a.date:
+            continue
+        
+        # Extraer fechas puras
+        agenda_date = a.date.date() if isinstance(a.date, (datetime, date)) else a.date
+        created_date = a.created_at.date() if a.created_at else None
 
-    future_agendas = len(future_agendas_query)
-    future_contacted = sum(1 for a in future_agendas_query if a.estado == 'Contactado')
-    future_confirmed = sum(1 for a in future_agendas_query if a.estado == 'Confirmado')
-    future_canceled = sum(1 for a in future_agendas_query if a.estado == 'Cancelada')
-    future_rescheduled = sum(1 for a in future_agendas_query if a.estado == 'Reagendada')
+        if agenda_date == target_date:
+            today_agendas_list.append(a)
+        elif created_date == target_date and agenda_date > target_date:
+            future_agendas_list.append(a)
+
+    # Helper robusto para clasificar e identificar estados por palabras clave insensibles a mayúsculas
+    def count_status(agendas, keywords):
+        count = 0
+        for a in agendas:
+            if not a.estado:
+                continue
+            est_clean = str(a.estado).strip().lower()
+            if any(kw in est_clean for kw in keywords):
+                count += 1
+        return count
+
+    # Palabras clave para los estados
+    kw_contacted = ['contac']
+    kw_confirmed = ['confirm']
+    kw_canceled = ['cancel']
+    kw_rescheduled = ['reagend', 'reprog']
+
+    # Métricas de hoy
+    today_agendas = len(today_agendas_list)
+    today_contacted = count_status(today_agendas_list, kw_contacted)
+    today_confirmed = count_status(today_agendas_list, kw_confirmed)
+    today_canceled = count_status(today_agendas_list, kw_canceled)
+    today_rescheduled = count_status(today_agendas_list, kw_rescheduled)
+
+    # Métricas futuras
+    future_agendas = len(future_agendas_list)
+    future_contacted = count_status(future_agendas_list, kw_contacted)
+    future_confirmed = count_status(future_agendas_list, kw_confirmed)
+    future_canceled = count_status(future_agendas_list, kw_canceled)
+    future_rescheduled = count_status(future_agendas_list, kw_rescheduled)
 
     return jsonify({
         "today_agendas": today_agendas,
