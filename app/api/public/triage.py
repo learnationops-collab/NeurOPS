@@ -109,9 +109,9 @@ def _trigger_triage_report_webhook(report):
         
         # Metadatos Discord
         content = (
-            f"🎯 **REPORTE DIARIO DE TRIAGE**\n"
+            f"🎯 **REPORTE DIARIO DE TRIAJE**\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 **Triage:** `{report.triage_name}`\n"
+            f"👤 **Triaje:** `{report.triage_name}`\n"
             f"📅 **Fecha:** `{report.date.strftime('%d/%m/%Y')}`\n"
             f"📊 **Resultados:** `{nuevas} En Gestión | {conf} Confirmadas`\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
