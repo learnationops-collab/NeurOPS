@@ -29,6 +29,22 @@
       - Se cambió la ortografía de "Triage" a "Triaje" en todas las etiquetas visuales, encabezados de tablas, insignias del buscador global y el modal de personificación de roles para usuarios y administradores.
     - **Backend API y Templates ([triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/triage.py), [triage_report.html](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/templates/reports/triage_report.html), [triage_tracker_report.html](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/templates/reports/triage_tracker_report.html) [MODIFY])**:
       - Se actualizó el título de los reportes y metadatos de notificaciones en Discord para sustituir "Triage" por la forma ortográfica en español "Triaje".
+  - **Implementación del Reporte Diario de Triaje Automático**:
+    - **Backend DB ([triage_report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/triage_report.py) [MODIFY])**:
+      - Se reestructuró el modelo `TriageDailyReport` reemplazando los campos antiguos por `today_agendas`, `today_contacted`, `today_confirmed`, `today_canceled`, `today_rescheduled` (Confirmaciones de Hoy), `future_agendas`, `future_contacted`, `future_confirmed`, `future_canceled`, `future_rescheduled` (Confirmaciones Futuras), y `recoveries_contacted`, `recoveries_replied`, `recoveries_scheduled` (Recuperaciones).
+    - **Backend API ([triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/triage.py) [MODIFY])**:
+      - Se agregaron los endpoints `/public/active-triage` para consultar los triadores activos, y `/public/triage-report/prefill` que calcula y prellena automáticamente en base a la fecha las agendas de hoy y futuras asignadas al triador.
+      - Se adaptaron los endpoints de inserción, actualización, eliminación y estadísticas agrupadas para operar con las nuevas variables del modelo.
+    - **Plantilla HTML ([triage_report.html](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/templates/reports/triage_report.html) [MODIFY])**:
+      - Se rediseñó la tarjeta de reportes de Discord para representar visualmente las secciones y estadísticas de Confirmaciones de Hoy, Confirmaciones Futuras y Recuperaciones.
+    - **Frontend React ([PublicTriageReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicTriageReportPage.jsx) [MODIFY])**:
+      - Se rehizo la página del reporte diario del triaje para convertirla en un formulario premium que precarga automáticamente las confirmaciones al elegir la fecha, permitiendo el ingreso manual del módulo de Recuperaciones.
+    - **Frontend React ([TriageReportsTable.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/TriageReportsTable.jsx) [MODIFY])**:
+      - Se actualizaron las columnas de la tabla de listado para mostrar los 13 campos del nuevo formato del reporte de triaje.
+    - **Navegación e Imports ([App.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx), [useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
+      - Se registró la ruta `/triage/report` en la aplicación y se añadió al menú del dock para que el triador pueda acceder a su reporte diario fácilmente.
+    - **Base de Datos Migración ([bfe5eca377f9_change_triage_daily_report_fields.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/migrations/versions/bfe5eca377f9_change_triage_daily_report_fields.py) [NEW])**:
+      - Se generó y aplicó el script de migración para actualizar el esquema de SQLite local de forma exitosa.
 
 - **9 de Julio de 2026**:
   - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
