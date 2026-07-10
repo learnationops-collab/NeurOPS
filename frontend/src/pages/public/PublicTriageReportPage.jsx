@@ -247,11 +247,11 @@ const PublicTriageReportPage = () => {
                                 <div className="space-y-6">
                                     <SectionHeader icon={Phone} title="Confirmaciones del Día" colorClass="text-indigo-400" />
                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                        <MetricInput label="Agendas" field="today_agendas" value={formData.today_agendas} onChange={handleFieldChange} readOnly={true} color="indigo" />
-                                        <MetricInput label="Contactadas" field="today_contacted" value={formData.today_contacted} onChange={handleFieldChange} readOnly={true} color="teal" />
-                                        <MetricInput label="Confirmadas" field="today_confirmed" value={formData.today_confirmed} onChange={handleFieldChange} readOnly={true} color="teal" />
-                                        <MetricInput label="Canceladas" field="today_canceled" value={formData.today_canceled} onChange={handleFieldChange} readOnly={true} color="pink" />
-                                        <MetricInput label="Reagendadas" field="today_rescheduled" value={formData.today_rescheduled} onChange={handleFieldChange} readOnly={true} color="orange" />
+                                        <MetricInput label="Agendas" field="today_agendas" value={formData.today_agendas} onChange={handleFieldChange} color="indigo" />
+                                        <MetricInput label="Contactadas" field="today_contacted" value={formData.today_contacted} onChange={handleFieldChange} color="teal" />
+                                        <MetricInput label="Confirmadas" field="today_confirmed" value={formData.today_confirmed} onChange={handleFieldChange} color="teal" />
+                                        <MetricInput label="Canceladas" field="today_canceled" value={formData.today_canceled} onChange={handleFieldChange} color="pink" />
+                                        <MetricInput label="Reagendadas" field="today_rescheduled" value={formData.today_rescheduled} onChange={handleFieldChange} color="orange" />
                                     </div>
                                 </div>
 
@@ -259,11 +259,11 @@ const PublicTriageReportPage = () => {
                                 <div className="space-y-6">
                                     <SectionHeader icon={Target} title="Confirmaciones Futuras" colorClass="text-fuchsia-400" />
                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                        <MetricInput label="Próximas Agendas" field="future_agendas" value={formData.future_agendas} onChange={handleFieldChange} readOnly={true} color="fuchsia" />
-                                        <MetricInput label="Contactadas" field="future_contacted" value={formData.future_contacted} onChange={handleFieldChange} readOnly={true} color="cyan" />
-                                        <MetricInput label="Confirmadas" field="future_confirmed" value={formData.future_confirmed} onChange={handleFieldChange} readOnly={true} color="cyan" />
-                                        <MetricInput label="Canceladas" field="future_canceled" value={formData.future_canceled} onChange={handleFieldChange} readOnly={true} color="pink" />
-                                        <MetricInput label="Reagendadas" field="future_rescheduled" value={formData.future_rescheduled} onChange={handleFieldChange} readOnly={true} color="orange" />
+                                        <MetricInput label="Próximas Agendas" field="future_agendas" value={formData.future_agendas} onChange={handleFieldChange} color="fuchsia" />
+                                        <MetricInput label="Contactadas" field="future_contacted" value={formData.future_contacted} onChange={handleFieldChange} color="cyan" />
+                                        <MetricInput label="Confirmadas" field="future_confirmed" value={formData.future_confirmed} onChange={handleFieldChange} color="cyan" />
+                                        <MetricInput label="Canceladas" field="future_canceled" value={formData.future_canceled} onChange={handleFieldChange} color="pink" />
+                                        <MetricInput label="Reagendadas" field="future_rescheduled" value={formData.future_rescheduled} onChange={handleFieldChange} color="orange" />
                                     </div>
                                 </div>
 
