@@ -673,15 +673,113 @@ def get_setter_deck():
     from sqlalchemy import or_
     
     # Filtrar según el paso del flujo de trabajo
+    if step == 'cualificacion':
+        from app.models import LeadAnswer, ManychatLead, Ad, Event, Client, Appointment
+        from sqlalchemy import func
+        
+        show_disqualified = request.args.get('show_disqualified') == 'true'
+        target_date_str = request.args.get('date')
+        
+        qual_filter = 'false' if show_disqualified else 'true'
+        
+        start_dt = None
+        end_dt = None
+        
+        if date_range == 'today':
+            start_dt = datetime.combine(today, datetime.min.time())
+            end_dt = datetime.combine(today, datetime.max.time())
+        elif date_range == 'tomorrow':
+            tomorrow = today + timedelta(days=1)
+            start_dt = datetime.combine(tomorrow, datetime.min.time())
+            end_dt = datetime.combine(tomorrow, datetime.max.time())
+        elif date_range == 'week':
+            start_dt = datetime.combine(today - timedelta(days=7), datetime.min.time())
+            end_dt = datetime.combine(today, datetime.max.time())
+        elif date_range == 'month':
+            start_dt = datetime.combine(today - timedelta(days=30), datetime.min.time())
+            end_dt = datetime.combine(today, datetime.max.time())
+        elif date_range == 'custom' and target_date_str:
+            try:
+                target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+                start_dt = datetime.combine(target_date, datetime.min.time())
+                end_dt = datetime.combine(target_date, datetime.max.time())
+            except ValueError:
+                pass
+                
+        query = LeadAnswer.query.filter(LeadAnswer.qualification == qual_filter)
+        
+        if start_dt and end_dt:
+            query = query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
+            
+        if current_user.role != 'admin':
+            query = query.join(Ad, Ad.id == LeadAnswer.ad_id)\
+                         .join(Event, Event.id == Ad.event_id)\
+                         .filter(Event.setter_id == current_user.id)
+        else:
+            query = query.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
+                         .outerjoin(Event, Event.id == Ad.event_id)
+                         
+        lead_answers = query.order_by(LeadAnswer.created_at.desc()).all()
+        
+        booked_instagrams_q = db.session.query(func.lower(func.replace(Client.instagram, '@', '')))\
+            .join(Appointment, Appointment.client_id == Client.id)\
+            .filter(Client.instagram != None, Client.instagram != '')\
+            .distinct().all()
+        booked_igs = {ig[0] for ig in booked_instagrams_q if ig[0]}
+        
+        response_data = []
+        for la in lead_answers:
+            lead = la.lead
+            if not lead:
+                continue
+                
+            ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
+            if ig_clean and ig_clean in booked_igs:
+                continue
+                
+            edad_str = "N/A"
+            client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first() if ig_clean else None
+            if client and client.form_data:
+                for key, val in client.form_data.items():
+                    if 'edad' in key.lower() or 'age' in key.lower():
+                        edad_str = f"{val} años"
+                        break
+                        
+            assigned_setter = "Sin asignar"
+            assigned_closer = "Sin asignar"
+            
+            ad = Ad.query.get(la.ad_id) if la.ad_id else None
+            event = Event.query.get(ad.event_id) if (ad and ad.event_id) else None
+            if event:
+                if event.setter:
+                    assigned_setter = event.setter.username
+                if event.closers:
+                    assigned_closer = " / ".join([c.username for c in event.closers])
+                    
+            response_data.append({
+                "id": la.id,
+                "lead_name": lead.name or "Sin Nombre",
+                "email": client.email if client else "",
+                "phone": client.phone if client else "",
+                "instagram": lead.ig or "",
+                "start_time": la.created_at.isoformat() if la.created_at else None,
+                "created_at": lead.created_at.isoformat() if lead.created_at else None,
+                "origin": "ManyChat / Instagram",
+                "result": la.qualification,
+                "ig_chat_link": f"https://instagram.com/{lead.ig.replace('@', '')}" if lead.ig else "",
+                "keyword": la.keyword or "",
+                "setter_notes": "",
+                "assigned_to": f"{assigned_setter} / {assigned_closer}",
+                "edad_form": edad_str
+            })
+            
+        return jsonify(response_data), 200
+
+    # Filtrar según el paso del flujo de trabajo (citas)
     if step == 'entrantes':
         # Leads entrantes sin contactar (result es vacío, nulo o Pendiente)
         query = Appointment.query.filter(
             or_(Appointment.result == None, Appointment.result == '', Appointment.result == 'Pendiente')
-        )
-    elif step == 'cualificacion':
-        # Leads contactados que no estén ni cualificados ni descualificados
-        query = Appointment.query.filter(
-            Appointment.result == 'Contactado'
         )
     elif step == 'link-agenda':
         # Leads cualificados a la espera de agendamiento/envío de link
@@ -1102,6 +1200,203 @@ def get_unassigned_leads_today():
         "created_at": a.created_at.isoformat(),
         "origin": a.origin or "ManyChat"
     } for a in appointments]), 200
+
+
+@bp.route('/deck/stats/cualificacion', methods=['GET'])
+@role_required(ROLE_SETTER)
+def get_cualificacion_stats():
+    from app.models import LeadAnswer, Ad, Event
+    from datetime import date, datetime
+    
+    today_date = date.today()
+    start_dt = datetime.combine(today_date, datetime.min.time())
+    end_dt = datetime.combine(today_date, datetime.max.time())
+    
+    # 1. Cualificados hoy
+    query_qual = LeadAnswer.query.filter(
+        LeadAnswer.qualification == 'true',
+        LeadAnswer.created_at.between(start_dt, end_dt)
+    )
+    if current_user.role != 'admin':
+        query_qual = query_qual.join(Ad, Ad.id == LeadAnswer.ad_id)\
+                               .join(Event, Event.id == Ad.event_id)\
+                               .filter(Event.setter_id == current_user.id)
+    qualified_today = query_qual.count()
+    
+    # 2. Sin asignación (de los cualificados hoy, no tienen setter ni closer asignado)
+    if current_user.role != 'admin':
+        unassigned_today = 0
+    else:
+        all_qual = query_qual.all()
+        unassigned_count = 0
+        for la in all_qual:
+            ad = Ad.query.get(la.ad_id) if la.ad_id else None
+            event = Event.query.get(ad.event_id) if (ad and ad.event_id) else None
+            if not event or not event.setter_id or not event.closers:
+                unassigned_count += 1
+        unassigned_today = unassigned_count
+        
+    # 3. Sin responder hoy (qualification == 'null')
+    query_no_resp = LeadAnswer.query.filter(
+        LeadAnswer.qualification == 'null',
+        LeadAnswer.created_at.between(start_dt, end_dt)
+    )
+    if current_user.role != 'admin':
+        query_no_resp = query_no_resp.join(Ad, Ad.id == LeadAnswer.ad_id)\
+                                     .join(Event, Event.id == Ad.event_id)\
+                                     .filter(Event.setter_id == current_user.id)
+    no_response_today = query_no_resp.count()
+    
+    return jsonify({
+        "qualified_today": qualified_today,
+        "unassigned_today": unassigned_today,
+        "no_response_today": no_response_today
+    }), 200
+
+
+@bp.route('/deck/confirm-qualified/<int:answer_id>', methods=['POST'])
+@role_required(ROLE_SETTER)
+def confirm_qualified_lead(answer_id):
+    from app.models import LeadAnswer, ManychatLead, Client, Appointment, Ad, Event, User, db
+    from app.services.booking_service import BookingService
+    from datetime import datetime
+    
+    la = LeadAnswer.query.get_or_404(answer_id)
+    lead = la.lead
+    if not lead:
+        return jsonify({"message": "Lead no encontrado"}), 404
+        
+    ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
+    client = None
+    if ig_clean:
+        from sqlalchemy import func
+        client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
+        
+    if not client:
+        client = Client(
+            full_name=lead.name or "Sin Nombre",
+            instagram=lead.ig,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(client)
+        db.session.commit()
+        
+    closer_id = None
+    ad = Ad.query.get(la.ad_id) if la.ad_id else None
+    event = Event.query.get(ad.event_id) if (ad and ad.event_id) else None
+    if event and event.closers:
+        closer_id = event.closers[0].id
+    else:
+        default_closer = User.query.filter_by(role='closer', is_active=True).first()
+        if default_closer:
+            closer_id = default_closer.id
+        else:
+            any_closer = User.query.filter_by(role='closer').first()
+            if any_closer:
+                closer_id = any_closer.id
+                
+    if not closer_id:
+        return jsonify({"message": "No hay closers registrados en el sistema para asignar"}), 400
+        
+    appt = Appointment(
+        closer_id=closer_id,
+        setter_id=current_user.id,
+        client_id=client.id,
+        start_time=datetime.utcnow(),
+        origin='ManyChat / Instagram',
+        result='Cualificado',
+        setter_processed=False
+    )
+    db.session.add(appt)
+    db.session.commit()
+    
+    description = f"Setter {current_user.username} confirmó el lead cualificado de ManyChat."
+    BookingService.log_lead_event(appt.id, current_user.id, 'confirm_qualified', description)
+    
+    return jsonify({"status": "success", "message": "Lead confirmado y pasado a Link de Agenda"}), 200
+
+
+@bp.route('/deck/disqualify/<int:answer_id>', methods=['POST'])
+@role_required(ROLE_SETTER)
+def disqualify_lead(answer_id):
+    from app.models import LeadAnswer, db
+    
+    la = LeadAnswer.query.get_or_404(answer_id)
+    la.qualification = 'false'
+    db.session.commit()
+    
+    return jsonify({"status": "success", "message": "Lead descalificado correctamente"}), 200
+
+
+@bp.route('/deck/bulk-update-cualificacion', methods=['POST'])
+@role_required(ROLE_SETTER)
+def bulk_update_cualificacion():
+    from app.models import LeadAnswer, ManychatLead, Client, Appointment, Ad, Event, User, db
+    from datetime import datetime
+    
+    data = request.get_json() or {}
+    answer_ids = data.get('answer_ids', [])
+    action = data.get('action')
+    
+    if not answer_ids or not action:
+        return jsonify({"message": "Faltan parámetros"}), 400
+        
+    processed_count = 0
+    
+    for ans_id in answer_ids:
+        la = LeadAnswer.query.get(ans_id)
+        if not la or not la.lead:
+            continue
+            
+        if action == 'disqualify':
+            la.qualification = 'false'
+            processed_count += 1
+        elif action == 'confirm':
+            lead = la.lead
+            ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
+            client = None
+            if ig_clean:
+                from sqlalchemy import func
+                client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
+                
+            if not client:
+                client = Client(
+                    full_name=lead.name or "Sin Nombre",
+                    instagram=lead.ig,
+                    created_at=datetime.utcnow()
+                )
+                db.session.add(client)
+                db.session.commit()
+                
+            closer_id = None
+            ad = Ad.query.get(la.ad_id) if la.ad_id else None
+            event = Event.query.get(ad.event_id) if (ad and ad.event_id) else None
+            if event and event.closers:
+                closer_id = event.closers[0].id
+            else:
+                default_closer = User.query.filter_by(role='closer', is_active=True).first()
+                if default_closer:
+                    closer_id = default_closer.id
+                else:
+                    any_closer = User.query.filter_by(role='closer').first()
+                    if any_closer:
+                        closer_id = any_closer.id
+                        
+            if closer_id:
+                appt = Appointment(
+                    closer_id=closer_id,
+                    setter_id=current_user.id,
+                    client_id=client.id,
+                    start_time=datetime.utcnow(),
+                    origin='ManyChat / Instagram',
+                    result='Cualificado',
+                    setter_processed=False
+                )
+                db.session.add(appt)
+                processed_count += 1
+                
+    db.session.commit()
+    return jsonify({"status": "success", "message": f"{processed_count} leads procesados"}), 200
 
 
 
