@@ -38,7 +38,7 @@ export default function FormsManagementPage() {
     const fetchForms = async () => {
         try {
             setLoading(true);
-            const response = await api.get(`/api/triage/qualified-forms?unlinked_only=${unlinkedOnly}&search=${search}`);
+            const response = await api.get(`/triage/qualified-forms?unlinked_only=${unlinkedOnly}&search=${search}`);
             setForms(response.data || []);
         } catch (error) {
             console.error("Error al obtener formularios:", error);
@@ -62,7 +62,7 @@ export default function FormsManagementPage() {
         const delayDebounceFn = setTimeout(async () => {
             try {
                 setSearchingDest(true);
-                const response = await api.get(`/api/closer/leads/search?q=${destinationSearch}`);
+                const response = await api.get(`/closer/leads/search?q=${destinationSearch}`);
                 // Filtrar el propio cliente de origen para que no aparezca en la busqueda
                 const filtered = (response.data || []).filter(item => item.id !== formToMerge?.id);
                 setDestinationResults(filtered);
@@ -82,7 +82,7 @@ export default function FormsManagementPage() {
         
         try {
             setSubmittingMerge(true);
-            const response = await api.post('/api/triage/merge-clients', {
+            const response = await api.post('/triage/merge-clients', {
                 source_client_id: formToMerge.id,
                 target_client_id: selectedDest.id
             });
