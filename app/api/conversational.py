@@ -207,6 +207,7 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         *base_filters,
         LeadAnswer.id_option_send != None,
         LeadAnswer.id_option_send != '',
+        LeadAnswer.id_option_send != '0',
         not_(LeadAnswer.id_option_send.like('%cuf_%'))
     ).group_by(LeadAnswer.id_option_send).all()
 
@@ -220,6 +221,7 @@ def _compute_stats_for_dates(start_dt, end_dt, category_filter, ad_id_filter):
         *base_filters,
         LeadAnswer.id_option != None,
         LeadAnswer.id_option != '',
+        LeadAnswer.id_option != '0',
         not_(LeadAnswer.id_option.like('%cuf_%'))
     ).group_by(LeadAnswer.id_option).all()
 
