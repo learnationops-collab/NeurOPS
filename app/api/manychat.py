@@ -42,6 +42,18 @@ def receive_manychat_ad_lead():
                 return False
         return True
 
+    def resolve_qualification(val):
+        if not is_valid_value(val):
+            return 'null'
+        v = str(val).lower().strip()
+        # Casos positivos
+        if v in ('true', '1', 'si', 'sí', 'yes', 'y', 'qualified', 'cualificado', 'cualificada') or v.startswith('si ') or v.startswith('sí ') or v.startswith('yes '):
+            return 'true'
+        # Casos negativos
+        if v in ('false', '0', 'no', 'n', 'disqualified', 'descalificado', 'descalificada') or v.startswith('no ') or v.startswith('no_') or v.startswith('no-') or v.startswith('descalificado') or v.startswith('descalificada'):
+            return 'false'
+        return 'null'
+
     # ----- Datos del LEAD -----
     lead_name = data.get('lead_name', '')
     lead_ig = data.get('lead_ig', '')
@@ -165,16 +177,7 @@ def receive_manychat_ad_lead():
                 answer.id_option = opt_str
                 
                 # Procesar cualificación
-                if is_valid_value(qualification_raw):
-                    qual_str = str(qualification_raw).lower().strip()
-                    if qual_str in ('true', '1', 'si', 'sí', 'yes'):
-                        answer.qualification = 'true'
-                    elif qual_str in ('false', '0', 'no'):
-                        answer.qualification = 'false'
-                    else:
-                        answer.qualification = 'null'
-                else:
-                    answer.qualification = 'null'
+                answer.qualification = resolve_qualification(qualification_raw)
 
                 # Sincronizar otros campos si vienen
                 if is_valid_value(fecha): 
@@ -194,13 +197,7 @@ def receive_manychat_ad_lead():
                 logger.info(f"[WEBHOOK] Respuesta de Lead consolidada en envío previo para Manychat_ID: {manychat_id}")
             else:
                 # Crear nueva interacción como respuesta aislada
-                qual = 'null'
-                if is_valid_value(qualification_raw):
-                    qual_str = str(qualification_raw).lower().strip()
-                    if qual_str in ('true', '1', 'si', 'sí', 'yes'):
-                        qual = 'true'
-                    elif qual_str in ('false', '0', 'no'):
-                        qual = 'false'
+                qual = resolve_qualification(qualification_raw)
 
                 answer = LeadAnswer(
                     lead_id=lead.id,
@@ -256,12 +253,7 @@ def receive_manychat_ad_lead():
             if not is_new_interaction and answer:
                 if ad_id and not answer.ad_id:
                     answer.ad_id = ad_id
-                if is_valid_value(qualification_raw):
-                    qual_str = str(qualification_raw).lower()
-                    if qual_str in ('true', '1', 'si', 'sí', 'yes'):
-                        answer.qualification = 'true'
-                    elif qual_str in ('false', '0', 'no'):
-                        answer.qualification = 'false'
+                answer.qualification = resolve_qualification(qualification_raw)
                 if is_valid_value(fecha): 
                     answer.fecha_recibida = fecha
                 if is_valid_value(opening): 
@@ -278,13 +270,7 @@ def receive_manychat_ad_lead():
                     answer.id_question = str(id_question)
                 action = 'updated'
             else:
-                qual = 'null'
-                if is_valid_value(qualification_raw):
-                    qual_str = str(qualification_raw).lower()
-                    if qual_str in ('true', '1', 'si', 'sí', 'yes'):
-                        qual = 'true'
-                    elif qual_str in ('false', '0', 'no'):
-                        qual = 'false'
+                qual = resolve_qualification(qualification_raw)
                 
                 answer = LeadAnswer(
                     lead_id=lead.id,
