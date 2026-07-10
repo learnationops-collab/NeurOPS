@@ -11,6 +11,7 @@
       - Se rediseñó por completo el paso de cualificación para representar la bandeja de cualificados con avatar de Instagram, asignación, edad, origen y tiempo relativo.
       - Se integró la barra superior con selector de fecha dropdown, buscador en tiempo real, estadísticas dinámicas y toggle para ver descalificados.
       - Se adaptaron las acciones masivas e individuales del setter para usar los nuevos flujos del backend.
+      - Se corrigió la importación del icono `ChevronDown` de `lucide-react` solucionando un ReferenceError que provocaba la caída en el renderizado de la página.
   - **Corrección de Renderizado de Capturas en ImageService (Docker)**:
     - **Backend API ([image_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/image_service.py) [MODIFY])**:
       - Se reemplazó la bandera obsoleta `--headless` por la bandera `--headless=new` en los 6 métodos estáticos de generación de imágenes que utilizan `Html2Image`. Esto corrige el fallo `FileNotFoundError` en contenedores de producción (Railway/Docker) provocado porque Chromium fallaba silenciosamente al capturar pantallas en el modo headless antiguo.
