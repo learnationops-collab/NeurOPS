@@ -61,6 +61,11 @@
       - Se reestructuró la lógica de decisión de interacciones en el webhook. Si llega `id_option_send == '0'`, se identifica como una respuesta del lead a la plantilla `id_option` y se actualiza/cualifica el LeadAnswer correspondiente evaluando `cualificacion` (`yes`/`no`). Si llega `id_option == '0'`, se trata de un envío y se registra un nuevo LeadAnswer con cualificación `'null'` por defecto.
     - **Backend API ([conversational.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/conversational.py) [MODIFY])**:
       - Se excluyó el valor `'0'` del filtrado en `sends_query` (`id_option_send != '0'`) and `responses_query` (`id_option != '0'`) para prevenir que los mensajes de control de envíos y respuestas distorsionen los porcentajes y métricas del rendimiento conversacional.
+  - **Normalización de Ceros en Conversación de ManyChat**:
+    - **Backend API ([manychat.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/manychat.py) [MODIFY])**:
+      - Se normalizaron de forma estricta los valores de `id_option` e `id_option_send` a la cadena `'0'` si vienen como enteros, floats o variaciones de cero.
+    - **Backend API ([conversational.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/conversational.py) [MODIFY])**:
+      - Se robustecieron las exclusiones en la consulta de rendimiento conversacional filtrando explícitamente `!= 0`, `!= '0'` y `!= '0.0'` para prevenir que cualquier tipo de dato asignado al cero cuente como respuesta válida de mensaje.
 
 - **9 de Julio de 2026**:
   - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
