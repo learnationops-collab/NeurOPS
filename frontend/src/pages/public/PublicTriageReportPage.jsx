@@ -81,7 +81,7 @@ const PublicTriageReportPage = () => {
     useEffect(() => {
         const fetchTriages = async () => {
             try {
-                const response = await api.get('/active-triage');
+                const response = await api.get('/public/active-triage');
                 setTriages(response.data || []);
                 
                 // Auto-seleccionar si el rol es triage
@@ -102,7 +102,7 @@ const PublicTriageReportPage = () => {
         const loadPrefillData = async () => {
             setLoading(true);
             try {
-                const response = await api.get(`/triage-report/prefill?triage_name=${formData.triage_name}&date=${formData.date}`);
+                const response = await api.get(`/public/triage-report/prefill?triage_name=${formData.triage_name}&date=${formData.date}`);
                 const data = response.data || {};
                 
                 setFormData(prev => ({
@@ -154,7 +154,7 @@ const PublicTriageReportPage = () => {
 
         setSubmitting(true);
         try {
-            await api.post('/triage-report', formData);
+            await api.post('/public/triage-report', formData);
             toast.success('¡Reporte diario guardado exitosamente! Buen trabajo.');
             
             // Reset manteniendo nombre y fecha
