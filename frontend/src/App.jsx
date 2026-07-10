@@ -288,6 +288,16 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/triage/report"
+              element={
+                <ProtectedRoute roles={['triage', 'admin']}>
+                  <MainLayout>
+                    <PublicTriageReportPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/admin/workshop"

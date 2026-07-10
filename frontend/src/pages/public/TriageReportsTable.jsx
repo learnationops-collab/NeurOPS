@@ -175,39 +175,46 @@ const TriageReportsTable = () => {
 
             <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[1000px]">
+                    <table className="w-full text-left border-collapse min-w-[1200px]">
                         <thead>
                             <tr className="bg-slate-800/50">
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Triaje</th>
-                                <th className="p-4 text-[9px] font-black text-indigo-500 uppercase tracking-widest text-center" colSpan="5">Gestión de Agendas</th>
-                                <th className="p-4 text-[9px] font-black text-sky-500 uppercase tracking-widest text-center" colSpan="2">Seguimientos</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>
+                                <th className="p-4 text-[9px] font-black text-indigo-500 uppercase tracking-widest text-center border-l border-slate-800" colSpan="5">Confirmaciones Hoy</th>
+                                <th className="p-4 text-[9px] font-black text-fuchsia-500 uppercase tracking-widest text-center border-l border-slate-800" colSpan="5">Confirmaciones Futuro</th>
+                                <th className="p-4 text-[9px] font-black text-rose-500 uppercase tracking-widest text-center border-l border-slate-800" colSpan="3">Recuperaciones</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right border-l border-slate-800">Acciones</th>
                             </tr>
                             <tr className="bg-slate-800/20 border-t border-slate-800 border-b">
                                 <th></th>
                                 <th></th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Nuevas</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Age.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Cont.</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Conf.</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">No Cont.</th>
                                 <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Canc.</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Reprog.</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Iniciados</th>
-                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Contest.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Reag.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Próx.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Cont.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Conf.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Canc.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Reag.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-l border-slate-800">Cont.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Resp.</th>
+                                <th className="p-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-800">Age.</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="10" className="py-20 text-center">
+                                    <td colSpan="16" className="py-20 text-center">
                                         <Loader2 className="animate-spin mx-auto text-indigo-500 mb-2" size={32} />
                                         <span className="text-[10px] font-black text-slate-500 uppercase">Cargando registros...</span>
                                     </td>
                                 </tr>
                             ) : reports.length === 0 ? (
                                 <tr>
-                                    <td colSpan="10" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
+                                    <td colSpan="16" className="py-20 text-center text-slate-600 font-bold italic">No se encontraron reportes</td>
                                 </tr>
                             ) : reports.map(r => (
                                 <tr key={r.id} className="hover:bg-slate-800/20 transition-colors group">
@@ -220,13 +227,19 @@ const TriageReportsTable = () => {
                                     <td className="p-4 text-xs font-bold text-white uppercase italic">{r.triage_name}</td>
                                     
                                     {[
-                                        { f: 'agendas_nuevas', color: 'text-indigo-400', isLeft: true },
-                                        { f: 'agendas_confirmadas', color: 'text-emerald-400', isLeft: false },
-                                        { f: 'no_contestan', color: 'text-rose-400', isLeft: false },
-                                        { f: 'cancelaciones', color: 'text-amber-400', isLeft: false },
-                                        { f: 'reprogramandos', color: 'text-violet-400', isLeft: false, isRight: true },
-                                        { f: 'seguimientos_iniciados', color: 'text-sky-400', isLeft: false },
-                                        { f: 'seguimientos_contestados', color: 'text-emerald-400', isLeft: false, isRight: true }
+                                        { f: 'today_agendas', color: 'text-indigo-400', isLeft: true },
+                                        { f: 'today_contacted', color: 'text-slate-400', isLeft: false },
+                                        { f: 'today_confirmed', color: 'text-emerald-400', isLeft: false },
+                                        { f: 'today_canceled', color: 'text-rose-400', isLeft: false },
+                                        { f: 'today_rescheduled', color: 'text-orange-400', isLeft: false, isRight: true },
+                                        { f: 'future_agendas', color: 'text-fuchsia-400', isLeft: true },
+                                        { f: 'future_contacted', color: 'text-slate-400', isLeft: false },
+                                        { f: 'future_confirmed', color: 'text-emerald-400', isLeft: false },
+                                        { f: 'future_canceled', color: 'text-rose-400', isLeft: false },
+                                        { f: 'future_rescheduled', color: 'text-orange-400', isLeft: false, isRight: true },
+                                        { f: 'recoveries_contacted', color: 'text-rose-400', isLeft: true },
+                                        { f: 'recoveries_replied', color: 'text-rose-300', isLeft: false },
+                                        { f: 'recoveries_scheduled', color: 'text-teal-400', isLeft: false, isRight: true }
                                     ].map(col => (
                                         <td key={col.f} className={`p-4 text-center ${col.isLeft ? 'border-l border-slate-800' : ''} ${col.isRight ? 'border-r border-slate-800' : ''}`}>
                                             {editingId === r.id ? (
@@ -234,7 +247,7 @@ const TriageReportsTable = () => {
                                                     type="number"
                                                     value={editForm[col.f]}
                                                     onChange={e => setEditForm({ ...editForm, [col.f]: parseInt(e.target.value) || 0 })}
-                                                    className="w-14 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-black text-indigo-400 focus:border-indigo-500 outline-none"
+                                                    className="w-12 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-black text-indigo-400 focus:border-indigo-500 outline-none"
                                                 />
                                             ) : (
                                                 <span className={`text-xs font-black tabular-nums ${col.color}`}>{r[col.f]}</span>

@@ -1,29 +1,31 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Calendar, ListChecks, Phone, Activity, Target, ArrowLeft, RefreshCw, Layers } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { Loader2, Send, Calendar, ClipboardList, Phone, Activity, Target, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly = false }) => {
     const isFilled = value > 0 || value !== '';
     const colorClasses = {
-        indigo: "text-indigo-600 focus:ring-indigo-500",
-        pink: "text-rose-500 focus:ring-rose-500",
-        fuchsia: "text-fuchsia-600 focus:ring-fuchsia-500",
-        teal: "text-teal-600 focus:ring-teal-500",
-        cyan: "text-cyan-600 focus:ring-cyan-500",
-        orange: "text-orange-600 focus:ring-orange-500"
+        indigo: "text-indigo-400 focus:border-indigo-500",
+        pink: "text-rose-400 focus:border-rose-500",
+        fuchsia: "text-fuchsia-400 focus:border-fuchsia-500",
+        teal: "text-teal-400 focus:border-teal-500",
+        cyan: "text-cyan-400 focus:border-cyan-500",
+        orange: "text-orange-400 focus:border-orange-500"
     };
 
     return (
         <div className="space-y-1.5 flex-1">
-            <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-500/80">{label}</label>
+            <label className="text-[10px] font-black uppercase tracking-widest ml-1 text-slate-400/80">{label}</label>
             <input
                 type="number"
                 required
                 readOnly={readOnly}
-                className={`w-full px-4 py-3.5 rounded-[1.25rem] outline-none border transition-all font-black text-lg
-                    ${readOnly ? 'bg-slate-100/50 border-slate-200 text-slate-400' : 
-                      isFilled ? 'bg-white border-slate-200 text-slate-900 shadow-sm' : 'bg-slate-50/50 border-slate-200/60 text-slate-900 shadow-inner'}
+                className={`w-full px-4 py-3 bg-slate-950/50 border rounded-xl transition-all font-black text-base outline-none
+                    ${readOnly ? 'border-slate-800/80 text-slate-500 bg-slate-900/10 cursor-not-allowed' : 
+                      isFilled ? 'border-slate-700 text-white shadow-sm bg-slate-900/40' : 'border-slate-850 text-white bg-slate-950/60 shadow-inner'}
                     ${colorClasses[color] || colorClasses.indigo}
                 `}
                 value={value}
@@ -35,40 +37,103 @@ const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly
 };
 
 const SectionHeader = ({ icon: Icon, title, colorClass }) => (
-    <div className="flex items-center gap-4 mb-8">
-        <div className={`p-3.5 bg-white shadow-sm border border-slate-100 rounded-2xl`}>
-            <Icon className={colorClass} size={22} strokeWidth={2.5} />
+    <div className="flex items-center gap-3 mb-6 border-b border-slate-800 pb-3">
+        <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+            <Icon className={colorClass} size={18} />
         </div>
-        <h2 className="text-2xl font-black tracking-tight text-slate-800 uppercase italic leading-none">{title}</h2>
+        <h2 className="text-sm font-black tracking-widest text-slate-300 uppercase">{title}</h2>
     </div>
 );
 
 const PublicTriageReportPage = () => {
+    const { user } = useAuth();
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [triages, setTriages] = useState([]);
 
     const initialFormData = {
-        triage_name: 'Kerwin', // Default or from context if available
+        triage_name: '',
         date: '',
         
-        // Starting Process
-        starting_1st_call_agendas: '', starting_1st_call_confirmando: '', starting_1st_call_reprogramando: '', starting_1st_call_confirmadas: '', starting_1st_call_canceladas: '',
-        starting_2nd_call_agendas: '', starting_2nd_call_confirmando: '', starting_2nd_call_reprogramando: '', starting_2nd_call_confirmadas: '', starting_2nd_call_canceladas: '',
+        // Confirmaciones del día
+        today_agendas: '',
+        today_contacted: '',
+        today_confirmed: '',
+        today_canceled: '',
+        today_rescheduled: '',
         
-        // All of Them
-        all_1st_call_agendas: '', all_1st_call_confirmando: '', all_1st_call_reprogramando: '', all_1st_call_confirmadas: '', all_1st_call_canceladas: '',
-        all_2nd_call_agendas: '', all_2nd_call_confirmando: '', all_2nd_call_reprogramando: '', all_2nd_call_confirmadas: '', all_2nd_call_canceladas: '',
+        // Confirmaciones futuras
+        future_agendas: '',
+        future_contacted: '',
+        future_confirmed: '',
+        future_canceled: '',
+        future_rescheduled: '',
         
-        // Post Confirmation
-        post_hoy_confirmadas: '', post_hoy_ppc_completo: '', post_all_confirmadas: '', post_all_ppc_completo: '',
-        
-        // Follow Up
-        fu_cold_personas_disp_fu: '', fu_cold_mjes_realizados: '', fu_cold_personas_realizados: '', fu_cold_personas_respondidos: '',
-        fu_warm_personas_disp_fu: '', fu_warm_mjes_realizados: '', fu_warm_personas_realizados: '', fu_warm_personas_respondidos: '',
-        fu_hot_personas_disp_fu: '', fu_hot_mjes_realizados: '', fu_hot_personas_realizados: '', fu_hot_personas_respondidos: ''
+        // Recuperaciones
+        recoveries_contacted: '',
+        recoveries_replied: '',
+        recoveries_scheduled: ''
     };
 
     const [formData, setFormData] = useState(initialFormData);
+
+    // Cargar lista de triadores activos
+    useEffect(() => {
+        const fetchTriages = async () => {
+            try {
+                const response = await api.get('/active-triage');
+                setTriages(response.data || []);
+                
+                // Auto-seleccionar si el rol es triage
+                if (user?.role === 'triage') {
+                    setFormData(prev => ({ ...prev, triage_name: user.username }));
+                }
+            } catch (err) {
+                console.error("Error cargando triadores activos:", err);
+            }
+        };
+        fetchTriages();
+    }, [user]);
+
+    // Autollenar datos al cambiar fecha o triador
+    useEffect(() => {
+        if (!formData.date || !formData.triage_name) return;
+
+        const loadPrefillData = async () => {
+            setLoading(true);
+            try {
+                const response = await api.get(`/triage-report/prefill?triage_name=${formData.triage_name}&date=${formData.date}`);
+                const data = response.data || {};
+                
+                setFormData(prev => ({
+                    ...prev,
+                    today_agendas: data.today_agendas ?? 0,
+                    today_contacted: data.today_contacted ?? 0,
+                    today_confirmed: data.today_confirmed ?? 0,
+                    today_canceled: data.today_canceled ?? 0,
+                    today_rescheduled: data.today_rescheduled ?? 0,
+                    
+                    future_agendas: data.future_agendas ?? 0,
+                    future_contacted: data.future_contacted ?? 0,
+                    future_confirmed: data.future_confirmed ?? 0,
+                    future_canceled: data.future_canceled ?? 0,
+                    future_rescheduled: data.future_rescheduled ?? 0,
+                    
+                    recoveries_contacted: prev.recoveries_contacted || '',
+                    recoveries_replied: prev.recoveries_replied || '',
+                    recoveries_scheduled: prev.recoveries_scheduled || ''
+                }));
+                toast.success("Métricas de agendas precargadas correctamente.");
+            } catch (err) {
+                console.error("Error al precargar reporte:", err);
+                toast.error("Error al precargar agendas automáticas.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadPrefillData();
+    }, [formData.date, formData.triage_name]);
 
     const handleFieldChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value === '' ? '' : (parseInt(value) || 0) }));
@@ -78,289 +143,195 @@ const PublicTriageReportPage = () => {
         e.preventDefault();
 
         if (!formData.date) {
-            alert("Por favor, selecciona la fecha del informe.");
+            toast.error("Por favor, selecciona la fecha del informe.");
+            return;
+        }
+
+        if (!formData.triage_name) {
+            toast.error("Por favor, selecciona tu nombre.");
             return;
         }
 
         setSubmitting(true);
         try {
-            await api.post('/triage/tracker', formData);
-            alert('¡Reporte enviado correctamente! Excelente trabajo.');
-            setFormData(prev => ({ ...initialFormData, triage_name: prev.triage_name, date: prev.date }));
+            await api.post('/triage-report', formData);
+            toast.success('¡Reporte diario guardado exitosamente! Buen trabajo.');
+            
+            // Reset manteniendo nombre y fecha
+            setFormData(prev => ({
+                ...initialFormData,
+                triage_name: prev.triage_name,
+                date: prev.date
+            }));
         } catch (err) {
-            alert(err.response?.data?.error || 'Error al enviar reporte.');
+            toast.error(err.response?.data?.message || err.response?.data?.error || 'Error al enviar reporte.');
         } finally {
             setSubmitting(false);
         }
     };
 
-    const calculateProgress = () => {
-        const allFields = Object.keys(initialFormData).filter(k => k !== 'triage_name' && k !== 'date');
-        let filled = 0;
-        allFields.forEach(field => {
-            if (formData[field] !== '' && formData[field] !== null && formData[field] !== undefined) {
-                filled++;
-            }
-        });
-        const total = allFields.length;
-        return Math.min(Math.round((filled / total) * 100), 100);
-    };
-
+    // Estadísticas del sidebar en tiempo real
     const liveMetrics = useMemo(() => {
-        const stAgendas = (parseInt(formData.starting_1st_call_agendas) || 0) + (parseInt(formData.starting_2nd_call_agendas) || 0);
-        const stConfirmadas = (parseInt(formData.starting_1st_call_confirmadas) || 0) + (parseInt(formData.starting_2nd_call_confirmadas) || 0);
+        const todayTot = parseInt(formData.today_agendas) || 0;
+        const todayConf = parseInt(formData.today_confirmed) || 0;
+        const futureTot = parseInt(formData.future_agendas) || 0;
+        const futureConf = parseInt(formData.future_confirmed) || 0;
         
-        const fuCont = (parseInt(formData.fu_cold_personas_realizados) || 0) + (parseInt(formData.fu_warm_personas_realizados) || 0) + (parseInt(formData.fu_hot_personas_realizados) || 0);
-        const fuResp = (parseInt(formData.fu_cold_personas_respondidos) || 0) + (parseInt(formData.fu_warm_personas_respondidos) || 0) + (parseInt(formData.fu_hot_personas_respondidos) || 0);
-        
-        const confirmRate = stAgendas > 0 ? (stConfirmadas / stAgendas * 100).toFixed(1) : 0;
-        const responseRate = fuCont > 0 ? (fuResp / fuCont * 100).toFixed(1) : 0;
+        const recCont = parseInt(formData.recoveries_contacted) || 0;
+        const recSched = parseInt(formData.recoveries_scheduled) || 0;
+
+        const rate = (num, den) => den > 0 ? ((num / den) * 100).toFixed(1) : '0.0';
 
         return {
-            stAgendas,
-            stConfirmadas,
-            confirmRate,
-            responseRate
+            todayRate: rate(todayConf, todayTot),
+            futureRate: rate(futureConf, futureTot),
+            recRate: rate(recSched, recCont)
         };
     }, [formData]);
 
-    const progress = calculateProgress();
-
     return (
-        <div className="min-h-screen bg-[#f0f4f8] text-slate-900 flex flex-col p-4 md:p-8 lg:p-12 relative overflow-hidden font-sans">
-            {/* Ambient Background Elements */}
-            <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-200/30 blur-[120px] rounded-full" />
-            <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-teal-100/40 blur-[100px] rounded-full" />
+        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 py-12 relative overflow-hidden font-sans">
+            <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-900/10 to-transparent pointer-events-none" />
 
-            <div className="w-full max-w-6xl mx-auto z-10 space-y-10">
-                {/* Dashboard Header */}
-                <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div className="space-y-1">
-                        <p className="text-cyan-600 font-black tracking-[0.2em] text-[10px] uppercase ml-1">NeurOPS Call Confirmer System</p>
-                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                            Call Confirmer Dashboard <span className="text-slate-300 font-light">/</span> <span className="text-indigo-600 italic">Report</span>
-                        </h1>
-                        <p className="text-slate-500 font-medium text-lg">Daily Tracker for <span className="text-slate-800 font-bold">{formData.triage_name}</span> 🎯</p>
+            <div className="w-full max-w-6xl mx-auto z-10 space-y-8">
+                {/* Cabecera */}
+                <div className="text-center space-y-3 mb-2 relative">
+                    <p className="text-indigo-400 font-bold tracking-widest text-xs uppercase">NeurOPS Triage System</p>
+                    <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
+                        Reporte Diario Triaje
+                    </h1>
+                </div>
+
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-32 space-y-4">
+                        <Loader2 className="animate-spin text-indigo-500" size={48} />
+                        <p className="text-slate-500 font-medium">Sincronizando agendas del día...</p>
                     </div>
-                    
-                    <div className="flex items-center gap-4 bg-white/60 backdrop-blur-md border border-white/40 p-4 rounded-[2rem] shadow-sm">
-                        <div className="flex items-center gap-3 px-4 border-r border-slate-200">
-                            <Calendar className="text-indigo-500" size={20} />
-                            <input
-                                type="date"
-                                required
-                                className="bg-transparent border-none outline-none font-bold text-slate-700 cursor-pointer"
-                                value={formData.date}
-                                onChange={e => setFormData({ ...formData, date: e.target.value })}
-                            />
-                        </div>
-                        <div className="px-4 pr-6">
-                            <span className="font-bold text-slate-400 text-sm uppercase tracking-widest mr-2">Call Confirmer:</span>
-                            <span className="font-black text-indigo-600 italic">{formData.triage_name}</span>
-                        </div>
-                    </div>
-                </header>
-
-                <form onSubmit={handleSubmit} className="space-y-10">
-                    {/* HIGH LEVEL METRICS ROW */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                        {[
-                            { label: 'Total Agendas St.', value: liveMetrics.stAgendas, icon: Phone, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                            { label: 'Confirmadas St.', value: liveMetrics.stConfirmadas, icon: Target, color: 'text-teal-600', bg: 'bg-teal-50' },
-                            { label: 'Tasa Confirm. St.', value: `${liveMetrics.confirmRate}%`, icon: Activity, color: 'text-cyan-600', bg: 'bg-cyan-50' },
-                            { label: 'Resp. FU', value: `${liveMetrics.responseRate}%`, icon: RefreshCw, color: 'text-rose-600', bg: 'bg-rose-50' }
-                        ].map((card, i) => (
-                            <div key={i} className="bg-white/80 backdrop-blur-lg border border-white/60 p-6 rounded-[2.5rem] shadow-sm hover:shadow-md transition-all group">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className={`p-2.5 ${card.bg} rounded-2xl group-hover:scale-110 transition-transform`}>
-                                        <card.icon className={card.color} size={20} strokeWidth={2.5} />
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* ═══ COLUMNA 1: FORMULARIO ═══ */}
+                        <div className="lg:col-span-2">
+                            <form onSubmit={handleSubmit} className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 shadow-xl space-y-8 backdrop-blur-sm">
+                                {/* Triador y Fecha */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-950/40 p-5 rounded-2xl border border-slate-850">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400/80 ml-1">Call Confirmer / Triaje</label>
+                                        <select
+                                            disabled={user?.role === 'triage'}
+                                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                                            value={formData.triage_name}
+                                            onChange={e => setFormData(prev => ({ ...prev, triage_name: e.target.value }))}
+                                        >
+                                            <option value="">Selecciona quién eres</option>
+                                            {triages.map(t => (
+                                                <option key={t.id} value={t.name}>{t.name}</option>
+                                            ))}
+                                        </select>
                                     </div>
-                                </div>
-                                <p className="text-3xl font-black text-slate-900 tracking-tight">{card.value}</p>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{card.label}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* MAIN CONTENT GRID */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                        
-                        {/* LEFT COLUMN: Starting & All Process */}
-                        <div className="lg:col-span-8 space-y-10">
-                            
-                            {/* starting Process Cards */}
-                            <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 shadow-sm">
-                                <SectionHeader icon={Phone} title="DÍA DE HOY" colorClass="text-indigo-600" />
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                    {/* 1st Call */}
-                                    <div className="space-y-6">
-                                        <div className="bg-indigo-50/50 py-2 px-4 rounded-xl text-center">
-                                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">1ra Llamada</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <MetricInput label="Agendas" field="starting_1st_call_agendas" color="indigo" value={formData.starting_1st_call_agendas} onChange={handleFieldChange} />
-                                            <MetricInput label="Confirmando" field="starting_1st_call_confirmando" color="indigo" value={formData.starting_1st_call_confirmando} onChange={handleFieldChange} />
-                                            <MetricInput label="Reprog." field="starting_1st_call_reprogramando" color="fuchsia" value={formData.starting_1st_call_reprogramando} onChange={handleFieldChange} />
-                                            <MetricInput label="Confirmadas" field="starting_1st_call_confirmadas" color="teal" value={formData.starting_1st_call_confirmadas} onChange={handleFieldChange} />
-                                            <div className="col-span-2">
-                                                <MetricInput label="Canceladas" field="starting_1st_call_canceladas" color="pink" value={formData.starting_1st_call_canceladas} onChange={handleFieldChange} />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* 2nd Call */}
-                                    <div className="space-y-6">
-                                        <div className="bg-fuchsia-50/50 py-2 px-4 rounded-xl text-center">
-                                            <span className="text-[10px] font-black text-fuchsia-600 uppercase tracking-widest">2da Llamada</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <MetricInput label="Agendas" field="starting_2nd_call_agendas" color="fuchsia" value={formData.starting_2nd_call_agendas} onChange={handleFieldChange} />
-                                            <MetricInput label="Confirmando" field="starting_2nd_call_confirmando" color="fuchsia" value={formData.starting_2nd_call_confirmando} onChange={handleFieldChange} />
-                                            <MetricInput label="Reprog." field="starting_2nd_call_reprogramando" color="indigo" value={formData.starting_2nd_call_reprogramando} onChange={handleFieldChange} />
-                                            <MetricInput label="Confirmadas" field="starting_2nd_call_confirmadas" color="teal" value={formData.starting_2nd_call_confirmadas} onChange={handleFieldChange} />
-                                            <div className="col-span-2">
-                                                <MetricInput label="Canceladas" field="starting_2nd_call_canceladas" color="pink" value={formData.starting_2nd_call_canceladas} onChange={handleFieldChange} />
-                                            </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400/80 ml-1">Fecha de Gestión</label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-4 top-3.5 text-slate-500 w-4 h-4" />
+                                            <input
+                                                type="date"
+                                                required
+                                                className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500"
+                                                value={formData.date}
+                                                onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                                            />
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* All Of Them Cards */}
-                            <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 shadow-sm">
-                                <SectionHeader icon={Layers} title="RESTANTES" colorClass="text-fuchsia-600" />
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                    {/* 1st Call Hist. */}
-                                    <div className="space-y-6">
-                                        <div className="bg-fuchsia-50/50 py-2 px-4 rounded-xl text-center">
-                                            <span className="text-[10px] font-black text-fuchsia-600 uppercase tracking-widest">Histórico 1ra</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <MetricInput label="Agendas" field="all_1st_call_agendas" color="fuchsia" value={formData.all_1st_call_agendas} onChange={handleFieldChange} />
-                                            <MetricInput label="Confirmando" field="all_1st_call_confirmando" color="fuchsia" value={formData.all_1st_call_confirmando} onChange={handleFieldChange} />
-                                            <MetricInput label="Reprog." field="all_1st_call_reprogramando" color="indigo" value={formData.all_1st_call_reprogramando} onChange={handleFieldChange} />
-                                            <MetricInput label="Confirmadas" field="all_1st_call_confirmadas" color="teal" value={formData.all_1st_call_confirmadas} onChange={handleFieldChange} />
-                                            <div className="col-span-2">
-                                                <MetricInput label="Canceladas" field="all_1st_call_canceladas" color="pink" value={formData.all_1st_call_canceladas} onChange={handleFieldChange} />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* 2nd Call Hist. */}
-                                    <div className="space-y-6">
-                                        <div className="bg-indigo-50/50 py-2 px-4 rounded-xl text-center">
-                                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Histórico 2da</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <MetricInput label="Agendas" field="all_2nd_call_agendas" color="indigo" value={formData.all_2nd_call_agendas} onChange={handleFieldChange} />
-                                            <MetricInput label="Confirmando" field="all_2nd_call_confirmando" color="indigo" value={formData.all_2nd_call_confirmando} onChange={handleFieldChange} />
-                                            <MetricInput label="Reprog." field="all_2nd_call_reprogramando" color="fuchsia" value={formData.all_2nd_call_reprogramando} onChange={handleFieldChange} />
-                                            <MetricInput label="Confirmadas" field="all_2nd_call_confirmadas" color="teal" value={formData.all_2nd_call_confirmadas} onChange={handleFieldChange} />
-                                            <div className="col-span-2">
-                                                <MetricInput label="Canceladas" field="all_2nd_call_canceladas" color="pink" value={formData.all_2nd_call_canceladas} onChange={handleFieldChange} />
-                                            </div>
-                                        </div>
+                                {/* Confirmaciones del Día */}
+                                <div className="space-y-6">
+                                    <SectionHeader icon={Phone} title="Confirmaciones del Día" colorClass="text-indigo-400" />
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                        <MetricInput label="Agendas" field="today_agendas" value={formData.today_agendas} onChange={handleFieldChange} readOnly={true} color="indigo" />
+                                        <MetricInput label="Contactadas" field="today_contacted" value={formData.today_contacted} onChange={handleFieldChange} readOnly={true} color="teal" />
+                                        <MetricInput label="Confirmadas" field="today_confirmed" value={formData.today_confirmed} onChange={handleFieldChange} readOnly={true} color="teal" />
+                                        <MetricInput label="Canceladas" field="today_canceled" value={formData.today_canceled} onChange={handleFieldChange} readOnly={true} color="pink" />
+                                        <MetricInput label="Reagendadas" field="today_rescheduled" value={formData.today_rescheduled} onChange={handleFieldChange} readOnly={true} color="orange" />
                                     </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        {/* RIGHT COLUMN: Follow Up & Submission */}
-                        <div className="lg:col-span-4 space-y-10">
-                            
-                            {/* Follow Up Card */}
-                            <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 shadow-sm">
-                                <SectionHeader icon={RefreshCw} title="Follow Up" colorClass="text-cyan-600" />
-                                
-                                <div className="space-y-8">
-                                    {[
-                                        { label: 'Cold Leads', color: 'cyan', fields: ['fu_cold_personas_disp_fu', 'fu_cold_mjes_realizados', 'fu_cold_personas_realizados', 'fu_cold_personas_respondidos'] },
-                                        { label: 'Warm Leads', color: 'orange', fields: ['fu_warm_personas_disp_fu', 'fu_warm_mjes_realizados', 'fu_warm_personas_realizados', 'fu_warm_personas_respondidos'] },
-                                        { label: 'Hot Leads', color: 'pink', fields: ['fu_hot_personas_disp_fu', 'fu_hot_mjes_realizados', 'fu_hot_personas_realizados', 'fu_hot_personas_respondidos'] }
-                                    ].map((sec, idx) => (
-                                        <div key={idx} className="space-y-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-1.5 h-6 rounded-full bg-${sec.color}-500`} />
-                                                <h4 className="text-xs font-black uppercase text-slate-800 tracking-widest">{sec.label}</h4>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <MetricInput label="Disponibles" field={sec.fields[0]} color={sec.color} value={formData[sec.fields[0]]} onChange={handleFieldChange} />
-                                                <MetricInput label="Msjs. Env." field={sec.fields[1]} color={sec.color} value={formData[sec.fields[1]]} onChange={handleFieldChange} />
-                                                <MetricInput label="Contac." field={sec.fields[2]} color={sec.color} value={formData[sec.fields[2]]} onChange={handleFieldChange} />
-                                                <MetricInput label="Resp." field={sec.fields[3]} color={sec.color} value={formData[sec.fields[3]]} onChange={handleFieldChange} />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Submit Progress Card */}
-                            <div className="bg-white/90 backdrop-blur-xl border border-white rounded-[2.5rem] p-8 shadow-sm">
-                                <div className="flex justify-between items-end mb-4">
-                                    <div>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1 italic">Submit Status</p>
-                                        <p className="text-4xl font-black text-slate-900">{progress}%</p>
-                                    </div>
-                                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
-                                        <Send className="text-indigo-600" size={20} strokeWidth={2.5} />
+                                {/* Confirmaciones Futuras */}
+                                <div className="space-y-6">
+                                    <SectionHeader icon={Target} title="Confirmaciones Futuras" colorClass="text-fuchsia-400" />
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                        <MetricInput label="Próximas Agendas" field="future_agendas" value={formData.future_agendas} onChange={handleFieldChange} readOnly={true} color="fuchsia" />
+                                        <MetricInput label="Contactadas" field="future_contacted" value={formData.future_contacted} onChange={handleFieldChange} readOnly={true} color="cyan" />
+                                        <MetricInput label="Confirmadas" field="future_confirmed" value={formData.future_confirmed} onChange={handleFieldChange} readOnly={true} color="cyan" />
+                                        <MetricInput label="Canceladas" field="future_canceled" value={formData.future_canceled} onChange={handleFieldChange} readOnly={true} color="pink" />
+                                        <MetricInput label="Reagendadas" field="future_rescheduled" value={formData.future_rescheduled} onChange={handleFieldChange} readOnly={true} color="orange" />
                                     </div>
                                 </div>
-                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-8">
-                                    <div className="h-full bg-indigo-600 transition-all duration-700 shadow-[0_0_12px_rgba(79,70,229,0.4)]" style={{ width: `${progress}%` }} />
+
+                                {/* Recuperaciones */}
+                                <div className="space-y-6">
+                                    <SectionHeader icon={RefreshCw} title="Recuperaciones (Manual)" colorClass="text-rose-400" />
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <MetricInput label="Contactados" field="recoveries_contacted" value={formData.recoveries_contacted} onChange={handleFieldChange} color="pink" />
+                                        <MetricInput label="Respuestas" field="recoveries_replied" value={formData.recoveries_replied} onChange={handleFieldChange} color="pink" />
+                                        <MetricInput label="Agendas" field="recoveries_scheduled" value={formData.recoveries_scheduled} onChange={handleFieldChange} color="teal" />
+                                    </div>
                                 </div>
+
                                 <button
                                     type="submit"
-                                    disabled={submitting || progress < 1}
-                                    className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white py-5 rounded-[1.5rem] font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                                    disabled={submitting}
+                                    className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black uppercase text-xs tracking-widest py-4 rounded-2xl shadow-lg shadow-indigo-950/20 hover:shadow-indigo-500/10 hover:shadow-2xl transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
-                                    {submitting ? <Loader2 className="animate-spin" size={18} /> : null}
-                                    {submitting ? 'Sending Data...' : 'Submit Call Confirmer Report'}
+                                    {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                                    {submitting ? 'Enviando Reporte...' : 'Enviar Reporte Diario'}
                                 </button>
+                            </form>
+                        </div>
+
+                        {/* ═══ COLUMNA 2: SIDEBAR DE TASAS ═══ */}
+                        <div className="space-y-6">
+                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-800 pb-3">Resumen de Tasas</h3>
+                                
+                                <div className="space-y-4">
+                                    <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-850 flex justify-between items-center">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tasa Confirm. Hoy</p>
+                                            <p className="text-2xl font-black text-white italic mt-1">{liveMetrics.todayRate}%</p>
+                                        </div>
+                                        <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl">
+                                            <Activity size={18} />
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-850 flex justify-between items-center">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tasa Confirm. Futuro</p>
+                                            <p className="text-2xl font-black text-white italic mt-1">{liveMetrics.futureRate}%</p>
+                                        </div>
+                                        <div className="p-3 bg-fuchsia-500/10 text-fuchsia-400 rounded-xl">
+                                            <Target size={18} />
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-850 flex justify-between items-center">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Conversión Recuperac.</p>
+                                            <p className="text-2xl font-black text-white italic mt-1">{liveMetrics.recRate}%</p>
+                                        </div>
+                                        <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl">
+                                            <RefreshCw size={18} />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    {/* BOTTOM SECTION: Post Confirmation Process */}
-                    <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-[2.5rem] p-8 md:p-12 shadow-sm border-t-8 border-t-teal-600">
-                        <SectionHeader icon={Target} title="RECORDATORIOS" colorClass="text-teal-600" />
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                            {/* HOY Column */}
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center">
-                                        <Target className="text-teal-600" size={18} />
-                                    </div>
-                                    <h4 className="text-lg font-black uppercase italic text-slate-800">Cierre de Hoy</h4>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <MetricInput label="Confirmadas Hoy" field="post_hoy_confirmadas" color="teal" value={formData.post_hoy_confirmadas} onChange={handleFieldChange} />
-                                    <MetricInput label="PPC Completo Hoy" field="post_hoy_ppc_completo" color="cyan" value={formData.post_hoy_ppc_completo} onChange={handleFieldChange} />
-                                </div>
-                            </div>
-
-                            {/* ALL Column */}
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
-                                        <Target className="text-indigo-600" size={18} />
-                                    </div>
-                                    <h4 className="text-lg font-black uppercase italic text-slate-800">Histórico Total</h4>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <MetricInput label="Confirmadas All" field="post_all_confirmadas" color="indigo" value={formData.post_all_confirmadas} onChange={handleFieldChange} />
-                                    <MetricInput label="PPC Completo All" field="post_all_ppc_completo" color="cyan" value={formData.post_all_ppc_completo} onChange={handleFieldChange} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
+                )}
 
                 <footer className="flex flex-col md:flex-row justify-between items-center py-10 text-slate-400 font-medium text-xs gap-4 border-t border-slate-200/60">
                     <div className="flex items-center gap-6">
-                        <Link to="/estadisticas-triage" className="hover:text-indigo-600 transition-colors uppercase tracking-[0.1em] font-black">View Stats</Link>
+                        <span className="text-slate-500">NeurOPS SYSTEM</span>
                         <span className="text-slate-200">|</span>
                         <p>© 2026 NeurOPS PERFORMANCE SYSTEM</p>
                     </div>
