@@ -116,7 +116,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
         { id: 'all', label: 'Todos' },
         { id: 'closer', label: 'Closers' },
         { id: 'setter', label: 'Setters' },
-        { id: 'triage', label: 'Triage' },
+        { id: 'triage', label: 'Triaje' },
         { id: 'operator', label: 'Operadores' },
         { id: 'admin', label: 'Admins' },
     ];

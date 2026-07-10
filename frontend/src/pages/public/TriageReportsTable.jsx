@@ -104,7 +104,7 @@ const TriageReportsTable = () => {
         <div className="space-y-6 animate-in fade-in duration-500 relative">
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-[2rem] flex flex-wrap items-end gap-6">
                 <div className="flex flex-col gap-2">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Triage</label>
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Triaje</label>
                     <select
                         className="bg-slate-800 border border-slate-700 text-xs font-bold rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500 min-w-[150px]"
                         value={filters.triage_name}
@@ -179,7 +179,7 @@ const TriageReportsTable = () => {
                         <thead>
                             <tr className="bg-slate-800/50">
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
-                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Triage</th>
+                                <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Triaje</th>
                                 <th className="p-4 text-[9px] font-black text-indigo-500 uppercase tracking-widest text-center" colSpan="5">Gestión de Agendas</th>
                                 <th className="p-4 text-[9px] font-black text-sky-500 uppercase tracking-widest text-center" colSpan="2">Seguimientos</th>
                                 <th className="p-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Acciones</th>

@@ -116,7 +116,7 @@ const BuscadorGlobalDeck = ({ onSelectLead, onSelectClient, role = 'setter' }) =
                                             {r.setter_processed ? (
                                                 <span className="text-[8px] font-black uppercase bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Setter OK</span>
                                             ) : (
-                                                <span className="text-[8px] font-black uppercase bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Triage</span>
+                                                <span className="text-[8px] font-black uppercase bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Triaje</span>
                                             )}
                                             {r.closer_processed && (
                                                 <span className="text-[8px] font-black uppercase bg-sky-500/10 border border-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full">Win</span>
