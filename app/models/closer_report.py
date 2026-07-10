@@ -58,16 +58,15 @@ class CloserDailyReport(db.Model):
     # --- SEGUIMIENTOS ---
     follow_ups_sent = db.Column(db.Integer, default=0)
     follow_ups_replied = db.Column(db.Integer, default=0)
-    follow_ups_hot_sent = db.Column(db.Integer, default=0)
-    follow_ups_hot_replied = db.Column(db.Integer, default=0)
-    follow_ups_hot_scheduled = db.Column(db.Integer, default=0)
-    follow_ups_cold_sent = db.Column(db.Integer, default=0)
-    follow_ups_cold_replied = db.Column(db.Integer, default=0)
-    follow_ups_cold_scheduled = db.Column(db.Integer, default=0)
+    follow_ups_closed = db.Column(db.Integer, default=0)
+
+    # --- RECUPERACIONES ---
+    recoveries_contacted = db.Column(db.Integer, default=0)
+    recoveries_replied = db.Column(db.Integer, default=0)
+    recoveries_scheduled = db.Column(db.Integer, default=0)
 
     # --- REFERIDOS ---
     referrals_sourced = db.Column(db.Integer, default=0)
-    referrals_contacted = db.Column(db.Integer, default=0)
     referrals_scheduled = db.Column(db.Integer, default=0)
 
     # --- REFLEXIÓN (legacy: 2 campos) ---
