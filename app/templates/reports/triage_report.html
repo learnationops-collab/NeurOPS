@@ -243,59 +243,81 @@
     <div class="main-grid">
         <div class="card">
             <div class="card-header">
-                <div class="icon-box" style="color: var(--indigo-500)">📋</div>
-                <div class="card-title">Métricas de Actividad</div>
+                <div class="icon-box" style="color: var(--indigo-500)">🎯</div>
+                <div class="card-title">Métricas del Informe Diario</div>
             </div>
             
             <div class="metrics-list">
+                <!-- Confirmaciones del Día -->
+                <div style="font-size: 11px; font-weight: 950; text-transform: uppercase; color: var(--indigo-400); letter-spacing: 1px; margin-bottom: 8px;">Confirmaciones del Día</div>
                 <div class="metric-row">
                     <div class="metric-info">
-                        <span class="metric-label">Agendas en Gestión</span>
-                        <span class="metric-text">Total en gestión</span>
+                        <span class="metric-label">Agendas del Día</span>
+                        <span class="metric-text">Total citados hoy</span>
                     </div>
-                    <span class="metric-value" style="color: var(--indigo-400)">{{ agendas_nuevas }}</span>
+                    <span class="metric-value" style="color: var(--indigo-400)">{{ today_agendas }}</span>
                 </div>
-
-                <div class="metric-row">
-                    <div class="metric-info">
-                        <span class="metric-label">Confirmadas</span>
-                        <span class="metric-text">Efectivas</span>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Contact.</span>
+                        <span class="metric-value" style="color: var(--sky-400); font-size: 20px;">{{ today_contacted }}</span>
                     </div>
-                    <span class="metric-value" style="color: var(--emerald-400)">{{ agendas_confirmadas }}</span>
-                </div>
-
-                <div class="metric-row">
-                    <div class="metric-info">
-                        <span class="metric-label">No Contestan</span>
-                        <span class="metric-text">Sin contacto</span>
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Confirm.</span>
+                        <span class="metric-value" style="color: var(--emerald-400); font-size: 20px;">{{ today_confirmed }}</span>
                     </div>
-                    <span class="metric-value" style="color: var(--rose-400)">{{ no_contestan }}</span>
-                </div>
-
-                <div class="metric-row">
-                    <div class="metric-info">
-                        <span class="metric-label">Seguimientos</span>
-                        <span class="metric-text">Iniciados / Contestados</span>
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Cancel.</span>
+                        <span class="metric-value" style="color: var(--rose-400); font-size: 20px;">{{ today_canceled }}</span>
                     </div>
-                    <div style="display: flex; align-items: baseline; gap: 8px;">
-                        <span class="metric-value" style="color: var(--sky-400)">{{ seguimientos_iniciados }}</span>
-                        <span style="color: var(--slate-600); font-weight: 900;">/</span>
-                        <span class="metric-value" style="color: var(--emerald-500); font-size: 24px;">{{ seguimientos_contestados }}</span>
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Reagend.</span>
+                        <span class="metric-value" style="color: var(--amber-400); font-size: 20px;">{{ today_rescheduled }}</span>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div class="metric-row" style="padding: 12px 16px;">
-                        <div class="metric-info">
-                            <span class="metric-label">Cancelaciones</span>
-                        </div>
-                        <span class="metric-value" style="color: var(--amber-400); font-size: 24px;">{{ cancelaciones }}</span>
+                <!-- Confirmaciones Futuras -->
+                <div style="font-size: 11px; font-weight: 950; text-transform: uppercase; color: var(--violet-400); letter-spacing: 1px; margin-bottom: 8px; margin-top: 12px;">Confirmaciones Futuro</div>
+                <div class="metric-row">
+                    <div class="metric-info">
+                        <span class="metric-label">Próximas Agendas</span>
+                        <span class="metric-text">Total creadas/triadas para adelante</span>
                     </div>
-                    <div class="metric-row" style="padding: 12px 16px;">
-                        <div class="metric-info">
-                            <span class="metric-label">Reprogramandos</span>
-                        </div>
-                        <span class="metric-value" style="color: var(--violet-400); font-size: 24px;">{{ reprogramandos }}</span>
+                    <span class="metric-value" style="color: var(--violet-400)">{{ future_agendas }}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Contact.</span>
+                        <span class="metric-value" style="color: var(--sky-400); font-size: 20px;">{{ future_contacted }}</span>
+                    </div>
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Confirm.</span>
+                        <span class="metric-value" style="color: var(--emerald-400); font-size: 20px;">{{ future_confirmed }}</span>
+                    </div>
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Cancel.</span>
+                        <span class="metric-value" style="color: var(--rose-400); font-size: 20px;">{{ future_canceled }}</span>
+                    </div>
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Reagend.</span>
+                        <span class="metric-value" style="color: var(--amber-400); font-size: 20px;">{{ future_rescheduled }}</span>
+                    </div>
+                </div>
+
+                <!-- Recuperaciones -->
+                <div style="font-size: 11px; font-weight: 950; text-transform: uppercase; color: var(--rose-400); letter-spacing: 1px; margin-bottom: 8px; margin-top: 12px;">Recuperaciones</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Contactados</span>
+                        <span class="metric-value" style="color: var(--rose-400); font-size: 20px;">{{ recoveries_contacted }}</span>
+                    </div>
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Respuestas</span>
+                        <span class="metric-value" style="color: var(--rose-300); font-size: 20px;">{{ recoveries_replied }}</span>
+                    </div>
+                    <div class="metric-row" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <span class="metric-label" style="font-size: 8px; margin-bottom: 4px;">Agendados</span>
+                        <span class="metric-value" style="color: var(--emerald-400); font-size: 20px;">{{ recoveries_scheduled }}</span>
                     </div>
                 </div>
             </div>
@@ -303,27 +325,27 @@
 
         <div class="live-panel">
             <div class="live-stat">
-                <div class="live-stat-label">Tasa de Confirmación</div>
+                <div class="live-stat-label">Confirmación Hoy</div>
                 <div class="live-stat-val emerald">{{ confirm_rate }}%</div>
-                <div style="margin-top: 8px;"><span class="status-pill confirm">Eficiencia Alta</span></div>
+                <div style="margin-top: 8px;"><span class="status-pill confirm">Triaje Activo</span></div>
             </div>
 
             <div class="live-stat">
-                <div class="live-stat-label">Respuesta Seg.</div>
-                <div class="live-stat-val indigo">{{ follow_up_rate }}%</div>
+                <div class="live-stat-label">Futuro Confirm.</div>
+                <div class="live-stat-val indigo" style="font-size: 36px;">{{ future_confirmed }}/{{ future_agendas }}</div>
             </div>
 
             <div style="flex: 1;"></div>
             
-            <div style="text-align: center; opacity: 0.5;">
-                <div class="metric-label">Total Gestiones</div>
-                <div class="metric-text" style="font-size: 32px; color: var(--slate-400);">{{ total_gestiones }}</div>
+            <div style="text-align: center; opacity: 0.8;">
+                <div class="metric-label">Recuperaciones</div>
+                <div class="metric-text" style="font-size: 28px; color: var(--emerald-400); font-weight: 900;">{{ recoveries_scheduled }} Agendas</div>
             </div>
         </div>
     </div>
 
     <div class="footer">
-        NEUROPS TRIAGE SYSTEM • REPORTE GENERADO EL {{ date_str }}
+        NEUROPS TRIAJE SYSTEM • REPORTE GENERADO EL {{ date_str }}
     </div>
 </body>
 
