@@ -45,6 +45,11 @@
       - Se registró la ruta `/triage/report` en la aplicación y se añadió al menú del dock para que el triador pueda acceder a su reporte diario fácilmente.
     - **Base de Datos Migración ([bfe5eca377f9_change_triage_daily_report_fields.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/migrations/versions/bfe5eca377f9_change_triage_daily_report_fields.py) [NEW])**:
       - Se generó y aplicó el script de migración para actualizar el esquema de SQLite local de forma exitosa.
+  - **Corrección de Rutas Públicas en Formulario de Triaje y Diferenciación de Iconos de Dock**:
+    - **Frontend React ([PublicTriageReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicTriageReportPage.jsx) [MODIFY])**:
+      - Se agregó el prefijo `/public` a las rutas de las peticiones Axios (`/public/active-triage`, `/public/triage-report/prefill`, `/public/triage-report`), corrigiendo el bloqueo y fallo en la renderización de la página al no encontrar las rutas del backend.
+    - **Navegación e Iconografía ([useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
+      - Se asignó el icono `ClipboardCheck` a la sección de Formularios de triaje y `ClipboardList` al Reporte Diario para diferenciarlos visualmente en el dock inferior del usuario.
 
 - **9 de Julio de 2026**:
   - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
