@@ -1326,14 +1326,11 @@ class CloserService:
             func.sum(CloserDailyReport.deposit_in_call_cash).label('deposit_ic_cash'),
             func.sum(CloserDailyReport.follow_ups_sent).label('fu_sent'),
             func.sum(CloserDailyReport.follow_ups_replied).label('fu_replied'),
-            func.sum(CloserDailyReport.follow_ups_hot_sent).label('fu_hot_sent'),
-            func.sum(CloserDailyReport.follow_ups_hot_replied).label('fu_hot_replied'),
-            func.sum(CloserDailyReport.follow_ups_hot_scheduled).label('fu_hot_scheduled'),
-            func.sum(CloserDailyReport.follow_ups_cold_sent).label('fu_cold_sent'),
-            func.sum(CloserDailyReport.follow_ups_cold_replied).label('fu_cold_replied'),
-            func.sum(CloserDailyReport.follow_ups_cold_scheduled).label('fu_cold_scheduled'),
+            func.sum(CloserDailyReport.follow_ups_closed).label('fu_closed'),
+            func.sum(CloserDailyReport.recoveries_contacted).label('rec_contacted'),
+            func.sum(CloserDailyReport.recoveries_replied).label('rec_replied'),
+            func.sum(CloserDailyReport.recoveries_scheduled).label('rec_scheduled'),
             func.sum(CloserDailyReport.referrals_sourced).label('ref_sourced'),
-            func.sum(CloserDailyReport.referrals_contacted).label('ref_contacted'),
             func.sum(CloserDailyReport.referrals_scheduled).label('ref_scheduled')
         )
 
@@ -1854,12 +1851,11 @@ class CloserService:
             },
             "follow_ups": {
                 "sent": val(stats.fu_sent), "replied": val(stats.fu_replied),
-                "hot_sent": val(stats.fu_hot_sent), "hot_replied": val(stats.fu_hot_replied),
-                "hot_scheduled": val(stats.fu_hot_scheduled),
-                "cold_sent": val(stats.fu_cold_sent), "cold_replied": val(stats.fu_cold_replied),
-                "cold_scheduled": val(stats.fu_cold_scheduled),
+                "closed": val(stats.fu_closed),
+                "recoveries_contacted": val(stats.rec_contacted),
+                "recoveries_replied": val(stats.rec_replied),
+                "recoveries_scheduled": val(stats.rec_scheduled),
                 "referrals_sourced": val(stats.ref_sourced),
-                "referrals_contacted": val(stats.ref_contacted),
                 "referrals_scheduled": val(stats.ref_scheduled)
             },
             "percentages": {

@@ -91,15 +91,13 @@ def submit_public_closer_report():
         # Seguimientos
         'follow_ups_sent': get_int('follow_ups_sent'),
         'follow_ups_replied': get_int('follow_ups_replied'),
-        'follow_ups_hot_sent': get_int('follow_ups_hot_sent'),
-        'follow_ups_hot_replied': get_int('follow_ups_hot_replied'),
-        'follow_ups_hot_scheduled': get_int('follow_ups_hot_scheduled'),
-        'follow_ups_cold_sent': get_int('follow_ups_cold_sent'),
-        'follow_ups_cold_replied': get_int('follow_ups_cold_replied'),
-        'follow_ups_cold_scheduled': get_int('follow_ups_cold_scheduled'),
+        'follow_ups_closed': get_int('follow_ups_closed'),
+        # Recuperaciones
+        'recoveries_contacted': get_int('recoveries_contacted'),
+        'recoveries_replied': get_int('recoveries_replied'),
+        'recoveries_scheduled': get_int('recoveries_scheduled'),
         # Referidos
         'referrals_sourced': get_int('referrals_sourced'),
-        'referrals_contacted': get_int('referrals_contacted'),
         'referrals_scheduled': get_int('referrals_scheduled'),
         # Reflexión legacy
         'reflection_victory': data.get('reflection_victory'),
@@ -258,20 +256,19 @@ def _prepare_report_data(report):
             }
         },
         "follow_up": {
-            "hot_sent": report.follow_ups_hot_sent or 0,
-            "hot_replied": report.follow_ups_hot_replied or 0,
-            "hot_scheduled": report.follow_ups_hot_scheduled or 0,
-            "hot_response_pct": safe_percent(report.follow_ups_hot_replied or 0, report.follow_ups_hot_sent or 0),
-            "cold_sent": report.follow_ups_cold_sent or 0,
-            "cold_replied": report.follow_ups_cold_replied or 0,
-            "cold_scheduled": report.follow_ups_cold_scheduled or 0,
-            "cold_response_pct": safe_percent(report.follow_ups_cold_replied or 0, report.follow_ups_cold_sent or 0),
             "total_sent": report.follow_ups_sent or 0,
             "total_replied": report.follow_ups_replied or 0,
+            "closed": report.follow_ups_closed or 0,
+            "response_pct": safe_percent(report.follow_ups_replied or 0, report.follow_ups_sent or 0),
+        },
+        "recoveries": {
+            "contacted": report.recoveries_contacted or 0,
+            "replied": report.recoveries_replied or 0,
+            "scheduled": report.recoveries_scheduled or 0,
+            "response_pct": safe_percent(report.recoveries_replied or 0, report.recoveries_contacted or 0),
         },
         "referrals": {
             "sourced": report.referrals_sourced or 0,
-            "contacted": report.referrals_contacted or 0,
             "scheduled": report.referrals_scheduled or 0,
         },
         "reflections": {
@@ -486,14 +483,11 @@ def get_public_closer_reports():
             "installment_in_call_cash": r.installment_in_call_cash,
             "follow_ups_sent": r.follow_ups_sent,
             "follow_ups_replied": r.follow_ups_replied,
-            "follow_ups_hot_sent": r.follow_ups_hot_sent,
-            "follow_ups_hot_replied": r.follow_ups_hot_replied,
-            "follow_ups_hot_scheduled": r.follow_ups_hot_scheduled,
-            "follow_ups_cold_sent": r.follow_ups_cold_sent,
-            "follow_ups_cold_replied": r.follow_ups_cold_replied,
-            "follow_ups_cold_scheduled": r.follow_ups_cold_scheduled,
+            "follow_ups_closed": r.follow_ups_closed,
+            "recoveries_contacted": r.recoveries_contacted,
+            "recoveries_replied": r.recoveries_replied,
+            "recoveries_scheduled": r.recoveries_scheduled,
             "referrals_sourced": r.referrals_sourced,
-            "referrals_contacted": r.referrals_contacted,
             "referrals_scheduled": r.referrals_scheduled,
             "reflection_victory": r.reflection_victory,
             "reflection_opportunity": r.reflection_opportunity,
@@ -571,16 +565,13 @@ def update_public_closer_report(report_id):
         
         stat.follow_ups_sent = get_int('follow_ups_sent', stat.follow_ups_sent)
         stat.follow_ups_replied = get_int('follow_ups_replied', stat.follow_ups_replied)
-
-        stat.follow_ups_hot_sent = get_int('follow_ups_hot_sent', stat.follow_ups_hot_sent)
-        stat.follow_ups_hot_replied = get_int('follow_ups_hot_replied', stat.follow_ups_hot_replied)
-        stat.follow_ups_hot_scheduled = get_int('follow_ups_hot_scheduled', stat.follow_ups_hot_scheduled)
-        stat.follow_ups_cold_sent = get_int('follow_ups_cold_sent', stat.follow_ups_cold_sent)
-        stat.follow_ups_cold_replied = get_int('follow_ups_cold_replied', stat.follow_ups_cold_replied)
-        stat.follow_ups_cold_scheduled = get_int('follow_ups_cold_scheduled', stat.follow_ups_cold_scheduled)
+        stat.follow_ups_closed = get_int('follow_ups_closed', stat.follow_ups_closed)
+        
+        stat.recoveries_contacted = get_int('recoveries_contacted', stat.recoveries_contacted)
+        stat.recoveries_replied = get_int('recoveries_replied', stat.recoveries_replied)
+        stat.recoveries_scheduled = get_int('recoveries_scheduled', stat.recoveries_scheduled)
         
         stat.referrals_sourced = get_int('referrals_sourced', stat.referrals_sourced)
-        stat.referrals_contacted = get_int('referrals_contacted', stat.referrals_contacted)
         stat.referrals_scheduled = get_int('referrals_scheduled', stat.referrals_scheduled)
         
         stat.reflection_victory = data.get('reflection_victory', stat.reflection_victory)
