@@ -9,6 +9,79 @@ import requests
 # TRIAGE DAILY REPORT
 # ============================================================
 
+@bp.route('/public/active-triage', methods=['GET'])
+def get_active_triage():
+    """Retorna lista de triadores activos (ID y nombre)."""
+    try:
+        triages = User.query.filter_by(role='triage', is_active=True).all()
+        return jsonify([
+            {"id": t.id, "name": t.username}
+            for t in triages
+        ]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/public/triage-report/prefill', methods=['GET'])
+def prefill_triage_report():
+    """Autollena las métricas de agendas para el triaje en base a la fecha y nombre."""
+    triage_name = request.args.get('triage_name')
+    report_date_str = request.args.get('date')
+
+    if not triage_name or not report_date_str:
+        return jsonify({"message": "Nombre del triage y fecha son obligatorios"}), 400
+
+    try:
+        target_date = datetime.strptime(report_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({"message": "Formato de fecha inválido"}), 400
+
+    from app.models import FinancialAgenda
+    from sqlalchemy import func
+
+    # Agendas de hoy (fecha de cita == target_date)
+    today_agendas_query = FinancialAgenda.query.filter(
+        FinancialAgenda.encargado_triage == triage_name,
+        func.date(FinancialAgenda.date) == target_date
+    ).all()
+
+    today_agendas = len(today_agendas_query)
+    today_contacted = sum(1 for a in today_agendas_query if a.estado == 'Contactado')
+    today_confirmed = sum(1 for a in today_agendas_query if a.estado == 'Confirmado')
+    today_canceled = sum(1 for a in today_agendas_query if a.estado == 'Cancelada')
+    today_rescheduled = sum(1 for a in today_agendas_query if a.estado == 'Reagendada')
+
+    # Agendas futuras (cita > target_date, creadas hoy)
+    future_agendas_query = FinancialAgenda.query.filter(
+        FinancialAgenda.encargado_triage == triage_name,
+        func.date(FinancialAgenda.date) > target_date,
+        func.date(FinancialAgenda.created_at) == target_date
+    ).all()
+
+    future_agendas = len(future_agendas_query)
+    future_contacted = sum(1 for a in future_agendas_query if a.estado == 'Contactado')
+    future_confirmed = sum(1 for a in future_agendas_query if a.estado == 'Confirmado')
+    future_canceled = sum(1 for a in future_agendas_query if a.estado == 'Cancelada')
+    future_rescheduled = sum(1 for a in future_agendas_query if a.estado == 'Reagendada')
+
+    return jsonify({
+        "today_agendas": today_agendas,
+        "today_contacted": today_contacted,
+        "today_confirmed": today_confirmed,
+        "today_canceled": today_canceled,
+        "today_rescheduled": today_rescheduled,
+        
+        "future_agendas": future_agendas,
+        "future_contacted": future_contacted,
+        "future_confirmed": future_confirmed,
+        "future_canceled": future_canceled,
+        "future_rescheduled": future_rescheduled,
+        
+        "recoveries_contacted": 0,
+        "recoveries_replied": 0,
+        "recoveries_scheduled": 0
+    }), 200
+
+
 @bp.route('/public/triage-report', methods=['POST'])
 def submit_public_triage_report():
     """Recibe y guarda el reporte diario de un triage."""
@@ -35,13 +108,21 @@ def submit_public_triage_report():
         return int(data.get(key) or 0)
 
     field_values = {
-        'agendas_nuevas': get_int('agendas_nuevas'),
-        'agendas_confirmadas': get_int('agendas_confirmadas'),
-        'no_contestan': get_int('no_contestan'),
-        'cancelaciones': get_int('cancelaciones'),
-        'reprogramandos': get_int('reprogramandos'),
-        'seguimientos_iniciados': get_int('seguimientos_iniciados'),
-        'seguimientos_contestados': get_int('seguimientos_contestados'),
+        'today_agendas': get_int('today_agendas'),
+        'today_contacted': get_int('today_contacted'),
+        'today_confirmed': get_int('today_confirmed'),
+        'today_canceled': get_int('today_canceled'),
+        'today_rescheduled': get_int('today_rescheduled'),
+        
+        'future_agendas': get_int('future_agendas'),
+        'future_contacted': get_int('future_contacted'),
+        'future_confirmed': get_int('future_confirmed'),
+        'future_canceled': get_int('future_canceled'),
+        'future_rescheduled': get_int('future_rescheduled'),
+        
+        'recoveries_contacted': get_int('recoveries_contacted'),
+        'recoveries_replied': get_int('recoveries_replied'),
+        'recoveries_scheduled': get_int('recoveries_scheduled'),
     }
 
     if report:
@@ -80,28 +161,28 @@ def _trigger_triage_report_webhook(report):
             print("[Discord Triage] No webhook URL configured in environment or database.")
             return
         
-        # Calcular tasas para la imagen
-        nuevas = report.agendas_nuevas or 0
-        conf = report.agendas_confirmadas or 0
-        seg_ini = report.seguimientos_iniciados or 0
-        seg_res = report.seguimientos_contestados or 0
-        
-        conf_rate = round((conf / nuevas * 100), 1) if nuevas > 0 else 0
-        fu_rate = round((seg_res / seg_ini * 100), 1) if seg_ini > 0 else 0
+        # Calcular tasas
+        today_conf = report.today_confirmed or 0
+        today_tot = report.today_agendas or 0
+        conf_rate = round((today_conf / today_tot * 100), 1) if today_tot > 0 else 0
         
         img_data = {
             "triage_name": report.triage_name,
             "date_str": report.date.strftime('%d/%m/%Y'),
-            "agendas_nuevas": nuevas,
-            "agendas_confirmadas": conf,
-            "no_contestan": report.no_contestan or 0,
-            "cancelaciones": report.cancelaciones or 0,
-            "reprogramandos": report.reprogramandos or 0,
-            "seguimientos_iniciados": seg_ini,
-            "seguimientos_contestados": seg_res,
-            "confirm_rate": conf_rate,
-            "follow_up_rate": fu_rate,
-            "total_gestiones": nuevas + seg_ini
+            "today_agendas": report.today_agendas or 0,
+            "today_contacted": report.today_contacted or 0,
+            "today_confirmed": report.today_confirmed or 0,
+            "today_canceled": report.today_canceled or 0,
+            "today_rescheduled": report.today_rescheduled or 0,
+            "future_agendas": report.future_agendas or 0,
+            "future_contacted": report.future_contacted or 0,
+            "future_confirmed": report.future_confirmed or 0,
+            "future_canceled": report.future_canceled or 0,
+            "future_rescheduled": report.future_rescheduled or 0,
+            "recoveries_contacted": report.recoveries_contacted or 0,
+            "recoveries_replied": report.recoveries_replied or 0,
+            "recoveries_scheduled": report.recoveries_scheduled or 0,
+            "confirm_rate": conf_rate
         }
 
         # Generar Imagen
@@ -113,7 +194,9 @@ def _trigger_triage_report_webhook(report):
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"👤 **Triaje:** `{report.triage_name}`\n"
             f"📅 **Fecha:** `{report.date.strftime('%d/%m/%Y')}`\n"
-            f"📊 **Resultados:** `{nuevas} En Gestión | {conf} Confirmadas`\n"
+            f"📊 **Resultados Hoy:** `{today_conf}/{today_tot} Confirmadas ({conf_rate}%)`\n"
+            f"🔮 **Futuras Confirmadas:** `{report.future_confirmed}/{report.future_agendas}`\n"
+            f"🔄 **Recuperaciones:** `{report.recoveries_scheduled} Agendas`\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"@everyone"
         )
@@ -126,7 +209,7 @@ def _trigger_triage_report_webhook(report):
                     "url": "attachment://triage_report.png"
                 },
                 "footer": {
-                    "text": "NeurOPS Triage System • " + datetime.now().strftime('%H:%M')
+                    "text": "NeurOPS Triaje System • " + datetime.now().strftime('%H:%M')
                 }
             }]
         }
@@ -156,13 +239,19 @@ def get_public_triage_stats():
     agg_type = request.args.get('agg_type', 'sum')
 
     query = db.session.query(
-        func.sum(TriageDailyReport.agendas_nuevas).label('agendas_nuevas'),
-        func.sum(TriageDailyReport.agendas_confirmadas).label('agendas_confirmadas'),
-        func.sum(TriageDailyReport.no_contestan).label('no_contestan'),
-        func.sum(TriageDailyReport.cancelaciones).label('cancelaciones'),
-        func.sum(TriageDailyReport.reprogramandos).label('reprogramandos'),
-        func.sum(TriageDailyReport.seguimientos_iniciados).label('seguimientos_iniciados'),
-        func.sum(TriageDailyReport.seguimientos_contestados).label('seguimientos_contestados'),
+        func.sum(TriageDailyReport.today_agendas).label('today_agendas'),
+        func.sum(TriageDailyReport.today_contacted).label('today_contacted'),
+        func.sum(TriageDailyReport.today_confirmed).label('today_confirmed'),
+        func.sum(TriageDailyReport.today_canceled).label('today_canceled'),
+        func.sum(TriageDailyReport.today_rescheduled).label('today_rescheduled'),
+        func.sum(TriageDailyReport.future_agendas).label('future_agendas'),
+        func.sum(TriageDailyReport.future_contacted).label('future_contacted'),
+        func.sum(TriageDailyReport.future_confirmed).label('future_confirmed'),
+        func.sum(TriageDailyReport.future_canceled).label('future_canceled'),
+        func.sum(TriageDailyReport.future_rescheduled).label('future_rescheduled'),
+        func.sum(TriageDailyReport.recoveries_contacted).label('recoveries_contacted'),
+        func.sum(TriageDailyReport.recoveries_replied).label('recoveries_replied'),
+        func.sum(TriageDailyReport.recoveries_scheduled).label('recoveries_scheduled'),
         func.count(TriageDailyReport.id).label('days_count')
     )
 
@@ -185,13 +274,19 @@ def get_public_triage_stats():
     return jsonify({
         "metadata": {"days_analyzed": days_count, "agg_type": agg_type},
         "totals": {
-            "agendas_nuevas": process_val(stats.agendas_nuevas),
-            "agendas_confirmadas": process_val(stats.agendas_confirmadas),
-            "no_contestan": process_val(stats.no_contestan),
-            "cancelaciones": process_val(stats.cancelaciones),
-            "reprogramandos": process_val(stats.reprogramandos),
-            "seguimientos_iniciados": process_val(stats.seguimientos_iniciados),
-            "seguimientos_contestados": process_val(stats.seguimientos_contestados)
+            "today_agendas": process_val(stats.today_agendas),
+            "today_contacted": process_val(stats.today_contacted),
+            "today_confirmed": process_val(stats.today_confirmed),
+            "today_canceled": process_val(stats.today_canceled),
+            "today_rescheduled": process_val(stats.today_rescheduled),
+            "future_agendas": process_val(stats.future_agendas),
+            "future_contacted": process_val(stats.future_contacted),
+            "future_confirmed": process_val(stats.future_confirmed),
+            "future_canceled": process_val(stats.future_canceled),
+            "future_rescheduled": process_val(stats.future_rescheduled),
+            "recoveries_contacted": process_val(stats.recoveries_contacted),
+            "recoveries_replied": process_val(stats.recoveries_replied),
+            "recoveries_scheduled": process_val(stats.recoveries_scheduled)
         }
     }), 200
 
@@ -219,18 +314,7 @@ def get_public_triage_reports():
     pagination = query.order_by(TriageDailyReport.date.desc()).paginate(page=page, per_page=per_page)
 
     return jsonify({
-        "reports": [{
-            "id": r.id,
-            "date": r.date.isoformat(),
-            "triage_name": r.triage_name,
-            "agendas_nuevas": r.agendas_nuevas,
-            "agendas_confirmadas": r.agendas_confirmadas,
-            "no_contestan": r.no_contestan,
-            "cancelaciones": r.cancelaciones,
-            "reprogramandos": r.reprogramandos,
-            "seguimientos_iniciados": r.seguimientos_iniciados,
-            "seguimientos_contestados": r.seguimientos_contestados
-        } for r in pagination.items],
+        "reports": [r.to_dict() for r in pagination.items],
         "total": pagination.total,
         "pages": pagination.pages,
         "current_page": pagination.page
@@ -251,13 +335,21 @@ def update_public_triage_report(report_id):
             except ValueError:
                 return jsonify({"message": "Formato de fecha inválido. Debe ser YYYY-MM-DD"}), 400
 
-        report.agendas_nuevas = int(data.get('agendas_nuevas') or report.agendas_nuevas)
-        report.agendas_confirmadas = int(data.get('agendas_confirmadas') or report.agendas_confirmadas)
-        report.no_contestan = int(data.get('no_contestan') or report.no_contestan)
-        report.cancelaciones = int(data.get('cancelaciones') or report.cancelaciones)
-        report.reprogramandos = int(data.get('reprogramandos') or report.reprogramandos)
-        report.seguimientos_iniciados = int(data.get('seguimientos_iniciados') or report.seguimientos_iniciados)
-        report.seguimientos_contestados = int(data.get('seguimientos_contestados') or report.seguimientos_contestados)
+        report.today_agendas = int(data.get('today_agendas') or report.today_agendas)
+        report.today_contacted = int(data.get('today_contacted') or report.today_contacted)
+        report.today_confirmed = int(data.get('today_confirmed') or report.today_confirmed)
+        report.today_canceled = int(data.get('today_canceled') or report.today_canceled)
+        report.today_rescheduled = int(data.get('today_rescheduled') or report.today_rescheduled)
+        
+        report.future_agendas = int(data.get('future_agendas') or report.future_agendas)
+        report.future_contacted = int(data.get('future_contacted') or report.future_contacted)
+        report.future_confirmed = int(data.get('future_confirmed') or report.future_confirmed)
+        report.future_canceled = int(data.get('future_canceled') or report.future_canceled)
+        report.future_rescheduled = int(data.get('future_rescheduled') or report.future_rescheduled)
+        
+        report.recoveries_contacted = int(data.get('recoveries_contacted') or report.recoveries_contacted)
+        report.recoveries_replied = int(data.get('recoveries_replied') or report.recoveries_replied)
+        report.recoveries_scheduled = int(data.get('recoveries_scheduled') or report.recoveries_scheduled)
 
         db.session.commit()
         return jsonify({"message": "Reporte actualizado"}), 200
@@ -278,5 +370,4 @@ def delete_public_triage_report(report_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-
 from . import closer
