@@ -129,68 +129,91 @@ def receive_manychat_ad_lead():
 
         # 2. DECISIÓN INTELIGENTE DE INSERCIÓN O ACTUALIZACIÓN (Deduplicación y acumulación)
         answer = None
-        is_new_interaction = False
+        action = 'created'
         from datetime import datetime
 
-        # Obtiene la última interacción registrada de este lead
-        latest_answer = LeadAnswer.query.filter_by(lead_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
+        opt_send_str = str(id_option_send).strip() if id_option_send is not None else ""
+        opt_str = str(id_option).strip() if id_option is not None else ""
 
-        if latest_answer:
-            # Ventana de sesión de 30 minutos
-            time_diff = datetime.utcnow() - latest_answer.created_at
-            within_window = time_diff.total_seconds() < 1800
+        is_mc_response = (opt_send_str == '0')
+        is_mc_send = (opt_str == '0')
 
-            # Evalúa si los IDs son diferentes a la última interacción (sin considerar nulos como diferentes)
-            different_send = is_valid_value(id_option_send) and latest_answer.id_option_send and latest_answer.id_option_send != str(id_option_send)
-            different_resp = is_valid_value(id_option) and latest_answer.id_option and latest_answer.id_option != str(id_option)
+        if is_mc_response:
+            # El Lead respondió al mensaje con ID opt_str.
+            # Buscamos un envío reciente (en los últimos 30 minutos) que coincida con este mensaje (id_option_send == opt_str)
+            # y que todavía no tenga una respuesta registrada (id_option == '0' o similar)
+            latest_send = LeadAnswer.query.filter(
+                LeadAnswer.lead_id == lead.id,
+                LeadAnswer.id_option_send == opt_str,
+                (LeadAnswer.id_option == '0') | (LeadAnswer.id_option == None) | (LeadAnswer.id_option == '')
+            ).order_by(LeadAnswer.created_at.desc()).first()
 
-            # Crea nuevo si cambia anuncio, mensajes o expira ventana temporal
-            if (ad_id and latest_answer.ad_id != ad_id) or different_send or different_resp or not within_window:
-                is_new_interaction = True
-            else:
-                answer = latest_answer  # Consolida en la misma interacción
-        else:
-            is_new_interaction = True
+            within_window = False
+            if latest_send:
+                time_diff = datetime.utcnow() - latest_send.created_at
+                within_window = time_diff.total_seconds() < 1800
 
-        if not is_new_interaction and answer:
-            # ACTUALIZAR: Consolida la información en el registro actual
-            if ad_id and not answer.ad_id:
-                answer.ad_id = ad_id
-            
-            if is_valid_value(qualification_raw):
-                qual_str = str(qualification_raw).lower()
-                if qual_str in ('true', '1', 'si', 'sí', 'yes'):
-                    answer.qualification = 'true'
-                elif qual_str in ('false', '0', 'no'):
-                    answer.qualification = 'false'
-            
-            if is_valid_value(fecha): 
-                answer.fecha_recibida = fecha
-            if is_valid_value(opening): 
-                answer.opening = opening
-            if is_valid_value(variante): 
-                answer.variante = variante
-            if is_valid_value(keyword): 
-                answer.keyword = keyword
-            if is_valid_value(id_option): 
-                answer.id_option = str(id_option)
-            if is_valid_value(id_option_send): 
-                answer.id_option_send = str(id_option_send)
-            if is_valid_value(id_question): 
-                answer.id_question = str(id_question)
+            if latest_send and within_window:
+                # Consolidamos la respuesta del Lead en el registro de envío existente
+                answer = latest_send
+                answer.id_option = opt_str
                 
-            action = 'updated'
-            logger.info(f"[WEBHOOK] LeadAnswer de sesión actualizado selectivamente para Manychat_ID: {manychat_id}")
-        else:
-            # CREAR: Registra una nueva interacción independiente
-            qual = 'null'
-            if is_valid_value(qualification_raw):
-                qual_str = str(qualification_raw).lower()
-                if qual_str in ('true', '1', 'si', 'sí', 'yes'):
-                    qual = 'true'
-                elif qual_str in ('false', '0', 'no'):
-                    qual = 'false'
-            
+                # Procesar cualificación
+                if is_valid_value(qualification_raw):
+                    qual_str = str(qualification_raw).lower().strip()
+                    if qual_str in ('true', '1', 'si', 'sí', 'yes'):
+                        answer.qualification = 'true'
+                    elif qual_str in ('false', '0', 'no'):
+                        answer.qualification = 'false'
+                    else:
+                        answer.qualification = 'null'
+                else:
+                    answer.qualification = 'null'
+
+                # Sincronizar otros campos si vienen
+                if is_valid_value(fecha): 
+                    answer.fecha_recibida = fecha
+                if is_valid_value(opening): 
+                    answer.opening = opening
+                if is_valid_value(variante): 
+                    answer.variante = variante
+                if is_valid_value(keyword): 
+                    answer.keyword = keyword
+                if is_valid_value(id_question): 
+                    answer.id_question = str(id_question)
+                if ad_id and not answer.ad_id:
+                    answer.ad_id = ad_id
+
+                action = 'updated'
+                logger.info(f"[WEBHOOK] Respuesta de Lead consolidada en envío previo para Manychat_ID: {manychat_id}")
+            else:
+                # Crear nueva interacción como respuesta aislada
+                qual = 'null'
+                if is_valid_value(qualification_raw):
+                    qual_str = str(qualification_raw).lower().strip()
+                    if qual_str in ('true', '1', 'si', 'sí', 'yes'):
+                        qual = 'true'
+                    elif qual_str in ('false', '0', 'no'):
+                        qual = 'false'
+
+                answer = LeadAnswer(
+                    lead_id=lead.id,
+                    ad_id=ad_id,
+                    keyword=keyword if is_valid_value(keyword) else None,
+                    fecha_recibida=fecha if is_valid_value(fecha) else None,
+                    opening=opening if is_valid_value(opening) else None,
+                    variante=variante if is_valid_value(variante) else None,
+                    qualification=qual,
+                    id_option=opt_str,
+                    id_option_send='0',
+                    id_question=str(id_question) if is_valid_value(id_question) else None
+                )
+                db.session.add(answer)
+                action = 'created'
+                logger.info(f"[WEBHOOK] Respuesta de Lead creada como nuevo registro (sin envío previo encontrado) para Manychat_ID: {manychat_id}")
+        
+        elif is_mc_send:
+            # Es un envío de mensaje. Registramos el envío con qualification='null' (no califica todavía)
             answer = LeadAnswer(
                 lead_id=lead.id,
                 ad_id=ad_id,
@@ -198,14 +221,79 @@ def receive_manychat_ad_lead():
                 fecha_recibida=fecha if is_valid_value(fecha) else None,
                 opening=opening if is_valid_value(opening) else None,
                 variante=variante if is_valid_value(variante) else None,
-                qualification=qual,
-                id_option=str(id_option) if is_valid_value(id_option) else None,
-                id_option_send=str(id_option_send) if is_valid_value(id_option_send) else None,
+                qualification='null',
+                id_option='0',
+                id_option_send=opt_send_str,
                 id_question=str(id_question) if is_valid_value(id_question) else None
             )
             db.session.add(answer)
             action = 'created'
-            logger.info(f"[WEBHOOK] LeadAnswer nuevo creado (acumulativo) para Manychat_ID: {manychat_id}")
+            logger.info(f"[WEBHOOK] Envío de mensaje registrado para Manychat_ID: {manychat_id}")
+
+        else:
+            # Lógica genérica heredada
+            latest_answer = LeadAnswer.query.filter_by(lead_id=lead.id).order_by(LeadAnswer.created_at.desc()).first()
+            is_new_interaction = False
+
+            if latest_answer:
+                time_diff = datetime.utcnow() - latest_answer.created_at
+                within_window = time_diff.total_seconds() < 1800
+                different_send = is_valid_value(id_option_send) and latest_answer.id_option_send and latest_answer.id_option_send != str(id_option_send)
+                different_resp = is_valid_value(id_option) and latest_answer.id_option and latest_answer.id_option != str(id_option)
+                if (ad_id and latest_answer.ad_id != ad_id) or different_send or different_resp or not within_window:
+                    is_new_interaction = True
+                else:
+                    answer = latest_answer
+            else:
+                is_new_interaction = True
+
+            if not is_new_interaction and answer:
+                if ad_id and not answer.ad_id:
+                    answer.ad_id = ad_id
+                if is_valid_value(qualification_raw):
+                    qual_str = str(qualification_raw).lower()
+                    if qual_str in ('true', '1', 'si', 'sí', 'yes'):
+                        answer.qualification = 'true'
+                    elif qual_str in ('false', '0', 'no'):
+                        answer.qualification = 'false'
+                if is_valid_value(fecha): 
+                    answer.fecha_recibida = fecha
+                if is_valid_value(opening): 
+                    answer.opening = opening
+                if is_valid_value(variante): 
+                    answer.variante = variante
+                if is_valid_value(keyword): 
+                    answer.keyword = keyword
+                if is_valid_value(id_option): 
+                    answer.id_option = str(id_option)
+                if is_valid_value(id_option_send): 
+                    answer.id_option_send = str(id_option_send)
+                if is_valid_value(id_question): 
+                    answer.id_question = str(id_question)
+                action = 'updated'
+            else:
+                qual = 'null'
+                if is_valid_value(qualification_raw):
+                    qual_str = str(qualification_raw).lower()
+                    if qual_str in ('true', '1', 'si', 'sí', 'yes'):
+                        qual = 'true'
+                    elif qual_str in ('false', '0', 'no'):
+                        qual = 'false'
+                
+                answer = LeadAnswer(
+                    lead_id=lead.id,
+                    ad_id=ad_id,
+                    keyword=keyword if is_valid_value(keyword) else None,
+                    fecha_recibida=fecha if is_valid_value(fecha) else None,
+                    opening=opening if is_valid_value(opening) else None,
+                    variante=variante if is_valid_value(variante) else None,
+                    qualification=qual,
+                    id_option=str(id_option) if is_valid_value(id_option) else None,
+                    id_option_send=str(id_option_send) if is_valid_value(id_option_send) else None,
+                    id_question=str(id_question) if is_valid_value(id_question) else None
+                )
+                db.session.add(answer)
+                action = 'created'
 
         db.session.commit()
 
