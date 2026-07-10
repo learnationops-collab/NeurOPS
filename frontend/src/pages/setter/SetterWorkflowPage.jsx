@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { 
     Users, Layers, Activity, ClipboardList, BarChart3,
     Search, Check, X, Link2, Copy, ChevronRight, Loader2,
-    Instagram, ExternalLink, Tag, CalendarDays, MessageSquare
+    Instagram, ExternalLink, Tag, CalendarDays, MessageSquare, ChevronDown
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
