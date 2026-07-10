@@ -149,8 +149,13 @@ def create_app(config_class=Config):
         from flask import jsonify
         import traceback
         # pass through HTTP errors (como 404, 403, 400)
-        if hasattr(e, 'code') and e.code < 500:
-            return e
+        if hasattr(e, 'code'):
+            try:
+                code_val = int(e.code)
+                if code_val < 500:
+                    return e
+            except (ValueError, TypeError):
+                pass
         
         response = {
             "message": "Unhandled Exception"
