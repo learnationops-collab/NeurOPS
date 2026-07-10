@@ -518,7 +518,7 @@
             </div>
         </div>
 
-        <!-- 4. FOLLOW UPS -->
+        <!-- 4. SEGUIMIENTOS -->
         <div class="card followups">
             <div class="card-header">
                 <div class="icon-box" style="color: var(--blue-500)">🔄</div>
@@ -526,61 +526,61 @@
             </div>
             
             <div class="fu-flows">
-                <div class="flow-box hot">
-                    <div class="flow-title">
-                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--rose-500);"></span>
-                        SRD Hot
-                    </div>
-                    <div class="flow-stats">
-                        <div>
-                            <div class="metric-label">Contactados</div>
-                            <div class="metric-value">{{ follow_up.hot_sent }}</div>
-                        </div>
-                        <div>
-                            <div class="metric-label">Respondidos</div>
-                            <div class="metric-value">{{ follow_up.hot_replied }}</div>
-                        </div>
-                        <div>
-                            <div class="metric-label">Agendados</div>
-                            <div class="metric-value">{{ follow_up.hot_scheduled }}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="flow-box cold">
+                <div class="flow-box warm" style="width: 100%; box-sizing: border-box;">
                     <div class="flow-title">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--blue-500);"></span>
-                        SRD Cold
+                        Flujo de Seguimientos
                     </div>
-                    <div class="flow-stats">
+                    <div class="flow-stats" style="grid-template-columns: repeat(3, 1fr);">
                         <div>
                             <div class="metric-label">Contactados</div>
-                            <div class="metric-value">{{ follow_up.cold_sent }}</div>
+                            <div class="metric-value">{{ follow_up.total_sent }}</div>
                         </div>
                         <div>
                             <div class="metric-label">Respondidos</div>
-                            <div class="metric-value">{{ follow_up.cold_replied }}</div>
+                            <div class="metric-value" style="color: #38bdf8;">{{ follow_up.total_replied }}</div>
                         </div>
                         <div>
-                            <div class="metric-label">Agendados</div>
-                            <div class="metric-value">{{ follow_up.cold_scheduled }}</div>
+                            <div class="metric-label">Cierres</div>
+                            <div class="metric-value" style="color: #10b981;">{{ follow_up.closed }}</div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <div class="metrics-grid-2">
-                <div class="metric-box">
-                    <div class="metric-label">Total Contactados</div>
-                    <div class="metric-value">{{ follow_up.total_sent }}</div>
-                </div>
-                <div class="metric-box highlight-blue">
-                    <div class="metric-label">Total Respondidos</div>
-                    <div class="metric-value val-blue">{{ follow_up.total_replied }}</div>
                 </div>
             </div>
         </div>
 
-        <!-- 5. REFERIDOS -->
+        <!-- 5. RECUPERACIONES -->
+        <div class="card recoveries" style="margin-top: 16px;">
+            <div class="card-header">
+                <div class="icon-box" style="color: var(--rose-500)">🔥</div>
+                <div class="card-title">RECUPERACIONES</div>
+            </div>
+            
+            <div class="fu-flows">
+                <div class="flow-box hot" style="width: 100%; box-sizing: border-box;">
+                    <div class="flow-title">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--rose-500);"></span>
+                        Flujo de Recuperación
+                    </div>
+                    <div class="flow-stats" style="grid-template-columns: repeat(3, 1fr);">
+                        <div>
+                            <div class="metric-label">Contactados</div>
+                            <div class="metric-value">{{ recoveries.contacted }}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Respondidos</div>
+                            <div class="metric-value" style="color: #38bdf8;">{{ recoveries.replied }}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Agendados</div>
+                            <div class="metric-value" style="color: #fbbf24;">{{ recoveries.scheduled }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. REFERIDOS -->
         <div class="card referrals" style="margin-top: 16px;">
             <div class="card-header">
                 <div class="icon-box" style="color: #10b981">👥</div>
@@ -593,17 +593,13 @@
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span>
                         Flujo de Referidos
                     </div>
-                    <div class="flow-stats" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="flow-stats" style="grid-template-columns: repeat(2, 1fr);">
                         <div>
-                            <div class="metric-label">Conseguidos</div>
+                            <div class="metric-label">Pedidos</div>
                             <div class="metric-value" style="color: #10b981;">{{ referrals.sourced }}</div>
                         </div>
                         <div>
-                            <div class="metric-label">Contactados</div>
-                            <div class="metric-value" style="color: #38bdf8;">{{ referrals.contacted }}</div>
-                        </div>
-                        <div>
-                            <div class="metric-label">Agendados</div>
+                            <div class="metric-label">Concretados</div>
                             <div class="metric-value" style="color: #fbbf24;">{{ referrals.scheduled }}</div>
                         </div>
                     </div>
