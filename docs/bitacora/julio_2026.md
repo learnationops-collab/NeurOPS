@@ -56,6 +56,11 @@
   - **Soporte de Búsqueda Insensible a Mayúsculas y Variaciones en Estados de Agendas**:
     - **Backend API ([triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/triage.py) [MODIFY])**:
       - Se reescribió la consulta del prefill para filtrar las agendas en memoria de Python. Se hace la comparación del nombre del triador en minúscula (`func.lower(FinancialAgenda.encargado_triage) == triage_name.strip().lower()`) y se identifican los estados usando coincidencia parcial de palabras clave (ej. "confirm" para "Confirmado"/"Confirmada", "cancel" para "Cancelado"/"Cancelada") evitando resultados en cero debido a diferencias de capitalización u ortografía en la base de datos.
+  - **Diferenciación de Envíos y Respuestas en Webhook de ManyChat**:
+    - **Backend API ([manychat.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/manychat.py) [MODIFY])**:
+      - Se reestructuró la lógica de decisión de interacciones en el webhook. Si llega `id_option_send == '0'`, se identifica como una respuesta del lead a la plantilla `id_option` y se actualiza/cualifica el LeadAnswer correspondiente evaluando `cualificacion` (`yes`/`no`). Si llega `id_option == '0'`, se trata de un envío y se registra un nuevo LeadAnswer con cualificación `'null'` por defecto.
+    - **Backend API ([conversational.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/conversational.py) [MODIFY])**:
+      - Se excluyó el valor `'0'` del filtrado en `sends_query` (`id_option_send != '0'`) and `responses_query` (`id_option != '0'`) para prevenir que los mensajes de control de envíos y respuestas distorsionen los porcentajes y métricas del rendimiento conversacional.
 
 - **9 de Julio de 2026**:
   - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
