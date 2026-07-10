@@ -67,6 +67,12 @@
     - **Backend API ([conversational.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/conversational.py) [MODIFY])**:
       - Se robustecieron las exclusiones en la consulta de rendimiento conversacional filtrando explícitamente `!= 0`, `!= '0'` y `!= '0.0'` para prevenir que cualquier tipo de dato asignado al cero cuente como respuesta válida de mensaje.
 
+  - **Corrección de Errores de Comparación de Tipos (PostgreSQL y Excepciones)**:
+    - **Backend API ([conversational.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/conversational.py) [MODIFY])**:
+      - Se removieron los filtros de comparación numérica entera (`!= 0`) en las consultas SQL de rendimiento conversacional, corrigiendo el error `psycopg2.errors.UndefinedFunction: operator does not exist: character varying <> integer` provocado por el tipado estricto en la base de datos PostgreSQL de producción.
+    - **Manejador de Excepciones ([__init__.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/__init__.py) [MODIFY])**:
+      - Se robusteció la validación de `e.code` en `handle_exception` envolviendo el casteo a entero en un bloque `try-except`, resolviendo el error `TypeError: '<' not supported between instances of 'str' and 'int'` provocado por excepciones que retornan strings como código de error.
+
 - **9 de Julio de 2026**:
   - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
     - **Backend API ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
