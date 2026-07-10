@@ -4,6 +4,24 @@
   - **Corrección de Renderizado de Capturas en ImageService (Docker)**:
     - **Backend API ([image_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/image_service.py) [MODIFY])**:
       - Se reemplazó la bandera obsoleta `--headless` por la bandera `--headless=new` en los 6 métodos estáticos de generación de imágenes que utilizan `Html2Image`. Esto corrige el fallo `FileNotFoundError` en contenedores de producción (Railway/Docker) provocado porque Chromium fallaba silenciosamente al capturar pantallas en el modo headless antiguo.
+  - **Reestructuración de Seguimientos, Recuperaciones y Referidos en Reporte Diario de Closing**:
+    - **Backend DB ([closer_report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/closer_report.py) [MODIFY])**:
+      - Se eliminaron las columnas obsoletas `follow_ups_hot_*`, `follow_ups_cold_*` y `referrals_contacted`.
+      - Se agregaron las columnas `follow_ups_closed` (Cierres en Seguimientos), `recoveries_contacted`, `recoveries_replied` y `recoveries_scheduled` (flujo de Recuperaciones).
+    - **Backend API ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/closer.py) [MODIFY])**:
+      - Se adaptaron los endpoints de guardado, actualización y formateo de reportes para operar con las nuevas variables del modelo.
+    - **Servicio Backend ([closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY])**:
+      - Se actualizó la función `get_comprehensive_stats` para agregar y retornar los nuevos campos.
+    - **Plantilla HTML ([closer_report.html](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/templates/reports/closer_report.html) [MODIFY])**:
+      - Se rediseñó el template de la tarjeta de reportes para Discord sustituyendo "SRD Hot" y "SRD Cold" por las nuevas secciones.
+    - **Frontend React ([PublicCloserReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicCloserReportPage.jsx) [MODIFY])**:
+      - Se actualizaron los campos del formulario, la barra de estadísticas laterales y el envío del reporte con la nueva estructura.
+    - **Frontend React ([CloserReportsTable.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/CloserReportsTable.jsx) [MODIFY])**:
+      - Se adaptaron las columnas y celdas de la tabla para visualizar Seguimientos, Recuperaciones y Referidos.
+    - **Frontend React ([CloserPerformanceTab.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/CloserPerformanceTab.jsx) [MODIFY])**:
+      - Se actualizó el breakdown de re-engagement y los gráficos circulares con el nuevo esquema de métricas.
+    - **Base de Datos Migración ([d6d1714a8f87_change_followups_recoveries_and_.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/migrations/versions/d6d1714a8f87_change_followups_recoveries_and_.py) [NEW])**:
+      - Se autogeneró y ejecutó exitosamente el script de migración para aplicar el cambio en SQLite local.
 
 - **9 de Julio de 2026**:
   - **Corrección de Error de Sincronización en Cancelaciones de Citas (PostgreSQL)**:
