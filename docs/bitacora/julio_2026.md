@@ -45,6 +45,15 @@
   - **Redirección del Setter Post-Login**:
     - **Frontend React ([LoginPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/auth/LoginPage.jsx) [MODIFY], [App.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx) [MODIFY])**:
       - Se actualizó la redirección del Setter tras el inicio de sesión (y en las restricciones del `ProtectedRoute`) para que acceda por defecto a la cola de cualificación en `/setter/deck?step=cualificacion` en lugar del dashboard general `/setter/statistics`.
+  - **Autocompletado del Reporte Diario de Setting**:
+    - **Backend API ([public/setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/setter.py) [MODIFY])**:
+      - Se implementó el endpoint `GET /public/setter-report/prefill?setter_id=&date=` que calcula y retorna automáticamente las métricas de: **Entrantes** (total de `LeadAnswer` del día), **No Leads** (leads descualificados), **Cualificación** (leads cualificados) y **Agenda** (citas agendadas por el setter ese día).
+      - La consulta aplica el mismo criterio de visibilidad flexible (outerjoin sobre Event/Ad) que el deck de cualificación: el setter ve los leads de eventos no asignados y los propios.
+    - **Frontend React ([PublicSetterReportPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicSetterReportPage.jsx) [MODIFY])**:
+      - Se añadió estado `loadingPrefill` y `prefilledMessage`.
+      - Se declararon los campos `funnel_qualification`, `funnel_pain`, `funnel_offer`, `funnel_link` y `funnel_agenda` en el estado inicial del formulario.
+      - Se implementó un `useEffect` que dispara el prefill automáticamente al seleccionar setter y fecha, rellenando los campos **Entrantes**, **No Lead**, **Cualificación** y **Agenda** con los valores reales del sistema. Los campos siguen siendo editables para correcciones manuales.
+      - Se añaden banners visuales de estado: loader translúcido azul mientras se obtienen los datos, y confirmación en verde al completarse el autocompletado.
 
 - **10 de Julio de 2026**:
   - **Desarrollo de la Bandeja de Cualificados del Setter**:
