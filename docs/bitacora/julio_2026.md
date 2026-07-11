@@ -38,6 +38,7 @@
       - Se reemplazó el filtro de fecha `tomorrow` por `yesterday` en la consulta del deck.
     - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
       - Se modificaron las opciones del selector de fecha en el deck para remover la opción "Mañana" y sustituirla por "Ayer", dejando el listado en: Hoy, Ayer, Esta semana, Este mes y Personalizado.
+      - Se agregó la fecha y hora absoluta de llegada del lead (formato "DD/MM/AAAA HH:MM") debajo del tiempo relativo transcurrido en el listado de cualificación, reemplazando la etiqueta estática "Cualificado".
 
 - **10 de Julio de 2026**:
   - **Desarrollo de la Bandeja de Cualificados del Setter**:
