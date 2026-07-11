@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import { Loader2, Send, Calendar, ListChecks, User, ArrowLeft, Inbox, MessageSquare, Filter, RefreshCw, HelpCircle, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import FunnelChart from '../../components/charts/FunnelChart';
 import DailyReflectionSection from '../../components/reports/DailyReflectionSection';
 const MetricInput = ({ label, field, value, onChange, color = "indigo", readOnly = false }) => {
@@ -43,6 +44,7 @@ const SectionHeader = ({ icon: Icon, title, colorClass }) => (
 );
 
 const PublicSetterReportPage = () => {
+    const { user } = useAuth();
     const [setters, setSetters] = useState([]);
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -50,9 +52,16 @@ const PublicSetterReportPage = () => {
     const [loadingPrefill, setLoadingPrefill] = useState(false);
     const [prefilledMessage, setPrefilledMessage] = useState('');
 
+    // Fecha local de hoy sin desfase de timezone
+    const todayLocal = () => {
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        return new Date(now - offset).toISOString().split('T')[0];
+    };
+
     const [formData, setFormData] = useState({
-        setter_id: '',
-        date: '',
+        setter_id: user?.id?.toString() || '',
+        date: todayLocal(),
 
         // INBOX
         inbox_entrantes: '',
@@ -143,6 +152,14 @@ const PublicSetterReportPage = () => {
 
             setSetters(settersRes.data);
             setQuestions(qRes.data);
+
+            // Auto-seleccionar el setter logueado si aún no hay uno seleccionado
+            if (user?.id) {
+                setFormData(prev => ({
+                    ...prev,
+                    setter_id: prev.setter_id || user.id.toString()
+                }));
+            }
         } catch (err) {
             console.error("Error fetching data:", err);
             alert("Hubo un error cargando el formulario. Reintenta.");
