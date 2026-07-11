@@ -71,7 +71,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     // Redirigir a su dashboard correspondiente si intenta entrar a ruta ajena
     if (user.role === 'admin') return <Navigate to="/admin/ventas" />;
     if (user.role === 'operator') return <Navigate to="/ops/dashboard" />;
-    if (user.role === 'setter') return <Navigate to="/setter/statistics" />;
+    if (user.role === 'setter') return <Navigate to="/setter/deck?step=cualificacion" />;
     if (user.role === 'closer') return <Navigate to="/closer/deck?step=agendas" />;
     if (user.role === 'triage') return <Navigate to="/triage/agendas" />;
     return <Navigate to="/" />;
