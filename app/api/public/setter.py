@@ -184,6 +184,66 @@ def submit_public_setter_report():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@bp.route('/public/setter-report/prefill', methods=['GET'])
+def prefill_public_setter_report():
+    """Calcula y retorna estadísticas automatizadas para un setter y fecha específicos."""
+    from app.models import LeadAnswer, Ad, Event, Appointment, User
+    from sqlalchemy import or_
+    
+    setter_id = request.args.get('setter_id')
+    date_str = request.args.get('date')
+    
+    if not setter_id or not date_str:
+        return jsonify({"message": "setter_id y date son obligatorios"}), 400
+        
+    try:
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({"message": "Formato de fecha inválido"}), 400
+        
+    user = User.query.get(setter_id)
+    if not user:
+        return jsonify({"message": "Setter no encontrado"}), 404
+        
+    start_dt = datetime.combine(target_date, datetime.min.time())
+    end_dt = datetime.combine(target_date, datetime.max.time())
+    
+    # 1. Consulta de LeadAnswer del setter
+    query_leads = LeadAnswer.query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
+    
+    if user.role != 'admin':
+        query_leads = query_leads.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
+                                 .outerjoin(Event, Event.id == Ad.event_id)\
+                                 .filter(
+                                     or_(
+                                         Event.setter_id == user.id,
+                                         Event.setter_id == None,
+                                         LeadAnswer.ad_id == None
+                                     )
+                                 )
+                                 
+    # 2. Inbox entrantes
+    inbox_entrantes = query_leads.count()
+    
+    # 3. No Leads (descalificados)
+    not_lead = query_leads.filter(LeadAnswer.qualification.in_(['no', 'false'])).count()
+    
+    # 4. Cualificados (funnel_qualification)
+    funnel_qualification = query_leads.filter(LeadAnswer.qualification.in_(['yes', 'true'])).count()
+    
+    # 5. Agendas (funnel_agenda)
+    funnel_agenda = Appointment.query.filter(
+        Appointment.setter_id == user.id,
+        Appointment.created_at.between(start_dt, end_dt)
+    ).count()
+    
+    return jsonify({
+        "inbox_entrantes": inbox_entrantes,
+        "not_lead": not_lead,
+        "funnel_qualification": funnel_qualification,
+        "funnel_agenda": funnel_agenda
+    }), 200
+
 def _compute_setter_stats(start_date_str, end_date_str, setter_id, agg_type):
     from app.models import SetterDailyStats, User
     from sqlalchemy import func

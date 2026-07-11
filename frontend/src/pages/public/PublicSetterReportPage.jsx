@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Calendar, ListChecks, User, ArrowLeft, Inbox, MessageSquare, Filter, RefreshCw, HelpCircle } from 'lucide-react';
+import { Loader2, Send, Calendar, ListChecks, User, ArrowLeft, Inbox, MessageSquare, Filter, RefreshCw, HelpCircle, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import FunnelChart from '../../components/charts/FunnelChart';
 import DailyReflectionSection from '../../components/reports/DailyReflectionSection';
@@ -47,6 +47,8 @@ const PublicSetterReportPage = () => {
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [loadingPrefill, setLoadingPrefill] = useState(false);
+    const [prefilledMessage, setPrefilledMessage] = useState('');
 
     const [formData, setFormData] = useState({
         setter_id: '',
@@ -57,6 +59,13 @@ const PublicSetterReportPage = () => {
         not_lead: '',
         inbox_inabribles: '',
         inbox_leads: '',
+
+        // FUNNEL
+        funnel_qualification: '',
+        funnel_pain: '',
+        funnel_offer: '',
+        funnel_link: '',
+        funnel_agenda: '',
 
         qualification_fu: '',
         pain_fu: '',
@@ -91,6 +100,34 @@ const PublicSetterReportPage = () => {
             setFormData(prev => ({ ...prev, inbox_leads: calculatedLeads }));
         }
     }, [formData.funnel_qualification, formData.not_lead]);
+
+    // Auto-prefill data when setter and date are chosen
+    useEffect(() => {
+        const prefillData = async () => {
+            if (!formData.setter_id || !formData.date) return;
+            
+            setLoadingPrefill(true);
+            setPrefilledMessage('');
+            try {
+                const res = await api.get(`/public/setter-report/prefill?setter_id=${formData.setter_id}&date=${formData.date}`);
+                
+                setFormData(prev => ({
+                    ...prev,
+                    inbox_entrantes: res.data.inbox_entrantes !== undefined ? res.data.inbox_entrantes : '',
+                    not_lead: res.data.not_lead !== undefined ? res.data.not_lead : '',
+                    funnel_qualification: res.data.funnel_qualification !== undefined ? res.data.funnel_qualification : '',
+                    funnel_agenda: res.data.funnel_agenda !== undefined ? res.data.funnel_agenda : ''
+                }));
+                setPrefilledMessage('Métricas del día autocompletadas correctamente desde el sistema.');
+            } catch (err) {
+                console.error("Error al prefill de reporte de setter:", err);
+            } finally {
+                setLoadingPrefill(false);
+            }
+        };
+        
+        prefillData();
+    }, [formData.setter_id, formData.date]);
 
     useEffect(() => {
         fetchData();
@@ -152,6 +189,11 @@ const PublicSetterReportPage = () => {
                 not_lead: '',
                 inbox_inabribles: '',
                 inbox_leads: '',
+                funnel_qualification: '',
+                funnel_pain: '',
+                funnel_offer: '',
+                funnel_link: '',
+                funnel_agenda: '',
                 qualification_fu: '',
                 pain_fu: '',
                 offer_fu: '',
@@ -349,6 +391,18 @@ const PublicSetterReportPage = () => {
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-10">
+                        {loadingPrefill && (
+                            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center gap-3 text-indigo-400 animate-pulse">
+                                <Loader2 size={18} className="animate-spin shrink-0" />
+                                <span className="text-xs font-black uppercase tracking-widest">Autocompletando métricas desde el sistema...</span>
+                            </div>
+                        )}
+                        {prefilledMessage && !loadingPrefill && (
+                            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <CheckCircle2 size={18} className="shrink-0" />
+                                <span className="text-xs font-black uppercase tracking-widest">{prefilledMessage}</span>
+                            </div>
+                        )}
                         {/* HIGH LEVEL METRICS ROW */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                             {[
