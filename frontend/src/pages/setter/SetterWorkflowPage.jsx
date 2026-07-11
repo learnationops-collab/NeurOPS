@@ -10,6 +10,7 @@ import {
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
+import SetterCualificacionModal from '../../components/modals/SetterCualificacionModal';
 
 const SetterWorkflowPage = () => {
     const { user } = useAuth();
@@ -200,6 +201,31 @@ const SetterWorkflowPage = () => {
         }).catch(() => {
             toast.error("No se pudo copiar el enlace de forma automática");
         });
+    };
+
+    const handleSaveAndNext = (currentLeadId) => {
+        // Buscar el índice del lead actual en la lista filtrada
+        const currentIndex = filteredLeads.findIndex(l => l.id === currentLeadId);
+        
+        // Recargar los leads de fondo
+        fetchLeads();
+        fetchCualificacionStats();
+
+        if (currentIndex !== -1 && currentIndex < filteredLeads.length - 1) {
+            // Seleccionar el siguiente lead disponible
+            setSelectedLead(filteredLeads[currentIndex + 1]);
+        } else if (filteredLeads.length > 1) {
+            // Si era el último pero quedan otros leads en la lista, seleccionar el primero disponible
+            const remainingLeads = filteredLeads.filter(l => l.id !== currentLeadId);
+            if (remainingLeads.length > 0) {
+                setSelectedLead(remainingLeads[0]);
+            } else {
+                setSelectedLead(null);
+            }
+        } else {
+            // Si no quedan leads, cerrar el modal
+            setSelectedLead(null);
+        }
     };
 
     // Selección de elementos
@@ -654,43 +680,17 @@ const SetterWorkflowPage = () => {
             </div>
 
             {/* Modal de Detalle de Lead (para cualificación) */}
-            <AnimatePresence>
-                {activeStep === 'cualificacion' && selectedLead && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl overflow-y-auto max-h-[85vh] text-left relative space-y-6 flex flex-col custom-scrollbar"
-                        >
-                            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-                                <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
-                                    Perfil & Calificación del Prospecto
-                                </h3>
-                                <button
-                                    onClick={() => setSelectedLead(null)}
-                                    className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors"
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                            
-                            <LeadRoadmapDetail 
-                                instagram={selectedLead.instagram}
-                                email={selectedLead.email}
-                                phone={selectedLead.phone}
-                                availableKeywords={availableKeywords}
-                                userRole={user?.role}
-                                appointmentId={selectedLead.id}
-                                compact={true}
-                                onUpdate={() => {
-                                    fetchLeads();
-                                }}
-                            />
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            <SetterCualificacionModal 
+                isOpen={activeStep === 'cualificacion' && selectedLead !== null}
+                onClose={() => setSelectedLead(null)}
+                lead={selectedLead}
+                availableKeywords={availableKeywords}
+                onUpdate={() => {
+                    fetchLeads();
+                    fetchCualificacionStats();
+                }}
+                onSaveAndNext={handleSaveAndNext}
+            />
         </div>
     );
 };
