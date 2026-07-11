@@ -1,6 +1,11 @@
 # Bitácora - Julio 2026
 
 - **11 de Julio de 2026**:
+  - **Eliminación del paso Link de Agenda del Setter Workspace**:
+    - **Navegación del Sistema ([useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
+      - Se eliminó el paso `step-2` (`link-agenda`) del dock de navegación del rol de Setter, reordenando los demás pasos correspondientes.
+    - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
+      - Se removieron los renderizados condicionales, botones masivos y de tarjetas relacionados con la acción manual del link de agenda.
   - **Desarrollo del Modal Premium de Cualificación del Setter**:
     - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
       - Se implementó la ruta `POST /deck/update-qualified/<int:answer_id>` para buscar/crear el cliente (`Client`), registrar sus dolores y observaciones, actualizar el anuncio asociado, y guardar el estado de cualificación del lead. Si se cualifica, se crea la cita (`Appointment`) correspondiente en el flujo.
