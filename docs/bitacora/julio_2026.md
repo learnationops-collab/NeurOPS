@@ -40,7 +40,8 @@
     - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
       - Se modificaron las opciones del selector de fecha en el deck para remover la opción "Mañana" y sustituirla por "Ayer", dejando el listado en: Hoy, Ayer, Esta semana, Este mes y Personalizado.
       - Se agregó la fecha y hora absoluta de llegada del lead (formato "DD/MM/AAAA HH:MM") debajo del tiempo relativo transcurrido en el listado de cualificación, reemplazando la etiqueta estática "Cualificado".
-      - Se removió el subtítulo estático "N/A • ManyChat / Instagram" de las tarjetas y se reemplazó por un enlace interactivo directo al perfil de Instagram del lead, el cual abre en una nueva pestaña y detiene la propagación del evento para no interferir con la selección de la tarjeta.
+      - Se removió el subtítulo estático "N/A • ManyChat / Instagram" de las tarjetas y se reemplazó por un enlace interactivo directo al perfil de Instagram del lead, el cual abre en una nueva pestaña y detiene la propagación del evento para no interferir con la selección de la tarjeta de lead.
+      - Se integró una etiqueta visual dinámica (Badge) de cualificación al lado del nombre del lead en la tarjeta para reflejar claramente si está "Cualificado" (verde), "Descualificado" (rojo) o "Pendiente" (amarillo).
   - **Redirección del Setter Post-Login**:
     - **Frontend React ([LoginPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/auth/LoginPage.jsx) [MODIFY], [App.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx) [MODIFY])**:
       - Se actualizó la redirección del Setter tras el inicio de sesión (y en las restricciones del `ProtectedRoute`) para que acceda por defecto a la cola de cualificación en `/setter/deck?step=cualificacion` en lugar del dashboard general `/setter/statistics`.
