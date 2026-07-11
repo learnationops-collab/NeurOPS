@@ -53,9 +53,8 @@ const useDockNavigation = () => {
         } else if (isSetter) {
             return [
                 { id: 'step-1', icon: Layers, label: '1. Cualificación', path: '/setter/deck?step=cualificacion' },
-                { id: 'step-2', icon: Activity, label: '2. Link de Agenda', path: '/setter/deck?step=link-agenda' },
-                { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/setter/report' },
-                { id: 'step-4', icon: BarChart3, label: '4. Dashboard', path: '/setter/statistics' }
+                { id: 'step-2', icon: ClipboardList, label: '2. Reporte Diario', path: '/setter/report' },
+                { id: 'step-3', icon: BarChart3, label: '3. Dashboard', path: '/setter/statistics' }
             ];
         } else if (isTriage) {
             return [
