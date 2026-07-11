@@ -770,7 +770,9 @@ def get_setter_deck():
                 "keyword": la.keyword or "",
                 "setter_notes": "",
                 "assigned_to": f"{assigned_setter} / {assigned_closer}",
-                "edad_form": edad_str
+                "edad_form": edad_str,
+                "dolores": client.dolores if client else "",
+                "observaciones": client.observaciones if client else ""
             })
             
         return jsonify(response_data), 200
@@ -1397,6 +1399,97 @@ def bulk_update_cualificacion():
                 
     db.session.commit()
     return jsonify({"status": "success", "message": f"{processed_count} leads procesados"}), 200
+
+
+@bp.route('/deck/update-qualified/<int:answer_id>', methods=['POST'])
+@role_required(ROLE_SETTER)
+def update_qualified_lead(answer_id):
+    from app.models import LeadAnswer, ManychatLead, Client, Appointment, Ad, Event, User, db
+    from app.services.booking_service import BookingService
+    from datetime import datetime
+    
+    la = LeadAnswer.query.get_or_404(answer_id)
+    lead = la.lead
+    if not lead:
+        return jsonify({"message": "Lead no encontrado"}), 404
+        
+    data = request.get_json() or {}
+    
+    # 1. Buscar o crear cliente
+    ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
+    client = None
+    if ig_clean:
+        from sqlalchemy import func
+        client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
+        
+    if not client:
+        client = Client(
+            full_name=lead.name or "Sin Nombre",
+            instagram=lead.ig,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(client)
+        db.session.commit()
+        
+    # 2. Guardar dolores y observaciones en Client
+    if 'dolores' in data:
+        client.dolores = data['dolores']
+    if 'observaciones' in data:
+        client.observaciones = data['observaciones']
+        
+    # 3. Guardar anuncio de origen en LeadAnswer
+    if 'keyword' in data:
+        la.keyword = data['keyword']
+        ad = Ad.query.filter_by(keyword=data['keyword']).first()
+        if not ad:
+            event = Event.query.filter_by(utm_source=data['keyword']).first()
+            if event:
+                ad = Ad.query.filter_by(event_id=event.id).first()
+        if ad:
+            la.ad_id = ad.id
+            
+    # 4. Guardar calificación
+    qual = data.get('qualification')
+    if qual == 'true':
+        la.qualification = 'true'
+        appt = Appointment.query.filter_by(client_id=client.id, setter_id=current_user.id).first()
+        if not appt:
+            closer_id = None
+            ad = Ad.query.get(la.ad_id) if la.ad_id else None
+            event = Event.query.get(ad.event_id) if (ad and ad.event_id) else None
+            if event and event.closers:
+                closer_id = event.closers[0].id
+            else:
+                default_closer = User.query.filter_by(role='closer', is_active=True).first()
+                if default_closer:
+                    closer_id = default_closer.id
+                else:
+                    any_closer = User.query.filter_by(role='closer').first()
+                    if any_closer:
+                        closer_id = any_closer.id
+            
+            if not closer_id:
+                return jsonify({"message": "No hay closers registrados en el sistema para asignar"}), 400
+                
+            appt = Appointment(
+                closer_id=closer_id,
+                setter_id=current_user.id,
+                client_id=client.id,
+                start_time=datetime.utcnow(),
+                origin='ManyChat / Instagram',
+                result='Cualificado',
+                setter_processed=False
+            )
+            db.session.add(appt)
+            db.session.commit()
+            
+            description = f"Setter {current_user.username} calificó el lead e ingresó dolores/notas."
+            BookingService.log_lead_event(appt.id, current_user.id, 'confirm_qualified', description)
+    elif qual == 'false':
+        la.qualification = 'false'
+        
+    db.session.commit()
+    return jsonify({"status": "success", "message": "Lead actualizado correctamente"}), 200
 
 
 
