@@ -565,9 +565,11 @@ const SetterWorkflowPage = () => {
                                                                         return `Hace ${diffDays} días`;
                                                                     })() : 'N/A'}
                                                                 </div>
-                                                                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                                                                    Cualificado
-                                                                </div>
+                                                                {l.start_time && (
+                                                                    <div className="text-[9px] text-slate-500 font-mono">
+                                                                        {new Date(l.start_time).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date(l.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
