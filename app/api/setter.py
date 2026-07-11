@@ -680,7 +680,7 @@ def get_setter_deck():
         show_disqualified = request.args.get('show_disqualified') == 'true'
         target_date_str = request.args.get('date')
         
-        qual_filter = 'false' if show_disqualified else 'true'
+        qual_list = ['no', 'false'] if show_disqualified else ['yes', 'true']
         
         start_dt = None
         end_dt = None
@@ -706,7 +706,7 @@ def get_setter_deck():
             except ValueError:
                 pass
                 
-        query = LeadAnswer.query.filter(LeadAnswer.qualification == qual_filter)
+        query = LeadAnswer.query.filter(LeadAnswer.qualification.in_(qual_list))
         
         if start_dt and end_dt:
             query = query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
@@ -1216,7 +1216,7 @@ def get_cualificacion_stats():
     
     # 1. Cualificados hoy
     query_qual = LeadAnswer.query.filter(
-        LeadAnswer.qualification == 'true',
+        LeadAnswer.qualification.in_(['yes', 'true']),
         LeadAnswer.created_at.between(start_dt, end_dt)
     )
     if current_user.role != 'admin':
@@ -1238,9 +1238,9 @@ def get_cualificacion_stats():
                 unassigned_count += 1
         unassigned_today = unassigned_count
         
-    # 3. Sin responder hoy (qualification == 'null')
+    # 3. Sin responder hoy (qualification == 'null' o vacía)
     query_no_resp = LeadAnswer.query.filter(
-        LeadAnswer.qualification == 'null',
+        LeadAnswer.qualification.in_(['null', None, '', 'undefined']),
         LeadAnswer.created_at.between(start_dt, end_dt)
     )
     if current_user.role != 'admin':
