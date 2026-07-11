@@ -1021,6 +1021,21 @@ const CloserWorkflowPage = () => {
                                                     />
                                                 </div>
                                             </div>
+                                            <div className="space-y-1 text-left md:col-span-2">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Vendedor (Closer Asignado) *</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><User size={13} /></span>
+                                                    <input
+                                                        type="email"
+                                                        value={saleForm.email_vendedor}
+                                                        onChange={e => setSaleForm({ ...saleForm, email_vendedor: e.target.value })}
+                                                        placeholder="email@vendedor.com"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        required
+                                                    />
+                                                </div>
+                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Confirma que sea el correo correcto para la atribución de comisiones.</p>
+                                            </div>
                                         </div>
                                     </div>
                                 )}

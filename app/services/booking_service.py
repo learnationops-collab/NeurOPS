@@ -622,14 +622,25 @@ class BookingService:
                 FinancialAgenda.date <= end_search
             ).first()
             
-        # Mapear estado (ÚNICAMENTE del Confirmer/Triage, es decir, appt.result)
+        # Mapear estado: prioritario el resultado del closer si ya fue procesado por él
         mapped_state = 'Pendiente'
-        if appt.result and appt.result != 'Pendiente':
+        if appt.closer_result and appt.closer_result != 'Pendiente':
+            mapped_state = appt.closer_result
+        elif appt.result and appt.result != 'Pendiente':
             mapped_state = appt.result
-            if mapped_state == 'Cancelado':
-                mapped_state = 'Cancelada'
-            elif mapped_state == 'Reagendado':
-                mapped_state = 'Reagendada'
+
+        # Normalizar strings para evitar inconsistencias en reportes y sheets
+        mapped_state_lower = mapped_state.lower()
+        if mapped_state_lower in ('show up', 'show_up'):
+            mapped_state = 'Show Up'
+        elif mapped_state_lower in ('no show', 'no_show'):
+            mapped_state = 'No Show'
+        elif mapped_state_lower in ('cancelado', 'cancelada'):
+            mapped_state = 'Cancelada'
+        elif mapped_state_lower in ('reagendado', 'reagendada'):
+            mapped_state = 'Reagendada'
+        elif mapped_state_lower in ('2th call', '2da call'):
+            mapped_state = '2TH Call'
                 
         # Buscar nombres de closer y setter
         closer_name = 'Sin asignar'

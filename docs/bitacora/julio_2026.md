@@ -5,11 +5,15 @@
     - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
       - Se integró un prompt intermedio tras marcar una agenda como "Asistió" (Show up) y completar el modal de decisores, consultando al closer si se cerró la venta en la llamada.
       - Se desarrolló un modal de registro de venta premium dividido en 3 pasos interactivos que guía al closer en la declaración de la transacción:
-        - **Paso 1 (Cliente)**: Autocompleta los datos del prospecto (Nombre, Instagram, Email, Teléfono) provenientes de la cita y expone el campo Documento de Identidad (cédula/DNI) para ser completado.
+        - **Paso 1 (Cliente)**: Autocompleta los datos del prospecto (Nombre, Instagram, Email, Teléfono) provenientes de la cita, expone el campo Documento de Identidad (cédula/DNI) y añade un campo para verificar y modificar el Closer/Vendedor asignado para asegurar la correcta atribución de comisiones.
         - **Paso 2 (Transacción)**: Permite seleccionar el Programa, Tipo de Pago (PIF, Cuota, etc.), Monto Cobrado USD y Método de Pago.
         - **Paso 3 (Confirmación)**: Expone campos para Examen, Notas de Venta, Fecha (datepicker) y un selector premium de tarjetas interactivas para indicar si la venta fue cerrada dentro de la llamada en Meet o fuera, eliminando la opción redundante de desactivación de la automatización de WhatsApp.
       - Se implementó la llamada al endpoint `/sheets/push?tabla=Ventas_DB` para insertar y sincronizar directamente con Google Sheets (Ventas_DB) con formato estricto y marcas temporales locales.
       - Se añadieron validaciones de obligatoriedad en cada paso para guiar correctamente al usuario.
+  - **Sincronización de Resultados del Closer a Agendas Financieras**:
+    - **Servicios Backend ([booking_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py) [MODIFY])**:
+      - Se modificó `sync_appointment_to_financial_agenda` para priorizar el estado `closer_result` sobre `result` al sincronizar la cita de vuelta a la tabla `FinancialAgenda`.
+      - Se implementó una normalización estricta de cadenas de texto (ej. `'Show Up'`, `'No Show'`, `'Cancelada'`, `'Reagendada'`) para evitar discordancias de estados en las bases de datos de reportes, solucionando el problema donde la asistencia real y show-ups del día se visualizaban en cero.
   - **Corrección de Generación de Reportes en Producción (Docker/Railway) y Refactorización del Servicio de Imágenes**:
     - **Servicios Backend ([report_image_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/report_image_service.py) [NEW])**:
       - Se creó un nuevo servicio específico para aislar y centralizar el renderizado HTML de reportes usando `Html2Image`.
