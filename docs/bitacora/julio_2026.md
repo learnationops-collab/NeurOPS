@@ -27,6 +27,11 @@
       - Se amplió la cola de agendas del día a ancho completo (`lg:col-span-12`) en el paso de agendas.
       - Se ocultó el visor empotrado lateral de perfil para el paso de agendas.
       - Se integró el modal detallado de seguimiento de cita al hacer clic en cualquier cita de la lista.
+  - **Corrección de Visibilidad de Leads Entrantes en el Workspace del Setter**:
+    - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - Se reestructuró la consulta del deck de cualificación (`/deck?step=cualificacion`) para omitir el filtro de fecha en los leads con estado **Pendiente** (`qualification` nula, vacía o `'null'`). Esto permite al Setter visualizar y calificar toda la cola de leads entrantes sin importar la fecha en que ingresaron, mientras que los ya cualificados y descalificados siguen filtrándose por fecha de forma habitual.
+    - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
+      - Se corrigió el cálculo de la fecha por defecto `customDate` utilizando el offset local en minutos en lugar del método ISO UTC nativo, solucionando el desfase de día que causaba que a partir de las 20:00 local se pre-seleccionara la fecha de mañana.
 
 - **10 de Julio de 2026**:
   - **Desarrollo de la Bandeja de Cualificados del Setter**:
