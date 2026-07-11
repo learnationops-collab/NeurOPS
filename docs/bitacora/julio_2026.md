@@ -17,6 +17,8 @@
     - **Controladores API ([public/closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/closer.py) [MODIFY])**:
       - Se corrigió la lógica del endpoint `/public/closer-report/prefill` (`prefill_closer_report`) para leer prioritariamente el estado real guardado por el Closer (`closer_result` / `result`) de forma insensible a mayúsculas y minúsculas.
       - Se expandieron las condiciones de emparejamiento para que considere estados como `'Show up'`, `'Show Up'`, `'no show'`, `'Cancelada'`, `'Reagendada'`, asegurando que al seleccionar cualquier fecha histórica (como el 9 de julio) en el reporte diario se autocompleten correctamente las asistencias, inasistencias y cancelaciones en vez de mostrarse en cero.
+    - **Controladores API ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+      - Se modificó la lógica del filtrado de fechas en get_closer_deck (`/deck`) para usar el formato UTC naive directo en lugar de desfasar por la zona horaria local del closer. Esto soluciona la inconsistencia donde citas como la de "Ciro Peña" (del 9 de julio a las 03:00 UTC) aparecían en el registro de agendas y estadísticas del 9 de julio, pero no se visualizaban en la agenda del Closer del mismo día.
   - **Corrección de Generación de Reportes en Producción (Docker/Railway) y Refactorización del Servicio de Imágenes**:
     - **Servicios Backend ([report_image_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/report_image_service.py) [NEW])**:
       - Se creó un nuevo servicio específico para aislar y centralizar el renderizado HTML de reportes usando `Html2Image`.
