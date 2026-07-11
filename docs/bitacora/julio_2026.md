@@ -1,6 +1,14 @@
 # Bitácora - Julio 2026
 
 - **11 de Julio de 2026**:
+  - **Mejoras al Panel KPI del Dashboard de Setting (LeadUnifiedKPI)**:
+    - **Frontend React ([LeadUnifiedKPI.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/LeadUnifiedKPI.jsx) [MODIFY])**:
+      - Se intercambió el orden de las secciones del panel: ahora **Cualificación Final** ocupa la posición central (col-span-5) y **Engagement Rate** se ubica al final (col-span-4), priorizando visualmente la métrica más relevante para la operación.
+      - Se rediseñó la sección de Cualificación Final: la tasa de cualificación sobre entrantes es ahora el dato dominante (número grande en verde, con barra de progreso animada). La tasa sobre respuesta se degradó a sub-dato de apoyo, visible en tamaño reducido a la derecha, evitando ruido visual.
+      - Se mejoraron todos los tooltips del componente con lenguaje accesible para usuarios no técnicos: se eliminó la terminología de fórmulas explícitas en el texto principal de cada tooltip y se reemplazó por explicaciones en lenguaje cotidiano ("¿Cuántas personas llegaron?", "De cada 100 que llegaron..."), sin perder el detalle técnico en los `StatTooltip` interactivos.
+      - Se ajustó la decoración de fondo del panel de índigo a verde esmeralda, alineándola con el énfasis visual en la cualificación.
+
+
   - **Eliminación del paso Link de Agenda del Setter Workspace**:
     - **Navegación del Sistema ([useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
       - Se eliminó el paso `step-2` (`link-agenda`) del dock de navegación del rol de Setter, reordenando los demás pasos correspondientes.
