@@ -707,19 +707,16 @@ def get_setter_deck():
         from sqlalchemy import or_
         if show_disqualified:
             query = LeadAnswer.query.filter(LeadAnswer.qualification.in_(['no', 'false']))
-            if start_dt and end_dt:
-                query = query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
         else:
-            # Mostrar cualificados dentro del rango de fecha e incluir siempre todos los pendientes (sin filtro de fecha)
-            cond_qualified = LeadAnswer.qualification.in_(['yes', 'true'])
-            if start_dt and end_dt:
-                cond_qualified = and_(cond_qualified, LeadAnswer.created_at.between(start_dt, end_dt))
-                
-            cond_pending = or_(
-                LeadAnswer.qualification.in_(['null', '']),
-                LeadAnswer.qualification == None
+            query = LeadAnswer.query.filter(
+                or_(
+                    LeadAnswer.qualification.in_(['yes', 'true', 'null', '']),
+                    LeadAnswer.qualification == None
+                )
             )
-            query = LeadAnswer.query.filter(or_(cond_qualified, cond_pending))
+        
+        if start_dt and end_dt:
+            query = query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
             
         if current_user.role != 'admin':
             query = query.join(Ad, Ad.id == LeadAnswer.ad_id)\
