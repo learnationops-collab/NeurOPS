@@ -258,8 +258,8 @@ const SetterWorkflowPage = () => {
             {/* Área de Trabajo Principal (Grid 2 Columnas) */}
             <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                {/* Columna Izquierda: Cola de Leads y Herramientas (cols 7) */}
-                <div className="lg:col-span-7 space-y-4">
+                {/* Columna Izquierda: Cola de Leads y Herramientas (ancho completo en cualificacion) */}
+                <div className={`${activeStep === 'cualificacion' ? 'lg:col-span-12' : 'lg:col-span-7'} space-y-4`}>
                     
                     {/* Barra de Acciones Masivas */}
                     {selectedIds.size > 0 && (
@@ -605,17 +605,71 @@ const SetterWorkflowPage = () => {
                     </div>
                 </div>
 
-                {/* Columna Derecha: Visor de Calificación y Perfil Detallado (cols 5) */}
-                <div className="lg:col-span-5 h-[76vh] overflow-y-auto custom-scrollbar sticky top-28 bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl">
-                    {selectedLead ? (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center pb-2 border-b border-slate-900">
-                                <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest">
-                                    Perfil & Calificación
+                {/* Columna Derecha: Visor de Calificación y Perfil Detallado (cols 5) - Oculto en cualificacion */}
+                {activeStep !== 'cualificacion' && (
+                    <div className="lg:col-span-5 h-[76vh] overflow-y-auto custom-scrollbar sticky top-28 bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl">
+                        {selectedLead ? (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center pb-2 border-b border-slate-900">
+                                    <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest">
+                                        Perfil & Calificación
+                                    </h3>
+                                    <button
+                                        onClick={() => setSelectedLead(null)}
+                                        className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-500 hover:text-white transition-colors"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                                
+                                <LeadRoadmapDetail 
+                                    instagram={selectedLead.instagram}
+                                    email={selectedLead.email}
+                                    phone={selectedLead.phone}
+                                    availableKeywords={availableKeywords}
+                                    userRole={user?.role}
+                                    appointmentId={selectedLead.id}
+                                    compact={true}
+                                    onUpdate={() => {
+                                        fetchLeads();
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                                <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-3xl flex items-center justify-center text-slate-500 mb-4 shadow-xl">
+                                    <Users size={28} />
+                                </div>
+                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">
+                                    Ficha de Calificación
+                                </h3>
+                                <p className="text-[10px] text-slate-650 font-bold uppercase tracking-wider mt-1 max-w-xs">
+                                    Selecciona un lead de la lista izquierda para editar sus dolores, objeciones y ver las respuestas del formulario.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+            </div>
+
+            {/* Modal de Detalle de Lead (para cualificación) */}
+            <AnimatePresence>
+                {activeStep === 'cualificacion' && selectedLead && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl overflow-y-auto max-h-[85vh] text-left relative space-y-6 flex flex-col custom-scrollbar"
+                        >
+                            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                                <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
+                                    Perfil & Calificación del Prospecto
                                 </h3>
                                 <button
                                     onClick={() => setSelectedLead(null)}
-                                    className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-500 hover:text-white transition-colors"
+                                    className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors"
                                 >
                                     <X size={14} />
                                 </button>
@@ -633,23 +687,10 @@ const SetterWorkflowPage = () => {
                                     fetchLeads();
                                 }}
                             />
-                        </div>
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                            <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-3xl flex items-center justify-center text-slate-500 mb-4 shadow-xl">
-                                <Users size={28} />
-                            </div>
-                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">
-                                Ficha de Calificación
-                            </h3>
-                            <p className="text-[10px] text-slate-650 font-bold uppercase tracking-wider mt-1 max-w-xs">
-                                Selecciona un lead de la lista izquierda para editar sus dolores, objeciones y ver las respuestas del formulario.
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
