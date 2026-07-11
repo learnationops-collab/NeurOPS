@@ -1,5 +1,16 @@
 # Bitácora - Julio 2026
 
+- **11 de Julio de 2026**:
+  - **Migración del Perfil de Prospecto a Ventanas Modales (Setter & Closer)**:
+    - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
+      - Se modificó la columna de la cola de leads para que ocupe el ancho completo (`lg:col-span-12`) cuando la bandeja activa sea la de cualificación.
+      - Se ocultó la columna empotrada de perfil y calificación para el paso de cualificación.
+      - Se implementó un modal interactivo con fondo translúcido y botón de cerrado (`✕`) para desplegar la ficha de calificación del prospecto (`LeadRoadmapDetail`) al seleccionar un lead.
+    - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se amplió la cola de agendas del día a ancho completo (`lg:col-span-12`) en el paso de agendas.
+      - Se ocultó el visor empotrado lateral de perfil para el paso de agendas.
+      - Se integró el modal detallado de seguimiento de cita al hacer clic en cualquier cita de la lista.
+
 - **10 de Julio de 2026**:
   - **Desarrollo de la Bandeja de Cualificados del Setter**:
     - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
