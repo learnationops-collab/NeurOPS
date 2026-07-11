@@ -527,17 +527,29 @@ const SetterWorkflowPage = () => {
                                                                 <h4 className="text-sm font-black text-white leading-tight truncate font-bold">
                                                                     {l.lead_name || 'Sin Nombre'}
                                                                 </h4>
-                                                                {l.instagram && (
-                                                                    <span className="text-[10px] text-slate-500 font-bold">
-                                                                        • @{l.instagram}
-                                                                    </span>
-                                                                )}
                                                             </div>
-                                                            <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
-                                                                <span>{activeStep === 'cualificacion' ? (l.edad_form || 'N/A') : (l.origin || 'Web')}</span>
-                                                                <span>•</span>
-                                                                <span>ManyChat / Instagram</span>
-                                                            </div>
+                                                            {activeStep === 'cualificacion' ? (
+                                                                l.instagram ? (
+                                                                    <a
+                                                                        href={l.ig_chat_link || `https://instagram.com/${l.instagram.replace('@', '')}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-[10px] text-violet-400 hover:text-violet-300 font-bold flex items-center gap-1 hover:underline cursor-pointer w-max"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    >
+                                                                        <Instagram size={10} className="shrink-0" />
+                                                                        @{l.instagram.replace('@', '')}
+                                                                    </a>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-slate-500 font-bold">Sin Instagram</span>
+                                                                )
+                                                            ) : (
+                                                                <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                                                                    <span>{l.origin || 'Web'}</span>
+                                                                    <span>•</span>
+                                                                    <span>ManyChat / Instagram</span>
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         {/* Anuncio */}
