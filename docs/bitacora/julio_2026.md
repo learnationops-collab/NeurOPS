@@ -1,6 +1,16 @@
 # Bitácora - Julio 2026
 
 - **11 de Julio de 2026**:
+  - **Corrección de Generación de Reportes en Producción (Docker/Railway) y Refactorización del Servicio de Imágenes**:
+    - **Servicios Backend ([report_image_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/report_image_service.py) [NEW])**:
+      - Se creó un nuevo servicio específico para aislar y centralizar el renderizado HTML de reportes usando `Html2Image`.
+      - Se implementó la configuración dinámica de `output_path` y `temp_path` apuntando a `/tmp` en entornos Docker/Linux para asegurar los permisos de escritura del usuario no-root, resolviendo el bug `FileNotFoundError` al guardar las capturas temporales.
+      - Se centralizó la inicialización de Chromium y paso de banderas en una función helper `_get_hti(size)`.
+    - **Servicios Backend ([image_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/image_service.py) [MODIFY])**:
+      - Se delegaron los 6 métodos de generación de reportes HTML a `ReportImageService` mediante importaciones lazy, garantizando compatibilidad hacia atrás en los endpoints de la API sin modificar sus firmas ni importaciones externas.
+      - Se redujo el tamaño de este archivo de 527 a 150 líneas, cumpliendo estrictamente la directiva de arquitectura y estándares de no superar las 500 líneas por archivo.
+    - **Infraestructura ([Dockerfile](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/Dockerfile) [MODIFY])**:
+      - Se agregaron las dependencias `fonts-liberation` y `fonts-dejavu` a la sección de instalación de paquetes de Debian para asegurar la correcta disponibilidad de tipografías del sistema en el renderizado headless de Chromium.
   - **Mejoras al Panel KPI del Dashboard de Setting (LeadUnifiedKPI)**:
     - **Frontend React ([LeadUnifiedKPI.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/LeadUnifiedKPI.jsx) [MODIFY])**:
       - Se intercambió el orden de las secciones del panel: ahora **Cualificación Final** ocupa la posición central (col-span-5) y **Engagement Rate** se ubica al final (col-span-4), priorizando visualmente la métrica más relevante para la operación.

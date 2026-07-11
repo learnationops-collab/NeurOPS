@@ -5,81 +5,11 @@ class ImageService:
     @staticmethod
     def generate_client_card(data):
         """
-        Generates a premium 'Client Card' image for Discord notifications using HTML rendering.
+        Generates a premium 'Client Card' image for Discord notifications.
+        Delegated to ReportImageService.
         """
-        import os
-        from flask import render_template_string
-        from html2image import Html2Image
-        import io
-        import uuid
-        
-        # 1. Read the template
-        template_path = os.path.join('app', 'templates', 'reports', 'agenda_report.html')
-        with open(template_path, 'r', encoding='utf-8') as f:
-            template_content = f.read()
-
-        # 2. Render HTML with Data
-        # Note: We provide default fallback values for template variables
-        render_data = {
-            "client_name": data.get('client_name', 'CLIENTE').upper(),
-            "closer_name": data.get('closer_name', 'N/A'),
-            "date_str": data.get('date_str', ''),
-            "time_str": data.get('time_str', ''),
-            "lead_source": data.get('source', 'DESCONOCIDO').upper(),
-            "client_phone": data.get('client_phone', 'N/A'),
-            "client_ig": data.get('client_ig', 'N/A'),
-            "count": data.get('count', '0')
-        }
-        rendered_html = render_template_string(template_content, **render_data)
-
-        # 3. Configure html2image
-        output_filename = f"agenda_{uuid.uuid4().hex}.png"
-        
-        # Docker/Linux compatibility
-        custom_flags = []
-        browser_executable = None
-        if os.name != 'nt':
-            custom_flags = [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox', 
-                '--disable-dev-shm-usage', 
-                '--headless=new',
-                '--disable-gpu',
-                '--disable-software-rasterizer',
-                '--disable-dbus',
-                '--disable-extensions',
-                '--log-level=3'
-            ]
-            for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
-                if os.path.exists(path):
-                    browser_executable = path
-                    break
-
-        hti = Html2Image(
-            size=(800, 600), 
-            custom_flags=custom_flags,
-            browser_executable=browser_executable
-        ) 
-        
-        try:
-            paths = hti.screenshot(html_str=rendered_html, save_as=output_filename)
-            if not paths:
-                raise Exception("html2image failed to create screenshot for agenda")
-            
-            final_path = paths[0]
-            with open(final_path, 'rb') as img_f:
-                buf = io.BytesIO(img_f.read())
-            
-            if os.path.exists(final_path):
-                os.remove(final_path)
-                
-            buf.seek(0)
-            return buf
-            
-        except Exception as e:
-            print(f"[ImageService Agenda Error] {e}")
-            # Fallback to a simple PIL version or re-raise
-            raise e
+        from app.services.report_image_service import ReportImageService
+        return ReportImageService.generate_client_card(data)
 
     @staticmethod
     def generate_sale_card(data):
@@ -185,342 +115,39 @@ class ImageService:
     @staticmethod
     def generate_setter_report_card(data):
         """
-        Generates a high-fidelity 'Premium Dashboard' report using HTML/CSS rendering.
+        Delegated to ReportImageService.
         """
-        import os
-        from flask import render_template_string
-        from html2image import Html2Image
-        import io
-        import uuid
-        
-        # 1. Read the template
-        template_path = os.path.join('app', 'templates', 'reports', 'setter_report.html')
-        with open(template_path, 'r', encoding='utf-8') as f:
-            template_content = f.read()
-
-        # 2. Render HTML with Data using Flask's render_template_string (Jinja2)
-        # Note: We use render_template_string to be safe if the file isn't in the global template search path
-        rendered_html = render_template_string(template_content, **data)
-
-        # 3. Configure html2image
-        # We output to a temp file then read it back to match the buffer return type
-        output_filename = f"report_{uuid.uuid4().hex}.png"
-        
-        # Determine if we are in Docker/Linux to set correct flags
-        custom_flags = []
-        browser_executable = None
-        
-        if os.name != 'nt': # Not Windows
-            custom_flags = [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox', 
-                '--disable-dev-shm-usage', 
-                '--headless=new', 
-                '--disable-gpu',
-                '--disable-software-rasterizer',
-                '--disable-dbus', 
-                '--disable-extensions',
-                '--log-level=3'
-            ]
-            # Common paths for chromium in linux
-            for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
-                if os.path.exists(path):
-                    browser_executable = path
-                    break
-
-        hti = Html2Image(
-            size=(1200, 1800), 
-            custom_flags=custom_flags,
-            browser_executable=browser_executable
-        ) 
-        
-        try:
-            # Render to image
-            # html2image screenshot returns a list of file paths
-            paths = hti.screenshot(html_str=rendered_html, save_as=output_filename)
-            
-            if not paths:
-                raise Exception("html2image failed to create screenshot")
-            
-            final_path = paths[0]
-            
-            # 4. Read into buffer
-            with open(final_path, 'rb') as img_f:
-                buf = io.BytesIO(img_f.read())
-            
-            # Cleanup temp file
-            if os.path.exists(final_path):
-                os.remove(final_path)
-                
-            buf.seek(0)
-            return buf
-            
-        except Exception as e:
-            print(f"[ImageService Error] {e}")
-            import traceback
-            traceback.print_exc()
-            # If rendering fails, Fallback to a super simple PIL or just re-raise
-            raise e
+        from app.services.report_image_service import ReportImageService
+        return ReportImageService.generate_setter_report_card(data)
 
     @staticmethod
     def generate_closer_report_card(data):
         """
-        Generates a high-fidelity 'Premium Dashboard' report for Closers using HTML/CSS rendering.
+        Delegated to ReportImageService.
         """
-        import os
-        from flask import render_template_string
-        from html2image import Html2Image
-        import io
-        import uuid
-        
-        # 1. Read the template
-        template_path = os.path.join('app', 'templates', 'reports', 'closer_report.html')
-        with open(template_path, 'r', encoding='utf-8') as f:
-            template_content = f.read()
+        from app.services.report_image_service import ReportImageService
+        return ReportImageService.generate_closer_report_card(data)
 
-        # 2. Render HTML with Data using Flask's render_template_string (Jinja2)
-        rendered_html = render_template_string(template_content, **data)
-
-        # 3. Configure html2image
-        output_filename = f"closer_report_{uuid.uuid4().hex}.png"
-        
-        custom_flags = []
-        browser_executable = None
-        
-        if os.name != 'nt': # Not Windows
-            custom_flags = [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox', 
-                '--disable-dev-shm-usage', 
-                '--headless=new', 
-                '--disable-gpu',
-                '--disable-software-rasterizer',
-                '--disable-dbus', 
-                '--disable-extensions',
-                '--log-level=3'
-            ]
-            for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
-                if os.path.exists(path):
-                    browser_executable = path
-                    break
-
-        hti = Html2Image(
-            size=(1200, 2600), # Increased height to accommodate reflections
-            custom_flags=custom_flags,
-            browser_executable=browser_executable
-        ) 
-        
-        try:
-            paths = hti.screenshot(html_str=rendered_html, save_as=output_filename)
-            
-            if not paths:
-                raise Exception("html2image failed to create screenshot")
-            
-            final_path = paths[0]
-            
-            # 4. Read into buffer
-            with open(final_path, 'rb') as img_f:
-                buf = io.BytesIO(img_f.read())
-            
-            # Cleanup temp file
-            if os.path.exists(final_path):
-                os.remove(final_path)
-                
-            buf.seek(0)
-            return buf
-            
-        except Exception as e:
-            print(f"[ImageService Error] {e}")
-            import traceback
-            traceback.print_exc()
-            raise e
     @staticmethod
     def generate_triage_report_card(data):
         """
-        Generates a premium 'Triage Report' image for Discord notifications.
+        Delegated to ReportImageService.
         """
-        import os
-        from flask import render_template_string
-        from html2image import Html2Image
-        import io
-        import uuid
-        
-        # 1. Read the template
-        template_path = os.path.join('app', 'templates', 'reports', 'triage_report.html')
-        with open(template_path, 'r', encoding='utf-8') as f:
-            template_content = f.read()
-
-        # 2. Render HTML with Data
-        rendered_html = render_template_string(template_content, **data)
-
-        # 3. Configure html2image
-        output_filename = f"triage_report_{uuid.uuid4().hex}.png"
-        
-        custom_flags = []
-        browser_executable = None
-        if os.name != 'nt':
-            custom_flags = [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox', 
-                '--disable-dev-shm-usage', 
-                '--headless=new', 
-                '--disable-gpu',
-                '--disable-software-rasterizer',
-                '--disable-dbus', 
-                '--disable-extensions',
-                '--log-level=3'
-            ]
-            for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
-                if os.path.exists(path):
-                    browser_executable = path
-                    break
-
-        hti = Html2Image(
-            size=(1000, 1200), 
-            custom_flags=custom_flags,
-            browser_executable=browser_executable
-        ) 
-        
-        try:
-            paths = hti.screenshot(html_str=rendered_html, save_as=output_filename)
-            if not paths:
-                raise Exception("html2image failed to create screenshot for triage")
-            
-            final_path = paths[0]
-            with open(final_path, 'rb') as img_f:
-                buf = io.BytesIO(img_f.read())
-            
-            if os.path.exists(final_path):
-                os.remove(final_path)
-                
-            buf.seek(0)
-            return buf
-            
-        except Exception as e:
-            print(f"[ImageService Triage Error] {e}")
-            raise e
+        from app.services.report_image_service import ReportImageService
+        return ReportImageService.generate_triage_report_card(data)
 
     @staticmethod
     def generate_triage_tracker_card(data):
         """
-        Generates a premium 'Triage Tracker Report' image for Discord notifications.
+        Delegated to ReportImageService.
         """
-        import os
-        from flask import render_template_string
-        from html2image import Html2Image
-        import io
-        import uuid
-        
-        template_path = os.path.join('app', 'templates', 'reports', 'triage_tracker_report.html')
-        with open(template_path, 'r', encoding='utf-8') as f:
-            template_content = f.read()
-
-        rendered_html = render_template_string(template_content, **data)
-
-        output_filename = f"triage_tracker_{uuid.uuid4().hex}.png"
-        
-        custom_flags = []
-        browser_executable = None
-        if os.name != 'nt':
-            custom_flags = [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox', 
-                '--disable-dev-shm-usage', 
-                '--headless=new', 
-                '--disable-gpu',
-                '--disable-software-rasterizer',
-                '--disable-dbus', 
-                '--disable-extensions',
-                '--log-level=3'
-            ]
-            for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
-                if os.path.exists(path):
-                    browser_executable = path
-                    break
-
-        hti = Html2Image(
-            size=(1200, 1800), 
-            custom_flags=custom_flags,
-            browser_executable=browser_executable
-        ) 
-        
-        try:
-            paths = hti.screenshot(html_str=rendered_html, save_as=output_filename)
-            if not paths:
-                raise Exception("html2image failed to create screenshot for triage tracker")
-            
-            final_path = paths[0]
-            with open(final_path, 'rb') as img_f:
-                buf = io.BytesIO(img_f.read())
-            
-            if os.path.exists(final_path):
-                os.remove(final_path)
-                
-            buf.seek(0)
-            return buf
-            
-        except Exception as e:
-            print(f"[ImageService Triage Tracker Error] {e}")
-            raise e
+        from app.services.report_image_service import ReportImageService
+        return ReportImageService.generate_triage_tracker_card(data)
 
     @staticmethod
     def generate_reflection_card(data):
         """
-        Generates a premium 'Daily Reflection' image for Discord notifications.
+        Delegated to ReportImageService.
         """
-        import os
-        from flask import render_template_string
-        from html2image import Html2Image
-        import io
-        import uuid
-        
-        template_path = os.path.join('app', 'templates', 'reports', 'reflection_image.html')
-        with open(template_path, 'r', encoding='utf-8') as f:
-            template_content = f.read()
-
-        rendered_html = render_template_string(template_content, **data)
-        output_filename = f"reflection_{uuid.uuid4().hex}.png"
-        
-        custom_flags = []
-        browser_executable = None
-        if os.name != 'nt':
-            custom_flags = [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox', 
-                '--disable-dev-shm-usage', 
-                '--headless=new', 
-                '--disable-gpu',
-                '--disable-software-rasterizer',
-                '--disable-dbus', 
-                '--disable-extensions',
-                '--log-level=3'
-            ]
-            for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser']:
-                if os.path.exists(path):
-                    browser_executable = path
-                    break
-
-        hti = Html2Image(
-            size=(1200, 1400), 
-            custom_flags=custom_flags,
-            browser_executable=browser_executable
-        ) 
-        
-        try:
-            paths = hti.screenshot(html_str=rendered_html, save_as=output_filename)
-            if not paths:
-                raise Exception("html2image failed to create screenshot for reflection")
-            
-            final_path = paths[0]
-            with open(final_path, 'rb') as img_f:
-                buf = io.BytesIO(img_f.read())
-            
-            if os.path.exists(final_path):
-                os.remove(final_path)
-                
-            buf.seek(0)
-            return buf
-            
-        except Exception as e:
-            print(f"[ImageService Reflection Error] {e}")
-            raise e
+        from app.services.report_image_service import ReportImageService
+        return ReportImageService.generate_reflection_card(data)
