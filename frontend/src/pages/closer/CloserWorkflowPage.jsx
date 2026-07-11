@@ -271,8 +271,8 @@ const CloserWorkflowPage = () => {
             {/* Área de Trabajo Principal */}
             <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                {/* Columna Izquierda: Cola de Citas del Día */}
-                <div className="lg:col-span-7 space-y-4">
+                {/* Columna Izquierda: Cola de Citas del Día (ancho completo en agendas) */}
+                <div className={`${activeStep === 'agendas' ? 'lg:col-span-12' : 'lg:col-span-7'} space-y-4`}>
                     
                     {/* Barra de Acciones Masivas */}
                     {selectedIds.size > 0 && (
@@ -554,18 +554,73 @@ const CloserWorkflowPage = () => {
                     </div>
                 </div>
 
-                {/* Columna Derecha: Visor Detallado */}
-                <div className="lg:col-span-5 h-[76vh] overflow-y-auto custom-scrollbar sticky top-28 bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl">
-                    {selectedLead ? (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center pb-2 border-b border-slate-900">
+                {/* Columna Derecha: Visor Detallado - Oculto en agendas */}
+                {activeStep !== 'agendas' && (
+                    <div className="lg:col-span-5 h-[76vh] overflow-y-auto custom-scrollbar sticky top-28 bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl">
+                        {selectedLead ? (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center pb-2 border-b border-slate-900">
+                                    <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <AlertCircle size={13} />
+                                        Ficha de Seguimiento
+                                    </h3>
+                                    <button
+                                        onClick={() => setSelectedLead(null)}
+                                        className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-500 hover:text-white transition-colors"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                                
+                                <LeadRoadmapDetail 
+                                    instagram={selectedLead.instagram}
+                                    email={selectedLead.email}
+                                    phone={selectedLead.phone}
+                                    availableKeywords={[]}
+                                    userRole={user?.role}
+                                    appointmentId={selectedLead.id}
+                                    compact={true}
+                                    onUpdate={() => {
+                                        fetchAgendas();
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                                <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-3xl flex items-center justify-center text-slate-500 mb-4 shadow-xl">
+                                    <Users size={28} />
+                                </div>
+                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">
+                                    Perfil del Prospecto
+                                </h3>
+                                <p className="text-[10px] text-slate-655 font-bold uppercase tracking-wider mt-1.5 max-w-xs leading-relaxed">
+                                    Selecciona una cita de la agenda de hoy para calificar objeciones, guardar notas e investigar respuestas del prospecto.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+            </div>
+
+            {/* Modal de Detalle de Agenda (para agendas) */}
+            <AnimatePresence>
+                {activeStep === 'agendas' && selectedLead && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl overflow-y-auto max-h-[85vh] text-left relative space-y-6 flex flex-col custom-scrollbar"
+                        >
+                            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
                                 <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
                                     <AlertCircle size={13} />
-                                    Ficha de Seguimiento
+                                    Ficha de Seguimiento del Prospecto
                                 </h3>
                                 <button
                                     onClick={() => setSelectedLead(null)}
-                                    className="p-1.5 hover:bg-slate-900 rounded-lg text-slate-500 hover:text-white transition-colors"
+                                    className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors"
                                 >
                                     <X size={14} />
                                 </button>
@@ -583,23 +638,10 @@ const CloserWorkflowPage = () => {
                                     fetchAgendas();
                                 }}
                             />
-                        </div>
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                            <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-3xl flex items-center justify-center text-slate-500 mb-4 shadow-xl">
-                                <Users size={28} />
-                            </div>
-                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">
-                                Perfil del Prospecto
-                            </h3>
-                            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider mt-1.5 max-w-xs leading-relaxed">
-                                Selecciona una cita de la agenda de hoy para calificar objeciones, guardar notas e investigar respuestas del prospecto.
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Modal de decisión: Con / Sin Decisor */}
             <AnimatePresence>
