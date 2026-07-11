@@ -574,178 +574,225 @@ const PublicSetterStatsPage = () => {
                                         </div>
                                     )}
                                     <LeadUnifiedKPI stats={stats} compareActive={compare} comparisonStats={stats.comparison} />
-                                    {/* 1. TOP ROW: 4 TARJETAS DE IMPACTO Y RENDIMIENTO OPERACIONAL DEL SETTER */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-                                        
-                                        {/* TARJETA 1: AGENDAS TOTALES (Volumen Final) */}
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
-                                            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-                                                <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-emerald-500" />
-                                            </div>
-                                            <div className="flex items-start justify-between relative z-10">
-                                                <div className="space-y-1 text-left">
-                                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Agendas Generadas</p>
-                                                    <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                                                        <StatTooltip
-                                                            label="Agendas Generadas"
-                                                            value={stats.totals.funnel_agenda}
-                                                            calculation="Total de citas agendadas por el setter en el periodo seleccionado."
-                                                        >
-                                                            {stats.totals.funnel_agenda}
-                                                        </StatTooltip>
-                                                    </h3>
-                                                    <div className="flex items-center gap-1.5 mt-2">
-                                                        <span className="px-2 py-0.5 rounded-full text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30">
-                                                            <StatTooltip
-                                                                label="Conversión de Agendas sobre Leads"
-                                                                value={`${div(stats.totals.funnel_agenda, stats.totals.leads)}%`}
-                                                                calculation="Porcentaje de leads cualificados que terminaron con una cita agendada. Fórmula: (Agendas / Leads Cualificados) * 100"
-                                                            >
-                                                                {div(stats.totals.funnel_agenda, stats.totals.leads)}% conv.
-                                                            </StatTooltip>
-                                                        </span>
-                                                        <span className="text-[10px] text-slate-500 font-bold uppercase">sobre leads reales</span>
-                                                    </div>
-                                                    {renderComparisonSubdataLeft(stats.totals.funnel_agenda, stats.comparison?.totals?.funnel_agenda)}
-                                                </div>
-                                                <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-emerald-400 shrink-0">
-                                                    <CalendarDays size={18} />
-                                                </div>
-                                            </div>
-                                        </div>
+                                    {/* 1. TOP ROW: KPIs DE IMPACTO — JERARQUÍA VISUAL POR RELEVANCIA */}
+                                    <div className="space-y-4 mt-6">
 
-                                        {/* TARJETA 2: EFICACIA A CITA (Conversión de Cualificados) */}
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
-                                            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-                                                <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-violet-500" />
-                                            </div>
-                                            <div className="flex items-start justify-between relative z-10">
-                                                <div className="space-y-1 text-left">
-                                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Eficacia a Cita</p>
-                                                    <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                                                        <StatTooltip
-                                                            label="Eficacia a Cita"
-                                                            value={`${div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%`}
-                                                            calculation="Porcentaje de leads en cualificación que resultaron en agendamiento. Fórmula: (Agendas / Cualificación) * 100"
-                                                        >
-                                                            {div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%
-                                                        </StatTooltip>
-                                                    </h3>
-                                                    <div className="flex items-center gap-1.5 mt-2">
-                                                        <span className="px-2 py-0.5 rounded-full text-xs font-black text-violet-400 bg-violet-500/10 border border-violet-500/30">
-                                                            <StatTooltip
-                                                                label="Conversión Openings a Cita"
-                                                                value={`${stats.percentages.conversions_to_agenda.opening_to_agenda}%`}
-                                                                calculation="Porcentaje de conversaciones iniciadas (openings con respuesta) que terminaron en cita. Fórmula: (Agendas / Respondidos) * 100"
-                                                            >
-                                                                {stats.percentages.conversions_to_agenda.opening_to_agenda}%
-                                                            </StatTooltip>
-                                                        </span>
-                                                        <span className="text-[10px] text-slate-500 font-bold uppercase">de openings a cita</span>
-                                                    </div>
-                                                    {renderComparisonSubdataLeft(
-                                                        div(stats.totals.funnel_agenda, stats.totals.funnel_qualification),
-                                                        div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.funnel_qualification),
-                                                        true
-                                                    )}
-                                                </div>
-                                                <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-violet-400 shrink-0">
-                                                    <Target size={18} />
-                                                </div>
-                                            </div>
-                                        </div>
+                                        {/* FILA PRINCIPAL: Agendas Generadas + Conversión Final (los 2 datos más operativos) */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                                        {/* TARJETA 3: TASA DE REACTIVACIÓN (Follow-Up Response) */}
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
-                                            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-                                                <div className="absolute top-0 right-0 w-24 h-24 blur-[65px] opacity-10 group-hover:opacity-30 transition-opacity bg-indigo-500" />
-                                            </div>
-                                            <div className="flex items-start justify-between relative z-10">
-                                                <div className="space-y-1 text-left">
-                                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Tasa Follow-Up</p>
-                                                    <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                                                        <StatTooltip
-                                                            label="Tasa Follow-Up"
-                                                            value={`${stats.percentages.rates.total_fur}%`}
-                                                            calculation="Porcentaje de efectividad general de los mensajes de seguimiento (follow-ups) que obtuvieron respuesta. Fórmula: (Respuestas Follow-Up / Seguimientos Enviados) * 100"
-                                                        >
-                                                            {stats.percentages.rates.total_fur}%
-                                                        </StatTooltip>
-                                                    </h3>
-                                                    <div className="flex items-center gap-1.5 mt-2">
-                                                        <span className="px-2 py-0.5 rounded-full text-xs font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/30">
-                                                            <StatTooltip
-                                                                label="Follow-Up Respondidos / Enviados"
-                                                                value={`${stats.totals.total_fu_r} / ${stats.totals.total_fu_s}`}
-                                                                calculation="Respuestas obtenidas sobre el total de mensajes de seguimiento enviados."
-                                                            >
-                                                                {stats.totals.total_fu_r} / {stats.totals.total_fu_s}
-                                                            </StatTooltip>
-                                                        </span>
-                                                        <span className="text-[10px] text-slate-500 font-bold uppercase">respondidos</span>
-                                                    </div>
-                                                    {renderComparisonSubdataLeft(
-                                                        stats.percentages.rates.total_fur,
-                                                        stats.comparison?.percentages?.rates?.total_fur,
-                                                        true
-                                                    )}
+                                            {/* TARJETA HERO 1: AGENDAS GENERADAS */}
+                                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-7 shadow-xl relative group hover:border-emerald-800/40 transition-all overflow-hidden">
+                                                <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                                                    <div className="absolute top-0 right-0 w-40 h-40 blur-[80px] opacity-15 group-hover:opacity-30 transition-opacity bg-emerald-500" />
                                                 </div>
-                                                <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-indigo-400 shrink-0">
-                                                    <RefreshCw size={18} />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* TARJETA 4: CONVERSIÓN FINAL (Cita sobre Entrantes) */}
-                                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:shadow-indigo-500/5 transition-all">
-                                            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-                                                <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity bg-amber-500" />
-                                            </div>
-                                            <div className="flex items-start justify-between relative z-10">
-                                                <div className="space-y-1 text-left">
-                                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Conversión Final</p>
-                                                    <h3 className="text-4xl font-black text-white italic tracking-tighter">
-                                                        <StatTooltip
-                                                            label="Conversión Final"
-                                                            value={`${div(stats.totals.funnel_agenda, stats.totals.entrantes)}%`}
-                                                            calculation="Porcentaje de citas agendadas respecto al total de leads entrantes. Fórmula: (Agendas / Entrantes) * 100"
-                                                        >
-                                                            {div(stats.totals.funnel_agenda, stats.totals.entrantes)}%
-                                                        </StatTooltip>
-                                                    </h3>
-                                                    <div className="flex items-center gap-1.5 mt-2">
-                                                        <span className="px-2 py-0.5 rounded-full text-xs font-black text-amber-400 bg-amber-500/10 border border-emerald-500/30">
+                                                <div className="relative z-10 flex items-start justify-between gap-4">
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Agendas Generadas</p>
+                                                        {/* Número principal grande */}
+                                                        <h3 className="text-6xl font-black text-white italic tracking-tighter leading-none">
                                                             <StatTooltip
-                                                                label="Total Agendas"
+                                                                label="Agendas Generadas"
                                                                 value={stats.totals.funnel_agenda}
-                                                                calculation="Cantidad total de citas agendadas por el setter."
+                                                                calculation="Total de citas agendadas por el setter en el periodo seleccionado. Es el resultado directo de la gestión de conversaciones."
                                                             >
-                                                                Agendas: {stats.totals.funnel_agenda}
+                                                                {stats.totals.funnel_agenda}
                                                             </StatTooltip>
-                                                        </span>
-                                                        <span className="px-2 py-0.5 rounded-full text-xs font-black text-slate-400 bg-slate-500/10 border border-slate-500/30">
-                                                            <StatTooltip
-                                                                label="Total Entrantes"
-                                                                value={stats.totals.entrantes}
-                                                                calculation="Cantidad total de contactos iniciados/entrantes."
-                                                            >
-                                                                Inbox: {stats.totals.entrantes}
-                                                            </StatTooltip>
-                                                        </span>
+                                                        </h3>
+                                                        {/* Conversión Agendas/Leads — antes era un badge pequeño, ahora es dato prominente */}
+                                                        <div className="mt-4 flex items-end gap-3">
+                                                            <div>
+                                                                <p className="text-3xl font-black text-emerald-400 italic leading-none">
+                                                                    <StatTooltip
+                                                                        label="Conversión de Agendas sobre Leads Cualificados"
+                                                                        value={`${div(stats.totals.funnel_agenda, stats.totals.leads)}%`}
+                                                                        calculation="De cada 100 personas que fueron cualificadas como buenos prospectos, ¿cuántas terminaron agendando una cita? Fórmula: (Agendas / Leads Cualificados) × 100"
+                                                                    >
+                                                                        {div(stats.totals.funnel_agenda, stats.totals.leads)}%
+                                                                    </StatTooltip>
+                                                                </p>
+                                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider mt-0.5">Conv. sobre Leads</p>
+                                                            </div>
+                                                            <div className="w-px h-8 bg-slate-800" />
+                                                            <div>
+                                                                <p className="text-sm font-black text-slate-300 italic leading-none">
+                                                                    {stats.percentages.conversions_to_agenda.opening_to_agenda}%
+                                                                </p>
+                                                                <p className="text-[10px] font-black text-slate-600 uppercase tracking-wider mt-0.5">de openings a cita</p>
+                                                            </div>
+                                                        </div>
+                                                        {renderComparisonSubdataLeft(stats.totals.funnel_agenda, stats.comparison?.totals?.funnel_agenda)}
                                                     </div>
-                                                    {renderComparisonSubdataLeft(
-                                                        div(stats.totals.funnel_agenda, stats.totals.entrantes),
-                                                        div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.entrantes),
-                                                        true
-                                                    )}
+                                                    <div className="p-3 rounded-2xl bg-emerald-950/50 border border-emerald-800/30 text-emerald-400 shrink-0">
+                                                        <CalendarDays size={22} />
+                                                    </div>
                                                 </div>
-                                                <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-amber-400 shrink-0">
-                                                    <Target size={18} />
+                                                {/* Barra visual de progreso de conversión */}
+                                                <div className="relative z-10 mt-5">
+                                                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-emerald-500 rounded-full transition-all duration-1000 shadow-[0_0_8px_rgba(52,211,153,0.4)]"
+                                                            style={{ width: `${Math.min(div(stats.totals.funnel_agenda, stats.totals.leads), 100)}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* TARJETA HERO 2: CONVERSIÓN FINAL */}
+                                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-7 shadow-xl relative group hover:border-amber-800/40 transition-all overflow-hidden">
+                                                <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                                                    <div className="absolute top-0 right-0 w-40 h-40 blur-[80px] opacity-15 group-hover:opacity-30 transition-opacity bg-amber-500" />
+                                                </div>
+                                                <div className="relative z-10 flex items-start justify-between gap-4">
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Conversión Final</p>
+                                                        {/* Número principal grande */}
+                                                        <h3 className="text-6xl font-black text-amber-400 italic tracking-tighter leading-none">
+                                                            <StatTooltip
+                                                                label="Conversión Final"
+                                                                value={`${div(stats.totals.funnel_agenda, stats.totals.entrantes)}%`}
+                                                                calculation="De cada 100 personas que llegaron al sistema, ¿cuántas terminaron agendando una cita? Es la métrica más importante del embudo completo. Fórmula: (Agendas / Entrantes) × 100"
+                                                            >
+                                                                {div(stats.totals.funnel_agenda, stats.totals.entrantes)}%
+                                                            </StatTooltip>
+                                                        </h3>
+                                                        {/* Sub-datos de contexto */}
+                                                        <div className="mt-4 flex items-end gap-3">
+                                                            <div>
+                                                                <p className="text-sm font-black text-slate-300 italic leading-none">
+                                                                    <StatTooltip
+                                                                        label="Total Agendas"
+                                                                        value={stats.totals.funnel_agenda}
+                                                                        calculation="Total de citas generadas en el periodo."
+                                                                    >
+                                                                        {stats.totals.funnel_agenda}
+                                                                    </StatTooltip>
+                                                                </p>
+                                                                <p className="text-[10px] font-black text-slate-600 uppercase tracking-wider mt-0.5">Agendas</p>
+                                                            </div>
+                                                            <div className="w-px h-8 bg-slate-800" />
+                                                            <div>
+                                                                <p className="text-sm font-black text-slate-400 italic leading-none">
+                                                                    <StatTooltip
+                                                                        label="Total Entrantes"
+                                                                        value={stats.totals.entrantes}
+                                                                        calculation="Total de personas que llegaron al sistema en el periodo."
+                                                                    >
+                                                                        {stats.totals.entrantes}
+                                                                    </StatTooltip>
+                                                                </p>
+                                                                <p className="text-[10px] font-black text-slate-600 uppercase tracking-wider mt-0.5">Entrantes</p>
+                                                            </div>
+                                                        </div>
+                                                        {renderComparisonSubdataLeft(
+                                                            div(stats.totals.funnel_agenda, stats.totals.entrantes),
+                                                            div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.entrantes),
+                                                            true
+                                                        )}
+                                                    </div>
+                                                    <div className="p-3 rounded-2xl bg-amber-950/50 border border-amber-800/30 text-amber-400 shrink-0">
+                                                        <Target size={22} />
+                                                    </div>
+                                                </div>
+                                                {/* Barra visual */}
+                                                <div className="relative z-10 mt-5">
+                                                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-amber-500 rounded-full transition-all duration-1000 shadow-[0_0_8px_rgba(245,158,11,0.4)]"
+                                                            style={{ width: `${Math.min(div(stats.totals.funnel_agenda, stats.totals.entrantes) * 5, 100)}%` }}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
+                                        {/* FILA SECUNDARIA: Eficacia a Cita + Tasa Follow-Up */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                            {/* TARJETA SECUNDARIA 1: EFICACIA A CITA */}
+                                            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:border-violet-800/30 transition-all">
+                                                <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                                                    <div className="absolute top-0 right-0 w-24 h-24 blur-[60px] opacity-10 group-hover:opacity-25 transition-opacity bg-violet-500" />
+                                                </div>
+                                                <div className="flex items-start justify-between relative z-10">
+                                                    <div className="space-y-1 text-left flex-1">
+                                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Eficacia a Cita</p>
+                                                        <h3 className="text-4xl font-black text-white italic tracking-tighter">
+                                                            <StatTooltip
+                                                                label="Eficacia a Cita"
+                                                                value={`${div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%`}
+                                                                calculation="De cada 100 personas que pasaron por el proceso de cualificación, ¿cuántas terminaron agendando? Mide la efectividad de la conversación después del filtro inicial. Fórmula: (Agendas / En Cualificación) × 100"
+                                                            >
+                                                                {div(stats.totals.funnel_agenda, stats.totals.funnel_qualification)}%
+                                                            </StatTooltip>
+                                                        </h3>
+                                                        <div className="flex items-center gap-1.5 mt-2">
+                                                            <span className="px-2 py-0.5 rounded-full text-xs font-black text-violet-400 bg-violet-500/10 border border-violet-500/30">
+                                                                <StatTooltip
+                                                                    label="Conversión Openings a Cita"
+                                                                    value={`${stats.percentages.conversions_to_agenda.opening_to_agenda}%`}
+                                                                    calculation="De cada 100 personas que respondieron el primer mensaje, ¿cuántas llegaron a agendar? Fórmula: (Agendas / Respondidos) × 100"
+                                                                >
+                                                                    {stats.percentages.conversions_to_agenda.opening_to_agenda}%
+                                                                </StatTooltip>
+                                                            </span>
+                                                            <span className="text-[10px] text-slate-500 font-bold uppercase">de openings a cita</span>
+                                                        </div>
+                                                        {renderComparisonSubdataLeft(
+                                                            div(stats.totals.funnel_agenda, stats.totals.funnel_qualification),
+                                                            div(stats.comparison?.totals?.funnel_agenda, stats.comparison?.totals?.funnel_qualification),
+                                                            true
+                                                        )}
+                                                    </div>
+                                                    <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-violet-400 shrink-0">
+                                                        <Target size={18} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* TARJETA SECUNDARIA 2: TASA FOLLOW-UP */}
+                                            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:border-indigo-800/30 transition-all">
+                                                <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                                                    <div className="absolute top-0 right-0 w-24 h-24 blur-[65px] opacity-10 group-hover:opacity-25 transition-opacity bg-indigo-500" />
+                                                </div>
+                                                <div className="flex items-start justify-between relative z-10">
+                                                    <div className="space-y-1 text-left flex-1">
+                                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Tasa Follow-Up</p>
+                                                        <h3 className="text-4xl font-black text-white italic tracking-tighter">
+                                                            <StatTooltip
+                                                                label="Tasa Follow-Up"
+                                                                value={`${stats.percentages.rates.total_fur}%`}
+                                                                calculation="De cada 100 mensajes de seguimiento que se enviaron, ¿cuántos recibieron respuesta? Muestra qué tan efectivos son los mensajes de reactivación. Fórmula: (Respuestas Follow-Up / Seguimientos Enviados) × 100"
+                                                            >
+                                                                {stats.percentages.rates.total_fur}%
+                                                            </StatTooltip>
+                                                        </h3>
+                                                        <div className="flex items-center gap-1.5 mt-2">
+                                                            <span className="px-2 py-0.5 rounded-full text-xs font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/30">
+                                                                <StatTooltip
+                                                                    label="Follow-Up Respondidos / Enviados"
+                                                                    value={`${stats.totals.total_fu_r} / ${stats.totals.total_fu_s}`}
+                                                                    calculation="Número de personas que respondieron un mensaje de seguimiento versus el total de seguimientos enviados."
+                                                                >
+                                                                    {stats.totals.total_fu_r} / {stats.totals.total_fu_s}
+                                                                </StatTooltip>
+                                                            </span>
+                                                            <span className="text-[10px] text-slate-500 font-bold uppercase">respondidos</span>
+                                                        </div>
+                                                        {renderComparisonSubdataLeft(
+                                                            stats.percentages.rates.total_fur,
+                                                            stats.comparison?.percentages?.rates?.total_fur,
+                                                            true
+                                                        )}
+                                                    </div>
+                                                    <div className="p-3 rounded-2xl bg-slate-800 border border-slate-700/50 text-indigo-400 shrink-0">
+                                                        <RefreshCw size={18} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
                                     </div>
+
                                 </div>
 
                                 {/* SECCIÓN: ANÁLISIS PROFUNDO DEL EMBUDO Y PÉRDIDAS */}

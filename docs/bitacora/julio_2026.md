@@ -7,6 +7,13 @@
       - Se rediseñó la sección de Cualificación Final: la tasa de cualificación sobre entrantes es ahora el dato dominante (número grande en verde, con barra de progreso animada). La tasa sobre respuesta se degradó a sub-dato de apoyo, visible en tamaño reducido a la derecha, evitando ruido visual.
       - Se mejoraron todos los tooltips del componente con lenguaje accesible para usuarios no técnicos: se eliminó la terminología de fórmulas explícitas en el texto principal de cada tooltip y se reemplazó por explicaciones en lenguaje cotidiano ("¿Cuántas personas llegaron?", "De cada 100 que llegaron..."), sin perder el detalle técnico en los `StatTooltip` interactivos.
       - Se ajustó la decoración de fondo del panel de índigo a verde esmeralda, alineándola con el énfasis visual en la cualificación.
+  - **Rediseño de Jerarquía Visual en KPIs Operativos del Setter ([PublicSetterStatsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicSetterStatsPage.jsx) [MODIFY])**:
+      - Se reemplazó el grid homogéneo de 4 tarjetas idénticas (`grid-cols-4`) por una estructura de **2 filas con jerarquía de impacto**.
+      - **Fila principal (Hero)**: Tarjetas grandes (`text-6xl`) para **Agendas Generadas** y **Conversión Final**, los dos datos más consultados en la operación diaria. Las tarjetas tienen glow animado, barra de progreso al pie y contexto numérico de apoyo.
+      - **Conversión de Agendas sobre Leads**: ascendida de badge pequeño dentro de una tarjeta a **dato principal en `text-3xl`** dentro de la tarjeta de Agendas, con su propia etiqueta y barra de progreso animada.
+      - **Fila secundaria**: Tarjetas de tamaño estándar (`text-4xl`) para **Eficacia a Cita** y **Tasa Follow-Up**, con opacidad reducida en el fondo (`bg-slate-900/60`) para crear diferenciación visual clara frente a las tarjetas hero.
+      - Se mejoraron los tooltips de los 4 KPIs con lenguaje accesible ("De cada 100 personas...") en lugar de jerga técnica.
+
 
 
   - **Eliminación del paso Link de Agenda del Setter Workspace**:
