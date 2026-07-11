@@ -540,11 +540,11 @@ const SetterWorkflowPage = () => {
                                                             </div>
                                                         </div>
 
-                                                        {/* Asignación */}
+                                                        {/* Anuncio */}
                                                         <div className="space-y-1">
-                                                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Asignado a</div>
-                                                            <div className="text-xs font-black text-amber-500">
-                                                                {l.assigned_to || 'Sin asignar'}
+                                                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Anuncio</div>
+                                                            <div className="text-xs font-black text-violet-400 truncate max-w-[200px]" title={l.ad_name}>
+                                                                {l.ad_name || 'Desatribuido'}
                                                             </div>
                                                         </div>
 

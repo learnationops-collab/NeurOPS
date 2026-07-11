@@ -778,6 +778,7 @@ def get_setter_deck():
                 "result": la.qualification,
                 "ig_chat_link": f"https://instagram.com/{lead.ig.replace('@', '')}" if lead.ig else "",
                 "keyword": la.keyword or "",
+                "ad_name": ad.name if ad else (la.keyword or "Desatribuido"),
                 "setter_notes": "",
                 "assigned_to": f"{assigned_setter} / {assigned_closer}",
                 "edad_form": edad_str,
