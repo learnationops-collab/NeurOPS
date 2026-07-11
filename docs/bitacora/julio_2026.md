@@ -29,7 +29,7 @@
       - Se integró el modal detallado de seguimiento de cita al hacer clic en cualquier cita de la lista.
   - **Corrección de Visibilidad de Leads Entrantes en el Workspace del Setter**:
     - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
-      - Se reestructuró la consulta del deck de cualificación (`/deck?step=cualificacion`) para omitir el filtro de fecha en los leads con estado **Pendiente** (`qualification` nula, vacía o `'null'`). Esto permite al Setter visualizar y calificar toda la cola de leads entrantes sin importar la fecha en que ingresaron, mientras que los ya cualificados y descalificados siguen filtrándose por fecha de forma habitual.
+      - Se reestructuró la consulta del deck de cualificación (`/deck?step=cualificacion`) para unificar el filtro de fecha y resolver el desfase de día local en los leads en base a las zonas horarias. Esto permite filtrar de forma consistente toda la cola (tanto cualificados como pendientes) por el rango de fechas seleccionado en la UI.
     - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
       - Se corrigió el cálculo de la fecha por defecto `customDate` utilizando el offset local en minutos en lugar del método ISO UTC nativo, solucionando el desfase de día que causaba que a partir de las 20:00 local se pre-seleccionara la fecha de mañana.
       - Se reemplazó la columna "Asignado a" por la columna "Anuncio", mostrando el nombre o la palabra clave del anuncio por el cual ingresó el lead.
