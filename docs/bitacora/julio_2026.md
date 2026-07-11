@@ -8,6 +8,8 @@
       - Se removieron los renderizados condicionales, botones masivos y de tarjetas relacionados con la acción manual del link de agenda.
   - **Desarrollo del Modal Premium de Cualificación del Setter**:
     - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - Se flexibilizó el filtro de cualificación y descalificación para soportar tanto los valores `'yes'` y `'no'` procedentes de ManyChat, como `'true'` y `'false'` guardados manualmente.
+      - Se actualizó el endpoint de estadísticas de cualificación para contabilizar correctamente bajo esta misma lógica flexible de valores.
       - Se implementó la ruta `POST /deck/update-qualified/<int:answer_id>` para buscar/crear el cliente (`Client`), registrar sus dolores y observaciones, actualizar el anuncio asociado, y guardar el estado de cualificación del lead. Si se cualifica, se crea la cita (`Appointment`) correspondiente en el flujo.
       - Se modificó la consulta del step `cualificacion` para retornar en la respuesta las claves `dolores` y `observaciones` persistidas del prospecto.
     - **Componente Modal ([SetterCualificacionModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/SetterCualificacionModal.jsx) [NEW])**:
