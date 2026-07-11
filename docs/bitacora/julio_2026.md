@@ -35,6 +35,9 @@
       - Se reemplazó la columna "Asignado a" por la columna "Anuncio", mostrando el nombre o la palabra clave del anuncio por el cual ingresó el lead.
     - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
       - Se incluyó la propiedad `ad_name` en la respuesta de `/deck` para que el frontend pueda renderizar directamente el nombre amigable del anuncio.
+      - Se reemplazó el filtro de fecha `tomorrow` por `yesterday` en la consulta del deck.
+    - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
+      - Se modificaron las opciones del selector de fecha en el deck para remover la opción "Mañana" y sustituirla por "Ayer", dejando el listado en: Hoy, Ayer, Esta semana, Este mes y Personalizado.
 
 - **10 de Julio de 2026**:
   - **Desarrollo de la Bandeja de Cualificados del Setter**:
