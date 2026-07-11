@@ -719,9 +719,15 @@ def get_setter_deck():
             query = query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
             
         if current_user.role != 'admin':
-            query = query.join(Ad, Ad.id == LeadAnswer.ad_id)\
-                         .join(Event, Event.id == Ad.event_id)\
-                         .filter(Event.setter_id == current_user.id)
+            query = query.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
+                         .outerjoin(Event, Event.id == Ad.event_id)\
+                         .filter(
+                             or_(
+                                 Event.setter_id == current_user.id,
+                                 Event.setter_id == None,
+                                 LeadAnswer.ad_id == None
+                             )
+                         )
         else:
             query = query.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
                          .outerjoin(Event, Event.id == Ad.event_id)
@@ -1228,9 +1234,15 @@ def get_cualificacion_stats():
         LeadAnswer.created_at.between(start_dt, end_dt)
     )
     if current_user.role != 'admin':
-        query_qual = query_qual.join(Ad, Ad.id == LeadAnswer.ad_id)\
-                               .join(Event, Event.id == Ad.event_id)\
-                               .filter(Event.setter_id == current_user.id)
+        query_qual = query_qual.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
+                               .outerjoin(Event, Event.id == Ad.event_id)\
+                               .filter(
+                                   or_(
+                                       Event.setter_id == current_user.id,
+                                       Event.setter_id == None,
+                                       LeadAnswer.ad_id == None
+                                   )
+                               )
     qualified_today = query_qual.count()
     
     # 2. Sin asignación (de los cualificados hoy, no tienen setter ni closer asignado)
@@ -1252,9 +1264,15 @@ def get_cualificacion_stats():
         LeadAnswer.created_at.between(start_dt, end_dt)
     )
     if current_user.role != 'admin':
-        query_no_resp = query_no_resp.join(Ad, Ad.id == LeadAnswer.ad_id)\
-                                     .join(Event, Event.id == Ad.event_id)\
-                                     .filter(Event.setter_id == current_user.id)
+        query_no_resp = query_no_resp.outerjoin(Ad, Ad.id == LeadAnswer.ad_id)\
+                                     .outerjoin(Event, Event.id == Ad.event_id)\
+                                     .filter(
+                                         or_(
+                                             Event.setter_id == current_user.id,
+                                             Event.setter_id == None,
+                                             LeadAnswer.ad_id == None
+                                         )
+                                     )
     no_response_today = query_no_resp.count()
     
     return jsonify({
