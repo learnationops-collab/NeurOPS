@@ -523,11 +523,33 @@ const SetterWorkflowPage = () => {
                                                     <div className="min-w-0 flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-center">
                                                         {/* Nombre e IG */}
                                                         <div className="space-y-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <h4 className="text-sm font-black text-white leading-tight truncate font-bold">
-                                                                    {l.lead_name || 'Sin Nombre'}
-                                                                </h4>
-                                                            </div>
+                                                             <div className="flex items-center gap-2 flex-wrap">
+                                                                 <h4 className="text-sm font-black text-white leading-tight truncate font-bold">
+                                                                     {l.lead_name || 'Sin Nombre'}
+                                                                 </h4>
+                                                                 {(() => {
+                                                                     const status = l.result;
+                                                                     if (status === 'yes' || status === 'true') {
+                                                                         return (
+                                                                             <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full shrink-0">
+                                                                                 Cualificado
+                                                                             </span>
+                                                                         );
+                                                                     }
+                                                                     if (status === 'no' || status === 'false') {
+                                                                         return (
+                                                                             <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full shrink-0">
+                                                                                 Descualificado
+                                                                             </span>
+                                                                         );
+                                                                     }
+                                                                     return (
+                                                                         <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full shrink-0">
+                                                                             Pendiente
+                                                                         </span>
+                                                                     );
+                                                                 })()}
+                                                             </div>
                                                             {activeStep === 'cualificacion' ? (
                                                                 l.instagram ? (
                                                                     <a
