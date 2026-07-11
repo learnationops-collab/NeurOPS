@@ -686,10 +686,10 @@ def get_setter_deck():
         if date_range == 'today':
             start_dt = datetime.combine(today, datetime.min.time())
             end_dt = datetime.combine(today, datetime.max.time())
-        elif date_range == 'tomorrow':
-            tomorrow = today + timedelta(days=1)
-            start_dt = datetime.combine(tomorrow, datetime.min.time())
-            end_dt = datetime.combine(tomorrow, datetime.max.time())
+        elif date_range == 'yesterday':
+            yesterday = today - timedelta(days=1)
+            start_dt = datetime.combine(yesterday, datetime.min.time())
+            end_dt = datetime.combine(yesterday, datetime.max.time())
         elif date_range == 'week':
             start_dt = datetime.combine(today - timedelta(days=7), datetime.min.time())
             end_dt = datetime.combine(today, datetime.max.time())

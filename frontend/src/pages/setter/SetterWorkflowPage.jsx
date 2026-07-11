@@ -358,7 +358,7 @@ const SetterWorkflowPage = () => {
                                     <CalendarDays size={14} className="text-violet-400" />
                                     <span>
                                         {dateRange === 'today' && 'Hoy'}
-                                        {dateRange === 'tomorrow' && 'Mañana'}
+                                        {dateRange === 'yesterday' && 'Ayer'}
                                         {dateRange === 'week' && 'Esta semana'}
                                         {dateRange === 'month' && 'Este mes'}
                                         {dateRange === 'custom' && `Personalizado: ${customDate}`}
@@ -370,7 +370,7 @@ const SetterWorkflowPage = () => {
                                     <div className="absolute top-12 left-0 bg-slate-950 border border-slate-850 p-3 rounded-2xl shadow-xl z-50 space-y-2 min-w-[200px] animate-in fade-in slide-in-from-top-1 duration-150">
                                         {[
                                             { value: 'today', label: 'Hoy' },
-                                            { value: 'tomorrow', label: 'Mañana' },
+                                            { value: 'yesterday', label: 'Ayer' },
                                             { value: 'week', label: 'Esta semana' },
                                             { value: 'month', label: 'Este mes' }
                                         ].map(opt => (
