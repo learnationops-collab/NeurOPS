@@ -35,7 +35,8 @@ const SetterWorkflowPage = () => {
 
     // Filtros de fecha y descalificados para paso cualificacion
     const [dateRange, setDateRange] = useState('today');
-    const [customDate, setCustomDate] = useState(new Date().toISOString().split('T')[0]);
+    const localToday = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    const [customDate, setCustomDate] = useState(localToday);
     const [showDisqualified, setShowDisqualified] = useState(false);
     const [stats, setStats] = useState({ qualified_today: 0, unassigned_today: 0, no_response_today: 0 });
     const [showCalendar, setShowCalendar] = useState(false);
