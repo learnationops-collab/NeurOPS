@@ -1167,39 +1167,34 @@ const CloserWorkflowPage = () => {
                                                     />
                                                 </div>
                                             </div>
-                                            <div className="md:col-span-2 flex items-center justify-between bg-slate-950/20 p-3.5 rounded-xl border border-slate-800">
-                                                <div className="text-left space-y-0.5">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Venta en Llamada (In-Call)</label>
-                                                    <span className="text-[9px] text-slate-550 font-bold uppercase block">Indica si se cerró dentro de la sesión de Zoom</span>
+                                            <div className="md:col-span-2 space-y-2">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1 block text-left">¿Venta Cerrada en Llamada?</label>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSaleForm({ ...saleForm, sold_in_call: true })}
+                                                        className={`p-3.5 rounded-2xl border font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                                                            saleForm.sold_in_call
+                                                                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-500/10'
+                                                                : 'bg-slate-850/40 border-slate-800 text-slate-450 hover:border-slate-700'
+                                                        }`}
+                                                    >
+                                                        <CheckCircle2 size={13} className={saleForm.sold_in_call ? 'opacity-100' : 'opacity-40'} />
+                                                        Sí, en Meet
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSaleForm({ ...saleForm, sold_in_call: false })}
+                                                        className={`p-3.5 rounded-2xl border font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                                                            !saleForm.sold_in_call
+                                                                ? 'bg-gradient-to-r from-rose-500/20 to-orange-500/20 border-rose-500 text-rose-400 shadow-lg shadow-rose-500/10'
+                                                                : 'bg-slate-855/40 border-slate-800 text-slate-450 hover:border-slate-700'
+                                                        }`}
+                                                    >
+                                                        <X size={13} className={!saleForm.sold_in_call ? 'opacity-100' : 'opacity-40'} />
+                                                        No, fuera
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSaleForm({ ...saleForm, sold_in_call: !saleForm.sold_in_call })}
-                                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                                        saleForm.sold_in_call ? 'bg-indigo-650' : 'bg-slate-700'
-                                                    }`}
-                                                >
-                                                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                                        saleForm.sold_in_call ? 'translate-x-4' : 'translate-x-0'
-                                                    }`} />
-                                                </button>
-                                            </div>
-                                            <div className="md:col-span-2 flex items-center justify-between bg-slate-950/20 p-3.5 rounded-xl border border-slate-800">
-                                                <div className="text-left space-y-0.5">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Enviar WhatsApp</label>
-                                                    <span className="text-[9px] text-slate-550 font-bold uppercase block">Activar el envío de mensaje al cliente al guardar</span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSaleForm({ ...saleForm, enviar_mensaje: !saleForm.enviar_mensaje })}
-                                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                                        saleForm.enviar_mensaje ? 'bg-indigo-650' : 'bg-slate-700'
-                                                    }`}
-                                                >
-                                                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                                        saleForm.enviar_mensaje ? 'translate-x-4' : 'translate-x-0'
-                                                    }`} />
-                                                </button>
                                             </div>
                                         </div>
                                     </div>

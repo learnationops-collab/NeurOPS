@@ -7,7 +7,7 @@
       - Se desarrolló un modal de registro de venta premium dividido en 3 pasos interactivos que guía al closer en la declaración de la transacción:
         - **Paso 1 (Cliente)**: Autocompleta los datos del prospecto (Nombre, Instagram, Email, Teléfono) provenientes de la cita y expone el campo Documento de Identidad (cédula/DNI) para ser completado.
         - **Paso 2 (Transacción)**: Permite seleccionar el Programa, Tipo de Pago (PIF, Cuota, etc.), Monto Cobrado USD y Método de Pago.
-        - **Paso 3 (Confirmación)**: Expone campos para Examen, Notas de Venta, Fecha (datepicker) y switches de Venta Cerrada en Llamada (In-Call) y Enviar WhatsApp.
+        - **Paso 3 (Confirmación)**: Expone campos para Examen, Notas de Venta, Fecha (datepicker) y un selector premium de tarjetas interactivas para indicar si la venta fue cerrada dentro de la llamada en Meet o fuera, eliminando la opción redundante de desactivación de la automatización de WhatsApp.
       - Se implementó la llamada al endpoint `/sheets/push?tabla=Ventas_DB` para insertar y sincronizar directamente con Google Sheets (Ventas_DB) con formato estricto y marcas temporales locales.
       - Se añadieron validaciones de obligatoriedad en cada paso para guiar correctamente al usuario.
   - **Corrección de Generación de Reportes en Producción (Docker/Railway) y Refactorización del Servicio de Imágenes**:
