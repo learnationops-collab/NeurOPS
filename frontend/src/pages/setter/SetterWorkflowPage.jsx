@@ -322,15 +322,6 @@ const SetterWorkflowPage = () => {
                                         </button>
                                     </>
                                 )}
-                                {activeStep === 'link-agenda' && (
-                                    <button
-                                        onClick={() => handleBulkUpdate('Link Enviado')}
-                                        disabled={submittingBulk}
-                                        className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-violet-600/20"
-                                    >
-                                        ✓ Marcar Link Enviado
-                                    </button>
-                                )}
 
                                 {/* Selector de anuncio en lote */}
                                 {availableKeywords.length > 0 && (
@@ -602,20 +593,6 @@ const SetterWorkflowPage = () => {
                                                                  title="Descualificar"
                                                              >
                                                                  {processingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                                                             </button>
-                                                         </div>
-                                                     )}
-
-                                                     {/* Paso 2: Link de Agenda */}
-                                                     {activeStep === 'link-agenda' && (
-                                                         <div className="flex gap-1">
-                                                             <button
-                                                                 onClick={(e) => handleQuickAction(l.id, 'Link Enviado', e)}
-                                                                 disabled={processingId === l.id}
-                                                                 className="h-8 px-3 bg-violet-600 hover:bg-violet-500 text-white font-black text-[9px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-violet-600/15 flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
-                                                             >
-                                                                 {processingId === l.id ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
-                                                                 Link Enviado
                                                              </button>
                                                          </div>
                                                      )}
