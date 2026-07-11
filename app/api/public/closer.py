@@ -728,28 +728,28 @@ def prefill_closer_report():
         if appt.with_decision_maker == True:
             decision_makers += 1
 
-        res = appt.result
+        res = (appt.closer_result or appt.result or '').strip().lower()
         if is_first:
             first_call_scheduled += 1
-            if res in ('Terminada', 'Completada', 'Cerrada'):
+            if res in ('terminada', 'completada', 'cerrada', 'show up', 'show_up'):
                 first_call_attended += 1
-            elif res == 'No Show':
+            elif res in ('no show', 'no_show'):
                 first_call_no_show += 1
-            elif res == 'Reprogramada':
+            elif res in ('reprogramada', 'reagendada', 'reprogramado', 'reagendado'):
                 first_call_rescheduled += 1
                 rescheduled_calls += 1
-            elif res == 'Cancelada':
+            elif res in ('cancelada', 'cancelado'):
                 first_call_canceled += 1
         else:
             second_call_scheduled += 1
-            if res in ('Terminada', 'Completada', 'Cerrada'):
+            if res in ('terminada', 'completada', 'cerrada', 'show up', 'show_up'):
                 second_call_attended += 1
-            elif res == 'No Show':
+            elif res in ('no show', 'no_show'):
                 second_call_no_show += 1
-            elif res == 'Reprogramada':
+            elif res in ('reprogramada', 'reagendada', 'reprogramado', 'reagendado'):
                 second_call_rescheduled += 1
                 rescheduled_calls += 1
-            elif res == 'Cancelada':
+            elif res in ('cancelada', 'cancelado'):
                 second_call_canceled += 1
 
     # 2. Calcular métricas de ventas

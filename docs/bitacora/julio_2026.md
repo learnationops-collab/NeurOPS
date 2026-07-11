@@ -10,10 +10,13 @@
         - **Paso 3 (Confirmación)**: Expone campos para Examen, Notas de Venta, Fecha (datepicker) y un selector premium de tarjetas interactivas para indicar si la venta fue cerrada dentro de la llamada en Meet o fuera, eliminando la opción redundante de desactivación de la automatización de WhatsApp.
       - Se implementó la llamada al endpoint `/sheets/push?tabla=Ventas_DB` para insertar y sincronizar directamente con Google Sheets (Ventas_DB) con formato estricto y marcas temporales locales.
       - Se añadieron validaciones de obligatoriedad en cada paso para guiar correctamente al usuario.
-  - **Sincronización de Resultados del Closer a Agendas Financieras**:
+  - **Sincronización de Resultados y Prefill de Reportes Diarios del Closer**:
     - **Servicios Backend ([booking_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/booking_service.py) [MODIFY])**:
       - Se modificó `sync_appointment_to_financial_agenda` para priorizar el estado `closer_result` sobre `result` al sincronizar la cita de vuelta a la tabla `FinancialAgenda`.
-      - Se implementó una normalización estricta de cadenas de texto (ej. `'Show Up'`, `'No Show'`, `'Cancelada'`, `'Reagendada'`) para evitar discordancias de estados en las bases de datos de reportes, solucionando el problema donde la asistencia real y show-ups del día se visualizaban en cero.
+      - Se implementó una normalización estricta de cadenas de texto (ej. `'Show Up'`, `'No Show'`, `'Cancelada'`, `'Reagendada'`) para evitar discordancias de estados en las bases de datos de reportes.
+    - **Controladores API ([public/closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/closer.py) [MODIFY])**:
+      - Se corrigió la lógica del endpoint `/public/closer-report/prefill` (`prefill_closer_report`) para leer prioritariamente el estado real guardado por el Closer (`closer_result` / `result`) de forma insensible a mayúsculas y minúsculas.
+      - Se expandieron las condiciones de emparejamiento para que considere estados como `'Show up'`, `'Show Up'`, `'no show'`, `'Cancelada'`, `'Reagendada'`, asegurando que al seleccionar cualquier fecha histórica (como el 9 de julio) en el reporte diario se autocompleten correctamente las asistencias, inasistencias y cancelaciones en vez de mostrarse en cero.
   - **Corrección de Generación de Reportes en Producción (Docker/Railway) y Refactorización del Servicio de Imágenes**:
     - **Servicios Backend ([report_image_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/report_image_service.py) [NEW])**:
       - Se creó un nuevo servicio específico para aislar y centralizar el renderizado HTML de reportes usando `Html2Image`.
