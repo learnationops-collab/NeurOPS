@@ -5,7 +5,8 @@ import toast from 'react-hot-toast';
 import { 
     Users, Layers, Search, Check, X, ChevronRight, Loader2,
     Calendar, Phone, Mail, Instagram, ExternalLink, Clock,
-    RefreshCw, CalendarDays, AlertCircle
+    RefreshCw, CalendarDays, AlertCircle, DollarSign, CreditCard,
+    Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -39,6 +40,40 @@ const CloserWorkflowPage = () => {
 
     // Estado para reprogramación individual
     const [rescheduleData, setRescheduleData] = useState({ apptId: null, date: '', status: '' });
+
+    // Flujo de registro de venta directo post-Show Up
+    const [salePrompt, setSalePrompt] = useState({ apptId: null });
+    const [saleModalOpen, setSaleModalOpen] = useState(false);
+    const [saleStep, setSaleStep] = useState(1);
+    const [submittingSale, setSubmittingSale] = useState(false);
+    const [saleForm, setSaleForm] = useState({
+        lead_id: '',
+        email_vendedor: user?.email || '',
+        nombre_cliente: '',
+        telefono: '',
+        mail_cliente: '',
+        programa: 'RR',
+        tipo_pago_simple: 'completo',
+        monto: '',
+        segundo_pago: '',
+        metodo_pago: 'Stripe',
+        examen_lead: '',
+        notes: '',
+        estado: 'Completada',
+        instagram: '',
+        setter: '',
+        documento_identidad: '',
+        enviar_mensaje: true,
+        sold_in_call: true,
+        date: new Date().toISOString().split('T')[0]
+    });
+
+    // Sincronizar email del closer en cuanto esté cargado en la sesión
+    useEffect(() => {
+        if (user?.email) {
+            setSaleForm(prev => ({ ...prev, email_vendedor: user.email }));
+        }
+    }, [user]);
 
     // Cargar agendas del día del closer
     const fetchAgendas = async () => {
@@ -124,6 +159,36 @@ const CloserWorkflowPage = () => {
                     closer_result: nextStatus === 'Completada' ? 'Show up' : nextStatus,
                     with_decision_maker: withDecisionMaker
                 }));
+            }
+
+            // Si es asistencia (Show up), gatillar el prompt para registrar venta
+            if (nextStatus === 'Completada') {
+                const appt = agendas.find(a => a.id === leadId);
+                if (appt) {
+                    const igUser = appt.instagram ? (appt.instagram.startsWith('@') ? appt.instagram : `@${appt.instagram}`) : '';
+                    setSaleForm({
+                        lead_id: appt.client_id || '',
+                        email_vendedor: user?.email || '',
+                        nombre_cliente: appt.lead_name || '',
+                        telefono: appt.phone || '',
+                        mail_cliente: appt.email || '',
+                        programa: 'RR',
+                        tipo_pago_simple: 'completo',
+                        monto: '',
+                        segundo_pago: '',
+                        metodo_pago: 'Stripe',
+                        examen_lead: appt.keyword || '',
+                        notas: '',
+                        estado: 'Completada',
+                        instagram: igUser,
+                        setter: appt.setter_name || '',
+                        documento_identidad: '',
+                        enviar_mensaje: true,
+                        sold_in_call: true,
+                        date: new Date().toISOString().split('T')[0]
+                    });
+                    setSalePrompt({ apptId: leadId });
+                }
             }
         } catch (err) {
             console.error("Error al procesar acción rápida:", err);
@@ -224,6 +289,88 @@ const CloserWorkflowPage = () => {
             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } catch (e) {
             return '';
+        }
+    };
+
+    // Navegación de pasos del modal de venta
+    const handleNextStep = () => {
+        if (saleStep === 1) {
+            if (!saleForm.nombre_cliente.trim()) {
+                toast.error("El nombre del cliente es obligatorio");
+                return;
+            }
+            if (!saleForm.instagram.trim()) {
+                toast.error("El Instagram del cliente es obligatorio");
+                return;
+            }
+            if (!saleForm.mail_cliente.trim()) {
+                toast.error("El correo del cliente es obligatorio");
+                return;
+            }
+        } else if (saleStep === 2) {
+            if (!saleForm.monto) {
+                toast.error("El monto de la venta es obligatorio");
+                return;
+            }
+            if (parseFloat(saleForm.monto) <= 0) {
+                toast.error("El monto debe ser mayor que 0");
+                return;
+            }
+        }
+        setSaleStep(prev => prev + 1);
+    };
+
+    const handlePrevStep = () => {
+        setSaleStep(prev => prev - 1);
+    };
+
+    const handleRegisterSale = async () => {
+        if (!saleForm.date) {
+            toast.error("La fecha de la venta es obligatoria");
+            return;
+        }
+        setSubmittingSale(true);
+        try {
+            // Formatear payload exactamente para Google Sheets (Ventas_DB)
+            const payload = {
+                email_vendedor: saleForm.email_vendedor,
+                nombre_cliente: saleForm.nombre_cliente,
+                telefono: saleForm.telefono ? saleForm.telefono.replace(/\+/g, '').trim() : '',
+                mail_cliente: saleForm.mail_cliente,
+                tipo_pago: `${saleForm.programa} - ${saleForm.tipo_pago_simple}`,
+                monto: parseFloat(saleForm.monto) || 0.0,
+                segundo_pago: saleForm.segundo_pago || '',
+                metodo_pago: saleForm.metodo_pago,
+                examen: saleForm.examen_lead + (saleForm.notas ? ` | ${saleForm.notes}` : ''),
+                instagram: saleForm.instagram ? saleForm.instagram.replace(/@/g, '').trim() : '',
+                estado: saleForm.estado,
+                setter: saleForm.setter || '',
+                documento_identidad: saleForm.documento_identidad || '',
+                marca_temporal: (() => {
+                    const selectedDate = new Date(saleForm.date);
+                    const now = new Date();
+                    selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+                    return selectedDate.toLocaleString("es-ES");
+                })(),
+                enviar_webhook: true,
+                enviar_mensaje: saleForm.enviar_mensaje,
+                sold_in_call: saleForm.sold_in_call
+            };
+
+            const res = await api.post('/sheets/push?tabla=Ventas_DB', payload);
+            
+            if (res.data.status === 'success') {
+                toast.success("Venta declarada y sincronizada correctamente");
+                setSaleModalOpen(false);
+                fetchAgendas();
+            } else {
+                toast.error(res.data.message || "Error al sincronizar con Google Sheets");
+            }
+        } catch (err) {
+            console.error("Error al registrar venta desde deck:", err);
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Error al comunicar con el servidor");
+        } finally {
+            setSubmittingSale(false);
         }
     };
 
@@ -679,6 +826,421 @@ const CloserWorkflowPage = () => {
                                 >
                                     Cancelar
                                 </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Prompt intermedio: ¿Hubo venta? */}
+            <AnimatePresence>
+                {salePrompt.apptId && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-200"
+                        >
+                            <div className="mx-auto w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                <DollarSign size={22} />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-lg font-black text-white uppercase italic tracking-tight">¿Se cerró la venta?</h3>
+                                <p className="text-xs text-slate-400 font-bold uppercase">Indica si lograste cerrar la venta con este prospecto en la llamada.</p>
+                            </div>
+                            <div className="flex flex-col gap-2.5 pt-2">
+                                <button
+                                    onClick={() => {
+                                        setSalePrompt({ apptId: null });
+                                        setSaleStep(1);
+                                        setSaleModalOpen(true);
+                                    }}
+                                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-lg shadow-emerald-650/20 animate-pulse"
+                                >
+                                    Sí, Declarar Venta
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setSalePrompt({ apptId: null });
+                                        fetchAgendas();
+                                    }}
+                                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black text-xs uppercase tracking-widest rounded-xl border border-slate-700 transition-all cursor-pointer"
+                                >
+                                    No, terminar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Modal de declaración de venta por pasos */}
+            <AnimatePresence>
+                {saleModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden text-left flex flex-col space-y-6 max-h-[90vh] custom-scrollbar"
+                        >
+                            {/* Ambient Brillo */}
+                            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+                                <div className="absolute top-0 right-0 w-64 h-64 blur-[120px] opacity-10 bg-indigo-500" />
+                            </div>
+
+                            <div className="flex justify-between items-center pb-4 border-b border-slate-800 relative z-10">
+                                <div>
+                                    <h3 className="text-lg font-black text-white uppercase italic tracking-tight flex items-center gap-2">
+                                        <DollarSign size={20} className="text-emerald-405" />
+                                        Declarar Venta
+                                    </h3>
+                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Sincronización directa con Google Sheets</p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm("¿Seguro que deseas cerrar la declaración de venta? Los datos ingresados se perderán.")) {
+                                            setSaleModalOpen(false);
+                                            fetchAgendas();
+                                        }
+                                    }}
+                                    className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors cursor-pointer"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            {/* Indicador de pasos premium */}
+                            <div className="flex items-center justify-between px-4 py-2 bg-slate-950/40 rounded-2xl border border-slate-800 relative z-10">
+                                {[
+                                    { step: 1, label: "Cliente" },
+                                    { step: 2, label: "Transacción" },
+                                    { step: 3, label: "Confirmación" }
+                                ].map((s, idx) => (
+                                    <React.Fragment key={s.step}>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${
+                                                saleStep > s.step 
+                                                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
+                                                    : saleStep === s.step
+                                                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/35'
+                                                    : 'bg-slate-800 border-slate-700 text-slate-500'
+                                            }`}>
+                                                {saleStep > s.step ? <Check size={10} /> : s.step}
+                                            </div>
+                                            <span className={`text-[10px] font-black uppercase tracking-wider transition-colors ${
+                                                saleStep === s.step ? 'text-white font-bold' : 'text-slate-500'
+                                            }`}>
+                                                {s.label}
+                                            </span>
+                                        </div>
+                                        {idx < 2 && (
+                                            <div className={`flex-1 h-0.5 mx-4 transition-all duration-300 ${
+                                                saleStep > s.step ? 'bg-emerald-500/50' : 'bg-slate-800'
+                                            }`} />
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+
+                            {/* Contenido del Paso */}
+                            <div className="flex-1 py-2 relative z-10 overflow-y-auto custom-scrollbar pr-1">
+                                {saleStep === 1 && (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
+                                        <div className="space-y-1">
+                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left">Paso 1: Información del Prospecto</h4>
+                                            <p className="text-[10px] text-slate-550 font-bold uppercase text-left">Revisa los datos obtenidos de la agenda y completa el documento de identidad.</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre Completo *</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><User size={13} /></span>
+                                                    <input
+                                                        type="text"
+                                                        value={saleForm.nombre_cliente}
+                                                        onChange={e => setSaleForm({ ...saleForm, nombre_cliente: e.target.value })}
+                                                        placeholder="ej. Juan Pérez"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Instagram *</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Instagram size={13} /></span>
+                                                    <input
+                                                        type="text"
+                                                        value={saleForm.instagram}
+                                                        onChange={e => setSaleForm({ ...saleForm, instagram: e.target.value })}
+                                                        placeholder="ej. @juanperez"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Email del Cliente *</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Mail size={13} /></span>
+                                                    <input
+                                                        type="email"
+                                                        value={saleForm.mail_cliente}
+                                                        onChange={e => setSaleForm({ ...saleForm, mail_cliente: e.target.value })}
+                                                        placeholder="ej. juan@gmail.com"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Teléfono</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Phone size={13} /></span>
+                                                    <input
+                                                        type="text"
+                                                        value={saleForm.telefono}
+                                                        onChange={e => setSaleForm({ ...saleForm, telefono: e.target.value })}
+                                                        placeholder="ej. +34600000000"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 text-left md:col-span-2">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Documento de identidad (DNI, NIE, Pasaporte)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><PenTool size={13} /></span>
+                                                    <input
+                                                        type="text"
+                                                        value={saleForm.documento_identidad}
+                                                        onChange={e => setSaleForm({ ...saleForm, documento_identidad: e.target.value })}
+                                                        placeholder="Ingresa la cédula o DNI"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {saleStep === 2 && (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
+                                        <div className="space-y-1">
+                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left">Paso 2: Detalles de la Transacción</h4>
+                                            <p className="text-[10px] text-slate-550 font-bold uppercase text-left">Define el programa académico, método y monto recaudado de la venta.</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Programa Académico *</label>
+                                                <select
+                                                    value={saleForm.programa}
+                                                    onChange={e => setSaleForm({ ...saleForm, programa: e.target.value })}
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                                    required
+                                                >
+                                                    <option value="RR">Residency Roadmap (RR)</option>
+                                                    <option value="AL">Ace Learner (AL)</option>
+                                                    <option value="SI">Specialist Initiative (SI)</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Tipo de Pago *</label>
+                                                <select
+                                                    value={saleForm.tipo_pago_simple}
+                                                    onChange={e => setSaleForm({ ...saleForm, tipo_pago_simple: e.target.value })}
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                                    required
+                                                >
+                                                    <option value="completo">Completo (PIF)</option>
+                                                    <option value="parcial">Parcial (Primer Pago)</option>
+                                                    <option value="Seña">Seña (Promesa)</option>
+                                                    <option value="Cuota">Cuotas</option>
+                                                    <option value="Renovacion">Renovación</option>
+                                                    <option value="Upsell">Upsell</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Monto Cobrado (USD) *</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><DollarSign size={13} /></span>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={saleForm.monto}
+                                                        onChange={e => setSaleForm({ ...saleForm, monto: e.target.value })}
+                                                        placeholder="0.00"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Método de Pago *</label>
+                                                <select
+                                                    value={saleForm.metodo_pago}
+                                                    onChange={e => setSaleForm({ ...saleForm, metodo_pago: e.target.value })}
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                                    required
+                                                >
+                                                    <option value="Stripe">Stripe</option>
+                                                    <option value="PayPal">PayPal</option>
+                                                    <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+                                                    <option value="Binance / USDT">Binance / USDT</option>
+                                                    <option value="Hotmart">Hotmart</option>
+                                                    <option value="Otro">Otro Método</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1 text-left md:col-span-2">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Comentarios o Fecha de Siguientes Pagos</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><CalendarDays size={13} /></span>
+                                                    <input
+                                                        type="text"
+                                                        value={saleForm.segundo_pago}
+                                                        onChange={e => setSaleForm({ ...saleForm, segundo_pago: e.target.value })}
+                                                        placeholder="ej. Cobro de $500 programado para el 15/06"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {saleStep === 3 && (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
+                                        <div className="space-y-1">
+                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest text-left">Paso 3: Confirmación y Notas</h4>
+                                            <p className="text-[10px] text-slate-550 font-bold uppercase text-left">Agrega observaciones finales, revisa la fecha y confirma el envío de mensajes.</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                            <div className="space-y-1 text-left md:col-span-2">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Examen del Lead (ej. USMLE Step 1)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><PenTool size={13} /></span>
+                                                    <input
+                                                        type="text"
+                                                        value={saleForm.examen_lead}
+                                                        onChange={e => setSaleForm({ ...saleForm, examen_lead: e.target.value })}
+                                                        placeholder="ej. USMLE Step 1"
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Fecha de la Venta *</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><Calendar size={13} /></span>
+                                                    <input
+                                                        type="date"
+                                                        value={saleForm.date}
+                                                        onChange={e => setSaleForm({ ...saleForm, date: e.target.value })}
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Estado de la Venta *</label>
+                                                <select
+                                                    value={saleForm.estado}
+                                                    onChange={e => setSaleForm({ ...saleForm, estado: e.target.value })}
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                                    required
+                                                >
+                                                    <option value="Completada">Completada</option>
+                                                    <option value="Pendiente">Pendiente</option>
+                                                    <option value="Cancelada">Cancelada</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1 text-left md:col-span-2">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Notas de la Venta / Observaciones</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3.5 top-3 text-slate-500"><PenTool size={13} /></span>
+                                                    <textarea
+                                                        value={saleForm.notas}
+                                                        onChange={e => setSaleForm({ ...saleForm, notas: e.target.value })}
+                                                        placeholder="Detalles sobre el cierre, objeciones vencidas, etc..."
+                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs font-bold text-white placeholder-slate-650 outline-none focus:border-indigo-500 transition-all min-h-[70px] resize-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="md:col-span-2 flex items-center justify-between bg-slate-950/20 p-3.5 rounded-xl border border-slate-800">
+                                                <div className="text-left space-y-0.5">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Venta en Llamada (In-Call)</label>
+                                                    <span className="text-[9px] text-slate-550 font-bold uppercase block">Indica si se cerró dentro de la sesión de Zoom</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSaleForm({ ...saleForm, sold_in_call: !saleForm.sold_in_call })}
+                                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                                        saleForm.sold_in_call ? 'bg-indigo-650' : 'bg-slate-700'
+                                                    }`}
+                                                >
+                                                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                                        saleForm.sold_in_call ? 'translate-x-4' : 'translate-x-0'
+                                                    }`} />
+                                                </button>
+                                            </div>
+                                            <div className="md:col-span-2 flex items-center justify-between bg-slate-950/20 p-3.5 rounded-xl border border-slate-800">
+                                                <div className="text-left space-y-0.5">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Enviar WhatsApp</label>
+                                                    <span className="text-[9px] text-slate-550 font-bold uppercase block">Activar el envío de mensaje al cliente al guardar</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSaleForm({ ...saleForm, enviar_mensaje: !saleForm.enviar_mensaje })}
+                                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                                        saleForm.enviar_mensaje ? 'bg-indigo-650' : 'bg-slate-700'
+                                                    }`}
+                                                >
+                                                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                                        saleForm.enviar_mensaje ? 'translate-x-4' : 'translate-x-0'
+                                                    }`} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Pie del Modal: Controles de paso */}
+                            <div className="flex justify-between items-center pt-4 border-t border-slate-800 relative z-10">
+                                {saleStep > 1 ? (
+                                    <button
+                                        type="button"
+                                        onClick={handlePrevStep}
+                                        className="h-9 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 border border-slate-750"
+                                    >
+                                        <ArrowLeft size={12} />
+                                        Anterior
+                                    </button>
+                                ) : (
+                                    <div />
+                                )}
+
+                                {saleStep < 3 ? (
+                                    <button
+                                        type="button"
+                                        onClick={handleNextStep}
+                                        className="h-9 px-5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                                    >
+                                        Siguiente
+                                        <ArrowRight size={12} />
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={handleRegisterSale}
+                                        disabled={submittingSale}
+                                        className="h-9 px-5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                                    >
+                                        {submittingSale ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                        {submittingSale ? 'Guardando...' : 'Registrar Venta'}
+                                    </button>
+                                )}
                             </div>
                         </motion.div>
                     </div>
