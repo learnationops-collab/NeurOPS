@@ -40,6 +40,9 @@
     - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
       - Se modificaron las opciones del selector de fecha en el deck para remover la opción "Mañana" y sustituirla por "Ayer", dejando el listado en: Hoy, Ayer, Esta semana, Este mes y Personalizado.
       - Se agregó la fecha y hora absoluta de llegada del lead (formato "DD/MM/AAAA HH:MM") debajo del tiempo relativo transcurrido en el listado de cualificación, reemplazando la etiqueta estática "Cualificado".
+  - **Redirección del Setter Post-Login**:
+    - **Frontend React ([LoginPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/auth/LoginPage.jsx) [MODIFY], [App.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx) [MODIFY])**:
+      - Se actualizó la redirección del Setter tras el inicio de sesión (y en las restricciones del `ProtectedRoute`) para que acceda por defecto a la cola de cualificación en `/setter/deck?step=cualificacion` en lugar del dashboard general `/setter/statistics`.
 
 - **10 de Julio de 2026**:
   - **Desarrollo de la Bandeja de Cualificados del Setter**:
