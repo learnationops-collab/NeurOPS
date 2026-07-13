@@ -200,3 +200,6 @@ actualizar_db.py
 
 # Scratch / Temporary local scripts
 scratch/
+
+# Graphify
+graphify-out/
