@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     Plus, Edit2, Trash2, Calendar, RefreshCw,
     TrendingUp, DollarSign, Activity, Loader2, Sparkles,
-    X, Check, ArrowRight, ArrowDown, HelpCircle, AlertCircle
+    X, Check, ArrowRight, ArrowLeft, AlertCircle, LayoutGrid, List, BarChart3, HelpCircle
 } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
@@ -29,6 +29,8 @@ const WorkshopDashboardPage = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [currentStep, setCurrentStep] = useState(1); // 1, 2, 3
+    const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
 
     // Form states
     const [formData, setFormData] = useState({
@@ -52,8 +54,9 @@ const WorkshopDashboardPage = () => {
 
     const [loadingPrefill, setLoadingPrefill] = useState(false);
     const [agendaBreakdown, setAgendaBreakdown] = useState(null);
-    const [activeTab, setActiveTab] = useState('list'); // 'list' | 'funnel' | 'trends'
+    const [activeTab, setActiveTab] = useState('list'); // 'list' | 'funnel'
     const [selectedEventForFunnel, setSelectedEventForFunnel] = useState(null);
+    const [prefilledDate, setPrefilledDate] = useState(''); // Controlar si ya se precargó la fecha actual en el paso 3
 
     useEffect(() => {
         fetchEvents();
@@ -93,6 +96,7 @@ const WorkshopDashboardPage = () => {
                 cash_collected: data.cash_collected
             }));
             setAgendaBreakdown(data.agendas_breakdown);
+            setPrefilledDate(selectedDate);
             toast.success("Métricas autocompletadas del sistema para este día");
         } catch (err) {
             console.error("Error prefilling metrics:", err);
@@ -106,6 +110,8 @@ const WorkshopDashboardPage = () => {
         setIsEditMode(false);
         setSelectedEvent(null);
         setAgendaBreakdown(null);
+        setCurrentStep(1);
+        setPrefilledDate('');
         setFormData({
             date: '',
             name: '',
@@ -131,6 +137,8 @@ const WorkshopDashboardPage = () => {
         setIsEditMode(true);
         setSelectedEvent(event);
         setAgendaBreakdown(null);
+        setCurrentStep(1);
+        setPrefilledDate(event.date);
         setFormData({
             date: event.date,
             name: event.name,
@@ -150,7 +158,6 @@ const WorkshopDashboardPage = () => {
             cash_collected: event.cash_collected
         });
         setModalOpen(true);
-        // Intentar cargar breakdown histórico de agendas
         fetchHistoricalBreakdown(event.date);
     };
 
@@ -175,13 +182,30 @@ const WorkshopDashboardPage = () => {
         }
     };
 
+    const handleNextStep = () => {
+        if (currentStep === 1) {
+            if (!formData.date || !formData.name) {
+                toast.error("La fecha y el nombre son obligatorios");
+                return;
+            }
+            setCurrentStep(2);
+        } else if (currentStep === 2) {
+            setCurrentStep(3);
+            // Si no se han cargado datos para esta fecha, precargar automáticamente
+            if (formData.date && prefilledDate !== formData.date) {
+                handlePrefill(formData.date);
+            }
+        }
+    };
+
+    const handlePrevStep = () => {
+        if (currentStep > 1) {
+            setCurrentStep(currentStep - 1);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.date || !formData.name) {
-            toast.error("Fecha y nombre son obligatorios");
-            return;
-        }
-
         const payload = {
             ...formData,
             inversion: parseFloat(formData.inversion),
@@ -255,7 +279,6 @@ const WorkshopDashboardPage = () => {
     const liveCalculations = useMemo(() => {
         const inv = parseFloat(formData.inversion) || 0;
         const cpm = parseFloat(formData.cpm) || 0;
-        const cpc = parseFloat(formData.cpc) || 0;
         const clics = parseInt(formData.clics) || 0;
         const leads = parseInt(formData.leads) || 0;
         const wa_leads = parseInt(formData.whatsapp_leads) || 0;
@@ -337,7 +360,7 @@ const WorkshopDashboardPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 relative overflow-hidden">
-            {/* Background highlights */}
+            {/* Background elements */}
             <div className="absolute top-0 inset-x-0 h-[400px] bg-gradient-to-b from-indigo-900/10 to-transparent pointer-events-none" />
             <div className="absolute top-40 -left-40 w-96 h-96 bg-emerald-600/5 blur-[120px] rounded-full pointer-events-none" />
             <div className="absolute bottom-20 -right-40 w-96 h-96 bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
@@ -348,7 +371,7 @@ const WorkshopDashboardPage = () => {
                     <div className="space-y-4">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
                             <Sparkles size={12} className="animate-pulse" />
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em]">Workshop Marketing Operations</span>
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em]">Webinar Intelligence Hub</span>
                         </div>
                         <h1 className="text-4xl md:text-6xl font-black text-white italic tracking-tighter uppercase leading-none">
                             Webinar & <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-emerald-400">Workshop Tracker</span>
@@ -365,12 +388,31 @@ const WorkshopDashboardPage = () => {
                         >
                             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                         </button>
+                        
+                        {/* Toggle Vista */}
+                        <div className="flex bg-slate-900 border border-slate-800 p-1.5 rounded-2xl">
+                            <button
+                                onClick={() => setViewMode('cards')}
+                                className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-[9px] font-black uppercase tracking-wider transition-all ${viewMode === 'cards' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                <LayoutGrid size={14} />
+                                Tarjetas
+                            </button>
+                            <button
+                                onClick={() => setViewMode('table')}
+                                className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-[9px] font-black uppercase tracking-wider transition-all ${viewMode === 'table' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                <List size={14} />
+                                Tabla
+                            </button>
+                        </div>
+
                         <button
                             onClick={handleOpenCreateModal}
                             className="flex items-center gap-2 px-6 py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 border border-indigo-500/30 text-white rounded-2xl hover:from-indigo-500 hover:to-indigo-400 transition-all font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-600/20"
                         >
                             <Plus size={16} />
-                            Registrar Workshop
+                            Registrar Taller
                         </button>
                     </div>
                 </div>
@@ -433,73 +475,173 @@ const WorkshopDashboardPage = () => {
                     <div className="py-32 text-center bg-slate-900/20 rounded-[2.5rem] border border-dashed border-slate-800 space-y-4">
                         <Activity size={48} className="mx-auto text-slate-700" />
                         <p className="text-slate-400 font-black uppercase text-sm">No hay workshops registrados</p>
-                        <p className="text-xs text-slate-600 font-bold uppercase tracking-wider">Comienza haciendo clic en el botón "+ Registrar Workshop" de arriba</p>
+                        <p className="text-xs text-slate-600 font-bold uppercase tracking-wider">Comienza haciendo clic en el botón "+ Registrar Taller" de arriba</p>
                     </div>
                 ) : activeTab === 'list' ? (
-                    /* Table View */
-                    <div className="bg-slate-950 border border-slate-900 rounded-3xl overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-slate-900/50 border-b border-slate-900">
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Clase / Evento</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Inversión</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Leads</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">CPL</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Tasa WA</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Show up %</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Agendas</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Costo Agenda</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Ventas</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Collected</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">ROAS</th>
-                                        <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-900/50">
-                                    {events.map((e) => (
-                                        <tr key={e.id} className="hover:bg-slate-900/25 transition-colors group">
-                                            <td className="p-5 text-xs font-black text-white whitespace-nowrap italic">{formatDate(e.date)}</td>
-                                            <td className="p-5 text-xs font-black text-slate-300 uppercase tracking-wider">{e.name}</td>
-                                            <td className="p-5 text-xs font-black text-white text-right whitespace-nowrap">{formatCurrency(e.inversion)}</td>
-                                            <td className="p-5 text-xs font-black text-indigo-300 text-right">{e.leads.toLocaleString()}</td>
-                                            <td className="p-5 text-xs font-black text-indigo-400 text-right whitespace-nowrap">{formatCurrency(e.cpl)}</td>
-                                            <td className="p-5 text-xs font-bold text-slate-400 text-right">{e.tx_entrada_whatsapp}%</td>
-                                            <td className="p-5 text-xs font-bold text-slate-400 text-right">{e.show_up_rate}%</td>
-                                            <td className="p-5 text-xs font-black text-white text-right">{e.agendas_exitosas}</td>
-                                            <td className="p-5 text-xs font-black text-slate-400 text-right whitespace-nowrap">{formatCurrency(e.costo_por_agenda)}</td>
-                                            <td className="p-5 text-xs font-black text-white text-right">{e.sales}</td>
-                                            <td className="p-5 text-xs font-black text-emerald-400 text-right whitespace-nowrap">{formatCurrency(e.cash_collected)}</td>
-                                            <td className="p-5 text-xs text-right">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black tracking-widest ${e.roas >= 3 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : e.roas >= 1 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
-                                                    {e.roas.toFixed(2)}x
+                    viewMode === 'cards' ? (
+                        /* Dashboard Cards View */
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {events.map((e) => {
+                                const roasColor = e.roas >= 3 ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : e.roas >= 1.0 ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-rose-400 bg-rose-500/10 border-rose-500/20";
+                                const roasGlow = e.roas >= 3 ? "group-hover:border-emerald-500/30" : e.roas >= 1.0 ? "group-hover:border-amber-500/30" : "group-hover:border-rose-500/30";
+                                return (
+                                    <div key={e.id} className={`bg-slate-900/40 border border-slate-800 rounded-[2rem] p-6 space-y-6 relative overflow-hidden group hover:bg-slate-900/80 transition-all duration-300 ${roasGlow}`}>
+                                        <div className="absolute top-0 right-0 w-32 h-32 blur-[60px] opacity-10 bg-indigo-500 pointer-events-none" />
+                                        
+                                        {/* Card Header */}
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <span className="px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-black uppercase tracking-widest italic">
+                                                    {formatDate(e.date)}
                                                 </span>
-                                            </td>
-                                            <td className="p-5 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button
-                                                        onClick={() => handleOpenEditModal(e)}
-                                                        className="p-2 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 hover:text-white text-slate-400 transition-colors"
-                                                        title="Editar datos"
-                                                    >
-                                                        <Edit2 size={12} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteEvent(e.id)}
-                                                        className="p-2 bg-slate-900 border border-slate-800 rounded-xl hover:bg-rose-950/40 hover:text-rose-400 text-slate-400 transition-colors"
-                                                        title="Eliminar evento"
-                                                    >
-                                                        <Trash2 size={12} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                                <h3 className="text-xl font-black text-white italic tracking-tighter uppercase mt-2 group-hover:text-indigo-400 transition-colors">
+                                                    {e.name}
+                                                </h3>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-xl text-[10px] font-black border tracking-widest ${roasColor}`}>
+                                                {e.roas.toFixed(2)}x ROAS
+                                            </span>
+                                        </div>
+
+                                        {/* Financial Overview */}
+                                        <div className="grid grid-cols-2 gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/30">
+                                            <div>
+                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Inversión</p>
+                                                <p className="text-sm font-black text-slate-300">{formatCurrency(e.inversion)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">Recaudado</p>
+                                                <p className="text-sm font-black text-emerald-400">{formatCurrency(e.cash_collected)}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Mini funnel stats grid */}
+                                        <div className="grid grid-cols-3 gap-y-3 gap-x-2 text-xs">
+                                            <div>
+                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Leads (WA)</p>
+                                                <p className="font-bold text-white">{e.leads} <span className="text-[9px] text-slate-500">({e.whatsapp_leads})</span></p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Show Up</p>
+                                                <p className="font-bold text-white">{e.show_up} <span className="text-[9px] text-indigo-400 font-black">{e.show_up_rate}%</span></p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Agendas</p>
+                                                <p className="font-bold text-white">{e.agendas_exitosas}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Conv. Leads</p>
+                                                <p className="font-bold text-white">{e.conversion_leads}%</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Costo Agenda</p>
+                                                <p className="font-bold text-white">{formatCurrency(e.costo_por_agenda)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Ventas (Closes)</p>
+                                                <p className="font-bold text-white">{e.sales} <span className="text-[9px] text-emerald-400 font-black">{e.pct_close_rate}%</span></p>
+                                            </div>
+                                        </div>
+
+                                        {/* Action footer */}
+                                        <div className="flex justify-between items-center border-t border-slate-900 pt-4 mt-2">
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedEventForFunnel(e);
+                                                    setActiveTab('funnel');
+                                                }}
+                                                className="flex items-center gap-1.5 text-[9px] text-indigo-400 hover:text-indigo-300 font-black uppercase tracking-widest"
+                                            >
+                                                Ver Embudo
+                                                <ArrowRight size={10} />
+                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleOpenEditModal(e)}
+                                                    className="p-2 bg-slate-950 border border-slate-800 rounded-xl hover:bg-slate-800 hover:text-white text-slate-400 transition-colors"
+                                                    title="Editar registro"
+                                                >
+                                                    <Edit2 size={12} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteEvent(e.id)}
+                                                    className="p-2 bg-slate-950 border border-slate-800 rounded-xl hover:bg-rose-950/40 hover:text-rose-400 text-slate-400 transition-colors"
+                                                    title="Eliminar registro"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    </div>
+                    ) : (
+                        /* Table View */
+                        <div className="bg-slate-950 border border-slate-900 rounded-3xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-900/50 border-b border-slate-900">
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Clase / Evento</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Inversión</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Leads</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">CPL</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Tasa WA</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Show up %</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Agendas</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Costo Agenda</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Ventas</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Collected</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">ROAS</th>
+                                            <th className="p-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-900/50">
+                                        {events.map((e) => (
+                                            <tr key={e.id} className="hover:bg-slate-900/25 transition-colors group">
+                                                <td className="p-5 text-xs font-black text-white whitespace-nowrap italic">{formatDate(e.date)}</td>
+                                                <td className="p-5 text-xs font-black text-slate-300 uppercase tracking-wider">{e.name}</td>
+                                                <td className="p-5 text-xs font-black text-white text-right whitespace-nowrap">{formatCurrency(e.inversion)}</td>
+                                                <td className="p-5 text-xs font-black text-indigo-300 text-right">{e.leads.toLocaleString()}</td>
+                                                <td className="p-5 text-xs font-black text-indigo-400 text-right whitespace-nowrap">{formatCurrency(e.cpl)}</td>
+                                                <td className="p-5 text-xs font-bold text-slate-400 text-right">{e.tx_entrada_whatsapp}%</td>
+                                                <td className="p-5 text-xs font-bold text-slate-400 text-right">{e.show_up_rate}%</td>
+                                                <td className="p-5 text-xs font-black text-white text-right">{e.agendas_exitosas}</td>
+                                                <td className="p-5 text-xs font-black text-slate-400 text-right whitespace-nowrap">{formatCurrency(e.costo_por_agenda)}</td>
+                                                <td className="p-5 text-xs font-black text-white text-right">{e.sales}</td>
+                                                <td className="p-5 text-xs font-black text-emerald-400 text-right whitespace-nowrap">{formatCurrency(e.cash_collected)}</td>
+                                                <td className="p-5 text-xs text-right">
+                                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black tracking-widest ${e.roas >= 3 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : e.roas >= 1 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
+                                                        {e.roas.toFixed(2)}x
+                                                    </span>
+                                                </td>
+                                                <td className="p-5 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={() => handleOpenEditModal(e)}
+                                                            className="p-2 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 hover:text-white text-slate-400 transition-colors"
+                                                            title="Editar datos"
+                                                        >
+                                                            <Edit2 size={12} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteEvent(e.id)}
+                                                            className="p-2 bg-slate-900 border border-slate-800 rounded-xl hover:bg-rose-950/40 hover:text-rose-400 text-slate-400 transition-colors"
+                                                            title="Eliminar evento"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )
                 ) : (
                     /* Funnel View */
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -541,7 +683,6 @@ const WorkshopDashboardPage = () => {
 
                             <div className="space-y-5">
                                 {activeFunnelData.map((step, idx) => {
-                                    // Calculate percentage of conversion relative to previous step
                                     let conversionFromPrev = '';
                                     if (idx > 0 && activeFunnelData[idx - 1].value > 0) {
                                         const pct = (step.value / activeFunnelData[idx - 1].value) * 100;
@@ -574,7 +715,6 @@ const WorkshopDashboardPage = () => {
 
                                             {/* Bar container */}
                                             <div className="w-full h-3 bg-slate-950 border border-slate-900 rounded-full overflow-hidden relative group/bar">
-                                                {/* Calculated width as fraction of maximum clicks (first step) */}
                                                 <div
                                                     className="h-full bg-gradient-to-r from-indigo-600 to-emerald-500 rounded-full transition-all duration-1000 origin-left"
                                                     style={{ width: `${selectedEventForFunnel?.clics ? (step.value / selectedEventForFunnel.clics) * 100 : 0}%` }}
@@ -589,297 +729,335 @@ const WorkshopDashboardPage = () => {
                     </div>
                 )}
 
-                {/* Create/Edit Modal */}
+                {/* Step-by-Step Create/Edit Modal */}
                 {modalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto">
-                        <div className="bg-slate-950 border border-slate-800 w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl relative">
-                            {/* Header */}
-                            <div className="p-6 border-b border-slate-900 flex justify-between items-center bg-slate-900/30">
-                                <div>
-                                    <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">
-                                        {isEditMode ? 'Editar Clase / Workshop' : 'Registrar Clase / Workshop'}
-                                    </h2>
-                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">
-                                        {isEditMode ? 'Actualiza las métricas manuales o recalculadas' : 'Ingresa los datos del webinar para calcular el funnel'}
+                        <div className="bg-slate-950 border border-slate-850 w-full max-w-xl rounded-[2.5rem] overflow-hidden shadow-2xl relative border-indigo-500/20">
+                            
+                            {/* Progress Header Steps */}
+                            <div className="px-8 py-5 bg-slate-900/40 border-b border-slate-900 flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${currentStep >= 1 ? 'bg-indigo-600 text-white border-indigo-500 border' : 'bg-slate-900 text-slate-500 border border-slate-850'}`}>1</div>
+                                    <div className="w-6 h-0.5 bg-slate-800" />
+                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${currentStep >= 2 ? 'bg-indigo-600 text-white border-indigo-500 border' : 'bg-slate-900 text-slate-500 border border-slate-850'}`}>2</div>
+                                    <div className="w-6 h-0.5 bg-slate-800" />
+                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${currentStep >= 3 ? 'bg-indigo-600 text-white border-indigo-500 border' : 'bg-slate-900 text-slate-500 border border-slate-850'}`}>3</div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Paso {currentStep} de 3</p>
+                                    <p className="text-[10px] text-indigo-400 font-black uppercase tracking-wider italic">
+                                        {currentStep === 1 ? 'Tráfico & Anuncios' : currentStep === 2 ? 'Embudo Webinar' : 'Confirmación Sistema'}
                                     </p>
                                 </div>
-                                <button
-                                    onClick={() => setModalOpen(false)}
-                                    className="p-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-2xl text-slate-400 hover:text-white transition-colors"
-                                >
-                                    <X size={16} />
-                                </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    {/* Column 1: Info Básica */}
-                                    <div className="space-y-4 bg-slate-900/20 border border-slate-900 p-5 rounded-3xl">
-                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-900 pb-2">Información Básica</h3>
-                                        
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Fecha del Evento</label>
-                                            <div className="relative">
-                                                <input
-                                                    type="date"
-                                                    disabled={isEditMode}
-                                                    value={formData.date}
-                                                    onChange={(e) => {
-                                                        const d = e.target.value;
-                                                        setFormData(prev => ({ ...prev, date: d }));
-                                                        handlePrefill(d);
-                                                    }}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                                    required
-                                                />
+                            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                                
+                                {/* PASO 1: Tráfico y Anuncios (Meta Ads) */}
+                                {currentStep === 1 && (
+                                    <div className="space-y-5 animate-fadeIn">
+                                        <div>
+                                            <h3 className="text-lg font-black text-white italic tracking-tighter uppercase">Tráfico & Meta Ads</h3>
+                                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Ingresa los datos generales del evento y la inversión en publicidad</p>
+                                        </div>
+
+                                        <div className="space-y-4 bg-slate-900/10 border border-slate-900 p-5 rounded-2xl">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Fecha del Evento</label>
+                                                    <input
+                                                        type="date"
+                                                        disabled={isEditMode}
+                                                        value={formData.date}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Nombre del Workshop</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Ej: Webinar IA"
+                                                        value={formData.name}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none uppercase font-bold"
+                                                        required
+                                                    />
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Nombre del Workshop</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Ej: Webinar IA Generativa"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                                                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none uppercase font-bold"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Inversión Ads (USD)</label>
-                                            <input
-                                                type="number"
-                                                step="any"
-                                                value={formData.inversion}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, inversion: e.target.value }))}
-                                                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">CPM (Ads)</label>
-                                                <input
-                                                    type="number"
-                                                    step="any"
-                                                    value={formData.cpm}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, cpm: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                                />
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Inversión Ads (USD)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-3 text-slate-500 text-xs">$</span>
+                                                    <input
+                                                        type="number"
+                                                        step="any"
+                                                        value={formData.inversion}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, inversion: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-8 p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">CPC único</label>
-                                                <input
-                                                    type="number"
-                                                    step="any"
-                                                    value={formData.cpc}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, cpc: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    {/* Column 2: Métricas Manuales del Webinar */}
-                                    <div className="space-y-4 bg-slate-900/20 border border-slate-900 p-5 rounded-3xl">
-                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-900 pb-2">Métricas Manuales (Ads & Webinar)</h3>
-                                        
-                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">CPM (Ads)</label>
+                                                    <input
+                                                        type="number"
+                                                        step="any"
+                                                        value={formData.cpm}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, cpm: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">CPC único</label>
+                                                    <input
+                                                        type="number"
+                                                        step="any"
+                                                        value={formData.cpc}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, cpc: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Clics Únicos</label>
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Clics Únicos</label>
                                                 <input
                                                     type="number"
                                                     value={formData.clics}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, clics: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Leads Totales</label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.leads}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, leads: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
+                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
                                                 />
                                             </div>
                                         </div>
+                                    </div>
+                                )}
 
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Leads en WhatsApp</label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.whatsapp_leads}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, whatsapp_leads: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                                />
+                                {/* PASO 2: Conversión del Webinar (Datos del Evento) */}
+                                {currentStep === 2 && (
+                                    <div className="space-y-5 animate-fadeIn">
+                                        <div>
+                                            <h3 className="text-lg font-black text-white italic tracking-tighter uppercase">Asistencia & Retención</h3>
+                                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Ingresa los leads captados y las métricas de retención durante el webinar</p>
+                                        </div>
+
+                                        <div className="space-y-4 bg-slate-900/10 border border-slate-900 p-5 rounded-2xl">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Leads Totales</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.leads}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, leads: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Leads en WhatsApp</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.whatsapp_leads}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, whatsapp_leads: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
+                                                    />
+                                                </div>
                                             </div>
+
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Show Up Webinar</label>
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Show Up en Webinar</label>
                                                 <input
                                                     type="number"
                                                     value={formData.show_up}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, show_up: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
+                                                    className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
                                                 />
                                             </div>
-                                        </div>
 
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Leads en Pitch</label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.pitch_leads}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, pitch_leads: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Leads Final Pitch</label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.pitch_final_leads}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, pitch_final_leads: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Column 3: Auto calculated metrics (Database) */}
-                                    <div className="space-y-4 bg-slate-900/20 border border-slate-900 p-5 rounded-3xl relative">
-                                        {loadingPrefill && (
-                                            <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center z-20 space-y-2">
-                                                <Loader2 size={24} className="animate-spin text-indigo-500" />
-                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Consultando base de datos...</p>
-                                            </div>
-                                        )}
-                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-900 pb-2 flex justify-between items-center">
-                                            <span>Métricas del Sistema</span>
-                                            <span className="text-[8px] font-black text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 uppercase tracking-wider">Auto-fill</span>
-                                        </h3>
-                                        
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Aplicaciones Form</label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.aplicaciones_form}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, aplicaciones_form: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Agendas Exitosas</label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.agendas_exitosas}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, agendas_exitosas: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Show up Sales Call</label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.show_up_sales_call}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, show_up_sales_call: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Ventas Cerradas</label>
-                                                <input
-                                                    type="number"
-                                                    value={formData.sales}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, sales: e.target.value }))}
-                                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Cash Collected (USD)</label>
-                                            <input
-                                                type="number"
-                                                step="any"
-                                                value={formData.cash_collected}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, cash_collected: e.target.value }))}
-                                                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-emerald-400 border-emerald-500/20 bg-emerald-500/5 focus:border-emerald-500 outline-none font-bold"
-                                            />
-                                        </div>
-
-                                        {/* Agenda Breakdown visual details */}
-                                        {agendaBreakdown && (
-                                            <div className="mt-4 bg-slate-950/60 p-3 rounded-2xl border border-slate-900 space-y-2">
-                                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Estados de Citas (Cierre)</p>
-                                                <div className="grid grid-cols-3 gap-1.5 text-[8px] font-bold text-slate-400">
-                                                    <div className="bg-slate-900 px-2 py-1 rounded">Asistió: {agendaBreakdown["Show Up"]}</div>
-                                                    <div className="bg-slate-900 px-2 py-1 rounded">No Asistió: {agendaBreakdown["No Show"]}</div>
-                                                    <div className="bg-slate-900 px-2 py-1 rounded">Cancelada: {agendaBreakdown["Cancelada"]}</div>
-                                                    <div className="bg-slate-900 px-2 py-1 rounded">Reagendada: {agendaBreakdown["Reagendada"]}</div>
-                                                    <div className="bg-slate-900 px-2 py-1 rounded">Pendiente: {agendaBreakdown["Pendiente"]}</div>
-                                                    <div className="bg-slate-900 px-2 py-1 rounded">Otros: {agendaBreakdown["Otros"]}</div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Leads en Pitch</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.pitch_leads}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, pitch_leads: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Leads Final Pitch</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.pitch_final_leads}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, pitch_final_leads: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
+                                                    />
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Preview KPIs calculated */}
-                                <div className="bg-slate-900/10 border border-slate-900 p-5 rounded-3xl space-y-3">
-                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-900 pb-2">Previsualización de KPIs Calculados</h3>
-                                    
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 text-center">
-                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-900">
-                                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Impresiones</p>
-                                            <p className="text-sm font-black text-white italic">{Math.round(liveCalculations.impresiones).toLocaleString()}</p>
-                                        </div>
-                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-900">
-                                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">CPL</p>
-                                            <p className="text-sm font-black text-indigo-400 italic">{formatCurrency(liveCalculations.cpl)}</p>
-                                        </div>
-                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-900">
-                                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Tasa Show-Up</p>
-                                            <p className="text-sm font-black text-slate-300 italic">{liveCalculations.show_up_pct.toFixed(1)}%</p>
-                                        </div>
-                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-900">
-                                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Retención Pitch</p>
-                                            <p className="text-sm font-black text-slate-300 italic">{liveCalculations.ret_pitch.toFixed(1)}%</p>
-                                        </div>
-                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-900">
-                                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Costo / Agenda</p>
-                                            <p className="text-sm font-black text-slate-400 italic">{formatCurrency(liveCalculations.cost_ag)}</p>
-                                        </div>
-                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-900">
-                                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">ROAS</p>
-                                            <p className={`text-sm font-black italic ${liveCalculations.roas >= 3 ? 'text-emerald-400' : 'text-amber-400'}`}>{liveCalculations.roas.toFixed(2)}x</p>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Actions */}
-                                <div className="flex justify-end gap-3 border-t border-slate-900 pt-6">
-                                    <button
-                                        type="button"
-                                        onClick={() => setModalOpen(false)}
-                                        className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest border border-slate-800"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 border border-indigo-500/30"
-                                    >
-                                        {isEditMode ? 'Guardar Cambios' : 'Registrar Evento'}
-                                    </button>
+                                {/* PASO 3: Métricas del Sistema (Autocompletado) */}
+                                {currentStep === 3 && (
+                                    <div className="space-y-5 animate-fadeIn">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <h3 className="text-lg font-black text-white italic tracking-tighter uppercase">Validación del Sistema</h3>
+                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Confirma los datos obtenidos automáticamente del sistema NeurOPS</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handlePrefill(formData.date)}
+                                                className="p-2.5 bg-slate-900 border border-slate-850 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors"
+                                                title="Sincronizar del sistema"
+                                            >
+                                                <RefreshCw size={14} className={loadingPrefill ? 'animate-spin' : ''} />
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-4 bg-slate-900/10 border border-slate-900 p-5 rounded-2xl relative">
+                                            {loadingPrefill && (
+                                                <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-20 space-y-2">
+                                                    <Loader2 size={20} className="animate-spin text-indigo-500" />
+                                                    <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Sincronizando base de datos...</p>
+                                                </div>
+                                            )}
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Aplicaciones Form</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.aplicaciones_form}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, aplicaciones_form: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Agendas Exitosas</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.agendas_exitosas}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, agendas_exitosas: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Show up Sales Call</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.show_up_sales_call}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, show_up_sales_call: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Ventas Cerradas</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.sales}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, sales: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Cash Collected (USD)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-3 text-emerald-500 text-xs">$</span>
+                                                    <input
+                                                        type="number"
+                                                        step="any"
+                                                        value={formData.cash_collected}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, cash_collected: e.target.value }))}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-8 p-3 text-xs text-emerald-400 border-emerald-500/20 bg-emerald-500/5 focus:border-emerald-500 outline-none font-bold"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Agenda Breakdown visual details */}
+                                            {agendaBreakdown && (
+                                                <div className="mt-3 bg-slate-950/60 p-3 rounded-xl border border-slate-900 space-y-1.5">
+                                                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Citas y Asistencias de Closer</p>
+                                                    <div className="grid grid-cols-3 gap-1 text-[8px] font-bold text-slate-400">
+                                                        <div className="bg-slate-900/60 p-1.5 rounded">Asistió: {agendaBreakdown["Show Up"]}</div>
+                                                        <div className="bg-slate-900/60 p-1.5 rounded">No Asistió: {agendaBreakdown["No Show"]}</div>
+                                                        <div className="bg-slate-900/60 p-1.5 rounded">Cancelada: {agendaBreakdown["Cancelada"]}</div>
+                                                        <div className="bg-slate-900/60 p-1.5 rounded">Reagendada: {agendaBreakdown["Reagendada"]}</div>
+                                                        <div className="bg-slate-900/60 p-1.5 rounded">Pendiente: {agendaBreakdown["Pendiente"]}</div>
+                                                        <div className="bg-slate-900/60 p-1.5 rounded">Otros: {agendaBreakdown["Otros"]}</div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Previsualización KPIs */}
+                                        <div className="bg-slate-900/5 border border-slate-900 p-4 rounded-xl space-y-2.5">
+                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1 leading-none">Previsualización de Métricas</p>
+                                            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                                                <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-900">
+                                                    <p className="text-[8px] text-slate-500 font-bold uppercase">CPL</p>
+                                                    <p className="font-black text-indigo-400">{formatCurrency(liveCalculations.cpl)}</p>
+                                                </div>
+                                                <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-900">
+                                                    <p className="text-[8px] text-slate-500 font-bold uppercase">Costo Agenda</p>
+                                                    <p className="font-black text-slate-300">{formatCurrency(liveCalculations.cost_ag)}</p>
+                                                </div>
+                                                <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-900">
+                                                    <p className="text-[8px] text-slate-500 font-bold uppercase">ROAS</p>
+                                                    <p className={`font-black ${liveCalculations.roas >= 3 ? 'text-emerald-400' : 'text-amber-400'}`}>{liveCalculations.roas.toFixed(2)}x</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Modal Actions Navigation */}
+                                <div className="flex justify-between items-center border-t border-slate-900 pt-6 mt-4">
+                                    {currentStep > 1 ? (
+                                        <button
+                                            type="button"
+                                            onClick={handlePrevStep}
+                                            className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest border border-slate-800 flex items-center gap-2"
+                                        >
+                                            <ArrowLeft size={12} />
+                                            Atrás
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => setModalOpen(false)}
+                                            className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest border border-slate-800"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    )}
+
+                                    {currentStep < 3 ? (
+                                        <button
+                                            type="button"
+                                            onClick={handleNextStep}
+                                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-indigo-600/20 border border-indigo-500/30"
+                                        >
+                                            Siguiente
+                                            <ArrowRight size={12} />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="submit"
+                                            className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-600/20 border border-emerald-500/30"
+                                        >
+                                            {isEditMode ? 'Guardar Cambios' : 'Registrar Evento'}
+                                        </button>
+                                    )}
                                 </div>
                             </form>
                         </div>
