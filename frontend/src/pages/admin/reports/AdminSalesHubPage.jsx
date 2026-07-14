@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PublicSetterStatsPage from '../../public/PublicSetterStatsPage';
 import PublicCloserStatsPage from '../../public/PublicCloserStatsPage';
 import PublicTriageStatsPage from '../../public/PublicTriageStatsPage';
-import PublicWorkshopStatsPage from '../../public/PublicWorkshopStatsPage';
+import WorkshopDashboardPage from '../workshop/WorkshopDashboardPage';
 
 const AdminSalesHubPage = () => {
     const [tab, setTab] = useState('closer');
@@ -22,30 +22,23 @@ const AdminSalesHubPage = () => {
                 >
                     Setters
                 </button>
-                {/* 
-                 <button 
-                    onClick={() => setTab('triage')} 
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'triage' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white'}`}
-                >
-                    Triage
-                </button>
                  <button 
                     onClick={() => setTab('workshop')} 
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'workshop' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white'}`}
                 >
-                    Workshop
+                    Workshops
                 </button>
-                */}
             </div>
             
             <div className="w-full">
                 {tab === 'closer' && <PublicCloserStatsPage />}
                 {tab === 'setter' && <PublicSetterStatsPage />}
                 {tab === 'triage' && <PublicTriageStatsPage />}
-                {tab === 'workshop' && <PublicWorkshopStatsPage />}
+                {tab === 'workshop' && <WorkshopDashboardPage />}
             </div>
         </div>
     );
 };
 
 export default AdminSalesHubPage;
+
