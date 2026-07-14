@@ -3,7 +3,7 @@ import api from '../../services/api';
 import { 
     User, Mail, Phone, Instagram, DollarSign, Calendar, 
     ChevronDown, ChevronUp, Edit, Clock, 
-    Sparkles, Loader2, MessageCircle, AlertCircle, Trash2, Save, Award, ClipboardList
+    Sparkles, Loader2, MessageCircle, AlertCircle, Trash2, Save, Award, ClipboardList, Bot, MessageSquare
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EditLeadModal } from './LeadRoadmapModals';
@@ -293,52 +293,116 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
     const { lead, stages, activity, sales_summary, dolores: doloresConsolidados, comments: notesList, programs } = data;
     const { channel, setter, closer } = detectAdquisitionDetails();
 
-    const renderNotasInternas = () => {
+    const renderLeadTimeline = () => {
         return (
-            <div className="space-y-4 flex flex-col h-full min-h-[300px]">
+            <div className="space-y-6 flex flex-col h-full min-h-[350px]">
                 <div className="flex justify-between items-center px-1">
-                    <h4 className="text-sm font-black text-white uppercase tracking-wider">Notas Internas</h4>
-                    <span className="text-[9px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md">
-                        {notesList ? notesList.length : 0} Notas
+                    <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                        <MessageSquare size={16} className="text-violet-400 animate-pulse" />
+                        Feed de Actividad e Interacciones del Lead
+                    </h4>
+                    <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg">
+                        {activity ? activity.length : 0} Eventos
                     </span>
                 </div>
-                
-                <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar max-h-[350px] min-h-[200px]">
-                    {(notesList || []).map((n) => (
-                        <div key={n.id} className="bg-slate-900/30 p-3 rounded-xl space-y-1">
-                            <div className="flex justify-between text-[8px] text-slate-500 font-bold uppercase tracking-wider">
-                                <span>{n.author}</span>
-                                <span>{formatTime(n.created_at)}</span>
-                            </div>
-                            <p className="text-xs text-slate-300 font-medium whitespace-pre-wrap">{n.text}</p>
+
+                {/* Formulario de Notas Integrado */}
+                {lead && lead.id && (
+                    <form onSubmit={handleAddComment} className="flex gap-3 bg-[#0d0e14]/60 p-4 rounded-2xl border border-slate-850 shadow-inner text-left">
+                        <div className="w-8 h-8 rounded-full bg-violet-650/20 text-violet-400 flex items-center justify-center border border-violet-500/20 shrink-0 font-black text-xs">
+                            {user?.username ? user.username[0].toUpperCase() : 'U'}
                         </div>
-                    ))}
-                    {(!notesList || notesList.length === 0) && (
-                        <div className="text-center py-6 text-slate-550 text-xs font-bold italic">
-                            Sin comentarios
+                        <div className="flex-1 flex gap-2">
+                            <input 
+                                type="text"
+                                placeholder="Deja una nota interna para el equipo sobre este Lead..."
+                                className="flex-1 px-4 py-2 bg-[#050609] border border-slate-800 rounded-xl text-xs text-white placeholder-slate-650 focus:outline-none focus:border-violet-500 font-bold transition-all"
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                disabled={submittingComment}
+                            />
+                            <button 
+                                type="submit"
+                                disabled={submittingComment || !newComment.trim()}
+                                className="px-4 py-2 bg-violet-600 hover:bg-violet-750 text-white font-black uppercase text-[10px] tracking-wider rounded-xl disabled:opacity-30 transition-all flex items-center gap-1.5 shrink-0 border-none cursor-pointer"
+                            >
+                                {submittingComment ? <Loader2 size={12} className="animate-spin" /> : <MessageSquare size={12} />}
+                                Enviar Nota
+                            </button>
+                        </div>
+                    </form>
+                )}
+
+                {/* Línea de tiempo cronológica */}
+                <div className="relative border-l-2 border-slate-800/80 ml-4 pl-6 space-y-6 max-h-[550px] overflow-y-auto pr-2 custom-scrollbar">
+                    {(activity || []).map((act, i) => {
+                        let cardBg = "bg-slate-900/30 border-slate-850 hover:border-slate-800";
+                        let iconColor = "text-slate-500";
+                        let iconBg = "bg-slate-950 border-slate-800";
+                        let IconComponent = Sparkles;
+                        let isNote = act.origin === "Notas Internas";
+
+                        if (isNote) {
+                            cardBg = "bg-violet-950/15 border-violet-500/20 shadow-md shadow-violet-950/5 hover:border-violet-500/40";
+                            iconColor = "text-violet-400";
+                            iconBg = "bg-violet-950/30 border-violet-500/30";
+                            IconComponent = MessageCircle;
+                        } else if (act.event.includes("Agenda")) {
+                            cardBg = "bg-slate-900/40 border-blue-900/30 hover:border-blue-500/20";
+                            iconColor = "text-blue-400";
+                            iconBg = "bg-blue-950/30 border-blue-900/50";
+                            IconComponent = Calendar;
+                        } else if (act.event.includes("Llamada") || act.event.includes("Contacto")) {
+                            cardBg = "bg-slate-900/40 border-emerald-900/30 hover:border-emerald-500/20";
+                            iconColor = "text-emerald-450";
+                            iconBg = "bg-emerald-950/30 border-emerald-900/50";
+                            IconComponent = Phone;
+                        } else if (act.event.includes("Venta")) {
+                            cardBg = "bg-gradient-to-r from-emerald-950/10 to-slate-900/40 border-emerald-500/20 hover:border-emerald-500/45 shadow-lg shadow-emerald-950/5";
+                            iconColor = "text-emerald-400";
+                            iconBg = "bg-emerald-950/40 border-emerald-500/30";
+                            IconComponent = Award;
+                        } else if (act.origin === "ManyChat") {
+                            cardBg = "bg-slate-900/10 border-slate-900/50 hover:border-slate-800";
+                            iconColor = "text-violet-400";
+                            iconBg = "bg-slate-950 border-slate-900";
+                            IconComponent = Bot;
+                        }
+
+                        return (
+                            <div key={i} className="relative group transition-all text-left">
+                                {/* Icono de Hito */}
+                                <span className={`absolute -left-[35px] top-1.5 w-7 h-7 rounded-full flex items-center justify-center border transition-all ${iconBg} ${iconColor} group-hover:scale-110 z-10`}>
+                                    <IconComponent size={12} />
+                                </span>
+                                
+                                {/* Tarjeta de Evento */}
+                                <div className={`p-4 rounded-2xl border transition-all ${cardBg}`}>
+                                    <div className="flex justify-between items-start gap-4 mb-1.5">
+                                        <span className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                                            {act.event}
+                                            {isNote && (
+                                                <span className="px-2 py-0.5 text-[8px] bg-violet-500/10 text-violet-400 rounded-md font-bold uppercase border border-violet-500/20">Nota</span>
+                                            )}
+                                        </span>
+                                        <span className="text-[9px] text-slate-500 font-bold whitespace-nowrap">{formatTime(act.date, act.event_type)}</span>
+                                    </div>
+                                    <p className="text-xs text-slate-305 font-bold whitespace-pre-wrap leading-relaxed">{act.detail}</p>
+                                    {act.origin && !isNote && (
+                                        <div className="text-[9px] text-slate-550 font-bold uppercase tracking-wider mt-2.5 flex items-center gap-1">
+                                            Origen: <span className="text-slate-400">{act.origin}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {(!activity || activity.length === 0) && (
+                        <div className="text-center py-12 text-slate-650 text-xs italic font-bold">
+                            Sin historial de actividad aún.
                         </div>
                     )}
                 </div>
-
-                {lead && lead.id && (
-                    <form onSubmit={handleAddComment} className="flex gap-2 pt-2 border-t border-slate-800">
-                        <input 
-                            type="text"
-                            placeholder="Añadir nota interna..."
-                            className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-555 focus:outline-none focus:border-violet-500 font-bold"
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            disabled={submittingComment}
-                        />
-                        <button 
-                            type="submit"
-                            disabled={submittingComment || !newComment.trim()}
-                            className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white font-black uppercase text-[10px] tracking-wider rounded-xl disabled:opacity-30 transition-colors"
-                        >
-                            Enviar
-                        </button>
-                    </form>
-                )}
             </div>
         );
     };
@@ -837,7 +901,6 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         ) : (
                             <Save size={12} />
                         )}
-                        Guardar Calificación
                     </button>
                 </div>
                 )}
@@ -845,15 +908,15 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
 
             {/* Pestaña de Notas en modo compacto */}
             {compact && activeTab === 'notas' && (
-                <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-850 shadow-xl mb-4 text-left">
-                    {renderNotasInternas()}
+                <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-850 shadow-xl mb-4">
+                    {renderLeadTimeline()}
                 </div>
             )}
 
-            {/* SECCIÓN INFERIOR: MEMBRESÍAS, VENTAS Y NOTAS INTERNAS */}
+            {/* SECCIÓN INFERIOR: MEMBRESÍAS Y VENTAS (Grid de 2 columnas) */}
             {!compact && (
                 <>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                         
                         {/* COLUMNA 1: PROGRAMAS */}
                         <div className="space-y-4">
@@ -887,7 +950,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                 </div>
                             )}
                         </div>
-
+ 
                         {/* COLUMNA 2: RESUMEN DE VENTAS */}
                         <div className="space-y-4">
                             <h4 className="text-sm font-black text-white uppercase tracking-wider px-1">Ventas Totales</h4>
@@ -900,7 +963,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                     <div className="space-y-1.5 text-xs font-bold text-slate-300">
                                         <div className="flex justify-between"><span className="text-slate-500">Producto</span> <span>{sales_summary.producto}</span></div>
                                         <div className="flex justify-between"><span className="text-slate-500">Método</span> <span>{sales_summary.metodo_pago}</span></div>
-                                        <div className="flex justify-between"><span className="text-slate-500">Próximo</span> <span className="text-amber-500">{sales_summary.proximo_pago}</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-550">Próximo</span> <span className="text-amber-500">{sales_summary.proximo_pago}</span></div>
                                     </div>
                                 </div>
                             ) : (
@@ -909,57 +972,11 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                                 </div>
                             )}
                         </div>
-
-                        {/* COLUMNA 3: NOTAS INTERNAS */}
-                        {renderNotasInternas()}
                     </div>
-
-                    {/* FILA INFERIOR: DETALLE DE ACTIVIDAD (ANCHO COMPLETO - lg:col-span-3) */}
-                    <div className="lg:col-span-3 bg-slate-900/30 p-6 rounded-3xl border border-slate-850 space-y-6 flex flex-col">
-                        <div className="flex justify-between items-center">
-                            <div className="space-y-0.5">
-                                <h4 className="text-base font-black text-white uppercase tracking-tight">Detalle de Actividad</h4>
-                                <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Historial completo del prospecto</p>
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
-                                {activity.length} Eventos
-                            </span>
-                        </div>
-
-                        <div className="overflow-x-auto flex-1 max-h-[500px] custom-scrollbar">
-                            <table className="w-full text-left text-xs border-collapse">
-                                <thead>
-                                    <tr className="border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                        <th className="py-3 px-2">Fecha</th>
-                                        <th className="py-3 px-2">Evento</th>
-                                        <th className="py-3 px-2">Detalle</th>
-                                        <th className="py-3 px-2 text-right">Origen</th>
-                                        <th className="py-3 px-2 text-center w-12">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-850/50">
-                                    {activity.map((act, i) => (
-                                        <tr key={i} className="hover:bg-slate-900/30 transition-all">
-                                            <td className="py-3 px-2 text-slate-550 font-bold whitespace-nowrap">{formatTime(act.date, act.event_type)}</td>
-                                            <td className="py-3 px-2 font-black text-white italic">{act.event}</td>
-                                            <td className="py-3 px-2 text-slate-350">{act.detail}</td>
-                                            <td className="py-3 px-2 text-right font-medium text-slate-400">{act.origin}</td>
-                                            <td className="py-3 px-2 text-center">
-                                                {act.event_type && act.id && (
-                                                    <button
-                                                        onClick={() => handleDeleteActivity(act.event_type, act.id)}
-                                                        className="p-1.5 text-rose-500 hover:text-rose-450 hover:bg-rose-500/10 rounded-lg transition-all"
-                                                        title={`Eliminar ${act.event_type === 'agenda' ? 'agenda' : 'venta'}`}
-                                                    >
-                                                        <Trash2 size={13} />
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+ 
+                    {/* FILA INFERIOR: FEED DE ACTIVIDAD Y COMUNICACIÓN UNIFICADA (ANCHO COMPLETO) */}
+                    <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 shadow-xl">
+                        {renderLeadTimeline()}
                     </div>
                 </>
             )}
