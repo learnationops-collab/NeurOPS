@@ -10,8 +10,10 @@
       - Columna izquierda (`lg:col-span-8`): Aloja el formulario de cualificación en 3 pasos (estado de cualificación, anuncio y dolores/notas iniciales).
       - Columna derecha (`lg:col-span-4`): Integra el chat interactivo de notas y observaciones del Lead conectado a su `client_id`, permitiendo al setter ver notas históricas de closers, confirmadores y automatizaciones y registrar nuevas observaciones.
     - **Frontend React ([LeadRoadmapDetail.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/LeadRoadmapDetail.jsx) [MODIFY])**:
-      - Se habilitó la pestaña **Notas Internas** en el visor de perfil compacto (`compact === true`) que se abre al seleccionar citas/agendas (ej. `/closer/deck?step=agendas`).
-      - Se extrajo el chat de notas internas a una función reutilizable `renderNotasInternas()` y se le dio soporte de visualización tanto en el modo extendido como en el panel compacto cuando su respectiva pestaña esté seleccionada, permitiendo la comunicación interactiva y óptima en tiempo real entre roles.
+      - Se diseñó y construyó un **Feed Cronológico de Actividad e Interacciones del Lead** unificado (`renderLeadTimeline()`) que reemplaza las notas de texto plano y el historial rígido.
+      - Este feed une las respuestas automáticas de bot, la agenda de citas, las ventas financieras, las notas manuales de usuarios (setters, confirmadores, closers) y las automatizaciones en un timeline estilo chat colaborativo de alto impacto visual.
+      - En el panel extendido (`!compact`), el feed se despliega a ancho completo en la parte inferior y las columnas de membresías y ventas se reorganizan en una distribución equilibrada de dos columnas.
+      - En el panel compacto (`compact === true`), la pestaña **Notas Internas** ahora expone este mismo feed colaborativo interactivo junto con un formulario rápido de envío de observaciones para mantener al equipo conectado sobre el prospecto en tiempo real.
 
 - **11 de Julio de 2026**:
   - **Flujo Directo de Declaración de Ventas por Pasos en el Workspace del Closer**:
