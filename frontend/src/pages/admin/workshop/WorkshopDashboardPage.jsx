@@ -729,9 +729,8 @@ const WorkshopDashboardPage = () => {
                     </div>
                 )}
 
-                {/* Step-by-Step Create/Edit Modal */}
                 {modalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto">
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto">
                         <div className="bg-slate-950 border border-slate-850 w-full max-w-xl rounded-[2.5rem] overflow-hidden shadow-2xl relative border-indigo-500/20">
                             
                             {/* Progress Header Steps */}
