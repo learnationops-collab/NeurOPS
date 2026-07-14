@@ -293,6 +293,56 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
     const { lead, stages, activity, sales_summary, dolores: doloresConsolidados, comments: notesList, programs } = data;
     const { channel, setter, closer } = detectAdquisitionDetails();
 
+    const renderNotasInternas = () => {
+        return (
+            <div className="space-y-4 flex flex-col h-full min-h-[300px]">
+                <div className="flex justify-between items-center px-1">
+                    <h4 className="text-sm font-black text-white uppercase tracking-wider">Notas Internas</h4>
+                    <span className="text-[9px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md">
+                        {notesList ? notesList.length : 0} Notas
+                    </span>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar max-h-[350px] min-h-[200px]">
+                    {(notesList || []).map((n) => (
+                        <div key={n.id} className="bg-slate-900/30 p-3 rounded-xl space-y-1">
+                            <div className="flex justify-between text-[8px] text-slate-500 font-bold uppercase tracking-wider">
+                                <span>{n.author}</span>
+                                <span>{formatTime(n.created_at)}</span>
+                            </div>
+                            <p className="text-xs text-slate-300 font-medium whitespace-pre-wrap">{n.text}</p>
+                        </div>
+                    ))}
+                    {(!notesList || notesList.length === 0) && (
+                        <div className="text-center py-6 text-slate-550 text-xs font-bold italic">
+                            Sin comentarios
+                        </div>
+                    )}
+                </div>
+
+                {lead && lead.id && (
+                    <form onSubmit={handleAddComment} className="flex gap-2 pt-2 border-t border-slate-800">
+                        <input 
+                            type="text"
+                            placeholder="Añadir nota interna..."
+                            className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-555 focus:outline-none focus:border-violet-500 font-bold"
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            disabled={submittingComment}
+                        />
+                        <button 
+                            type="submit"
+                            disabled={submittingComment || !newComment.trim()}
+                            className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white font-black uppercase text-[10px] tracking-wider rounded-xl disabled:opacity-30 transition-colors"
+                        >
+                            Enviar
+                        </button>
+                    </form>
+                )}
+            </div>
+        );
+    };
+
     const statusColors = {
         "Ganado": "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
         "En proceso": "bg-violet-500/20 text-violet-400 border border-violet-500/30",
@@ -613,6 +663,17 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                     >
                         Calificar Lead
                     </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('notas')}
+                        className={`flex-1 pb-2 text-[10px] font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                            activeTab === 'notas'
+                                ? 'border-violet-500 text-white'
+                                : 'border-transparent text-slate-500 hover:text-slate-355'
+                        }`}
+                    >
+                        Notas Internas
+                    </button>
                 </div>
             )}
 
@@ -769,7 +830,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         type="button"
                         onClick={handleSaveCalificacion}
                         disabled={savingCalificacion}
-                        className="w-full py-3 bg-violet-600 hover:bg-violet-750 text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition-all shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full py-3 bg-violet-600 hover:bg-violet-755 text-white font-black uppercase text-[10px] tracking-wider rounded-xl transition-all shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {savingCalificacion ? (
                             <Loader2 size={12} className="animate-spin" />
@@ -781,6 +842,13 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                 </div>
                 )}
             </div>
+
+            {/* Pestaña de Notas en modo compacto */}
+            {compact && activeTab === 'notas' && (
+                <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-850 shadow-xl mb-4 text-left">
+                    {renderNotasInternas()}
+                </div>
+            )}
 
             {/* SECCIÓN INFERIOR: MEMBRESÍAS, VENTAS Y NOTAS INTERNAS */}
             {!compact && (
@@ -843,46 +911,7 @@ const LeadRoadmapDetail = ({ instagram, clientId, email, phone, onBack, onUpdate
                         </div>
 
                         {/* COLUMNA 3: NOTAS INTERNAS */}
-                        <div className="space-y-4 flex flex-col max-h-[350px]">
-                            <h4 className="text-sm font-black text-white uppercase tracking-wider px-1">Notas Internas</h4>
-                            
-                            <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
-                                {notesList.map((n) => (
-                                    <div key={n.id} className="bg-slate-900/30 p-3 rounded-xl space-y-1">
-                                        <div className="flex justify-between text-[8px] text-slate-500 font-bold uppercase tracking-wider">
-                                            <span>{n.author}</span>
-                                            <span>{formatTime(n.created_at)}</span>
-                                        </div>
-                                        <p className="text-xs text-slate-300 font-medium">{n.text}</p>
-                                    </div>
-                                ))}
-                                {notesList.length === 0 && (
-                                    <div className="text-center py-6 text-slate-550 text-xs font-bold italic">
-                                        Sin comentarios
-                                    </div>
-                                )}
-                            </div>
-
-                            {lead.id && (
-                                <form onSubmit={handleAddComment} className="flex gap-2 pt-2 border-t border-slate-800">
-                                    <input 
-                                        type="text"
-                                        placeholder="Añadir nota interna..."
-                                        className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-555 focus:outline-none focus:border-violet-500 font-bold"
-                                        value={newComment}
-                                        onChange={(e) => setNewComment(e.target.value)}
-                                        disabled={submittingComment}
-                                    />
-                                    <button 
-                                        type="submit"
-                                        disabled={submittingComment || !newComment.trim()}
-                                        className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white font-black uppercase text-[10px] tracking-wider rounded-xl disabled:opacity-30 transition-colors"
-                                    >
-                                        Enviar
-                                    </button>
-                                </form>
-                            )}
-                        </div>
+                        {renderNotasInternas()}
                     </div>
 
                     {/* FILA INFERIOR: DETALLE DE ACTIVIDAD (ANCHO COMPLETO - lg:col-span-3) */}
