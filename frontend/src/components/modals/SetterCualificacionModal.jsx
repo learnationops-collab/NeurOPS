@@ -75,50 +75,52 @@ const SetterCualificacionModal = ({ isOpen, onClose, lead, availableKeywords, on
     return (
         <div className="fixed inset-0 z-[100] bg-[#07080d] text-slate-100 flex flex-col h-screen overflow-hidden">
             {/* Cabecera superior del modal */}
-            <div className="px-8 pt-6 pb-6 border-b border-slate-900 bg-[#07080d] flex flex-col gap-6">
-                <div className="flex items-center justify-between">
-                    <button 
-                        onClick={onClose}
-                        className="text-xs font-bold text-slate-400 hover:text-white transition-colors flex items-center gap-2 cursor-pointer outline-none bg-transparent border-none"
-                    >
-                        <ArrowLeft size={16} />
-                        Volver
-                    </button>
-                    <button 
-                        onClick={onClose}
-                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all cursor-pointer outline-none bg-transparent border-none"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
+            <div className="px-8 pt-6 pb-6 border-b border-slate-900 bg-[#07080d]">
+                <div className="max-w-[95%] mx-auto w-full flex flex-col gap-6">
+                    <div className="flex items-center justify-between">
+                        <button 
+                            onClick={onClose}
+                            className="text-xs font-bold text-slate-400 hover:text-white transition-colors flex items-center gap-2 cursor-pointer outline-none bg-transparent border-none"
+                        >
+                            <ArrowLeft size={16} />
+                            Volver
+                        </button>
+                        <button 
+                            onClick={onClose}
+                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-all cursor-pointer outline-none bg-transparent border-none"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
 
-                <div className="space-y-3">
-                    <h2 className="text-3xl font-black text-white tracking-tight">{lead.lead_name || 'Sin Nombre'}</h2>
-                    
-                    <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400">
-                        {lead.instagram && (
-                            <span className="flex items-center gap-1.5 text-violet-400">
-                                <Instagram size={14} />
-                                @{lead.instagram}
+                    <div className="space-y-3">
+                        <h2 className="text-3xl font-black text-white tracking-tight">{lead.lead_name || 'Sin Nombre'}</h2>
+                        
+                        <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400">
+                            {lead.instagram && (
+                                <span className="flex items-center gap-1.5 text-violet-400">
+                                    <Instagram size={14} />
+                                    @{lead.instagram}
+                                </span>
+                            )}
+                            <span className="flex items-center gap-1.5">
+                                <MessageSquare size={14} className="text-slate-500" />
+                                ManyChat / Instagram
                             </span>
-                        )}
-                        <span className="flex items-center gap-1.5">
-                            <MessageSquare size={14} className="text-slate-500" />
-                            ManyChat / Instagram
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                            <Clock size={14} className="text-slate-500" />
-                            {getRelativeTimeString(lead.start_time)}
-                        </span>
-                        <span className="bg-violet-500/10 text-violet-400 px-3 py-1 rounded-full text-[10px] font-black border border-violet-500/20 uppercase tracking-wider">
-                            En revisión
-                        </span>
+                            <span className="flex items-center gap-1.5">
+                                <Clock size={14} className="text-slate-500" />
+                                {getRelativeTimeString(lead.start_time)}
+                            </span>
+                            <span className="bg-violet-500/10 text-violet-400 px-3 py-1 rounded-full text-[10px] font-black border border-violet-500/20 uppercase tracking-wider">
+                                En revisión
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Cuerpo del formulario scrollable */}
-            <div className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar max-w-7xl mx-auto w-full">
+            <div className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar max-w-[95%] mx-auto w-full">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                     {/* Columna Izquierda: Formulario de Cualificación */}
                     <div className="lg:col-span-8 space-y-8">
@@ -274,33 +276,35 @@ const SetterCualificacionModal = ({ isOpen, onClose, lead, availableKeywords, on
             </div>
 
             {/* Footer con botones de control */}
-            <div className="px-8 py-5 border-t border-slate-900 bg-[#07080d] flex items-center justify-between">
-                <button
-                    onClick={onClose}
-                    className="px-6 py-3 border border-slate-800 hover:bg-slate-900 text-slate-400 hover:text-white transition-all text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer bg-transparent"
-                >
-                    Cancelar
-                </button>
-
-                <div className="flex items-center gap-3">
+            <div className="px-8 py-5 border-t border-slate-900 bg-[#07080d]">
+                <div className="max-w-[95%] mx-auto w-full flex items-center justify-between">
                     <button
-                        onClick={() => handleSave(false)}
-                        disabled={saving}
-                        className="px-6 py-3 border border-slate-850 hover:bg-slate-900 text-slate-200 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 bg-transparent"
+                        onClick={onClose}
+                        className="px-6 py-3 border border-slate-800 hover:bg-slate-900 text-slate-400 hover:text-white transition-all text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer bg-transparent"
                     >
-                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                        Guardar
+                        Cancelar
                     </button>
 
-                    <button
-                        onClick={() => handleSave(true)}
-                        disabled={saving}
-                        className="px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-violet-650/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 border-none"
-                    >
-                        {saving ? <Loader2 size={14} className="animate-spin" /> : null}
-                        Guardar y revisar siguiente
-                        <ArrowRight size={14} />
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => handleSave(false)}
+                            disabled={saving}
+                            className="px-6 py-3 border border-slate-850 hover:bg-slate-900 text-slate-200 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 bg-transparent"
+                        >
+                            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                            Guardar
+                        </button>
+
+                        <button
+                            onClick={() => handleSave(true)}
+                            disabled={saving}
+                            className="px-6 py-3 bg-violet-600 hover:bg-violet-755 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-violet-650/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 border-none"
+                        >
+                            {saving ? <Loader2 size={14} className="animate-spin" /> : null}
+                            Guardar y revisar siguiente
+                            <ArrowRight size={14} />
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
