@@ -8,7 +8,8 @@
     - **Frontend React ([SetterCualificacionModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/SetterCualificacionModal.jsx) [MODIFY])**:
       - Se importó el componente de chat interactivo `CommentsSection` y se rediseñó el layout de pantalla completa a doble columna.
       - Columna izquierda (`lg:col-span-8`): Aloja el formulario de cualificación en 3 pasos (estado de cualificación, anuncio y dolores/notas iniciales).
-      - Columna derecha (`lg:col-span-4`): Integra el chat interactivo de notas y observaciones del Lead conectado a su `client_id`, permitiendo al setter ver notas históricas de closers, confirmadores y automatizaciones y registrar nuevas observaciones.
+      - Columna derecha (`lg:col-span-4`): Integra el chat interactivo de notas y observaciones del Lead.
+      - Se amplió el ancho máximo de la cabecera, cuerpo y pie del modal a `max-w-[95%] mx-auto w-full` para optimizar y aprovechar al máximo el espacio en resoluciones anchas y pantallas de escritorio.
     - **Frontend React ([LeadRoadmapDetail.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/LeadRoadmapDetail.jsx) [MODIFY])**:
       - Se diseñó y construyó un **Feed Cronológico de Actividad e Interacciones del Lead** unificado (`renderLeadTimeline()`) que reemplaza las notas de texto plano y el historial rígido.
       - Este feed une las respuestas automáticas de bot, la agenda de citas, las ventas financieras, las notas manuales de usuarios (setters, confirmadores, closers) y las automatizaciones en un timeline estilo chat colaborativo de alto impacto visual.
