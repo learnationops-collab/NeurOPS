@@ -751,7 +751,18 @@ def get_setter_deck():
                 continue
                 
             edad_str = "N/A"
-            client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first() if ig_clean else None
+            client = None
+            if ig_clean:
+                client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
+                if not client:
+                    client = Client(
+                        full_name=lead.name or "Sin Nombre",
+                        instagram=lead.ig,
+                        created_at=datetime.utcnow()
+                    )
+                    db.session.add(client)
+                    db.session.commit()
+
             if client and client.form_data:
                 for key, val in client.form_data.items():
                     if 'edad' in key.lower() or 'age' in key.lower():
@@ -786,7 +797,8 @@ def get_setter_deck():
                 "assigned_to": f"{assigned_setter} / {assigned_closer}",
                 "edad_form": edad_str,
                 "dolores": client.dolores if client else "",
-                "observaciones": client.observaciones if client else ""
+                "observaciones": client.observaciones if client else "",
+                "client_id": client.id if client else None
             })
             
         return jsonify(response_data), 200
