@@ -51,6 +51,8 @@ import AdminSalesHubPage from './pages/admin/reports/AdminSalesHubPage';
 import AdminMarketingHubPage from './pages/admin/marketing/AdminMarketingHubPage';
 import AdminSheetsHubPage from './pages/admin/reports/AdminSheetsHubPage';
 import AdminPayrollPage from './pages/admin/reports/AdminPayrollPage';
+import WorkshopDashboardPage from './pages/admin/workshop/WorkshopDashboardPage';
+
 
 import StyleGuidePage from './pages/admin/utils/StyleGuidePage';
 import TeamManagementPage from './pages/admin/team/TeamManagementPage';
@@ -176,6 +178,17 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/workshops"
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <MainLayout>
+                    <WorkshopDashboardPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+
 
             {/* Protected Role-Specific Routes */}
             <Route
