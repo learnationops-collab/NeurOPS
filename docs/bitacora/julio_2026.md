@@ -10,10 +10,13 @@
       - Se implementó la ruta `/prefill` para consultar dinámicamente los datos de formularios de Calendly, agendas de la fuente `workshop`, estado de asistencia de closers, ventas y monto cobrado a partir de una fecha.
     - **Base de Datos Migración ([a8be502f5e26_add_workshop_events.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/migrations/versions/a8be502f5e26_add_workshop_events.py) [NEW])**:
       - Se autogeneró y aplicó la migración para añadir la tabla `workshop_events`.
-    - **Frontend React ([WorkshopDashboardPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx) [NEW])**:
-      - Se construyó la consola premium de administrador para visualización de estadísticas globales, listado/historial, funnel interactivo del embudo y modal para registrar/editar talleres con precarga en vivo.
-    - **Navegación e Imports ([App.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx), [useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
-      - Se registró la ruta `/admin/workshops` y se integró al dock de navegación del administrador.
+    - **Frontend React ([WorkshopDashboardPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx) [MODIFY])**:
+      - Se rediseñó la visualización para mostrar por defecto una cuadrícula de tarjetas de diseño premium (Dashboard) con KPIs clave, ROAS resplandeciente y toggle para vista de tabla.
+      - Se dividió el modal de registro y edición en un flujo interactivo paso a paso de 3 secciones (Tráfico & Ads, Asistencia Webinar, y Confirmación Sistema con precarga).
+    - **Frontend Hub de Ventas ([AdminSalesHubPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/AdminSalesHubPage.jsx) [MODIFY])**:
+      - Se unificó la consola de Workshops como pestaña superior en la vista general de Ventas al lado de Closers y Setters.
+    - **Navegación e Imports ([useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
+      - Se removió el enlace redundante a Workshops del Dock del administrador para consolidar el flujo en la pestaña superior.
     - **Migración de Datos Históricos**:
       - Se ejecutó el script `scratch/import_tracker_csv.py` para migrar la bitácora del CSV a la base de datos local y se eliminó el archivo `Workshop Dashboard V1.0 - Webinar Tracker.csv` y el script temporal.
 
