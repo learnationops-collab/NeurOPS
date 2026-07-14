@@ -1,6 +1,22 @@
 # Bitácora - Julio 2026
 
 - **14 de Julio de 2026**:
+  - **Integración de Webinar & Workshop Tracker**:
+    - **Backend Modelos ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/workshop.py) [MODIFY])**:
+      - Se creó el modelo `WorkshopEvent` para registrar la inversión y las métricas manuales de los webinars.
+      - Se definieron propiedades calculadas (`impresiones`, `ctr`, `conversion_leads`, `cpl`, `tx_entrada_whatsapp`, `show_up_rate`, `retencion_clase`, `retencion_pitch`, `pct_aplicacion`, `pct_aplicacion_agenda`, `pct_conversion_agendas`, `costo_por_agenda`, `pct_show_up_sales_call`, `pct_close_rate`, `ticket_promedio`, `roas`) para calcular de forma dinámica las métricas del embudo.
+    - **Backend API ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/workshop.py) [MODIFY])**:
+      - Se desarrollaron los endpoints CRUD para `WorkshopEvent` protegidos con `@admin_required`.
+      - Se implementó la ruta `/prefill` para consultar dinámicamente los datos de formularios de Calendly, agendas de la fuente `workshop`, estado de asistencia de closers, ventas y monto cobrado a partir de una fecha.
+    - **Base de Datos Migración ([a8be502f5e26_add_workshop_events.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/migrations/versions/a8be502f5e26_add_workshop_events.py) [NEW])**:
+      - Se autogeneró y aplicó la migración para añadir la tabla `workshop_events`.
+    - **Frontend React ([WorkshopDashboardPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx) [NEW])**:
+      - Se construyó la consola premium de administrador para visualización de estadísticas globales, listado/historial, funnel interactivo del embudo y modal para registrar/editar talleres con precarga en vivo.
+    - **Navegación e Imports ([App.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx), [useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
+      - Se registró la ruta `/admin/workshops` y se integró al dock de navegación del administrador.
+    - **Migración de Datos Históricos**:
+      - Se ejecutó el script `scratch/import_tracker_csv.py` para migrar la bitácora del CSV a la base de datos local y se eliminó el archivo `Workshop Dashboard V1.0 - Webinar Tracker.csv` y el script temporal.
+
   - **Unificación del Sistema de Notas e Historial del Lead**:
     - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
       - Se optimizó la carga de leads de ManyChat en la cola de cualificación (`GET /deck?step=cualificacion`) para buscar o crear el registro correspondiente en la tabla `Client` en el momento de listar la cola si el cliente no existe.
