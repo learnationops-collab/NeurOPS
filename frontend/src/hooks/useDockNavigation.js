@@ -71,7 +71,6 @@ const useDockNavigation = () => {
                 { id: 'ventas', icon: TrendingUp, label: 'Ventas', path: '/admin/ventas' },
                 { id: 'payroll', icon: DollarSign, label: 'PayRoll', path: '/admin/payroll' },
                 { id: 'marketing', icon: Target, label: 'Marketing', path: '/admin/marketing' },
-                { id: 'workshops', icon: Activity, label: 'Workshops/Clases', path: '/admin/workshops' },
                 { id: 'alerts', icon: Bell, label: 'Alertas', path: '/admin/alerts' },
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' },
                 { id: 'sheets', icon: CalendarDays, label: 'Importaciones Sheets', path: '/admin/sheets' },
