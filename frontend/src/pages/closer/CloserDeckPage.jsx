@@ -412,36 +412,19 @@ const CloserDeckPage = () => {
                                             {/* Formulario Secuencial Closer */}
                                             <form onSubmit={handleSubmit} className="space-y-5 flex-1 overflow-y-auto pr-1 py-1 custom-scrollbar">
                                                 
-                                                {/* Palabra Clave editable para corregir */}
+                                                {/* Notas del Closer (Al tope) */}
                                                 <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1 block">
-                                                        Palabra Clave (Verificar)
+                                                    <label className="text-[9px] font-black text-violet-400 uppercase tracking-wider ml-1 block">
+                                                        Observaciones del Closer (Se registrarán en el chat)
                                                     </label>
                                                     <div className="relative">
-                                                        <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Ej: EVENTO"
-                                                            value={keyword}
-                                                            onChange={(e) => setKeyword(e.target.value)}
-                                                            className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Grabación de Llamada */}
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1 block">
-                                                        Enlace a Grabación de la Llamada
-                                                    </label>
-                                                    <div className="relative">
-                                                        <Video size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                                                        <input
-                                                            type="url"
-                                                            placeholder="https://zoom.us/rec/play/... o Google Drive"
-                                                            value={linkedCall}
-                                                            onChange={(e) => setLinkedCall(e.target.value)}
-                                                            className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all"
+                                                        <MessageSquare size={16} className="absolute left-4 top-4 text-slate-500" />
+                                                        <textarea
+                                                            placeholder="Escribe los dolores clave detectados, objeciones de venta, monto cobrado, señas, etc. Esta nota se publicará directamente en el chat compartido..."
+                                                            value={closerNotes}
+                                                            onChange={(e) => setCloserNotes(e.target.value)}
+                                                            rows={4}
+                                                            className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all resize-none min-h-[110px]"
                                                         />
                                                     </div>
                                                 </div>
@@ -477,19 +460,36 @@ const CloserDeckPage = () => {
                                                     </div>
                                                 </div>
  
-                                                {/* Notas del Closer */}
+                                                {/* Grabación de Llamada */}
                                                 <div className="space-y-2">
                                                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1 block">
-                                                        Notas de Seguimiento y Cierre
+                                                        Enlace a Grabación de la Llamada
                                                     </label>
                                                     <div className="relative">
-                                                        <MessageSquare size={16} className="absolute left-4 top-4 text-slate-500" />
-                                                        <textarea
-                                                            placeholder="Detalles sobre objeciones de venta, monto cobrado, señas, etc..."
-                                                            value={closerNotes}
-                                                            onChange={(e) => setCloserNotes(e.target.value)}
-                                                            rows={3}
-                                                            className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all resize-none"
+                                                        <Video size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                                                        <input
+                                                            type="url"
+                                                            placeholder="https://zoom.us/rec/play/... o Google Drive"
+                                                            value={linkedCall}
+                                                            onChange={(e) => setLinkedCall(e.target.value)}
+                                                            className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Palabra Clave editable para corregir */}
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1 block">
+                                                        Palabra Clave (Verificar)
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Ej: EVENTO"
+                                                            value={keyword}
+                                                            onChange={(e) => setKeyword(e.target.value)}
+                                                            className="w-full bg-black/40 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all"
                                                         />
                                                     </div>
                                                 </div>

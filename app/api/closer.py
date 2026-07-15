@@ -1234,7 +1234,18 @@ def process_closer_card(appt_id):
     if 'linked_call' in data:
         appt.linked_call = data['linked_call']
     if 'closer_notes' in data:
-        appt.closer_notes = data['closer_notes']
+        notes_str = data['closer_notes'].strip()
+        appt.closer_notes = notes_str
+        if notes_str and appt.client_id:
+            from app.models import Comment
+            comment = Comment(
+                text=notes_str,
+                comment_type='client',
+                associated_id=appt.client_id,
+                author_id=current_user.id
+            )
+            db.session.add(comment)
+
     if 'result' in data:
         res_val = data['result']
         if res_val == 'Asistió':
