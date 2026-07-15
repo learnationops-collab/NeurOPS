@@ -277,7 +277,10 @@ def prefill_workshop_metrics():
     utc_end = la_paz_tz.localize(end_local).astimezone(pytz.UTC).replace(tzinfo=None)
     
     # 1. Aplicaciones Form Calendly
-    clients = Client.query.filter(Client.created_at >= utc_start, Client.created_at <= utc_end).all()
+    # Ampliar a 2 dias para cubrir posibles desfases de hora local -> UTC
+    from datetime import timedelta
+    utc_end_extended = utc_end + timedelta(days=1)
+    clients = Client.query.filter(Client.created_at >= utc_start, Client.created_at <= utc_end_extended).all()
     aplicaciones_count = 0
     for c in clients:
         fd = c.form_data or {}
@@ -285,18 +288,27 @@ def prefill_workshop_metrics():
         if 'workshop' in str(fuente).lower():
             aplicaciones_count += 1
             
-    # 2. Agendas Exitosas
+    # 2. Agendas Exitosas - buscar por registro (texto local), created_at (UTC) y raw_data fuente
+    # El campo 'registro' contiene la fecha local del ingreso del formulario de n8n
+    # Se busca con el dia actual y el dia anterior para cubrir posibles desfases
+    import datetime as dt_module
+    prev_date_str = (dt - dt_module.timedelta(days=1)).strftime("%Y-%m-%d")
+    
     agendas = FinancialAgenda.query.filter(
         or_(
             (FinancialAgenda.created_at >= utc_start) & (FinancialAgenda.created_at <= utc_end),
-            FinancialAgenda.registro.like(f"{date_str}%")
+            FinancialAgenda.registro.like(f"{date_str}%"),
+            FinancialAgenda.registro.like(f"{prev_date_str}%")
         )
     ).all()
     
     workshop_agendas = []
     for a in agendas:
-        fuente = a.nombre or ''
-        if 'workshop' in str(fuente).lower():
+        # Detectar fuente workshop desde nombre O raw_data['fuente']
+        nombre_val = str(a.nombre or '').lower()
+        raw = a.raw_data or {}
+        fuente_raw = str(raw.get('fuente') or raw.get('fuente_form') or '').lower()
+        if 'workshop' in nombre_val or 'workshop' in fuente_raw:
             workshop_agendas.append(a)
             
     agendas_count = len(workshop_agendas)
