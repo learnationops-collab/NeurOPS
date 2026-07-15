@@ -1,5 +1,17 @@
 # Bitácora - Julio 2026
 
+- **15 de Julio de 2026**:
+  - **Corrección de Redirección de Sesión para Setter y Closer**:
+    - **Frontend React ([OperatorControls.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/OperatorControls.jsx) [MODIFY])**:
+      - Se corrigió la redirección del rol `setter` al suplantar y revertir sesión desde el panel de operador. Antes apuntaba a `/setter/report`; ahora apunta al espacio de trabajo principal `/setter/deck?step=cualificacion`, consistente con el comportamiento del login.
+      - El rol `closer` ya apuntaba correctamente a `/closer/deck?step=agendas` en login, `ProtectedRoute` y suplantación. Se verificó que todos los puntos de entrada son consistentes.
+    - **Estado de Redirecciones por Rol** (confirmación de consistencia total):
+      - `admin` → `/admin/ventas`
+      - `setter` → `/setter/deck?step=cualificacion` (deck de cualificación, su espacio de trabajo)
+      - `closer` → `/closer/deck?step=agendas` (deck de agendas del día, su espacio de trabajo)
+      - `triage` → `/triage/agendas`
+      - `operator` → `/ops/dashboard`
+
 - **14 de Julio de 2026**:
   - **Integración de Webinar & Workshop Tracker**:
     - **Backend Modelos ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/workshop.py) [MODIFY])**:
