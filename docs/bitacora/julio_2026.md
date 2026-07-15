@@ -21,6 +21,10 @@
       - Ofrece un listado dividido en dos secciones: **"Citas por Confirmar"** y **"Confirmadas y Procesadas"**, con buscador local y selector que carga por defecto las agendas de la fecha de hoy y todas las próximas citas futuras.
       - Al hacer clic en un lead, se abre un modal de doble columna (`max-w-6xl`): columna izquierda con detalles, encuesta y botones de confirmación rápida (Contactado, Confirmar, Sin Respuesta, Reagendar, Cancelar) y columna derecha con el chat unificado (`CommentsSection`).
       - Se integró una opción interactiva para editar directamente la fecha de cita (Meet) mediante un input `datetime-local` y botón de actualización en la ficha del lead, guardando el cambio y registrándolo en el chat de comentarios.
+      - Se removieron los campos innecesarios de los Detalles de Contacto: *Email*, *Setter Asignado* y *Zona Horaria*.
+    - **Backend Python ([financial_agendas.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
+      - Se implementó la creación dinámica y proactiva de clientes en el CRM (`_ensure_clients`) dentro de la consulta de agendas financieras (GET `/public/financial-agendas`).
+      - Esto asegura que cualquier agenda proveniente de sheets o workshops que no estuviera registrada en la tabla `clients` sea creada automáticamente al visualizarse, habilitando la sección de chat unificado para todos los prospectos de forma transparente.
     - **Backend Python ([financial.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY])**:
       - En el método `to_dict` del modelo `FinancialAgenda`, se resolvió de forma dinámica la asociación con la ficha de `Client` (CRM) y `Appointment` correspondiente (mediante email/instagram).
       - Se incluyeron datos de `client_id`, `survey_answers`, `setter_name`, `setter_notes`, `ig_chat_link` y `keyword` en el JSON retornado por `/public/financial-agendas` para alimentar el modal de triaje.
