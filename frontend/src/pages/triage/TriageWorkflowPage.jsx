@@ -274,13 +274,13 @@ const TriageWorkflowPage = () => {
                                 {formatMeetTime(a.date || a.fecha_meet)}
                             </span>
                             <h4 className="text-sm font-black text-white leading-tight truncate">
-                                {a.nombre || 'Sin Nombre'}
+                                {a.lead || 'Sin Nombre'}
                             </h4>
                         </div>
                         
                         <div className="flex items-center gap-2 flex-wrap mt-1">
                             <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-950 border border-slate-900 px-2 py-0.5 rounded-md">
-                                Fuente: {a.lead || 'Sheets'}
+                                Fuente: {a.nombre || 'Sheets'}
                             </span>
                             {a.closer && (
                                 <span className="text-[8px] font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-md">
@@ -444,7 +444,7 @@ const TriageWorkflowPage = () => {
                                 <div className="space-y-1">
                                     <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
                                         <AlertCircle size={20} className="text-violet-400" />
-                                        {selectedLead.nombre || 'Sin Nombre'}
+                                        {selectedLead.lead || 'Sin Nombre'}
                                     </h3>
                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                                         Ficha de Confirmación • ID Agenda: #{selectedLead.id}
@@ -517,6 +517,10 @@ const TriageWorkflowPage = () => {
                                             <div className="space-y-1">
                                                 <span className="text-[9px] text-slate-500 uppercase font-black block">Closer Asignado</span>
                                                 <span className="text-slate-200 font-black">{selectedLead.closer || 'Sin Closer'}</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Fuente del Lead</span>
+                                                <span className="text-slate-200 font-bold">{selectedLead.nombre || 'Sheets'}</span>
                                             </div>
                                             <div className="space-y-1 sm:col-span-2 border-t border-slate-900/60 pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                                 <div>
