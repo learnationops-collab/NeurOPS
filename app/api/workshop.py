@@ -267,11 +267,17 @@ def prefill_workshop_metrics():
     except ValueError:
         return jsonify({"error": "Formato de fecha inválido, debe ser YYYY-MM-DD"}), 400
         
-    start_dt = datetime.combine(dt, time.min)
-    end_dt = datetime.combine(dt, time.max)
+    import pytz
+    la_paz_tz = pytz.timezone('America/La_Paz')
+    start_local = datetime.combine(dt, time.min)
+    end_local = datetime.combine(dt, time.max)
+    
+    # created_at en la base de datos está guardado en UTC, por lo que convertimos los límites locales a UTC
+    utc_start = la_paz_tz.localize(start_local).astimezone(pytz.UTC).replace(tzinfo=None)
+    utc_end = la_paz_tz.localize(end_local).astimezone(pytz.UTC).replace(tzinfo=None)
     
     # 1. Aplicaciones Form Calendly
-    clients = Client.query.filter(Client.created_at >= start_dt, Client.created_at <= end_dt).all()
+    clients = Client.query.filter(Client.created_at >= utc_start, Client.created_at <= utc_end).all()
     aplicaciones_count = 0
     for c in clients:
         fd = c.form_data or {}
@@ -282,7 +288,7 @@ def prefill_workshop_metrics():
     # 2. Agendas Exitosas
     agendas = FinancialAgenda.query.filter(
         or_(
-            (FinancialAgenda.created_at >= start_dt) & (FinancialAgenda.created_at <= end_dt),
+            (FinancialAgenda.created_at >= utc_start) & (FinancialAgenda.created_at <= utc_end),
             FinancialAgenda.registro.like(f"{date_str}%")
         )
     ).all()

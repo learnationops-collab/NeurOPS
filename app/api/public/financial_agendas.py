@@ -55,6 +55,21 @@ def receive_financial_agendas():
         if dt_str:
             agenda_date = parse_date_robustly(dt_str)
 
+        import pytz
+        la_paz_tz = pytz.timezone('America/La_Paz')
+        if agenda_date.tzinfo is not None:
+            agenda_date = agenda_date.astimezone(la_paz_tz).replace(tzinfo=None)
+
+        # Normalizar el campo de registro a formato local de America/La_Paz
+        registro_val = item.get('registro') or item.get('fecha') or datetime.now(la_paz_tz).isoformat()
+        try:
+            from dateutil import parser
+            parsed_reg = parser.parse(str(registro_val).strip())
+            if parsed_reg.tzinfo is not None:
+                registro_val = parsed_reg.astimezone(la_paz_tz).replace(tzinfo=None).isoformat()
+        except:
+            pass
+
         # Buscar duplicados en el mismo dia para el mismo lead
         existing = None
         ig_val = item.get('instagram') or item.get('ig')
@@ -97,6 +112,7 @@ def receive_financial_agendas():
             existing.closer = item.get('closer') or item.get('vendedor') or existing.closer
             existing.fecha_meet = dt_str or existing.fecha_meet
             existing.date = agenda_date
+            existing.registro = registro_val
             existing.estado = item.get('estado') or existing.estado
             existing.encargado_triage = encargado_triage_val or existing.encargado_triage
             existing.raw_data = item
@@ -109,7 +125,7 @@ def receive_financial_agendas():
                 closer=item.get('closer') or item.get('vendedor') or 'Sin asignar',
                 fecha_meet=dt_str or str(agenda_date),
                 date=agenda_date,
-                registro=item.get('registro') or item.get('fecha') or datetime.utcnow().isoformat(),
+                registro=registro_val,
                 instagram=item.get('instagram') or item.get('ig') or 'N/A',
                 whatsapp=item.get('whatsapp') or item.get('phone') or item.get('telefono') or 'N/A',
                 mail=item.get('mail') or item.get('email') or 'N/A',
