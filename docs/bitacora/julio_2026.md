@@ -8,6 +8,11 @@
     - **Backend API ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/workshop.py) [MODIFY])**:
       - Se desarrollaron los endpoints CRUD para `WorkshopEvent` protegidos con `@admin_required`.
       - Se implementó la ruta `/prefill` para consultar dinámicamente los datos de formularios de Calendly, agendas de la fuente `workshop`, estado de asistencia de closers, ventas y monto cobrado a partir de una fecha.
+      - **Corrección**: Se convirtió el rango de fecha local (`America/La_Paz`) a UTC para realizar consultas correctas sobre las columnas `created_at` de la base de datos, evitando que se omitan las agendas y cobros del mismo día del evento.
+    - **Backend API Agendas ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
+      - **Corrección**: Se corrigió el desfase de zona horaria al guardar nuevas agendas. Las fechas timezone-aware de n8n/Calendly se normalizan ahora a la hora local de `America/La_Paz` (UTC-4) antes de ser guardadas en la base de datos de manera naive, previniendo que se guarden con fecha del día siguiente.
+    - **Backend API Triage ([triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/triage.py) [MODIFY])**:
+      - **Corrección**: Se solucionó un error 500 en el endpoint `/qualified-forms` reemplazando la comparación directa de la columna JSON `form_data != {}` (inválida en SQLite/PostgreSQL) por un filtrado de tamaño de diccionario en memoria Python.
     - **Base de Datos Migración ([a8be502f5e26_add_workshop_events.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/migrations/versions/a8be502f5e26_add_workshop_events.py) [NEW])**:
       - Se autogeneró y aplicó la migración para añadir la tabla `workshop_events`.
     - **Frontend React ([WorkshopDashboardPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx) [MODIFY])**:
