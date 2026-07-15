@@ -372,6 +372,9 @@ def get_qualified_forms():
         
     unlinked_only = request.args.get('unlinked_only', 'true').lower() == 'true'
     search = request.args.get('search', '').strip()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+    fuente = request.args.get('fuente', '').strip()
     
     # Filtrar clientes que tienen form_data no vacio
     query = Client.query.filter(Client.form_data != None)
@@ -385,12 +388,41 @@ def get_qualified_forms():
             Client.email.ilike(search_pattern)
         ))
         
+    import pytz
+    from datetime import datetime, time
+    la_paz_tz = pytz.timezone('America/La_Paz')
+    
+    if start_date:
+        try:
+            sd = datetime.strptime(start_date, "%Y-%m-%d").date()
+            start_local = datetime.combine(sd, time.min)
+            utc_start = la_paz_tz.localize(start_local).astimezone(pytz.UTC).replace(tzinfo=None)
+            query = query.filter(Client.created_at >= utc_start)
+        except ValueError:
+            pass
+            
+    if end_date:
+        try:
+            ed = datetime.strptime(end_date, "%Y-%m-%d").date()
+            end_local = datetime.combine(ed, time.max)
+            utc_end = la_paz_tz.localize(end_local).astimezone(pytz.UTC).replace(tzinfo=None)
+            query = query.filter(Client.created_at <= utc_end)
+        except ValueError:
+            pass
+            
     clients = query.all()
     
     result = []
     for c in clients:
         # Filtrar diccionarios vacíos en python para evitar fallos de SQL JSON
         if not c.form_data or not isinstance(c.form_data, dict) or len(c.form_data) == 0:
+            continue
+            
+        fd = c.form_data or {}
+        fuente_val = fd.get('fuente_form') or fd.get('fuente') or 'Desconocida'
+        
+        # Filtro de fuente
+        if fuente and fuente.lower() not in str(fuente_val).lower():
             continue
             
         # Contar citas asociadas
@@ -406,7 +438,9 @@ def get_qualified_forms():
             "phone": c.phone,
             "instagram": c.instagram,
             "form_data": c.form_data,
-            "appointments_count": appointments_count
+            "appointments_count": appointments_count,
+            "fuente": fuente_val,
+            "created_at": c.created_at.isoformat() if c.created_at else None
         })
         
     # Ordenar por id descendente (mas recientes primero)
