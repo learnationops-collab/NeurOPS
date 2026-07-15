@@ -11,6 +11,9 @@
       - **Corrección**: Se convirtió el rango de fecha local (`America/La_Paz`) a UTC para realizar consultas correctas sobre las columnas `created_at` de la base de datos, evitando que se omitan las agendas y cobros del mismo día del evento.
     - **Backend API Agendas ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
       - **Corrección**: Se corrigió el desfase de zona horaria al guardar nuevas agendas. Las fechas timezone-aware de n8n/Calendly se normalizan ahora a la hora local de `America/La_Paz` (UTC-4) antes de ser guardadas en la base de datos de manera naive, previniendo que se guarden con fecha del día siguiente.
+      - **Edición**: Se extendió la ruta PUT para permitir la actualización explícita del campo `created_at` (y el string normalizado `registro`) al modificar los registros de agenda.
+    - **Frontend Registro de Agendas ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
+      - Se añadió el campo "Fecha Registro (Sistema)" al modal de edición de agendas, vinculándolo al estado de `editForm` y permitiendo al administrador corregir o cambiar manualmente la fecha de registro en base de datos.
     - **Backend API Triage ([triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/triage.py) [MODIFY])**:
       - **Corrección**: Se solucionó un error 500 en el endpoint `/qualified-forms` reemplazando la comparación directa de la columna JSON `form_data != {}` (inválida en SQLite/PostgreSQL) por un filtrado de tamaño de diccionario en memoria Python.
     - **Base de Datos Migración ([a8be502f5e26_add_workshop_events.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/migrations/versions/a8be502f5e26_add_workshop_events.py) [NEW])**:
