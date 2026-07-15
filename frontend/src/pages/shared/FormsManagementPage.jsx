@@ -15,9 +15,26 @@ import {
     Loader2,
     Calendar,
     Globe,
-    FilterX
+    FilterX,
+    Edit
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+const formatToDatetimeLocal = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch {
+        return '';
+    }
+};
 
 export default function FormsManagementPage() {
     const [forms, setForms] = useState([]);
@@ -32,6 +49,30 @@ export default function FormsManagementPage() {
     const [selectedForm, setSelectedForm] = useState(null);
     const [mergeModalOpen, setMergeModalOpen] = useState(false);
     const [formToMerge, setFormToMerge] = useState(null);
+    
+    // Edición de fecha de registro
+    const [editingFormDate, setEditingFormDate] = useState(null); // { id, full_name, created_at }
+    const [newRegDate, setNewRegDate] = useState('');
+    const [updatingDate, setUpdatingDate] = useState(false);
+    
+    const handleUpdateDate = async (e) => {
+        if (e) e.preventDefault();
+        if (!editingFormDate || !newRegDate) return;
+        try {
+            setUpdatingDate(true);
+            await api.put(`/triage/qualified-forms/${editingFormDate.id}`, {
+                created_at: newRegDate
+            });
+            toast.success("Fecha de registro actualizada correctamente");
+            setEditingFormDate(null);
+            fetchForms();
+        } catch (error) {
+            console.error("Error al actualizar la fecha del formulario:", error);
+            toast.error(error.response?.data?.error || "Error al actualizar la fecha");
+        } finally {
+            setUpdatingDate(false);
+        }
+    };
     
     // Busqueda de Lead Destino
     const [destinationSearch, setDestinationSearch] = useState('');
@@ -256,9 +297,23 @@ export default function FormsManagementPage() {
                                         <Globe className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
                                         <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Fuente: <span className="text-white italic">{item.fuente || 'Desconocida'}</span></span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-                                        <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Registro: <span className="text-white font-semibold">{item.created_at ? new Date(item.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span></span>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                                            <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">
+                                                Registro: <span className="text-white font-semibold">{item.created_at ? new Date(item.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setEditingFormDate({ id: item.id, full_name: item.full_name, created_at: item.created_at });
+                                                setNewRegDate(formatToDatetimeLocal(item.created_at));
+                                            }}
+                                            className="p-1 text-slate-450 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer border-none bg-transparent"
+                                            title="Editar fecha de registro"
+                                        >
+                                            <Edit className="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -531,6 +586,59 @@ export default function FormsManagementPage() {
                                 Confirmar Fusión
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* Modal: Editar Fecha de Registro */}
+            {editingFormDate && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/20">
+                            <div>
+                                <h3 className="font-bold text-white text-base">Editar Fecha de Registro</h3>
+                                <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest">{editingFormDate.full_name}</p>
+                            </div>
+                            <button 
+                                onClick={() => setEditingFormDate(null)}
+                                className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleUpdateDate} className="p-6 space-y-4">
+                            <div className="space-y-1.5 text-left">
+                                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1 block">
+                                    Nueva Fecha y Hora de Registro
+                                </label>
+                                <input 
+                                    type="datetime-local"
+                                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-850 rounded-xl text-white outline-none focus:border-indigo-500 text-xs font-semibold cursor-pointer"
+                                    value={newRegDate}
+                                    onChange={e => setNewRegDate(e.target.value)}
+                                    required
+                                    style={{ colorScheme: 'dark' }}
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-4 justify-end border-t border-slate-850">
+                                <button 
+                                    type="button"
+                                    onClick={() => setEditingFormDate(null)}
+                                    className="px-4 py-2 bg-slate-850 hover:bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border border-slate-800 cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    type="submit"
+                                    disabled={updatingDate}
+                                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-550 disabled:opacity-50 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
+                                >
+                                    {updatingDate && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
