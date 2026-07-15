@@ -7,6 +7,9 @@
       - Se refactorizó el modal que se abre al hacer clic en un lead de agendas: en vez del genérico *Lead Roadmap*, ahora abre un modal de ancho completo (`max-w-6xl`) con estructura de dos columnas.
       - **Columna Izquierda**: Muestra la información principal (Nombre, Instagram, Fuente/Origen, Setter asignado), Notas de cualificación del Setter, Respuestas completas de la encuesta, y la botonera de acciones para actualizar el estado del prospecto o reprogramar su cita.
       - **Columna Derecha**: Integra de forma nativa el chat de Notas & Comentarios (`CommentsSection`), permitiendo comunicación directa y en hilo con el resto del equipo.
+      - Se removió un bloque de cierre JSX huérfano (`)}`) remanente de la eliminación de las acciones inline.
+    - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
+      - Se corrigió un error de sintaxis del compilador (JSX extra curly braces en el cierre de contenedor) introducido durante la división de listas.
     - **Frontend React ([CloserDeckPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserDeckPage.jsx) [MODIFY])**:
       - Se movió la sección de notas al tope del formulario secuencial del Closer bajo el título **"Observaciones del Closer (Se registrarán en el chat)"**, convirtiéndolo en lo primero editable e interactivo al ver la ficha del Lead.
     - **Backend Python ([closer.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
