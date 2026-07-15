@@ -16,6 +16,10 @@
       - Se añadió el campo "Fecha Registro (Sistema)" al modal de edición de agendas, vinculándolo al estado de `editForm` y permitiendo al administrador corregir o cambiar manualmente la fecha de registro en base de datos.
     - **Backend API Triage ([triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/triage.py) [MODIFY])**:
       - **Corrección**: Se solucionó un error 500 en el endpoint `/qualified-forms` reemplazando la comparación directa de la columna JSON `form_data != {}` (inválida en SQLite/PostgreSQL) por un filtrado de tamaño de diccionario en memoria Python.
+      - **Filtros**: Se agregaron parámetros de consulta `start_date`, `end_date` y `fuente` al endpoint `/qualified-forms`. Las fechas se procesan considerando la zona horaria del negocio `America/La_Paz` y se filtran contra `Client.created_at` en UTC.
+    - **Frontend Gestión de Formularios ([FormsManagementPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/shared/FormsManagementPage.jsx) [MODIFY])**:
+      - Se implementaron los filtros de UI para rango de fechas de registro y entrada de texto para filtrar por fuente.
+      - Se añadió a la visualización de cada tarjeta de cliente la etiqueta de la **Fuente** y la **Fecha de Registro**.
     - **Base de Datos Migración ([a8be502f5e26_add_workshop_events.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/migrations/versions/a8be502f5e26_add_workshop_events.py) [NEW])**:
       - Se autogeneró y aplicó la migración para añadir la tabla `workshop_events`.
     - **Frontend React ([WorkshopDashboardPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx) [MODIFY])**:
@@ -23,6 +27,7 @@
       - Se dividió el modal de registro y edición en un flujo interactivo paso a paso de 3 secciones (Tráfico & Ads, Asistencia Webinar, y Confirmación Sistema con precarga).
     - **Frontend Hub de Ventas ([AdminSalesHubPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/AdminSalesHubPage.jsx) [MODIFY])**:
       - Se unificó la consola de Workshops como pestaña superior en la vista general de Ventas al lado de Closers y Setters.
+      - Se integró la pestaña **Forms** que renderiza el panel `FormsManagementPage` para el administrador directamente en la consola unificada de ventas.
     - **Navegación e Imports ([useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
       - Se removió el enlace redundante a Workshops del Dock del administrador para consolidar el flujo en la pestaña superior.
     - **Migración de Datos Históricos**:
