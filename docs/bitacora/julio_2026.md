@@ -1,6 +1,14 @@
 # Bitácora - Julio 2026
 
 - **15 de Julio de 2026**:
+  - **Mejoras en la Cualificación del Setter**:
+    - **Frontend React ([SetterCualificacionModal.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/SetterCualificacionModal.jsx) [MODIFY])**:
+      - Se reemplazó el selector simple del anuncio de origen por un combobox buscador interactivo con filtrado en tiempo real.
+      - Se unificaron los campos "Dolores del prospecto" y "Notas internas" en un único campo "Observaciones del setter" opcional.
+    - **Backend Python ([setter.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - Se modificó `fetchKeywords` en `SetterWorkflowPage` para obtener los anuncios del endpoint `/marketing/ads` en lugar de los eventos de cal.com.
+      - En `update_qualified_lead`, las observaciones del setter ahora se guardan directamente como un `Comment` (tipo 'client') asociado al prospecto, haciéndolo visible en la sección de "Notas & Comentarios" para que los demás roles puedan verlo e interactuar.
+
   - **Corrección de Redirección de Sesión para Setter y Closer**:
     - **Frontend React ([OperatorControls.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/OperatorControls.jsx) [MODIFY])**:
       - Se corrigió la redirección del rol `setter` al suplantar y revertir sesión desde el panel de operador. Antes apuntaba a `/setter/report`; ahora apunta al espacio de trabajo principal `/setter/deck?step=cualificacion`, consistente con el comportamiento del login.
