@@ -11,6 +11,7 @@ import {
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
+import CommentsSection from '../../components/shared/CommentsSection';
 
 const CloserWorkflowPage = () => {
     const { user } = useAuth();
@@ -570,127 +571,7 @@ const CloserWorkflowPage = () => {
                                                         </span>
                                                         <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
                                                     </div>
-                                                 </div>
-                                                    {/* Acciones Rápidas */}
-                                                {!isRescheduling && (
-                                                    <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-900/60" onClick={(e) => e.stopPropagation()}>
-                                                        <button
-                                                            onClick={(e) => handleQuickAction(a.id, 'Completada', e)}
-                                                            disabled={processingId === a.id}
-                                                            className="h-7 px-2.5 bg-emerald-600/90 hover:bg-emerald-500 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                                        >
-                                                            Asistió
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => handleQuickAction(a.id, 'No Show', e)}
-                                                            disabled={processingId === a.id}
-                                                            className="h-7 px-2.5 bg-rose-650/90 hover:bg-rose-550 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                                        >
-                                                            No Show
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => handleQuickAction(a.id, 'Cancelada', e)}
-                                                            disabled={processingId === a.id}
-                                                            className="h-7 px-2.5 bg-amber-600/90 hover:bg-amber-505 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                                        >
-                                                            Canceló
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setRescheduleData({ apptId: a.id, date: '', status: 'Reprogramada' })}
-                                                            disabled={processingId === a.id}
-                                                            className="h-7 px-2.5 bg-violet-650/80 hover:bg-violet-550 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                                        >
-                                                            Reagendar
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setRescheduleData({ apptId: a.id, date: '', status: 'Primera Agenda' })}
-                                                            disabled={processingId === a.id}
-                                                            className="h-7 px-2.5 bg-blue-650/80 hover:bg-blue-550 text-white font-black text-[9px] uppercase tracking-wider rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                                        >
-                                                            2ª Llamada
-                                                        </button>
-                                                        <button
-                                                            onClick={async (e) => {
-                                                                if (e) e.stopPropagation();
-                                                                if (!window.confirm("¿Seguro que deseas marcar este prospecto como No Lead?")) return;
-                                                                setProcessingId(a.id);
-                                                                try {
-                                                                    await api.post(`/closer/appointments/${a.id}/process`, {
-                                                                        status: 'No Lead'
-                                                                    });
-                                                                    toast.success("Prospecto marcado como No Lead");
-                                                                    fetchAgendas();
-                                                                } catch (err) {
-                                                                    console.error("Error al calificar como No Lead:", err);
-                                                                    toast.error("Error al calificar");
-                                                                } finally {
-                                                                    setProcessingId(null);
-                                                                }
-                                                            }}
-                                                            disabled={processingId === a.id}
-                                                            className="h-7 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-350 font-black text-[9px] uppercase tracking-wider rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 border border-slate-750"
-                                                        >
-                                                            No Lead
-                                                        </button>
-                                                    </div>
-                                                )}
-
-                                                {/* Panel de Reprogramación Inline */}
-                                                {isRescheduling && (
-                                                    <div className="flex items-center gap-2 pt-2 border-t border-slate-900/60" onClick={(e) => e.stopPropagation()}>
-                                                        <span className="text-[10px] font-black uppercase text-violet-400 tracking-wider flex items-center gap-1">
-                                                            <CalendarDays size={12} className="text-violet-500" />
-                                                            {rescheduleData.status === 'Reprogramada' ? 'Reagendar:' : '2ª Llamada:'}
-                                                        </span>
-                                                        <input 
-                                                            type="datetime-local" 
-                                                            value={rescheduleData.date ? formatToDatetimeLocal(rescheduleData.date) : ''}
-                                                            onChange={(e) => setRescheduleData(prev => ({ ...prev, date: e.target.value }))}
-                                                            className="bg-transparent border-none text-xs font-bold text-slate-200 focus:outline-none focus:ring-0 cursor-pointer p-0 w-36 hover:text-primary transition-colors"
-                                                        />
-                                                        <button
-                                                            onClick={async (e) => {
-                                                                e.stopPropagation();
-                                                                if (!rescheduleData.date) {
-                                                                    toast.error("Selecciona una fecha y hora");
-                                                                    return;
-                                                                }
-                                                                const note = window.prompt("Escribe la razón del cambio para el Lead Roadmap:");
-                                                                if (note === null) return;
-                                                                if (!note.trim()) {
-                                                                    toast.error("La razón del cambio es requerida");
-                                                                    return;
-                                                                }
-                                                                setProcessingId(a.id);
-                                                                try {
-                                                                    await api.post(`/closer/appointments/${a.id}/process`, {
-                                                                        status: rescheduleData.status === 'Reprogramada' ? 'Reagendado' : '2da call',
-                                                                        reschedule_date: rescheduleData.date,
-                                                                        role: 'closer',
-                                                                        note: note
-                                                                    });
-                                                                    toast.success(rescheduleData.status === 'Reprogramada' ? "Cita reprogramada" : "Segunda llamada agendada");
-                                                                    setRescheduleData({ apptId: null, date: '', status: '' });
-                                                                    fetchAgendas();
-                                                                } catch (err) {
-                                                                    console.error("Error al procesar el cambio de fecha:", err);
-                                                                    toast.error("Error al procesar el cambio de fecha");
-                                                                } finally {
-                                                                    setProcessingId(null);
-                                                                }
-                                                            }}
-                                                            disabled={processingId === a.id || !rescheduleData.date}
-                                                            className="h-6 px-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                                                        >
-                                                            {processingId === a.id ? <Loader2 size={10} className="animate-spin" /> : 'Confirmar'}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => setRescheduleData({ apptId: null, date: '', status: '' })}
-                                                            className="p-1 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors ml-auto"
-                                                        >
-                                                            <X size={12} />
-                                                        </button>
-                                                    </div>
+                                                              {/* En la lista ya no se muestran acciones inline, solo el badge */}
                                                 )}
                                             </motion.div>
                                         );
@@ -750,41 +631,248 @@ const CloserWorkflowPage = () => {
 
             </div>
 
-            {/* Modal de Detalle de Agenda (para agendas) */}
+            {/* Modal de Detalle de Agenda Custom (para agendas del Closer) */}
             <AnimatePresence>
                 {activeStep === 'agendas' && selectedLead && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl overflow-y-auto max-h-[85vh] text-left relative space-y-6 flex flex-col custom-scrollbar"
+                            className="w-full max-w-6xl bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden text-left relative flex flex-col max-h-[90vh] text-slate-100 animate-in zoom-in-95 duration-250"
                         >
-                            <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-                                <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
-                                    <AlertCircle size={13} />
-                                    Ficha de Seguimiento del Prospecto
-                                </h3>
+                            {/* Cabecera */}
+                            <div className="flex justify-between items-center pb-4 border-b border-slate-800">
+                                <div className="space-y-1">
+                                    <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
+                                        <AlertCircle size={20} className="text-violet-400" />
+                                        {selectedLead.lead_name || 'Sin Nombre'}
+                                    </h3>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                        Ficha Operativa de Cierre • ID Cita: #{selectedLead.id}
+                                    </p>
+                                </div>
                                 <button
                                     onClick={() => setSelectedLead(null)}
-                                    className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-white transition-colors"
+                                    className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer border-none bg-transparent"
                                 >
-                                    <X size={14} />
+                                    <X size={20} />
                                 </button>
                             </div>
                             
-                            <LeadRoadmapDetail 
-                                instagram={selectedLead.instagram}
-                                email={selectedLead.email}
-                                phone={selectedLead.phone}
-                                availableKeywords={[]}
-                                userRole={user?.role}
-                                appointmentId={selectedLead.id}
-                                compact={true}
-                                onUpdate={() => {
-                                    fetchAgendas();
-                                }}
-                            />
+                            {/* Grid principal */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar mt-6 grid grid-cols-1 lg:grid-cols-12 gap-8 pr-2">
+                                {/* Columna Izquierda: Info y Acciones */}
+                                <div className="lg:col-span-7 space-y-6">
+                                    {/* Bloque 1: Info Principal del Lead */}
+                                    <div className="bg-slate-950/40 border border-slate-850 p-5 rounded-2xl space-y-4">
+                                        <h4 className="text-[10px] font-black text-violet-400 uppercase tracking-wider border-b border-slate-900 pb-2">
+                                            Información del Prospecto
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                            <div className="space-y-1">
+                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Instagram</span>
+                                                {selectedLead.instagram ? (
+                                                    <a
+                                                        href={selectedLead.ig_chat_link || `https://instagram.com/${selectedLead.instagram.replace('@', '')}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-violet-400 hover:text-violet-300 font-black hover:underline inline-flex items-center gap-1.5"
+                                                    >
+                                                        <Instagram size={12} />
+                                                        @{selectedLead.instagram.replace('@', '')}
+                                                        <ExternalLink size={10} />
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-slate-400 font-bold">No asignado</span>
+                                                )}
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Fuente del Lead</span>
+                                                <span className="text-slate-200 font-bold">{selectedLead.origin || 'Meta Ads / ManyChat'}</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Email</span>
+                                                <span className="text-slate-350 font-bold">{selectedLead.email || 'N/A'}</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Teléfono</span>
+                                                <span className="text-slate-350 font-bold">{selectedLead.phone || 'N/A'}</span>
+                                            </div>
+                                            <div className="space-y-1 sm:col-span-2">
+                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Setter Asignado</span>
+                                                <span className="text-slate-200 font-black">{selectedLead.setter_name || 'Sin Asignar'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Bloque 2: Notas del Setter */}
+                                    {selectedLead.setter_notes && (
+                                        <div className="bg-slate-950/40 border border-slate-850 p-5 rounded-2xl space-y-2">
+                                            <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-wider">
+                                                Notas de Cualificación (Setter)
+                                            </h4>
+                                            <p className="text-xs text-slate-300 italic leading-relaxed">
+                                                "{selectedLead.setter_notes}"
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Bloque 3: Respuestas del Formulario */}
+                                    {selectedLead.survey_answers && selectedLead.survey_answers.length > 0 && (
+                                        <div className="bg-slate-950/40 border border-slate-850 p-5 rounded-2xl space-y-3">
+                                            <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-wider border-b border-slate-900 pb-2">
+                                                Respuestas de la Encuesta
+                                            </h4>
+                                            <div className="space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-2">
+                                                {selectedLead.survey_answers.map((ans, index) => (
+                                                    <div key={index} className="space-y-0.5 border-l-2 border-emerald-500/20 pl-3">
+                                                        <p className="text-[9px] font-bold text-slate-500 leading-tight">{ans.question}</p>
+                                                        <p className="text-xs font-black text-slate-200">{ans.answer || 'Sin respuesta'}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Bloque 4: Modificar Estado (Acciones del Closer) */}
+                                    <div className="bg-slate-950/40 border border-slate-850 p-5 rounded-2xl space-y-4">
+                                        <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                                            <h4 className="text-[10px] font-black text-violet-400 uppercase tracking-wider">
+                                                Modificar Estado del Lead
+                                            </h4>
+                                            <span className="text-[10px] font-black uppercase bg-violet-650/20 text-violet-400 border border-violet-500/25 px-2.5 py-0.5 rounded-lg">
+                                                Actual: {selectedLead.closer_result || 'Pendiente'}
+                                            </span>
+                                        </div>
+
+                                        {/* Botonera de acciones rápidas */}
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                onClick={(e) => { handleQuickAction(selectedLead.id, 'Completada', e); setSelectedLead(null); }}
+                                                disabled={processingId === selectedLead.id}
+                                                className="h-10 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                            >
+                                                Asistió
+                                            </button>
+                                            <button
+                                                onClick={(e) => { handleQuickAction(selectedLead.id, 'No Show', e); setSelectedLead(null); }}
+                                                disabled={processingId === selectedLead.id}
+                                                className="h-10 px-4 bg-rose-650/90 hover:bg-rose-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                            >
+                                                No Show
+                                            </button>
+                                            <button
+                                                onClick={(e) => { handleQuickAction(selectedLead.id, 'Cancelada', e); setSelectedLead(null); }}
+                                                disabled={processingId === selectedLead.id}
+                                                className="h-10 px-4 bg-amber-600/90 hover:bg-amber-505 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                            >
+                                                Canceló
+                                            </button>
+                                            <button
+                                                onClick={() => setRescheduleData({ apptId: selectedLead.id, date: '', status: 'Reprogramada' })}
+                                                disabled={processingId === selectedLead.id}
+                                                className="h-10 px-4 bg-violet-650/80 hover:bg-violet-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                            >
+                                                Reagendar
+                                            </button>
+                                            <button
+                                                onClick={() => setRescheduleData({ apptId: selectedLead.id, date: '', status: 'Primera Agenda' })}
+                                                disabled={processingId === selectedLead.id}
+                                                className="h-10 px-4 bg-blue-650/80 hover:bg-blue-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                            >
+                                                2ª Llamada
+                                            </button>
+                                            <button
+                                                onClick={async (e) => {
+                                                    if (e) e.stopPropagation();
+                                                    if (!window.confirm("¿Seguro que deseas marcar este prospecto como No Lead?")) return;
+                                                    setProcessingId(selectedLead.id);
+                                                    try {
+                                                        await api.post(`/closer/appointments/${selectedLead.id}/process`, { status: 'No Lead' });
+                                                        toast.success("Prospecto marcado como No Lead");
+                                                        setSelectedLead(null);
+                                                        fetchAgendas();
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        toast.error("Error al calificar");
+                                                    } finally {
+                                                        setProcessingId(null);
+                                                    }
+                                                }}
+                                                disabled={processingId === selectedLead.id}
+                                                className="h-10 px-4 bg-slate-800 hover:bg-slate-700 text-slate-350 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border border-slate-750"
+                                            >
+                                                No Lead
+                                            </button>
+                                        </div>
+
+                                        {/* Formulario de reprogramación inline si se activó */}
+                                        {rescheduleData.apptId === selectedLead.id && (
+                                            <div className="pt-4 border-t border-slate-900 flex flex-wrap items-center gap-3 animate-in slide-in-from-bottom-2 duration-200">
+                                                <span className="text-[10px] font-black uppercase text-violet-400 tracking-wider flex items-center gap-1">
+                                                    <CalendarDays size={14} className="text-violet-500" />
+                                                    {rescheduleData.status === 'Reprogramada' ? 'Nueva Fecha Reagenda:' : 'Nueva Fecha 2ª Llamada:'}
+                                                </span>
+                                                <input 
+                                                    type="datetime-local" 
+                                                    value={rescheduleData.date ? formatToDatetimeLocal(rescheduleData.date) : ''}
+                                                    onChange={(e) => setRescheduleData(prev => ({ ...prev, date: e.target.value }))}
+                                                    className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50"
+                                                />
+                                                <button
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        if (!rescheduleData.date) {
+                                                            toast.error("Selecciona una fecha y hora");
+                                                            return;
+                                                        }
+                                                        const note = window.prompt("Escribe la razón del cambio para el Lead Roadmap:");
+                                                        if (note === null) return;
+                                                        if (!note.trim()) {
+                                                            toast.error("La razón del cambio es requerida");
+                                                            return;
+                                                        }
+                                                        setProcessingId(selectedLead.id);
+                                                        try {
+                                                            await api.post(`/closer/appointments/${selectedLead.id}/process`, {
+                                                                status: rescheduleData.status === 'Reprogramada' ? 'Reagendado' : '2da call',
+                                                                reschedule_date: rescheduleData.date,
+                                                                role: 'closer',
+                                                                note: note
+                                                            });
+                                                            toast.success(rescheduleData.status === 'Reprogramada' ? "Cita reprogramada" : "Segunda llamada agendada");
+                                                            setRescheduleData({ apptId: null, date: '', status: '' });
+                                                            setSelectedLead(null);
+                                                            fetchAgendas();
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            toast.error("Error al procesar el cambio");
+                                                        } finally {
+                                                            setProcessingId(null);
+                                                        }
+                                                    }}
+                                                    disabled={processingId === selectedLead.id || !rescheduleData.date}
+                                                    className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center cursor-pointer"
+                                                >
+                                                    {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Confirmar Reprogramación'}
+                                                </button>
+                                                <button 
+                                                    onClick={() => setRescheduleData({ apptId: null, date: '', status: '' })}
+                                                    className="h-9 px-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Columna Derecha: Chat / Comentarios */}
+                                <div className="lg:col-span-5 h-[65vh]">
+                                    <CommentsSection clientId={selectedLead.client_id} />
+                                </div>
+                            </div>
                         </motion.div>
                     </div>
                 )}
