@@ -722,7 +722,6 @@ const SetterWorkflowPage = () => {
                                 )}
                             </div>
                         )}
-                        )}
                     </div>
                 </div>
 
