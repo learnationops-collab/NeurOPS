@@ -10,8 +10,7 @@ const SetterCualificacionModal = ({ isOpen, onClose, lead, availableKeywords, on
     const [keyword, setKeyword] = useState('');
     const [adSearch, setAdSearch] = useState('');
     const [adDropdownOpen, setAdDropdownOpen] = useState(false);
-    const [dolores, setDolores] = useState('');
-    const [observaciones, setObservaciones] = useState('');
+    const [setterNote, setSetterNote] = useState('');
     const [saving, setSaving] = useState(false);
     const adRef = useRef(null);
 
@@ -20,15 +19,13 @@ const SetterCualificacionModal = ({ isOpen, onClose, lead, availableKeywords, on
             setQualification(lead.result === 'false' ? 'false' : 'true');
             const savedKeyword = lead.keyword || '';
             setKeyword(savedKeyword);
-            // Prellenar el input de búsqueda con el nombre del anuncio guardado
             if (savedKeyword && availableKeywords.length > 0) {
                 const found = availableKeywords.find(k => k.slug === savedKeyword);
                 setAdSearch(found ? `${found.name} (${found.slug})` : savedKeyword);
             } else {
                 setAdSearch(savedKeyword);
             }
-            setDolores(lead.dolores || '');
-            setObservaciones(lead.observaciones || '');
+            setSetterNote('');
         }
     }, [lead, availableKeywords]);
 
@@ -46,10 +43,6 @@ const SetterCualificacionModal = ({ isOpen, onClose, lead, availableKeywords, on
     if (!isOpen || !lead) return null;
 
     const handleSave = async (andNext = false) => {
-        if (qualification === 'true' && !dolores.trim()) {
-            toast.error("Los dolores del prospecto son obligatorios");
-            return;
-        }
         if (!keyword) {
             toast.error("El anuncio de origen es obligatorio");
             return;
@@ -60,8 +53,7 @@ const SetterCualificacionModal = ({ isOpen, onClose, lead, availableKeywords, on
             await api.post(`/setter/deck/update-qualified/${lead.id}`, {
                 qualification,
                 keyword,
-                dolores,
-                observaciones
+                setter_note: setterNote
             });
             toast.success("Lead guardado correctamente");
             
@@ -310,44 +302,28 @@ const SetterCualificacionModal = ({ isOpen, onClose, lead, availableKeywords, on
                         </div>
 
 
-                        {/* Paso 3: Información del prospecto */}
+                        {/* Paso 3: Observaciones del setter */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-10">
                             <div className="lg:col-span-4 space-y-1">
                                 <div className="flex items-center gap-2">
                                     <span className="w-6 h-6 rounded-lg bg-violet-650/20 text-violet-400 flex items-center justify-center text-xs font-black">3</span>
-                                    <h3 className="text-sm font-black text-white uppercase tracking-wider">Información del prospecto</h3>
+                                    <h3 className="text-sm font-black text-white uppercase tracking-wider">Observaciones del setter</h3>
                                 </div>
-                                <p className="text-xs text-slate-500 font-bold pl-8">Completa la información clave de esta conversación.</p>
+                                <p className="text-xs text-slate-500 font-bold pl-8">Se publicará como nota visible para todo el equipo en Notas &amp; Comentarios.</p>
                             </div>
 
-                            <div className="lg:col-span-8 space-y-6">
-                                {/* Dolores */}
-                                <div className="space-y-1.5">
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Dolores del prospecto (obligatorio)</span>
-                                    <div className="relative">
-                                        <textarea
-                                            value={dolores}
-                                            onChange={(e) => setDolores(e.target.value.slice(0, 500))}
-                                            placeholder="Ej: Me siento estancada en mi negocio, no tengo claridad, me cuesta vender..."
-                                            className="w-full bg-[#0d0e14] border border-slate-800/80 rounded-2xl p-4 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 min-h-[110px] resize-none"
-                                        />
-                                        <span className="absolute bottom-3 right-4 text-[9px] font-bold text-slate-650">{dolores.length}/500</span>
-                                    </div>
+                            <div className="lg:col-span-8 space-y-3">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Nota / observación (opcional)</span>
+                                <div className="relative">
+                                    <textarea
+                                        value={setterNote}
+                                        onChange={(e) => setSetterNote(e.target.value.slice(0, 800))}
+                                        placeholder="Ej: El lead mencionó que ya probó otros programas, tiene presupuesto disponible, muy interesado en el proceso..."
+                                        className="w-full bg-[#0d0e14] border border-slate-800/80 rounded-2xl p-4 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 min-h-[140px] resize-none"
+                                    />
+                                    <span className="absolute bottom-3 right-4 text-[9px] font-bold text-slate-650">{setterNote.length}/800</span>
                                 </div>
-
-                                {/* Notas internas */}
-                                <div className="space-y-1.5">
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Notas internas (opcional)</span>
-                                    <div className="relative">
-                                        <textarea
-                                            value={observaciones}
-                                            onChange={(e) => setObservaciones(e.target.value.slice(0, 500))}
-                                            placeholder="Cualquier información relevante sobre esta conversación..."
-                                            className="w-full bg-[#0d0e14] border border-[#1e293b] rounded-2xl p-4 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 min-h-[110px] resize-none"
-                                        />
-                                        <span className="absolute bottom-3 right-4 text-[9px] font-bold text-slate-650">{observaciones.length}/500</span>
-                                    </div>
-                                </div>
+                                <p className="text-[10px] text-slate-600 italic pl-1">💬 Esta nota aparecerá en tiempo real en el panel de comentarios de la derecha y podrán responderte desde otros roles.</p>
                             </div>
                         </div>
                         

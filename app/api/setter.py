@@ -1469,11 +1469,17 @@ def update_qualified_lead(answer_id):
         db.session.add(client)
         db.session.commit()
         
-    # 2. Guardar dolores y observaciones en Client
-    if 'dolores' in data:
-        client.dolores = data['dolores']
-    if 'observaciones' in data:
-        client.observaciones = data['observaciones']
+    # 2. Guardar observación del setter y publicarla como nota visible
+    setter_note = data.get('setter_note', '').strip()
+    if setter_note:
+        from app.models import Comment
+        comment = Comment(
+            text=setter_note,
+            comment_type='client',
+            associated_id=client.id,
+            author_id=current_user.id
+        )
+        db.session.add(comment)
         
     # 3. Guardar anuncio de origen en LeadAnswer
     if 'keyword' in data:
