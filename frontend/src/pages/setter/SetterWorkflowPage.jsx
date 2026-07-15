@@ -79,8 +79,13 @@ const SetterWorkflowPage = () => {
     // Cargar anuncios (keywords) disponibles
     const fetchKeywords = async () => {
         try {
-            const res = await api.get('/setter/links');
-            setAvailableKeywords(res.data?.events || []);
+            const res = await api.get('/marketing/ads');
+            const ads = res.data || [];
+            // Mapea Ad.keyword como slug (lo que se guarda en el lead)
+            setAvailableKeywords(ads
+                .filter(a => a.keyword)
+                .map(a => ({ id: a.id, name: a.name, slug: a.keyword }))
+            );
         } catch (err) {
             console.error("Error al cargar anuncios:", err);
         }
