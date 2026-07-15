@@ -30,7 +30,8 @@
       - Se dividió el modal de registro y edición en un flujo interactivo paso a paso de 3 secciones (Tráfico & Ads, Asistencia Webinar, y Confirmación Sistema con precarga).
     - **Frontend Hub de Ventas ([AdminSalesHubPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/AdminSalesHubPage.jsx) [MODIFY])**:
       - Se unificó la consola de Workshops como pestaña superior en la vista general de Ventas al lado de Closers y Setters.
-      - Se integró la pestaña **Forms** que renderiza el panel `FormsManagementPage` para el administrador directamente en la consola unificada de ventas.
+    - **Frontend Closer Dashboard ([PublicCloserStatsPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicCloserStatsPage.jsx) [MODIFY])**:
+      - Se integró la pestaña **Forms** que renderiza el panel `FormsManagementPage` directamente dentro del Closer Dashboard junto a las pestañas de Rendimiento, Clientes Nuevos y Registro de Agendas.
     - **Navegación e Imports ([useDockNavigation.js](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
       - Se removió el enlace redundante a Workshops del Dock del administrador para consolidar el flujo en la pestaña superior.
     - **Migración de Datos Históricos**:
