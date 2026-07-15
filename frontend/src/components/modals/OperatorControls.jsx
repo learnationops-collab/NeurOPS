@@ -65,7 +65,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
             if (targetUser.role === 'admin') {
                 redirectPath = '/admin/ventas';
             } else if (targetUser.role === 'setter') {
-                redirectPath = '/setter/report';
+                redirectPath = '/setter/deck?step=cualificacion';
             } else if (targetUser.role === 'triage') {
                 redirectPath = '/triage/agendas';
             } else if (targetUser.role === 'closer') {
@@ -95,7 +95,7 @@ const OperatorControls = ({ isOpen, onClose }) => {
             let redirectPath = '/login';
             if (originalUser.role === 'admin') redirectPath = '/admin/ventas';
             if (originalUser.role === 'operator') redirectPath = '/ops/dashboard';
-            if (originalUser.role === 'setter') redirectPath = '/setter/report';
+            if (originalUser.role === 'setter') redirectPath = '/setter/deck?step=cualificacion';
             if (originalUser.role === 'triage') redirectPath = '/triage/agendas';
             if (originalUser.role === 'closer') redirectPath = '/closer/deck?step=agendas';
 
