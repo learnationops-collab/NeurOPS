@@ -15,6 +15,22 @@
     - **Backend Python ([closer.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
       - En el endpoint `process_closer_card` (POST `/api/closer/deck/<int:appt_id>`), si se guardan notas de seguimiento (`closer_notes`), se crea automáticamente un `Comment` de tipo `client` asociado al prospecto. Esto expone la nota en el chat de comentarios de inmediato, permitiendo comunicación cruzada y respuestas en hilo de otros roles.
 
+  - **Espacio de Trabajo del Call Confirmer (Triaje)**:
+    - **Frontend React ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [NEW])**:
+      - Se creó el nuevo componente del espacio de trabajo interactivo del confirmer (`/triage/deck`).
+      - Ofrece un listado dividido en dos secciones de hoy: **"Citas por Confirmar"** y **"Confirmadas y Procesadas"**, con selector de fecha, recarga y buscador local.
+      - Al hacer clic en un lead, se abre un modal de doble columna (`max-w-6xl`): columna izquierda con detalles, encuesta y botones de confirmación rápida (Contactado, Confirmar, Sin Respuesta, Reagendar, Cancelar) y columna derecha con el chat unificado (`CommentsSection`).
+    - **Backend Python ([financial.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY])**:
+      - En el método `to_dict` del modelo `FinancialAgenda`, se resolvió de forma dinámica la asociación con la ficha de `Client` (CRM) y `Appointment` correspondiente (mediante email/instagram).
+      - Se incluyeron datos de `client_id`, `survey_answers`, `setter_name`, `setter_notes`, `ig_chat_link` y `keyword` en el JSON retornado por `/public/financial-agendas` para alimentar el modal de triaje.
+    - **Frontend React ([App.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx) [MODIFY])**:
+      - Se registró la nueva ruta protegida `/triage/deck` e importó `TriageWorkflowPage`.
+      - Se cambió la redirección predeterminada tras el inicio de sesión del rol `triage` a `/triage/deck?step=confirmar`.
+    - **Frontend React ([useDockNavigation.js](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/hooks/useDockNavigation.js) [MODIFY])**:
+      - Se añadió el botón **"Confirmaciones"** con icono `Layers` al panel de navegación del rol triaje para dar acceso rápido a su nuevo mazo.
+    - **Frontend React ([LoginPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/auth/LoginPage.jsx) y [OperatorControls.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/OperatorControls.jsx) [MODIFY])**:
+      - Se actualizaron las redirecciones de sesión e impersonación del rol `triage` para apuntar al nuevo deck.
+
   - **Mejoras en la Cualificación del Setter**:
     - **Frontend React ([SetterCualificacionModal.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/SetterCualificacionModal.jsx) [MODIFY])**:
       - Se reemplazó el selector simple del anuncio de origen por un combobox buscador interactivo con filtrado en tiempo real.
