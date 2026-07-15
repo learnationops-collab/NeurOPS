@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowLeft, Check, Play, ExternalLink, Save, ArrowRight, Loader2, Instagram, MessageSquare, Clock } from 'lucide-react';
+import { X, ArrowLeft, Check, Play, ExternalLink, Save, ArrowRight, Loader2, Instagram, MessageSquare, Clock, Search, ChevronDown } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import CommentsSection from '../shared/CommentsSection';
@@ -8,18 +8,40 @@ import CommentsSection from '../shared/CommentsSection';
 const SetterCualificacionModal = ({ isOpen, onClose, lead, availableKeywords, onUpdate, onSaveAndNext }) => {
     const [qualification, setQualification] = useState('true');
     const [keyword, setKeyword] = useState('');
+    const [adSearch, setAdSearch] = useState('');
+    const [adDropdownOpen, setAdDropdownOpen] = useState(false);
     const [dolores, setDolores] = useState('');
     const [observaciones, setObservaciones] = useState('');
     const [saving, setSaving] = useState(false);
+    const adRef = useRef(null);
 
     useEffect(() => {
         if (lead) {
             setQualification(lead.result === 'false' ? 'false' : 'true');
-            setKeyword(lead.keyword || '');
+            const savedKeyword = lead.keyword || '';
+            setKeyword(savedKeyword);
+            // Prellenar el input de búsqueda con el nombre del anuncio guardado
+            if (savedKeyword && availableKeywords.length > 0) {
+                const found = availableKeywords.find(k => k.slug === savedKeyword);
+                setAdSearch(found ? `${found.name} (${found.slug})` : savedKeyword);
+            } else {
+                setAdSearch(savedKeyword);
+            }
             setDolores(lead.dolores || '');
             setObservaciones(lead.observaciones || '');
         }
-    }, [lead]);
+    }, [lead, availableKeywords]);
+
+    // Cerrar dropdown al hacer clic fuera
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (adRef.current && !adRef.current.contains(e.target)) {
+                setAdDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     if (!isOpen || !lead) return null;
 
@@ -178,6 +200,7 @@ const SetterCualificacionModal = ({ isOpen, onClose, lead, availableKeywords, on
                             </div>
                         </div>
 
+
                         {/* Paso 2: Anuncio de origen */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-6 border-b border-slate-900">
                             <div className="lg:col-span-4 space-y-1">
@@ -190,34 +213,102 @@ const SetterCualificacionModal = ({ isOpen, onClose, lead, availableKeywords, on
 
                             <div className="lg:col-span-8 space-y-3">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Seleccionar anuncio activo (obligatorio)</span>
-                                <div className="relative">
-                                    <select
-                                        value={keyword}
-                                        onChange={(e) => setKeyword(e.target.value)}
-                                        className="w-full bg-[#0d0e14] border border-slate-800/80 rounded-xl px-4 py-3 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 appearance-none cursor-pointer"
+
+                                {/* Combobox buscador de anuncio */}
+                                <div className="relative" ref={adRef}>
+                                    <div
+                                        className={`flex items-center gap-2 w-full bg-[#0d0e14] border rounded-xl px-4 py-3 transition-all ${
+                                            adDropdownOpen ? 'border-violet-500/50 ring-1 ring-violet-500/20' : 'border-slate-800/80 hover:border-slate-700'
+                                        }`}
                                     >
-                                        <option value="">Seleccionar anuncio...</option>
-                                        {availableKeywords.map((k) => (
-                                            <option key={k.id} value={k.slug}>{k.name} ({k.slug})</option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                                        ▾
+                                        <Search size={14} className="text-slate-500 shrink-0" />
+                                        <input
+                                            type="text"
+                                            value={adSearch}
+                                            onChange={(e) => {
+                                                setAdSearch(e.target.value);
+                                                setAdDropdownOpen(true);
+                                                if (!e.target.value) setKeyword('');
+                                            }}
+                                            onFocus={() => setAdDropdownOpen(true)}
+                                            placeholder="Buscar anuncio por nombre o slug..."
+                                            className="flex-1 bg-transparent border-none text-xs font-bold text-slate-200 outline-none placeholder-slate-600"
+                                        />
+                                        {keyword && (
+                                            <button
+                                                type="button"
+                                                onClick={() => { setKeyword(''); setAdSearch(''); }}
+                                                className="text-slate-500 hover:text-slate-300 transition-colors shrink-0"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                        <ChevronDown size={14} className={`text-slate-500 shrink-0 transition-transform ${adDropdownOpen ? 'rotate-180' : ''}`} />
                                     </div>
+
+                                    {/* Dropdown de opciones filtradas */}
+                                    {adDropdownOpen && (
+                                        <div className="absolute z-50 top-full mt-1 w-full bg-[#0d0e14] border border-slate-800 rounded-xl shadow-2xl shadow-black/50 overflow-hidden">
+                                            <div className="max-h-56 overflow-y-auto custom-scrollbar">
+                                                {(() => {
+                                                    const q = adSearch.toLowerCase().trim();
+                                                    const filtered = availableKeywords.filter(k =>
+                                                        !q ||
+                                                        k.name.toLowerCase().includes(q) ||
+                                                        k.slug.toLowerCase().includes(q)
+                                                    );
+                                                    if (filtered.length === 0) {
+                                                        return (
+                                                            <div className="px-4 py-6 text-center text-xs font-bold text-slate-600 uppercase tracking-widest">
+                                                                Sin resultados para "{adSearch}"
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return filtered.map((k) => (
+                                                        <button
+                                                            key={k.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setKeyword(k.slug);
+                                                                setAdSearch(`${k.name} (${k.slug})`);
+                                                                setAdDropdownOpen(false);
+                                                            }}
+                                                            className={`w-full text-left px-4 py-3 text-xs font-bold transition-colors flex items-center justify-between gap-3 border-b border-slate-900/60 last:border-none ${
+                                                                keyword === k.slug
+                                                                    ? 'bg-violet-600/15 text-violet-300'
+                                                                    : 'text-slate-300 hover:bg-slate-800/60'
+                                                            }`}
+                                                        >
+                                                            <span>{k.name}</span>
+                                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider shrink-0">{k.slug}</span>
+                                                        </button>
+                                                    ));
+                                                })()}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Badge de anuncio seleccionado */}
                                 {keyword && (
-                                    <a 
-                                        href="https://adsmanager.facebook.com"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-[10px] font-black text-violet-400 hover:text-violet-300 transition-colors uppercase tracking-wider"
-                                    >
-                                        Ver anuncio en Meta Ads
-                                        <ExternalLink size={10} />
-                                    </a>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black text-violet-400 uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 px-3 py-1 rounded-full">
+                                            ✓ {keyword}
+                                        </span>
+                                        <a
+                                            href="https://adsmanager.facebook.com"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-[10px] font-black text-slate-500 hover:text-violet-400 transition-colors uppercase tracking-wider"
+                                        >
+                                            Ver en Meta Ads
+                                            <ExternalLink size={10} />
+                                        </a>
+                                    </div>
                                 )}
                             </div>
                         </div>
+
 
                         {/* Paso 3: Información del prospecto */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-10">
