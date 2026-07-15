@@ -361,18 +361,20 @@ const WorkshopDashboardPage = () => {
     const activeFunnelData = useMemo(() => {
         if (!selectedEventForFunnel) return [];
         const e = selectedEventForFunnel;
+        const leads = e.leads || 0;
+        
+        const pct = (val) => leads > 0 ? ((val / leads) * 100).toFixed(1) + '%' : '0%';
         
         return [
-            { label: 'Clics', value: e.clics, rate: '100%', detail: 'Tráfico inicial de Ads' },
-            { label: 'Leads', value: e.leads, rate: `${e.conversion_leads}%`, sub: 'Tasa Conv. Clics', detail: 'Prospectos registrados' },
-            { label: 'WhatsApp', value: e.whatsapp_leads, rate: `${e.tx_entrada_whatsapp}%`, sub: 'Entrada WA', detail: 'Leads que entraron al grupo' },
-            { label: 'Asistencia Webinar', value: e.show_up, rate: `${e.show_up_rate}%`, sub: 'Show up Webinar', detail: 'Vieron el webinar en vivo' },
-            { label: 'Leads en Pitch', value: e.pitch_leads, rate: `${e.retencion_clase}%`, sub: 'Retención Clase', detail: 'Se quedaron hasta el pitch' },
-            { label: 'Final de Pitch', value: e.pitch_final_leads, rate: `${e.retencion_pitch}%`, sub: 'Retención Pitch', detail: 'Vieron la oferta final' },
-            { label: 'Aplicaciones Calendly', value: e.aplicaciones_form, rate: `${e.pct_aplicacion}%`, sub: 'Tasa Aplicación', detail: 'Llenaron formulario Calendly' },
-            { label: 'Agendas Exitosas', value: e.agendas_exitosas, rate: `${e.pct_aplicacion_agenda}%`, sub: 'Aplicación a Agenda', detail: 'Agendaron cita con closer' },
-            { label: 'Show up Sales Call', value: e.show_up_sales_call, rate: `${e.pct_show_up_sales_call}%`, sub: 'Show Up en Cita', detail: 'Asistieron a la llamada de ventas' },
-            { label: 'Ventas (Sales)', value: e.sales, rate: `${e.pct_close_rate}%`, sub: 'Close Rate', detail: 'Cierres de venta completados' }
+            { label: 'Leads', value: leads, rate: '100%', detail: 'Base del embudo — prospectos registrados' },
+            { label: 'WhatsApp', value: e.whatsapp_leads, rate: pct(e.whatsapp_leads), sub: 'Entrada WA', detail: 'Leads que entraron al grupo' },
+            { label: 'Asistencia Webinar', value: e.show_up, rate: pct(e.show_up), sub: 'Show up Webinar', detail: 'Vieron el webinar en vivo' },
+            { label: 'Leads en Pitch', value: e.pitch_leads, rate: pct(e.pitch_leads), sub: 'Retención Clase', detail: 'Se quedaron hasta el pitch' },
+            { label: 'Final de Pitch', value: e.pitch_final_leads, rate: pct(e.pitch_final_leads), sub: 'Retención Pitch', detail: 'Vieron la oferta final' },
+            { label: 'Aplicaciones Calendly', value: e.aplicaciones_form, rate: pct(e.aplicaciones_form), sub: 'Tasa Aplicación', detail: 'Llenaron formulario Calendly' },
+            { label: 'Agendas Exitosas', value: e.agendas_exitosas, rate: pct(e.agendas_exitosas), sub: 'Aplicación a Agenda', detail: 'Agendaron cita con closer' },
+            { label: 'Show up Sales Call', value: e.show_up_sales_call, rate: pct(e.show_up_sales_call), sub: 'Show Up en Cita', detail: 'Asistieron a la llamada de ventas' },
+            { label: 'Ventas (Sales)', value: e.sales, rate: pct(e.sales), sub: 'Close Rate', detail: 'Cierres de venta completados' }
         ];
     }, [selectedEventForFunnel]);
 
@@ -758,7 +760,7 @@ const WorkshopDashboardPage = () => {
                                             <div className="w-full h-3 bg-slate-950 border border-slate-900 rounded-full overflow-hidden relative group/bar">
                                                 <div
                                                     className="h-full bg-gradient-to-r from-indigo-600 to-emerald-500 rounded-full transition-all duration-1000 origin-left"
-                                                    style={{ width: `${selectedEventForFunnel?.clics ? (step.value / selectedEventForFunnel.clics) * 100 : 0}%` }}
+                                                    style={{ width: `${selectedEventForFunnel?.leads ? (step.value / selectedEventForFunnel.leads) * 100 : 0}%` }}
                                                 />
                                             </div>
                                             <p className="text-[8px] text-slate-600 font-bold uppercase tracking-wider pl-7">{step.detail}</p>
