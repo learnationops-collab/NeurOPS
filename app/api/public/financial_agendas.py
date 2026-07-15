@@ -534,6 +534,14 @@ def update_financial_agenda(agenda_id):
             agenda.encargado_triage = data['encargado_triage']
         if 'date' in data:
             agenda.date = parse_date_robustly(data['date'])
+        if 'created_at' in data and data['created_at']:
+            new_created_at = parse_date_robustly(data['created_at'])
+            import pytz
+            la_paz_tz = pytz.timezone('America/La_Paz')
+            if new_created_at.tzinfo is not None:
+                new_created_at = new_created_at.astimezone(la_paz_tz).replace(tzinfo=None)
+            agenda.created_at = new_created_at
+            agenda.registro = new_created_at.isoformat()
             
         if status_changed:
             from app.models import Notification
