@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     Plus, Edit2, Trash2, Calendar, RefreshCw,
     TrendingUp, DollarSign, Activity, Loader2, Sparkles,
-    X, Check, ArrowRight, ArrowLeft, AlertCircle, LayoutGrid, List, BarChart3, HelpCircle
+    X, Check, ArrowRight, ArrowLeft, AlertCircle, LayoutGrid, List, BarChart3, HelpCircle, Zap
 } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
@@ -238,6 +238,36 @@ const WorkshopDashboardPage = () => {
             console.error("Error saving event:", err);
             const msg = err.response?.data?.error || "Error al guardar el evento";
             toast.error(msg);
+        }
+    };
+
+    // Resincronizar los campos del sistema desde el prefill sin abrir el modal
+    const [resyncing, setResyncing] = useState(false);
+    const handleResyncFunnel = async () => {
+        if (!selectedEventForFunnel || resyncing) return;
+        try {
+            setResyncing(true);
+            const res = await api.get(`workshop/prefill?date=${selectedEventForFunnel.date}`);
+            const data = res.data;
+            const patch = {
+                aplicaciones_form: data.aplicaciones_form,
+                agendas_exitosas: data.agendas_exitosas,
+                show_up_sales_call: data.show_up_sales_call,
+                sales: data.sales,
+                cash_collected: data.cash_collected
+            };
+            await api.put(`workshop/events/${selectedEventForFunnel.id}`, {
+                ...selectedEventForFunnel,
+                ...patch
+            });
+            toast.success('Datos del sistema actualizados correctamente');
+            setAgendaBreakdown(data.agendas_breakdown);
+            fetchEvents();
+        } catch (err) {
+            console.error('Error resincronizando embudo:', err);
+            toast.error(err.response?.data?.error || 'Error al actualizar desde sistema');
+        } finally {
+            setResyncing(false);
         }
     };
 
@@ -675,9 +705,20 @@ const WorkshopDashboardPage = () => {
                                     <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">{selectedEventForFunnel?.name}</h3>
                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{formatDate(selectedEventForFunnel?.date)}</p>
                                 </div>
-                                <div className="text-right">
-                                    <span className="text-emerald-400 font-black text-2xl italic tracking-tighter">{selectedEventForFunnel && `${selectedEventForFunnel.roas.toFixed(2)}x ROAS`}</span>
-                                    <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Retorno de Inversión</p>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={handleResyncFunnel}
+                                        disabled={resyncing}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 hover:bg-indigo-600/30 text-indigo-300 text-[9px] font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                        title="Actualizar Aplicaciones, Agendas, Show up y Ventas desde el sistema"
+                                    >
+                                        {resyncing ? <Loader2 size={10} className="animate-spin" /> : <Zap size={10} />}
+                                        {resyncing ? 'Actualizando...' : 'Resync Sistema'}
+                                    </button>
+                                    <div className="text-right">
+                                        <span className="text-emerald-400 font-black text-2xl italic tracking-tighter">{selectedEventForFunnel && `${selectedEventForFunnel.roas.toFixed(2)}x ROAS`}</span>
+                                        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Retorno de Inversión</p>
+                                    </div>
                                 </div>
                             </div>
 
