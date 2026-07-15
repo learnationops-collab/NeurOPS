@@ -12,6 +12,16 @@
       - `triage` → `/triage/agendas`
       - `operator` → `/ops/dashboard`
 
+  - **Visibilidad Cruzada de Estados en Registro de Agendas**:
+    - **Frontend React ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
+      - Se dividió la columna única "Estado" en **dos columnas independientes** en la tabla de registro de agendas:
+        - **"Confirmación"** (header en cyan): muestra `agenda.estado` — el estado que configuró el Call Confirmer/Triage (Pendiente, Contactado, Confirmado, Sin respuesta, Reagendada, Cancelada). Solo editable por usuarios con rol `triage` o `admin`.
+        - **"Resultado"** (header en violeta): muestra `agenda.closer_result` — el resultado de la llamada del Closer (Pendiente, Show Up, No Show, 2TH Call, Reagendada, Cancelada, Cerrada). Solo editable por usuarios con rol `closer` o `admin`.
+      - Cada columna muestra su badge de color temático correspondiente en modo solo lectura cuando el usuario no tiene permiso de edición, garantizando visibilidad cruzada para todos los roles.
+      - No se realizaron cambios en el backend — el modelo `FinancialAgenda.to_dict()` ya retornaba ambos campos.
+    - **Frontend React ([PublicTriageStatsPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicTriageStatsPage.jsx) [MODIFY])**:
+      - Se agregó la pestaña **"Registro Agendas"** al dashboard del Call Confirmer, embebiendo `FinancialAgendasPage` (el mismo patrón usado en el Closer Dashboard). El triage ahora puede ver en tiempo real el resultado del closer sobre sus agendas del período y viceversa.
+
 - **14 de Julio de 2026**:
   - **Integración de Webinar & Workshop Tracker**:
     - **Backend Modelos ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/workshop.py) [MODIFY])**:
