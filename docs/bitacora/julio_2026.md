@@ -5,9 +5,15 @@
     - **Frontend React ([SetterCualificacionModal.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/SetterCualificacionModal.jsx) [MODIFY])**:
       - Se reemplazó el selector simple del anuncio de origen por un combobox buscador interactivo con filtrado en tiempo real.
       - Se unificaron los campos "Dolores del prospecto" y "Notas internas" en un único campo "Observaciones del setter" opcional.
+    - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
+      - Se dividió la lista de cualificación en dos secciones independientes: **"Leads por procesar"** (leads con calificación pendiente) y **"Leads procesados"** (leads ya calificados o descalificados, permitiendo su re-evaluación).
+      - Se incorporó un indicador visual de notificación (**"Mensaje nuevo"** / dot rojo animado) en la tarjeta de cada lead, comparando el número de comentarios devueltos por el servidor con las lecturas guardadas localmente en `localStorage`.
+      - Al hacer clic en un lead, se sincroniza el contador de leídos en el almacenamiento local para limpiar la notificación.
     - **Backend Python ([setter.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
       - Se modificó `fetchKeywords` en `SetterWorkflowPage` para obtener los anuncios del endpoint `/marketing/ads` en lugar de los eventos de cal.com.
       - En `update_qualified_lead`, las observaciones del setter ahora se guardan directamente como un `Comment` (tipo 'client') asociado al prospecto, haciéndolo visible en la sección de "Notas & Comentarios" para que los demás roles puedan verlo e interactuar.
+      - Se quitó el filtro estricto de calificación en la consulta del deck `/setter/deck?step=cualificacion` para retornar la totalidad de los leads del período y permitir su categorización y reprocesamiento en la interfaz.
+      - Se agregó el campo `comments_count` en la respuesta JSON para realizar el control de notas leídas.
 
   - **Corrección de Redirección de Sesión para Setter y Closer**:
     - **Frontend React ([OperatorControls.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/OperatorControls.jsx) [MODIFY])**:
