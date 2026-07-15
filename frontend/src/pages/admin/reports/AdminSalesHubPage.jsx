@@ -3,6 +3,7 @@ import PublicSetterStatsPage from '../../public/PublicSetterStatsPage';
 import PublicCloserStatsPage from '../../public/PublicCloserStatsPage';
 import PublicTriageStatsPage from '../../public/PublicTriageStatsPage';
 import WorkshopDashboardPage from '../workshop/WorkshopDashboardPage';
+import FormsManagementPage from '../../shared/FormsManagementPage';
 
 const AdminSalesHubPage = () => {
     const [tab, setTab] = useState('closer');
@@ -23,6 +24,12 @@ const AdminSalesHubPage = () => {
                     Setters
                 </button>
                  <button 
+                    onClick={() => setTab('forms')} 
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'forms' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white'}`}
+                >
+                    Forms
+                </button>
+                 <button 
                     onClick={() => setTab('workshop')} 
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'workshop' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white'}`}
                 >
@@ -34,6 +41,7 @@ const AdminSalesHubPage = () => {
                 {tab === 'closer' && <PublicCloserStatsPage />}
                 {tab === 'setter' && <PublicSetterStatsPage />}
                 {tab === 'triage' && <PublicTriageStatsPage />}
+                {tab === 'forms' && <FormsManagementPage />}
                 {tab === 'workshop' && <WorkshopDashboardPage />}
             </div>
         </div>
