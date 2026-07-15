@@ -431,6 +431,11 @@ def get_qualified_forms():
         if unlinked_only and appointments_count > 0:
             continue
             
+        # Convertir created_at a hora local de America/La_Paz para visualización consistente en el frontend
+        local_created = None
+        if c.created_at:
+            local_created = pytz.utc.localize(c.created_at).astimezone(la_paz_tz).replace(tzinfo=None)
+            
         result.append({
             "id": c.id,
             "full_name": c.full_name,
@@ -440,7 +445,7 @@ def get_qualified_forms():
             "form_data": c.form_data,
             "appointments_count": appointments_count,
             "fuente": fuente_val,
-            "created_at": c.created_at.isoformat() if c.created_at else None
+            "created_at": local_created.isoformat() if local_created else None
         })
         
     # Ordenar por id descendente (mas recientes primero)
@@ -509,5 +514,42 @@ def merge_clients():
         db.session.rollback()
         logger.error(f"Error al fusionar clientes: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/qualified-forms/<int:client_id>', methods=['PUT'])
+@login_required
+def update_qualified_form(client_id):
+    """Permite actualizar la fecha de creación del lead (fecha de registro de formulario)"""
+    from app.models.client import Client
+    from flask_login import current_user
+    
+    if current_user.role not in ['triage', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+        
+    data = request.json or {}
+    client = Client.query.get(client_id)
+    if not client:
+        return jsonify({"error": "Lead no encontrado"}), 404
+        
+    try:
+        if 'created_at' in data and data['created_at']:
+            # Parse robustly and convert to UTC to store in database correctly
+            from app.api.public.financial_agendas import parse_date_robustly
+            new_date = parse_date_robustly(data['created_at'])
+            
+            import pytz
+            la_paz_tz = pytz.timezone('America/La_Paz')
+            if new_date.tzinfo is not None:
+                new_date = new_date.astimezone(la_paz_tz).replace(tzinfo=None)
+            
+            # Convertir de America/La_Paz local a UTC naive para guardar en created_at
+            utc_date = la_paz_tz.localize(new_date).astimezone(pytz.UTC).replace(tzinfo=None)
+            client.created_at = utc_date
+            
+        db.session.commit()
+        return jsonify({"message": "Fecha de registro actualizada", "client_id": client.id}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
 
 
