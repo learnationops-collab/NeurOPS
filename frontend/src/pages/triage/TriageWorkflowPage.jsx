@@ -503,18 +503,6 @@ const TriageWorkflowPage = () => {
                                                 )}
                                             </div>
                                             <div className="space-y-1">
-                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Email</span>
-                                                <span className="text-slate-350 font-bold">{selectedLead.mail || 'N/A'}</span>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Zona Horaria / Ubicación</span>
-                                                <span className="text-slate-350 font-bold">{selectedLead.zona_geografica || 'N/A'}</span>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="text-[9px] text-slate-500 uppercase font-black block">Setter Asignado</span>
-                                                <span className="text-slate-200 font-black">{selectedLead.setter_name || 'Sin Setter'}</span>
-                                            </div>
-                                            <div className="space-y-1">
                                                 <span className="text-[9px] text-slate-500 uppercase font-black block">Closer Asignado</span>
                                                 <span className="text-slate-200 font-black">{selectedLead.closer || 'Sin Closer'}</span>
                                             </div>

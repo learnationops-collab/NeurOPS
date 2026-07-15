@@ -157,6 +157,51 @@ def sync_financial_agendas_from_sheets():
 @bp.route('/public/financial-agendas', methods=['GET'])
 def get_financial_agendas():
     # Retorna todas las agendas financieras con filtros
+    def _ensure_clients(agendas_list):
+        from app.models import Client, db
+        from app.services.booking_service import BookingService
+        from sqlalchemy import or_, func
+        
+        needs_commit = False
+        for a in agendas_list:
+            ig_clean = a.instagram.strip().replace('@', '').lower() if a.instagram and a.instagram.lower() not in ('n/a', '') else None
+            mail_clean = a.mail.strip().lower() if a.mail and a.mail.lower() not in ('n/a', '') else None
+            
+            client_filters = []
+            if ig_clean:
+                client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
+            if mail_clean:
+                client_filters.append(func.lower(Client.email) == mail_clean)
+                
+            client = None
+            if client_filters:
+                client = Client.query.filter(or_(*client_filters)).first()
+                
+            if not client:
+                email = a.mail if (a.mail and a.mail.lower() not in ('n/a', '')) else None
+                if not email:
+                    name_slug = "".join([c for c in (a.lead or a.nombre or "cliente") if c.isalnum()]).lower()
+                    email = f"{name_slug}_{a.id}@neurops.temp"
+                    
+                client_data = {
+                    'name': a.lead or a.nombre or "Cliente Sin Nombre",
+                    'email': email,
+                    'phone': a.whatsapp,
+                    'instagram': a.instagram
+                }
+                try:
+                    BookingService.create_or_update_client(client_data)
+                    needs_commit = True
+                except Exception as e:
+                    import logging
+                    logging.error(f"Error creando cliente dinamico en GET agendas: {e}")
+                    
+        if needs_commit:
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+
     page = request.args.get('page', default=None, type=int)
     limit = request.args.get('limit', default=10, type=int)
     search = request.args.get('search', default='', type=str).strip()
@@ -431,6 +476,7 @@ def get_financial_agendas():
                     
         unique_sources = sorted(list(set(unique_sources)))
         
+        _ensure_clients(agendas_pagination.items)
         serialized_data = []
         for a in agendas_pagination.items:
             s_count, _, _ = get_agenda_sales_info(a)
@@ -492,6 +538,7 @@ def get_financial_agendas():
                     sales_dict[s.id] = s
             return len(sales_dict)
 
+        _ensure_clients(agendas)
         serialized_data = []
         for a in agendas:
             s_count = get_agenda_sales_info_local(a)
