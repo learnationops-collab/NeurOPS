@@ -374,7 +374,7 @@ def get_qualified_forms():
     search = request.args.get('search', '').strip()
     
     # Filtrar clientes que tienen form_data no vacio
-    query = Client.query.filter(Client.form_data != None, Client.form_data != {})
+    query = Client.query.filter(Client.form_data != None)
     
     if search:
         search_pattern = f"%{search}%"
@@ -389,6 +389,10 @@ def get_qualified_forms():
     
     result = []
     for c in clients:
+        # Filtrar diccionarios vacíos en python para evitar fallos de SQL JSON
+        if not c.form_data or not isinstance(c.form_data, dict) or len(c.form_data) == 0:
+            continue
+            
         # Contar citas asociadas
         appointments_count = Appointment.query.filter_by(client_id=c.id).count()
         
