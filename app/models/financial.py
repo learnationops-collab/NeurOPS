@@ -109,8 +109,6 @@ class FinancialAgenda(db.Model):
 
         if client:
             client_id = client.id
-            if client.setter:
-                setter_name = client.setter.username
             
             # Cargar respuestas de la encuesta
             answers_query = db.session.query(SurveyAnswer, SurveyQuestion).join(SurveyQuestion).filter(SurveyAnswer.client_id == client.id).all()
