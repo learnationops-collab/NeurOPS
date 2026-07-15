@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
 import {
-    Loader2, BarChart3, DollarSign, CalendarDays, Layers, Users, List, PenTool
+    Loader2, BarChart3, DollarSign, CalendarDays, Layers, Users, List, PenTool, ClipboardCheck
 } from 'lucide-react';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import CloserPerformanceTab from './CloserPerformanceTab';
@@ -12,6 +12,7 @@ import CloserReportsTable from './CloserReportsTable';
 import PublicFinancialSalesPage from './PublicFinancialSalesPage';
 import FinancialAgendasPage from '../admin/reports/FinancialAgendasPage';
 import NewClientsTab from './NewClientsTab';
+import FormsManagementPage from '../shared/FormsManagementPage';
 
 const getFirstDayOfCurrentMonth = () => {
     const now = new Date();
@@ -205,6 +206,7 @@ const PublicCloserStatsPage = () => {
                     <TabButton id="new_clients" label="Clientes Nuevos" icon={Users} />
                     <TabButton id="sales_log" label="Registro Ventas" icon={DollarSign} />
                     <TabButton id="agendas_log" label="Registro Agendas" icon={CalendarDays} />
+                    <TabButton id="forms" label="Forms" icon={ClipboardCheck} />
                 </div>
 
                 {/* FILTROS (Comunes para vista rendimiento) */}
@@ -375,6 +377,13 @@ const PublicCloserStatsPage = () => {
                         {activeTab === 'agendas_log' && (
                             <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
                                 <FinancialAgendasPage />
+                            </div>
+                        )}
+
+                        {/* TAB FORMS */}
+                        {activeTab === 'forms' && (
+                            <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
+                                <FormsManagementPage />
                             </div>
                         )}
 
