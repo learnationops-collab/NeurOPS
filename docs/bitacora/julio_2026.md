@@ -23,6 +23,7 @@
     - **Backend Python ([financial.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY])**:
       - En el método `to_dict` del modelo `FinancialAgenda`, se resolvió de forma dinámica la asociación con la ficha de `Client` (CRM) y `Appointment` correspondiente (mediante email/instagram).
       - Se incluyeron datos de `client_id`, `survey_answers`, `setter_name`, `setter_notes`, `ig_chat_link` y `keyword` en el JSON retornado por `/public/financial-agendas` para alimentar el modal de triaje.
+      - Se resolvió un error 500 (AttributeError: 'Client' object has no attribute 'setter') al eliminar una validación inexistente en el modelo `Client`, obteniendo de forma correcta el setter a través del objeto `Appointment` relacionado.
     - **Frontend React ([App.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/App.jsx) [MODIFY])**:
       - Se registró la nueva ruta protegida `/triage/deck` e importó `TriageWorkflowPage`.
       - Se cambió la redirección predeterminada tras el inicio de sesión del rol `triage` a `/triage/deck?step=confirmar`.
