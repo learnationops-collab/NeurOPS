@@ -99,16 +99,29 @@ const SetterWorkflowPage = () => {
         }
     }, [activeStep, dateRange, customDate, showDisqualified]);
 
-    // Filtrar localmente por búsqueda
-    const filteredLeads = useMemo(() => {
-        const query = searchQuery.toLowerCase().trim();
-        if (!query) return leads;
-        return leads.filter(l => 
-            (l.lead_name && l.lead_name.toLowerCase().includes(query)) ||
-            (l.instagram && l.instagram.toLowerCase().includes(query)) ||
-            (l.email && l.email.toLowerCase().includes(query))
-        );
     }, [leads, searchQuery]);
+
+    // Dividir listas de cualificación: Por Procesar vs Procesados
+    const { leadsPorProcesar, leadsProcesados } = useMemo(() => {
+        if (activeStep !== 'cualificacion') return { leadsPorProcesar: filteredLeads, leadsProcesados: [] };
+        const porProc = [];
+        const proc = [];
+        filteredLeads.forEach(l => {
+            if (!l.result || l.result === 'null' || l.result === '') {
+                porProc.push(l);
+            } else {
+                proc.push(l);
+            }
+        });
+        return { leadsPorProcesar: porProc, leadsProcesados: proc };
+    }, [filteredLeads, activeStep]);
+
+    const handleSelectLead = (lead) => {
+        if (lead.client_id) {
+            localStorage.setItem(`read_comments_${lead.client_id}`, lead.comments_count || 0);
+        }
+        setSelectedLead(lead);
+    };
 
 
 
@@ -219,12 +232,12 @@ const SetterWorkflowPage = () => {
 
         if (currentIndex !== -1 && currentIndex < filteredLeads.length - 1) {
             // Seleccionar el siguiente lead disponible
-            setSelectedLead(filteredLeads[currentIndex + 1]);
+            handleSelectLead(filteredLeads[currentIndex + 1]);
         } else if (filteredLeads.length > 1) {
             // Si era el último pero quedan otros leads en la lista, seleccionar el primero disponible
             const remainingLeads = filteredLeads.filter(l => l.id !== currentLeadId);
             if (remainingLeads.length > 0) {
-                setSelectedLead(remainingLeads[0]);
+                handleSelectLead(remainingLeads[0]);
             } else {
                 setSelectedLead(null);
             }
@@ -252,8 +265,175 @@ const SetterWorkflowPage = () => {
             setSelectedIds(new Set(filteredLeads.map(l => l.id)));
         }
     };
+    const renderLeadRow = (l) => {
+        const isSelected = selectedIds.has(l.id);
+        const isViewed = selectedLead?.id === l.id;
+        
+        // Notificación de comentarios sin leer
+        const unreadKey = `read_comments_${l.client_id}`;
+        const readCount = parseInt(localStorage.getItem(unreadKey) || '0');
+        const hasUnread = l.client_id && l.comments_count > readCount;
 
+        return (
+            <motion.div
+                key={l.id}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                onClick={() => handleSelectLead(l)}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden group ${
+                    isViewed 
+                        ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
+                        : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
+                }`}
+            >
+                {/* Contenido principal (Avatar y texto) */}
+                <div className="flex items-center gap-4 min-w-0 flex-1 w-full">
+                    <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => toggleSelect(l.id, e)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
+                    />
+                    
+                    {/* Avatar de Canal */}
+                    {activeStep === 'cualificacion' && (
+                        <div className="w-12 h-12 bg-gradient-to-tr from-amber-500 via-rose-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shrink-0 relative">
+                            <Instagram size={24} className="text-white" />
+                            {hasUnread && (
+                                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-600 rounded-full border-2 border-slate-950 flex items-center justify-center animate-bounce" title="Nuevas notas">
+                                    <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                                </span>
+                            )}
+                        </div>
+                    )}
 
+                    <div className="min-w-0 flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-center">
+                        {/* Nombre e IG */}
+                        <div className="space-y-1">
+                             <div className="flex items-center gap-2 flex-wrap">
+                                 <h4 className="text-sm font-black text-white leading-tight truncate font-bold flex items-center gap-2">
+                                     {l.lead_name || 'Sin Nombre'}
+                                     {hasUnread && (
+                                         <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-md animate-pulse">
+                                             Mensaje nuevo
+                                         </span>
+                                     )}
+                                 </h4>
+                                 {(() => {
+                                     const status = l.result;
+                                     if (status === 'yes' || status === 'true') {
+                                         return (
+                                             <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full shrink-0">
+                                                 Cualificado
+                                             </span>
+                                         );
+                                     }
+                                     if (status === 'no' || status === 'false') {
+                                         return (
+                                             <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full shrink-0">
+                                                 Descualificado
+                                             </span>
+                                         );
+                                     }
+                                     return (
+                                         <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full shrink-0">
+                                             Pendiente
+                                         </span>
+                                     );
+                                 })()}
+                             </div>
+                            {activeStep === 'cualificacion' ? (
+                                l.instagram ? (
+                                    <a
+                                        href={l.ig_chat_link || `https://instagram.com/${l.instagram.replace('@', '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] text-violet-400 hover:text-violet-300 font-bold flex items-center gap-1 hover:underline cursor-pointer w-max"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <Instagram size={10} className="shrink-0" />
+                                        @{l.instagram.replace('@', '')}
+                                    </a>
+                                ) : (
+                                    <span className="text-[10px] text-slate-500 font-bold">Sin Instagram</span>
+                                )
+                            ) : (
+                                <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                                    <span>{l.origin || 'Web'}</span>
+                                    <span>•</span>
+                                    <span>ManyChat / Instagram</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Anuncio */}
+                        <div className="space-y-1">
+                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Anuncio</div>
+                            <div className="text-xs font-black text-violet-400 truncate max-w-[200px]" title={l.ad_name}>
+                                {l.ad_name || 'Desatribuido'}
+                            </div>
+                        </div>
+
+                        {/* Tiempo transcurrido */}
+                        {activeStep === 'cualificacion' && (
+                            <div className="space-y-1 md:text-right">
+                                <div className="text-xs font-black text-white">
+                                    {l.start_time ? (() => {
+                                        const date = new Date(l.start_time);
+                                        const now = new Date();
+                                        const diffMs = now - date;
+                                        const diffMins = Math.floor(diffMs / 60000);
+                                        const diffHours = Math.floor(diffMins / 60);
+                                        const diffDays = Math.floor(diffHours / 24);
+                                        if (diffMins < 1) return 'Hace instantes';
+                                        if (diffMins < 60) return `Hace ${diffMins} min`;
+                                        if (diffHours < 24) return `Hace ${diffHours} h`;
+                                        return `Hace ${diffDays} días`;
+                                    })() : 'N/A'}
+                                </div>
+                                {l.start_time && (
+                                    <div className="text-[9px] text-slate-500 font-mono">
+                                        {new Date(l.start_time).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date(l.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Acciones directas a la derecha de la tarjeta */}
+                <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end">
+                    {/* Paso 2: Cualificar / Descualificar */}
+                    {activeStep === 'cualificacion' && (
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <button
+                                 onClick={(e) => handleQuickAction(l.id, 'Cualificado', e)}
+                                 disabled={processingId === l.id}
+                                 className="h-9 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-emerald-600/15 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 md:flex-initial"
+                                 title="Confirmar cualificado"
+                             >
+                                 {processingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                 Confirmar cualificado
+                             </button>
+                             <button
+                                 onClick={(e) => handleQuickAction(l.id, 'Descualificado', e)}
+                                 disabled={processingId === l.id}
+                                 className="h-9 w-9 bg-slate-900 border border-slate-800 hover:bg-rose-550/10 hover:border-rose-500/20 text-slate-400 hover:text-rose-500 font-black rounded-xl transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
+                                 title="Descualificar"
+                             >
+                                 {processingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                             </button>
+                         </div>
+                     )}
+
+                     <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors hidden md:block" />
+                 </div>
+            </motion.div>
+        );
+    };
 
     return (
         <div className="h-screen overflow-y-auto bg-slate-950 text-slate-100 flex flex-col custom-scrollbar pb-32">
@@ -489,163 +669,50 @@ const SetterWorkflowPage = () => {
                                 👏 ¡No tienes leads pendientes en este paso!
                             </div>
                         ) : (
-                            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
-                                <AnimatePresence initial={false}>
-                                    {filteredLeads.map((l) => {
-                                        const isSelected = selectedIds.has(l.id);
-                                        const isViewed = selectedLead?.id === l.id;
-                                        return (
-                                            <motion.div
-                                                key={l.id}
-                                                layout
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, scale: 0.95 }}
-                                                onClick={() => setSelectedLead(l)}
-                                                className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden group ${
-                                                    isViewed 
-                                                        ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
-                                                        : 'bg-black/20 border-slate-900/60 hover:bg-slate-900/50 hover:border-slate-800'
-                                                }`}
-                                            >
-                                                {/* Contenido principal (Avatar y texto) */}
-                                                <div className="flex items-center gap-4 min-w-0 flex-1 w-full">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isSelected}
-                                                        onChange={(e) => toggleSelect(l.id, e)}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4 shrink-0"
-                                                    />
-                                                    
-                                                    {/* Avatar de Canal */}
-                                                    {activeStep === 'cualificacion' && (
-                                                        <div className="w-12 h-12 bg-gradient-to-tr from-amber-500 via-rose-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shrink-0">
-                                                            <Instagram size={24} className="text-white" />
-                                                        </div>
-                                                    )}
-
-                                                    <div className="min-w-0 flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 items-center">
-                                                        {/* Nombre e IG */}
-                                                        <div className="space-y-1">
-                                                             <div className="flex items-center gap-2 flex-wrap">
-                                                                 <h4 className="text-sm font-black text-white leading-tight truncate font-bold">
-                                                                     {l.lead_name || 'Sin Nombre'}
-                                                                 </h4>
-                                                                 {(() => {
-                                                                     const status = l.result;
-                                                                     if (status === 'yes' || status === 'true') {
-                                                                         return (
-                                                                             <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full shrink-0">
-                                                                                 Cualificado
-                                                                             </span>
-                                                                         );
-                                                                     }
-                                                                     if (status === 'no' || status === 'false') {
-                                                                         return (
-                                                                             <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full shrink-0">
-                                                                                 Descualificado
-                                                                             </span>
-                                                                         );
-                                                                     }
-                                                                     return (
-                                                                         <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full shrink-0">
-                                                                             Pendiente
-                                                                         </span>
-                                                                     );
-                                                                 })()}
-                                                             </div>
-                                                            {activeStep === 'cualificacion' ? (
-                                                                l.instagram ? (
-                                                                    <a
-                                                                        href={l.ig_chat_link || `https://instagram.com/${l.instagram.replace('@', '')}`}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="text-[10px] text-violet-400 hover:text-violet-300 font-bold flex items-center gap-1 hover:underline cursor-pointer w-max"
-                                                                        onClick={(e) => e.stopPropagation()}
-                                                                    >
-                                                                        <Instagram size={10} className="shrink-0" />
-                                                                        @{l.instagram.replace('@', '')}
-                                                                    </a>
-                                                                ) : (
-                                                                    <span className="text-[10px] text-slate-500 font-bold">Sin Instagram</span>
-                                                                )
-                                                            ) : (
-                                                                <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
-                                                                    <span>{l.origin || 'Web'}</span>
-                                                                    <span>•</span>
-                                                                    <span>ManyChat / Instagram</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Anuncio */}
-                                                        <div className="space-y-1">
-                                                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Anuncio</div>
-                                                            <div className="text-xs font-black text-violet-400 truncate max-w-[200px]" title={l.ad_name}>
-                                                                {l.ad_name || 'Desatribuido'}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Tiempo transcurrido */}
-                                                        {activeStep === 'cualificacion' && (
-                                                            <div className="space-y-1 md:text-right">
-                                                                <div className="text-xs font-black text-white">
-                                                                    {l.start_time ? (() => {
-                                                                        const date = new Date(l.start_time);
-                                                                        const now = new Date();
-                                                                        const diffMs = now - date;
-                                                                        const diffMins = Math.floor(diffMs / 60000);
-                                                                        const diffHours = Math.floor(diffMins / 60);
-                                                                        const diffDays = Math.floor(diffHours / 24);
-                                                                        if (diffMins < 1) return 'Hace instantes';
-                                                                        if (diffMins < 60) return `Hace ${diffMins} min`;
-                                                                        if (diffHours < 24) return `Hace ${diffHours} h`;
-                                                                        return `Hace ${diffDays} días`;
-                                                                    })() : 'N/A'}
-                                                                </div>
-                                                                {l.start_time && (
-                                                                    <div className="text-[9px] text-slate-500 font-mono">
-                                                                        {new Date(l.start_time).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date(l.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
+                            <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-1 custom-scrollbar">
+                                {activeStep === 'cualificacion' ? (
+                                    <>
+                                        {/* SECCIÓN 1: LEADS POR PROCESAR */}
+                                        <div className="space-y-3">
+                                            <h3 className="text-xs font-black text-amber-400 uppercase tracking-widest pl-1 mb-2 flex items-center gap-2">
+                                                <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+                                                Leads por procesar ({leadsPorProcesar.length})
+                                            </h3>
+                                            {leadsPorProcesar.length === 0 ? (
+                                                <div className="text-center py-8 bg-slate-950/20 border border-dashed border-slate-900 rounded-2xl text-slate-500 text-xs italic">
+                                                    Sin leads pendientes por calificar
                                                 </div>
+                                            ) : (
+                                                <AnimatePresence initial={false}>
+                                                    {leadsPorProcesar.map((l) => renderLeadRow(l))}
+                                                </AnimatePresence>
+                                            )}
+                                        </div>
 
-                                                {/* Acciones directas a la derecha de la tarjeta */}
-                                                <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end">
-                                                    {/* Paso 2: Cualificar / Descualificar */}
-                                                    {activeStep === 'cualificacion' && (
-                                                        <div className="flex gap-2 w-full md:w-auto">
-                                                            <button
-                                                                 onClick={(e) => handleQuickAction(l.id, 'Cualificado', e)}
-                                                                 disabled={processingId === l.id}
-                                                                 className="h-9 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-emerald-600/15 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 md:flex-initial"
-                                                                 title="Confirmar cualificado"
-                                                             >
-                                                                 {processingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-                                                                 Confirmar cualificado
-                                                             </button>
-                                                             <button
-                                                                 onClick={(e) => handleQuickAction(l.id, 'Descualificado', e)}
-                                                                 disabled={processingId === l.id}
-                                                                 className="h-9 w-9 bg-slate-900 border border-slate-800 hover:bg-rose-550/10 hover:border-rose-500/20 text-slate-400 hover:text-rose-500 font-black rounded-xl transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
-                                                                 title="Descualificar"
-                                                             >
-                                                                 {processingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                                                             </button>
-                                                         </div>
-                                                     )}
-
-                                                     <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors hidden md:block" />
-                                                 </div>
-                                             </motion.div>
-                                        );
-                                    })}
-                                </AnimatePresence>
+                                        {/* SECCIÓN 2: LEADS PROCESADOS */}
+                                        <div className="space-y-3 pt-4 border-t border-slate-900">
+                                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 flex items-center gap-2">
+                                                <span className="w-2 h-2 bg-slate-500 rounded-full"></span>
+                                                Leads procesados ({leadsProcesados.length})
+                                            </h3>
+                                            {leadsProcesados.length === 0 ? (
+                                                <div className="text-center py-8 bg-slate-950/20 border border-dashed border-slate-900 rounded-2xl text-slate-500 text-xs italic">
+                                                    Aún no has procesado leads en este periodo
+                                                </div>
+                                            ) : (
+                                                <AnimatePresence initial={false}>
+                                                    {leadsProcesados.map((l) => renderLeadRow(l))}
+                                                </AnimatePresence>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <AnimatePresence initial={false}>
+                                        {filteredLeads.map((l) => renderLeadRow(l))}
+                                    </AnimatePresence>
+                                )}
                             </div>
+                        )}
                         )}
                     </div>
                 </div>

@@ -705,15 +705,7 @@ def get_setter_deck():
                 pass
                 
         from sqlalchemy import or_
-        if show_disqualified:
-            query = LeadAnswer.query.filter(LeadAnswer.qualification.in_(['no', 'false']))
-        else:
-            query = LeadAnswer.query.filter(
-                or_(
-                    LeadAnswer.qualification.in_(['yes', 'true', 'null', '']),
-                    LeadAnswer.qualification == None
-                )
-            )
+        query = LeadAnswer.query
         
         if start_dt and end_dt:
             query = query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
@@ -798,7 +790,8 @@ def get_setter_deck():
                 "edad_form": edad_str,
                 "dolores": client.dolores if client else "",
                 "observaciones": client.observaciones if client else "",
-                "client_id": client.id if client else None
+                "client_id": client.id if client else None,
+                "comments_count": db.session.query(Comment).filter(Comment.comment_type == 'client', Comment.associated_id == client.id).count() if client else 0
             })
             
         return jsonify(response_data), 200
