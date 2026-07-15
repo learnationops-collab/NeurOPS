@@ -571,8 +571,7 @@ const CloserWorkflowPage = () => {
                                                         </span>
                                                         <ChevronRight size={14} className="text-slate-600 group-hover:text-white transition-colors" />
                                                     </div>
-                                                              {/* En la lista ya no se muestran acciones inline, solo el badge */}
-                                                )}
+                                                </div>
                                             </motion.div>
                                         );
                                     })}
