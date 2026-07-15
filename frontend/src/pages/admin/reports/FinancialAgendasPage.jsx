@@ -1002,7 +1002,8 @@ const FinancialAgendasPage = () => {
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Fuente</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Call Confirmer</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest">Closer</th>
-                                        <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-center">Estado</th>
+                                        <th className="py-4 px-4 text-[10px] font-black text-cyan-400/80 uppercase tracking-widest text-center">Confirmación</th>
+                                        <th className="py-4 px-4 text-[10px] font-black text-violet-400/80 uppercase tracking-widest text-center">Resultado</th>
                                         <th className="py-4 px-4 text-[10px] font-black text-muted uppercase tracking-widest text-right">Acciones</th>
                                     </tr>
                                 </thead>
@@ -1148,66 +1149,88 @@ const FinancialAgendasPage = () => {
                                                     ))}
                                                 </select>
                                             </td>
+                                            {/* COLUMNA: Confirmación del Call Confirmer (estado) */}
                                             <td className="py-4 px-4 text-center">
                                                 {(() => {
-                                                    const isConfirmer = user?.role === 'triage' || user?.role === 'setter';
-                                                    const selectValue = isConfirmer ? (agenda.estado || 'Pendiente') : (agenda.closer_result || 'Pendiente');
-                                                    const selectOptions = isConfirmer 
-                                                        ? ['Pendiente', 'Contactado', 'Confirmado', 'Sin respuesta', 'Reagendada', 'Cancelada']
-                                                        : ['Pendiente', 'Show Up', 'No Show', '2TH Call', 'Reagendada', 'Cancelada', 'Cerrada'];
-                                                    
-                                                    return (
-                                                        <select
-                                                            value={selectValue}
-                                                            onChange={async (e) => {
-                                                                const nuevoEstado = e.target.value;
-                                                                const isSpecial = isConfirmer 
-                                                                    ? ['Cancelada', 'Reagendada'].includes(nuevoEstado)
-                                                                    : ['Cancelada', 'Reagendada', '2TH Call'].includes(nuevoEstado);
-                                                                    
-                                                                if (isSpecial) {
-                                                                    setStatusActionModal({
-                                                                        isOpen: true,
-                                                                        agenda: agenda,
-                                                                        nuevoEstado: nuevoEstado,
-                                                                        isConfirmer: isConfirmer,
-                                                                        requiresDate: ['Reagendada', '2TH Call'].includes(nuevoEstado),
-                                                                        razon: '',
-                                                                        fechaHora: ''
-                                                                    });
-                                                                    return;
-                                                                }
-                                                                
-                                                                const payload = isConfirmer ? { estado: nuevoEstado } : { closer_result: nuevoEstado };
-                                                                try {
-                                                                    const response = await api.put(`/public/financial-agendas/${agenda.id}`, payload);
-                                                                    const updated = response.data.agenda;
-                                                                    setAgendas(prev => prev.map(a => a.id === updated.id ? updated : a));
-                                                                } catch (err) {
-                                                                    console.error("Error updating agenda status in-line:", err);
-                                                                    alert("Error al actualizar el estado de la agenda");
-                                                                }
-                                                            }}
-                                                            className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border cursor-pointer outline-none focus:ring-1 focus:ring-primary/50 transition-all text-center border-box
-                                                                ${selectValue === 'Show Up' || selectValue === 'Show up' ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : ''}
-                                                                ${selectValue === 'Contactado' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20' : ''}
-                                                                ${selectValue === 'Confirmado' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : ''}
-                                                                ${selectValue === 'No Show' || selectValue === 'No show' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20' : ''}
-                                                                ${selectValue === 'Reagendada' || selectValue === 'Reagendado' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : ''}
-                                                                ${selectValue === 'Cerrada' || selectValue === 'Cerrado' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20 hover:bg-violet-500/20' : ''}
-                                                                ${selectValue === 'Cancelada' || selectValue === 'Cancelado' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
-                                                                ${selectValue === 'Sin respuesta' ? 'bg-pink-500/10 text-pink-400 border-pink-500/20 hover:bg-pink-500/20' : ''}
-                                                                ${selectValue === '2TH Call' || selectValue === '2da call' ? 'bg-blue-500/10 text-blue-450 border-blue-500/20 hover:bg-blue-500/20' : ''}
-                                                                ${selectValue === 'Pendiente' ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : ''}
-                                                            `}
-                                                        >
-                                                            {selectOptions.map(st => (
-                                                                <option key={st} value={st} className="bg-slate-900 text-white font-semibold">
-                                                                    {st}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    );
+                                                    const canEdit = user?.role === 'triage' || user?.role === 'admin';
+                                                    const val = agenda.estado || 'Pendiente';
+                                                    const confirmOptions = ['Pendiente', 'Contactado', 'Confirmado', 'Sin respuesta', 'Reagendada', 'Cancelada'];
+                                                    const colorClass = {
+                                                        'Confirmado': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+                                                        'Contactado': 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                                                        'Sin respuesta': 'bg-pink-500/10 text-pink-400 border-pink-500/20',
+                                                        'Reagendada': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                                        'Cancelada': 'bg-slate-800 text-slate-400 border-slate-700',
+                                                        'Pendiente': 'bg-slate-800/60 text-slate-500 border-slate-700/60',
+                                                    }[val] || 'bg-slate-800/60 text-slate-500 border-slate-700/60';
+
+                                                    if (canEdit) {
+                                                        return (
+                                                            <select
+                                                                value={val}
+                                                                onChange={async (e) => {
+                                                                    const nuevoEstado = e.target.value;
+                                                                    const isSpecial = ['Cancelada', 'Reagendada'].includes(nuevoEstado);
+                                                                    if (isSpecial) {
+                                                                        setStatusActionModal({ isOpen: true, agenda, nuevoEstado, isConfirmer: true, requiresDate: nuevoEstado === 'Reagendada', razon: '', fechaHora: '' });
+                                                                        return;
+                                                                    }
+                                                                    try {
+                                                                        const res = await api.put(`/public/financial-agendas/${agenda.id}`, { estado: nuevoEstado });
+                                                                        setAgendas(prev => prev.map(a => a.id === res.data.agenda.id ? res.data.agenda : a));
+                                                                    } catch (err) { console.error(err); alert('Error al actualizar confirmación'); }
+                                                                }}
+                                                                className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border cursor-pointer outline-none focus:ring-1 focus:ring-cyan-500/50 transition-all ${colorClass}`}
+                                                            >
+                                                                {confirmOptions.map(st => <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>)}
+                                                            </select>
+                                                        );
+                                                    }
+                                                    // Solo lectura para closer
+                                                    return <span className={`rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${colorClass}`}>{val}</span>;
+                                                })()}
+                                            </td>
+
+                                            {/* COLUMNA: Resultado del Closer (closer_result) */}
+                                            <td className="py-4 px-4 text-center">
+                                                {(() => {
+                                                    const canEdit = user?.role === 'closer' || user?.role === 'admin';
+                                                    const val = agenda.closer_result || 'Pendiente';
+                                                    const resultOptions = ['Pendiente', 'Show Up', 'No Show', '2TH Call', 'Reagendada', 'Cancelada', 'Cerrada'];
+                                                    const colorClass = {
+                                                        'Show Up': 'bg-primary/10 text-primary border-primary/20',
+                                                        'No Show': 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                                                        'Cerrada': 'bg-violet-500/10 text-violet-400 border-violet-500/20',
+                                                        '2TH Call': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                                                        'Reagendada': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                                        'Cancelada': 'bg-slate-800 text-slate-400 border-slate-700',
+                                                        'Pendiente': 'bg-slate-800/60 text-slate-500 border-slate-700/60',
+                                                    }[val] || 'bg-slate-800/60 text-slate-500 border-slate-700/60';
+
+                                                    if (canEdit) {
+                                                        return (
+                                                            <select
+                                                                value={val}
+                                                                onChange={async (e) => {
+                                                                    const nuevoEstado = e.target.value;
+                                                                    const isSpecial = ['Cancelada', 'Reagendada', '2TH Call'].includes(nuevoEstado);
+                                                                    if (isSpecial) {
+                                                                        setStatusActionModal({ isOpen: true, agenda, nuevoEstado, isConfirmer: false, requiresDate: ['Reagendada', '2TH Call'].includes(nuevoEstado), razon: '', fechaHora: '' });
+                                                                        return;
+                                                                    }
+                                                                    try {
+                                                                        const res = await api.put(`/public/financial-agendas/${agenda.id}`, { closer_result: nuevoEstado });
+                                                                        setAgendas(prev => prev.map(a => a.id === res.data.agenda.id ? res.data.agenda : a));
+                                                                    } catch (err) { console.error(err); alert('Error al actualizar resultado'); }
+                                                                }}
+                                                                className={`rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border cursor-pointer outline-none focus:ring-1 focus:ring-violet-500/50 transition-all ${colorClass}`}
+                                                            >
+                                                                {resultOptions.map(st => <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>)}
+                                                            </select>
+                                                        );
+                                                    }
+                                                    // Solo lectura para triage
+                                                    return <span className={`rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${colorClass}`}>{val}</span>;
                                                 })()}
                                             </td>
                                             <td className="py-4 px-4 text-right">
