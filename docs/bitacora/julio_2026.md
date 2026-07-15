@@ -1,6 +1,12 @@
 # Bitácora - Julio 2026
 
 - **15 de Julio de 2026**:
+  - **Mejoras en el Mazo del Closer**:
+    - **Frontend React ([CloserDeckPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserDeckPage.jsx) [MODIFY])**:
+      - Se movió la sección de notas al tope del formulario secuencial del Closer bajo el título **"Observaciones del Closer (Se registrarán en el chat)"**, convirtiéndolo en lo primero editable e interactivo al ver la ficha del Lead.
+    - **Backend Python ([closer.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+      - En el endpoint `process_closer_card` (POST `/api/closer/deck/<int:appt_id>`), si se guardan notas de seguimiento (`closer_notes`), se crea automáticamente un `Comment` de tipo `client` asociado al prospecto. Esto expone la nota en el chat de comentarios de inmediato, permitiendo comunicación cruzada y respuestas en hilo de otros roles.
+
   - **Mejoras en la Cualificación del Setter**:
     - **Frontend React ([SetterCualificacionModal.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/components/modals/SetterCualificacionModal.jsx) [MODIFY])**:
       - Se reemplazó el selector simple del anuncio de origen por un combobox buscador interactivo con filtrado en tiempo real.
