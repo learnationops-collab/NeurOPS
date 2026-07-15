@@ -346,7 +346,8 @@ const FinancialAgendasPage = () => {
         whatsapp: '',
         mail: '',
         estado: '',
-        encargado_triage: ''
+        encargado_triage: '',
+        created_at: ''
     });
 
     const handleStatusActionSubmit = async (e) => {
@@ -393,7 +394,8 @@ const FinancialAgendasPage = () => {
             whatsapp: agenda.whatsapp || '',
             mail: agenda.mail || '',
             estado: agenda.estado || 'Pendiente',
-            encargado_triage: agenda.encargado_triage || ''
+            encargado_triage: agenda.encargado_triage || '',
+            created_at: agenda.created_at || ''
         });
     };
 
@@ -1354,6 +1356,15 @@ const FinancialAgendasPage = () => {
                                                 <option key={tg} value={tg} className="bg-slate-900 text-white">{tg}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Registro (Sistema)</label>
+                                        <input 
+                                            type="datetime-local"
+                                            className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-sm font-semibold cursor-pointer"
+                                            value={formatToDatetimeLocal(editForm.created_at)}
+                                            onChange={e => setEditForm({...editForm, created_at: e.target.value})}
+                                        />
                                     </div>
                                 </div>
                             </div>
