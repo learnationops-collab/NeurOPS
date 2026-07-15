@@ -18,8 +18,9 @@
   - **Espacio de Trabajo del Call Confirmer (Triaje)**:
     - **Frontend React ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [NEW])**:
       - Se creó el nuevo componente del espacio de trabajo interactivo del confirmer (`/triage/deck`).
-      - Ofrece un listado dividido en dos secciones de hoy: **"Citas por Confirmar"** y **"Confirmadas y Procesadas"**, con selector de fecha, recarga y buscador local.
+      - Ofrece un listado dividido en dos secciones: **"Citas por Confirmar"** y **"Confirmadas y Procesadas"**, con buscador local y selector que carga por defecto las agendas de la fecha de hoy y todas las próximas citas futuras.
       - Al hacer clic en un lead, se abre un modal de doble columna (`max-w-6xl`): columna izquierda con detalles, encuesta y botones de confirmación rápida (Contactado, Confirmar, Sin Respuesta, Reagendar, Cancelar) y columna derecha con el chat unificado (`CommentsSection`).
+      - Se integró una opción interactiva para editar directamente la fecha de cita (Meet) mediante un input `datetime-local` y botón de actualización en la ficha del lead, guardando el cambio y registrándolo en el chat de comentarios.
     - **Backend Python ([financial.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY])**:
       - En el método `to_dict` del modelo `FinancialAgenda`, se resolvió de forma dinámica la asociación con la ficha de `Client` (CRM) y `Appointment` correspondiente (mediante email/instagram).
       - Se incluyeron datos de `client_id`, `survey_answers`, `setter_name`, `setter_notes`, `ig_chat_link` y `keyword` en el JSON retornado por `/public/financial-agendas` para alimentar el modal de triaje.
