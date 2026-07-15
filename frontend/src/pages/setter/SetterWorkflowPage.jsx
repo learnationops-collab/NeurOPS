@@ -99,6 +99,15 @@ const SetterWorkflowPage = () => {
         }
     }, [activeStep, dateRange, customDate, showDisqualified]);
 
+    // Filtrar localmente por búsqueda
+    const filteredLeads = useMemo(() => {
+        const query = searchQuery.toLowerCase().trim();
+        if (!query) return leads;
+        return leads.filter(l => 
+            (l.lead_name && l.lead_name.toLowerCase().includes(query)) ||
+            (l.instagram && l.instagram.toLowerCase().includes(query)) ||
+            (l.email && l.email.toLowerCase().includes(query))
+        );
     }, [leads, searchQuery]);
 
     // Dividir listas de cualificación: Por Procesar vs Procesados
