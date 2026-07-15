@@ -26,7 +26,7 @@ const LoginPage = () => {
       } else if (user.role === 'setter') {
         navigate('/setter/deck?step=cualificacion');
       } else if (user.role === 'triage') {
-        navigate('/triage/agendas');
+        navigate('/triage/deck?step=confirmar');
       } else if (user.role === 'closer') {
         navigate('/closer/deck?step=agendas');
       } else if (user.role === 'operator') {

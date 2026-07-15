@@ -83,58 +83,78 @@ class FinancialAgenda(db.Model):
                 from sqlalchemy import or_
                 sales_count = FinancialSale.query.filter(or_(*filters)).count()
 
+        # Resolver cliente de forma global
+        from app.models import Client, Appointment, SurveyAnswer, SurveyQuestion
+        from sqlalchemy import or_, func
+        
+        ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
+        mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
+        
+        client_filters = []
+        if ig_clean:
+            client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
+        if mail_clean:
+            client_filters.append(func.lower(Client.email) == mail_clean)
+            
+        client = None
+        if client_filters:
+            client = Client.query.filter(or_(*client_filters)).first()
+
+        survey_answers = []
+        client_id = None
+        setter_name = "Sin Setter"
+        setter_notes = ""
+        ig_chat_link = ""
+        keyword = ""
+
+        if client:
+            client_id = client.id
+            if client.setter:
+                setter_name = client.setter.username
+            
+            # Cargar respuestas de la encuesta
+            answers_query = db.session.query(SurveyAnswer, SurveyQuestion).join(SurveyQuestion).filter(SurveyAnswer.client_id == client.id).all()
+            for answer, question in answers_query:
+                survey_answers.append({
+                    "question": question.text,
+                    "answer": answer.answer
+                })
+
         # Determinar el estado dinámico de closing
         display_estado = self.estado or "Pendiente"
-        has_closer = self.closer and self.closer.strip() and self.closer.strip().lower() != 'sin asignar'
-        if has_closer:
-            # Buscar la cita correspondiente para extraer closer_result
-            from app.models import Client, Appointment
-            from sqlalchemy import or_, func
+        
+        # Buscar cita para el día si tenemos cliente y fecha de agenda
+        if client and self.date:
+            start_of_day = datetime.combine(self.date.date(), datetime.min.time())
+            end_of_day = datetime.combine(self.date.date(), datetime.max.time())
             
-            ig_clean = self.instagram.strip().replace('@', '').lower() if self.instagram and self.instagram.lower() not in ('n/a', '') else None
-            mail_clean = self.mail.strip().lower() if self.mail and self.mail.lower() not in ('n/a', '') else None
+            appt = Appointment.query.filter(
+                Appointment.client_id == client.id,
+                Appointment.start_time >= start_of_day,
+                Appointment.start_time <= end_of_day
+            ).first()
             
-            client_filters = []
-            if ig_clean:
-                client_filters.append(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean)
-            if mail_clean:
-                client_filters.append(func.lower(Client.email) == mail_clean)
+            if appt:
+                setter_notes = appt.setter_notes or ""
+                ig_chat_link = appt.ig_chat_link or ""
+                keyword = appt.keyword or ""
+                if appt.setter:
+                    setter_name = appt.setter.username
                 
-            client = None
-            if client_filters:
-                client = Client.query.filter(or_(*client_filters)).first()
-                
-            if client and self.date:
-                start_of_day = datetime.combine(self.date.date(), datetime.min.time())
-                end_of_day = datetime.combine(self.date.date(), datetime.max.time())
-                
-                appt = Appointment.query.filter(
-                    Appointment.client_id == client.id,
-                    Appointment.start_time >= start_of_day,
-                    Appointment.start_time <= end_of_day
-                ).first()
-                
-                if appt:
-                    closer_res = appt.closer_result
-                    if closer_res:
-                        if closer_res == 'Show up':
-                            display_estado = 'Show Up'
-                        elif closer_res == 'No Show':
-                            display_estado = 'No Show'
-                        elif closer_res == 'Cancelado':
-                            display_estado = 'Cancelada'
-                        elif closer_res == 'Reagendado':
-                            display_estado = 'Reagendada'
-                        elif closer_res == '2da call':
-                            display_estado = '2TH Call'
-                        else:
-                            display_estado = closer_res
+                closer_res = appt.closer_result
+                if closer_res:
+                    if closer_res == 'Show up':
+                        display_estado = 'Show Up'
+                    elif closer_res == 'No Show':
+                        display_estado = 'No Show'
+                    elif closer_res == 'Cancelado':
+                        display_estado = 'Cancelada'
+                    elif closer_res == 'Reagendado':
+                        display_estado = 'Reagendada'
+                    elif closer_res == '2da call':
+                        display_estado = '2TH Call'
                     else:
-                        display_estado = 'Pendiente'
-                else:
-                    display_estado = 'Pendiente'
-            else:
-                display_estado = 'Pendiente'
+                        display_estado = closer_res
 
         return {
             "id": self.id,
@@ -153,7 +173,14 @@ class FinancialAgenda(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "date": self.date.isoformat() if self.date else None,
             "sales_count": sales_count,
-            "has_sale": sales_count > 0
+            "has_sale": sales_count > 0,
+            # Campos enriquecidos para Call Confirmer / Triage
+            "client_id": client_id,
+            "survey_answers": survey_answers,
+            "setter_name": setter_name,
+            "setter_notes": setter_notes,
+            "ig_chat_link": ig_chat_link,
+            "keyword": keyword
         }
 
 class ExcludedSale(db.Model):

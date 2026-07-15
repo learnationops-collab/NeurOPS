@@ -40,6 +40,7 @@ import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
 import PublicTriageStatsPage from './pages/public/PublicTriageStatsPage';
 import AdManagementPage from './pages/public/AdManagementPage';
 import FinancialAgendasPage from './pages/admin/reports/FinancialAgendasPage';
+import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
 import PublicSalesAttributionPage from './pages/public/PublicSalesAttributionPage';
 import PublicWorkshopStatsPage from './pages/public/PublicWorkshopStatsPage';
 import PixelTracker from './components/common/PixelTracker';
@@ -75,7 +76,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     if (user.role === 'operator') return <Navigate to="/ops/dashboard" />;
     if (user.role === 'setter') return <Navigate to="/setter/deck?step=cualificacion" />;
     if (user.role === 'closer') return <Navigate to="/closer/deck?step=agendas" />;
-    if (user.role === 'triage') return <Navigate to="/triage/agendas" />;
+    if (user.role === 'triage') return <Navigate to="/triage/deck?step=confirmar" />;
     return <Navigate to="/" />;
   }
 
@@ -287,6 +288,16 @@ function App() {
                 <ProtectedRoute roles={['triage']}>
                   <MainLayout>
                     <FinancialAgendasPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/triage/deck"
+              element={
+                <ProtectedRoute roles={['triage']}>
+                  <MainLayout>
+                    <TriageWorkflowPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

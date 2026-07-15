@@ -58,6 +58,7 @@ const useDockNavigation = () => {
             ];
         } else if (isTriage) {
             return [
+                { id: 'deck', icon: Layers, label: 'Confirmaciones', path: '/triage/deck?step=confirmar' },
                 { id: 'agendas', icon: CalendarDays, label: 'Registro de Agendas', path: '/triage/agendas' },
                 { id: 'formularios', icon: ClipboardCheck, label: 'Formularios', path: '/triage/formularios' },
                 { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/triage/report' }
