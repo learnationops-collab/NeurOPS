@@ -674,7 +674,7 @@ def get_setter_deck():
     
     # Filtrar según el paso del flujo de trabajo
     if step == 'cualificacion':
-        from app.models import LeadAnswer, ManychatLead, Ad, Event, Client, Appointment
+        from app.models import LeadAnswer, ManychatLead, Ad, Event, Client, Appointment, Comment
         from sqlalchemy import func
         
         show_disqualified = request.args.get('show_disqualified') == 'true'
