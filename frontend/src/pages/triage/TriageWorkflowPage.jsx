@@ -28,6 +28,46 @@ const TriageWorkflowPage = () => {
     // Estados para reprogramación y notas
     const [rescheduleData, setRescheduleData] = useState({ apptId: null, date: '', status: '' });
     const [triageNote, setTriageNote] = useState('');
+    const [meetDateInput, setMeetDateInput] = useState('');
+    const [updatingDate, setUpdatingDate] = useState(false);
+
+    // Sincronizar input de fecha cuando cambia el lead
+    useEffect(() => {
+        if (selectedLead) {
+            setMeetDateInput(formatToDatetimeLocal(selectedLead.date || selectedLead.fecha_meet));
+        } else {
+            setMeetDateInput('');
+        }
+    }, [selectedLead]);
+
+    const handleSaveMeetDate = async () => {
+        if (!selectedLead || !meetDateInput) return;
+        setUpdatingDate(true);
+        try {
+            const payload = {
+                date: meetDateInput,
+                fecha_meet: meetDateInput
+            };
+            if (user?.username) {
+                payload.encargado_triage = user.username;
+            }
+            await api.put(`/public/financial-agendas/${selectedLead.id}`, payload);
+            toast.success("Fecha del meet actualizada");
+            
+            // Guardar comentario en el chat del cliente notificando la nueva fecha
+            if (selectedLead.client_id) {
+                const commentText = `[Fecha de Meet Modificada] Cita reprogramada para el ${new Date(meetDateInput).toLocaleString('es-ES')}`;
+                await saveTriageComment(selectedLead.client_id, commentText, 'Cambio Fecha');
+            }
+
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error al actualizar fecha del meet:", err);
+            toast.error("Error al actualizar la fecha del meet");
+        } finally {
+            setUpdatingDate(false);
+        }
+    };
 
     // Cargar agendas del día seleccionado
     const fetchAgendas = async () => {
@@ -36,7 +76,6 @@ const TriageWorkflowPage = () => {
             const res = await api.get('/public/financial-agendas', {
                 params: {
                     start_date: selectedDate,
-                    end_date: selectedDate,
                     date_filter_by: 'meet'
                 }
             });
@@ -478,6 +517,35 @@ const TriageWorkflowPage = () => {
                                             <div className="space-y-1">
                                                 <span className="text-[9px] text-slate-500 uppercase font-black block">Closer Asignado</span>
                                                 <span className="text-slate-200 font-black">{selectedLead.closer || 'Sin Closer'}</span>
+                                            </div>
+                                            <div className="space-y-1 sm:col-span-2 border-t border-slate-900/60 pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                <div>
+                                                    <span className="text-[9px] text-slate-500 uppercase font-black block">Fecha del Meet</span>
+                                                    <span className="text-slate-200 font-bold">
+                                                        {new Date(selectedLead.date || selectedLead.fecha_meet).toLocaleString('es-ES', {
+                                                            day: '2-digit',
+                                                            month: 'short',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="datetime-local"
+                                                        value={meetDateInput}
+                                                        onChange={(e) => setMeetDateInput(e.target.value)}
+                                                        className="bg-slate-950 border border-slate-850 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-violet-500/50"
+                                                    />
+                                                    <button
+                                                        onClick={handleSaveMeetDate}
+                                                        disabled={updatingDate || !meetDateInput}
+                                                        className="h-8 px-3 bg-violet-600 hover:bg-violet-500 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
+                                                    >
+                                                        {updatingDate ? <Loader2 size={10} className="animate-spin" /> : 'Actualizar'}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
