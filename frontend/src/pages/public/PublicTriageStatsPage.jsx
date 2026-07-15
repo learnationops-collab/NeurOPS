@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import {
     Loader2, BarChart3, Target, Layers, Phone, Activity,
-    Table, Users, ListChecks
+    Table, Users, ListChecks, CalendarDays
 } from 'lucide-react';
 import usePersistentFilters from '../../hooks/usePersistentFilters';
 import TriageTrackerTable from '../admin/reports/TriageTrackerTable';
+import FinancialAgendasPage from '../admin/reports/FinancialAgendasPage';
 
 const PublicTriageStatsPage = () => {
     const { filters: tabFilters, updateFilter: setTabFilters } = usePersistentFilters('triage_active_tab', {
@@ -174,6 +175,7 @@ const PublicTriageStatsPage = () => {
                     <div className="flex bg-slate-200/50 p-1.5 rounded-[1.5rem] border border-slate-200/60 shadow-inner">
                         <TabButton id="general" label="Estadísticas" icon={BarChart3} />
                         <TabButton id="tracker" label="Reportes" icon={Table} />
+                        <TabButton id="agendas_log" label="Registro Agendas" icon={CalendarDays} />
                     </div>
                 </header>
 
@@ -481,6 +483,13 @@ const PublicTriageStatsPage = () => {
                         {activeTab === 'tracker' && (
                             <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-xl animate-in fade-in duration-700 mt-8">
                                 <TriageTrackerTable />
+                            </div>
+                        )}
+
+                        {/* TAB REGISTRO DE AGENDAS */}
+                        {activeTab === 'agendas_log' && (
+                            <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-700 rounded-[2.5rem] mt-8 overflow-hidden">
+                                <FinancialAgendasPage />
                             </div>
                         )}
                     </>
