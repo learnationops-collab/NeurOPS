@@ -35,6 +35,9 @@
     - **Frontend ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY])**:
       - Se añadió una sección especial superior `"Mensajes pendientes de Leads sin Agenda"` pintada en tonos rose/alerta cuando existen comentarios pendientes de clientes sin agenda vinculada.
       - Al seleccionar uno de estos leads, se abre de forma transparente el mazo de Notas & Comentarios sin interferir con las agendas de confirmación normales.
+      - Se previno el error fatal de renderizado de React al abrir un lead sin agenda, agregando validaciones para controlar fechas nulas (`selectedLead.date` y `selectedLead.fecha_meet`) y evitar el formateo de `Invalid Date`.
+      - Se vinculó correctamente la acción de actualización del botón de fecha de meet al nombre del nuevo método `handleUpdateMeetDate` (anteriormente `handleSaveMeetDate`).
+      - Se deshabilitaron y ocultaron las acciones rápidas de cambio de estado de agenda en la ficha del lead si se visualiza un prospecto de la bandeja de mensajes sin agenda real.
     - **Frontend ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
       - Se agregó la misma sección especial de mensajes pendientes arriba de la cola de agendas de citas del Closer.
       - Se restringió y deshabilitó la botonera de acciones rápidas de citas (como Asistió, No Show, Reagendar, etc.) cuando se visualiza un lead de esta bandeja sin cita real (utilizando IDs negativos especiales), mostrando un mensaje explicativo al closer.
