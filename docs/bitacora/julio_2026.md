@@ -1,6 +1,13 @@
 # Bitácora - Julio 2026
 
 - **16 de Julio de 2026**:
+  - **Manejo Robusto de Bloqueos de Base de Datos en Decks (Robustness & Bugfix)**:
+    - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - Se implementó un bloque de control `try-except` con `db.session.rollback()` y fallback en memoria para la creación de `ManychatLead` y `LeadAnswer` durante peticiones GET de lectura, previniendo errores 500 si la base de datos local SQLite se encuentra bloqueada por transacciones concurrentes.
+    - **Backend API ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
+      - Se envolvió la creación persistente de `FinancialAgenda` en un bloque `try-except` seguro con rollback y fallback en memoria en el endpoint de consulta pública de agendas de Triage, solucionando el error 500 reportado por el usuario debido a bloqueos concurrentes de base de datos.
+    - **Backend API ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+      - Se robusteció la creación de citas `Appointment` de Closer mediante un bloque `try-except` seguro y fallback en memoria para evitar errores por locks en base de datos en la carga del deck del Closer.
   - **Priorización y Visibilidad de Leads con Mensajes Sin Leer**:
     - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
       - Se inyectan dinámicamente leads (con su correspondiente `ManychatLead` y `LeadAnswer` autogenerados si no existen) que tengan comentarios no leídos para el Setter actual en `/setter/deck?step=cualificacion`, garantizando su visibilidad independientemente de los filtros y asignaciones normales.
