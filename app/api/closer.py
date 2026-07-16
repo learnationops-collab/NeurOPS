@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 import json
 from flask_login import login_required, current_user
 from app.services.closer_service import CloserService
-from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment, SurveyAnswer, SurveyQuestion
+from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, Enrollment, WeeklyAvailability, Event, Client, Payment, ClientComment, SurveyAnswer, SurveyQuestion, CommentNotification
 from app.decorators import role_required
 from datetime import date, timedelta, datetime
 from sqlalchemy import or_
@@ -1280,7 +1280,7 @@ def get_closer_deck():
 
     appointments = query.order_by(Appointment.start_time.asc()).all()
 
-    from app.models import CommentNotification, Client, Appointment
+    # No local import needed as they are imported globally
     unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
     
     # Asegurar citas para notificaciones sin leer
