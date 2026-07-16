@@ -506,23 +506,44 @@ def get_financial_agendas():
                     agenda = FinancialAgenda.query.filter(or_(*client_filters)).first()
                     
                 if not agenda:
-                    agenda = FinancialAgenda(
-                        nombre="Mensaje de Triage",
-                        registro=datetime.utcnow().isoformat(),
-                        fecha_meet=datetime.utcnow().isoformat(),
-                        whatsapp=uc.phone or "",
-                        closer="Sin Asignar",
-                        lead=uc.full_name or "Sin Nombre",
-                        mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
-                        instagram=uc.instagram or f"no_ig_{uc.id}",
-                        estado="Pendiente",
-                        encargado_triage=current_user.username,
-                        date=datetime.utcnow()
-                    )
-                    db.session.add(agenda)
-                    db.session.commit()
+                    try:
+                        agenda = FinancialAgenda(
+                            nombre="Mensaje de Triage",
+                            registro=datetime.utcnow().isoformat(),
+                            fecha_meet=datetime.utcnow().isoformat(),
+                            whatsapp=uc.phone or "",
+                            closer="Sin Asignar",
+                            lead=uc.full_name or "Sin Nombre",
+                            mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
+                            instagram=uc.instagram or f"no_ig_{uc.id}",
+                            estado="Pendiente",
+                            encargado_triage=current_user.username,
+                            date=datetime.utcnow()
+                        )
+                        db.session.add(agenda)
+                        db.session.commit()
+                    except Exception as ex:
+                        db.session.rollback()
+                        import logging
+                        logging.error(f"Error persistiendo agenda de triage en GET (paginado): {ex}")
+                        # Objeto transitorio en memoria
+                        agenda = FinancialAgenda(
+                            id=-(uc.id + 1000000),
+                            nombre="Mensaje de Triage",
+                            registro=datetime.utcnow().isoformat(),
+                            fecha_meet=datetime.utcnow().isoformat(),
+                            whatsapp=uc.phone or "",
+                            closer="Sin Asignar",
+                            lead=uc.full_name or "Sin Nombre",
+                            mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
+                            instagram=uc.instagram or f"no_ig_{uc.id}",
+                            estado="Pendiente",
+                            encargado_triage=current_user.username,
+                            date=datetime.utcnow()
+                        )
                     
-                unread_agendas.append(agenda)
+                if agenda:
+                    unread_agendas.append(agenda)
 
         # Agregar agendas de notificaciones sin leer a agendas_pagination.items si no están presentes
         present_agenda_ids = {a.id for a in agendas_pagination.items}
@@ -629,23 +650,44 @@ def get_financial_agendas():
                     agenda = FinancialAgenda.query.filter(or_(*client_filters)).first()
                     
                 if not agenda:
-                    agenda = FinancialAgenda(
-                        nombre="Mensaje de Triage",
-                        registro=datetime.utcnow().isoformat(),
-                        fecha_meet=datetime.utcnow().isoformat(),
-                        whatsapp=uc.phone or "",
-                        closer="Sin Asignar",
-                        lead=uc.full_name or "Sin Nombre",
-                        mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
-                        instagram=uc.instagram or f"no_ig_{uc.id}",
-                        estado="Pendiente",
-                        encargado_triage=current_user.username,
-                        date=datetime.utcnow()
-                    )
-                    db.session.add(agenda)
-                    db.session.commit()
+                    try:
+                        agenda = FinancialAgenda(
+                            nombre="Mensaje de Triage",
+                            registro=datetime.utcnow().isoformat(),
+                            fecha_meet=datetime.utcnow().isoformat(),
+                            whatsapp=uc.phone or "",
+                            closer="Sin Asignar",
+                            lead=uc.full_name or "Sin Nombre",
+                            mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
+                            instagram=uc.instagram or f"no_ig_{uc.id}",
+                            estado="Pendiente",
+                            encargado_triage=current_user.username,
+                            date=datetime.utcnow()
+                        )
+                        db.session.add(agenda)
+                        db.session.commit()
+                    except Exception as ex:
+                        db.session.rollback()
+                        import logging
+                        logging.error(f"Error persistiendo agenda de triage en GET (no paginado): {ex}")
+                        # Objeto transitorio en memoria
+                        agenda = FinancialAgenda(
+                            id=-(uc.id + 1000000),
+                            nombre="Mensaje de Triage",
+                            registro=datetime.utcnow().isoformat(),
+                            fecha_meet=datetime.utcnow().isoformat(),
+                            whatsapp=uc.phone or "",
+                            closer="Sin Asignar",
+                            lead=uc.full_name or "Sin Nombre",
+                            mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
+                            instagram=uc.instagram or f"no_ig_{uc.id}",
+                            estado="Pendiente",
+                            encargado_triage=current_user.username,
+                            date=datetime.utcnow()
+                        )
                     
-                unread_agendas.append(agenda)
+                if agenda:
+                    unread_agendas.append(agenda)
 
         # Agregar agendas de notificaciones sin leer a agendas si no están presentes
         present_agenda_ids = {a.id for a in agendas}
