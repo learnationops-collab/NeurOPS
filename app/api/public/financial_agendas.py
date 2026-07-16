@@ -263,307 +263,322 @@ def get_financial_agendas():
         else:
             query = query.filter(FinancialAgenda.encargado_triage == encargado_triage)
         
+    closer_result = request.args.get('closer_result', default='', type=str).strip()
+    
     if date_filter_by == 'created':
         query = query.order_by(FinancialAgenda.registro.desc())
     else:
         query = query.order_by(FinancialAgenda.date.desc())
+        
+    all_agendas = query.all()
     
+    # Obtener notificaciones no leídas para ordenar
+    unread_client_ids = set()
+    from flask_login import current_user
+    if current_user and current_user.is_authenticated:
+        from app.models import CommentNotification
+        unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+
+    # Asegurar agendas para notificaciones sin leer
+    unread_agendas = []
+    if current_user and current_user.is_authenticated and unread_client_ids:
+        clients_with_unread = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
+        for uc in clients_with_unread:
+            ig_clean = uc.instagram.strip().replace('@', '').lower() if uc.instagram and uc.instagram.lower() not in ('n/a', '') else None
+            mail_clean = uc.email.strip().lower() if uc.email and uc.email.lower() not in ('n/a', '') else None
+            
+            agenda = None
+            client_filters = []
+            if ig_clean:
+                client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
+            if mail_clean:
+                client_filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
+                
+            if client_filters:
+                agenda = FinancialAgenda.query.filter(or_(*client_filters)).first()
+                
+            if not agenda:
+                try:
+                    agenda = FinancialAgenda(
+                        nombre="Mensaje de Triage",
+                        registro=datetime.utcnow().isoformat(),
+                        fecha_meet=datetime.utcnow().isoformat(),
+                        whatsapp=uc.phone or "",
+                        closer="Sin Asignar",
+                        lead=uc.full_name or "Sin Nombre",
+                        mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
+                        instagram=uc.instagram or f"no_ig_{uc.id}",
+                        estado="Pendiente",
+                        encargado_triage=current_user.username,
+                        date=datetime.utcnow()
+                    )
+                    db.session.add(agenda)
+                    db.session.commit()
+                except Exception as ex:
+                    db.session.rollback()
+                    import logging
+                    logging.error(f"Error persistiendo agenda de triage en GET: {ex}")
+                    # Objeto transitorio en memoria
+                    agenda = FinancialAgenda(
+                        id=-(uc.id + 1000000),
+                        nombre="Mensaje de Triage",
+                        registro=datetime.utcnow().isoformat(),
+                        fecha_meet=datetime.utcnow().isoformat(),
+                        whatsapp=uc.phone or "",
+                        closer="Sin Asignar",
+                        lead=uc.full_name or "Sin Nombre",
+                        mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
+                        instagram=uc.instagram or f"no_ig_{uc.id}",
+                        estado="Pendiente",
+                        encargado_triage=current_user.username,
+                        date=datetime.utcnow()
+                    )
+                
+            if agenda:
+                unread_agendas.append(agenda)
+
+    # Agregar agendas de notificaciones sin leer a agendas si no están presentes
+    present_agenda_ids = {a.id for a in all_agendas}
+    for ua in unread_agendas:
+        if ua.id not in present_agenda_ids:
+            all_agendas.insert(0, ua)
+            present_agenda_ids.add(ua.id)
+
+    _ensure_clients(all_agendas)
+    
+    # Precalcular ventas asociadas para evitar N+1
+    from app.models import FinancialSale
+    emails = {a.mail.strip().lower() for a in all_agendas if a.mail and a.mail.lower() not in ('n/a', '')}
+    instagrams = {a.instagram.strip().replace('@', '').lower() for a in all_agendas if a.instagram and a.instagram.lower() not in ('n/a', '')}
+    
+    sales_by_email = {}
+    sales_by_ig = {}
+    if emails or instagrams:
+        sales_filters = []
+        if instagrams:
+            sales_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(list(instagrams)))
+        if emails:
+            sales_filters.append(func.lower(FinancialSale.mail_cliente).in_(list(emails)))
+        
+        sales = FinancialSale.query.filter(or_(*sales_filters)).all()
+        for s in sales:
+            if s.mail_cliente:
+                m = s.mail_cliente.strip().lower()
+                if m not in sales_by_email: sales_by_email[m] = []
+                sales_by_email[m].append(s)
+            if s.instagram:
+                ig = s.instagram.strip().replace('@', '').lower()
+                if ig not in sales_by_ig: sales_by_ig[ig] = []
+                sales_by_ig[ig].append(s)
+                
+    def get_agenda_sales_info(agenda):
+        ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
+        mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
+        
+        sales_dict = {}
+        if ig_clean and ig_clean in sales_by_ig:
+            for s in sales_by_ig[ig_clean]:
+                sales_dict[s.id] = s
+        if mail_clean and mail_clean in sales_by_email:
+            for s in sales_by_email[mail_clean]:
+                sales_dict[s.id] = s
+                
+        associated_sales = list(sales_dict.values())
+        
+        has_deposit = False
+        has_full_sale = False
+        for s in associated_sales:
+            tp = (s.tipo_pago or "").lower()
+            if any(w in tp for w in ["seña", "sena", "deposito", "deposit"]):
+                has_deposit = True
+            else:
+                has_full_sale = True
+        return len(associated_sales), has_deposit, has_full_sale
+
+    # Serializar y filtrar por closer_result en memoria
+    serialized_all = []
+    for a in all_agendas:
+        s_count, has_deposit, has_full_sale = get_agenda_sales_info(a)
+        dict_agenda = a.to_dict(sales_count=s_count)
+        c_id = dict_agenda.get("client_id")
+        dict_agenda["unread_comment"] = c_id in unread_client_ids if c_id else False
+        dict_agenda["_sales_info"] = (s_count, has_deposit, has_full_sale)
+        
+        if closer_result:
+            agenda_closer_res = dict_agenda.get("closer_result") or "Pendiente"
+            if agenda_closer_res.strip().lower() != closer_result.strip().lower():
+                continue
+                
+        serialized_all.append(dict_agenda)
+
+    # Agrupaciones en memoria en Python a partir de los datos finales filtrados
+    by_closer = {}
+    by_closer_state = {}
+    by_source_state = {}
+    
+    known_setters_lower = {
+        'elias', 'workshop', 'vsl', 'marketing', 'organico', 'orgánico',
+        'sin asignar', 'sin_asignar', 'facebook', 'instagram', 'youtube',
+        'tiktok', 'manychat', 'workshop manychat', 'ads', 'setter', 'organica'
+    }
+    
+    for x in serialized_all:
+        c_name = (x.get("closer") or 'Sin Asignar').strip()
+        st_name = (x.get("closer_result") or 'Pendiente').strip()
+        s_count, has_deposit, has_full_sale = x["_sales_info"]
+        
+        # by_closer
+        by_closer[c_name] = by_closer.get(c_name, 0) + 1
+        
+        # by_closer_state
+        if c_name not in by_closer_state:
+            by_closer_state[c_name] = {
+                "total": 0,
+                "Pendiente": 0,
+                "Contactado": 0,
+                "Confirmado": 0,
+                "Reagendada": 0,
+                "Cancelada": 0,
+                "Cerrada": 0,
+                "Show Up": 0,
+                "No Show": 0,
+                "2TH Call": 0,
+                "Ventas": 0,
+                "Depósitos": 0,
+                "Follow Ups": 0,
+                "No Leads": 0
+            }
+        
+        state_key = None
+        if st_name == 'Pendiente': state_key = 'Pendiente'
+        elif st_name == 'Contactado': state_key = 'Contactado'
+        elif st_name == 'Confirmado': state_key = 'Confirmado'
+        elif st_name in ('Reagendada', 'Reprogramada', 'Reagendado', 'Reprogramado'): state_key = 'Reagendada'
+        elif st_name in ('Cancelada', 'Cancelado'): state_key = 'Cancelada'
+        elif st_name in ('Cerrada', 'Cerrado'): state_key = 'Cerrada'
+        elif st_name.lower() == 'no show': state_key = 'No Show'
+        elif st_name in ('2TH Call', '2da Call', '2nd Call', '2da call', '2TH call', 'Segunda llamada', 'Segunda agenda'): state_key = '2TH Call'
+        elif st_name in ('Show Up', 'Show up', 'completada', 'Completada', 'Follow Up', 'Follow Ups', 'follow_up', 'No Lead', 'No Leads', 'no_lead'):
+            state_key = 'Show Up'
+        
+        if state_key:
+            by_closer_state[c_name][state_key] += 1
+        
+        if state_key == 'Show Up':
+            if s_count > 0:
+                if has_full_sale:
+                    by_closer_state[c_name]["Ventas"] += 1
+                elif has_deposit:
+                    by_closer_state[c_name]["Depósitos"] += 1
+            else:
+                if st_name in ('No Lead', 'No Leads', 'no_lead'):
+                    by_closer_state[c_name]["No Leads"] += 1
+                else:
+                    by_closer_state[c_name]["Follow Ups"] += 1
+        
+        by_closer_state[c_name]["total"] += 1
+        
+        # by_source_state
+        s_name = (x.get("nombre") or 'Sin Asignar').strip()
+        if len(s_name.split()) > 2:
+            continue
+        s_name_lower = s_name.lower()
+        if s_name_lower not in known_setters_lower and len(s_name.split()) == 2:
+            words = [w.lower() for w in s_name.split()]
+            if not any(w in known_setters_lower for w in words):
+                continue
+                
+        if s_name not in by_source_state:
+            by_source_state[s_name] = {
+                "total": 0,
+                "Pendiente": 0,
+                "Contactado": 0,
+                "Confirmado": 0,
+                "Reagendada": 0,
+                "Cancelada": 0,
+                "Cerrada": 0,
+                "Show Up": 0,
+                "No Show": 0,
+                "2TH Call": 0,
+                "Ventas": 0,
+                "Depósitos": 0,
+                "Follow Ups": 0,
+                "No Leads": 0
+            }
+        if state_key:
+            by_source_state[s_name][state_key] += 1
+            
+        if state_key == 'Show Up':
+            if s_count > 0:
+                if has_full_sale:
+                    by_source_state[s_name]["Ventas"] += 1
+                elif has_deposit:
+                    by_source_state[s_name]["Depósitos"] += 1
+            else:
+                if st_name in ('No Lead', 'No Leads', 'no_lead'):
+                    by_source_state[s_name]["No Leads"] += 1
+                else:
+                    by_source_state[s_name]["Follow Ups"] += 1
+        
+        by_source_state[s_name]["total"] += 1
+
+    # Obtener closers y fuentes únicas para el periodo de fechas seleccionado
+    closers_query = db.session.query(FinancialAgenda.closer).distinct().filter(
+        FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
+    ).all()
+    sources_query = db.session.query(FinancialAgenda.nombre).distinct().filter(
+        FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
+    ).all()
+    
+    closer_names_db = [c[0].strip() for c in closers_query if c[0] and c[0].strip()]
+    closer_users = User.query.filter_by(role='closer', is_active=True).all()
+    closer_usernames = [u.username for u in closer_users]
+    unique_closers = sorted(list(set(closer_names_db + closer_usernames)))
+    
+    triage_query = db.session.query(FinancialAgenda.encargado_triage).distinct().filter(
+        FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
+    ).all()
+    triage_names_db = [t[0].strip() for t in triage_query if t[0] and t[0].strip()]
+    triage_users = User.query.filter_by(role='triage', is_active=True).all()
+    triage_usernames = [u.username for u in triage_users]
+    unique_triage = sorted(list(set(triage_names_db + triage_usernames)))
+    
+    raw_sources = [s[0].strip() for s in sources_query if s[0] and s[0].strip()]
+    unique_sources = []
+    for src in raw_sources:
+        if len(src.split()) > 2:
+            continue
+        src_lower = src.lower()
+        if src_lower in known_setters_lower:
+            unique_sources.append(src)
+        elif len(src.split()) == 1:
+            unique_sources.append(src)
+        elif len(src.split()) == 2:
+            words = [w.lower() for w in src.split()]
+            if any(w in known_setters_lower for w in words):
+                unique_sources.append(src)
+                
+    unique_sources = sorted(list(set(unique_sources)))
+
+    # Ordenar por no leídos
+    if current_user and current_user.is_authenticated:
+        serialized_all.sort(key=lambda x: 0 if x.get('unread_comment', False) else 1)
+        
+    for x in serialized_all:
+        x.pop("_sales_info", None)
+        
+    total_count = len(serialized_all)
+    upcoming_count = len([x for x in serialized_all if x.get('date') and datetime.fromisoformat(x['date']) >= datetime.utcnow()])
+
     if page is not None:
-        agendas_pagination = query.paginate(page=page, per_page=limit, error_out=False)
-        total_count = query.count()
-        upcoming_count = query.filter(FinancialAgenda.date >= datetime.utcnow()).count()
-        
-        # Obtener todas las agendas del periodo filtrado para las agregaciones
-        all_agendas = query.all()
-        
-        # Mapear ventas asociadas a las agendas en una sola consulta
-        from app.models import FinancialSale
-        emails = {a.mail.strip().lower() for a in all_agendas if a.mail and a.mail.lower() not in ('n/a', '')}
-        instagrams = {a.instagram.strip().replace('@', '').lower() for a in all_agendas if a.instagram and a.instagram.lower() not in ('n/a', '')}
-        
-        sales_by_email = {}
-        sales_by_ig = {}
-        if emails or instagrams:
-            sales_filters = []
-            if instagrams:
-                sales_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(list(instagrams)))
-            if emails:
-                sales_filters.append(func.lower(FinancialSale.mail_cliente).in_(list(emails)))
-            
-            sales = FinancialSale.query.filter(or_(*sales_filters)).all()
-            for s in sales:
-                if s.mail_cliente:
-                    m = s.mail_cliente.strip().lower()
-                    if m not in sales_by_email: sales_by_email[m] = []
-                    sales_by_email[m].append(s)
-                if s.instagram:
-                    ig = s.instagram.strip().replace('@', '').lower()
-                    if ig not in sales_by_ig: sales_by_ig[ig] = []
-                    sales_by_ig[ig].append(s)
-                    
-        def get_agenda_sales_info(agenda):
-            ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
-            mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
-            
-            sales_dict = {}
-            if ig_clean and ig_clean in sales_by_ig:
-                for s in sales_by_ig[ig_clean]:
-                    sales_dict[s.id] = s
-            if mail_clean and mail_clean in sales_by_email:
-                for s in sales_by_email[mail_clean]:
-                    sales_dict[s.id] = s
-                    
-            associated_sales = list(sales_dict.values())
-            
-            has_deposit = False
-            has_full_sale = False
-            for s in associated_sales:
-                tp = (s.tipo_pago or "").lower()
-                if any(w in tp for w in ["seña", "sena", "deposito", "deposit"]):
-                    has_deposit = True
-                else:
-                    has_full_sale = True
-            return len(associated_sales), has_deposit, has_full_sale
-
-        # Agrupaciones en memoria en Python
-        by_closer = {}
-        by_closer_state = {}
-        by_source_state = {}
-        by_triage_state = {}
-        
-        known_setters_lower = {
-            'elias', 'workshop', 'vsl', 'marketing', 'organico', 'orgánico',
-            'sin asignar', 'sin_asignar', 'facebook', 'instagram', 'youtube',
-            'tiktok', 'manychat', 'workshop manychat', 'ads', 'setter', 'organica'
-        }
-        
-        for a in all_agendas:
-            c_name = (a.closer or 'Sin Asignar').strip()
-            st_name = (a.estado or 'Pendiente').strip()
-            s_count, has_deposit, has_full_sale = get_agenda_sales_info(a)
-            
-            # by_closer
-            by_closer[c_name] = by_closer.get(c_name, 0) + 1
-            
-            # by_closer_state
-            if c_name not in by_closer_state:
-                by_closer_state[c_name] = {
-                    "total": 0,
-                    "Pendiente": 0,
-                    "Contactado": 0,
-                    "Confirmado": 0,
-                    "Reagendada": 0,
-                    "Cancelada": 0,
-                    "Cerrada": 0,
-                    "Show Up": 0,
-                    "No Show": 0,
-                    "2TH Call": 0,
-                    "Ventas": 0,
-                    "Depósitos": 0,
-                    "Follow Ups": 0,
-                    "No Leads": 0
-                }
-            
-            state_key = None
-            if st_name == 'Pendiente': state_key = 'Pendiente'
-            elif st_name == 'Contactado': state_key = 'Contactado'
-            elif st_name == 'Confirmado': state_key = 'Confirmado'
-            elif st_name in ('Reagendada', 'Reprogramada', 'Reagendado', 'Reprogramado'): state_key = 'Reagendada'
-            elif st_name in ('Cancelada', 'Cancelado'): state_key = 'Cancelada'
-            elif st_name in ('Cerrada', 'Cerrado'): state_key = 'Cerrada'
-            elif st_name.lower() == 'no show': state_key = 'No Show'
-            elif st_name in ('2TH Call', '2da Call', '2nd Call', '2da call', '2TH call', 'Segunda llamada', 'Segunda agenda'): state_key = '2TH Call'
-            elif st_name in ('Show Up', 'Show up', 'completada', 'Completada', 'Follow Up', 'Follow Ups', 'follow_up', 'No Lead', 'No Leads', 'no_lead'):
-                state_key = 'Show Up'
-            
-            if state_key:
-                by_closer_state[c_name][state_key] += 1
-            
-            if state_key == 'Show Up':
-                if s_count > 0:
-                    if has_full_sale:
-                        by_closer_state[c_name]["Ventas"] += 1
-                    elif has_deposit:
-                        by_closer_state[c_name]["Depósitos"] += 1
-                else:
-                    if st_name in ('No Lead', 'No Leads', 'no_lead'):
-                        by_closer_state[c_name]["No Leads"] += 1
-                    else:
-                        by_closer_state[c_name]["Follow Ups"] += 1
-            
-            by_closer_state[c_name]["total"] += 1
-            
-            # by_source_state
-            s_name = (a.nombre or 'Sin Asignar').strip()
-            if len(s_name.split()) > 2:
-                continue
-            s_name_lower = s_name.lower()
-            if s_name_lower not in known_setters_lower and len(s_name.split()) == 2:
-                words = [w.lower() for w in s_name.split()]
-                if not any(w in known_setters_lower for w in words):
-                    continue
-                    
-            if s_name not in by_source_state:
-                by_source_state[s_name] = {
-                    "total": 0,
-                    "Pendiente": 0,
-                    "Contactado": 0,
-                    "Confirmado": 0,
-                    "Reagendada": 0,
-                    "Cancelada": 0,
-                    "Cerrada": 0,
-                    "Show Up": 0,
-                    "No Show": 0,
-                    "2TH Call": 0,
-                    "Ventas": 0,
-                    "Depósitos": 0,
-                    "Follow Ups": 0,
-                    "No Leads": 0
-                }
-            if state_key:
-                by_source_state[s_name][state_key] += 1
-                
-            if state_key == 'Show Up':
-                if s_count > 0:
-                    if has_full_sale:
-                        by_source_state[s_name]["Ventas"] += 1
-                    elif has_deposit:
-                        by_source_state[s_name]["Depósitos"] += 1
-                else:
-                    if st_name in ('No Lead', 'No Leads', 'no_lead'):
-                        by_source_state[s_name]["No Leads"] += 1
-                    else:
-                        by_source_state[s_name]["Follow Ups"] += 1
-            
-            by_source_state[s_name]["total"] += 1
-        
-        # Obtener closers y fuentes únicas para el periodo de fechas seleccionado
-        closers_query = db.session.query(FinancialAgenda.closer).distinct().filter(
-            FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
-        ).all()
-        sources_query = db.session.query(FinancialAgenda.nombre).distinct().filter(
-            FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
-        ).all()
-        
-        # Combinar closers historicos en BD con todos los usuarios closer activos
-        closer_names_db = [c[0].strip() for c in closers_query if c[0] and c[0].strip()]
-        closer_users = User.query.filter_by(role='closer', is_active=True).all()
-        closer_usernames = [u.username for u in closer_users]
-        unique_closers = sorted(list(set(closer_names_db + closer_usernames)))
-        
-        triage_query = db.session.query(FinancialAgenda.encargado_triage).distinct().filter(
-            FinancialAgenda.id.in_(date_query.with_entities(FinancialAgenda.id))
-        ).all()
-        triage_names_db = [t[0].strip() for t in triage_query if t[0] and t[0].strip()]
-        triage_users = User.query.filter_by(role='triage', is_active=True).all()
-        triage_usernames = [u.username for u in triage_users]
-        unique_triage = sorted(list(set(triage_names_db + triage_usernames)))
-        
-        raw_sources = [s[0].strip() for s in sources_query if s[0] and s[0].strip()]
-        unique_sources = []
-        for src in raw_sources:
-            if len(src.split()) > 2:
-                continue
-            src_lower = src.lower()
-            if src_lower in known_setters_lower:
-                unique_sources.append(src)
-            elif len(src.split()) == 1:
-                unique_sources.append(src)
-            elif len(src.split()) == 2:
-                words = [w.lower() for w in src.split()]
-                if any(w in known_setters_lower for w in words):
-                    unique_sources.append(src)
-                    
-        unique_sources = sorted(list(set(unique_sources)))
-        
-        # Obtener notificaciones no leídas para ordenar
-        unread_client_ids = set()
-        from flask_login import current_user
-        if current_user and current_user.is_authenticated:
-            from app.models import CommentNotification
-            unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
-
-        # Asegurar agendas para notificaciones sin leer
-        unread_agendas = []
-        if current_user and current_user.is_authenticated and unread_client_ids:
-            # No local import needed
-            
-            clients_with_unread = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
-            for uc in clients_with_unread:
-                ig_clean = uc.instagram.strip().replace('@', '').lower() if uc.instagram and uc.instagram.lower() not in ('n/a', '') else None
-                mail_clean = uc.email.strip().lower() if uc.email and uc.email.lower() not in ('n/a', '') else None
-                
-                agenda = None
-                client_filters = []
-                if ig_clean:
-                    client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
-                if mail_clean:
-                    client_filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
-                    
-                if client_filters:
-                    agenda = FinancialAgenda.query.filter(or_(*client_filters)).first()
-                    
-                if not agenda:
-                    try:
-                        agenda = FinancialAgenda(
-                            nombre="Mensaje de Triage",
-                            registro=datetime.utcnow().isoformat(),
-                            fecha_meet=datetime.utcnow().isoformat(),
-                            whatsapp=uc.phone or "",
-                            closer="Sin Asignar",
-                            lead=uc.full_name or "Sin Nombre",
-                            mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
-                            instagram=uc.instagram or f"no_ig_{uc.id}",
-                            estado="Pendiente",
-                            encargado_triage=current_user.username,
-                            date=datetime.utcnow()
-                        )
-                        db.session.add(agenda)
-                        db.session.commit()
-                    except Exception as ex:
-                        db.session.rollback()
-                        import logging
-                        logging.error(f"Error persistiendo agenda de triage en GET (paginado): {ex}")
-                        # Objeto transitorio en memoria
-                        agenda = FinancialAgenda(
-                            id=-(uc.id + 1000000),
-                            nombre="Mensaje de Triage",
-                            registro=datetime.utcnow().isoformat(),
-                            fecha_meet=datetime.utcnow().isoformat(),
-                            whatsapp=uc.phone or "",
-                            closer="Sin Asignar",
-                            lead=uc.full_name or "Sin Nombre",
-                            mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
-                            instagram=uc.instagram or f"no_ig_{uc.id}",
-                            estado="Pendiente",
-                            encargado_triage=current_user.username,
-                            date=datetime.utcnow()
-                        )
-                    
-                if agenda:
-                    unread_agendas.append(agenda)
-
-        # Agregar agendas de notificaciones sin leer a agendas_pagination.items si no están presentes
-        present_agenda_ids = {a.id for a in agendas_pagination.items}
-        for ua in unread_agendas:
-            if ua.id not in present_agenda_ids:
-                agendas_pagination.items.insert(0, ua)
-                present_agenda_ids.add(ua.id)
-
-        _ensure_clients(agendas_pagination.items)
-        serialized_data = []
-        for a in agendas_pagination.items:
-            s_count, _, _ = get_agenda_sales_info(a)
-            dict_agenda = a.to_dict(sales_count=s_count)
-            c_id = dict_agenda.get("client_id")
-            dict_agenda["unread_comment"] = c_id in unread_client_ids if c_id else False
-            serialized_data.append(dict_agenda)
-        
-        if current_user and current_user.is_authenticated:
-            serialized_data.sort(key=lambda x: 0 if x.get('unread_comment', False) else 1)
+        start_idx = (page - 1) * limit
+        end_idx = start_idx + limit
+        paginated_items = serialized_all[start_idx:end_idx]
+        has_more = end_idx < total_count
+        pages_count = (total_count + limit - 1) // limit
         
         return jsonify({
-            "data": serialized_data,
+            "data": paginated_items,
             "total": total_count,
             "upcoming_count": upcoming_count,
             "by_closer": by_closer,
@@ -574,137 +589,12 @@ def get_financial_agendas():
             "unique_closers": unique_closers,
             "unique_sources": unique_sources,
             "unique_triage": unique_triage,
-            "page": agendas_pagination.page,
-            "pages": agendas_pagination.pages,
-            "has_more": agendas_pagination.has_next
+            "page": page,
+            "pages": pages_count,
+            "has_more": has_more
         }), 200
     else:
-        agendas = query.all()
-        # Precalcular ventas asociadas para evitar N+1
-        from app.models import FinancialSale
-        emails = {a.mail.strip().lower() for a in agendas if a.mail and a.mail.lower() not in ('n/a', '')}
-        instagrams = {a.instagram.strip().replace('@', '').lower() for a in agendas if a.instagram and a.instagram.lower() not in ('n/a', '')}
-        
-        sales_by_email = {}
-        sales_by_ig = {}
-        if emails or instagrams:
-            sales_filters = []
-            if instagrams:
-                sales_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')).in_(list(instagrams)))
-            if emails:
-                sales_filters.append(func.lower(FinancialSale.mail_cliente).in_(list(emails)))
-            
-            sales = FinancialSale.query.filter(or_(*sales_filters)).all()
-            for s in sales:
-                if s.mail_cliente:
-                    m = s.mail_cliente.strip().lower()
-                    if m not in sales_by_email: sales_by_email[m] = []
-                    sales_by_email[m].append(s)
-                if s.instagram:
-                    ig = s.instagram.strip().replace('@', '').lower()
-                    if ig not in sales_by_ig: sales_by_ig[ig] = []
-                    sales_by_ig[ig].append(s)
-                    
-        def get_agenda_sales_info_local(agenda):
-            ig_clean = agenda.instagram.strip().replace('@', '').lower() if agenda.instagram and agenda.instagram.lower() not in ('n/a', '') else None
-            mail_clean = agenda.mail.strip().lower() if agenda.mail and agenda.mail.lower() not in ('n/a', '') else None
-            
-            sales_dict = {}
-            if ig_clean and ig_clean in sales_by_ig:
-                for s in sales_by_ig[ig_clean]:
-                    sales_dict[s.id] = s
-            if mail_clean and mail_clean in sales_by_email:
-                for s in sales_by_email[mail_clean]:
-                    sales_dict[s.id] = s
-            return len(sales_dict)
-
-        # Obtener notificaciones no leídas para ordenar
-        unread_client_ids = set()
-        from flask_login import current_user
-        if current_user and current_user.is_authenticated:
-            from app.models import CommentNotification
-            unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
-
-        # Asegurar agendas para notificaciones sin leer
-        unread_agendas = []
-        if current_user and current_user.is_authenticated and unread_client_ids:
-            # No local import needed
-            
-            clients_with_unread = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
-            for uc in clients_with_unread:
-                ig_clean = uc.instagram.strip().replace('@', '').lower() if uc.instagram and uc.instagram.lower() not in ('n/a', '') else None
-                mail_clean = uc.email.strip().lower() if uc.email and uc.email.lower() not in ('n/a', '') else None
-                
-                agenda = None
-                client_filters = []
-                if ig_clean:
-                    client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
-                if mail_clean:
-                    client_filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
-                    
-                if client_filters:
-                    agenda = FinancialAgenda.query.filter(or_(*client_filters)).first()
-                    
-                if not agenda:
-                    try:
-                        agenda = FinancialAgenda(
-                            nombre="Mensaje de Triage",
-                            registro=datetime.utcnow().isoformat(),
-                            fecha_meet=datetime.utcnow().isoformat(),
-                            whatsapp=uc.phone or "",
-                            closer="Sin Asignar",
-                            lead=uc.full_name or "Sin Nombre",
-                            mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
-                            instagram=uc.instagram or f"no_ig_{uc.id}",
-                            estado="Pendiente",
-                            encargado_triage=current_user.username,
-                            date=datetime.utcnow()
-                        )
-                        db.session.add(agenda)
-                        db.session.commit()
-                    except Exception as ex:
-                        db.session.rollback()
-                        import logging
-                        logging.error(f"Error persistiendo agenda de triage en GET (no paginado): {ex}")
-                        # Objeto transitorio en memoria
-                        agenda = FinancialAgenda(
-                            id=-(uc.id + 1000000),
-                            nombre="Mensaje de Triage",
-                            registro=datetime.utcnow().isoformat(),
-                            fecha_meet=datetime.utcnow().isoformat(),
-                            whatsapp=uc.phone or "",
-                            closer="Sin Asignar",
-                            lead=uc.full_name or "Sin Nombre",
-                            mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
-                            instagram=uc.instagram or f"no_ig_{uc.id}",
-                            estado="Pendiente",
-                            encargado_triage=current_user.username,
-                            date=datetime.utcnow()
-                        )
-                    
-                if agenda:
-                    unread_agendas.append(agenda)
-
-        # Agregar agendas de notificaciones sin leer a agendas si no están presentes
-        present_agenda_ids = {a.id for a in agendas}
-        for ua in unread_agendas:
-            if ua.id not in present_agenda_ids:
-                agendas.insert(0, ua)
-                present_agenda_ids.add(ua.id)
-
-        _ensure_clients(agendas)
-        serialized_data = []
-        for a in agendas:
-            s_count = get_agenda_sales_info_local(a)
-            dict_agenda = a.to_dict(sales_count=s_count)
-            c_id = dict_agenda.get("client_id")
-            dict_agenda["unread_comment"] = c_id in unread_client_ids if c_id else False
-            serialized_data.append(dict_agenda)
-            
-        if current_user and current_user.is_authenticated:
-            serialized_data.sort(key=lambda x: 0 if x.get('unread_comment', False) else 1)
-            
-        return jsonify(serialized_data), 200
+        return jsonify(serialized_all), 200
 
 @bp.route('/public/financial-agendas/<int:agenda_id>', methods=['PUT', 'OPTIONS'])
 def update_financial_agenda(agenda_id):
