@@ -13,6 +13,7 @@
       - Se eliminaron los imports locales redundantes de `Client`, `FinancialAgenda`, `datetime` y `func` (SQLAlchemy) dentro de la función `get_financial_agendas`, los cuales provocaban errores de colisión de ámbito (`UnboundLocalError`) al solapar a las importaciones globales correspondientes al principio del archivo.
       - Se implementó soporte para el nuevo parámetro de consulta `closer_result`, unificando el procesamiento y agregaciones de reportes del panel (por Closer y Fuente) usando el resultado de closing real de las agendas.
       - Se corrigieron los nombres descriptivos autogenerados de "Mensaje de Triage" a "Mensaje de Triaje" en español con J.
+      - Se importó `login_required` y `current_user` a nivel de módulo para corregir el NameError lanzado por el decorador de ruta de la bandeja de mensajes sin agenda.
     - **Frontend ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
       - Se agregó un nuevo selector dropdown para "Estado de Closing" (`closer_result`), permitiendo a los directores y operadores filtrar la lista de agendas según el resultado del Closer (Pendiente, Show Up, No Show, Reagendada, Cancelada, 2TH Call, Cerrada).
       - Se actualizó el botón de limpiar filtros y el hook de persistencia de filtros para soportar la persistencia local de este nuevo parámetro.
