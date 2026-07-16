@@ -7,6 +7,7 @@
       - Se eliminaron las importaciones locales redundantes en `get_setter_deck` para prevenir errores de tipo `UnboundLocalError` debido a name shadowing de `Client`, `ManychatLead` y `LeadAnswer`.
       - Se solucionó un bug en la vinculación de clientes sin instagram (sintéticos `no_ig_X`) extrayendo el ID del cliente real para evitar la creación de duplicados y mostrar la notificación correctamente.
       - Se omitió el descarte por estar en `booked_igs` (citas agendadas) si el lead tiene notificaciones sin leer, garantizando que el setter lo vea en su bandeja a toda costa.
+      - Se corrigió un `UnboundLocalError` al restablecer la inicialización de la variable `edad_str` al principio del ciclo de serialización de leads.
     - **Backend API ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
       - Se envolvió la creación persistente de `FinancialAgenda` en un bloque `try-except` seguro con rollback y fallback en memoria en el endpoint de consulta pública de agendas de Triage, solucionando el error 500 reportado por el usuario debido a bloqueos concurrentes de base de datos.
       - Se eliminaron los imports locales redundantes de `Client`, `FinancialAgenda`, `datetime` y `func` (SQLAlchemy) dentro de la función `get_financial_agendas`, los cuales provocaban errores de colisión de ámbito (`UnboundLocalError`) al solapar a las importaciones globales correspondientes al principio del archivo.
