@@ -143,7 +143,7 @@ const TriageWorkflowPage = () => {
         if (!clientId || !noteText.trim()) return;
         try {
             await api.post('/comments', {
-                text: `[Confirmación Triage: ${actionStatus}] ${noteText.trim()}`,
+                text: `[Confirmación Triaje: ${actionStatus}] ${noteText.trim()}`,
                 type: 'client',
                 associated_id: clientId
             });

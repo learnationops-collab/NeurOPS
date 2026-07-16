@@ -300,7 +300,7 @@ def get_financial_agendas():
             if not agenda:
                 try:
                     agenda = FinancialAgenda(
-                        nombre="Mensaje de Triage",
+                        nombre="Mensaje de Triaje",
                         registro=datetime.utcnow().isoformat(),
                         fecha_meet=datetime.utcnow().isoformat(),
                         whatsapp=uc.phone or "",
@@ -321,7 +321,7 @@ def get_financial_agendas():
                     # Objeto transitorio en memoria
                     agenda = FinancialAgenda(
                         id=-(uc.id + 1000000),
-                        nombre="Mensaje de Triage",
+                        nombre="Mensaje de Triaje",
                         registro=datetime.utcnow().isoformat(),
                         fecha_meet=datetime.utcnow().isoformat(),
                         whatsapp=uc.phone or "",

@@ -390,7 +390,7 @@ const CloserDeckPage = () => {
                                                         </p>
                                                     </div>
 
-                                                    {/* Triage / Respuestas de Encuesta colapsables */}
+                                                    {/* Triaje / Respuestas de Encuesta colapsables */}
                                                     {activeCard.survey_answers && activeCard.survey_answers.length > 0 && (
                                                         <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-5 space-y-3 text-left">
                                                             <div className="flex items-center gap-2 text-[9px] font-black text-emerald-400 uppercase tracking-widest">

@@ -196,7 +196,7 @@ const PublicTriageReportPage = () => {
             <div className="w-full max-w-6xl mx-auto z-10 space-y-8">
                 {/* Cabecera */}
                 <div className="text-center space-y-3 mb-2 relative">
-                    <p className="text-indigo-400 font-bold tracking-widest text-xs uppercase">NeurOPS Triage System</p>
+                    <p className="text-indigo-400 font-bold tracking-widest text-xs uppercase">NeurOPS Triaje System</p>
                     <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
                         Reporte Diario Triaje
                     </h1>
