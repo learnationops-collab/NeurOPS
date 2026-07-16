@@ -16,6 +16,7 @@
     - **Frontend ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
       - Se agregó un nuevo selector dropdown para "Estado de Closing" (`closer_result`), permitiendo a los directores y operadores filtrar la lista de agendas según el resultado del Closer (Pendiente, Show Up, No Show, Reagendada, Cancelada, 2TH Call, Cerrada).
       - Se actualizó el botón de limpiar filtros y el hook de persistencia de filtros para soportar la persistencia local de este nuevo parámetro.
+      - Se renombraron las etiquetas visuales de los selectores a "Estado pre call" (anteriormente Estado Triaje) y "Estado post call" (anteriormente Estado Closing) para mayor claridad conceptual en el flujo comercial.
     - **Base de Datos / Modelos ([financial.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY])**:
       - Se modificó `FinancialAgenda.to_dict` para resolver correctamente al cliente original usando su clave primaria (`id`) cuando la agenda contiene una cuenta de instagram sintética (`no_ig_X`), arreglando el enlace en el panel de Triage.
     - **Corrección Ortográfica de Triage a Triaje (UI Spelling & Localization)**:
