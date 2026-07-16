@@ -501,10 +501,11 @@ const FinancialAgendasPage = () => {
         closer: '',
         fuente: '',
         encargadoTriage: '',
-        dateFilterBy: 'meet'
+        dateFilterBy: 'meet',
+        closer_result: ''
     });
 
-    const { searchTerm, startDate, endDate, estado, closer, fuente, encargadoTriage, dateFilterBy } = filters;
+    const { searchTerm, startDate, endDate, estado, closer, fuente, encargadoTriage, dateFilterBy, closer_result } = filters;
     const setSearchTerm = (val) => setFilters({ searchTerm: val });
     const setStartDate = (val) => setFilters({ startDate: val });
     const setEndDate = (val) => setFilters({ endDate: val });
@@ -513,6 +514,7 @@ const FinancialAgendasPage = () => {
     const setFuente = (val) => setFilters({ fuente: val });
     const setEncargadoTriage = (val) => setFilters({ encargadoTriage: val });
     const setDateFilterBy = (val) => setFilters({ dateFilterBy: val });
+    const setCloserResult = (val) => setFilters({ closer_result: val });
 
     const applyDatePreset = (preset) => {
         const today = new Date();
@@ -598,7 +600,8 @@ const FinancialAgendasPage = () => {
                     closer: closer,
                     fuente: fuente,
                     encargado_triage: encargadoTriage,
-                    date_filter_by: dateFilterBy
+                    date_filter_by: dateFilterBy,
+                    closer_result: closer_result
                 }
             });
             const resData = response.data;
@@ -647,7 +650,7 @@ const FinancialAgendasPage = () => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, startDate, endDate, estado, closer, fuente, encargadoTriage, dateFilterBy]);
+    }, [searchTerm, startDate, endDate, estado, closer, fuente, encargadoTriage, dateFilterBy, closer_result]);
 
     // Observador para scroll infinito
     useEffect(() => {
@@ -794,7 +797,7 @@ const FinancialAgendasPage = () => {
                 <div className="flex flex-wrap items-center gap-3">
                     {/* Selector de Estado */}
                     <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Estado</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Estado Triage</span>
                         <select
                             value={estado}
                             onChange={(e) => setEstado(e.target.value)}
@@ -802,6 +805,21 @@ const FinancialAgendasPage = () => {
                         >
                             <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
                             {['Pendiente', 'Contactado', 'Confirmado', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', 'Cerrada'].map(st => (
+                                <option key={st} value={st} className="bg-slate-900 text-white font-semibold">{st}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Selector de Estado de Closing */}
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Estado Closing</span>
+                        <select
+                            value={closer_result}
+                            onChange={(e) => setCloserResult(e.target.value)}
+                            className="bg-transparent border-none text-xs text-white focus:outline-none focus:ring-0 cursor-pointer pr-8 font-bold uppercase tracking-wider p-0"
+                        >
+                            <option value="" className="bg-slate-900 text-white font-semibold">Todos</option>
+                            {['Pendiente', 'Show Up', 'No Show', 'Reagendada', 'Cancelada', '2TH Call', 'Cerrada'].map(st => (
                                 <option key={st} value={st} className="bg-slate-900 text-white font-semibold">{st}</option>
                             ))}
                         </select>
@@ -854,7 +872,7 @@ const FinancialAgendasPage = () => {
                     </div>
 
                     {/* Botón para Limpiar todos los Filtros */}
-                    {(estado || closer || fuente || encargadoTriage || searchTerm || startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate()) && (
+                    {(estado || closer || fuente || encargadoTriage || closer_result || searchTerm || startDate !== getFirstDayOfCurrentMonth() || endDate !== getTodayDate()) && (
                         <button
                             type="button"
                             onClick={() => setFilters({
@@ -864,7 +882,8 @@ const FinancialAgendasPage = () => {
                                 estado: '',
                                 closer: '',
                                 fuente: '',
-                                encargadoTriage: ''
+                                encargadoTriage: '',
+                                closer_result: ''
                             })}
                             className="p-3 bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 rounded-2xl transition-all cursor-pointer shadow-sm shadow-rose-950/20"
                             title="Limpiar Filtros"
