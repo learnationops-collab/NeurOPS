@@ -50,3 +50,19 @@ class ClientComment(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     text = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class CommentNotification(db.Model):
+    __tablename__ = 'comment_notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('client_comments.id'), nullable=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    client = db.relationship('Client', backref=db.backref('comment_notifications', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('received_notifications', lazy='dynamic'))
+    sender = db.relationship('User', foreign_keys=[sender_id], backref=db.backref('sent_notifications', lazy='dynamic'))
+    comment = db.relationship('ClientComment', backref=db.backref('notifications', lazy='dynamic', cascade='all, delete-orphan'))

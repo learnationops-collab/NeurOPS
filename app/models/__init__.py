@@ -1,6 +1,6 @@
 from app import db, login
 from .user import User, GoogleCalendarToken, CloserAlias, ROLE_ADMIN, ROLE_CLOSER, ROLE_SETTER, ROLE_OPERATOR
-from .client import Client, Lead, ClientComment
+from .client import Client, Lead, ClientComment, CommentNotification
 from .funnel import Event, EventGroup, Program, event_closers
 from .booking import Appointment, Availability, WeeklyAvailability, SurveyQuestion, SurveyAnswer
 from .payment import Enrollment, PaymentMethod, Payment
@@ -15,11 +15,11 @@ from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
 from .workshop import WorkshopTemplate, WorkshopButton, WorkshopTemplateSent, WorkshopInteraction, WorkshopEvent
 from .alert import AlertRule, Alert
-
+ 
 # Export all for easy access via from app.models import ...
 __all__ = [
     'User', 'GoogleCalendarToken', 'CloserAlias', 'ROLE_ADMIN', 'ROLE_CLOSER', 'ROLE_SETTER', 'ROLE_OPERATOR', 'ROLE_TRIAGE',
-    'Client', 'Lead', 'ClientComment',
+    'Client', 'Lead', 'ClientComment', 'CommentNotification',
     'Event', 'EventGroup', 'Program', 'event_closers',
     'Appointment', 'Availability', 'WeeklyAvailability', 'SurveyQuestion', 'SurveyAnswer',
     'Enrollment', 'PaymentMethod', 'Payment',
