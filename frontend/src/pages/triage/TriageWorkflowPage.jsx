@@ -21,6 +21,7 @@ const TriageWorkflowPage = () => {
     });
     const [searchQuery, setSearchQuery] = useState('');
     const [agendas, setAgendas] = useState([]);
+    const [unreadNoAgenda, setUnreadNoAgenda] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
     const [selectedLead, setSelectedLead] = useState(null);
@@ -34,29 +35,29 @@ const TriageWorkflowPage = () => {
     // Sincronizar input de fecha cuando cambia el lead
     useEffect(() => {
         if (selectedLead) {
-            setMeetDateInput(formatToDatetimeLocal(selectedLead.date || selectedLead.fecha_meet));
-        } else {
-            setMeetDateInput('');
+            setMeetDateInput(selectedLead.fecha_meet || '');
         }
     }, [selectedLead]);
 
-    const handleSaveMeetDate = async () => {
+    const handleUpdateMeetDate = async () => {
         if (!selectedLead || !meetDateInput) return;
         setUpdatingDate(true);
         try {
-            const payload = {
-                date: meetDateInput,
-                fecha_meet: meetDateInput
-            };
-            if (user?.username) {
-                payload.encargado_triage = user.username;
+            const payload = { fecha_meet: meetDateInput };
+            const agendaId = selectedLead.id;
+            
+            if (agendaId > 0) {
+                await api.put(`/public/financial-agendas/${agendaId}`, payload);
             }
-            await api.put(`/public/financial-agendas/${selectedLead.id}`, payload);
+
             toast.success("Fecha del meet actualizada");
             
-            // Guardar comentario en el chat del cliente notificando la nueva fecha
+            // Registrar comentario descriptivo
+            const oldDateStr = selectedLead.fecha_meet ? new Date(selectedLead.fecha_meet).toLocaleString('es-ES') : 'N/A';
+            const newDateStr = new Date(meetDateInput).toLocaleString('es-ES');
+            const commentText = `[Cambio Fecha Meet] Modificada por el Call Confirmer (Triaje) -> Antes: ${oldDateStr} | Ahora: ${newDateStr}`;
+            
             if (selectedLead.client_id) {
-                const commentText = `[Fecha de Meet Modificada] Cita reprogramada para el ${new Date(meetDateInput).toLocaleString('es-ES')}`;
                 await saveTriageComment(selectedLead.client_id, commentText, 'Cambio Fecha');
             }
 
@@ -83,9 +84,17 @@ const TriageWorkflowPage = () => {
             const dataList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
             setAgendas(dataList);
 
+            // Cargar leads sin agenda con notificaciones pendientes
+            try {
+                const unreadRes = await api.get('/public/financial-agendas/unread-no-agenda');
+                setUnreadNoAgenda(unreadRes.data || []);
+            } catch (err) {
+                console.error("Error al cargar leads sin agenda:", err);
+            }
+
             // Sincronizar el lead seleccionado si cambió
             if (selectedLead) {
-                const updated = dataList.find(a => a.id === selectedLead.id);
+                const updated = dataList.find(a => a.id === selectedLead.id) || unreadNoAgenda.find(a => a.id === selectedLead.id);
                 if (updated) {
                     setSelectedLead(updated);
                 } else {
@@ -107,6 +116,7 @@ const TriageWorkflowPage = () => {
     const handleSelectLead = (lead) => {
         setSelectedLead(lead);
         setAgendas(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
+        setUnreadNoAgenda(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
     };
 
     // Filtrar localmente por búsqueda
@@ -383,6 +393,19 @@ const TriageWorkflowPage = () => {
                         className="w-full pl-12 pr-4 py-3.5 bg-slate-950/60 border border-slate-900 rounded-2xl text-xs font-bold text-slate-200 outline-none focus:border-violet-500/30 transition-all placeholder-slate-600"
                     />
                 </div>
+
+                {/* Sección Especial: Mensajes de Leads sin Agenda */}
+                {unreadNoAgenda.length > 0 && (
+                    <div className="bg-rose-500/5 border border-rose-500/10 rounded-[2rem] p-6 space-y-4 shadow-xl shadow-rose-950/5">
+                        <h2 className="text-sm font-black text-rose-450 uppercase tracking-widest pl-1 flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                            Mensajes pendientes de Leads sin Agenda ({unreadNoAgenda.length})
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {unreadNoAgenda.map(a => renderLeadRow(a))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Dashboard / Dos columnas de leads */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

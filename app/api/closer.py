@@ -1283,44 +1283,6 @@ def get_closer_deck():
     # No local import needed as they are imported globally
     unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
     
-    # Asegurar citas para notificaciones sin leer
-    if unread_client_ids:
-        present_client_ids = {a.client_id for a in appointments if a.client_id}
-        unread_clients = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
-        for uc in unread_clients:
-            if uc.id not in present_client_ids:
-                # Buscar si ya existe una cita para este cliente
-                appt = Appointment.query.filter_by(client_id=uc.id).first()
-                if not appt:
-                    try:
-                        # Crear Appointment de forma persistente
-                        appt = Appointment(
-                            client_id=uc.id,
-                            closer_id=current_user.id,
-                            start_time=datetime.utcnow(),
-                            origin="Funnel Web",
-                            result="Pendiente",
-                            closer_processed=False
-                        )
-                        db.session.add(appt)
-                        db.session.commit()
-                    except Exception as ex:
-                        db.session.rollback()
-                        import logging
-                        logging.error(f"Error persistiendo Appointment de closer en GET: {ex}")
-                        appt = Appointment(
-                            id=-(uc.id + 4000000),
-                            client_id=uc.id,
-                            closer_id=current_user.id,
-                            start_time=datetime.utcnow(),
-                            origin="Funnel Web",
-                            result="Pendiente",
-                            closer_processed=False
-                        )
-                if appt:
-                    appointments.insert(0, appt)
-                    present_client_ids.add(uc.id)
-                
     formatted_appointments = []
     for a in appointments:
         formatted = _format_appointment_for_deck(a)
@@ -1748,4 +1710,39 @@ def get_unassigned_leads_today():
         "created_at": a.created_at.isoformat(),
         "origin": a.origin or "ManyChat"
     } for a in appointments]), 200
+
+@bp.route('/unread-no-agenda', methods=['GET'])
+@login_required
+def get_unread_no_agenda_closer():
+    # Obtener clientes que tienen notificaciones de comentarios no leídos para este closer
+    from app.models import CommentNotification, Client, Appointment
+    
+    unread_notifications = CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()
+    unread_client_ids = {n.client_id for n in unread_notifications}
+    
+    if not unread_client_ids:
+        return jsonify([]), 200
+        
+    clients = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
+    
+    results = []
+    for c in clients:
+        # Verificar si tiene cita para el closer en base de datos
+        appt_exists = Appointment.query.filter_by(client_id=c.id).first() is not None
+        
+        if not appt_exists:
+            results.append({
+                "id": -(c.id + 5000000), # ID negativo especial
+                "client_id": c.id,
+                "lead_name": c.full_name or "Sin Nombre",
+                "email": c.email or "",
+                "instagram": c.instagram or "",
+                "whatsapp": c.phone or "",
+                "result": "Pendiente",
+                "origin": "Mensaje (Sin Agenda)",
+                "unread_comment": True,
+                "start_time": None
+            })
+            
+    return jsonify(results), 200
 

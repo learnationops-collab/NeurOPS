@@ -279,71 +279,6 @@ def get_financial_agendas():
         from app.models import CommentNotification
         unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
 
-    # Asegurar agendas para notificaciones sin leer
-    unread_agendas = []
-    if current_user and current_user.is_authenticated and unread_client_ids:
-        clients_with_unread = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
-        for uc in clients_with_unread:
-            ig_clean = uc.instagram.strip().replace('@', '').lower() if uc.instagram and uc.instagram.lower() not in ('n/a', '') else None
-            mail_clean = uc.email.strip().lower() if uc.email and uc.email.lower() not in ('n/a', '') else None
-            
-            agenda = None
-            client_filters = []
-            if ig_clean:
-                client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
-            if mail_clean:
-                client_filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
-                
-            if client_filters:
-                agenda = FinancialAgenda.query.filter(or_(*client_filters)).first()
-                
-            if not agenda:
-                try:
-                    agenda = FinancialAgenda(
-                        nombre="Mensaje de Triaje",
-                        registro=datetime.utcnow().isoformat(),
-                        fecha_meet=datetime.utcnow().isoformat(),
-                        whatsapp=uc.phone or "",
-                        closer="Sin Asignar",
-                        lead=uc.full_name or "Sin Nombre",
-                        mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
-                        instagram=uc.instagram or f"no_ig_{uc.id}",
-                        estado="Pendiente",
-                        encargado_triage=current_user.username,
-                        date=datetime.utcnow()
-                    )
-                    db.session.add(agenda)
-                    db.session.commit()
-                except Exception as ex:
-                    db.session.rollback()
-                    import logging
-                    logging.error(f"Error persistiendo agenda de triage en GET: {ex}")
-                    # Objeto transitorio en memoria
-                    agenda = FinancialAgenda(
-                        id=-(uc.id + 1000000),
-                        nombre="Mensaje de Triaje",
-                        registro=datetime.utcnow().isoformat(),
-                        fecha_meet=datetime.utcnow().isoformat(),
-                        whatsapp=uc.phone or "",
-                        closer="Sin Asignar",
-                        lead=uc.full_name or "Sin Nombre",
-                        mail=uc.email or f"no_mail_{uc.id}@neurops.temp",
-                        instagram=uc.instagram or f"no_ig_{uc.id}",
-                        estado="Pendiente",
-                        encargado_triage=current_user.username,
-                        date=datetime.utcnow()
-                    )
-                
-            if agenda:
-                unread_agendas.append(agenda)
-
-    # Agregar agendas de notificaciones sin leer a agendas si no están presentes
-    present_agenda_ids = {a.id for a in all_agendas}
-    for ua in unread_agendas:
-        if ua.id not in present_agenda_ids:
-            all_agendas.insert(0, ua)
-            present_agenda_ids.add(ua.id)
-
     _ensure_clients(all_agendas)
     
     # Precalcular ventas asociadas para evitar N+1
@@ -1026,3 +961,51 @@ def receive_financial_agendas_form():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Error al procesar el formulario de calificación: {str(e)}"}), 500
+
+@bp.route('/public/financial-agendas/unread-no-agenda', methods=['GET'])
+@login_required
+def get_unread_no_agenda_triage():
+    # Obtener clientes que tienen notificaciones de comentarios no leídos para este usuario de triaje
+    from app.models import CommentNotification, Client, FinancialAgenda
+    from sqlalchemy import func, or_
+    
+    unread_notifications = CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()
+    unread_client_ids = {n.client_id for n in unread_notifications}
+    
+    if not unread_client_ids:
+        return jsonify([]), 200
+        
+    clients = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
+    
+    results = []
+    for c in clients:
+        ig_clean = c.instagram.strip().replace('@', '').lower() if c.instagram and c.instagram.lower() not in ('n/a', '') else None
+        mail_clean = c.email.strip().lower() if c.email and c.email.lower() not in ('n/a', '') else None
+        
+        agenda_exists = False
+        client_filters = []
+        if ig_clean:
+            client_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == ig_clean)
+        if mail_clean:
+            client_filters.append(func.lower(FinancialAgenda.mail) == mail_clean)
+            
+        if client_filters:
+            agenda_exists = FinancialAgenda.query.filter(or_(*client_filters)).first() is not None
+            
+        if not agenda_exists:
+            results.append({
+                "id": -(c.id + 2000000),
+                "client_id": c.id,
+                "nombre": "Mensaje de Triaje (Sin Agenda)",
+                "lead": c.full_name or "Sin Nombre",
+                "mail": c.email or "",
+                "instagram": c.instagram or "",
+                "whatsapp": c.phone or "",
+                "estado": "Pendiente",
+                "closer": "Sin Asignar",
+                "unread_comment": True,
+                "date": None,
+                "fecha_meet": None
+            })
+            
+    return jsonify(results), 200
