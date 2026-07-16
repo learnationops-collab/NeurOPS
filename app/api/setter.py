@@ -750,26 +750,51 @@ def get_setter_deck():
                 if uc_ig_clean not in present_igs:
                     m_lead = ManychatLead.query.filter(func.lower(func.replace(ManychatLead.ig, '@', '')) == uc_ig_clean).first()
                     if not m_lead:
-                        m_lead = ManychatLead(
-                            manychat_id=f"synth_{uc.id}_{int(datetime.utcnow().timestamp())}",
-                            name=uc.full_name or "Sin Nombre",
-                            ig=uc.instagram or uc_ig_clean,
-                            created_at=datetime.utcnow()
-                        )
-                        db.session.add(m_lead)
-                        db.session.commit()
-                    la_obj = LeadAnswer.query.filter_by(lead_id=m_lead.id).order_by(LeadAnswer.created_at.desc()).first()
+                        try:
+                            m_lead = ManychatLead(
+                                manychat_id=f"synth_{uc.id}_{int(datetime.utcnow().timestamp())}",
+                                name=uc.full_name or "Sin Nombre",
+                                ig=uc.instagram or uc_ig_clean,
+                                created_at=datetime.utcnow()
+                            )
+                            db.session.add(m_lead)
+                            db.session.commit()
+                        except Exception as ex:
+                            db.session.rollback()
+                            import logging
+                            logging.error(f"Error persistiendo ManychatLead de setter en GET: {ex}")
+                            m_lead = ManychatLead(
+                                id=-(uc.id + 2000000),
+                                name=uc.full_name or "Sin Nombre",
+                                ig=uc.instagram or uc_ig_clean,
+                                created_at=datetime.utcnow()
+                            )
+                            
+                    la_obj = LeadAnswer.query.filter_by(lead_id=m_lead.id).order_by(LeadAnswer.created_at.desc()).first() if m_lead.id > 0 else None
                     if not la_obj:
-                        la_obj = LeadAnswer(
-                            lead_id=m_lead.id,
-                            qualification='null',
-                            keyword='Mensaje Directo',
-                            created_at=datetime.utcnow()
-                        )
-                        db.session.add(la_obj)
-                        db.session.commit()
-                    lead_answers.insert(0, la_obj)
-                    present_igs.add(uc_ig_clean)
+                        try:
+                            la_obj = LeadAnswer(
+                                lead_id=m_lead.id,
+                                qualification='null',
+                                keyword='Mensaje Directo',
+                                created_at=datetime.utcnow()
+                            )
+                            db.session.add(la_obj)
+                            db.session.commit()
+                        except Exception as ex:
+                            db.session.rollback()
+                            import logging
+                            logging.error(f"Error persistiendo LeadAnswer de setter en GET: {ex}")
+                            la_obj = LeadAnswer(
+                                id=-(uc.id + 3000000),
+                                lead_id=m_lead.id,
+                                qualification='null',
+                                keyword='Mensaje Directo',
+                                created_at=datetime.utcnow()
+                            )
+                    if la_obj:
+                        lead_answers.insert(0, la_obj)
+                        present_igs.add(uc_ig_clean)
                     
         response_data = []
         for la in lead_answers:
