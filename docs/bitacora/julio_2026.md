@@ -1,6 +1,13 @@
 # Bitácora - Julio 2026
 
 - **16 de Julio de 2026**:
+  - **Priorización y Visibilidad de Leads con Mensajes Sin Leer**:
+    - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - Se inyectan dinámicamente leads (con su correspondiente `ManychatLead` y `LeadAnswer` autogenerados si no existen) que tengan comentarios no leídos para el Setter actual en `/setter/deck?step=cualificacion`, garantizando su visibilidad independientemente de los filtros y asignaciones normales.
+    - **Backend API ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
+      - Se inyectan y priorizan al principio agendas (con su `FinancialAgenda` autogenerada si no existe) que contengan notificaciones sin leer para el usuario de Triage actual en `/triage/deck?step=confirmar`.
+    - **Backend API ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+      - Se inyectan y priorizan citas (con su `Appointment` autogenerada si no existe) que contengan notificaciones sin leer para el Closer actual en `/closer/deck?step=agendas`.
   - **Mejora del Chat y Notificaciones Dirigidas/Automáticas entre Roles**:
     - **Base de Datos ([client.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/models/client.py) [MODIFY])**:
       - Se creó el modelo `CommentNotification` para rastrear las notificaciones de chat dirigidas a usuarios y roles, incluyendo campos `client_id`, `user_id` (destinatario), `comment_id`, `sender_id` y `is_read`.
