@@ -803,13 +803,17 @@ def get_setter_deck():
                 continue
                 
             ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
-            if ig_clean and ig_clean in booked_igs:
-                continue
-                
-            edad_str = "N/A"
+            
             client = None
             if ig_clean:
-                client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
+                if ig_clean.startswith("no_ig_"):
+                    try:
+                        c_id = int(ig_clean.split("_")[-1])
+                        client = Client.query.get(c_id)
+                    except Exception:
+                        pass
+                if not client:
+                    client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
                 if not client:
                     client = Client(
                         full_name=lead.name or "Sin Nombre",
@@ -818,6 +822,10 @@ def get_setter_deck():
                     )
                     db.session.add(client)
                     db.session.commit()
+            
+            has_unread = client.id in unread_client_ids if client else False
+            if ig_clean and ig_clean in booked_igs and not has_unread:
+                continue
 
             if client and client.form_data:
                 for key, val in client.form_data.items():
