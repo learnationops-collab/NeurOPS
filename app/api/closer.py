@@ -1280,9 +1280,32 @@ def get_closer_deck():
 
     appointments = query.order_by(Appointment.start_time.asc()).all()
 
-    from app.models import CommentNotification
+    from app.models import CommentNotification, Client, Appointment
     unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
     
+    # Asegurar citas para notificaciones sin leer
+    if unread_client_ids:
+        present_client_ids = {a.client_id for a in appointments if a.client_id}
+        unread_clients = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
+        for uc in unread_clients:
+            if uc.id not in present_client_ids:
+                # Buscar si ya existe una cita para este cliente
+                appt = Appointment.query.filter_by(client_id=uc.id).first()
+                if not appt:
+                    # Crear Appointment de forma persistente
+                    appt = Appointment(
+                        client_id=uc.id,
+                        closer_id=current_user.id,
+                        start_time=datetime.utcnow(),
+                        origin="Funnel Web",
+                        result="Pendiente",
+                        closer_processed=False
+                    )
+                    db.session.add(appt)
+                    db.session.commit()
+                appointments.insert(0, appt)
+                present_client_ids.add(uc.id)
+                
     formatted_appointments = []
     for a in appointments:
         formatted = _format_appointment_for_deck(a)
