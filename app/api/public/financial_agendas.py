@@ -486,9 +486,7 @@ def get_financial_agendas():
         # Asegurar agendas para notificaciones sin leer
         unread_agendas = []
         if current_user and current_user.is_authenticated and unread_client_ids:
-            from app.models import Client, FinancialAgenda
-            from sqlalchemy import or_, func
-            from datetime import datetime
+            # No local import needed
             
             clients_with_unread = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
             for uc in clients_with_unread:
@@ -630,9 +628,7 @@ def get_financial_agendas():
         # Asegurar agendas para notificaciones sin leer
         unread_agendas = []
         if current_user and current_user.is_authenticated and unread_client_ids:
-            from app.models import Client, FinancialAgenda
-            from sqlalchemy import or_, func
-            from datetime import datetime
+            # No local import needed
             
             clients_with_unread = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
             for uc in clients_with_unread:
