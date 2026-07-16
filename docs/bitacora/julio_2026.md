@@ -1,5 +1,33 @@
 # Bitácora - Julio 2026
 
+- **16 de Julio de 2026**:
+  - **Mejora del Chat y Notificaciones Dirigidas/Automáticas entre Roles**:
+    - **Base de Datos ([client.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/models/client.py) [MODIFY])**:
+      - Se creó el modelo `CommentNotification` para rastrear las notificaciones de chat dirigidas a usuarios y roles, incluyendo campos `client_id`, `user_id` (destinatario), `comment_id`, `sender_id` y `is_read`.
+    - **Base de Datos ([__init__.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/models/__init__.py) [MODIFY])**:
+      - Se registró y exportó `CommentNotification` en el módulo de modelos.
+    - **Base de Datos Migración ([6603914498e0_add_comment_notifications.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/migrations/versions/6603914498e0_add_comment_notifications.py) [NEW])**:
+      - Se generó y aplicó la migración de base de datos local SQLite (`instance/local.db`).
+    - **Backend API ([comments.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/comments.py) [MODIFY])**:
+      - Se implementó el endpoint `GET /api/comments/users` para listar usuarios activos con roles operativos (`setter`, `closer`, `triage`, `admin`), excluyendo al usuario actual.
+    - **Backend API ([closer.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
+      - En `get_lead_comments` (GET `/leads/<int:id>/comments`), se dio acceso al rol `triage` y se implementó la limpieza automática de notificaciones pendientes del usuario logueado en ese lead.
+      - En `add_lead_comment` (POST `/leads/<int:id>/comments`), se dio acceso a `triage`, se implementó el soporte para la lista de `target_user_ids` (notificaciones dirigidas manuales) y, en caso de no especificarse destinatarios, se implementó el envío automático de notificaciones de vuelta al emisor del último mensaje (respuesta directa).
+      - En `get_closer_deck`, se integró el flag `unread_comment` y se ordenaron de forma estable las citas no leídas al inicio.
+    - **Backend API ([setter.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - En `get_setter_deck` para el step `cualificacion`, se integró el flag `unread_comment` y se ordenaron de forma estable los leads no leídos al inicio de la cola de trabajo.
+    - **Backend API ([financial_agendas.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
+      - En `get_financial_agendas`, se integró el flag `unread_comment` y se ordenaron de forma estable las citas no leídas de Triage al inicio.
+    - **Frontend React ([CommentsSection.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/CommentsSection.jsx) [MODIFY])**:
+      - Se cargaron los usuarios operativos del sistema y se renderizó un selector horizontal premium con colores asignados a cada rol.
+      - Se agregó el envío del parámetro `target_user_ids` en el cuerpo de la petición de envío del chat, limpiando la selección al enviarse.
+    - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
+      - Se reemplazó la lógica `hasUnread` local basada en localStorage por el flag dinámico `unread_comment` y se limpió localmente al hacer clic en un lead.
+    - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se implementó el handler `handleSelectLead` para resetear el flag `unread_comment` en el listado al abrir el modal, y se renderizó la insignia animada `"Mensaje nuevo"` en el listado de citas.
+    - **Frontend React ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY])**:
+      - Se implementó el handler `handleSelectLead` para resetear el flag `unread_comment` en el listado al abrir el modal, y se renderizó la insignia animada `"Mensaje nuevo"` en el listado de confirmaciones.
+
 - **15 de Julio de 2026**:
   - **Mejoras en el Mazo y Flujo del Closer**:
     - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
