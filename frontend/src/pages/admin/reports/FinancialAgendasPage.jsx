@@ -797,7 +797,7 @@ const FinancialAgendasPage = () => {
                 <div className="flex flex-wrap items-center gap-3">
                     {/* Selector de Estado */}
                     <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Estado Triaje</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Estado pre call</span>
                         <select
                             value={estado}
                             onChange={(e) => setEstado(e.target.value)}
@@ -812,7 +812,7 @@ const FinancialAgendasPage = () => {
 
                     {/* Selector de Estado de Closing */}
                     <div className="flex items-center gap-2 bg-white/5 border border-white/10 p-2.5 rounded-2xl">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Estado Closing</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Estado post call</span>
                         <select
                             value={closer_result}
                             onChange={(e) => setCloserResult(e.target.value)}
