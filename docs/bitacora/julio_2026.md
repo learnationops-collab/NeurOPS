@@ -21,6 +21,7 @@
     - **Frontend React ([CommentsSection.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/components/shared/CommentsSection.jsx) [MODIFY])**:
       - Se cargaron los usuarios operativos del sistema y se renderizó un selector horizontal premium con colores asignados a cada rol.
       - Se agregó el envío del parámetro `target_user_ids` en el cuerpo de la petición de envío del chat, limpiando la selección al enviarse.
+      - Se implementó un mecanismo de polling silencioso (`fetchCommentsSilent`) cada 10 segundos para actualizar los mensajes del chat en segundo plano de forma transparente.
     - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
       - Se reemplazó la lógica `hasUnread` local basada en localStorage por el flag dinámico `unread_comment` y se limpió localmente al hacer clic en un lead.
     - **Frontend React ([CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:

@@ -11,7 +11,16 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
     const [selectedUserIds, setSelectedUserIds] = useState([]);
 
     useEffect(() => {
-        if (clientId || (type && associatedId)) fetchComments();
+        if (clientId || (type && associatedId)) {
+            fetchComments();
+            
+            // Polling silencioso cada 10 segundos para actualizar en tiempo real
+            const interval = setInterval(() => {
+                fetchCommentsSilent();
+            }, 10000);
+            
+            return () => clearInterval(interval);
+        }
     }, [clientId, type, associatedId]);
 
     useEffect(() => {
@@ -26,6 +35,25 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
             }
         } catch (err) {
             console.error("Error fetching operational users", err);
+        }
+    };
+
+    const fetchCommentsSilent = async () => {
+        try {
+            let res;
+            if (clientId) {
+                res = await api.get(`/closer/leads/${clientId}/comments/`, { skipAuthError: true });
+            } else {
+                res = await api.get('/comments/', {
+                    params: { type, associated_id: associatedId },
+                    skipAuthError: true
+                });
+            }
+            if (Array.isArray(res.data)) {
+                setComments(res.data);
+            }
+        } catch (err) {
+            console.error("Error silently fetching comments", err);
         }
     };
 
