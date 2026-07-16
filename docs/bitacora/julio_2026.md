@@ -11,6 +11,10 @@
     - **Backend API ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
       - Se envolvió la creación persistente de `FinancialAgenda` en un bloque `try-except` seguro con rollback y fallback en memoria en el endpoint de consulta pública de agendas de Triage, solucionando el error 500 reportado por el usuario debido a bloqueos concurrentes de base de datos.
       - Se eliminaron los imports locales redundantes de `Client`, `FinancialAgenda`, `datetime` y `func` (SQLAlchemy) dentro de la función `get_financial_agendas`, los cuales provocaban errores de colisión de ámbito (`UnboundLocalError`) al solapar a las importaciones globales correspondientes al principio del archivo.
+      - Se implementó soporte para el nuevo parámetro de consulta `closer_result`, unificando el procesamiento y agregaciones de reportes del panel (por Closer y Fuente) usando el resultado de closing real de las agendas.
+    - **Frontend ([FinancialAgendasPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/reports/FinancialAgendasPage.jsx) [MODIFY])**:
+      - Se agregó un nuevo selector dropdown para "Estado de Closing" (`closer_result`), permitiendo a los directores y operadores filtrar la lista de agendas según el resultado del Closer (Pendiente, Show Up, No Show, Reagendada, Cancelada, 2TH Call, Cerrada).
+      - Se actualizó el botón de limpiar filtros y el hook de persistencia de filtros para soportar la persistencia local de este nuevo parámetro.
     - **Base de Datos / Modelos ([financial.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY])**:
       - Se modificó `FinancialAgenda.to_dict` para resolver correctamente al cliente original usando su clave primaria (`id`) cuando la agenda contiene una cuenta de instagram sintética (`no_ig_X`), arreglando el enlace en el panel de Triage.
     - **Backend API ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
