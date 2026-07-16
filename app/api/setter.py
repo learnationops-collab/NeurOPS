@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import DailyReportQuestion, DailyReportAnswer, SetterDailyStats, ROLE_SETTER, User, Client, Appointment, Event, EventGroup
+from app.models import DailyReportQuestion, DailyReportAnswer, SetterDailyStats, ROLE_SETTER, User, Client, Appointment, Event, EventGroup, CommentNotification, ManychatLead, LeadAnswer
 from app.decorators import role_required
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_, and_, desc
@@ -732,7 +732,7 @@ def get_setter_deck():
             .distinct().all()
         booked_igs = {ig[0] for ig in booked_instagrams_q if ig[0]}
         
-        from app.models import CommentNotification, Client, ManychatLead, LeadAnswer
+        # No local import needed as they are imported globally
         unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
         
         # Inyectar leads con comentarios sin leer que no estan en la consulta normal
