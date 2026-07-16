@@ -732,6 +732,8 @@ def get_setter_deck():
             .distinct().all()
         booked_igs = {ig[0] for ig in booked_instagrams_q if ig[0]}
         
+        from app.models import CommentNotification
+        unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
         response_data = []
         for la in lead_answers:
             lead = la.lead
@@ -791,9 +793,11 @@ def get_setter_deck():
                 "dolores": client.dolores if client else "",
                 "observaciones": client.observaciones if client else "",
                 "client_id": client.id if client else None,
-                "comments_count": db.session.query(Comment).filter(Comment.comment_type == 'client', Comment.associated_id == client.id).count() if client else 0
+                "comments_count": db.session.query(Comment).filter(Comment.comment_type == 'client', Comment.associated_id == client.id).count() if client else 0,
+                "unread_comment": client.id in unread_client_ids if client else False
             })
             
+        response_data.sort(key=lambda x: 0 if x.get('unread_comment', False) else 1)
         return jsonify(response_data), 200
 
     # Filtrar según el paso del flujo de trabajo (citas)

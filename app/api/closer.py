@@ -802,8 +802,22 @@ def get_availability():
 @bp.route('/leads/<int:id>/comments', methods=['GET'], strict_slashes=False)
 @login_required
 def get_lead_comments(id):
-    if current_user.role not in ['closer', 'admin', 'setter']:
+    if current_user.role not in ['closer', 'admin', 'setter', 'triage']:
         return jsonify({"message": "Forbidden"}), 403
+        
+    # Marcar notificaciones de este cliente para el usuario actual como leídas
+    from app.models import CommentNotification
+    try:
+        CommentNotification.query.filter_by(
+            client_id=id,
+            user_id=current_user.id,
+            is_read=False
+        ).update({"is_read": True})
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        import logging
+        logging.error(f"Error marking notifications as read: {e}")
         
     comments = ClientComment.query.filter_by(client_id=id).order_by(ClientComment.created_at.desc()).all()
     return jsonify([{
@@ -816,7 +830,7 @@ def get_lead_comments(id):
 @bp.route('/leads/<int:id>/comments', methods=['POST'], strict_slashes=False)
 @login_required
 def add_lead_comment(id):
-    if current_user.role not in ['closer', 'admin', 'setter']:
+    if current_user.role not in ['closer', 'admin', 'setter', 'triage']:
         return jsonify({"message": "Forbidden"}), 403
         
     data = request.get_json() or {}
@@ -826,19 +840,72 @@ def add_lead_comment(id):
     comment = ClientComment(client_id=id, author_id=current_user.id, text=text)
     db.session.add(comment)
     
-    from app.models import Notification, Client
+    # Procesar destinatarios
+    target_user_ids = data.get('target_user_ids', [])
+    
+    from app.models import Notification, Client, CommentNotification
     client = Client.query.get(id)
     if client:
-        notif = Notification(
+        # 1. Notificaciones dirigidas/personalizadas
+        if target_user_ids:
+            for uid in target_user_ids:
+                notif = CommentNotification(
+                    client_id=client.id,
+                    user_id=int(uid),
+                    comment_id=comment.id,
+                    sender_id=current_user.id,
+                    is_read=False
+                )
+                db.session.add(notif)
+        else:
+            # 2. Notificación automática al responder
+            # Buscar última notificación recibida por el usuario actual sobre este lead
+            last_notif = CommentNotification.query.filter_by(
+                client_id=client.id,
+                user_id=current_user.id
+            ).order_by(CommentNotification.created_at.desc()).first()
+            
+            if last_notif and last_notif.sender_id != current_user.id:
+                notif = CommentNotification(
+                    client_id=client.id,
+                    user_id=last_notif.sender_id,
+                    comment_id=comment.id,
+                    sender_id=current_user.id,
+                    is_read=False
+                )
+                db.session.add(notif)
+            else:
+                # Si no hay notificación directa pero hay comentarios previos, podemos notificar al autor del último comentario
+                # que sea distinto al usuario actual
+                last_comment = ClientComment.query.filter(
+                    ClientComment.client_id == client.id,
+                    ClientComment.author_id != current_user.id
+                ).order_by(ClientComment.created_at.desc()).first()
+                if last_comment:
+                    notif = CommentNotification(
+                        client_id=client.id,
+                        user_id=last_comment.author_id,
+                        comment_id=comment.id,
+                        sender_id=current_user.id,
+                        is_read=False
+                    )
+                    db.session.add(notif)
+
+        # 3. Mantener notificación general por compatibilidad
+        notif_global = Notification(
             subject=f"Nueva nota interna en el lead: {client.full_name or client.instagram or 'Desconocido'}",
             content=f"{current_user.username} agregó una nota:\n\n{text}",
             target_users=["all"],
             associated_id=client.id,
             associated_type="lead"
         )
-        db.session.add(notif)
+        db.session.add(notif_global)
         
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
     
     return jsonify({"message": "Comentario agregado", "comment": {
         "id": comment.id,
@@ -1213,7 +1280,18 @@ def get_closer_deck():
 
     appointments = query.order_by(Appointment.start_time.asc()).all()
 
-    return jsonify([_format_appointment_for_deck(a) for a in appointments]), 200
+    from app.models import CommentNotification
+    unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+    
+    formatted_appointments = []
+    for a in appointments:
+        formatted = _format_appointment_for_deck(a)
+        formatted["unread_comment"] = a.client_id in unread_client_ids if a.client_id else False
+        formatted_appointments.append(formatted)
+        
+    formatted_appointments.sort(key=lambda x: 0 if x.get('unread_comment', False) else 1)
+
+    return jsonify(formatted_appointments), 200
 
 
 @bp.route('/deck/<int:appt_id>', methods=['POST'])

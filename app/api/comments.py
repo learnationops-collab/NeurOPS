@@ -46,3 +46,18 @@ def add_comment():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+@bp.route('/users', methods=['GET'])
+@login_required
+def get_operational_users():
+    users = User.query.filter(
+        User.is_active == True,
+        User.role.in_(['setter', 'closer', 'triage', 'admin']),
+        User.id != current_user.id
+    ).order_by(User.username.asc()).all()
+    
+    return jsonify([{
+        "id": u.id,
+        "username": u.username,
+        "role": u.role
+    } for u in users]), 200

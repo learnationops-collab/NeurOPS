@@ -476,11 +476,24 @@ def get_financial_agendas():
                     
         unique_sources = sorted(list(set(unique_sources)))
         
+        # Obtener notificaciones no leídas para ordenar
+        unread_client_ids = set()
+        from flask_login import current_user
+        if current_user and current_user.is_authenticated:
+            from app.models import CommentNotification
+            unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+
         _ensure_clients(agendas_pagination.items)
         serialized_data = []
         for a in agendas_pagination.items:
             s_count, _, _ = get_agenda_sales_info(a)
-            serialized_data.append(a.to_dict(sales_count=s_count))
+            dict_agenda = a.to_dict(sales_count=s_count)
+            c_id = dict_agenda.get("client_id")
+            dict_agenda["unread_comment"] = c_id in unread_client_ids if c_id else False
+            serialized_data.append(dict_agenda)
+        
+        if current_user and current_user.is_authenticated:
+            serialized_data.sort(key=lambda x: 0 if x.get('unread_comment', False) else 1)
         
         return jsonify({
             "data": serialized_data,
@@ -538,11 +551,24 @@ def get_financial_agendas():
                     sales_dict[s.id] = s
             return len(sales_dict)
 
+        # Obtener notificaciones no leídas para ordenar
+        unread_client_ids = set()
+        from flask_login import current_user
+        if current_user and current_user.is_authenticated:
+            from app.models import CommentNotification
+            unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+
         _ensure_clients(agendas)
         serialized_data = []
         for a in agendas:
             s_count = get_agenda_sales_info_local(a)
-            serialized_data.append(a.to_dict(sales_count=s_count))
+            dict_agenda = a.to_dict(sales_count=s_count)
+            c_id = dict_agenda.get("client_id")
+            dict_agenda["unread_comment"] = c_id in unread_client_ids if c_id else False
+            serialized_data.append(dict_agenda)
+            
+        if current_user and current_user.is_authenticated:
+            serialized_data.sort(key=lambda x: 0 if x.get('unread_comment', False) else 1)
             
         return jsonify(serialized_data), 200
 
