@@ -1292,19 +1292,34 @@ def get_closer_deck():
                 # Buscar si ya existe una cita para este cliente
                 appt = Appointment.query.filter_by(client_id=uc.id).first()
                 if not appt:
-                    # Crear Appointment de forma persistente
-                    appt = Appointment(
-                        client_id=uc.id,
-                        closer_id=current_user.id,
-                        start_time=datetime.utcnow(),
-                        origin="Funnel Web",
-                        result="Pendiente",
-                        closer_processed=False
-                    )
-                    db.session.add(appt)
-                    db.session.commit()
-                appointments.insert(0, appt)
-                present_client_ids.add(uc.id)
+                    try:
+                        # Crear Appointment de forma persistente
+                        appt = Appointment(
+                            client_id=uc.id,
+                            closer_id=current_user.id,
+                            start_time=datetime.utcnow(),
+                            origin="Funnel Web",
+                            result="Pendiente",
+                            closer_processed=False
+                        )
+                        db.session.add(appt)
+                        db.session.commit()
+                    except Exception as ex:
+                        db.session.rollback()
+                        import logging
+                        logging.error(f"Error persistiendo Appointment de closer en GET: {ex}")
+                        appt = Appointment(
+                            id=-(uc.id + 4000000),
+                            client_id=uc.id,
+                            closer_id=current_user.id,
+                            start_time=datetime.utcnow(),
+                            origin="Funnel Web",
+                            result="Pendiente",
+                            closer_processed=False
+                        )
+                if appt:
+                    appointments.insert(0, appt)
+                    present_client_ids.add(uc.id)
                 
     formatted_appointments = []
     for a in appointments:
