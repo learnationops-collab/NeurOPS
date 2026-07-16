@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from flask_login import login_required, current_user
 from app.models import db, FinancialAgenda, User, Client
 from datetime import datetime
 from . import bp
