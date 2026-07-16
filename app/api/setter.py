@@ -732,8 +732,45 @@ def get_setter_deck():
             .distinct().all()
         booked_igs = {ig[0] for ig in booked_instagrams_q if ig[0]}
         
-        from app.models import CommentNotification
+        from app.models import CommentNotification, Client, ManychatLead, LeadAnswer
         unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+        
+        # Inyectar leads con comentarios sin leer que no estan en la consulta normal
+        present_igs = set()
+        for la in lead_answers:
+            if la.lead and la.lead.ig:
+                present_igs.add(la.lead.ig.strip().replace('@', '').lower())
+                
+        if unread_client_ids:
+            unread_clients = Client.query.filter(Client.id.in_(list(unread_client_ids))).all()
+            for uc in unread_clients:
+                uc_ig_clean = uc.instagram.strip().replace('@', '').lower() if uc.instagram else None
+                if not uc_ig_clean:
+                    uc_ig_clean = f"no_ig_{uc.id}"
+                if uc_ig_clean not in present_igs:
+                    m_lead = ManychatLead.query.filter(func.lower(func.replace(ManychatLead.ig, '@', '')) == uc_ig_clean).first()
+                    if not m_lead:
+                        m_lead = ManychatLead(
+                            manychat_id=f"synth_{uc.id}_{int(datetime.utcnow().timestamp())}",
+                            name=uc.full_name or "Sin Nombre",
+                            ig=uc.instagram or uc_ig_clean,
+                            created_at=datetime.utcnow()
+                        )
+                        db.session.add(m_lead)
+                        db.session.commit()
+                    la_obj = LeadAnswer.query.filter_by(lead_id=m_lead.id).order_by(LeadAnswer.created_at.desc()).first()
+                    if not la_obj:
+                        la_obj = LeadAnswer(
+                            lead_id=m_lead.id,
+                            qualification='null',
+                            keyword='Mensaje Directo',
+                            created_at=datetime.utcnow()
+                        )
+                        db.session.add(la_obj)
+                        db.session.commit()
+                    lead_answers.insert(0, la_obj)
+                    present_igs.add(uc_ig_clean)
+                    
         response_data = []
         for la in lead_answers:
             lead = la.lead
