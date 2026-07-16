@@ -9,7 +9,7 @@
     - **Base de Datos Migración ([6603914498e0_add_comment_notifications.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/migrations/versions/6603914498e0_add_comment_notifications.py) [NEW])**:
       - Se generó y aplicó la migración de base de datos local SQLite (`instance/local.db`).
     - **Backend API ([comments.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/comments.py) [MODIFY])**:
-      - Se implementó el endpoint `GET /api/comments/users` para listar usuarios activos con roles operativos (`setter`, `closer`, `triage`, `admin`), excluyendo al usuario actual.
+      - Se implementó el endpoint `GET /api/comments/users` para listar usuarios activos con roles operativos (`setter`, `closer`, `triage`), excluyendo al usuario actual y al rol administrador (`admin`).
     - **Backend API ([closer.py](file:///c:/Users/EQUIPO DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
       - En `get_lead_comments` (GET `/leads/<int:id>/comments`), se dio acceso al rol `triage` y se implementó la limpieza automática de notificaciones pendientes del usuario logueado en ese lead.
       - En `add_lead_comment` (POST `/leads/<int:id>/comments`), se dio acceso a `triage`, se implementó el soporte para la lista de `target_user_ids` (notificaciones dirigidas manuales) y, en caso de no especificarse destinatarios, se implementó el envío automático de notificaciones de vuelta al emisor del último mensaje (respuesta directa).

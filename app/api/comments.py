@@ -52,7 +52,7 @@ def add_comment():
 def get_operational_users():
     users = User.query.filter(
         User.is_active == True,
-        User.role.in_(['setter', 'closer', 'triage', 'admin']),
+        User.role.in_(['setter', 'closer', 'triage']),
         User.id != current_user.id
     ).order_by(User.username.asc()).all()
     
