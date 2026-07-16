@@ -547,13 +547,17 @@ const TriageWorkflowPage = () => {
                                                 <div>
                                                     <span className="text-[9px] text-slate-500 uppercase font-black block">Fecha del Meet</span>
                                                     <span className="text-slate-200 font-bold">
-                                                        {new Date(selectedLead.date || selectedLead.fecha_meet).toLocaleString('es-ES', {
-                                                            day: '2-digit',
-                                                            month: 'short',
-                                                            year: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
+                                                        {selectedLead.date || selectedLead.fecha_meet ? (
+                                                            new Date(selectedLead.date || selectedLead.fecha_meet).toLocaleString('es-ES', {
+                                                                day: '2-digit',
+                                                                month: 'short',
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })
+                                                        ) : (
+                                                            'Sin Fecha Programada'
+                                                        )}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -564,7 +568,7 @@ const TriageWorkflowPage = () => {
                                                         className="bg-slate-950 border border-slate-850 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-violet-500/50"
                                                     />
                                                     <button
-                                                        onClick={handleSaveMeetDate}
+                                                        onClick={handleUpdateMeetDate}
                                                         disabled={updatingDate || !meetDateInput}
                                                         className="h-8 px-3 bg-violet-600 hover:bg-violet-500 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
                                                     >
@@ -614,85 +618,92 @@ const TriageWorkflowPage = () => {
                                                 Estado: {selectedLead.estado || 'Pendiente'}
                                             </span>
                                         </div>
-
-                                        {/* Comentario / Observación de Triaje */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Observación / Nota interna de Triaje</label>
-                                            <textarea
-                                                rows="2"
-                                                placeholder="Escribe un comentario que se enviará al chat de notas..."
-                                                value={triageNote}
-                                                onChange={(e) => setTriageNote(e.target.value)}
-                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/40 placeholder-slate-700 resize-none"
-                                            />
-                                        </div>
-
-                                        {/* Botonera de acciones rápidas */}
-                                        <div className="flex flex-wrap gap-2 pt-2">
-                                            <button
-                                                onClick={() => handleUpdateStatus(selectedLead.id, 'Contactado')}
-                                                disabled={processingId === selectedLead.id}
-                                                className="h-10 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                                            >
-                                                Contactado
-                                            </button>
-                                            <button
-                                                onClick={() => handleUpdateStatus(selectedLead.id, 'Confirmado')}
-                                                disabled={processingId === selectedLead.id}
-                                                className="h-10 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                                            >
-                                                Confirmar Cita
-                                            </button>
-                                            <button
-                                                onClick={() => handleUpdateStatus(selectedLead.id, 'Sin respuesta')}
-                                                disabled={processingId === selectedLead.id}
-                                                className="h-10 px-4 bg-amber-600 hover:bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                                            >
-                                                Sin Respuesta
-                                            </button>
-                                            <button
-                                                onClick={() => setRescheduleData({ apptId: selectedLead.id, date: '', status: 'Reagendada' })}
-                                                disabled={processingId === selectedLead.id}
-                                                className="h-10 px-4 bg-violet-650/80 hover:bg-violet-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                                            >
-                                                Reagendar
-                                            </button>
-                                            <button
-                                                onClick={() => handleUpdateStatus(selectedLead.id, 'Cancelada')}
-                                                disabled={processingId === selectedLead.id}
-                                                className="h-10 px-4 bg-rose-650/90 hover:bg-rose-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                                            >
-                                                Cancelar Cita
-                                            </button>
-                                        </div>
-
-                                        {/* Selector de Reagenda inline */}
-                                        {rescheduleData.apptId === selectedLead.id && (
-                                            <div className="pt-4 border-t border-slate-900 flex flex-wrap items-center gap-3 animate-in slide-in-from-bottom-2 duration-200">
-                                                <span className="text-[10px] font-black uppercase text-violet-400 tracking-wider flex items-center gap-1">
-                                                    <CalendarDays size={14} className="text-violet-500" />
-                                                    Nueva Fecha de Cita:
-                                                </span>
-                                                <input 
-                                                    type="datetime-local" 
-                                                    value={rescheduleData.date ? formatToDatetimeLocal(rescheduleData.date) : ''}
-                                                    onChange={(e) => setRescheduleData(prev => ({ ...prev, date: e.target.value }))}
-                                                    className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50"
-                                                />
-                                                <button
-                                                    onClick={handleConfirmReschedule}
-                                                    disabled={processingId === selectedLead.id || !rescheduleData.date}
-                                                    className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center cursor-pointer"
-                                                >
-                                                    {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Confirmar Reagenda'}
-                                                </button>
-                                                <button 
-                                                    onClick={() => setRescheduleData({ apptId: null, date: '', status: '' })}
-                                                    className="h-9 px-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all"
-                                                >
-                                                    Cancelar
-                                                </button>
+                                        {selectedLead.id < 0 ? (
+                                            <div className="py-6 px-6 bg-slate-950/40 rounded-2xl border border-slate-850/50 text-xs font-semibold text-slate-400 text-center italic">
+                                                Este lead no posee una cita agendada para hoy. Utiliza la sección de Notas & Comentarios a la derecha para comunicarte.
                                             </div>
+                                        ) : (
+                                            <>
+                                                {/* Comentario / Observación de Triaje */}
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Observación / Nota interna de Triaje</label>
+                                                    <textarea
+                                                        rows="2"
+                                                        placeholder="Escribe un comentario que se enviará al chat de notas..."
+                                                        value={triageNote}
+                                                        onChange={(e) => setTriageNote(e.target.value)}
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/40 placeholder-slate-700 resize-none"
+                                                    />
+                                                </div>
+
+                                                {/* Botonera de acciones rápidas */}
+                                                <div className="flex flex-wrap gap-2 pt-2">
+                                                    <button
+                                                        onClick={() => handleUpdateStatus(selectedLead.id, 'Contactado')}
+                                                        disabled={processingId === selectedLead.id}
+                                                        className="h-10 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                                                    >
+                                                        Contactado
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleUpdateStatus(selectedLead.id, 'Confirmado')}
+                                                        disabled={processingId === selectedLead.id}
+                                                        className="h-10 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                                                    >
+                                                        Confirmar Cita
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleUpdateStatus(selectedLead.id, 'Sin respuesta')}
+                                                        disabled={processingId === selectedLead.id}
+                                                        className="h-10 px-4 bg-amber-600 hover:bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                                                    >
+                                                        Sin Respuesta
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setRescheduleData({ apptId: selectedLead.id, date: '', status: 'Reagendada' })}
+                                                        disabled={processingId === selectedLead.id}
+                                                        className="h-10 px-4 bg-violet-650/80 hover:bg-violet-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                                                    >
+                                                        Reagendar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleUpdateStatus(selectedLead.id, 'Cancelada')}
+                                                        disabled={processingId === selectedLead.id}
+                                                        className="h-10 px-4 bg-rose-650/90 hover:bg-rose-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                                                    >
+                                                        Cancelar Cita
+                                                    </button>
+                                                </div>
+
+                                                {/* Selector de Reagenda inline */}
+                                                {rescheduleData.apptId === selectedLead.id && (
+                                                    <div className="pt-4 border-t border-slate-900 flex flex-wrap items-center gap-3 animate-in slide-in-from-bottom-2 duration-200">
+                                                        <span className="text-[10px] font-black uppercase text-violet-400 tracking-wider flex items-center gap-1">
+                                                            <CalendarDays size={14} className="text-violet-500" />
+                                                            Nueva Fecha de Cita:
+                                                        </span>
+                                                        <input 
+                                                            type="datetime-local" 
+                                                            value={rescheduleData.date ? formatToDatetimeLocal(rescheduleData.date) : ''}
+                                                            onChange={(e) => setRescheduleData(prev => ({ ...prev, date: e.target.value }))}
+                                                            className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50"
+                                                        />
+                                                        <button
+                                                            onClick={handleConfirmReschedule}
+                                                            disabled={processingId === selectedLead.id || !rescheduleData.date}
+                                                            className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center cursor-pointer"
+                                                        >
+                                                            {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Confirmar Reagenda'}
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => setRescheduleData({ apptId: null, date: '', status: '' })}
+                                                            className="h-9 px-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all"
+                                                        >
+                                                            Cancelar
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </div>
