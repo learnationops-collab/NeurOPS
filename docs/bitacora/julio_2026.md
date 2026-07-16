@@ -4,11 +4,13 @@
   - **Manejo Robusto de Bloqueos de Base de Datos en Decks (Robustness & Bugfix)**:
     - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
       - Se implementó un bloque de control `try-except` con `db.session.rollback()` y fallback en memoria para la creación de `ManychatLead` y `LeadAnswer` durante peticiones GET de lectura, previniendo errores 500 si la base de datos local SQLite se encuentra bloqueada por transacciones concurrentes.
+      - Se eliminaron las importaciones locales redundantes en `get_setter_deck` para prevenir errores de tipo `UnboundLocalError` debido a name shadowing de `Client`, `ManychatLead` y `LeadAnswer`.
     - **Backend API ([financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
       - Se envolvió la creación persistente de `FinancialAgenda` en un bloque `try-except` seguro con rollback y fallback en memoria en el endpoint de consulta pública de agendas de Triage, solucionando el error 500 reportado por el usuario debido a bloqueos concurrentes de base de datos.
       - Se eliminaron los imports locales redundantes de `Client`, `FinancialAgenda`, `datetime` y `func` (SQLAlchemy) dentro de la función `get_financial_agendas`, los cuales provocaban errores de colisión de ámbito (`UnboundLocalError`) al solapar a las importaciones globales correspondientes al principio del archivo.
     - **Backend API ([closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
       - Se robusteció la creación de citas `Appointment` de Closer mediante un bloque `try-except` seguro y fallback en memoria para evitar errores por locks en base de datos en la carga del deck del Closer.
+      - Se movieron los imports locales de `CommentNotification`, `Appointment` y `Client` a nivel global para solucionar el error `UnboundLocalError` al consultar citas para closer deck.
   - **Priorización y Visibilidad de Leads con Mensajes Sin Leer**:
     - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
       - Se inyectan dinámicamente leads (con su correspondiente `ManychatLead` y `LeadAnswer` autogenerados si no existen) que tengan comentarios no leídos para el Setter actual en `/setter/deck?step=cualificacion`, garantizando su visibilidad independientemente de los filtros y asignaciones normales.
