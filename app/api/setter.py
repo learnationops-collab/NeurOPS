@@ -803,6 +803,7 @@ def get_setter_deck():
                 continue
                 
             ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
+            edad_str = "N/A"
             
             client = None
             if ig_clean:
