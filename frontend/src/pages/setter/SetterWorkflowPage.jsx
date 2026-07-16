@@ -130,6 +130,7 @@ const SetterWorkflowPage = () => {
             localStorage.setItem(`read_comments_${lead.client_id}`, lead.comments_count || 0);
         }
         setSelectedLead(lead);
+        setLeads(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
     };
 
 
@@ -281,7 +282,7 @@ const SetterWorkflowPage = () => {
         // Notificación de comentarios sin leer
         const unreadKey = `read_comments_${l.client_id}`;
         const readCount = parseInt(localStorage.getItem(unreadKey) || '0');
-        const hasUnread = l.client_id && l.comments_count > readCount;
+        const hasUnread = l.unread_comment || (l.client_id && l.comments_count > readCount);
 
         return (
             <motion.div

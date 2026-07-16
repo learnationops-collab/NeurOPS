@@ -102,6 +102,11 @@ const CloserWorkflowPage = () => {
         fetchAgendas();
     }, [activeStep, selectedDate]);
 
+    const handleSelectLead = (lead) => {
+        setSelectedLead(lead);
+        setAgendas(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
+    };
+
     // Filtrar localmente por búsqueda
     const filteredAgendas = useMemo(() => {
         const query = searchQuery.toLowerCase().trim();
@@ -507,7 +512,7 @@ const CloserWorkflowPage = () => {
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.95 }}
-                                                onClick={() => setSelectedLead(a)}
+                                                onClick={() => handleSelectLead(a)}
                                                 className={`p-4 rounded-2xl border transition-all cursor-pointer text-left flex flex-col gap-3 relative overflow-hidden group ${
                                                     isViewed 
                                                         ? 'bg-violet-650/10 border-violet-500/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]' 
@@ -531,8 +536,13 @@ const CloserWorkflowPage = () => {
                                                                     <Clock size={10} />
                                                                     {formatTimeOnly(a.start_time)}
                                                                 </span>
-                                                                <h4 className="text-sm font-black text-white leading-tight truncate">
+                                                                <h4 className="text-sm font-black text-white leading-tight truncate flex items-center gap-2">
                                                                     {a.lead_name || 'Sin Nombre'}
+                                                                    {a.unread_comment && (
+                                                                        <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-md animate-pulse">
+                                                                            Mensaje nuevo
+                                                                        </span>
+                                                                    )}
                                                                 </h4>
                                                             </div>
                                                             

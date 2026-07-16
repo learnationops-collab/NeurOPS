@@ -7,10 +7,27 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [operationalUsers, setOperationalUsers] = useState([]);
+    const [selectedUserIds, setSelectedUserIds] = useState([]);
 
     useEffect(() => {
         if (clientId || (type && associatedId)) fetchComments();
     }, [clientId, type, associatedId]);
+
+    useEffect(() => {
+        fetchOperationalUsers();
+    }, []);
+
+    const fetchOperationalUsers = async () => {
+        try {
+            const res = await api.get('/comments/users', { skipAuthError: true });
+            if (Array.isArray(res.data)) {
+                setOperationalUsers(res.data);
+            }
+        } catch (err) {
+            console.error("Error fetching operational users", err);
+        }
+    };
 
     const fetchComments = async () => {
         setLoading(true);
@@ -46,23 +63,35 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
         try {
             let res;
             if (clientId) {
-                res = await api.post(`/closer/leads/${clientId}/comments`, { text: newComment });
-                // Adapt legacy response format if needed, but assuming standard format
+                res = await api.post(`/closer/leads/${clientId}/comments`, { 
+                    text: newComment,
+                    target_user_ids: selectedUserIds
+                });
                 setComments([res.data.comment, ...comments]);
             } else {
                 res = await api.post('/comments', {
                     text: newComment,
                     type,
-                    associated_id: associatedId
+                    associated_id: associatedId,
+                    target_user_ids: selectedUserIds
                 });
                 setComments([res.data, ...comments]);
             }
             setNewComment('');
+            setSelectedUserIds([]);
         } catch (err) {
             console.error("Error posting comment", err);
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const toggleUserSelection = (userId) => {
+        setSelectedUserIds(prev => 
+            prev.includes(userId) 
+                ? prev.filter(id => id !== userId) 
+                : [...prev, userId]
+        );
     };
 
     return (
@@ -103,6 +132,39 @@ const CommentsSection = ({ clientId, type, associatedId }) => {
                     ))
                 )}
             </div>
+
+            {/* Selector de Destinatarios de Notificación */}
+            {operationalUsers.length > 0 && (
+                <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-900/40 space-y-1.5">
+                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">
+                        Notificar a:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar">
+                        {operationalUsers.map(u => {
+                            const isSelected = selectedUserIds.includes(u.id);
+                            let roleColor = 'border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-700';
+                            if (isSelected) {
+                                roleColor = 'border-indigo-500 bg-indigo-600/20 text-indigo-400 font-bold shadow-[0_0_8px_rgba(99,102,241,0.25)]';
+                            } else {
+                                if (u.role === 'setter') roleColor = 'border-emerald-900/50 bg-emerald-950/10 text-emerald-400 hover:bg-emerald-900/20';
+                                else if (u.role === 'closer') roleColor = 'border-violet-900/50 bg-violet-950/10 text-violet-400 hover:bg-violet-900/20';
+                                else if (u.role === 'triage') roleColor = 'border-cyan-900/50 bg-cyan-950/10 text-cyan-400 hover:bg-cyan-900/20';
+                                else if (u.role === 'admin') roleColor = 'border-rose-900/50 bg-rose-950/10 text-rose-450 hover:bg-rose-900/20';
+                            }
+                            return (
+                                <button
+                                    key={u.id}
+                                    type="button"
+                                    onClick={() => toggleUserSelection(u.id)}
+                                    className={`text-[9px] uppercase tracking-wider px-2 py-1 border rounded-lg transition-all cursor-pointer ${roleColor}`}
+                                >
+                                    {u.username} ({u.role})
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="p-3 border-t border-slate-800 bg-slate-800/30 flex gap-2">
                 <input
