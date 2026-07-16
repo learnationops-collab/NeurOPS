@@ -99,6 +99,12 @@ class FinancialAgenda(db.Model):
         client = None
         if client_filters:
             client = Client.query.filter(or_(*client_filters)).first()
+        if not client and ig_clean and ig_clean.startswith("no_ig_"):
+            try:
+                c_id = int(ig_clean.split("_")[-1])
+                client = Client.query.get(c_id)
+            except Exception:
+                pass
 
         survey_answers = []
         client_id = None
