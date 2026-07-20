@@ -289,12 +289,14 @@ def receive_manychat_ad_lead():
 
         db.session.commit()
 
-        # Log de mensajes sin ConversationalMessage configurado
+        # Log de mensajes sin ConversationalMessage configurado (ignorando '0' y '0.0' que indican envío/respuesta estándar)
         if is_valid_value(id_option_send) or is_valid_value(id_option):
             from app.models import ConversationalMessage
             ids_to_check = []
-            if is_valid_value(id_option_send): ids_to_check.append(str(id_option_send))
-            if is_valid_value(id_option): ids_to_check.append(str(id_option))
+            if is_valid_value(id_option_send) and str(id_option_send).strip() not in ('0', '0.0'):
+                ids_to_check.append(str(id_option_send).strip())
+            if is_valid_value(id_option) and str(id_option).strip() not in ('0', '0.0'):
+                ids_to_check.append(str(id_option).strip())
             for mid in ids_to_check:
                 exists = ConversationalMessage.query.filter_by(message_id=mid).first()
                 if not exists:
