@@ -626,6 +626,10 @@
       - Se removió por completo el bloque y pestaña de "Calificación en Caliente" (dolores, objeciones y observaciones manuales).
       - Se posicionó el Chat de Comunicación en vivo (`CommentsSection`) como panel principal al lado de las Respuestas del Formulario / Encuesta.
       - Se refactorizó la vista dividiéndola en submódulos para garantizar que ningún archivo supere el límite de 500 líneas.
+  - **Omisión de Logs de Advertencia para Mensajes Estándar en Webhook ManyChat**:
+    - **API Backend ([manychat.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/manychat.py) [MODIFY])**:
+      - Se actualizó la verificación de logs en `receive_manychat_ad_lead` para ignorar advertencias cuando `id_option` o `id_option_send` valgan `'0'` o `'0.0'` (indicadores estándar de mensajes enviados o respuestas), evitando generar falsos positivos en el log del servidor.
+
 
 
 
