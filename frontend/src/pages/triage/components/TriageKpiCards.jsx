@@ -1,7 +1,7 @@
 import React from 'react';
-import { Calendar, MessageSquare, CheckSquare, Clock, ChevronDown } from 'lucide-react';
+import { Calendar, CheckSquare, Clock, ChevronDown } from 'lucide-react';
 
-const TriageKpiCards = ({ counts, activeFilter, onSelectFilter }) => {
+const TriageKpiCards = ({ counts, activeFilter, onFilterChange }) => {
     const cards = [
         {
             id: 'citas',
@@ -13,17 +13,6 @@ const TriageKpiCards = ({ counts, activeFilter, onSelectFilter }) => {
             borderColor: 'border-violet-500/20',
             textColor: 'text-violet-400',
             glowColor: 'shadow-[0_0_15px_rgba(139,92,246,0.15)]'
-        },
-        {
-            id: 'mensajes',
-            title: 'Mensajes por contestar',
-            count: counts.mensajes || 0,
-            icon: MessageSquare,
-            color: 'amber',
-            bgColor: 'bg-amber-500/10',
-            borderColor: 'border-amber-500/20',
-            textColor: 'text-amber-400',
-            glowColor: 'shadow-[0_0_15px_rgba(245,158,11,0.15)]'
         },
         {
             id: 'seguimientos',
@@ -50,18 +39,17 @@ const TriageKpiCards = ({ counts, activeFilter, onSelectFilter }) => {
     ];
 
     return (
-        <div className="relative space-y-3">
+        <div className="relative space-y-3 text-left">
             {/* Header del bloque con filtro */}
             <div className="flex justify-end items-center">
                 <div className="relative">
                     <select
                         value={activeFilter || 'all'}
-                        onChange={(e) => onSelectFilter?.(e.target.value)}
+                        onChange={(e) => onFilterChange?.(e.target.value)}
                         className="bg-slate-900/80 border border-slate-800 text-slate-300 text-xs font-semibold py-1.5 pl-3 pr-8 rounded-xl appearance-none outline-none cursor-pointer hover:border-slate-700 transition-colors"
                     >
                         <option value="all">Todos los tipos</option>
                         <option value="citas">Solo Citas por confirmar</option>
-                        <option value="mensajes">Solo Mensajes por contestar</option>
                         <option value="seguimientos">Solo Seguimientos</option>
                         <option value="reagendar">Solo Reagenda</option>
                     </select>
@@ -69,8 +57,8 @@ const TriageKpiCards = ({ counts, activeFilter, onSelectFilter }) => {
                 </div>
             </div>
 
-            {/* Grid de tarjetas KPI */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Grid de 3 tarjetas KPI */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {cards.map((card) => {
                     const IconComponent = card.icon;
                     const isSelected = activeFilter === card.id;
@@ -78,7 +66,7 @@ const TriageKpiCards = ({ counts, activeFilter, onSelectFilter }) => {
                     return (
                         <div
                             key={card.id}
-                            onClick={() => onSelectFilter?.(isSelected ? 'all' : card.id)}
+                            onClick={() => onFilterChange?.(isSelected ? 'all' : card.id)}
                             className={`p-4 rounded-2xl bg-slate-950/60 border ${
                                 isSelected ? `${card.borderColor} ${card.glowColor}` : 'border-slate-850 hover:border-slate-800'
                             } transition-all cursor-pointer flex items-center justify-between group relative overflow-hidden`}
@@ -97,9 +85,6 @@ const TriageKpiCards = ({ counts, activeFilter, onSelectFilter }) => {
                                         </span>
                                     </div>
                                 </div>
-                                <button className={`text-[10px] font-bold ${card.textColor} hover:underline pt-1 block cursor-pointer bg-transparent border-none p-0`}>
-                                    Ver detalle
-                                </button>
                             </div>
                         </div>
                     );

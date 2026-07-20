@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { 
     Search, Calendar, RefreshCw, Loader2, ChevronDown, 
@@ -30,7 +29,6 @@ const TriageWorkflowPage = () => {
     const [activeKpiFilter, setActiveKpiFilter] = useState('all');
 
     const [agendas, setAgendas] = useState([]);
-    const [unreadNoAgenda, setUnreadNoAgenda] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
     const [selectedLead, setSelectedLead] = useState(null);
@@ -69,15 +67,8 @@ const TriageWorkflowPage = () => {
             const dataList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
             setAgendas(dataList);
 
-            try {
-                const unreadRes = await api.get('/public/financial-agendas/unread-no-agenda');
-                setUnreadNoAgenda(unreadRes.data || []);
-            } catch (err) {
-                console.error("Error al cargar leads sin agenda:", err);
-            }
-
             if (selectedLead) {
-                const updated = dataList.find(a => a.id === selectedLead.id) || unreadNoAgenda.find(a => a.id === selectedLead.id);
+                const updated = dataList.find(a => a.id === selectedLead.id);
                 if (updated) setSelectedLead(updated);
             }
         } catch (err) {
@@ -225,7 +216,6 @@ const TriageWorkflowPage = () => {
             await api.put(`/public/financial-agendas/${apptId}`, payload);
             toast.success("Cita reagendada exitosamente");
 
-            // Abrir modal de seguimiento tras reagendar
             const targetAgenda = agendas.find(a => a.id === apptId) || selectedLead;
             setFollowUpModal({
                 show: true,
@@ -246,8 +236,6 @@ const TriageWorkflowPage = () => {
 
     const handleSelectLead = (lead) => {
         setSelectedLead(lead);
-        setAgendas(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
-        setUnreadNoAgenda(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
     };
 
     const formatToDatetimeLocal = (dateStr) => {
@@ -279,10 +267,9 @@ const TriageWorkflowPage = () => {
         );
     }, [agendas, searchQuery]);
 
-    // Agrupar items por categorías
+    // Agrupar items con criterio estricto para cada sección
     const categorizedData = useMemo(() => {
         const citas = [];
-        const mensajes = [];
         const seguimientos = [];
         const reagendar = [];
         const completadas = [];
@@ -291,52 +278,40 @@ const TriageWorkflowPage = () => {
             const est = (a.estado || 'Pendiente').toLowerCase();
             const isCompleted = ['confirmado', 'show up', 'no show', 'cancelada'].includes(est);
 
+            // Criterio estricto de seguimiento programado
             const hasFollowUpToday = a.fecha_seguimiento && a.fecha_seguimiento.startsWith(selectedDate) && !a.seguimiento_realizado;
 
             if (hasFollowUpToday) {
                 seguimientos.push(a);
-            } else if (a.seguimiento_realizado) {
+            } else if (a.seguimiento_realizado || isCompleted) {
                 completadas.push(a);
-            } else if (isCompleted) {
-                completadas.push(a);
-            } else if (a.unread_comment) {
-                mensajes.push(a);
             } else if (est === 'reagendada') {
                 reagendar.push(a);
-            } else if (est === 'contactado' || est === 'sin respuesta') {
-                seguimientos.push(a);
             } else {
                 citas.push(a);
             }
         });
 
-        unreadNoAgenda.forEach(u => {
-            if (!mensajes.some(m => m.id === u.id)) mensajes.push(u);
-        });
-
         const sortFn = (a, b) => {
             if (sortBy === 'name') return (a.lead || a.nombre || '').localeCompare(b.lead || b.nombre || '');
             if (sortBy === 'setter') return (a.setter_name || a.setter || '').localeCompare(b.setter_name || b.setter || '');
-            if (sortBy === 'time') return new Date(a.date || a.fecha_meet || 0) - new Date(b.date || b.fecha_meet || 0);
-            return (b.unread_comment ? 1 : 0) - (a.unread_comment ? 1 : 0);
+            return new Date(a.date || a.fecha_meet || 0) - new Date(b.date || b.fecha_meet || 0);
         };
 
         return {
             citas: citas.sort(sortFn),
-            mensajes: mensajes.sort(sortFn),
             seguimientos: seguimientos.sort(sortFn),
             reagendar: reagendar.sort(sortFn),
             completadas: completadas.sort(sortFn)
         };
-    }, [filteredAgendas, unreadNoAgenda, sortBy, selectedDate]);
+    }, [filteredAgendas, sortBy, selectedDate]);
 
     const counts = useMemo(() => ({
         citas: categorizedData.citas.length,
-        mensajes: categorizedData.mensajes.length,
         seguimientos: categorizedData.seguimientos.length,
         reagendar: categorizedData.reagendar.length,
         completadas: categorizedData.completadas.length,
-        pendientesTotal: categorizedData.citas.length + categorizedData.mensajes.length + categorizedData.seguimientos.length + categorizedData.reagendar.length
+        pendientesTotal: categorizedData.citas.length + categorizedData.seguimientos.length + categorizedData.reagendar.length
     }), [categorizedData]);
 
     return (
@@ -518,37 +493,7 @@ const TriageWorkflowPage = () => {
                                     </div>
                                 )}
 
-                                {/* SUBGRUPO 2: MENSAJES POR CONTESTAR */}
-                                {(activeKpiFilter === 'all' || activeKpiFilter === 'mensajes') && (
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center px-1">
-                                            <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
-                                                <Clock size={16} />
-                                                MENSAJES POR CONTESTAR ({categorizedData.mensajes.length})
-                                            </h3>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {categorizedData.mensajes.map(lead => (
-                                                <TriageLeadCard
-                                                    key={lead.id}
-                                                    lead={lead}
-                                                    sectionType="mensajes"
-                                                    isSelected={selectedLead?.id === lead.id}
-                                                    onSelect={() => handleSelectLead(lead)}
-                                                    onActionClick={() => handleSelectLead(lead)}
-                                                    onOpenMenu={() => handleSelectLead(lead)}
-                                                />
-                                            ))}
-                                            {categorizedData.mensajes.length === 0 && (
-                                                <div className="p-5 text-center text-xs text-slate-500 font-bold italic bg-slate-950/20 rounded-2xl border border-dashed border-slate-850">
-                                                    Sin mensajes nuevos pendientes
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* SUBGRUPO 3: SEGUIMIENTOS POR HACER */}
+                                {/* SUBGRUPO 2: SEGUIMIENTOS POR HACER */}
                                 {(activeKpiFilter === 'all' || activeKpiFilter === 'seguimientos') && (
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center px-1">
@@ -572,14 +517,14 @@ const TriageWorkflowPage = () => {
                                             ))}
                                             {categorizedData.seguimientos.length === 0 && (
                                                 <div className="p-5 text-center text-xs text-slate-500 font-bold italic bg-slate-950/20 rounded-2xl border border-dashed border-slate-850">
-                                                    Sin seguimientos pendientes para hoy
+                                                    Sin seguimientos pendientes programados para hoy
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* SUBGRUPO 4: REAGENDAR / ACTUALIZAR */}
+                                {/* SUBGRUPO 3: REAGENDAR / ACTUALIZAR */}
                                 {(activeKpiFilter === 'all' || activeKpiFilter === 'reagendar') && (
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center px-1">

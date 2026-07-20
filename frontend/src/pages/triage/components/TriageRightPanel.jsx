@@ -1,7 +1,7 @@
 import React from 'react';
 
 const TriageRightPanel = ({ counts }) => {
-    const total = (counts.citas || 0) + (counts.mensajes || 0) + (counts.seguimientos || 0) + (counts.reagendar || 0);
+    const total = (counts.citas || 0) + (counts.seguimientos || 0) + (counts.reagendar || 0);
 
     const calcPct = (val) => {
         if (!total) return 0;
@@ -10,7 +10,6 @@ const TriageRightPanel = ({ counts }) => {
 
     const categories = [
         { key: 'citas', label: 'Citas por confirmar', count: counts.citas || 0, color: '#8b5cf6', dotClass: 'bg-violet-500' },
-        { key: 'mensajes', label: 'Mensajes por contestar', count: counts.mensajes || 0, color: '#f59e0b', dotClass: 'bg-amber-500' },
         { key: 'seguimientos', label: 'Seguimientos por hacer', count: counts.seguimientos || 0, color: '#10b981', dotClass: 'bg-emerald-500' },
         { key: 'reagendar', label: 'Reagendar / Actualizar', count: counts.reagendar || 0, color: '#f43f5e', dotClass: 'bg-rose-500' },
     ];
@@ -21,7 +20,7 @@ const TriageRightPanel = ({ counts }) => {
     let strokeOffset = 0;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 text-left">
             {/* Tarjeta 1: Resumen de Pendientes (Donut Chart) */}
             <div className="bg-slate-950/60 border border-slate-850 rounded-3xl p-5 space-y-5 shadow-xl">
                 <h3 className="text-sm font-black text-white tracking-tight">
