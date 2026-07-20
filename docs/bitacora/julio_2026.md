@@ -630,7 +630,8 @@
     - **Modelos y API Backend ([financial.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY], [financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
       - Se agregaron las columnas `fecha_seguimiento` y `seguimiento_realizado` al modelo `FinancialAgenda` y su serialización en `to_dict()`.
       - Se creó y ejecutó la migración correspondiente con Alembic (`686f8945d822_add_follow_up_fields_to_financial_agenda.py`).
-      - Se unificó la ruta `GET /api/closer/leads/<id>/comments` para consultar e incluir tanto los comentarios recientes (`ClientComment`), los comentarios genéricos (`Comment`), como las observaciones y notas históricas registradas previamente en la ficha del lead (`Client.observaciones` y `Client.notes`).
+      - Se unificó la ruta `GET /api/closer/leads/<id>/comments` para consultar e incluir tanto los comentarios recientes (`ClientComment`), los comentarios genéricos (`Comment`), como las observaciones y notas históricas registradas previamente en la ficha del lead (`Client.observaciones` y `Client.notes`), incorporando un formateador seguro de fechas (`_format_date`) para prevenir excepciones HTTP 500.
+
       - Se habilitó la actualización de ambos campos en la ruta `PUT /public/financial-agendas/<agenda_id>`.
       - Se corrigió la consulta en `GET /public/financial-agendas` para incluir en los resultados del rango de fechas tanto la fecha de la cita (`date`) como la fecha de seguimiento programada (`fecha_seguimiento`), importando adecuadamente `and_` de `sqlalchemy` para evitar excepciones de servidor (`NameError`).
 
