@@ -61,6 +61,7 @@ const TriageWorkflowPage = () => {
             const res = await api.get('/public/financial-agendas', {
                 params: {
                     start_date: selectedDate,
+                    end_date: selectedDate,
                     date_filter_by: 'meet'
                 }
             });
