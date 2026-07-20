@@ -177,7 +177,7 @@ const TriageWorkflowPage = () => {
         }
     };
 
-    // Marcar seguimiento como realizado
+    // Marcar seguimiento como realizado y consultar si desea agendar otro
     const handleMarkFollowUpDone = async (lead) => {
         if (!lead || !lead.id) return;
         setProcessingId(lead.id);
@@ -187,6 +187,14 @@ const TriageWorkflowPage = () => {
             });
             toast.success("Seguimiento marcado como realizado");
             fetchAgendas();
+
+            // Consultar si desea agendar un próximo seguimiento
+            setFollowUpModal({
+                show: true,
+                agendaId: lead.id,
+                leadName: lead.lead || lead.nombre || 'Prospecto',
+                newStatus: 'Seguimiento Realizado'
+            });
         } catch (err) {
             console.error("Error marcando seguimiento como realizado:", err);
             toast.error("Error al actualizar seguimiento");
