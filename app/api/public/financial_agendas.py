@@ -227,15 +227,29 @@ def get_financial_agendas():
         if start_date_str:
             try:
                 start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-                date_query = date_query.filter(FinancialAgenda.date >= start_date)
-            except ValueError:
-                pass
+                end_date = None
+                if end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59, microsecond=999999)
+                    except ValueError:
+                        pass
                 
-        if end_date_str:
-            try:
-                end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-                end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
-                date_query = date_query.filter(FinancialAgenda.date <= end_date)
+                # Filtro para fecha de cita (date)
+                date_conds = [FinancialAgenda.date >= start_date]
+                if end_date:
+                    date_conds.append(FinancialAgenda.date <= end_date)
+                
+                # Filtro para fecha de seguimiento (fecha_seguimiento)
+                followup_conds = [FinancialAgenda.fecha_seguimiento >= start_date_str]
+                if end_date_str:
+                    followup_conds.append(FinancialAgenda.fecha_seguimiento <= f"{end_date_str}T23:59:59")
+                else:
+                    followup_conds.append(FinancialAgenda.fecha_seguimiento <= f"{start_date_str}T23:59:59")
+
+                date_query = date_query.filter(or_(
+                    and_(*date_conds),
+                    and_(*followup_conds)
+                ))
             except ValueError:
                 pass
 
