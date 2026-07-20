@@ -617,4 +617,14 @@
       - Se estructuraron los subgrupos visuales de tareas pendientes con insignias de hora, tags de taller/programa, códigos de fuente, setter asignado, tiempo límite de atención y botones de acción rápida directos (`Confirmar`, `Responder`, `Hacer seguimiento`).
       - Se implementó el panel lateral derecho con gráfico de tipo Donut SVG para el resumen de pendientes y la botonera de acciones rápidas masivas.
       - Se moduló el código en componentes atómicos respetando el límite estricto de 500 líneas por archivo.
+  - **Corrección del Error HTTP 500 e Integración de Chat y Encuestas en Lead Roadmap**:
+    - **API Backend ([lead_roadmap.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/lead_roadmap.py) [MODIFY])**:
+      - Se solucionó el bug HTTP 500 en `GET /api/public/lead-roadmap` causado por la consulta del atributo inexistente `keyword` sobre objetos `FinancialAgenda`. Se utilizó acceso seguro `getattr`.
+      - Se implementó un bloque de manejo de errores `try-except` robusto para evitar caídas de servidor y garantizar respuestas JSON estructuradas ante cualquier excepción inesperada.
+      - Se expuso la lista de respuestas de encuestas (`survey_answers`) en la respuesta JSON del roadmap.
+    - **Interfaz Frontend ([LeadRoadmapDetail.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/LeadRoadmapDetail.jsx) [MODIFY], [LeadRoadmapHeader.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapHeader.jsx) [NEW], [LeadRoadmapFunnel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapFunnel.jsx) [NEW], [LeadRoadmapFormInfo.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapFormInfo.jsx) [NEW], [LeadRoadmapCalificacion.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapCalificacion.jsx) [NEW])**:
+      - Se integró el componente de Chat en vivo (`CommentsSection`) dentro del Lead Roadmap tanto en la vista extendida como en la pestaña dedicada ("Chat & Notas") del modo modal/compacto.
+      - Se consolidó la visualización de respuestas del formulario n8n junto con las respuestas de la encuesta de cita (`survey_answers`).
+      - Se refactorizó la vista dividiéndola en submódulos para garantizar que ningún archivo supere el límite de 500 líneas.
+
 
