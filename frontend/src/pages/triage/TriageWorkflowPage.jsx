@@ -106,18 +106,27 @@ const TriageWorkflowPage = () => {
         }
     };
 
-    // Guardar comentario en cliente
-    const saveTriageComment = async (clientId, noteText, actionStatus) => {
+    // Guardar comentario/observación de triaje en el Chat de Comunicación del Lead
+    const saveTriageComment = async (clientId, noteText, actionStatus = 'Observación') => {
         if (!clientId || !noteText.trim()) return;
         try {
-            await api.post('/comments', {
-                text: `[Confirmación Triaje: ${actionStatus}] ${noteText.trim()}`,
-                type: 'client',
-                associated_id: clientId
+            const prefix = actionStatus ? `[Triaje - ${actionStatus}]: ` : `[Observación Call Confirmer]: `;
+            await api.post(`/closer/leads/${clientId}/comments`, {
+                text: `${prefix}${noteText.trim()}`
             });
+            toast.success("Observación guardada en el Chat de Comunicación");
         } catch (err) {
             console.error("Error al registrar comentario de triaje:", err);
         }
+    };
+
+    const handleSendTriageNoteOnly = async () => {
+        if (!selectedLead?.client_id || !triageNote.trim()) {
+            toast.error("Escribe una observación para enviar");
+            return;
+        }
+        await saveTriageComment(selectedLead.client_id, triageNote, 'Observación');
+        setTriageNote('');
     };
 
     // Procesar cambio de estado de triaje y abrir modal de seguimiento
@@ -588,6 +597,7 @@ const TriageWorkflowPage = () => {
                 rescheduleData={rescheduleData}
                 setRescheduleData={setRescheduleData}
                 handleConfirmReschedule={handleConfirmReschedule}
+                onSendNoteOnly={handleSendTriageNoteOnly}
                 formatToDatetimeLocal={formatToDatetimeLocal}
             />
 
