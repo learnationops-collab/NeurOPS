@@ -25,7 +25,7 @@ const TriageFollowUpModal = ({
     const isNextFollowUp = newStatus === 'Seguimiento Realizado';
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in text-left">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in text-left">
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 relative">
                 
                 <div className="flex justify-between items-start border-b border-slate-800/80 pb-4">
