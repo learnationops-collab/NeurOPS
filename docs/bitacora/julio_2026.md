@@ -631,10 +631,10 @@
       - Se agregaron las columnas `fecha_seguimiento` y `seguimiento_realizado` al modelo `FinancialAgenda` y su serialización en `to_dict()`.
       - Se creó y ejecutó la migración correspondiente con Alembic (`686f8945d822_add_follow_up_fields_to_financial_agenda.py`).
       - Se habilitó la actualización de ambos campos en la ruta `PUT /public/financial-agendas/<agenda_id>`.
-    - **Interfaz Frontend ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY], [TriageFollowUpModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageFollowUpModal.jsx) [NEW], [TriageLeadCard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageLeadCard.jsx) [MODIFY], [TriageRightPanel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageRightPanel.jsx) [MODIFY])**:
-      - Se implementó un modal interactivo (`TriageFollowUpModal`) que se despliega automáticamente al marcar un estado clave (Contactado, Confirmado, Cancelada o Reagendada) consultando si desea programar una fecha de seguimiento.
-      - Las agendas con fecha de seguimiento programada para la fecha filtrada aparecen dinámicamente en la sección **SEGUIMIENTOS POR HACER** hasta que se haga clic en el botón `Marcar Realizado`.
-      - Se removió por completo el bloque de "Acciones Rápidas" del panel lateral derecho para simplificar la interfaz.
+    - **Interfaz Frontend ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY], [TriageKpiCards.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageKpiCards.jsx) [MODIFY], [TriageRightPanel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageRightPanel.jsx) [MODIFY])**:
+      - Se estableció un criterio estricto para la sección **SEGUIMIENTOS POR HACER**: sólo se muestran agendas que poseen una `fecha_seguimiento` explícitamente configurada que coincida con el día seleccionado y cuyo `seguimiento_realizado` sea falso.
+      - Se eliminó por completo la sección y tarjeta KPI de "Mensajes por contestar", dejando únicamente las 3 categorías activas: "Citas por confirmar", "Seguimientos por hacer" y "Reagendar / Actualizar".
+
 
 
 
