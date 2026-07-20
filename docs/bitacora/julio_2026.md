@@ -626,9 +626,16 @@
       - Se removió por completo el bloque y pestaña de "Calificación en Caliente" (dolores, objeciones y observaciones manuales).
       - Se posicionó el Chat de Comunicación en vivo (`CommentsSection`) como panel principal al lado de las Respuestas del Formulario / Encuesta.
       - Se refactorizó la vista dividiéndola en submódulos para garantizar que ningún archivo supere el límite de 500 líneas.
-  - **Omisión de Logs de Advertencia para Mensajes Estándar en Webhook ManyChat**:
-    - **API Backend ([manychat.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/manychat.py) [MODIFY])**:
-      - Se actualizó la verificación de logs en `receive_manychat_ad_lead` para ignorar advertencias cuando `id_option` o `id_option_send` valgan `'0'` o `'0.0'` (indicadores estándar de mensajes enviados o respuestas), evitando generar falsos positivos en el log del servidor.
+  - **Mejora del Sistema de Seguimientos y Simplificación en Espacio de Confirmación (Triaje - `/triage/deck?step=confirmar`)**:
+    - **Modelos y API Backend ([financial.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY], [financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
+      - Se agregaron las columnas `fecha_seguimiento` y `seguimiento_realizado` al modelo `FinancialAgenda` y su serialización en `to_dict()`.
+      - Se creó y ejecutó la migración correspondiente con Alembic (`686f8945d822_add_follow_up_fields_to_financial_agenda.py`).
+      - Se habilitó la actualización de ambos campos en la ruta `PUT /public/financial-agendas/<agenda_id>`.
+    - **Interfaz Frontend ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY], [TriageFollowUpModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageFollowUpModal.jsx) [NEW], [TriageLeadCard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageLeadCard.jsx) [MODIFY], [TriageRightPanel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageRightPanel.jsx) [MODIFY])**:
+      - Se implementó un modal interactivo (`TriageFollowUpModal`) que se despliega automáticamente al marcar un estado clave (Contactado, Confirmado, Cancelada o Reagendada) consultando si desea programar una fecha de seguimiento.
+      - Las agendas con fecha de seguimiento programada para la fecha filtrada aparecen dinámicamente en la sección **SEGUIMIENTOS POR HACER** hasta que se haga clic en el botón `Marcar Realizado`.
+      - Se removió por completo el bloque de "Acciones Rápidas" del panel lateral derecho para simplificar la interfaz.
+
 
 
 
