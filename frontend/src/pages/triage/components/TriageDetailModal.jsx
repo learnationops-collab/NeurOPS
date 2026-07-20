@@ -183,29 +183,6 @@ const TriageDetailModal = ({
                                     </div>
                                 ) : (
                                     <>
-                                        {/* Comentario / Observación de Triaje */}
-                                        <div className="space-y-1.5">
-                                            <div className="flex justify-between items-center">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Observación / Nota interna de Triaje</label>
-                                                {triageNote && triageNote.trim() && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={onSendNoteOnly}
-                                                        className="px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer border-none shadow-md shadow-violet-600/20"
-                                                    >
-                                                        <Send size={10} /> Enviar al Chat
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <textarea
-                                                rows="2"
-                                                placeholder="Escribe una observación que se guardará en el Chat de Comunicación..."
-                                                value={triageNote}
-                                                onChange={(e) => setTriageNote(e.target.value)}
-                                                className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/40 placeholder-slate-700 resize-none"
-                                            />
-                                        </div>
-
                                         {/* Botonera de acciones rápidas */}
                                         <div className="flex flex-wrap gap-2 pt-2">
                                             <button
