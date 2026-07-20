@@ -627,20 +627,20 @@
       - Se posicionó el Chat de Comunicación en vivo (`CommentsSection`) como panel principal al lado de las Respuestas del Formulario / Encuesta.
       - Se refactorizó la vista dividiéndola en submódulos para garantizar que ningún archivo supere el límite de 500 líneas.
   - **Mejora del Sistema de Seguimientos y Simplificación en Espacio de Confirmación (Triaje - `/triage/deck?step=confirmar`)**:
-    - **Modelos y API Backend ([financial.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY], [financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY])**:
+    - **Modelos y API Backend ([financial.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/financial.py) [MODIFY], [financial_agendas.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/financial_agendas.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY])**:
       - Se agregaron las columnas `fecha_seguimiento` y `seguimiento_realizado` al modelo `FinancialAgenda` y su serialización en `to_dict()`.
       - Se creó y ejecutó la migración correspondiente con Alembic (`686f8945d822_add_follow_up_fields_to_financial_agenda.py`).
+      - Se unificó la ruta `GET /api/closer/leads/<id>/comments` para consultar e incluir tanto los comentarios recientes (`ClientComment`), los comentarios genéricos (`Comment`), como las observaciones y notas históricas registradas previamente en la ficha del lead (`Client.observaciones` y `Client.notes`).
       - Se habilitó la actualización de ambos campos en la ruta `PUT /public/financial-agendas/<agenda_id>`.
       - Se corrigió la consulta en `GET /public/financial-agendas` para incluir en los resultados del rango de fechas tanto la fecha de la cita (`date`) como la fecha de seguimiento programada (`fecha_seguimiento`), importando adecuadamente `and_` de `sqlalchemy` para evitar excepciones de servidor (`NameError`).
 
-
     - **Interfaz Frontend ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY], [TriageDetailModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageDetailModal.jsx) [MODIFY], [TriageFollowUpModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageFollowUpModal.jsx) [MODIFY], [TriageKpiCards.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageKpiCards.jsx) [MODIFY], [TriageRightPanel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageRightPanel.jsx) [MODIFY])**:
-      - Se vinculó el campo de observaciones de Triaje directamente con el endpoint del Chat de Comunicación (`POST /api/closer/leads/<client_id>/comments`), publicando las observaciones como notas (`ClientComment`) para que sean inmediatamente legibles en la sección "Notas & Comentarios" por el Call Confirmer, Setter, Closer y Admin.
-      - Se añadió el botón `Enviar al Chat` en la Ficha Detallada del Lead (`TriageDetailModal`), permitiendo publicar observaciones al chat de forma independiente o al cambiar el estado del prospecto.
+      - Se removió por completo el textarea de "Observación / Nota interna de Triaje" en `TriageDetailModal.jsx` para concentrar toda la comunicación y toma de notas exclusivamente en el Chat de Comunicación (`CommentsSection`).
       - Se estableció un criterio estricto para la sección **SEGUIMIENTOS POR HACER**: sólo se muestran agendas que poseen una `fecha_seguimiento` explícitamente configurada que coincida con el día seleccionado y cuyo `seguimiento_realizado` sea falso.
       - Al hacer clic en `Marcar Realizado`, el sistema marca el seguimiento actual como completado e inmediatamente despliega el modal `TriageFollowUpModal` consultando al Call Confirmer si desea agendar un **próximo seguimiento futuro** para el mismo prospecto.
       - Se elevó la capa visual (`z-index`) de `TriageFollowUpModal` a `z-[200]` para garantizar que se superponga por encima de la Ficha Detallada del Lead (`TriageDetailModal` a `z-[100]`).
       - Se eliminó por completo la sección y tarjeta KPI de "Mensajes por contestar", dejando únicamente las 3 categorías activas: "Citas por confirmar", "Seguimientos por hacer" y "Reagendar / Actualizar".
+
 
 
 
