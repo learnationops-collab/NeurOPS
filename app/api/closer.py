@@ -838,27 +838,42 @@ def get_lead_comments(id):
         combined = []
         seen_texts = set()
 
-        # 1. Observaciones históricas registradas en la ficha del lead
-        if client and client.observaciones and client.observaciones.strip():
-            txt = f"[Observación Call Confirmer Histórica]: {client.observaciones.strip()}"
-            combined.append({
-                "id": f"obs_{client.id}",
-                "text": txt,
-                "author": "Call Confirmer",
-                "created_at": _format_date(client.created_at)
-            })
-            seen_texts.add(txt.lower())
-
-        if client and client.notes and client.notes.strip():
-            txt = f"[Nota del Lead]: {client.notes.strip()}"
-            if txt.lower() not in seen_texts:
+        # 1. Observaciones, dolores y objeciones históricas registradas en la ficha del lead
+        if client:
+            obs_val = getattr(client, 'observaciones', None)
+            if obs_val and str(obs_val).strip():
+                txt = f"[Observación Call Confirmer Histórica]: {str(obs_val).strip()}"
                 combined.append({
-                    "id": f"note_{client.id}",
+                    "id": f"obs_{client.id}",
                     "text": txt,
-                    "author": "Sistema",
+                    "author": "Call Confirmer",
                     "created_at": _format_date(client.created_at)
                 })
                 seen_texts.add(txt.lower())
+
+            dol_val = getattr(client, 'dolores', None)
+            if dol_val and str(dol_val).strip():
+                txt = f"[Dolores Registrados]: {str(dol_val).strip()}"
+                if txt.lower() not in seen_texts:
+                    combined.append({
+                        "id": f"dol_{client.id}",
+                        "text": txt,
+                        "author": "Sistema",
+                        "created_at": _format_date(client.created_at)
+                    })
+                    seen_texts.add(txt.lower())
+
+            obj_val = getattr(client, 'objeciones', None)
+            if obj_val and str(obj_val).strip():
+                txt = f"[Objeciones Registradas]: {str(obj_val).strip()}"
+                if txt.lower() not in seen_texts:
+                    combined.append({
+                        "id": f"obj_{client.id}",
+                        "text": txt,
+                        "author": "Sistema",
+                        "created_at": _format_date(client.created_at)
+                    })
+                    seen_texts.add(txt.lower())
 
         # 2. Comentarios de la tabla genérica Comment
         for c in old_comments:
