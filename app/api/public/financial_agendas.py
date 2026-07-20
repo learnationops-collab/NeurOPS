@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app.models import db, FinancialAgenda, User, Client
 from datetime import datetime
 from . import bp
-from sqlalchemy import or_, func
+from sqlalchemy import or_, and_, func
 
 def parse_date_robustly(val):
     if not val:
