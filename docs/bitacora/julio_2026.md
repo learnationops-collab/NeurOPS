@@ -634,11 +634,14 @@
       - Se corrigió la consulta en `GET /public/financial-agendas` para incluir en los resultados del rango de fechas tanto la fecha de la cita (`date`) como la fecha de seguimiento programada (`fecha_seguimiento`), importando adecuadamente `and_` de `sqlalchemy` para evitar excepciones de servidor (`NameError`).
 
 
-    - **Interfaz Frontend ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY], [TriageFollowUpModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageFollowUpModal.jsx) [MODIFY], [TriageKpiCards.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageKpiCards.jsx) [MODIFY], [TriageRightPanel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageRightPanel.jsx) [MODIFY])**:
+    - **Interfaz Frontend ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY], [TriageDetailModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageDetailModal.jsx) [MODIFY], [TriageFollowUpModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageFollowUpModal.jsx) [MODIFY], [TriageKpiCards.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageKpiCards.jsx) [MODIFY], [TriageRightPanel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageRightPanel.jsx) [MODIFY])**:
+      - Se vinculó el campo de observaciones de Triaje directamente con el endpoint del Chat de Comunicación (`POST /api/closer/leads/<client_id>/comments`), publicando las observaciones como notas (`ClientComment`) para que sean inmediatamente legibles en la sección "Notas & Comentarios" por el Call Confirmer, Setter, Closer y Admin.
+      - Se añadió el botón `Enviar al Chat` en la Ficha Detallada del Lead (`TriageDetailModal`), permitiendo publicar observaciones al chat de forma independiente o al cambiar el estado del prospecto.
       - Se estableció un criterio estricto para la sección **SEGUIMIENTOS POR HACER**: sólo se muestran agendas que poseen una `fecha_seguimiento` explícitamente configurada que coincida con el día seleccionado y cuyo `seguimiento_realizado` sea falso.
       - Al hacer clic en `Marcar Realizado`, el sistema marca el seguimiento actual como completado e inmediatamente despliega el modal `TriageFollowUpModal` consultando al Call Confirmer si desea agendar un **próximo seguimiento futuro** para el mismo prospecto.
       - Se elevó la capa visual (`z-index`) de `TriageFollowUpModal` a `z-[200]` para garantizar que se superponga por encima de la Ficha Detallada del Lead (`TriageDetailModal` a `z-[100]`).
       - Se eliminó por completo la sección y tarjeta KPI de "Mensajes por contestar", dejando únicamente las 3 categorías activas: "Citas por confirmar", "Seguimientos por hacer" y "Reagendar / Actualizar".
+
 
 
 
