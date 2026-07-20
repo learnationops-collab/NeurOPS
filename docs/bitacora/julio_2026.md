@@ -607,3 +607,14 @@
       - Se redefinió la función [handleExportCSV](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/public/PublicFinancialSalesPage.jsx) para agrupar los pagos por cliente utilizando el algoritmo Union-Find (en base a Instagram y correo electrónico).
       - Muestra el consolidado de pagos brutos por cliente en el periodo actual, manteniendo las mismas columnas financieras que el reporte de Clientes Nuevos (Seña, Completo, Parcial, Cuotas, Renovaciones, Upsells, Programa final, Total pagado, Total a pagar y Deuda), pero incluyendo a todos los clientes que pagaron, sin filtros restrictivos de ingreso.
       - Se mantiene el botón de acción "Exportar CSV" en el panel de herramientas superior.
+
+- **20 de Julio de 2026**:
+  - **Rediseño y Modulación del Espacio de Trabajo de Confirmadores (Triaje - `/triage/deck?step=confirmar`)**:
+    - **Interfaz Frontend ([TriageWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/TriageWorkflowPage.jsx) [MODIFY], [TriageKpiCards.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageKpiCards.jsx) [NEW], [TriageLeadCard.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageLeadCard.jsx) [NEW], [TriageRightPanel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageRightPanel.jsx) [NEW], [TriageDetailModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/triage/components/TriageDetailModal.jsx) [NEW])**:
+      - Se rediseñó por completo el espacio de confirmación inspirándose en el panel de referencia.
+      - Se incorporó la navegación por pestañas de nivel superior ("Pendientes" vs "Completadas").
+      - Se crearon 4 tarjetas KPI dinámicas ("Citas por confirmar", "Mensajes por contestar", "Seguimientos por hacer", "Reagendar / Actualizar") con filtrado interactivo.
+      - Se estructuraron los subgrupos visuales de tareas pendientes con insignias de hora, tags de taller/programa, códigos de fuente, setter asignado, tiempo límite de atención y botones de acción rápida directos (`Confirmar`, `Responder`, `Hacer seguimiento`).
+      - Se implementó el panel lateral derecho con gráfico de tipo Donut SVG para el resumen de pendientes y la botonera de acciones rápidas masivas.
+      - Se moduló el código en componentes atómicos respetando el límite estricto de 500 líneas por archivo.
+
