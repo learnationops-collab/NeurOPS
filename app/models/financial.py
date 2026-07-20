@@ -60,6 +60,8 @@ class FinancialAgenda(db.Model):
     instagram = db.Column(db.String(255), nullable=True)
     estado = db.Column(db.String(255), nullable=True, default="Pendiente", server_default="Pendiente")
     encargado_triage = db.Column(db.String(255), nullable=True)
+    fecha_seguimiento = db.Column(db.String(255), nullable=True)
+    seguimiento_realizado = db.Column(db.Boolean, default=False, server_default='0')
     # Metadatos
     raw_data = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -174,6 +176,8 @@ class FinancialAgenda(db.Model):
             "estado": self.estado or "Pendiente",
             "closer_result": display_estado,
             "encargado_triage": self.encargado_triage,
+            "fecha_seguimiento": self.fecha_seguimiento,
+            "seguimiento_realizado": bool(self.seguimiento_realizado),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "date": self.date.isoformat() if self.date else None,
             "sales_count": sales_count,

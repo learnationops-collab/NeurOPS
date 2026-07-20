@@ -565,6 +565,10 @@ def update_financial_agenda(agenda_id):
             
         if 'encargado_triage' in data:
             agenda.encargado_triage = data['encargado_triage']
+        if 'fecha_seguimiento' in data:
+            agenda.fecha_seguimiento = data['fecha_seguimiento']
+        if 'seguimiento_realizado' in data:
+            agenda.seguimiento_realizado = bool(data['seguimiento_realizado'])
         if 'date' in data:
             agenda.date = parse_date_robustly(data['date'])
         if 'created_at' in data and data['created_at']:
