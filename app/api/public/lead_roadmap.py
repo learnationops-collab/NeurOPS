@@ -36,488 +36,516 @@ def format_date_es(dt):
 
 @bp.route('/public/lead-roadmap', methods=['GET'])
 def get_lead_roadmap():
-    client_id = request.args.get('client_id', type=int)
-    instagram = request.args.get('instagram', type=str)
-    email = request.args.get('email', type=str)
-    phone = request.args.get('phone', type=str)
-    name = request.args.get('name', type=str)
+    try:
+        client_id = request.args.get('client_id', type=int)
+        instagram = request.args.get('instagram', type=str)
+        email = request.args.get('email', type=str)
+        phone = request.args.get('phone', type=str)
+        name = request.args.get('name', type=str)
 
-    client = None
-    manychat_lead = None
-    financial_agendas = []
-    financial_sales = []
-    appointments = []
-    comments = []
+        client = None
+        manychat_lead = None
+        financial_agendas = []
+        financial_sales = []
+        appointments = []
+        comments = []
+        survey_answers = []
 
-    # 1. Resolver el cliente por ID
-    if client_id:
-        client = Client.query.get(client_id)
+        # 1. Resolver el cliente por ID
+        if client_id:
+            client = Client.query.get(client_id)
 
-    # 2. Resolver por otros campos si no se encontró
-    ig_norm = normalize_ig(instagram)
-    if is_generic_val(ig_norm):
-        ig_norm = None
-    
-    clean_email = email.strip().lower() if email and not is_generic_val(email) else None
-    clean_phone = phone.strip() if phone and not is_generic_val(phone) else None
-    clean_name = name.strip() if name and name.strip() else None
-    
-    if not client:
-        if ig_norm:
-            client = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
-        if not client and clean_email:
-            client = Client.query.filter(func.lower(Client.email) == clean_email).first()
-        if not client and clean_phone:
-            client = Client.query.filter(Client.phone.like(f"%{clean_phone}%")).first()
-        # Búsqueda por nombre (parcial, case-insensitive) como último recurso
-        if not client and clean_name:
-            client = Client.query.filter(
-                func.lower(Client.full_name).like(f"%{clean_name.lower()}%")
-            ).first()
-
-    # Si se encontró un Client, normalizamos sus búsquedas para jalar todo lo relacionado
-    resolved_ig = normalize_ig(client.instagram) if client else ig_norm
-    if is_generic_val(resolved_ig):
-        resolved_ig = None
+        # 2. Resolver por otros campos si no se encontró
+        ig_norm = normalize_ig(instagram)
+        if is_generic_val(ig_norm):
+            ig_norm = None
         
-    resolved_email = client.email.strip().lower() if client and client.email and not is_generic_val(client.email) else clean_email
-    resolved_phone = client.phone.strip() if client and client.phone and not is_generic_val(client.phone) else clean_phone
-
-    # 3. Buscar ManychatLead
-    if resolved_ig:
-        manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_ig).first()
-    if not manychat_lead and resolved_email:
-        manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_email).first() # Fallback a veces guardado como email
-
-    # 4. Buscar FinancialAgendas
-    agenda_filters = []
-    if resolved_ig:
-        agenda_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == resolved_ig)
-    if resolved_email:
-        agenda_filters.append(func.lower(FinancialAgenda.mail) == resolved_email)
-    if resolved_phone:
-        agenda_filters.append(FinancialAgenda.whatsapp.like(f"%{resolved_phone}%"))
-    
-    if agenda_filters:
-        financial_agendas = FinancialAgenda.query.filter(or_(*agenda_filters)).order_by(FinancialAgenda.date.desc()).all()
-
-    # 5. Buscar FinancialSales
-    sale_filters = []
-    if resolved_ig:
-        sale_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == resolved_ig)
-    if resolved_email:
-        sale_filters.append(func.lower(FinancialSale.mail_cliente) == resolved_email)
-    if resolved_phone:
-        sale_filters.append(FinancialSale.telefono.like(f"%{resolved_phone}%"))
+        clean_email = email.strip().lower() if email and not is_generic_val(email) else None
+        clean_phone = phone.strip() if phone and not is_generic_val(phone) else None
+        clean_name = name.strip() if name and name.strip() else None
         
-    if sale_filters:
-        financial_sales = FinancialSale.query.filter(or_(*sale_filters)).order_by(FinancialSale.date.desc()).all()
+        if not client:
+            if ig_norm:
+                client = Client.query.filter(func.lower(Client.instagram) == ig_norm).first()
+            if not client and clean_email:
+                client = Client.query.filter(func.lower(Client.email) == clean_email).first()
+            if not client and clean_phone:
+                client = Client.query.filter(Client.phone.like(f"%{clean_phone}%")).first()
+            # Búsqueda por nombre (parcial, case-insensitive) como último recurso
+            if not client and clean_name:
+                client = Client.query.filter(
+                    func.lower(Client.full_name).like(f"%{clean_name.lower()}%")
+                ).first()
 
-    # 6. Buscar Appointments locales
-    if client:
-        appointments = client.appointments.order_by(Appointment.start_time.desc()).all()
-        comments = ClientComment.query.filter_by(client_id=client.id).order_by(ClientComment.created_at.desc()).all()
+        # Si se encontró un Client, normalizamos sus búsquedas para jalar todo lo relacionado
+        resolved_ig = normalize_ig(client.instagram) if client else ig_norm
+        if is_generic_val(resolved_ig):
+            resolved_ig = None
+            
+        resolved_email = client.email.strip().lower() if client and client.email and not is_generic_val(client.email) else clean_email
+        resolved_phone = client.phone.strip() if client and client.phone and not is_generic_val(client.phone) else clean_phone
 
-    # Si no hay absolutamente nada, retornamos un 404
-    if not client and not manychat_lead and not financial_agendas and not financial_sales:
-        return jsonify({"error": "Lead no encontrado en el sistema"}), 404
+        # 3. Buscar ManychatLead
+        if resolved_ig:
+            manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_ig).first()
+        if not manychat_lead and resolved_email:
+            manychat_lead = ManychatLead.query.filter(func.lower(ManychatLead.ig) == resolved_email).first() # Fallback a veces guardado como email
 
-    # Determinar la fecha de creación del lead
-    created_at_val = None
-    if client and client.created_at:
-        created_at_val = client.created_at.isoformat()
-    elif manychat_lead and manychat_lead.created_at:
-        created_at_val = manychat_lead.created_at.isoformat()
-    elif financial_agendas:
-        # Usar el registro (creación) de la agenda más antigua (el final de la lista ordenada por date desc)
-        created_at_val = financial_agendas[-1].registro or (financial_agendas[-1].date.isoformat() if financial_agendas[-1].date else None)
-    elif financial_sales:
-        created_at_val = financial_sales[-1].marca_temporal or (financial_sales[-1].date.isoformat() if financial_sales[-1].date else None)
+        # 4. Buscar FinancialAgendas
+        agenda_filters = []
+        if resolved_ig:
+            agenda_filters.append(func.lower(func.replace(FinancialAgenda.instagram, '@', '')) == resolved_ig)
+        if resolved_email:
+            agenda_filters.append(func.lower(FinancialAgenda.mail) == resolved_email)
+        if resolved_phone:
+            agenda_filters.append(FinancialAgenda.whatsapp.like(f"%{resolved_phone}%"))
         
-    if not created_at_val:
-        created_at_val = datetime.utcnow().isoformat()
+        if agenda_filters:
+            financial_agendas = FinancialAgenda.query.filter(or_(*agenda_filters)).order_by(FinancialAgenda.date.desc()).all()
 
-    # Consolidar datos de perfil del lead
-    lead_profile = {
-        "id": client.id if client else None,
-        "full_name": client.full_name if client else (manychat_lead.name if manychat_lead else (financial_sales[0].nombre_cliente if financial_sales else (financial_agendas[0].lead if financial_agendas else "Desconocido"))),
-        "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (financial_sales[0].mail_cliente if financial_sales else (financial_agendas[0].mail if financial_agendas else "Sin Email"))),
-        "phone": client.phone if client else (financial_sales[0].telefono if financial_sales else (financial_agendas[0].whatsapp if financial_agendas else "Sin Teléfono")),
-        "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (financial_sales[0].instagram if financial_sales else (financial_agendas[0].instagram if financial_agendas else "Sin Instagram"))),
-        "status": "Entrante",
-        "created_at": created_at_val,
-        "objeciones": client.objeciones if client else "",
-        "observaciones": client.observaciones if client else "",
-        "dolores": client.dolores if client else "",
-        "form_data": client.form_data if client else None
-    }
+        # 5. Buscar FinancialSales
+        sale_filters = []
+        if resolved_ig:
+            sale_filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == resolved_ig)
+        if resolved_email:
+            sale_filters.append(func.lower(FinancialSale.mail_cliente) == resolved_email)
+        if resolved_phone:
+            sale_filters.append(FinancialSale.telefono.like(f"%{resolved_phone}%"))
+            
+        if sale_filters:
+            financial_sales = FinancialSale.query.filter(or_(*sale_filters)).order_by(FinancialSale.date.desc()).all()
 
-    # Resolver el estado del lead
-    has_completed_sale = any(s.estado.lower() == 'completada' or not s.estado for s in financial_sales)
-    if has_completed_sale:
-        lead_profile["status"] = "Ganado"
-    elif financial_agendas or appointments:
-        lead_profile["status"] = "En proceso"
+        # 6. Buscar Appointments locales y respuestas de encuestas
+        if client:
+            appointments = client.appointments.order_by(Appointment.start_time.desc()).all()
+            comments = ClientComment.query.filter_by(client_id=client.id).order_by(ClientComment.created_at.desc()).all()
 
-    # Construir las 6 etapas del Roadmap
-    stages = []
+            answers_query = db.session.query(SurveyAnswer, SurveyQuestion).join(SurveyQuestion).filter(SurveyAnswer.client_id == client.id).all()
+            for answer, question in answers_query:
+                survey_answers.append({
+                    "question": question.text,
+                    "answer": answer.answer
+                })
 
-    # Etapa 1: Llegó
-    arrived_stage = {
-        "name": "1. Llegó",
-        "completed": True,
-        "date": lead_profile["created_at"],
-        "details": {
-            "origen": manychat_lead.manychat_id if manychat_lead else "Registro Web/Directo",
-            "canal": "Instagram Ads" if manychat_lead else "Orgánico / Búsqueda",
-            "campaña": "N/A",
-            "inversion": 0.0
+        # Si no hay absolutamente nada, retornamos un 404
+        if not client and not manychat_lead and not financial_agendas and not financial_sales:
+            return jsonify({"error": "Lead no encontrado en el sistema"}), 404
+
+        # Determinar la fecha de creación del lead
+        created_at_val = None
+        if client and client.created_at:
+            created_at_val = client.created_at.isoformat()
+        elif manychat_lead and manychat_lead.created_at:
+            created_at_val = manychat_lead.created_at.isoformat()
+        elif financial_agendas:
+            # Usar el registro (creación) de la agenda más antigua (el final de la lista ordenada por date desc)
+            created_at_val = financial_agendas[-1].registro or (financial_agendas[-1].date.isoformat() if financial_agendas[-1].date else None)
+        elif financial_sales:
+            created_at_val = financial_sales[-1].marca_temporal or (financial_sales[-1].date.isoformat() if financial_sales[-1].date else None)
+            
+        if not created_at_val:
+            created_at_val = datetime.utcnow().isoformat()
+
+        # Consolidar datos de perfil del lead
+        lead_profile = {
+            "id": client.id if client else None,
+            "full_name": client.full_name if client else (manychat_lead.name if manychat_lead else (financial_sales[0].nombre_cliente if financial_sales else (financial_agendas[0].lead if financial_agendas else "Desconocido"))),
+            "email": client.email if client else (manychat_lead.ig if manychat_lead and '@' in manychat_lead.ig else (financial_sales[0].mail_cliente if financial_sales else (financial_agendas[0].mail if financial_agendas else "Sin Email"))),
+            "phone": client.phone if client else (financial_sales[0].telefono if financial_sales else (financial_agendas[0].whatsapp if financial_agendas else "Sin Teléfono")),
+            "instagram": client.instagram if client else (manychat_lead.ig if manychat_lead else (financial_sales[0].instagram if financial_sales else (financial_agendas[0].instagram if financial_agendas else "Sin Instagram"))),
+            "status": "Entrante",
+            "created_at": created_at_val,
+            "objeciones": client.objeciones if client else "",
+            "observaciones": client.observaciones if client else "",
+            "dolores": client.dolores if client else "",
+            "form_data": client.form_data if client else None
         }
-    }
-    # Intentar obtener más detalles del primer contacto o ManyChat
-    if manychat_lead:
-        # Buscar la primera respuesta para ver origen
-        first_la = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).order_by(LeadAnswer.created_at.asc()).first()
-        if first_la:
-            arrived_stage["details"]["campaña"] = first_la.keyword or "Instagram Bot"
-            if first_la.opening:
-                arrived_stage["details"]["origen"] = f"Keyword: {first_la.keyword} ({first_la.opening})"
 
-    stages.append(arrived_stage)
+        # Resolver el estado del lead
+        has_completed_sale = any((s.estado or '').lower() == 'completada' or not s.estado for s in financial_sales)
+        if has_completed_sale:
+            lead_profile["status"] = "Ganado"
+        elif financial_agendas or appointments:
+            lead_profile["status"] = "En proceso"
 
-    # Etapa 2: Contactó
-    contact_date = lead_profile["created_at"]
-    contact_completed = False
-    contact_msg = "Mensaje del bot gatillado"
-    if manychat_lead:
-        contact_completed = True
-        first_la = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).order_by(LeadAnswer.created_at.asc()).first()
-        if first_la:
-            contact_date = first_la.created_at.isoformat()
-            contact_msg = f"Keyword: {first_la.keyword} - Opción: {first_la.id_option_send or 'N/A'}"
-    elif financial_agendas or appointments:
-        contact_completed = True
-        first_meet_date = financial_agendas[-1].created_at if financial_agendas else appointments[-1].created_at
-        contact_date = first_meet_date.isoformat() if first_meet_date else contact_date
-        contact_msg = "Agendado directamente"
+        # Construir las 6 etapas del Roadmap
+        stages = []
 
-    stages.append({
-        "name": "2. Contactó",
-        "completed": contact_completed,
-        "date": contact_date,
-        "details": {
-            "accion": "Inició conversación" if manychat_lead else "Registro Directo",
-            "medio": "Instagram" if manychat_lead else "Web",
-            "mensaje": contact_msg
+        # Etapa 1: Llegó
+        arrived_stage = {
+            "name": "1. Llegó",
+            "completed": True,
+            "date": lead_profile["created_at"],
+            "details": {
+                "origen": manychat_lead.manychat_id if manychat_lead else "Registro Web/Directo",
+                "canal": "Instagram Ads" if manychat_lead else "Orgánico / Búsqueda",
+                "campaña": "N/A",
+                "inversion": 0.0
+            }
         }
-    })
+        # Intentar obtener más detalles del primer contacto o ManyChat
+        if manychat_lead:
+            # Buscar la primera respuesta para ver origen
+            first_la = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).order_by(LeadAnswer.created_at.asc()).first()
+            if first_la:
+                arrived_stage["details"]["campaña"] = first_la.keyword or "Instagram Bot"
+                if first_la.opening:
+                    arrived_stage["details"]["origen"] = f"Keyword: {first_la.keyword} ({first_la.opening})"
 
-    # Etapa 3: Dolor
-    pain_completed = False
-    pain_date = None
-    pain_list = []
-    pain_notes = "Sin notas de dolor registradas"
+        stages.append(arrived_stage)
 
-    if client:
-        # Agregar dolores manuales registrados
-        if client.dolores:
-            pain_completed = True
-            for d in client.dolores.split(','):
-                d_clean = d.strip()
-                if d_clean:
-                    pain_list.append(d_clean)
-            pain_date = client.created_at.isoformat() if client.created_at else datetime.utcnow().isoformat()
+        # Etapa 2: Contactó
+        contact_date = lead_profile["created_at"]
+        contact_completed = False
+        contact_msg = "Mensaje del bot gatillado"
+        if manychat_lead:
+            contact_completed = True
+            first_la = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).order_by(LeadAnswer.created_at.asc()).first()
+            if first_la:
+                contact_date = first_la.created_at.isoformat()
+                contact_msg = f"Keyword: {first_la.keyword} - Opción: {first_la.id_option_send or 'N/A'}"
+        elif financial_agendas or appointments:
+            contact_completed = True
+            first_meet_date = financial_agendas[-1].created_at if financial_agendas else appointments[-1].created_at
+            contact_date = first_meet_date.isoformat() if first_meet_date else contact_date
+            contact_msg = "Agendado directamente"
 
-        # Buscar en survey answers
-        survey_answers = SurveyAnswer.query.filter_by(client_id=client.id).all()
-        for sa in survey_answers:
-            q_text = sa.question.text.lower() if sa.question else ""
-            if "dolor" in q_text or "problema" in q_text or "dificultad" in q_text or "obstáculo" in q_text:
-                pain_completed = True
-                if sa.answer not in pain_list:
-                    pain_list.append(sa.answer)
-                if not pain_date:
-                    pain_date = sa.appointment.start_time.isoformat() if sa.appointment else datetime.utcnow().isoformat()
-
-    # Si no se encontraron dolores en las encuestas, buscar en ManyChat
-    if not pain_completed and manychat_lead:
-        # Buscar respuestas con categoría dolor en conversational_messages
-        pain_answers = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).all()
-        for pa in pain_answers:
-            if pa.keyword and ("dolor" in pa.keyword.lower() or "pain" in pa.keyword.lower()):
-                pain_completed = True
-                pain_list.append(f"{pa.keyword}: {pa.id_option_send or 'Seleccionado'}")
-                pain_date = pa.created_at.isoformat()
-
-    stages.append({
-        "name": "3. Dolor",
-        "completed": pain_completed,
-        "date": pain_date or lead_profile["created_at"],
-        "details": {
-            "dolores": pain_list if pain_list else ["Por identificar"],
-            "notas": pain_notes if not pain_list else "Dolores recopilados de formularios"
-        }
-    })
-
-    # Etapa 4: Agenda
-    agenda_completed = False
-    agenda_date = None
-    agenda_type = "Llamada de cierre"
-    fecha_agendada_meet = None
-    
-    if appointments:
-        agenda_completed = True
-        latest_appt = appointments[0]
-        agenda_date = latest_appt.created_at.isoformat() if latest_appt.created_at else None
-        agenda_type = latest_appt.origin or "Manual Closer"
-        fecha_agendada_meet = latest_appt.start_time.isoformat()
-    elif financial_agendas:
-        agenda_completed = True
-        latest_fa = financial_agendas[0]
-        agenda_date = latest_fa.registro or (latest_fa.created_at.isoformat() if latest_fa.created_at else None)
-        agenda_type = latest_fa.nombre or "Calendly / n8n"
-        fecha_agendada_meet = latest_fa.date.isoformat() if latest_fa.date else latest_fa.fecha_meet
-
-    stages.append({
-        "name": "4. Agenda",
-        "completed": agenda_completed,
-        "date": agenda_date or lead_profile["created_at"],
-        "details": {
-            "tipo": agenda_type,
-            "fecha_agendada": fecha_agendada_meet,
-            "recordatorio": "Enviado" if agenda_completed else "No programado"
-        }
-    })
-
-    # Etapa 5: Llamada
-    call_completed = False
-    call_date = None
-    call_duration = "45 min"
-    call_result = "Pendiente"
-    call_notes = "Sin notas"
-
-    if appointments:
-        # Cita local
-        latest_appt = appointments[0]
-        # Si ya ocurrió o tiene resultado
-        if latest_appt.result or latest_appt.start_time < datetime.utcnow():
-            call_completed = True
-            call_date = latest_appt.start_time.isoformat()
-            call_result = latest_appt.result or "Terminada"
-            call_notes = latest_appt.closer_notes or latest_appt.setter_notes or "Llamada realizada"
-    elif financial_agendas:
-        latest_fa = financial_agendas[0]
-        if latest_fa.estado and latest_fa.estado != "Pendiente":
-            call_completed = True
-            call_date = latest_fa.date.isoformat() if latest_fa.date else None
-            call_result = latest_fa.estado
-            call_notes = f"Agenda de sheets con estado: {latest_fa.estado}"
-
-    stages.append({
-        "name": "5. Llamada",
-        "completed": call_completed,
-        "date": call_date or lead_profile["created_at"],
-        "details": {
-            "duracion": call_duration,
-            "resultado": call_result,
-            "notes": call_notes
-        }
-    })
-
-    # Etapa 6: Venta
-    sale_completed = False
-    sale_date = None
-    sale_product = "N/A"
-    sale_monto = 0.0
-    sale_method = "N/A"
-    sale_next_pay = "N/A"
-
-    if financial_sales:
-        # Obtener venta completada o la más reciente
-        comp_sales = [s for s in financial_sales if s.estado.lower() == 'completada' or not s.estado]
-        latest_sale = comp_sales[0] if comp_sales else financial_sales[0]
-        
-        sale_completed = latest_sale.estado.lower() == 'completada' or not latest_sale.estado
-        sale_date = latest_sale.date.isoformat() if latest_sale.date else None
-        sale_product = latest_sale.tipo_pago or "Desconocido"
-        sale_monto = latest_sale.monto or 0.0
-        sale_method = latest_sale.metodo_pago or "No especificado"
-        if latest_sale.segundo_pago:
-            sale_next_pay = latest_sale.segundo_pago
-
-    stages.append({
-        "name": "6. Venta",
-        "completed": sale_completed,
-        "date": sale_date or lead_profile["created_at"],
-        "details": {
-            "producto": sale_product,
-            "monto": sale_monto,
-            "metodo_pago": sale_method,
-            "proximo_pago": sale_next_pay
-        }
-    })
-
-    # Construir Historial de Actividad Cronológica
-    activity = []
-
-    # 1. Llegada
-    activity.append({
-        "date": lead_profile["created_at"],
-        "event": "Llegó al embudo",
-        "detail": f"Prospecto ingresó al sistema. Origen resuelto: {arrived_stage['details']['origen']}",
-        "origin": "ManyChat" if manychat_lead else "Sistema"
-    })
-
-    # 2. Respuestas de bot
-    if manychat_lead:
-        answers = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).all()
-        for la in answers:
-            activity.append({
-                "date": la.created_at.isoformat() if la.created_at else lead_profile["created_at"],
-                "event": "Interacción Bot",
-                "detail": f"Keyword: {la.keyword} | Opción: {la.id_option_send or 'Seleccionada'} (Calificación: {la.qualification})",
-                "origin": "ManyChat"
-            })
-
-    # 3. Agendas
-    seen_agenda_dates = set()
-    for fa in financial_agendas:
-        fecha_formateada = ""
-        if fa.date:
-            fecha_formateada = format_date_es(fa.date)
-        elif fa.fecha_meet:
-            fecha_formateada = fa.fecha_meet.split('T')[0]
-        else:
-            fecha_formateada = "N/A"
-
-        # Fusionar duplicados para la misma fecha
-        if fecha_formateada in seen_agenda_dates and fecha_formateada != "N/A":
-            continue
-        seen_agenda_dates.add(fecha_formateada)
-
-        activity.append({
-            "id": fa.id,
-            "event_type": "agenda",
-            "date": fa.registro if fa.registro else (fa.date.isoformat() if fa.date else (fa.created_at.isoformat() if fa.created_at else lead_profile["created_at"])),
-            "event": "Agenda Creada",
-            "detail": f"Cita programada para {fecha_formateada} con closer: {fa.closer or 'Sin asignar'} (Fuente: {fa.nombre})",
-            "origin": "Calendly / Webhook"
+        stages.append({
+            "name": "2. Contactó",
+            "completed": contact_completed,
+            "date": contact_date,
+            "details": {
+                "accion": "Inició conversación" if manychat_lead else "Registro Directo",
+                "medio": "Instagram" if manychat_lead else "Web",
+                "mensaje": contact_msg
+            }
         })
 
-    # 4. Appointments locales (filtrando el evento de agendamiento local directo)
-    for appt in appointments:
-        # Si ocurrió, agregar la llamada realizada
-        if appt.result or appt.start_time < datetime.utcnow():
+        # Etapa 3: Dolor
+        pain_completed = False
+        pain_date = None
+        pain_list = []
+        pain_notes = "Sin notas de dolor registradas"
+
+        if client:
+            # Agregar dolores manuales registrados
+            if client.dolores:
+                pain_completed = True
+                for d in client.dolores.split(','):
+                    d_clean = d.strip()
+                    if d_clean:
+                        pain_list.append(d_clean)
+                pain_date = client.created_at.isoformat() if client.created_at else datetime.utcnow().isoformat()
+
+            # Buscar en survey answers
+            sa_list = SurveyAnswer.query.filter_by(client_id=client.id).all()
+            for sa in sa_list:
+                q_text = sa.question.text.lower() if sa.question else ""
+                if "dolor" in q_text or "problema" in q_text or "dificultad" in q_text or "obstáculo" in q_text:
+                    pain_completed = True
+                    if sa.answer not in pain_list:
+                        pain_list.append(sa.answer)
+                    if not pain_date:
+                        pain_date = sa.appointment.start_time.isoformat() if sa.appointment else datetime.utcnow().isoformat()
+
+        # Si no se encontraron dolores en las encuestas, buscar en ManyChat
+        if not pain_completed and manychat_lead:
+            # Buscar respuestas con categoría dolor en conversational_messages
+            pain_answers = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).all()
+            for pa in pain_answers:
+                if pa.keyword and ("dolor" in pa.keyword.lower() or "pain" in pa.keyword.lower()):
+                    pain_completed = True
+                    pain_list.append(f"{pa.keyword}: {pa.id_option_send or 'Seleccionado'}")
+                    pain_date = pa.created_at.isoformat()
+
+        stages.append({
+            "name": "3. Dolor",
+            "completed": pain_completed,
+            "date": pain_date or lead_profile["created_at"],
+            "details": {
+                "dolores": pain_list if pain_list else ["Por identificar"],
+                "notas": pain_notes if not pain_list else "Dolores recopilados de formularios"
+            }
+        })
+
+        # Etapa 4: Agenda
+        agenda_completed = False
+        agenda_date = None
+        agenda_type = "Llamada de cierre"
+        fecha_agendada_meet = None
+        
+        if appointments:
+            agenda_completed = True
+            latest_appt = appointments[0]
+            agenda_date = latest_appt.created_at.isoformat() if latest_appt.created_at else None
+            agenda_type = latest_appt.origin or "Manual Closer"
+            fecha_agendada_meet = latest_appt.start_time.isoformat()
+        elif financial_agendas:
+            agenda_completed = True
+            latest_fa = financial_agendas[0]
+            agenda_date = latest_fa.registro or (latest_fa.created_at.isoformat() if latest_fa.created_at else None)
+            agenda_type = latest_fa.nombre or "Calendly / n8n"
+            fecha_agendada_meet = latest_fa.date.isoformat() if latest_fa.date else latest_fa.fecha_meet
+
+        stages.append({
+            "name": "4. Agenda",
+            "completed": agenda_completed,
+            "date": agenda_date or lead_profile["created_at"],
+            "details": {
+                "tipo": agenda_type,
+                "fecha_agendada": fecha_agendada_meet,
+                "recordatorio": "Enviado" if agenda_completed else "No programado"
+            }
+        })
+
+        # Etapa 5: Llamada
+        call_completed = False
+        call_date = None
+        call_duration = "45 min"
+        call_result = "Pendiente"
+        call_notes = "Sin notas"
+
+        if appointments:
+            latest_appt = appointments[0]
+            if latest_appt.result or latest_appt.start_time < datetime.utcnow():
+                call_completed = True
+                call_date = latest_appt.start_time.isoformat()
+                call_result = latest_appt.result or "Terminada"
+                call_notes = latest_appt.closer_notes or latest_appt.setter_notes or "Llamada realizada"
+        elif financial_agendas:
+            latest_fa = financial_agendas[0]
+            if latest_fa.estado and latest_fa.estado != "Pendiente":
+                call_completed = True
+                call_date = latest_fa.date.isoformat() if latest_fa.date else None
+                call_result = latest_fa.estado
+                call_notes = f"Agenda de sheets con estado: {latest_fa.estado}"
+
+        stages.append({
+            "name": "5. Llamada",
+            "completed": call_completed,
+            "date": call_date or lead_profile["created_at"],
+            "details": {
+                "duracion": call_duration,
+                "resultado": call_result,
+                "notes": call_notes
+            }
+        })
+
+        # Etapa 6: Venta
+        sale_completed = False
+        sale_date = None
+        sale_product = "N/A"
+        sale_monto = 0.0
+        sale_method = "N/A"
+        sale_next_pay = "N/A"
+
+        if financial_sales:
+            comp_sales = [s for s in financial_sales if (s.estado or '').lower() == 'completada' or not s.estado]
+            latest_sale = comp_sales[0] if comp_sales else financial_sales[0]
+            
+            sale_completed = (latest_sale.estado or '').lower() == 'completada' or not latest_sale.estado
+            sale_date = latest_sale.date.isoformat() if latest_sale.date else None
+            sale_product = latest_sale.tipo_pago or "Desconocido"
+            sale_monto = latest_sale.monto or 0.0
+            sale_method = latest_sale.metodo_pago or "No especificado"
+            if latest_sale.segundo_pago:
+                sale_next_pay = latest_sale.segundo_pago
+
+        stages.append({
+            "name": "6. Venta",
+            "completed": sale_completed,
+            "date": sale_date or lead_profile["created_at"],
+            "details": {
+                "producto": sale_product,
+                "monto": sale_monto,
+                "metodo_pago": sale_method,
+                "proximo_pago": sale_next_pay
+            }
+        })
+
+        # Construir Historial de Actividad Cronológica
+        activity = []
+
+        # 1. Llegada
+        activity.append({
+            "date": lead_profile["created_at"],
+            "event": "Llegó al embudo",
+            "detail": f"Prospecto ingresó al sistema. Origen resuelto: {arrived_stage['details']['origen']}",
+            "origin": "ManyChat" if manychat_lead else "Sistema"
+        })
+
+        # 2. Respuestas de bot
+        if manychat_lead:
+            answers = LeadAnswer.query.filter_by(lead_id=manychat_lead.id).all()
+            for la in answers:
+                activity.append({
+                    "date": la.created_at.isoformat() if la.created_at else lead_profile["created_at"],
+                    "event": "Interacción Bot",
+                    "detail": f"Keyword: {la.keyword} | Opción: {la.id_option_send or 'Seleccionada'} (Calificación: {la.qualification})",
+                    "origin": "ManyChat"
+                })
+
+        # 3. Agendas
+        seen_agenda_dates = set()
+        for fa in financial_agendas:
+            fecha_formateada = ""
+            if fa.date:
+                fecha_formateada = format_date_es(fa.date)
+            elif fa.fecha_meet:
+                fecha_formateada = fa.fecha_meet.split('T')[0]
+            else:
+                fecha_formateada = "N/A"
+
+            if fecha_formateada in seen_agenda_dates and fecha_formateada != "N/A":
+                continue
+            seen_agenda_dates.add(fecha_formateada)
+
             activity.append({
-                "date": appt.start_time.isoformat(),
-                "event": "Llamada Realizada",
-                "detail": f"Resultado: {appt.result or 'Terminada'}. Notas: {appt.closer_notes or 'Sin notas'}",
+                "id": fa.id,
+                "event_type": "agenda",
+                "date": fa.registro if fa.registro else (fa.date.isoformat() if fa.date else (fa.created_at.isoformat() if fa.created_at else lead_profile["created_at"])),
+                "event": "Agenda Creada",
+                "detail": f"Cita programada para {fecha_formateada} con closer: {fa.closer or 'Sin asignar'} (Fuente: {fa.nombre})",
+                "origin": "Calendly / Webhook"
+            })
+
+        # 4. Appointments locales
+        for appt in appointments:
+            if appt.result or appt.start_time < datetime.utcnow():
+                activity.append({
+                    "date": appt.start_time.isoformat(),
+                    "event": "Llamada Realizada",
+                    "detail": f"Resultado: {appt.result or 'Terminada'}. Notas: {appt.closer_notes or 'Sin notas'}",
+                    "origin": "Closer"
+                })
+
+        # 5. Ventas financieras
+        seen_sale_dates = set()
+        for fs in financial_sales:
+            fecha_venta_str = fs.date.strftime('%Y-%m-%d') if fs.date else "N/A"
+            if fecha_venta_str in seen_sale_dates and fecha_venta_str != "N/A":
+                continue
+            seen_sale_dates.add(fecha_venta_str)
+
+            activity.append({
+                "id": fs.id,
+                "event_type": "sale",
+                "date": fs.date.isoformat() if fs.date else lead_profile["created_at"],
+                "event": "Venta Registrada",
+                "detail": f"Declarada venta de {fs.tipo_pago} por ${fs.monto} via {fs.metodo_pago} (Estado: {fs.estado or 'Completada'})",
                 "origin": "Closer"
             })
 
-    # 5. Ventas financieras
-    seen_sale_dates = set()
-    for fs in financial_sales:
-        fecha_venta_str = fs.date.strftime('%Y-%m-%d') if fs.date else "N/A"
-        
-        # Fusionar duplicados para la misma fecha
-        if fecha_venta_str in seen_sale_dates and fecha_venta_str != "N/A":
-            continue
-        seen_sale_dates.add(fecha_venta_str)
+        # 6. Comentarios / Notas Internas
+        for c in comments:
+            activity.append({
+                "date": c.created_at.isoformat(),
+                "event": f"Nota de {c.author_rel.username if c.author_rel else 'Desconocido'}",
+                "detail": c.text,
+                "origin": "Notas Internas"
+            })
 
-        activity.append({
-            "id": fs.id,
-            "event_type": "sale",
-            "date": fs.date.isoformat() if fs.date else lead_profile["created_at"],
-            "event": "Venta Registrada",
-            "detail": f"Declarada venta de {fs.tipo_pago} por ${fs.monto} via {fs.metodo_pago} (Estado: {fs.estado or 'Completada'})",
-            "origin": "Closer"
-        })
+        # 6b. Calificación manual
+        if client and (client.dolores or client.objeciones or client.observaciones):
+            detail_parts = []
+            if client.dolores:
+                detail_parts.append(f"Dolores: {client.dolores}")
+            if client.objeciones:
+                detail_parts.append(f"Objeciones: {client.objeciones}")
+            if client.observaciones:
+                detail_parts.append(f"Obs. Call Confirmer: {client.observaciones}")
+                
+            activity.append({
+                "date": client.created_at.isoformat() if client.created_at else lead_profile["created_at"],
+                "event": "Calificación Registrada",
+                "detail": " | ".join(detail_parts),
+                "origin": "Call Confirmer"
+            })
 
-    # 6. Comentarios / Notas Internas
-    for c in comments:
-        activity.append({
-            "date": c.created_at.isoformat(),
-            "event": f"Nota de {c.author_rel.username if c.author_rel else 'Desconocido'}",
-            "detail": c.text,
-            "origin": "Notas Internas"
-        })
+        # Ordenar por fecha descendentemente
+        activity.sort(key=lambda x: x["date"] or "", reverse=True)
 
-    # 6b. Calificación en Caliente manual
-    if client and (client.dolores or client.objeciones or client.observaciones):
-        detail_parts = []
-        if client.dolores:
-            detail_parts.append(f"Dolores: {client.dolores}")
-        if client.objeciones:
-            detail_parts.append(f"Objeciones: {client.objeciones}")
-        if client.observaciones:
-            detail_parts.append(f"Obs. Call Confirmer: {client.observaciones}")
-            
-        activity.append({
-            "date": client.created_at.isoformat() if client.created_at else lead_profile["created_at"],
-            "event": "Calificación Registrada",
-            "detail": " | ".join(detail_parts),
-            "origin": "Call Confirmer"
-        })
+        # Ventas resumen
+        sales_summary = None
+        if financial_sales:
+            latest_sale = financial_sales[0]
+            sales_summary = {
+                "monto": latest_sale.monto or 0.0,
+                "estado": latest_sale.estado or "Completada",
+                "producto": latest_sale.tipo_pago or "Desconocido",
+                "metodo_pago": latest_sale.metodo_pago or "No especificado",
+                "proximo_pago": latest_sale.segundo_pago or "Sin pagos pendientes",
+                "pagos_desglose": [
+                    {
+                        "id": s.id,
+                        "monto": s.monto,
+                        "fecha": s.date.isoformat() if s.date else None,
+                        "metodo": s.metodo_pago,
+                        "estado": s.estado or "Completada"
+                    } for s in financial_sales
+                ]
+            }
 
-    # Ordenar por fecha descendentemente
-    activity.sort(key=lambda x: x["date"] or "", reverse=True)
-
-    # Ventas resumen
-    sales_summary = None
-    if financial_sales:
-        latest_sale = financial_sales[0]
-        sales_summary = {
-            "monto": latest_sale.monto or 0.0,
-            "estado": latest_sale.estado or "Completada",
-            "producto": latest_sale.tipo_pago or "Desconocido",
-            "metodo_pago": latest_sale.metodo_pago or "No especificado",
-            "proximo_pago": latest_sale.segundo_pago or "Sin pagos pendientes",
-            "pagos_desglose": [
-                {
-                    "id": s.id,
-                    "monto": s.monto,
-                    "fecha": s.date.isoformat() if s.date else None,
-                    "metodo": s.metodo_pago,
-                    "estado": s.estado or "Completada"
-                } for s in financial_sales
-            ]
-        }
-
-    # Dolores consolidados
-    dolores_set = set()
-    if client and client.dolores:
-        for d in client.dolores.split(','):
+        # Dolores consolidados
+        dolores_set = set()
+        if client and client.dolores:
+            for d in client.dolores.split(','):
+                d_clean = d.strip()
+                if d_clean:
+                    dolores_set.add(d_clean)
+        for d in pain_list:
             d_clean = d.strip()
-            if d_clean:
+            if d_clean and d_clean.lower() != "por identificar":
                 dolores_set.add(d_clean)
-    for d in pain_list:
-        d_clean = d.strip()
-        if d_clean and d_clean.lower() != "por identificar":
-            dolores_set.add(d_clean)
+                
+        dolores_lead = list(dolores_set) if dolores_set else ["Por identificar"]
+
+        comments_list = [
+            {
+                "id": c.id,
+                "text": c.text,
+                "author": c.author_rel.username if c.author_rel else "Desconocido",
+                "created_at": c.created_at.isoformat()
+            } for c in comments
+        ]
+
+        # 7. Permanencia en Programas
+        programs_list = []
+        seen_program_names = set()
+        
+        if client:
+            for enroll in client.enrollments.all():
+                program_name = enroll.program.name if enroll.program else "Programa Desconocido"
+                seen_program_names.add(program_name.lower().strip())
+                total_paid = enroll.total_paid
+                days_enrolled = (datetime.utcnow() - enroll.enrollment_date).days if enroll.enrollment_date else 0
+                permanence_str = f"{days_enrolled} días"
+                if days_enrolled >= 30:
+                    months = days_enrolled // 30
+                    rem_days = days_enrolled % 30
+                    permanence_str = f"{months} mes(es)"
+                    if rem_days > 0:
+                        permanence_str += f" y {rem_days} día(s)"
+                    
+                programs_list.append({
+                    "program_name": program_name,
+                    "enrollment_date": enroll.enrollment_date.isoformat() if enroll.enrollment_date else None,
+                    "total_paid": total_paid,
+                    "permanence": permanence_str,
+                    "source": "Matrícula"
+                })
+
+        # Integrar también desde FinancialSales
+        for fs in financial_sales:
+            if not fs.tipo_pago:
+                continue
+            p_name = fs.tipo_pago.strip()
+            if p_name.lower().strip() in seen_program_names:
+                continue
+                
+            seen_program_names.add(p_name.lower().strip())
             
-    dolores_lead = list(dolores_set) if dolores_set else ["Por identificar"]
-
-    # Comentarios / Notas en formato simplificado
-    comments_list = [
-        {
-            "id": c.id,
-            "text": c.text,
-            "author": c.author_rel.username if c.author_rel else "Desconocido",
-            "created_at": c.created_at.isoformat()
-        } for c in comments
-    ]
-
-    # 7. Permanencia en Programas
-    programs_list = []
-    seen_program_names = set()
-    
-    if client:
-        for enroll in client.enrollments.all():
-            program_name = enroll.program.name if enroll.program else "Programa Desconocido"
-            seen_program_names.add(program_name.lower().strip())
-            total_paid = enroll.total_paid
-            days_enrolled = (datetime.utcnow() - enroll.enrollment_date).days if enroll.enrollment_date else 0
+            days_enrolled = (datetime.utcnow() - fs.date).days if fs.date else 0
             permanence_str = f"{days_enrolled} días"
             if days_enrolled >= 30:
                 months = days_enrolled // 30
@@ -525,79 +553,56 @@ def get_lead_roadmap():
                 permanence_str = f"{months} mes(es)"
                 if rem_days > 0:
                     permanence_str += f" y {rem_days} día(s)"
-                
+                    
+            total_paid_product = sum(sale.monto or 0.0 for sale in financial_sales if sale.tipo_pago and sale.tipo_pago.strip().lower() == p_name.lower())
+            
             programs_list.append({
-                "program_name": program_name,
-                "enrollment_date": enroll.enrollment_date.isoformat() if enroll.enrollment_date else None,
-                "total_paid": total_paid,
+                "program_name": p_name,
+                "enrollment_date": fs.date.isoformat() if fs.date else None,
+                "total_paid": total_paid_product,
                 "permanence": permanence_str,
-                "source": "Matrícula"
+                "source": "Venta Declarada"
             })
 
-    # Integrar también desde FinancialSales
-    for fs in financial_sales:
-        if not fs.tipo_pago:
-            continue
-        p_name = fs.tipo_pago.strip()
-        if p_name.lower().strip() in seen_program_names:
-            continue
-            
-        seen_program_names.add(p_name.lower().strip())
-        
-        days_enrolled = (datetime.utcnow() - fs.date).days if fs.date else 0
-        permanence_str = f"{days_enrolled} días"
-        if days_enrolled >= 30:
-            months = days_enrolled // 30
-            rem_days = days_enrolled % 30
-            permanence_str = f"{months} mes(es)"
-            if rem_days > 0:
-                permanence_str += f" y {rem_days} día(s)"
-                
-        # Calcular el monto total abonado sumando todas las transacciones de esta venta
-        total_paid_product = sum(sale.monto or 0.0 for sale in financial_sales if sale.tipo_pago and sale.tipo_pago.strip().lower() == p_name.lower())
-        
-        programs_list.append({
-            "program_name": p_name,
-            "enrollment_date": fs.date.isoformat() if fs.date else None,
-            "total_paid": total_paid_product,
-            "permanence": permanence_str,
-            "source": "Venta Declarada"
-        })
+        # Objeciones y dolores mas frecuentes
+        all_clients = Client.query.with_entities(Client.objeciones, Client.dolores).all()
+        objection_counts = {}
+        dolores_counts = {}
+        for c_obj, c_dol in all_clients:
+            if c_obj:
+                for obj in c_obj.split(','):
+                    obj_clean = obj.strip()
+                    if obj_clean:
+                        objection_counts[obj_clean] = objection_counts.get(obj_clean, 0) + 1
+            if c_dol:
+                for dol in c_dol.split(','):
+                    dol_clean = dol.strip()
+                    if dol_clean:
+                        dolores_counts[dol_clean] = dolores_counts.get(dol_clean, 0) + 1
 
-    # Calcular las objeciones y dolores más frecuentes de todos los clientes
-    all_clients = Client.query.with_entities(Client.objeciones, Client.dolores).all()
-    objection_counts = {}
-    dolores_counts = {}
-    for c_obj, c_dol in all_clients:
-        if c_obj:
-            for obj in c_obj.split(','):
-                obj_clean = obj.strip()
-                if obj_clean:
-                    objection_counts[obj_clean] = objection_counts.get(obj_clean, 0) + 1
-        if c_dol:
-            for dol in c_dol.split(','):
-                dol_clean = dol.strip()
-                if dol_clean:
-                    dolores_counts[dol_clean] = dolores_counts.get(dol_clean, 0) + 1
+        frequent_objections = sorted(objection_counts.keys(), key=lambda k: objection_counts[k], reverse=True)[:10]
+        frequent_dolores = sorted(dolores_counts.keys(), key=lambda k: dolores_counts[k], reverse=True)[:10]
 
-    frequent_objections = sorted(objection_counts.keys(), key=lambda k: objection_counts[k], reverse=True)[:10]
-    frequent_dolores = sorted(dolores_counts.keys(), key=lambda k: dolores_counts[k], reverse=True)[:10]
+        # Keyword seguro
+        appt_keyword = appointments[0].keyword if appointments else (getattr(financial_agendas[0], 'keyword', None) if financial_agendas else None)
 
-    # Obtener la keyword de la cita o agenda para mostrarla como anuncio asociado
-    appt_keyword = appointments[0].keyword if appointments else (financial_agendas[0].keyword if financial_agendas else None)
-
-    return jsonify({
-        "lead": lead_profile,
-        "stages": stages,
-        "activity": activity,
-        "sales_summary": sales_summary,
-        "dolores": dolores_lead,
-        "comments": comments_list,
-        "programs": programs_list,
-        "frequent_objections": frequent_objections,
-        "frequent_dolores": frequent_dolores,
-        "appointment_keyword": appt_keyword
-    }), 200
+        return jsonify({
+            "lead": lead_profile,
+            "stages": stages,
+            "activity": activity,
+            "sales_summary": sales_summary,
+            "dolores": dolores_lead,
+            "comments": comments_list,
+            "programs": programs_list,
+            "survey_answers": survey_answers,
+            "frequent_objections": frequent_objections,
+            "frequent_dolores": frequent_dolores,
+            "appointment_keyword": appt_keyword
+        }), 200
+    except Exception as e:
+        import logging
+        logging.error(f"Error en get_lead_roadmap: {e}", exc_info=True)
+        return jsonify({"error": f"Error al procesar los datos del lead: {str(e)}"}), 500
 
 @bp.route('/public/lead-roadmap/update-client', methods=['POST'])
 def update_client_roadmap():
