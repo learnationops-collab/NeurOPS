@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, MoreVertical, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Clock, MoreVertical, MessageSquare, AlertTriangle, CalendarCheck, CheckCircle2 } from 'lucide-react';
 
-const TriageLeadCard = ({ lead, sectionType, isSelected, onSelect, onActionClick, onOpenMenu }) => {
+const TriageLeadCard = ({ lead, sectionType, isSelected, onSelect, onActionClick, onOpenMenu, onMarkFollowUpDone }) => {
     // Formatear hora de cita / meet
     const formatTime = (dateStr) => {
         if (!dateStr) return '12:00';
@@ -31,8 +31,8 @@ const TriageLeadCard = ({ lead, sectionType, isSelected, onSelect, onActionClick
         },
         seguimientos: {
             timeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-            btnBg: 'bg-transparent border border-emerald-500/50 hover:bg-emerald-500/10 text-emerald-400',
-            btnText: 'Hacer seguimiento',
+            btnBg: 'bg-emerald-600 hover:bg-emerald-500 text-white font-black',
+            btnText: 'Marcar Realizado',
             tagBg: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/40'
         },
         reagendar: {
@@ -47,6 +47,7 @@ const TriageLeadCard = ({ lead, sectionType, isSelected, onSelect, onActionClick
 
     // Calcular o mockear etiqueta de tiempo límite / tiempo transcurrido
     const getTimeLimitLabel = () => {
+        if (lead.fecha_seguimiento) return `Seguimiento: ${lead.fecha_seguimiento}`;
         if (lead.time_limit) return lead.time_limit;
         if (lead.unread_comment) return 'Mensaje nuevo';
         if (lead.estado === 'Sin respuesta') return 'Re-contactar';
@@ -86,6 +87,12 @@ const TriageLeadCard = ({ lead, sectionType, isSelected, onSelect, onActionClick
                             <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-md animate-pulse flex items-center gap-1">
                                 <MessageSquare size={10} />
                                 Mensaje nuevo
+                            </span>
+                        )}
+                        {lead.seguimiento_realizado && (
+                            <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-md flex items-center gap-1">
+                                <CheckCircle2 size={10} />
+                                Seguimiento Realizado
                             </span>
                         )}
                     </div>
@@ -131,15 +138,28 @@ const TriageLeadCard = ({ lead, sectionType, isSelected, onSelect, onActionClick
                 </span>
 
                 {/* Botón de Acción Principal */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onActionClick?.(lead);
-                    }}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-sm ${style.btnBg}`}
-                >
-                    {style.btnText}
-                </button>
+                {sectionType === 'seguimientos' && !lead.seguimiento_realizado ? (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onMarkFollowUpDone?.(lead);
+                        }}
+                        className="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-sm bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5"
+                    >
+                        <CalendarCheck size={14} />
+                        <span>Marcar Realizado</span>
+                    </button>
+                ) : (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onActionClick?.(lead);
+                        }}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-sm ${style.btnBg}`}
+                    >
+                        {style.btnText}
+                    </button>
+                )}
 
                 {/* Menú Tres Puntos */}
                 <button

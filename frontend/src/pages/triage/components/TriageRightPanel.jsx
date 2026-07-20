@@ -1,7 +1,6 @@
 import React from 'react';
-import { CalendarCheck, Send, Calendar } from 'lucide-react';
 
-const TriageRightPanel = ({ counts, onQuickAction }) => {
+const TriageRightPanel = ({ counts }) => {
     const total = (counts.citas || 0) + (counts.mensajes || 0) + (counts.seguimientos || 0) + (counts.reagendar || 0);
 
     const calcPct = (val) => {
@@ -95,45 +94,6 @@ const TriageRightPanel = ({ counts, onQuickAction }) => {
                             </div>
                         );
                     })}
-                </div>
-            </div>
-
-            {/* Tarjeta 2: Acciones Rápidas */}
-            <div className="bg-slate-950/60 border border-slate-850 rounded-3xl p-5 space-y-4 shadow-xl">
-                <h3 className="text-sm font-black text-white tracking-tight">
-                    Acciones rápidas
-                </h3>
-
-                <div className="space-y-2.5">
-                    <button
-                        onClick={() => onQuickAction?.('confirm_all')}
-                        className="w-full p-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-750 text-slate-200 hover:text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-3 cursor-pointer text-left"
-                    >
-                        <div className="p-2 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                            <CalendarCheck size={16} />
-                        </div>
-                        <span>Confirmar todas las disponibles</span>
-                    </button>
-
-                    <button
-                        onClick={() => onQuickAction?.('mass_reminders')}
-                        className="w-full p-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-750 text-slate-200 hover:text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-3 cursor-pointer text-left"
-                    >
-                        <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                            <Send size={16} />
-                        </div>
-                        <span>Enviar recordatorios masivos</span>
-                    </button>
-
-                    <button
-                        onClick={() => onQuickAction?.('view_calendar')}
-                        className="w-full p-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-750 text-slate-200 hover:text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-3 cursor-pointer text-left"
-                    >
-                        <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <Calendar size={16} />
-                        </div>
-                        <span>Ver calendario</span>
-                    </button>
                 </div>
             </div>
         </div>

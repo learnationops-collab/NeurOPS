@@ -3,7 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { 
     Search, Calendar, RefreshCw, Loader2, ChevronDown, 
-    Calendar as CalendarIcon, MessageSquare, CheckSquare, Clock
+    Calendar as CalendarIcon, CheckSquare, Clock
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,6 +11,7 @@ import TriageKpiCards from './components/TriageKpiCards';
 import TriageLeadCard from './components/TriageLeadCard';
 import TriageRightPanel from './components/TriageRightPanel';
 import TriageDetailModal from './components/TriageDetailModal';
+import TriageFollowUpModal from './components/TriageFollowUpModal';
 
 const TriageWorkflowPage = () => {
     const { user } = useAuth();
@@ -34,13 +35,21 @@ const TriageWorkflowPage = () => {
     const [processingId, setProcessingId] = useState(null);
     const [selectedLead, setSelectedLead] = useState(null);
 
+    // Modal de Seguimiento tras cambio de estado
+    const [followUpModal, setFollowUpModal] = useState({
+        show: false,
+        agendaId: null,
+        leadName: '',
+        newStatus: ''
+    });
+    const [savingFollowUp, setSavingFollowUp] = useState(false);
+
     // Estados para reprogramación y notas
     const [rescheduleData, setRescheduleData] = useState({ apptId: null, date: '', status: '' });
     const [triageNote, setTriageNote] = useState('');
     const [meetDateInput, setMeetDateInput] = useState('');
     const [updatingDate, setUpdatingDate] = useState(false);
 
-    // Sincronizar input de fecha cuando cambia el lead
     useEffect(() => {
         if (selectedLead) {
             setMeetDateInput(selectedLead.fecha_meet || selectedLead.date || '');
@@ -96,15 +105,6 @@ const TriageWorkflowPage = () => {
             }
 
             toast.success("Fecha del meet actualizada");
-            
-            const oldDateStr = selectedLead.fecha_meet ? new Date(selectedLead.fecha_meet).toLocaleString('es-ES') : 'N/A';
-            const newDateStr = new Date(meetDateInput).toLocaleString('es-ES');
-            const commentText = `[Cambio Fecha Meet] Modificada por Triaje -> Antes: ${oldDateStr} | Ahora: ${newDateStr}`;
-            
-            if (selectedLead.client_id) {
-                await saveTriageComment(selectedLead.client_id, commentText, 'Cambio Fecha');
-            }
-
             fetchAgendas();
         } catch (err) {
             console.error("Error al actualizar fecha del meet:", err);
@@ -128,7 +128,7 @@ const TriageWorkflowPage = () => {
         }
     };
 
-    // Procesar cambio de estado de triaje
+    // Procesar cambio de estado de triaje y abrir modal de seguimiento
     const handleUpdateStatus = async (agendaId, nextStatus) => {
         setProcessingId(agendaId);
         try {
@@ -138,15 +138,67 @@ const TriageWorkflowPage = () => {
             await api.put(`/public/financial-agendas/${agendaId}`, payload);
             toast.success(`Cita marcada como ${nextStatus}`);
 
+            const targetAgenda = agendas.find(a => a.id === agendaId) || selectedLead;
+            const leadName = targetAgenda ? (targetAgenda.lead || targetAgenda.nombre || 'Prospecto') : 'Prospecto';
+
             if (selectedLead?.client_id && triageNote.trim()) {
                 await saveTriageComment(selectedLead.client_id, triageNote, nextStatus);
                 setTriageNote('');
             }
 
             fetchAgendas();
+
+            // Desplegar modal para consultar fecha de seguimiento en estados clave
+            const triggerStatuses = ['contactado', 'confirmado', 'cancelada', 'reagendada'];
+            if (triggerStatuses.includes(nextStatus.toLowerCase())) {
+                setFollowUpModal({
+                    show: true,
+                    agendaId: agendaId,
+                    leadName: leadName,
+                    newStatus: nextStatus
+                });
+            }
         } catch (err) {
             console.error("Error al actualizar estado:", err);
             toast.error("Error al actualizar el estado");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    // Guardar fecha de seguimiento programada
+    const handleConfirmFollowUpDate = async (followUpDate) => {
+        if (!followUpModal.agendaId || !followUpDate) return;
+        setSavingFollowUp(true);
+        try {
+            await api.put(`/public/financial-agendas/${followUpModal.agendaId}`, {
+                fecha_seguimiento: followUpDate,
+                seguimiento_realizado: false
+            });
+            toast.success(`Seguimiento programado para el ${followUpDate}`);
+            setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '' });
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error guardando fecha de seguimiento:", err);
+            toast.error("Error al guardar la fecha de seguimiento");
+        } finally {
+            setSavingFollowUp(false);
+        }
+    };
+
+    // Marcar seguimiento como realizado
+    const handleMarkFollowUpDone = async (lead) => {
+        if (!lead || !lead.id) return;
+        setProcessingId(lead.id);
+        try {
+            await api.put(`/public/financial-agendas/${lead.id}`, {
+                seguimiento_realizado: true
+            });
+            toast.success("Seguimiento marcado como realizado");
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error marcando seguimiento como realizado:", err);
+            toast.error("Error al actualizar seguimiento");
         } finally {
             setProcessingId(null);
         }
@@ -165,8 +217,7 @@ const TriageWorkflowPage = () => {
             const payload = {
                 estado: 'Reagendada',
                 date: date,
-                reschedule_date: date,
-                note: triageNote.trim() || 'Cita reagendada por el Call Confirmer (Triaje)'
+                reschedule_date: date
             };
 
             if (user?.username) payload.encargado_triage = user.username;
@@ -174,13 +225,14 @@ const TriageWorkflowPage = () => {
             await api.put(`/public/financial-agendas/${apptId}`, payload);
             toast.success("Cita reagendada exitosamente");
 
-            if (selectedLead?.client_id) {
-                const commentText = triageNote.trim() 
-                    ? `[Cita Reagendada] ${triageNote.trim()} -> Nueva fecha: ${new Date(date).toLocaleString('es-ES')}`
-                    : `Cita reagendada para el ${new Date(date).toLocaleString('es-ES')}`;
-                await saveTriageComment(selectedLead.client_id, commentText, 'Reagendada');
-                setTriageNote('');
-            }
+            // Abrir modal de seguimiento tras reagendar
+            const targetAgenda = agendas.find(a => a.id === apptId) || selectedLead;
+            setFollowUpModal({
+                show: true,
+                agendaId: apptId,
+                leadName: targetAgenda ? (targetAgenda.lead || targetAgenda.nombre || 'Prospecto') : 'Prospecto',
+                newStatus: 'Reagendada'
+            });
 
             setRescheduleData({ apptId: null, date: '', status: '' });
             fetchAgendas();
@@ -198,7 +250,6 @@ const TriageWorkflowPage = () => {
         setUnreadNoAgenda(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
     };
 
-    // Formatear datetime-local
     const formatToDatetimeLocal = (dateStr) => {
         if (!dateStr) return '';
         try {
@@ -228,7 +279,7 @@ const TriageWorkflowPage = () => {
         );
     }, [agendas, searchQuery]);
 
-    // Agrupar items por categorías del espacio de confirmación
+    // Agrupar items por categorías
     const categorizedData = useMemo(() => {
         const citas = [];
         const mensajes = [];
@@ -240,7 +291,13 @@ const TriageWorkflowPage = () => {
             const est = (a.estado || 'Pendiente').toLowerCase();
             const isCompleted = ['confirmado', 'show up', 'no show', 'cancelada'].includes(est);
 
-            if (isCompleted) {
+            const hasFollowUpToday = a.fecha_seguimiento && a.fecha_seguimiento.startsWith(selectedDate) && !a.seguimiento_realizado;
+
+            if (hasFollowUpToday) {
+                seguimientos.push(a);
+            } else if (a.seguimiento_realizado) {
+                completadas.push(a);
+            } else if (isCompleted) {
                 completadas.push(a);
             } else if (a.unread_comment) {
                 mensajes.push(a);
@@ -253,17 +310,14 @@ const TriageWorkflowPage = () => {
             }
         });
 
-        // Incluir sin agenda en mensajes pendientes
         unreadNoAgenda.forEach(u => {
             if (!mensajes.some(m => m.id === u.id)) mensajes.push(u);
         });
 
-        // Ordenamiento
         const sortFn = (a, b) => {
             if (sortBy === 'name') return (a.lead || a.nombre || '').localeCompare(b.lead || b.nombre || '');
             if (sortBy === 'setter') return (a.setter_name || a.setter || '').localeCompare(b.setter_name || b.setter || '');
             if (sortBy === 'time') return new Date(a.date || a.fecha_meet || 0) - new Date(b.date || b.fecha_meet || 0);
-            // 'urgent'
             return (b.unread_comment ? 1 : 0) - (a.unread_comment ? 1 : 0);
         };
 
@@ -274,9 +328,8 @@ const TriageWorkflowPage = () => {
             reagendar: reagendar.sort(sortFn),
             completadas: completadas.sort(sortFn)
         };
-    }, [filteredAgendas, unreadNoAgenda, sortBy]);
+    }, [filteredAgendas, unreadNoAgenda, sortBy, selectedDate]);
 
-    // Conteo total para tarjetas KPI
     const counts = useMemo(() => ({
         citas: categorizedData.citas.length,
         mensajes: categorizedData.mensajes.length,
@@ -286,34 +339,8 @@ const TriageWorkflowPage = () => {
         pendientesTotal: categorizedData.citas.length + categorizedData.mensajes.length + categorizedData.seguimientos.length + categorizedData.reagendar.length
     }), [categorizedData]);
 
-    // Acciones Rápidas del panel derecho
-    const handleQuickAction = async (actionType) => {
-        if (actionType === 'confirm_all') {
-            const pending = categorizedData.citas;
-            if (!pending.length) {
-                toast("No hay citas pendientes de confirmación", { icon: 'ℹ️' });
-                return;
-            }
-            try {
-                for (const item of pending) {
-                    await api.put(`/public/financial-agendas/${item.id}`, { estado: 'Confirmado' });
-                }
-                toast.success(`${pending.length} citas confirmadas masivamente`);
-                fetchAgendas();
-            } catch (err) {
-                toast.error("Error confirmando citas masivamente");
-            }
-        } else if (actionType === 'mass_reminders') {
-            toast.success("Recordatorios masivos enviados");
-        } else if (actionType === 'view_calendar') {
-            toast("Mostrando calendario de agendas", { icon: '📅' });
-        }
-    };
-
-    const initials = user?.username ? user.username.slice(0, 2).toUpperCase() : 'JD';
-
     return (
-        <div className="min-h-screen bg-[#07080d] text-white p-4 sm:p-6 lg:p-8 space-y-6">
+        <div className="min-h-screen bg-[#07080d] text-white p-4 sm:p-6 lg:p-8 space-y-6 text-left">
             <div className="max-w-7xl mx-auto space-y-6">
                 
                 {/* Header Superior */}
@@ -323,7 +350,7 @@ const TriageWorkflowPage = () => {
                             <CalendarIcon size={24} />
                         </div>
                         <div>
-                            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight italic">
                                 Espacio de Confirmación (Triaje)
                             </h1>
                             <p className="text-xs text-slate-400 font-medium mt-0.5">
@@ -333,7 +360,6 @@ const TriageWorkflowPage = () => {
                     </div>
 
                     <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                        {/* Selector de Fecha */}
                         <div className="relative flex-1 md:flex-none">
                             <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                             <input 
@@ -347,251 +373,256 @@ const TriageWorkflowPage = () => {
                         <button
                             onClick={fetchAgendas}
                             disabled={loading}
-                            className="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer"
-                            title="Recargar"
+                            className="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer border-none"
                         >
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                         </button>
-
-                        {/* Avatar Usuario */}
-                        <div className="w-9 h-9 rounded-xl bg-slate-850 border border-slate-750 flex items-center justify-center text-xs font-black text-slate-200">
-                            {initials}
-                        </div>
                     </div>
                 </div>
 
-                {/* Pestañas Principales (Pendientes / Completadas) */}
-                <div className="flex items-center gap-2 border-b border-slate-900 pb-1">
+                {/* Navegación por Pestañas */}
+                <div className="flex border-b border-slate-850 gap-8">
                     <button
                         onClick={() => setActiveTab('pendientes')}
-                        className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border-none ${
-                            activeTab === 'pendientes'
-                                ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30 shadow-[0_0_15px_rgba(139,92,246,0.15)]'
-                                : 'bg-transparent text-slate-400 hover:text-slate-200'
+                        className={`pb-3 text-sm font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 cursor-pointer border-none bg-transparent ${
+                            activeTab === 'pendientes' 
+                                ? 'border-violet-500 text-white' 
+                                : 'border-transparent text-slate-500 hover:text-slate-300'
                         }`}
                     >
                         <span>Pendientes</span>
-                        <span className="px-2 py-0.5 text-[10px] font-black rounded-lg bg-violet-500/20 text-violet-300">
+                        <span className="px-2 py-0.5 text-xs bg-violet-500/10 text-violet-400 rounded-full border border-violet-500/20 font-mono">
                             {counts.pendientesTotal}
                         </span>
                     </button>
 
                     <button
                         onClick={() => setActiveTab('completadas')}
-                        className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border-none ${
-                            activeTab === 'completadas'
-                                ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30 shadow-[0_0_15px_rgba(139,92,246,0.15)]'
-                                : 'bg-transparent text-slate-400 hover:text-slate-200'
+                        className={`pb-3 text-sm font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 cursor-pointer border-none bg-transparent ${
+                            activeTab === 'completadas' 
+                                ? 'border-emerald-500 text-emerald-400' 
+                                : 'border-transparent text-slate-500 hover:text-slate-300'
                         }`}
                     >
                         <span>Completadas</span>
-                        <span className="px-2 py-0.5 text-[10px] font-black rounded-lg bg-slate-800 text-slate-400">
+                        <span className="px-2 py-0.5 text-xs bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20 font-mono">
                             {counts.completadas}
                         </span>
                     </button>
                 </div>
 
                 {/* Tarjetas KPI Superiores */}
-                <TriageKpiCards
-                    counts={counts}
-                    activeFilter={activeKpiFilter}
-                    onSelectFilter={setActiveKpiFilter}
-                />
+                {activeTab === 'pendientes' && (
+                    <TriageKpiCards 
+                        counts={counts} 
+                        activeFilter={activeKpiFilter} 
+                        onFilterChange={setActiveKpiFilter} 
+                    />
+                )}
 
                 {/* Barra de Búsqueda y Ordenamiento */}
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-                    <div className="relative w-full sm:w-96">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                        <input 
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-950/40 p-3 rounded-2xl border border-slate-850">
+                    <div className="relative w-full sm:w-80">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                        <input
                             type="text"
-                            placeholder="Buscar por nombre, Instagram, email o WhatsApp..."
+                            placeholder="Buscar por lead, instagram, correo o WhatsApp..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-850 rounded-2xl text-xs font-medium text-slate-200 outline-none focus:border-violet-500/40 transition-all placeholder-slate-600"
+                            className="w-full pl-10 pr-4 py-2 bg-slate-900/80 border border-slate-800 rounded-xl text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-violet-500/50"
                         />
                     </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end text-xs text-slate-400">
-                        <span className="font-semibold">Ordenar por:</span>
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end text-xs text-slate-400 font-bold">
+                        <span>Ordenar por:</span>
                         <div className="relative">
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="bg-slate-900/80 border border-slate-800 text-slate-200 text-xs font-semibold py-2 pl-3 pr-8 rounded-xl appearance-none outline-none cursor-pointer"
+                                className="appearance-none bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 pr-8 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 cursor-pointer"
                             >
-                                <option value="urgent">Más urgente</option>
+                                <option value="urgent">Prioridad URGENTE</option>
                                 <option value="time">Hora de cita</option>
-                                <option value="name">Nombre de lead</option>
-                                <option value="setter">Setter</option>
+                                <option value="name">Nombre del lead</option>
+                                <option value="setter">Setter asignado</option>
                             </select>
-                            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
                         </div>
                     </div>
                 </div>
 
-                {/* Grid Principal de 2 Columnas */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Layout Principal con Subgrupos */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     
-                    {/* Columna Izquierda: Listado de Grupos (8 cols) */}
-                    <div className="lg:col-span-8 space-y-6">
+                    <div className="lg:col-span-8 space-y-8">
                         {loading ? (
-                            <div className="py-20 flex flex-col items-center justify-center text-slate-500 bg-slate-950/40 rounded-3xl border border-slate-850">
-                                <Loader2 className="animate-spin mb-2" size={24} />
-                                <span className="text-xs uppercase font-black tracking-widest">Cargando datos de triaje...</span>
+                            <div className="py-20 flex flex-col items-center justify-center space-y-3 text-slate-500">
+                                <Loader2 className="animate-spin text-violet-500" size={28} />
+                                <span className="text-xs uppercase font-black tracking-widest">Cargando tareas del espacio...</span>
                             </div>
                         ) : activeTab === 'completadas' ? (
                             <div className="space-y-4">
-                                <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-2">
-                                    <span>Completadas ({categorizedData.completadas.length})</span>
+                                <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                                    <CheckSquare size={16} />
+                                    Citas Completadas o Finalizadas ({categorizedData.completadas.length})
                                 </h3>
-                                {categorizedData.completadas.length === 0 ? (
-                                    <div className="py-12 text-center text-slate-500 text-xs italic bg-slate-950/40 rounded-2xl border border-slate-850">
-                                        No hay citas completadas para este día
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {categorizedData.completadas.map(lead => (
-                                            <TriageLeadCard
-                                                key={lead.id}
-                                                lead={lead}
-                                                sectionType="citas"
-                                                isSelected={selectedLead?.id === lead.id}
-                                                onSelect={() => handleSelectLead(lead)}
-                                                onActionClick={() => handleSelectLead(lead)}
-                                                onOpenMenu={() => handleSelectLead(lead)}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
+
+                                <div className="space-y-3">
+                                    {categorizedData.completadas.map(lead => (
+                                        <TriageLeadCard
+                                            key={lead.id}
+                                            lead={lead}
+                                            sectionType="citas"
+                                            isSelected={selectedLead?.id === lead.id}
+                                            onSelect={() => handleSelectLead(lead)}
+                                            onActionClick={() => handleSelectLead(lead)}
+                                            onOpenMenu={() => handleSelectLead(lead)}
+                                        />
+                                    ))}
+                                    {categorizedData.completadas.length === 0 && (
+                                        <div className="p-8 text-center text-xs text-slate-500 font-bold italic bg-slate-950/40 rounded-2xl border border-slate-850">
+                                            No hay citas completadas en esta fecha
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         ) : (
-                            <div className="space-y-8">
-                                {/* Subgrupo 1: CITAS POR CONFIRMAR */}
+                            <>
+                                {/* SUBGRUPO 1: CITAS POR CONFIRMAR */}
                                 {(activeKpiFilter === 'all' || activeKpiFilter === 'citas') && (
                                     <div className="space-y-3">
-                                        <div className="flex items-center gap-2 text-xs font-black text-violet-400 uppercase tracking-wider">
-                                            <CalendarIcon size={14} />
-                                            <span>CITAS POR CONFIRMAR ({categorizedData.citas.length})</span>
+                                        <div className="flex justify-between items-center px-1">
+                                            <h3 className="text-xs font-black uppercase tracking-wider text-violet-400 flex items-center gap-2">
+                                                <Clock size={16} />
+                                                CITAS POR CONFIRMAR ({categorizedData.citas.length})
+                                            </h3>
                                         </div>
-                                        {categorizedData.citas.length === 0 ? (
-                                            <p className="text-xs text-slate-600 italic py-3">No hay citas pendientes por confirmar</p>
-                                        ) : (
-                                            <div className="space-y-2.5">
-                                                {categorizedData.citas.map(lead => (
-                                                    <TriageLeadCard
-                                                        key={lead.id}
-                                                        lead={lead}
-                                                        sectionType="citas"
-                                                        isSelected={selectedLead?.id === lead.id}
-                                                        onSelect={() => handleSelectLead(lead)}
-                                                        onActionClick={() => handleSelectLead(lead)}
-                                                        onOpenMenu={() => handleSelectLead(lead)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
+                                        <div className="space-y-3">
+                                            {categorizedData.citas.map(lead => (
+                                                <TriageLeadCard
+                                                    key={lead.id}
+                                                    lead={lead}
+                                                    sectionType="citas"
+                                                    isSelected={selectedLead?.id === lead.id}
+                                                    onSelect={() => handleSelectLead(lead)}
+                                                    onActionClick={() => handleSelectLead(lead)}
+                                                    onOpenMenu={() => handleSelectLead(lead)}
+                                                />
+                                            ))}
+                                            {categorizedData.citas.length === 0 && (
+                                                <div className="p-5 text-center text-xs text-slate-500 font-bold italic bg-slate-950/20 rounded-2xl border border-dashed border-slate-850">
+                                                    Sin citas por confirmar pendientes
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
-                                {/* Subgrupo 2: MENSAJES POR CONTESTAR */}
+                                {/* SUBGRUPO 2: MENSAJES POR CONTESTAR */}
                                 {(activeKpiFilter === 'all' || activeKpiFilter === 'mensajes') && (
                                     <div className="space-y-3">
-                                        <div className="flex items-center gap-2 text-xs font-black text-amber-400 uppercase tracking-wider">
-                                            <MessageSquare size={14} />
-                                            <span>MENSAJES POR CONTESTAR ({categorizedData.mensajes.length})</span>
+                                        <div className="flex justify-between items-center px-1">
+                                            <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                                                <Clock size={16} />
+                                                MENSAJES POR CONTESTAR ({categorizedData.mensajes.length})
+                                            </h3>
                                         </div>
-                                        {categorizedData.mensajes.length === 0 ? (
-                                            <p className="text-xs text-slate-600 italic py-3">No hay mensajes pendientes</p>
-                                        ) : (
-                                            <div className="space-y-2.5">
-                                                {categorizedData.mensajes.map(lead => (
-                                                    <TriageLeadCard
-                                                        key={lead.id}
-                                                        lead={lead}
-                                                        sectionType="mensajes"
-                                                        isSelected={selectedLead?.id === lead.id}
-                                                        onSelect={() => handleSelectLead(lead)}
-                                                        onActionClick={() => handleSelectLead(lead)}
-                                                        onOpenMenu={() => handleSelectLead(lead)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
+                                        <div className="space-y-3">
+                                            {categorizedData.mensajes.map(lead => (
+                                                <TriageLeadCard
+                                                    key={lead.id}
+                                                    lead={lead}
+                                                    sectionType="mensajes"
+                                                    isSelected={selectedLead?.id === lead.id}
+                                                    onSelect={() => handleSelectLead(lead)}
+                                                    onActionClick={() => handleSelectLead(lead)}
+                                                    onOpenMenu={() => handleSelectLead(lead)}
+                                                />
+                                            ))}
+                                            {categorizedData.mensajes.length === 0 && (
+                                                <div className="p-5 text-center text-xs text-slate-500 font-bold italic bg-slate-950/20 rounded-2xl border border-dashed border-slate-850">
+                                                    Sin mensajes nuevos pendientes
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
-                                {/* Subgrupo 3: SEGUIMIENTOS POR HACER */}
+                                {/* SUBGRUPO 3: SEGUIMIENTOS POR HACER */}
                                 {(activeKpiFilter === 'all' || activeKpiFilter === 'seguimientos') && (
                                     <div className="space-y-3">
-                                        <div className="flex items-center gap-2 text-xs font-black text-emerald-400 uppercase tracking-wider">
-                                            <CheckSquare size={14} />
-                                            <span>SEGUIMIENTOS POR HACER ({categorizedData.seguimientos.length})</span>
+                                        <div className="flex justify-between items-center px-1">
+                                            <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                                                <Clock size={16} />
+                                                SEGUIMIENTOS POR HACER ({categorizedData.seguimientos.length})
+                                            </h3>
                                         </div>
-                                        {categorizedData.seguimientos.length === 0 ? (
-                                            <p className="text-xs text-slate-600 italic py-3">No hay seguimientos pendientes</p>
-                                        ) : (
-                                            <div className="space-y-2.5">
-                                                {categorizedData.seguimientos.map(lead => (
-                                                    <TriageLeadCard
-                                                        key={lead.id}
-                                                        lead={lead}
-                                                        sectionType="seguimientos"
-                                                        isSelected={selectedLead?.id === lead.id}
-                                                        onSelect={() => handleSelectLead(lead)}
-                                                        onActionClick={() => handleSelectLead(lead)}
-                                                        onOpenMenu={() => handleSelectLead(lead)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
+                                        <div className="space-y-3">
+                                            {categorizedData.seguimientos.map(lead => (
+                                                <TriageLeadCard
+                                                    key={lead.id}
+                                                    lead={lead}
+                                                    sectionType="seguimientos"
+                                                    isSelected={selectedLead?.id === lead.id}
+                                                    onSelect={() => handleSelectLead(lead)}
+                                                    onActionClick={() => handleSelectLead(lead)}
+                                                    onOpenMenu={() => handleSelectLead(lead)}
+                                                    onMarkFollowUpDone={handleMarkFollowUpDone}
+                                                />
+                                            ))}
+                                            {categorizedData.seguimientos.length === 0 && (
+                                                <div className="p-5 text-center text-xs text-slate-500 font-bold italic bg-slate-950/20 rounded-2xl border border-dashed border-slate-850">
+                                                    Sin seguimientos pendientes para hoy
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
-                                {/* Subgrupo 4: REAGENDAR / ACTUALIZAR */}
+                                {/* SUBGRUPO 4: REAGENDAR / ACTUALIZAR */}
                                 {(activeKpiFilter === 'all' || activeKpiFilter === 'reagendar') && (
                                     <div className="space-y-3">
-                                        <div className="flex items-center gap-2 text-xs font-black text-rose-400 uppercase tracking-wider">
-                                            <Clock size={14} />
-                                            <span>REAGENDAR / ACTUALIZAR ({categorizedData.reagendar.length})</span>
+                                        <div className="flex justify-between items-center px-1">
+                                            <h3 className="text-xs font-black uppercase tracking-wider text-rose-400 flex items-center gap-2">
+                                                <Clock size={16} />
+                                                REAGENDAR / ACTUALIZAR ({categorizedData.reagendar.length})
+                                            </h3>
                                         </div>
-                                        {categorizedData.reagendar.length === 0 ? (
-                                            <p className="text-xs text-slate-600 italic py-3">No hay citas por reagendar</p>
-                                        ) : (
-                                            <div className="space-y-2.5">
-                                                {categorizedData.reagendar.map(lead => (
-                                                    <TriageLeadCard
-                                                        key={lead.id}
-                                                        lead={lead}
-                                                        sectionType="reagendar"
-                                                        isSelected={selectedLead?.id === lead.id}
-                                                        onSelect={() => handleSelectLead(lead)}
-                                                        onActionClick={() => handleSelectLead(lead)}
-                                                        onOpenMenu={() => handleSelectLead(lead)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
+                                        <div className="space-y-3">
+                                            {categorizedData.reagendar.map(lead => (
+                                                <TriageLeadCard
+                                                    key={lead.id}
+                                                    lead={lead}
+                                                    sectionType="reagendar"
+                                                    isSelected={selectedLead?.id === lead.id}
+                                                    onSelect={() => handleSelectLead(lead)}
+                                                    onActionClick={() => handleSelectLead(lead)}
+                                                    onOpenMenu={() => handleSelectLead(lead)}
+                                                />
+                                            ))}
+                                            {categorizedData.reagendar.length === 0 && (
+                                                <div className="p-5 text-center text-xs text-slate-500 font-bold italic bg-slate-950/20 rounded-2xl border border-dashed border-slate-850">
+                                                    Sin citas por reagendar
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
-                            </div>
+                            </>
                         )}
                     </div>
 
-                    {/* Columna Derecha: Panel de Resumen (4 cols) */}
-                    <div className="lg:col-span-4 sticky top-6">
-                        <TriageRightPanel
-                            counts={counts}
-                            onQuickAction={handleQuickAction}
-                        />
+                    {/* Columna Derecha: Resumen Donut Chart */}
+                    <div className="lg:col-span-4">
+                        <TriageRightPanel counts={counts} />
                     </div>
                 </div>
-
             </div>
 
-            {/* Modal de Detalle */}
-            <TriageDetailModal
+            {/* Modal Ficha Detallada del Lead */}
+            <TriageDetailModal 
                 selectedLead={selectedLead}
-                onClose={() => { setSelectedLead(null); setTriageNote(''); setRescheduleData({ apptId: null, date: '', status: '' }); }}
+                onClose={() => setSelectedLead(null)}
                 meetDateInput={meetDateInput}
                 setMeetDateInput={setMeetDateInput}
                 handleUpdateMeetDate={handleUpdateMeetDate}
@@ -604,6 +635,16 @@ const TriageWorkflowPage = () => {
                 setRescheduleData={setRescheduleData}
                 handleConfirmReschedule={handleConfirmReschedule}
                 formatToDatetimeLocal={formatToDatetimeLocal}
+            />
+
+            {/* Modal de Configuración de Fecha de Seguimiento */}
+            <TriageFollowUpModal
+                show={followUpModal.show}
+                onClose={() => setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '' })}
+                onConfirm={handleConfirmFollowUpDate}
+                leadName={followUpModal.leadName}
+                newStatus={followUpModal.newStatus}
+                loading={savingFollowUp}
             />
         </div>
     );
