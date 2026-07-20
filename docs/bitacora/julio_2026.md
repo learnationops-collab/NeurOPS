@@ -622,9 +622,10 @@
       - Se solucionó el bug HTTP 500 en `GET /api/public/lead-roadmap` causado por la consulta del atributo inexistente `keyword` sobre objetos `FinancialAgenda`. Se utilizó acceso seguro `getattr`.
       - Se implementó un bloque de manejo de errores `try-except` robusto para evitar caídas de servidor y garantizar respuestas JSON estructuradas ante cualquier excepción inesperada.
       - Se expuso la lista de respuestas de encuestas (`survey_answers`) en la respuesta JSON del roadmap.
-    - **Interfaz Frontend ([LeadRoadmapDetail.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/LeadRoadmapDetail.jsx) [MODIFY], [LeadRoadmapHeader.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapHeader.jsx) [NEW], [LeadRoadmapFunnel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapFunnel.jsx) [NEW], [LeadRoadmapFormInfo.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapFormInfo.jsx) [NEW], [LeadRoadmapCalificacion.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapCalificacion.jsx) [NEW])**:
-      - Se integró el componente de Chat en vivo (`CommentsSection`) dentro del Lead Roadmap tanto en la vista extendida como en la pestaña dedicada ("Chat & Notas") del modo modal/compacto.
-      - Se consolidó la visualización de respuestas del formulario n8n junto con las respuestas de la encuesta de cita (`survey_answers`).
+    - **Interfaz Frontend ([LeadRoadmapDetail.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/LeadRoadmapDetail.jsx) [MODIFY], [LeadRoadmapHeader.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapHeader.jsx) [NEW], [LeadRoadmapFunnel.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapFunnel.jsx) [NEW], [LeadRoadmapFormInfo.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/components/leads/components/LeadRoadmapFormInfo.jsx) [NEW])**:
+      - Se removió por completo el bloque y pestaña de "Calificación en Caliente" (dolores, objeciones y observaciones manuales).
+      - Se posicionó el Chat de Comunicación en vivo (`CommentsSection`) como panel principal al lado de las Respuestas del Formulario / Encuesta.
       - Se refactorizó la vista dividiéndola en submódulos para garantizar que ningún archivo supere el límite de 500 líneas.
+
 
 
