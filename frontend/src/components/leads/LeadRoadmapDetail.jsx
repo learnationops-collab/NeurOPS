@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Award, Sparkles, MessageCircle, Phone, Calendar, Bot, MessageSquare } from 'lucide-react';
+import { Loader2, Award, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EditLeadModal } from './LeadRoadmapModals';
-import { useAuth } from '../../contexts/AuthContext';
 import CommentsSection from '../shared/CommentsSection';
 
 import LeadRoadmapHeader from './components/LeadRoadmapHeader';
 import LeadRoadmapFunnel from './components/LeadRoadmapFunnel';
 import LeadRoadmapFormInfo from './components/LeadRoadmapFormInfo';
-import LeadRoadmapCalificacion from './components/LeadRoadmapCalificacion';
 
 const LeadRoadmapDetail = ({ 
     instagram, 
@@ -23,19 +21,11 @@ const LeadRoadmapDetail = ({
     appointmentId, 
     compact = false 
 }) => {
-    const { user } = useAuth();
-    
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [activeTab, setActiveTab] = useState('formulario'); // 'formulario' | 'calificacion' | 'chat' | 'notas'
+    const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'formulario' | 'notas'
     
-    // Calificación en caliente
-    const [objeciones, setObjeciones] = useState('');
-    const [dolores, setDolores] = useState('');
-    const [observaciones, setObservaciones] = useState('');
-    const [savingCalificacion, setSavingCalificacion] = useState(false);
-
     // Formulario de edición
     const [editForm, setEditForm] = useState({ full_name: '', email: '', phone: '', instagram: '' });
 
@@ -62,9 +52,6 @@ const LeadRoadmapDetail = ({
                     phone: res.data.lead.phone || '',
                     instagram: res.data.lead.instagram || ''
                 });
-                setObjeciones(res.data.lead.objeciones || '');
-                setDolores(res.data.lead.dolores || '');
-                setObservaciones(res.data.lead.observaciones || '');
             }
         } catch (err) {
             console.error("Error fetching lead roadmap", err);
@@ -86,30 +73,6 @@ const LeadRoadmapDetail = ({
         } catch (err) {
             console.error("Error saving client", err);
             toast.error(err.response?.data?.error || "Error al guardar cliente");
-        }
-    };
-
-    const handleSaveCalificacion = async () => {
-        setSavingCalificacion(true);
-        try {
-            const payload = {
-                client_id: data?.lead?.id || null,
-                instagram: data?.lead?.instagram || instagram,
-                email: data?.lead?.email || email,
-                full_name: data?.lead?.full_name,
-                objeciones,
-                dolores,
-                observaciones
-            };
-            const res = await api.post('/public/lead-roadmap/update-client', payload);
-            toast.success(res.data.message || "Calificación guardada");
-            fetchRoadmap();
-            if (onUpdate) onUpdate();
-        } catch (err) {
-            console.error("Error saving calificacion", err);
-            toast.error("Error al guardar la calificación");
-        } finally {
-            setSavingCalificacion(false);
         }
     };
 
@@ -140,7 +103,7 @@ const LeadRoadmapDetail = ({
                 {onBack && (
                     <button 
                         onClick={onBack}
-                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-slate-300"
+                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 cursor-pointer"
                     >
                         Volver al listado
                     </button>
@@ -176,30 +139,21 @@ const LeadRoadmapDetail = ({
                 <div className="flex border-b border-slate-800/80 mb-2 overflow-x-auto">
                     <button
                         type="button"
+                        onClick={() => setActiveTab('chat')}
+                        className={`flex-1 pb-2 text-[10px] font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                            activeTab === 'chat' ? 'border-violet-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
+                        }`}
+                    >
+                        Chat de Comunicación
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setActiveTab('formulario')}
                         className={`flex-1 pb-2 text-[10px] font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                             activeTab === 'formulario' ? 'border-violet-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
                         }`}
                     >
                         Formulario / Encuesta
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('calificacion')}
-                        className={`flex-1 pb-2 text-[10px] font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                            activeTab === 'calificacion' ? 'border-violet-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        Calificar Lead
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('chat')}
-                        className={`flex-1 pb-2 text-[10px] font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                            activeTab === 'chat' ? 'border-violet-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        Chat & Notas
                     </button>
                     <button
                         type="button"
@@ -213,10 +167,10 @@ const LeadRoadmapDetail = ({
                 </div>
             )}
 
-            {/* CONTENIDO PRINCIPAL */}
+            {/* GRID PRINCIPAL */}
             <div className={compact ? "space-y-4 mb-4" : "grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8"}>
                 
-                {/* COLUMNA 1: FORMULARIO Y ENCUESTAS */}
+                {/* SECCIÓN 1: FORMULARIO Y ENCUESTAS */}
                 {(!compact || activeTab === 'formulario') && (
                     <div className={compact ? "" : "lg:col-span-6"}>
                         <LeadRoadmapFormInfo 
@@ -226,37 +180,28 @@ const LeadRoadmapDetail = ({
                     </div>
                 )}
 
-                {/* COLUMNA 2: CALIFICACIÓN EN CALIENTE */}
-                {(!compact || activeTab === 'calificacion') && (
+                {/* SECCIÓN 2: CHAT DE COMUNICACIÓN EN VIVO */}
+                {(!compact || activeTab === 'chat') && (
                     <div className={compact ? "" : "lg:col-span-6"}>
-                        <LeadRoadmapCalificacion
-                            dolores={dolores}
-                            setDolores={setDolores}
-                            objeciones={objeciones}
-                            setObjeciones={setObjeciones}
-                            observaciones={observaciones}
-                            setObservaciones={setObservaciones}
-                            handleSaveCalificacion={handleSaveCalificacion}
-                            savingCalificacion={savingCalificacion}
-                            userRole={userRole}
-                        />
+                        <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-850 shadow-xl space-y-4 h-full flex flex-col">
+                            <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/60 pb-3">
+                                <MessageSquare size={16} className="text-violet-400" />
+                                Chat de Comunicación del Lead
+                            </h4>
+                            {lead.id ? (
+                                <div className="flex-1 min-h-[380px]">
+                                    <CommentsSection clientId={lead.id} />
+                                </div>
+                            ) : (
+                                <div className="py-12 text-center text-slate-500 text-xs italic bg-slate-950/20 border border-dashed border-slate-850 rounded-2xl my-auto">
+                                    Lead no vinculado a un cliente activo del CRM
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
-                {/* PESTAÑA DE CHAT EN VIVO COMPACTA */}
-                {compact && activeTab === 'chat' && (
-                    <div className="bg-slate-900/40 p-4 rounded-3xl border border-slate-850 shadow-xl min-h-[400px]">
-                        {lead.id ? (
-                            <CommentsSection clientId={lead.id} />
-                        ) : (
-                            <div className="py-12 text-center text-xs text-slate-500 font-bold italic">
-                                Sin ID de cliente registrado para iniciar el chat en vivo
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* PESTAÑA DE HISTORIAL DE EVENTOS COMPACTA */}
+                {/* PESTAÑA DE HISTORIAL DE EVENTOS (COMPACTA) */}
                 {compact && activeTab === 'notas' && (
                     <div className="bg-slate-900/40 p-5 rounded-3xl border border-slate-850 shadow-xl space-y-4">
                         <h4 className="text-xs font-black uppercase text-white tracking-wider flex items-center gap-1.5">
@@ -278,28 +223,11 @@ const LeadRoadmapDetail = ({
                 )}
             </div>
 
-            {/* SECCIÓN INFERIOR COMPLETA (MODO NO COMPACTO) */}
+            {/* SECCIÓN INFERIOR: MEMBRESÍAS, VENTAS E HISTORIAL (MODO COMPLETO) */}
             {!compact && (
-                <>
-                    {/* CHAT EN VIVO COMPARTIDO */}
-                    <div className="bg-slate-900/40 p-6 rounded-3xl border border-slate-850 shadow-xl space-y-4">
-                        <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/60 pb-3">
-                            <MessageSquare size={16} className="text-violet-400" />
-                            Chat de Comunicación del Lead
-                        </h4>
-                        {lead.id ? (
-                            <div className="min-h-[350px]">
-                                <CommentsSection clientId={lead.id} />
-                            </div>
-                        ) : (
-                            <div className="py-8 text-center text-slate-500 text-xs italic bg-slate-950/20 border border-dashed border-slate-850 rounded-2xl">
-                                Lead no vinculado a un cliente activo del CRM
-                            </div>
-                        )}
-                    </div>
-
+                <div className="space-y-8">
                     {/* PROGRAMAS Y VENTAS */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <div className="space-y-4">
                             <h4 className="text-sm font-black text-white uppercase tracking-wider px-1">Membresías</h4>
                             {programs && programs.length > 0 ? (
@@ -345,7 +273,29 @@ const LeadRoadmapDetail = ({
                             )}
                         </div>
                     </div>
-                </>
+
+                    {/* HISTORIAL CRONOLÓGICO */}
+                    <div className="bg-slate-900/30 p-6 rounded-3xl border border-slate-850 shadow-xl space-y-4">
+                        <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/60 pb-3">
+                            <MessageSquare size={16} className="text-violet-400" />
+                            Historial de Actividad e Interacciones
+                        </h4>
+                        <div className="relative border-l-2 border-slate-800 ml-4 pl-6 space-y-4 max-h-[450px] overflow-y-auto custom-scrollbar">
+                            {(activity || []).map((act, i) => (
+                                <div key={i} className="p-4 bg-slate-950/60 rounded-2xl border border-slate-850 text-xs space-y-1">
+                                    <div className="flex justify-between items-center text-[10px] font-black text-slate-400">
+                                        <span className="uppercase text-violet-300">{act.event}</span>
+                                        <span>{formatTime(act.date)}</span>
+                                    </div>
+                                    <p className="text-slate-200 font-medium">{act.detail}</p>
+                                    {act.origin && (
+                                        <span className="text-[9px] text-slate-500 font-bold uppercase block mt-1">Origen: {act.origin}</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* MODAL DE EDICIÓN DE DATOS DEL CLIENTE */}
