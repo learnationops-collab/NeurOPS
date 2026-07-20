@@ -806,7 +806,7 @@ def get_lead_comments(id):
         return jsonify({"message": "Forbidden"}), 403
         
     # Marcar notificaciones de este cliente para el usuario actual como leídas
-    from app.models import CommentNotification
+    from app.models import CommentNotification, Comment, Client, ClientComment
     try:
         CommentNotification.query.filter_by(
             client_id=id,
@@ -819,13 +819,64 @@ def get_lead_comments(id):
         import logging
         logging.error(f"Error marking notifications as read: {e}")
         
-    comments = ClientComment.query.filter_by(client_id=id).order_by(ClientComment.created_at.desc()).all()
-    return jsonify([{
-        "id": c.id,
-        "text": c.text,
-        "author": c.author_rel.username if c.author_rel else "Desconocido",
-        "created_at": c.created_at.isoformat()
-    } for c in comments]), 200
+    comments = ClientComment.query.filter_by(client_id=id).all()
+    old_comments = Comment.query.filter_by(comment_type='client', associated_id=id).all()
+    client = Client.query.get(id)
+    
+    combined = []
+    seen_texts = set()
+
+    # 1. Observaciones históricas registradas en la ficha del lead
+    if client and client.observaciones and client.observaciones.strip():
+        txt = f"[Observación Call Confirmer Histórica]: {client.observaciones.strip()}"
+        combined.append({
+            "id": f"obs_{client.id}",
+            "text": txt,
+            "author": "Call Confirmer",
+            "created_at": client.created_at.isoformat() if client.created_at else datetime.utcnow().isoformat()
+        })
+        seen_texts.add(txt.lower())
+
+    if client and client.notes and client.notes.strip():
+        txt = f"[Nota del Lead]: {client.notes.strip()}"
+        if txt.lower() not in seen_texts:
+            combined.append({
+                "id": f"note_{client.id}",
+                "text": txt,
+                "author": "Sistema",
+                "created_at": client.created_at.isoformat() if client.created_at else datetime.utcnow().isoformat()
+            })
+            seen_texts.add(txt.lower())
+
+    # 2. Comentarios de la tabla genérica Comment
+    for c in old_comments:
+        c_text = getattr(c, 'text', None) or getattr(c, 'content', None) or ""
+        if c_text and c_text.strip().lower() not in seen_texts:
+            author_name = "Call Confirmer"
+            if hasattr(c, 'user') and c.user:
+                author_name = c.user.username
+            combined.append({
+                "id": f"old_{c.id}",
+                "text": c_text.strip(),
+                "author": author_name,
+                "created_at": c.created_at.isoformat() if c.created_at else datetime.utcnow().isoformat()
+            })
+            seen_texts.add(c_text.strip().lower())
+
+    # 3. Comentarios de ClientComment
+    for c in comments:
+        if c.text and c.text.strip().lower() not in seen_texts:
+            combined.append({
+                "id": c.id,
+                "text": c.text.strip(),
+                "author": c.author_rel.username if c.author_rel else "Call Confirmer",
+                "created_at": c.created_at.isoformat() if c.created_at else datetime.utcnow().isoformat()
+            })
+            seen_texts.add(c.text.strip().lower())
+
+    # Ordenar cronológicamente descendente
+    combined.sort(key=lambda x: x["created_at"], reverse=True)
+    return jsonify(combined), 200
 
 @bp.route('/leads/<int:id>/comments', methods=['POST'], strict_slashes=False)
 @login_required
