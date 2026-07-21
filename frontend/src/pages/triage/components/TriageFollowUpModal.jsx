@@ -7,6 +7,7 @@ const TriageFollowUpModal = ({
     onConfirm,
     leadName,
     newStatus,
+    subtitle = "Call Confirmer Workflow",
     loading = false
 }) => {
     const [followUpDate, setFollowUpDate] = useState('');
@@ -31,7 +32,7 @@ const TriageFollowUpModal = ({
                 <div className="flex justify-between items-start border-b border-slate-800/80 pb-4">
                     <div className="space-y-1">
                         <span className="text-[10px] font-black uppercase tracking-widest text-violet-400">
-                            Call Confirmer Workflow
+                            {subtitle}
                         </span>
                         <h3 className="text-lg font-black text-white italic tracking-tight">
                             {isNextFollowUp ? '¿Programar Próximo Seguimiento?' : '¿Programar Seguimiento?'}

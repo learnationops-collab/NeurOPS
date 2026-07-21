@@ -12,6 +12,7 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import LeadRoadmapDetail from '../../components/leads/LeadRoadmapDetail';
 import CommentsSection from '../../components/shared/CommentsSection';
+import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 
 const CloserWorkflowPage = () => {
     const { user } = useAuth();
@@ -26,6 +27,15 @@ const CloserWorkflowPage = () => {
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
     const [submittingBulk, setSubmittingBulk] = useState(false);
+    
+    // Modal de Seguimiento tras cambio de estado / venta
+    const [followUpModal, setFollowUpModal] = useState({
+        show: false,
+        agendaId: null,
+        leadName: '',
+        newStatus: ''
+    });
+    const [savingFollowUp, setSavingFollowUp] = useState(false);
     
     // Selección masiva y búsqueda local
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -81,9 +91,7 @@ const CloserWorkflowPage = () => {
     const fetchAgendas = async () => {
         setLoading(true);
         try {
-            const url = activeStep === 'agendas'
-                ? `/closer/deck?step=${activeStep}&selected_date=${selectedDate}`
-                : `/closer/deck?step=${activeStep}`;
+            const url = `/closer/deck?step=${activeStep}&selected_date=${selectedDate}`;
             const res = await api.get(url);
             const dataList = res.data || [];
             setAgendas(dataList);
@@ -112,6 +120,51 @@ const CloserWorkflowPage = () => {
     useEffect(() => {
         fetchAgendas();
     }, [activeStep, selectedDate]);
+
+    // Guardar la fecha de seguimiento del modal
+    const handleConfirmFollowUp = async (followUpDate) => {
+        if (!followUpModal.agendaId) return;
+        setSavingFollowUp(true);
+        try {
+            await api.post(`/closer/deck/${followUpModal.agendaId}`, {
+                fecha_seguimiento: followUpDate,
+                seguimiento_realizado: false
+            });
+            toast.success("Seguimiento programado correctamente");
+            setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '' });
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error al guardar fecha de seguimiento:", err);
+            toast.error("Error al guardar la fecha de seguimiento");
+        } finally {
+            setSavingFollowUp(false);
+        }
+    };
+
+    // Marcar seguimiento como realizado
+    const handleMarkFollowUpDone = async (agenda, e) => {
+        if (e) e.stopPropagation();
+        setProcessingId(agenda.id);
+        try {
+            await api.post(`/closer/deck/${agenda.id}`, {
+                seguimiento_realizado: true
+            });
+            toast.success("Seguimiento marcado como realizado");
+            // Mostrar modal para consultar si desea programar un nuevo seguimiento futuro
+            setFollowUpModal({
+                show: true,
+                agendaId: agenda.id,
+                leadName: agenda.lead_name || 'Prospecto',
+                newStatus: 'Seguimiento Realizado'
+            });
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error al marcar seguimiento como realizado:", err);
+            toast.error("Error al actualizar el seguimiento");
+        } finally {
+            setProcessingId(null);
+        }
+    };
 
     const handleSelectLead = (lead) => {
         setSelectedLead(lead);
@@ -207,6 +260,15 @@ const CloserWorkflowPage = () => {
                     });
                     setSalePrompt({ apptId: leadId });
                 }
+            } else {
+                // Para estados distintos de Completada, preguntar por seguimiento
+                const appt = agendas.find(a => a.id === leadId);
+                setFollowUpModal({
+                    show: true,
+                    agendaId: leadId,
+                    leadName: appt?.lead_name || selectedLead?.lead_name || 'Prospecto',
+                    newStatus: nextStatus
+                });
             }
         } catch (err) {
             console.error("Error al procesar acción rápida:", err);
@@ -379,8 +441,20 @@ const CloserWorkflowPage = () => {
             
             if (res.data.status === 'success') {
                 toast.success("Venta declarada y sincronizada correctamente");
+                const savedApptId = salePrompt.apptId;
                 setSaleModalOpen(false);
+                setSalePrompt({ apptId: null });
                 fetchAgendas();
+
+                // Ofrecer seguimiento de cobro post-venta
+                if (savedApptId) {
+                    setFollowUpModal({
+                        show: true,
+                        agendaId: savedApptId,
+                        leadName: saleForm.nombre_cliente || 'Cliente',
+                        newStatus: 'Seguimiento de Cobro'
+                    });
+                }
             } else {
                 toast.error(res.data.message || "Error al sincronizar con Google Sheets");
             }
@@ -396,20 +470,57 @@ const CloserWorkflowPage = () => {
         <div className="h-screen overflow-y-auto bg-slate-950 text-slate-100 flex flex-col custom-scrollbar pb-32">
             
             {/* Header del Espacio de Trabajo */}
-            <div className="px-6 pt-6 pb-4 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
+            <div className="px-6 pt-6 pb-4 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 space-y-4">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h1 className="text-2xl font-black text-white italic uppercase tracking-tight flex items-center gap-2">
                             Closer Workspace
                         </h1>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                            Flujo de Trabajo Operativo • 1. Agendas del Día
+                            Flujo de Trabajo Operativo • {activeStep === 'seguimientos' ? '2. Seguimientos por Hacer' : activeStep === 'reagendar' ? '3. Reagendar / Actualizar' : '1. Citas del Día'}
                         </p>
+                    </div>
+
+                    {/* Selector de Pestaña de Categoría */}
+                    <div className="flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800/80">
+                        <button
+                            onClick={() => setSearchParams({ step: 'agendas', selected_date: selectedDate })}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                                activeStep === 'agendas'
+                                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/25'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                            }`}
+                        >
+                            <Calendar size={12} />
+                            <span>Citas del Día</span>
+                        </button>
+                        <button
+                            onClick={() => setSearchParams({ step: 'seguimientos', selected_date: selectedDate })}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                                activeStep === 'seguimientos'
+                                    ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/25'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                            }`}
+                        >
+                            <Clock size={12} />
+                            <span>Seguimientos por Hacer</span>
+                        </button>
+                        <button
+                            onClick={() => setSearchParams({ step: 'reagendar', selected_date: selectedDate })}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                                activeStep === 'reagendar'
+                                    ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/25'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                            }`}
+                        >
+                            <RefreshCw size={12} />
+                            <span>Reagendar / Actualizar</span>
+                        </button>
                     </div>
 
                     {/* Controles de Búsqueda y Filtro de Fecha */}
                     <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                        {activeStep === 'agendas' && (
+                        {(activeStep === 'agendas' || activeStep === 'seguimientos') && (
                             <div className="relative">
                                 <input
                                     type="date"
@@ -616,6 +727,12 @@ const CloserWorkflowPage = () => {
                                                                 <span className="text-[8px] font-black uppercase text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-md">
                                                                     Confirmer: {a.result || 'Pendiente'}
                                                                 </span>
+                                                                {a.fecha_seguimiento && (
+                                                                    <span className="text-[8px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                                        <Calendar size={10} />
+                                                                        Seguimiento: {a.fecha_seguimiento}
+                                                                    </span>
+                                                                )}
                                                                 {a.is_rescheduled && (
                                                                     <span className="text-[8px] font-black uppercase text-pink-400 bg-pink-500/10 border border-pink-500/20 px-2 py-0.5 rounded-md">
                                                                         Reagenda
@@ -632,6 +749,16 @@ const CloserWorkflowPage = () => {
 
                                                     {/* Estado actual e indicador */}
                                                     <div className="flex items-center gap-3 shrink-0">
+                                                        {activeStep === 'seguimientos' && !a.seguimiento_realizado && (
+                                                            <button
+                                                                onClick={(e) => handleMarkFollowUpDone(a, e)}
+                                                                disabled={processingId === a.id}
+                                                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20"
+                                                            >
+                                                                {processingId === a.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                                                Marcar Realizado
+                                                            </button>
+                                                        )}
                                                         <span className={`text-[9px] font-black px-2 py-1 rounded-xl uppercase tracking-wider ${
                                                             a.closer_result === 'Show up' ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20' :
                                                             a.closer_result === 'No Show' ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20' :
@@ -1423,6 +1550,17 @@ const CloserWorkflowPage = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Modal de Configuración de Seguimiento */}
+            <TriageFollowUpModal
+                show={followUpModal.show}
+                onClose={() => setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '' })}
+                onConfirm={handleConfirmFollowUp}
+                leadName={followUpModal.leadName}
+                newStatus={followUpModal.newStatus}
+                subtitle="Closer Workflow"
+                loading={savingFollowUp}
+            />
         </div>
     );
 };
