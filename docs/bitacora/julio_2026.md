@@ -646,7 +646,7 @@
       - Se añadió el campo `is_non_working_day` a los modelos de base de datos `SetterDailyStats`, `CloserDailyReport`, `TriageDailyReport` y `TriageTrackerReport`.
       - Se ejecutó la migración de Alembic `c9ec326adaa9_add_is_non_working_day_to_report_models.py`.
       - Se actualizaron los endpoints de reporte diario de Setting (`POST /api/setter/daily-report`), Closing (`POST /api/closer/daily-report` y `POST /api/public/closer/report`) y Call Confirmer (`POST /api/public/triage-report`) para recibir y guardar la marca de día no laborable.
-      - Se agregó el botón **"Día no laborable"** a la interfaz de reporte diario para Setting (`SetterReportModal.jsx` y `SetterDashboard.jsx`), Call Confirmer (`PublicTriageReportPage.jsx`) y Closing (`CloserDashboard.jsx`), permitiendo guardar el reporte completado sin retrasos al presionar este botón.
+      - Se agregó el botón **"Día no laborable"** a la interfaz de reporte diario para Setting (`SetterReportModal.jsx` y `SetterDashboard.jsx`), Call Confirmer (`PublicTriageReportPage.jsx`) y Closing (`CloserDashboard.jsx` y `PublicCloserReportPage.jsx` en `/closer/report`), permitiendo guardar el reporte completado sin retrasos al presionar este botón.
 
 
 
