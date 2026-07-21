@@ -33,7 +33,8 @@ const CloserWorkflowPage = () => {
         show: false,
         agendaId: null,
         leadName: '',
-        newStatus: ''
+        newStatus: '',
+        isSaleFollowUp: false
     });
     const [savingFollowUp, setSavingFollowUp] = useState(false);
     
@@ -50,88 +51,42 @@ const CloserWorkflowPage = () => {
     // Cita seleccionada para el visor de la derecha
     const [selectedLead, setSelectedLead] = useState(null);
 
+    // Modal de motivo/razón de cambio (Reemplazo de window.prompt)
+    const [reasonModal, setReasonModal] = useState({
+        show: false,
+        title: '',
+        description: '',
+        placeholder: '',
+        confirmText: 'Guardar',
+        requireText: true,
+        actionType: null,
+        apptId: null,
+        nextStatus: null,
+        rescheduleDate: null
+    });
+    const [reasonInput, setReasonInput] = useState('');
+
     // Estado para reprogramación individual
     const [rescheduleData, setRescheduleData] = useState({ apptId: null, date: '', status: '' });
 
-    // Flujo de registro de venta directo post-Show Up
-    const [salePrompt, setSalePrompt] = useState({ apptId: null });
-    const [saleModalOpen, setSaleModalOpen] = useState(false);
-    const [saleStep, setSaleStep] = useState(1);
-    const [submittingSale, setSubmittingSale] = useState(false);
-    const [saleForm, setSaleForm] = useState({
-        lead_id: '',
-        email_vendedor: user?.email || '',
-        nombre_cliente: '',
-        telefono: '',
-        mail_cliente: '',
-        programa: 'RR',
-        tipo_pago_simple: 'completo',
-        monto: '',
-        segundo_pago: '',
-        metodo_pago: 'Stripe',
-        examen_lead: '',
-        notes: '',
-        estado: 'Completada',
-        instagram: '',
-        setter: '',
-        documento_identidad: '',
-        enviar_mensaje: true,
-        sold_in_call: true,
-        date: new Date().toISOString().split('T')[0]
-    });
-
-    // Sincronizar email del closer en cuanto esté cargado en la sesión
-    useEffect(() => {
-        if (user?.email) {
-            setSaleForm(prev => ({ ...prev, email_vendedor: user.email }));
-        }
-    }, [user]);
-
-    // Cargar agendas del día del closer
-    const fetchAgendas = async () => {
-        setLoading(true);
-        try {
-            const url = `/closer/deck?step=${activeStep}&selected_date=${selectedDate}`;
-            const res = await api.get(url);
-            const dataList = res.data || [];
-            setAgendas(dataList);
-            setSelectedIds(new Set());
-
-            // Cargar leads sin agenda con comentarios pendientes
-            try {
-                const unreadRes = await api.get('/closer/unread-no-agenda');
-                setUnreadNoAgenda(unreadRes.data || []);
-            } catch (err) {
-                console.error("Error al cargar leads sin agenda para closer:", err);
-            }
-
-            // Si el lead actualmente seleccionado ya no está en la cola ni en unreadNoAgenda, deseleccionarlo
-            if (selectedLead && !dataList.some(l => l.id === selectedLead.id) && !unreadNoAgenda.some(l => l.id === selectedLead.id)) {
-                setSelectedLead(null);
-            }
-        } catch (err) {
-            console.error("Error al cargar agendas:", err);
-            toast.error("Error al cargar las agendas");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchAgendas();
-    }, [activeStep, selectedDate]);
-
-    // Guardar la fecha de seguimiento del modal
-    const handleConfirmFollowUp = async (followUpDate) => {
+    // Guardar la fecha de seguimiento del modal (soporta string o objeto con cobro + normal)
+    const handleConfirmFollowUp = async (followUpData) => {
         if (!followUpModal.agendaId) return;
         setSavingFollowUp(true);
         try {
-            await api.post(`/closer/deck/${followUpModal.agendaId}`, {
-                fecha_seguimiento: followUpDate,
-                seguimiento_realizado: false
-            });
-            toast.success("Seguimiento programado correctamente");
-            setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '' });
+            const payload = {};
+            if (typeof followUpData === 'object' && followUpData !== null) {
+                if (followUpData.normal) payload.fecha_seguimiento = followUpData.normal;
+                if (followUpData.cobro) payload.fecha_seguimiento_cobro = followUpData.cobro;
+                payload.seguimiento_realizado = false;
+            } else {
+                payload.fecha_seguimiento = followUpData;
+                payload.seguimiento_realizado = false;
+            }
+
+            await api.post(`/closer/deck/${followUpModal.agendaId}`, payload);
+            toast.success("Seguimiento(s) programado(s) correctamente");
+            setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '', isSaleFollowUp: false });
             fetchAgendas();
         } catch (err) {
             console.error("Error al guardar fecha de seguimiento:", err);
@@ -152,13 +107,55 @@ const CloserWorkflowPage = () => {
                 seguimiento_realizado: true
             });
             toast.success("Lead marcado como Perdido (almacenado para etapa de recuperación)");
-            setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '' });
+            setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '', isSaleFollowUp: false });
             fetchAgendas();
         } catch (err) {
             console.error("Error al marcar lead como perdido:", err);
             toast.error("Error al actualizar el estado del lead");
         } finally {
             setSavingFollowUp(false);
+        }
+    };
+
+    // Confirmar modal de motivo (Cancelación, Reagenda, No Lead)
+    const handleConfirmReason = async (note) => {
+        const { actionType, apptId, nextStatus, rescheduleDate } = reasonModal;
+        setReasonModal(prev => ({ ...prev, show: false }));
+
+        if (actionType === 'cancel') {
+            await executeQuickAction(apptId, 'Cancelado', null, note);
+        } else if (actionType === 'reschedule') {
+            setProcessingId(apptId);
+            try {
+                await api.post(`/closer/appointments/${apptId}/process`, {
+                    status: nextStatus === 'Reprogramada' ? 'Reagendado' : '2da call',
+                    reschedule_date: rescheduleDate,
+                    role: 'closer',
+                    note: note
+                });
+                toast.success(nextStatus === 'Reprogramada' ? "Cita reprogramada" : "Segunda llamada agendada");
+                setRescheduleData({ apptId: null, date: '', status: '' });
+                if (selectedLead?.id === apptId) setSelectedLead(null);
+                fetchAgendas();
+            } catch (err) {
+                console.error("Error al reprogramar:", err);
+                toast.error("Error al procesar el cambio");
+            } finally {
+                setProcessingId(null);
+            }
+        } else if (actionType === 'no_lead') {
+            setProcessingId(apptId);
+            try {
+                await api.post(`/closer/appointments/${apptId}/process`, { status: 'No Lead', note: note });
+                toast.success("Prospecto marcado como No Lead");
+                if (selectedLead?.id === apptId) setSelectedLead(null);
+                fetchAgendas();
+            } catch (err) {
+                console.error(err);
+                toast.error("Error al calificar como No Lead");
+            } finally {
+                setProcessingId(null);
+            }
         }
     };
 
@@ -213,17 +210,24 @@ const CloserWorkflowPage = () => {
             return;
         }
         
-        let note = null;
-        if (nextStatus === 'Cancelada') {
-            note = window.prompt("Escribe la razón de la cancelación para el Lead Roadmap:");
-            if (note === null) return;
-            if (!note.trim()) {
-                toast.error("La razón de la cancelación es requerida");
-                return;
-            }
+        if (nextStatus === 'Cancelada' || nextStatus === 'Cancelado') {
+            const appt = agendas.find(a => a.id === leadId);
+            setReasonInput('');
+            setReasonModal({
+                show: true,
+                title: "Motivo de Cancelación",
+                description: `Por favor ingresa la razón de la cancelación para el Lead Roadmap de ${appt?.lead_name || 'este prospecto'}:`,
+                placeholder: "Motivo de la cancelación...",
+                confirmText: "Guardar y Cancelar Cita",
+                requireText: true,
+                actionType: 'cancel',
+                apptId: leadId,
+                nextStatus: 'Cancelado'
+            });
+            return;
         }
         
-        await executeQuickAction(leadId, nextStatus === 'Cancelada' ? 'Cancelado' : nextStatus, null, note);
+        await executeQuickAction(leadId, nextStatus, null, null);
     };
 
     const executeQuickAction = async (leadId, nextStatus, withDecisionMaker, note = null) => {
@@ -288,7 +292,8 @@ const CloserWorkflowPage = () => {
                     show: true,
                     agendaId: leadId,
                     leadName: appt?.lead_name || selectedLead?.lead_name || 'Prospecto',
-                    newStatus: nextStatus
+                    newStatus: nextStatus,
+                    isSaleFollowUp: false
                 });
             }
         } catch (err) {
@@ -309,23 +314,20 @@ const CloserWorkflowPage = () => {
             return;
         }
 
-        setProcessingId(apptId);
-        try {
-            await api.post(`/closer/appointments/${apptId}/process`, {
-                status: status,
-                reschedule_date: date
-            });
-            toast.success(status === 'Reprogramada' ? "Cita reprogramada" : "Segunda llamada agendada");
-            
-            // Cerrar panel de reprogramación y recargar datos
-            setRescheduleData({ apptId: null, date: '', status: '' });
-            fetchAgendas();
-        } catch (err) {
-            console.error("Error al reprogramar:", err);
-            toast.error("Error al procesar el cambio de fecha");
-        } finally {
-            setProcessingId(null);
-        }
+        const appt = agendas.find(a => a.id === apptId);
+        setReasonInput('');
+        setReasonModal({
+            show: true,
+            title: status === 'Reprogramada' ? "Motivo de Reagendamiento" : "Motivo de 2ª Llamada",
+            description: `Escribe la razón del cambio para el Lead Roadmap de ${appt?.lead_name || 'este prospecto'}:`,
+            placeholder: "Razón del cambio...",
+            confirmText: "Confirmar Fecha",
+            requireText: true,
+            actionType: 'reschedule',
+            apptId: apptId,
+            nextStatus: status,
+            rescheduleDate: date
+        });
     };
 
     // Actualización masiva (Asistió, No Show, Canceló)
@@ -1009,21 +1011,19 @@ const CloserWorkflowPage = () => {
                                                         2ª Llamada
                                                     </button>
                                                     <button
-                                                        onClick={async (e) => {
+                                                        onClick={(e) => {
                                                             if (e) e.stopPropagation();
-                                                            if (!window.confirm("¿Seguro que deseas marcar este prospecto como No Lead?")) return;
-                                                            setProcessingId(selectedLead.id);
-                                                            try {
-                                                                await api.post(`/closer/appointments/${selectedLead.id}/process`, { status: 'No Lead' });
-                                                                toast.success("Prospecto marcado como No Lead");
-                                                                setSelectedLead(null);
-                                                                fetchAgendas();
-                                                            } catch (err) {
-                                                                console.error(err);
-                                                                toast.error("Error al calificar");
-                                                            } finally {
-                                                                setProcessingId(null);
-                                                            }
+                                                            setReasonInput('');
+                                                            setReasonModal({
+                                                                show: true,
+                                                                title: "Calificar como No Lead",
+                                                                description: `¿Seguro que deseas calificar a ${selectedLead.lead_name || 'este prospecto'} como No Lead? Puedes ingresar un detalle opcional:`,
+                                                                placeholder: "Detalles opcionales...",
+                                                                confirmText: "Confirmar No Lead",
+                                                                requireText: false,
+                                                                actionType: 'no_lead',
+                                                                apptId: selectedLead.id
+                                                            });
                                                         }}
                                                         disabled={processingId === selectedLead.id}
                                                         className="h-10 px-4 bg-slate-800 hover:bg-slate-700 text-slate-350 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border border-slate-750"
@@ -1046,37 +1046,7 @@ const CloserWorkflowPage = () => {
                                                             className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50"
                                                         />
                                                         <button
-                                                            onClick={async (e) => {
-                                                                e.stopPropagation();
-                                                                if (!rescheduleData.date) {
-                                                                    toast.error("Selecciona una fecha y hora");
-                                                                    return;
-                                                                }
-                                                                const note = window.prompt("Escribe la razón del cambio para el Lead Roadmap:");
-                                                                if (note === null) return;
-                                                                if (!note.trim()) {
-                                                                    toast.error("La razón del cambio es requerida");
-                                                                    return;
-                                                                }
-                                                                setProcessingId(selectedLead.id);
-                                                                try {
-                                                                    await api.post(`/closer/appointments/${selectedLead.id}/process`, {
-                                                                        status: rescheduleData.status === 'Reprogramada' ? 'Reagendado' : '2da call',
-                                                                        reschedule_date: rescheduleData.date,
-                                                                        role: 'closer',
-                                                                        note: note
-                                                                    });
-                                                                    toast.success(rescheduleData.status === 'Reprogramada' ? "Cita reprogramada" : "Segunda llamada agendada");
-                                                                    setRescheduleData({ apptId: null, date: '', status: '' });
-                                                                    setSelectedLead(null);
-                                                                    fetchAgendas();
-                                                                } catch (err) {
-                                                                    console.error(err);
-                                                                    toast.error("Error al procesar el cambio");
-                                                                } finally {
-                                                                    setProcessingId(null);
-                                                                }
-                                                            }}
+                                                            onClick={handleConfirmReschedule}
                                                             disabled={processingId === selectedLead.id || !rescheduleData.date}
                                                             className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center cursor-pointer"
                                                         >
@@ -1177,12 +1147,24 @@ const CloserWorkflowPage = () => {
                                 </button>
                                 <button
                                     onClick={() => {
+                                        const apptId = salePrompt.apptId;
+                                        const appt = agendas.find(a => a.id === apptId);
                                         setSalePrompt({ apptId: null });
-                                        fetchAgendas();
+                                        if (apptId) {
+                                            setFollowUpModal({
+                                                show: true,
+                                                agendaId: apptId,
+                                                leadName: appt?.lead_name || 'Prospecto',
+                                                newStatus: 'Cierre de Venta',
+                                                isSaleFollowUp: false
+                                            });
+                                        } else {
+                                            fetchAgendas();
+                                        }
                                     }}
                                     className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black text-xs uppercase tracking-widest rounded-xl border border-slate-700 transition-all cursor-pointer"
                                 >
-                                    No, terminar
+                                    No hubo venta (Configurar Seguimiento)
                                 </button>
                             </div>
                         </motion.div>
@@ -1215,8 +1197,19 @@ const CloserWorkflowPage = () => {
                                 </div>
                                 <button
                                     onClick={() => {
-                                        if (window.confirm("¿Seguro que deseas cerrar la declaración de venta? Los datos ingresados se perderán.")) {
-                                            setSaleModalOpen(false);
+                                        const apptId = salePrompt.apptId;
+                                        setSaleModalOpen(false);
+                                        setSalePrompt({ apptId: null });
+                                        if (apptId) {
+                                            const appt = agendas.find(a => a.id === apptId);
+                                            setFollowUpModal({
+                                                show: true,
+                                                agendaId: apptId,
+                                                leadName: appt?.lead_name || 'Prospecto',
+                                                newStatus: 'Cierre de Venta',
+                                                isSaleFollowUp: false
+                                            });
+                                        } else {
                                             fetchAgendas();
                                         }
                                     }}
@@ -1572,15 +1565,87 @@ const CloserWorkflowPage = () => {
                 )}
             </AnimatePresence>
 
+            {/* Modal de Motivo / Razón de Cambio (Reemplazo de window.prompt) */}
+            <AnimatePresence>
+                {reasonModal.show && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in text-left">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 relative"
+                        >
+                            <div className="flex justify-between items-start border-b border-slate-800/80 pb-4">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-violet-400">
+                                        Closer Workflow
+                                    </span>
+                                    <h3 className="text-lg font-black text-white italic tracking-tight">
+                                        {reasonModal.title}
+                                    </h3>
+                                </div>
+                                <button
+                                    onClick={() => setReasonModal(prev => ({ ...prev, show: false }))}
+                                    className="text-slate-500 hover:text-white transition-colors p-1 cursor-pointer bg-transparent border-none"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                {reasonModal.description}
+                            </p>
+
+                            {reasonModal.actionType !== 'no_lead' && (
+                                <div className="space-y-2">
+                                    <textarea
+                                        rows={3}
+                                        value={reasonInput}
+                                        onChange={(e) => setReasonInput(e.target.value)}
+                                        placeholder={reasonModal.placeholder}
+                                        className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-medium custom-scrollbar"
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex items-center gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setReasonModal(prev => ({ ...prev, show: false }))}
+                                    className="flex-1 py-3 bg-slate-950 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (reasonModal.requireText && !reasonInput.trim()) {
+                                            toast.error("Por favor ingresa un motivo");
+                                            return;
+                                        }
+                                        handleConfirmReason(reasonInput.trim());
+                                    }}
+                                    className="flex-1 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 cursor-pointer border-none"
+                                >
+                                    <Check size={14} />
+                                    <span>{reasonModal.confirmText || 'Guardar'}</span>
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             {/* Modal de Configuración de Seguimiento */}
             <TriageFollowUpModal
                 show={followUpModal.show}
-                onClose={() => setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '' })}
+                onClose={() => setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '', isSaleFollowUp: false })}
                 onConfirm={handleConfirmFollowUp}
                 onMarkLost={handleMarkLeadLost}
                 leadName={followUpModal.leadName}
                 newStatus={followUpModal.newStatus}
                 subtitle="Closer Workflow"
+                isSaleFollowUp={followUpModal.isSaleFollowUp}
                 loading={savingFollowUp}
             />
         </div>

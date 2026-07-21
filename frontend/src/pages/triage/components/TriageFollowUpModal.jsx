@@ -9,16 +9,19 @@ const TriageFollowUpModal = ({
     leadName,
     newStatus,
     subtitle = "Call Confirmer Workflow",
+    isSaleFollowUp = false,
     loading = false
 }) => {
     const [followUpDate, setFollowUpDate] = useState('');
+    const [followUpCobroDate, setFollowUpCobroDate] = useState('');
 
     useEffect(() => {
         if (show) {
-            // Predeterminar mañana a la fecha actual si no hay valor
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
-            setFollowUpDate(tomorrow.toISOString().split('T')[0]);
+            const tomorrowStr = tomorrow.toISOString().split('T')[0];
+            setFollowUpDate(tomorrowStr);
+            setFollowUpCobroDate('');
         }
     }, [show]);
 
@@ -36,7 +39,7 @@ const TriageFollowUpModal = ({
                             {subtitle}
                         </span>
                         <h3 className="text-lg font-black text-white italic tracking-tight">
-                            {isNextFollowUp ? '¿Programar Próximo Seguimiento?' : '¿Programar Seguimiento?'}
+                            {isSaleFollowUp ? 'Configurar Seguimientos Post-Venta' : isNextFollowUp ? '¿Programar Próximo Seguimiento?' : '¿Programar Seguimiento?'}
                         </h3>
                     </div>
                     <button
@@ -48,7 +51,12 @@ const TriageFollowUpModal = ({
                 </div>
 
                 <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                    {isNextFollowUp ? (
+                    {isSaleFollowUp ? (
+                        <>
+                            ¡Venta registrada para <strong className="text-white italic">{leadName}</strong>! 
+                            Puedes programar una fecha de <strong>Seguimiento de Cobro</strong> (ej. segundo pago/cuotas) y/o un <strong>Seguimiento Normal / Onboarding</strong>.
+                        </>
+                    ) : isNextFollowUp ? (
                         <>
                             Has marcado el seguimiento de <strong className="text-white italic">{leadName}</strong> como{' '}
                             <span className="text-emerald-400 font-black uppercase">Completado</span>. 
@@ -63,20 +71,49 @@ const TriageFollowUpModal = ({
                     )}
                 </p>
 
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block flex items-center gap-1.5">
-                        <Calendar size={12} className="text-violet-400" />
-                        Fecha del {isNextFollowUp ? 'Próximo Seguimiento' : 'Seguimiento'}
-                    </label>
-                    <input
-                        type="date"
-                        value={followUpDate}
-                        onChange={(e) => setFollowUpDate(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-bold cursor-pointer"
-                    />
-                </div>
+                {isSaleFollowUp ? (
+                    <div className="space-y-4">
+                        <div className="space-y-1.5 bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10">
+                            <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block flex items-center gap-1.5">
+                                <Calendar size={12} className="text-emerald-400" />
+                                Seguimiento de Cobro (opcional)
+                            </label>
+                            <input
+                                type="date"
+                                value={followUpCobroDate}
+                                onChange={(e) => setFollowUpCobroDate(e.target.value)}
+                                className="w-full px-4 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-bold cursor-pointer"
+                            />
+                        </div>
+                        <div className="space-y-1.5 bg-violet-500/5 p-3 rounded-2xl border border-violet-500/10">
+                            <label className="text-[10px] font-black text-violet-400 uppercase tracking-widest block flex items-center gap-1.5">
+                                <Calendar size={12} className="text-violet-400" />
+                                Seguimiento Normal / Onboarding (opcional)
+                            </label>
+                            <input
+                                type="date"
+                                value={followUpDate}
+                                onChange={(e) => setFollowUpDate(e.target.value)}
+                                className="w-full px-4 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-bold cursor-pointer"
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block flex items-center gap-1.5">
+                            <Calendar size={12} className="text-violet-400" />
+                            Fecha del {isNextFollowUp ? 'Próximo Seguimiento' : 'Seguimiento'}
+                        </label>
+                        <input
+                            type="date"
+                            value={followUpDate}
+                            onChange={(e) => setFollowUpDate(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all font-bold cursor-pointer"
+                        />
+                    </div>
+                )}
 
-                {onMarkLost && (
+                {onMarkLost && !isSaleFollowUp && (
                     <div className="pt-1">
                         <button
                             type="button"
@@ -100,8 +137,14 @@ const TriageFollowUpModal = ({
                     </button>
                     <button
                         type="button"
-                        onClick={() => onConfirm(followUpDate)}
-                        disabled={loading || !followUpDate}
+                        onClick={() => {
+                            if (isSaleFollowUp) {
+                                onConfirm({ normal: followUpDate, cobro: followUpCobroDate });
+                            } else {
+                                onConfirm(followUpDate);
+                            }
+                        }}
+                        disabled={loading || (!isSaleFollowUp && !followUpDate) || (isSaleFollowUp && !followUpDate && !followUpCobroDate)}
                         className="flex-1 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 border-none"
                     >
                         {loading ? (
@@ -109,7 +152,7 @@ const TriageFollowUpModal = ({
                         ) : (
                             <>
                                 <Check size={14} />
-                                <span>Guardar Fecha</span>
+                                <span>{isSaleFollowUp ? 'Guardar Seguimientos' : 'Guardar Fecha'}</span>
                             </>
                         )}
                     </button>
