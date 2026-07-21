@@ -84,6 +84,7 @@ const CloserWorkflowPage = () => {
         tipo_pago_simple: 'completo',
         monto: '',
         segundo_pago: '',
+        fecha_cobro: '',
         metodo_pago: 'Stripe',
         examen_lead: '',
         notes: '',
@@ -340,6 +341,7 @@ const CloserWorkflowPage = () => {
                         tipo_pago_simple: 'completo',
                         monto: '',
                         segundo_pago: '',
+                        fecha_cobro: '',
                         metodo_pago: 'Stripe',
                         examen_lead: appt.keyword || '',
                         notas: '',
@@ -533,6 +535,19 @@ const CloserWorkflowPage = () => {
             if (res.data.status === 'success') {
                 toast.success("Venta declarada y sincronizada correctamente");
                 const savedApptId = salePrompt.apptId;
+
+                // Si se definió una fecha de cobro en la venta, auto-guardarla para la agenda
+                if (savedApptId && saleForm.fecha_cobro) {
+                    try {
+                        await api.post(`/closer/deck/${savedApptId}`, {
+                            fecha_seguimiento_cobro: saleForm.fecha_cobro,
+                            seguimiento_realizado: false
+                        });
+                    } catch (e) {
+                        console.error("Error al auto-guardar fecha_seguimiento_cobro:", e);
+                    }
+                }
+
                 setSaleModalOpen(false);
                 setSalePrompt({ apptId: null });
                 fetchAgendas();
@@ -543,7 +558,8 @@ const CloserWorkflowPage = () => {
                         show: true,
                         agendaId: savedApptId,
                         leadName: saleForm.nombre_cliente || 'Cliente',
-                        newStatus: 'Seguimiento de Cobro'
+                        newStatus: 'Seguimiento de Cobro',
+                        isSaleFollowUp: true
                     });
                 }
             } else {
@@ -1483,18 +1499,27 @@ const CloserWorkflowPage = () => {
                                                     <option value="Otro">Otro Método</option>
                                                 </select>
                                             </div>
-                                            <div className="space-y-1 text-left md:col-span-2">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Comentarios o Fecha de Siguientes Pagos</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"><CalendarDays size={13} /></span>
-                                                    <input
-                                                        type="text"
-                                                        value={saleForm.segundo_pago}
-                                                        onChange={e => setSaleForm({ ...saleForm, segundo_pago: e.target.value })}
-                                                        placeholder="ej. Cobro de $500 programado para el 15/06"
-                                                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
-                                                    />
-                                                </div>
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-emerald-400 uppercase tracking-widest ml-1 block flex items-center gap-1">
+                                                    <CalendarDays size={12} className="text-emerald-400" />
+                                                    Fecha del Próximo Cobro (Seguimiento)
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={saleForm.fecha_cobro || ''}
+                                                    onChange={e => setSaleForm({ ...saleForm, fecha_cobro: e.target.value })}
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                                                />
+                                            </div>
+                                            <div className="space-y-1 text-left">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Comentario / Detalles del Cobro</label>
+                                                <input
+                                                    type="text"
+                                                    value={saleForm.segundo_pago || ''}
+                                                    onChange={e => setSaleForm({ ...saleForm, segundo_pago: e.target.value })}
+                                                    placeholder="ej. Cobro de $500 (2do pago / saldo)"
+                                                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-indigo-500 transition-all"
+                                                />
                                             </div>
                                         </div>
                                     </div>
