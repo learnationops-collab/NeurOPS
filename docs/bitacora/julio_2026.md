@@ -656,6 +656,9 @@
       - Se conectó el modal interactivo de seguimiento (`TriageFollowUpModal`) para solicitar una `fecha_seguimiento` al actualizar cualquier estado de la cita (No Show, Cancelado, Reagendado) o al declarar una venta (**Seguimiento de Cobro**).
       - En la vista **Seguimientos por Hacer**, se agregaron los badges de fecha de seguimiento y el botón **"✓ Marcar Realizado"**, el cual actualiza el estado y consulta al closer si desea agendar un próximo seguimiento futuro.
       - Se añadió el botón **"🚫 Lead Perdido / Descartado"** en `TriageFollowUpModal` y el manejo en `CloserService.process_agenda` para marcar prospectos que no cerraron como `Lead Perdido`, permitiendo archivarlos limpiamente para ser utilizados en futuras campañas de recuperación de leads.
+      - Se agregó la columna `fecha_seguimiento_cobro` al modelo `Appointment` (migración Alembic `027b9cb4171d_add_fecha_seguimiento_cobro_to_appointment.py`) para permitir configurar independientemente un **Seguimiento de Cobro** (cuotas/segundo pago) y un **Seguimiento Normal / Onboarding** al declarar una venta.
+      - Si la llamada asistió pero NO hubo venta, el sistema despliega el modal para programar un **Seguimiento de Cierre de Venta** o descartar como Lead Perdido.
+      - Se reemplazaron todos los `window.prompt` y `window.confirm` por un modal nativo en React (`ReasonModal`), capturando el motivo de cancelación, reagendamiento o calificación de No Lead con una interfaz uniforme y sin alertas emergentes del navegador.
 
 
 
