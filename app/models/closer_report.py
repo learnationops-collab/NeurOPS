@@ -8,6 +8,7 @@ class CloserDailyReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     closer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
+    is_non_working_day = db.Column(db.Boolean, default=False, server_default='0')
 
     # --- GENERALES ---
     slots = db.Column(db.Integer, default=0)

@@ -170,7 +170,8 @@ def submit_daily_report():
             },
             "funnel_stats": stage_metrics,
             "answers": answers,
-            "reflections": stat.reflections or {}
+            "reflections": stat.reflections or {},
+            "is_non_working_day": bool(stat.is_non_working_day) if stat.is_non_working_day is not None else False
         }), 200
 
     # POST Logic
@@ -188,8 +189,11 @@ def submit_daily_report():
     # Verificar si ya existe un reporte para este setter en esta fecha
     stat = SetterDailyStats.query.filter_by(setter_id=current_user.id, date=report_date).first()
     
+    is_non_working = bool(data.get('is_non_working_day', False))
+
     if stat:
         # Update existing
+        stat.is_non_working_day = is_non_working
         stat.not_lead = int(data.get('not_lead') or 0)
         stat.inbox_entrantes = int(data.get('inbox_entrantes') or 0)
         stat.inbox_inabribles = int(data.get('inbox_inabribles') or 0)
@@ -229,6 +233,7 @@ def submit_daily_report():
         stat = SetterDailyStats(
             setter_id=current_user.id,
             date=report_date,
+            is_non_working_day=is_non_working,
             not_lead=int(data.get('not_lead') or 0),
             inbox_entrantes=int(data.get('inbox_entrantes') or 0),
             inbox_inabribles=int(data.get('inbox_inabribles') or 0),

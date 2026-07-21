@@ -44,6 +44,7 @@ class SetterDailyStats(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     setter_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
+    is_non_working_day = db.Column(db.Boolean, default=False, server_default='0')
     
     not_lead = db.Column(db.Integer, default=0)
 

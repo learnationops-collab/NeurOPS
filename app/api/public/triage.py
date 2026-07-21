@@ -152,6 +152,7 @@ def submit_public_triage_report():
         'recoveries_contacted': get_int('recoveries_contacted'),
         'recoveries_replied': get_int('recoveries_replied'),
         'recoveries_scheduled': get_int('recoveries_scheduled'),
+        'is_non_working_day': bool(data.get('is_non_working_day', False)),
     }
 
     if report:

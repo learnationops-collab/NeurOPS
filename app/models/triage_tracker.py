@@ -7,6 +7,7 @@ class TriageTrackerReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     triage_name = db.Column(db.String(100), nullable=False, default='Kerwin')
     date = db.Column(db.Date, nullable=False)
+    is_non_working_day = db.Column(db.Boolean, default=False, server_default='0')
 
     # ==========================
     # Starting Process - 1st Call

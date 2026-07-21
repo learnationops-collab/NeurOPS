@@ -104,6 +104,7 @@ def submit_public_closer_report():
         'reflection_opportunity': data.get('reflection_opportunity'),
         # Daily Reflection (5 preguntas como JSON)
         'reflections': data.get('reflections'),
+        'is_non_working_day': bool(data.get('is_non_working_day', False)),
     }
 
     if report:

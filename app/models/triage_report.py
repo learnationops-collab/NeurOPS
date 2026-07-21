@@ -8,6 +8,7 @@ class TriageDailyReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     triage_name = db.Column(db.String(100), nullable=False, default='Kerwin')
     date = db.Column(db.Date, nullable=False)
+    is_non_working_day = db.Column(db.Boolean, default=False, server_default='0')
 
     # Confirmaciones del día
     today_agendas = db.Column(db.Integer, default=0)
@@ -47,6 +48,7 @@ class TriageDailyReport(db.Model):
             "future_rescheduled": self.future_rescheduled,
             "recoveries_contacted": self.recoveries_contacted,
             "recoveries_replied": self.recoveries_replied,
-            "recoveries_scheduled": self.recoveries_scheduled
+            "recoveries_scheduled": self.recoveries_scheduled,
+            "is_non_working_day": bool(self.is_non_working_day) if self.is_non_working_day is not None else False
         }
 
