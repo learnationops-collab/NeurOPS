@@ -1308,6 +1308,7 @@ def _format_appointment_for_deck(a):
         "setter_processed": a.setter_processed,
         "closer_processed": a.closer_processed,
         "fecha_seguimiento": getattr(a, 'fecha_seguimiento', None),
+        "fecha_seguimiento_cobro": getattr(a, 'fecha_seguimiento_cobro', None),
         "seguimiento_realizado": bool(getattr(a, 'seguimiento_realizado', False)) if getattr(a, 'seguimiento_realizado', None) is not None else False
     }
 
@@ -1349,7 +1350,10 @@ def get_closer_deck():
         )
     elif step == 'seguimientos':
         query = Appointment.query.filter(
-            Appointment.fecha_seguimiento.like(f"{selected_date_str}%"),
+            or_(
+                Appointment.fecha_seguimiento.like(f"{selected_date_str}%"),
+                Appointment.fecha_seguimiento_cobro.like(f"{selected_date_str}%")
+            ),
             or_(Appointment.seguimiento_realizado == False, Appointment.seguimiento_realizado == None)
         )
     elif step == 'reagendar':
@@ -1429,6 +1433,8 @@ def process_closer_card(appt_id):
 
     if 'fecha_seguimiento' in data:
         appt.fecha_seguimiento = data['fecha_seguimiento']
+    if 'fecha_seguimiento_cobro' in data:
+        appt.fecha_seguimiento_cobro = data['fecha_seguimiento_cobro']
     if 'seguimiento_realizado' in data:
         appt.seguimiento_realizado = bool(data['seguimiento_realizado'])
 

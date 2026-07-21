@@ -800,6 +800,8 @@ class CloserService:
 
         if 'fecha_seguimiento' in data:
             appt.fecha_seguimiento = data['fecha_seguimiento']
+        if 'fecha_seguimiento_cobro' in data:
+            appt.fecha_seguimiento_cobro = data['fecha_seguimiento_cobro']
         if 'seguimiento_realizado' in data:
             appt.seguimiento_realizado = bool(data['seguimiento_realizado'])
 
