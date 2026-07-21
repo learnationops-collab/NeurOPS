@@ -1306,7 +1306,9 @@ def _format_appointment_for_deck(a):
         "setter_name": a.setter.username if a.setter else "Sin Setter",
         "survey_answers": survey_answers,
         "setter_processed": a.setter_processed,
-        "closer_processed": a.closer_processed
+        "closer_processed": a.closer_processed,
+        "fecha_seguimiento": getattr(a, 'fecha_seguimiento', None),
+        "seguimiento_realizado": bool(getattr(a, 'seguimiento_realizado', False)) if getattr(a, 'seguimiento_realizado', None) is not None else False
     }
 
 @bp.route('/deck', methods=['GET'])
@@ -1328,16 +1330,14 @@ def get_closer_deck():
     
     from sqlalchemy import or_
     
+    selected_date_str = request.args.get('selected_date') or today.isoformat()
+
     if step == 'agendas':
         # Citas del día seleccionado (o hoy) en UTC naive para consistencia con sheets y estadísticas
         from datetime import time
-        selected_date_str = request.args.get('selected_date')
-        if selected_date_str:
-            try:
-                today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
-            except ValueError:
-                today_local = date.today()
-        else:
+        try:
+            today_local = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
             today_local = date.today()
             
         start_utc = datetime.combine(today_local, time.min)
@@ -1346,6 +1346,15 @@ def get_closer_deck():
         query = Appointment.query.filter(
             Appointment.start_time >= start_utc,
             Appointment.start_time <= end_utc
+        )
+    elif step == 'seguimientos':
+        query = Appointment.query.filter(
+            Appointment.fecha_seguimiento.like(f"{selected_date_str}%"),
+            or_(Appointment.seguimiento_realizado == False, Appointment.seguimiento_realizado == None)
+        )
+    elif step == 'reagendar':
+        query = Appointment.query.filter(
+            or_(Appointment.closer_result.in_(['Reagendado', 'Cancelado', 'Reagendada', 'Cancelada']), Appointment.is_rescheduled == True)
         )
     else:
         # Cola por defecto de leads pendientes (excluye canceladas/reagendadas por confirmer)
@@ -1417,6 +1426,11 @@ def process_closer_card(appt_id):
             appt.with_decision_maker = None
         else:
             appt.with_decision_maker = data['with_decision_maker'] == True or data['with_decision_maker'] in ('true', 'True', '1', 1)
+
+    if 'fecha_seguimiento' in data:
+        appt.fecha_seguimiento = data['fecha_seguimiento']
+    if 'seguimiento_realizado' in data:
+        appt.seguimiento_realizado = bool(data['seguimiento_realizado'])
 
     appt.closer_processed = True
     

@@ -798,6 +798,11 @@ class CloserService:
         if last_stage:
             appt.last_stage = last_stage
 
+        if 'fecha_seguimiento' in data:
+            appt.fecha_seguimiento = data['fecha_seguimiento']
+        if 'seguimiento_realizado' in data:
+            appt.seguimiento_realizado = bool(data['seguimiento_realizado'])
+
         if 'with_decision_maker' in data:
             if data['with_decision_maker'] is None or data['with_decision_maker'] == '':
                 appt.with_decision_maker = None

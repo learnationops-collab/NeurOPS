@@ -27,6 +27,8 @@ class Appointment(db.Model):
     ig_chat_link = db.Column(db.String(500), nullable=True)
     keyword = db.Column(db.String(100), nullable=True)
     examen = db.Column(db.String(255), nullable=True)
+    fecha_seguimiento = db.Column(db.String(255), nullable=True)
+    seguimiento_realizado = db.Column(db.Boolean, default=False, server_default='0')
 
     # Relationships
     closer = db.relationship('User', foreign_keys=[closer_id], backref='appointments_assigned')
