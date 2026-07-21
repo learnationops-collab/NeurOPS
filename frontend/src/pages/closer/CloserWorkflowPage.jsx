@@ -103,6 +103,40 @@ const CloserWorkflowPage = () => {
         }
     }, [user]);
 
+    // Cargar agendas del día del closer
+    const fetchAgendas = async () => {
+        setLoading(true);
+        try {
+            const url = `/closer/deck?step=${activeStep}&selected_date=${selectedDate}`;
+            const res = await api.get(url);
+            const dataList = res.data || [];
+            setAgendas(dataList);
+            setSelectedIds(new Set());
+
+            // Cargar leads sin agenda con comentarios pendientes
+            try {
+                const unreadRes = await api.get('/closer/unread-no-agenda');
+                setUnreadNoAgenda(unreadRes.data || []);
+            } catch (err) {
+                console.error("Error al cargar leads sin agenda para closer:", err);
+            }
+
+            // Si el lead actualmente seleccionado ya no está en la cola ni en unreadNoAgenda, deseleccionarlo
+            if (selectedLead && !dataList.some(l => l.id === selectedLead.id) && !unreadNoAgenda.some(l => l.id === selectedLead.id)) {
+                setSelectedLead(null);
+            }
+        } catch (err) {
+            console.error("Error al cargar agendas:", err);
+            toast.error("Error al cargar las agendas");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAgendas();
+    }, [activeStep, selectedDate]);
+
     // Guardar la fecha de seguimiento del modal (soporta string o objeto con cobro + normal)
     const handleConfirmFollowUp = async (followUpData) => {
         if (!followUpModal.agendaId) return;
