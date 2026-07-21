@@ -648,6 +648,14 @@
       - Se actualizaron los endpoints de reporte diario de Setting (`POST /api/setter/daily-report`), Closing (`POST /api/closer/daily-report` y `POST /api/public/closer/report`) y Call Confirmer (`POST /api/public/triage-report`) para recibir y guardar la marca de día no laborable.
       - Se agregó el botón **"Día no laborable"** a la interfaz de reporte diario para Setting (`SetterReportModal.jsx` y `SetterDashboard.jsx`), Call Confirmer (`PublicTriageReportPage.jsx`) y Closing (`CloserDashboard.jsx` y `PublicCloserReportPage.jsx` en `/closer/report`), permitiendo guardar el reporte completado sin retrasos al presionar este botón.
 
+    - **Sistema de Seguimientos y Seguimiento de Cobro en Mazo de Closers ([booking.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/booking.py) [MODIFY], [closer_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/closer_service.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/closer.py) [MODIFY], [CloserWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/closer/CloserWorkflowPage.jsx) [MODIFY])**:
+      - Se agregaron los campos `fecha_seguimiento` y `seguimiento_realizado` al modelo `Appointment` en `app/models/booking.py`.
+      - Se ejecutó la migración oficial de Alembic `fbec71fd9b9f_add_follow_up_fields_to_appointment.py`.
+      - Se adaptaron los endpoints `GET /api/closer/deck` y `POST /api/closer/deck/<id>` para serializar, filtrar y guardar fechas de seguimiento.
+      - Se integró la navegación de 3 categorías en el mazo de Closer (`/closer/deck?step=agendas`): **Citas del Día**, **Seguimientos por Hacer** y **Reagendar / Actualizar**.
+      - Se conectó el modal interactivo de seguimiento (`TriageFollowUpModal`) para solicitar una `fecha_seguimiento` al actualizar cualquier estado de la cita (No Show, Cancelado, Reagendado) o al declarar una venta (**Seguimiento de Cobro**).
+      - En la vista **Seguimientos por Hacer**, se agregaron los badges de fecha de seguimiento y el botón **"✓ Marcar Realizado"**, el cual actualiza el estado y consulta al closer si desea agendar un próximo seguimiento futuro.
+
 
 
 
