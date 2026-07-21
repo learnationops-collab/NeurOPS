@@ -659,6 +659,7 @@
       - Se agregó la columna `fecha_seguimiento_cobro` al modelo `Appointment` (migración Alembic `027b9cb4171d_add_fecha_seguimiento_cobro_to_appointment.py`) para permitir configurar independientemente un **Seguimiento de Cobro** (cuotas/segundo pago) y un **Seguimiento Normal / Onboarding** al declarar una venta.
       - Si la llamada asistió pero NO hubo venta, el sistema despliega el modal para programar un **Seguimiento de Cierre de Venta** o descartar como Lead Perdido.
       - Se reemplazaron todos los `window.prompt` y `window.confirm` por un modal nativo en React (`ReasonModal`), capturando el motivo de cancelación, reagendamiento o calificación de No Lead con una interfaz uniforme y sin alertas emergentes del navegador.
+      - Se agregó un selector de **Fecha del Próximo Cobro** (`fecha_cobro`) en el **Paso 2** del formulario de declaración de venta. Al guardar, dicha fecha se auto-persiste como `fecha_seguimiento_cobro` en la cita de la base de datos, y luego el sistema muestra el `TriageFollowUpModal` en modo `isSaleFollowUp: true` para que el closer pueda ajustar o complementar las fechas de seguimiento (cobro y onboarding) antes de cerrar el flujo.
 
 
 
