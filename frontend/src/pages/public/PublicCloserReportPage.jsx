@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../../services/api';
-import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headphones, BarChart, ArrowLeftCircle } from 'lucide-react';
+import { Loader2, Send, Phone, DollarSign, ArrowLeft, BarChart3, Users, TrendingUp, Target, Activity, Zap, Brain, Headphones, BarChart, ArrowLeftCircle, Coffee } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import DailyReflectionSection from '../../components/reports/DailyReflectionSection';
@@ -280,6 +280,38 @@ const PublicCloserReportPage = () => {
             }
         } catch (err) {
             alert(err.response?.data?.message || err.response?.data?.error || 'Error al enviar el reporte.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleNonWorkingDay = async () => {
+        if (!formData.closer_id) {
+            alert('Por favor, selecciona tu nombre.');
+            return;
+        }
+        if (!formData.date) {
+            alert('Por favor, selecciona la fecha del informe.');
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            const payload = {
+                closer_id: formData.closer_id,
+                date: formData.date,
+                is_non_working_day: true
+            };
+            await api.post('/public/closer-report', payload);
+            alert('¡Día no laborable registrado correctamente!');
+            setFormData(prev => ({
+                ...initialFormData,
+                closer_id: prev.closer_id,
+                date: prev.date,
+            }));
+            setOpenSection('agendas');
+        } catch (err) {
+            alert(err.response?.data?.message || err.response?.data?.error || 'Error al registrar día no laborable.');
         } finally {
             setSubmitting(false);
         }
@@ -895,11 +927,20 @@ const PublicCloserReportPage = () => {
 
 
                                 {/* Botón de envío */}
-                                <div className="pt-4">
+                                <div className="pt-4 flex flex-col md:flex-row gap-4 items-center">
+                                    <button
+                                        type="button"
+                                        onClick={handleNonWorkingDay}
+                                        disabled={submitting || !formData.closer_id}
+                                        className="w-full md:w-auto bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-400 disabled:opacity-50 disabled:cursor-not-allowed py-5 px-8 rounded-3xl font-black uppercase text-base tracking-[0.2em] transition-all flex items-center justify-center gap-3 shrink-0"
+                                    >
+                                        <Coffee size={24} />
+                                        DÍA NO LABORABLE
+                                    </button>
                                     <button
                                         type="submit"
                                         disabled={submitting || !formData.closer_id}
-                                        className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-5 rounded-3xl font-black uppercase text-base tracking-[0.2em] transition-all shadow-2xl shadow-violet-600/30 flex items-center justify-center gap-3 active:scale-[0.98]"
+                                        className="w-full md:flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-5 rounded-3xl font-black uppercase text-base tracking-[0.2em] transition-all shadow-2xl shadow-violet-600/30 flex items-center justify-center gap-3 active:scale-[0.98]"
                                     >
                                         {submitting ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}
                                         {submitting ? 'Procesando Envío...' : editReport ? 'GUARDAR CAMBIOS' : 'ENVIAR REPORTE AL SISTEMA'}
