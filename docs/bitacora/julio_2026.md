@@ -642,6 +642,12 @@
       - Se elevó la capa visual (`z-index`) de `TriageFollowUpModal` a `z-[200]` para garantizar que se superponga por encima de la Ficha Detallada del Lead (`TriageDetailModal` a `z-[100]`).
       - Se eliminó por completo la sección y tarjeta KPI de "Mensajes por contestar", dejando únicamente las 3 categorías activas: "Citas por confirmar", "Seguimientos por hacer" y "Reagendar / Actualizar".
 
+    - **Funcionalidad "Día No Laborable" en Reportes Diarios ([report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/report.py) [MODIFY], [closer_report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/closer_report.py) [MODIFY], [triage_report.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/models/triage_report.py) [MODIFY], [setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY], [closer.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/closer.py) [MODIFY], [triage.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/triage.py) [MODIFY])**:
+      - Se añadió el campo `is_non_working_day` a los modelos de base de datos `SetterDailyStats`, `CloserDailyReport`, `TriageDailyReport` y `TriageTrackerReport`.
+      - Se ejecutó la migración de Alembic `c9ec326adaa9_add_is_non_working_day_to_report_models.py`.
+      - Se actualizaron los endpoints de reporte diario de Setting (`POST /api/setter/daily-report`), Closing (`POST /api/closer/daily-report` y `POST /api/public/closer/report`) y Call Confirmer (`POST /api/public/triage-report`) para recibir y guardar la marca de día no laborable.
+      - Se agregó el botón **"Día no laborable"** a la interfaz de reporte diario para Setting (`SetterReportModal.jsx` y `SetterDashboard.jsx`), Call Confirmer (`PublicTriageReportPage.jsx`) y Closing (`CloserDashboard.jsx`), permitiendo guardar el reporte completado sin retrasos al presionar este botón.
+
 
 
 
