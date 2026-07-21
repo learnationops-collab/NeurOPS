@@ -5,6 +5,7 @@ const TriageFollowUpModal = ({
     show,
     onClose,
     onConfirm,
+    onMarkLost,
     leadName,
     newStatus,
     subtitle = "Call Confirmer Workflow",
@@ -57,7 +58,7 @@ const TriageFollowUpModal = ({
                         <>
                             Has marcado a <strong className="text-white italic">{leadName}</strong> como{' '}
                             <span className="text-amber-400 font-black uppercase">{newStatus}</span>. 
-                            Selecciona una fecha para que aparezca en tu lista de <strong>Seguimientos por hacer</strong>.
+                            Selecciona una fecha para que aparezca en tu lista de <strong>Seguimientos por hacer</strong> o descártalo como lead perdido.
                         </>
                     )}
                 </p>
@@ -75,7 +76,20 @@ const TriageFollowUpModal = ({
                     />
                 </div>
 
-                <div className="flex items-center gap-3 pt-2">
+                {onMarkLost && (
+                    <div className="pt-1">
+                        <button
+                            type="button"
+                            onClick={onMarkLost}
+                            disabled={loading}
+                            className="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                            🚫 Lead Perdido / Descartado
+                        </button>
+                    </div>
+                )}
+
+                <div className="flex items-center gap-3 pt-1">
                     <button
                         type="button"
                         onClick={onClose}

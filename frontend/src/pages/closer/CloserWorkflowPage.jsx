@@ -141,6 +141,27 @@ const CloserWorkflowPage = () => {
         }
     };
 
+    // Marcar Lead como Perdido / Descartado (Etapa de Recuperación)
+    const handleMarkLeadLost = async () => {
+        if (!followUpModal.agendaId) return;
+        setSavingFollowUp(true);
+        try {
+            await api.post(`/closer/appointments/${followUpModal.agendaId}/process`, {
+                status: 'Lead Perdido',
+                role: 'closer',
+                seguimiento_realizado: true
+            });
+            toast.success("Lead marcado como Perdido (almacenado para etapa de recuperación)");
+            setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '' });
+            fetchAgendas();
+        } catch (err) {
+            console.error("Error al marcar lead como perdido:", err);
+            toast.error("Error al actualizar el estado del lead");
+        } finally {
+            setSavingFollowUp(false);
+        }
+    };
+
     // Marcar seguimiento como realizado
     const handleMarkFollowUpDone = async (agenda, e) => {
         if (e) e.stopPropagation();
@@ -1556,6 +1577,7 @@ const CloserWorkflowPage = () => {
                 show={followUpModal.show}
                 onClose={() => setFollowUpModal({ show: false, agendaId: null, leadName: '', newStatus: '' })}
                 onConfirm={handleConfirmFollowUp}
+                onMarkLost={handleMarkLeadLost}
                 leadName={followUpModal.leadName}
                 newStatus={followUpModal.newStatus}
                 subtitle="Closer Workflow"
