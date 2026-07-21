@@ -69,6 +69,40 @@ const CloserWorkflowPage = () => {
     // Estado para reprogramación individual
     const [rescheduleData, setRescheduleData] = useState({ apptId: null, date: '', status: '' });
 
+    // Flujo de registro de venta directo post-Show Up
+    const [salePrompt, setSalePrompt] = useState({ apptId: null });
+    const [saleModalOpen, setSaleModalOpen] = useState(false);
+    const [saleStep, setSaleStep] = useState(1);
+    const [submittingSale, setSubmittingSale] = useState(false);
+    const [saleForm, setSaleForm] = useState({
+        lead_id: '',
+        email_vendedor: user?.email || '',
+        nombre_cliente: '',
+        telefono: '',
+        mail_cliente: '',
+        programa: 'RR',
+        tipo_pago_simple: 'completo',
+        monto: '',
+        segundo_pago: '',
+        metodo_pago: 'Stripe',
+        examen_lead: '',
+        notes: '',
+        estado: 'Completada',
+        instagram: '',
+        setter: '',
+        documento_identidad: '',
+        enviar_mensaje: true,
+        sold_in_call: true,
+        date: new Date().toISOString().split('T')[0]
+    });
+
+    // Sincronizar email del closer en cuanto esté cargado en la sesión
+    useEffect(() => {
+        if (user?.email) {
+            setSaleForm(prev => ({ ...prev, email_vendedor: user.email }));
+        }
+    }, [user]);
+
     // Guardar la fecha de seguimiento del modal (soporta string o objeto con cobro + normal)
     const handleConfirmFollowUp = async (followUpData) => {
         if (!followUpModal.agendaId) return;
