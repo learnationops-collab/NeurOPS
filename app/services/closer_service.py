@@ -824,6 +824,15 @@ class CloserService:
             elif new_status == 'No Show':
                 appt.closer_processed = True
 
+            elif new_status in ['Lead Perdido', 'Perdido']:
+                appt.closer_result = 'Lead Perdido'
+                appt.closer_processed = True
+                appt.seguimiento_realizado = True
+                if note:
+                    if closer_id:
+                        comment = ClientComment(client_id=appt.client_id, author_id=closer_id, text=f"Marcado como Lead Perdido por {user_display}: {note}")
+                        db.session.add(comment)
+
             elif new_status == 'Cancelado':
                 appt.closer_processed = True
                 if note:
