@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { Loader2, Send, Calendar, ClipboardList, Phone, Activity, Target, RefreshCw } from 'lucide-react';
+import { Loader2, Send, Calendar, ClipboardList, Phone, Activity, Target, RefreshCw, Coffee } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -170,6 +170,30 @@ const PublicTriageReportPage = () => {
         }
     };
 
+    const handleNonWorkingDay = async () => {
+        if (!formData.date) {
+            toast.error("Por favor, selecciona la fecha del informe.");
+            return;
+        }
+        if (!formData.triage_name) {
+            toast.error("Por favor, selecciona tu nombre.");
+            return;
+        }
+        setSubmitting(true);
+        try {
+            await api.post('/public/triage-report', {
+                date: formData.date,
+                triage_name: formData.triage_name,
+                is_non_working_day: true
+            });
+            toast.success('Día no laborable registrado correctamente.');
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.response?.data?.error || 'Error al registrar día no laborable.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     // Estadísticas del sidebar en tiempo real
     const liveMetrics = useMemo(() => {
         const todayTot = parseInt(formData.today_agendas) || 0;
@@ -277,14 +301,25 @@ const PublicTriageReportPage = () => {
                                     </div>
                                 </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={submitting}
-                                    className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black uppercase text-xs tracking-widest py-4 rounded-2xl shadow-lg shadow-indigo-950/20 hover:shadow-indigo-500/10 hover:shadow-2xl transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                                >
-                                    {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                                    {submitting ? 'Enviando Reporte...' : 'Enviar Reporte Diario'}
-                                </button>
+                                <div className="flex flex-col md:flex-row gap-4 items-center">
+                                    <button
+                                        type="button"
+                                        onClick={handleNonWorkingDay}
+                                        disabled={submitting}
+                                        className="w-full md:w-auto flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-400 font-black uppercase text-xs tracking-widest py-4 px-6 rounded-2xl transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+                                    >
+                                        <Coffee size={16} />
+                                        Día no laborable
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="w-full md:flex-1 flex items-center justify-center gap-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black uppercase text-xs tracking-widest py-4 rounded-2xl shadow-lg shadow-indigo-950/20 hover:shadow-indigo-500/10 hover:shadow-2xl transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                                    >
+                                        {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                                        {submitting ? 'Enviando Reporte...' : 'Enviar Reporte Diario'}
+                                    </button>
+                                </div>
                             </form>
                         </div>
 

@@ -33,6 +33,7 @@ import {
     Zap,
     Plus,
     RefreshCw,
+    Coffee,
     XCircle,
     Send,
     Link as LinkIcon
@@ -194,6 +195,20 @@ const CloserDashboard = () => {
         }
     };
 
+    const handleNonWorkingDayReport = async () => {
+        setSubmitting(true);
+        try {
+            await api.post('/closer/daily-report', { is_non_working_day: true });
+            setShowSavedToast(true);
+            setTimeout(() => setShowSavedToast(false), 3000);
+            fetchDashboard();
+        } catch (err) {
+            console.error("Error saving non-working day report", err);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center p-20 min-h-screen">
             <Loader2 className="animate-spin text-primary" size={48} />
@@ -236,6 +251,15 @@ const CloserDashboard = () => {
                             </div>
 
                             <div className="flex items-center gap-4">
+                                <Button
+                                    onClick={handleNonWorkingDayReport}
+                                    disabled={submitting}
+                                    variant="ghost"
+                                    className="h-12 px-6 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-black tracking-widest text-[10px] gap-2"
+                                    icon={Coffee}
+                                >
+                                    Día no laborable
+                                </Button>
                                 <Button
                                     onClick={() => setIsLinkModalOpen(true)}
                                     variant="ghost"
@@ -338,13 +362,25 @@ const CloserDashboard = () => {
                                             values={reflections}
                                             onChange={(key, val) => setReflections(prev => ({ ...prev, [key]: val }))}
                                         />
-                                        <Button
-                                            type="submit"
-                                            loading={submitting}
-                                            className="w-full h-16 text-xs font-black tracking-widest shadow-xl shadow-primary/20 bg-primary text-white"
-                                        >
-                                            Sincronizar reporte
-                                        </Button>
+                                        <div className="flex flex-col md:flex-row gap-4 items-center">
+                                            <Button
+                                                type="button"
+                                                onClick={handleNonWorkingDayReport}
+                                                disabled={submitting}
+                                                variant="outline"
+                                                className="w-full md:w-auto h-16 px-8 rounded-2xl border-amber-500/30 text-amber-400 hover:bg-amber-500/10 font-black text-xs uppercase tracking-widest gap-2 shrink-0"
+                                                icon={Coffee}
+                                            >
+                                                Día no laborable
+                                            </Button>
+                                            <Button
+                                                type="submit"
+                                                loading={submitting}
+                                                className="w-full md:flex-1 h-16 text-xs font-black tracking-widest shadow-xl shadow-primary/20 bg-primary text-white"
+                                            >
+                                                Sincronizar reporte
+                                            </Button>
+                                        </div>
 
                                     </form>
                                 </Card>

@@ -10,7 +10,8 @@ import {
     AlertCircle,
     CheckCircle2,
     Loader2,
-    HelpCircle
+    HelpCircle,
+    Coffee
 } from 'lucide-react';
 import api from '../../../services/api';
 import Card from '../../../components/ui/Card';
@@ -32,6 +33,24 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
     const [fixedStats, setFixedStats] = useState({ not_lead: '' });
     const [funnelStats, setFunnelStats] = useState({});
     const [answers, setAnswers] = useState({});
+
+    const handleNonWorkingDay = async () => {
+        setSubmitting(true);
+        setError(null);
+        try {
+            await api.post('/setter/daily-report', {
+                date: formData.date || reportDate,
+                is_non_working_day: true
+            });
+            if (onSuccess) onSuccess();
+            onClose();
+        } catch (err) {
+            console.error('Error submitting non-working day report:', err);
+            setError('Error al registrar el día no laborable');
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -233,12 +252,22 @@ const SetterReportModal = ({ isOpen, onClose, reportDate, existingReport = null,
                 </div>
 
                 {/* Footer */}
-                <div className="p-8 border-t border-base bg-main/30 flex-shrink-0">
+                <div className="p-8 border-t border-base bg-main/30 flex-shrink-0 flex flex-col md:flex-row gap-4 items-center">
+                    <Button
+                        type="button"
+                        onClick={handleNonWorkingDay}
+                        disabled={submitting || loading}
+                        variant="outline"
+                        className="w-full md:w-auto h-16 px-8 rounded-2xl border-amber-500/30 text-amber-400 hover:bg-amber-500/10 font-black text-xs uppercase tracking-widest gap-2 shrink-0"
+                    >
+                        <Coffee size={18} />
+                        Día no laborable
+                    </Button>
                     <Button
                         form="setter-report-form"
                         type="submit"
                         disabled={submitting || loading}
-                        className="w-full h-16 rounded-2xl shadow-brand-glow flex items-center justify-center gap-3 font-black text-xs uppercase tracking-[0.3em]"
+                        className="w-full md:flex-1 h-16 rounded-2xl shadow-brand-glow flex items-center justify-center gap-3 font-black text-xs uppercase tracking-[0.3em]"
                     >
                         {submitting ? <Loader2 className="animate-spin" size={20} /> : (
                             <>

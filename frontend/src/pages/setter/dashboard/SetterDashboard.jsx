@@ -13,7 +13,8 @@ import {
     MessageSquare,
     Edit2,
     Trash2,
-    FileText
+    FileText,
+    Coffee
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -250,7 +251,9 @@ const SetterDashboard = () => {
                                             <div className="space-y-2">
                                                 <div className="flex items-center gap-2 text-emerald-400">
                                                     <CheckCircle2 size={16} />
-                                                    <h4 className="text-2xl font-black italic uppercase tracking-tighter">Reporte completado</h4>
+                                                    <h4 className="text-2xl font-black italic uppercase tracking-tighter">
+                                                        {todaysReport.is_non_working_day ? 'Reporte completado (Día no laborable)' : 'Reporte completado'}
+                                                    </h4>
                                                 </div>
                                                 <p className="text-[10px] text-muted font-bold uppercase tracking-widest">Enviado hoy a las {new Date(todaysReport.date + 'T12:00:00').toLocaleDateString()}</p>
                                             </div>
@@ -259,14 +262,16 @@ const SetterDashboard = () => {
 
                                     <div className="flex items-center gap-3">
                                         {!todaysReport ? (
-                                            <Button
-                                                onClick={() => setIsReportModalOpen(true)}
-                                                variant="primary"
-                                                className="h-12 px-8 rounded-xl shadow-lg shadow-primary/20 text-[10px] font-black uppercase tracking-widest gap-2 flex-1"
-                                                icon={Send}
-                                            >
-                                                Completar Ahora
-                                            </Button>
+                                            <>
+                                                <Button
+                                                    onClick={() => setIsReportModalOpen(true)}
+                                                    variant="primary"
+                                                    className="h-12 px-6 rounded-xl shadow-lg shadow-primary/20 text-[10px] font-black uppercase tracking-widest gap-2 flex-1"
+                                                    icon={Send}
+                                                >
+                                                    Completar Ahora
+                                                </Button>
+                                            </>
                                         ) : (
                                             <>
                                                 <Button
