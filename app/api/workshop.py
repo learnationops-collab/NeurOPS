@@ -383,11 +383,35 @@ def prefill_workshop_metrics():
         else:
             breakdown["Otros"] += 1
             
-    # 4. Sales & Cash Collected
-    matched_sales = set()
+    # 4. Sales & Cash Collected (Por cliente/lead único)
+    # Solo cuentan como ventas válidas: Seña (Sena), Split Pay (Parcial/Split) y Completo (PIF/Full).
+    # Las cuotas, renovaciones y upsells NO cuentan ni en la cantidad de ventas ni en cash_collected.
+    from app.api.public.financial_sales import split_tipo_pago
+
+    def is_valid_workshop_sale(sale):
+        if not sale or not sale.tipo_pago:
+            return False
+        _, simple_tp = split_tipo_pago(sale.tipo_pago)
+        tp_norm = (simple_tp or '').lower().strip()
+
+        # Excluir cuotas, renovaciones y upsells
+        if any(ex in tp_norm for ex in ['cuota', 'renovac', 'upsell']):
+            return False
+
+        # Debe ser Seña, Split Pay / Parcial, o Completo
+        is_sena = 'seña' in tp_norm or 'sena' in tp_norm
+        is_split = 'parcial' in tp_norm or 'split' in tp_norm or 'primer pago' in tp_norm
+        is_completo = 'completo' in tp_norm or 'pif' in tp_norm or 'full' in tp_norm
+
+        return is_sena or is_split or is_completo
+
+    lead_buyers_set = set() # Clientes únicos que realizaron al menos 1 compra válida
+    all_workshop_sales = set() # Transacciones de venta válidas
+
     for a in workshop_agendas:
         ig_clean = a.instagram.strip().replace('@', '').lower() if a.instagram and a.instagram.lower() not in ('n/a', '') else None
         mail_clean = a.mail.strip().lower() if a.mail and a.mail.lower() not in ('n/a', '') else None
+        client_key = ig_clean or mail_clean or f"agenda_{a.id}"
         
         filters = []
         if ig_clean:
@@ -398,10 +422,12 @@ def prefill_workshop_metrics():
         if filters:
             sales = FinancialSale.query.filter(or_(*filters)).all()
             for s in sales:
-                matched_sales.add(s)
+                if is_valid_workshop_sale(s):
+                    lead_buyers_set.add(client_key)
+                    all_workshop_sales.add(s)
                 
-    sales_count = len(matched_sales)
-    cash_collected = sum(s.monto or 0.0 for s in matched_sales)
+    sales_count = len(lead_buyers_set)
+    cash_collected = sum(s.monto or 0.0 for s in all_workshop_sales)
     
     return jsonify({
         "aplicaciones_form": aplicaciones_count,
