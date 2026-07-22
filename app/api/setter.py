@@ -712,6 +712,11 @@ def get_setter_deck():
         from sqlalchemy import or_
         query = LeadAnswer.query
         
+        if not show_disqualified:
+            query = query.filter(LeadAnswer.qualification.in_(['true', 'yes']))
+        else:
+            query = query.filter(LeadAnswer.qualification.in_(['true', 'yes', 'false', 'no']))
+
         if start_dt and end_dt:
             query = query.filter(LeadAnswer.created_at.between(start_dt, end_dt))
             

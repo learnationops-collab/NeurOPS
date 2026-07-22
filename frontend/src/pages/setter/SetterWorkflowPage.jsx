@@ -165,7 +165,7 @@ const SetterWorkflowPage = () => {
         );
     }, [leads, searchQuery]);
 
-    // Dividir listas de cualificación: Por Procesar vs Procesados
+    // Dividir listas de cualificación: Por Procesar (solo cualificados por confirmar) vs Procesados (confirmados)
     const { leadsPorProcesar, leadsProcesados } = useMemo(() => {
         if (!Array.isArray(filteredLeads)) return { leadsPorProcesar: [], leadsProcesados: [] };
         if (activeStep !== 'cualificacion') return { leadsPorProcesar: filteredLeads, leadsProcesados: [] };
@@ -174,9 +174,11 @@ const SetterWorkflowPage = () => {
         filteredLeads.forEach(l => {
             if (!l) return;
             const resVal = String(l.result || '').toLowerCase();
-            if (l.processed || resVal === 'yes_confirmed' || resVal === 'confirmed' || resVal === 'no' || resVal === 'false' || resVal === 'descualificado') {
+            // Solo los confirmados cualificados van a Procesados
+            if (l.processed || resVal === 'yes_confirmed' || resVal === 'confirmed') {
                 proc.push(l);
-            } else {
+            } else if (resVal === 'yes' || resVal === 'true' || resVal === 'cualificado') {
+                // Solo los cualificados pendientes por confirmar van a Por Procesar
                 porProc.push(l);
             }
         });
@@ -837,7 +839,7 @@ const SetterWorkflowPage = () => {
                                         }`}
                                     >
                                         <span className="w-2 h-2 rounded-full bg-violet-400"></span>
-                                        Pestaña Procesados
+                                        Procesados
                                         <span className="ml-1 px-2 py-0.5 rounded-full text-[9px] bg-violet-500/20 text-violet-300 border border-violet-500/30 font-bold">
                                             {leadsProcesados.length}
                                         </span>
