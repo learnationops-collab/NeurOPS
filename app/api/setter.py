@@ -807,12 +807,20 @@ def get_setter_deck():
                         present_igs.add(uc_ig_clean)
                     
         response_data = []
+        seen_igs = set()
         for la in lead_answers:
             lead = la.lead
             if not lead:
                 continue
                 
             ig_clean = lead.ig.strip().replace('@', '').lower() if lead.ig else None
+            lead_identifier = ig_clean or f"lead_id_{lead.id}"
+            
+            # Garantizar que cada Instagram / prospecto sea ÚNICO en el mazo
+            if lead_identifier in seen_igs:
+                continue
+            seen_igs.add(lead_identifier)
+
             edad_str = "N/A"
             
             client = None
@@ -1323,7 +1331,8 @@ def get_cualificacion_stats():
     start_dt = datetime.combine(today_date, datetime.min.time())
     end_dt = datetime.combine(today_date, datetime.max.time())
     
-    # 1. Cualificados hoy
+    from sqlalchemy import func
+    # 1. Cualificados hoy (únicos por prospecto/lead)
     query_qual = LeadAnswer.query.filter(
         LeadAnswer.qualification.in_(['yes', 'true']),
         LeadAnswer.created_at.between(start_dt, end_dt)
@@ -1338,22 +1347,22 @@ def get_cualificacion_stats():
                                        LeadAnswer.ad_id == None
                                    )
                                )
-    qualified_today = query_qual.count()
+    qualified_today = query_qual.with_entities(func.count(func.distinct(LeadAnswer.lead_id))).scalar() or 0
     
     # 2. Sin asignación (de los cualificados hoy, no tienen setter ni closer asignado)
     if current_user.role != 'admin':
         unassigned_today = 0
     else:
         all_qual = query_qual.all()
-        unassigned_count = 0
+        unassigned_leads = set()
         for la in all_qual:
             ad = Ad.query.get(la.ad_id) if la.ad_id else None
             event = Event.query.get(ad.event_id) if (ad and ad.event_id) else None
             if not event or not event.setter_id or not event.closers:
-                unassigned_count += 1
-        unassigned_today = unassigned_count
+                unassigned_leads.add(la.lead_id)
+        unassigned_today = len(unassigned_leads)
         
-    # 3. Sin responder hoy (qualification == 'null' o vacía)
+    # 3. Sin responder hoy (qualification == 'null' o vacía, únicos por prospecto)
     query_no_resp = LeadAnswer.query.filter(
         LeadAnswer.qualification.in_(['null', None, '', 'undefined']),
         LeadAnswer.created_at.between(start_dt, end_dt)
@@ -1368,7 +1377,7 @@ def get_cualificacion_stats():
                                              LeadAnswer.ad_id == None
                                          )
                                      )
-    no_response_today = query_no_resp.count()
+    no_response_today = query_no_resp.with_entities(func.count(func.distinct(LeadAnswer.lead_id))).scalar() or 0
     
     return jsonify({
         "qualified_today": qualified_today,

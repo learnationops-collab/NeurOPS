@@ -988,19 +988,24 @@ def force_manual_attribution_agenda():
         db.session.add(matched_lead)
         db.session.flush()
 
-    # Interaccion virtual un minuto antes
+    # Interaccion virtual un minuto antes (reutilizar si ya existe para evitar duplicados)
     fake_time = agenda.date - timedelta(minutes=1) if agenda.date else db.func.now()
     
-    answer = LeadAnswer(
-        lead_id=matched_lead.id,
-        ad_id=ad_id,
-        keyword="manual_attribution",
-        qualification="true",
-        created_at=fake_time,
-        updated_at=fake_time
-    )
-    
-    db.session.add(answer)
+    answer = LeadAnswer.query.filter_by(lead_id=matched_lead.id).first()
+    if answer:
+        answer.ad_id = ad_id
+        answer.qualification = "true"
+        answer.updated_at = fake_time
+    else:
+        answer = LeadAnswer(
+            lead_id=matched_lead.id,
+            ad_id=ad_id,
+            keyword="manual_attribution",
+            qualification="true",
+            created_at=fake_time,
+            updated_at=fake_time
+        )
+        db.session.add(answer)
     
     try:
         db.session.commit()

@@ -100,10 +100,10 @@ class MarketingService:
         campaign_map = {a.id: c for a, _, c in ads_raw}
         ad_ids = list(ads_map.keys())
 
-        # 2. Leads por anuncio en el periodo
+        # 2. Leads por anuncio en el periodo (únicos por prospecto/lead_id)
         lead_stats = db.session.query(
             LeadAnswer.ad_id,
-            func.count(LeadAnswer.id).label('total_leads')
+            func.count(func.distinct(LeadAnswer.lead_id)).label('total_leads')
         ).filter(
             LeadAnswer.ad_id != None,
             LeadAnswer.created_at >= start_dt,
