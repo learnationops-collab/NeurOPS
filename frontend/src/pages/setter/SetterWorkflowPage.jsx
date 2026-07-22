@@ -55,7 +55,6 @@ const SetterWorkflowPage = () => {
             const res = await api.get(url);
             setLeads(res.data || []);
             setSelectedIds(new Set());
-            // Si el lead actualmente seleccionado ya no está en la cola, deseleccionarlo
             if (selectedLead && !res.data.some(l => l.id === selectedLead.id)) {
                 setSelectedLead(null);
             }
@@ -76,12 +75,10 @@ const SetterWorkflowPage = () => {
         }
     };
 
-    // Cargar anuncios (keywords) disponibles
     const fetchKeywords = async () => {
         try {
             const res = await api.get('/marketing/ads');
             const ads = res.data || [];
-            // Mapea Ad.keyword como slug (lo que se guarda en el lead)
             setAvailableKeywords(ads
                 .filter(a => a.keyword)
                 .map(a => ({ id: a.id, name: a.name, slug: a.keyword }))
@@ -91,11 +88,58 @@ const SetterWorkflowPage = () => {
         }
     };
 
+    // Agendas desatribuidas (Fuente Elias)
+    const [unattributedAgendas, setUnattributedAgendas] = useState([]);
+    const [loadingUnattributed, setLoadingUnattributed] = useState(false);
+    const [selectedAdsMap, setSelectedAdsMap] = useState({});
+    const [assigningId, setAssigningId] = useState(null);
+
+    const fetchUnattributedAgendas = async () => {
+        setLoadingUnattributed(true);
+        try {
+            const res = await api.get('/setter/deck/unattributed-agendas');
+            setUnattributedAgendas(res.data || []);
+        } catch (err) {
+            console.error("Error al cargar agendas desatribuidas:", err);
+        } finally {
+            setLoadingUnattributed(false);
+        }
+    };
+
+    const handleAssignAdToAgenda = async (agenda) => {
+        const adId = selectedAdsMap[agenda.id];
+        if (!adId) {
+            toast.error("Por favor selecciona un anuncio para esta agenda.");
+            return;
+        }
+        const igInput = agenda.instagram && agenda.instagram !== 'N/A' ? agenda.instagram : `@lead_${agenda.id}`;
+        setAssigningId(agenda.id);
+        const toastId = toast.loading("Asignando anuncio a la agenda...");
+        try {
+            await api.post('/setter/deck/assign-unattributed-ad', {
+                agenda_id: agenda.id,
+                ad_id: parseInt(adId),
+                instagram: igInput
+            });
+            toast.success(`Anuncio asignado a ${agenda.cliente}`, { id: toastId });
+            setUnattributedAgendas(prev => prev.filter(item => item.id !== agenda.id));
+            if (activeStep === 'cualificacion') {
+                fetchCualificacionStats();
+            }
+        } catch (err) {
+            console.error("Error al asignar anuncio a agenda:", err);
+            toast.error(err.response?.data?.error || "Error al asignar el anuncio", { id: toastId });
+        } finally {
+            setAssigningId(null);
+        }
+    };
+
     useEffect(() => {
         fetchLeads();
         fetchKeywords();
         if (activeStep === 'cualificacion') {
             fetchCualificacionStats();
+            fetchUnattributedAgendas();
         }
     }, [activeStep, dateRange, customDate, showDisqualified]);
 
@@ -646,6 +690,106 @@ const SetterWorkflowPage = () => {
                                 <X size={12} />
                                 {showDisqualified ? 'Ocultar descalificados' : 'Ver descalificados'}
                             </button>
+                        </div>
+                    )}
+
+                    {/* Sección Especial: Agendas Desatribuidas (Fuente Elias) */}
+                    {activeStep === 'cualificacion' && (
+                        <div className="bg-gradient-to-r from-amber-500/10 via-slate-900/90 to-amber-500/5 border border-amber-500/20 rounded-[2rem] p-6 space-y-4 shadow-xl">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-amber-500/15 pb-4">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
+                                            <Link2 size={16} />
+                                        </span>
+                                        <h3 className="text-sm font-black text-white italic tracking-wider uppercase">
+                                            Agendas Desatribuidas (Fuente Elias)
+                                        </h3>
+                                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                            {unattributedAgendas.length} pendientes
+                                        </span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                                        Agendas de la fuente Elias que no tienen anuncio asociado. Asigna el anuncio correspondiente para completar la atribución.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={fetchUnattributedAgendas}
+                                    disabled={loadingUnattributed}
+                                    className="p-2.5 bg-slate-950 border border-amber-500/20 hover:border-amber-500/40 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0 self-start md:self-auto"
+                                    title="Actualizar agendas desatribuidas"
+                                >
+                                    <RefreshCw size={14} className={loadingUnattributed ? 'animate-spin text-amber-400' : ''} />
+                                </button>
+                            </div>
+
+                            {loadingUnattributed ? (
+                                <div className="flex items-center justify-center py-6 text-slate-500 gap-2">
+                                    <Loader2 size={18} className="animate-spin text-amber-400" />
+                                    <span className="text-xs font-bold uppercase">Cargando agendas desatribuidas...</span>
+                                </div>
+                            ) : unattributedAgendas.length === 0 ? (
+                                <div className="text-center py-4 text-xs font-bold text-emerald-400 flex items-center justify-center gap-2">
+                                    <Check size={16} />
+                                    <span>No hay agendas de Elias pendientes de atribución. ¡Todas cuentan con anuncio asociado!</span>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                                    {unattributedAgendas.map(agenda => (
+                                        <div 
+                                            key={agenda.id}
+                                            className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-amber-500/30 transition-all"
+                                        >
+                                            <div className="space-y-1 min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-black text-xs text-white uppercase">{agenda.cliente}</span>
+                                                    <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                                                        Fuente: {agenda.setter}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-3 text-[10px] text-slate-400 font-bold flex-wrap">
+                                                    <span>IG: <strong className="text-slate-200">{agenda.instagram}</strong></span>
+                                                    <span>WA: <strong className="text-slate-200">{agenda.whatsapp}</strong></span>
+                                                    {agenda.fecha_meet && agenda.fecha_meet !== 'N/A' && (
+                                                        <span>Cita: <strong className="text-indigo-400">{agenda.fecha_meet}</strong></span>
+                                                    )}
+                                                    <span>Closer: <strong className="text-slate-300">{agenda.closer}</strong></span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
+                                                <select
+                                                    value={selectedAdsMap[agenda.id] || ''}
+                                                    onChange={(e) => setSelectedAdsMap(prev => ({ ...prev, [agenda.id]: e.target.value }))}
+                                                    className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-amber-500/50 flex-1 md:w-64 cursor-pointer"
+                                                >
+                                                    <option value="">Seleccionar anuncio (Meta Ad)...</option>
+                                                    {availableKeywords.map(ad => (
+                                                        <option key={ad.id} value={ad.id}>
+                                                            {ad.name} ({ad.slug})
+                                                        </option>
+                                                    ))}
+                                                </select>
+
+                                                <button
+                                                    onClick={() => handleAssignAdToAgenda(agenda)}
+                                                    disabled={assigningId === agenda.id || !selectedAdsMap[agenda.id]}
+                                                    className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-50 text-slate-950 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-amber-500/10 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                                                >
+                                                    {assigningId === agenda.id ? (
+                                                        <Loader2 size={14} className="animate-spin" />
+                                                    ) : (
+                                                        <>
+                                                            <Check size={14} />
+                                                            Asignar Anuncio
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
 
