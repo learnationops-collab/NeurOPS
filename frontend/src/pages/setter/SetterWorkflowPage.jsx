@@ -36,10 +36,10 @@ const SetterWorkflowPage = () => {
     // Filtros de fecha y descalificados para paso cualificacion
     const [dateRange, setDateRange] = useState('today');
     const localToday = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
-    const [customDate, setCustomDate] = useState(localToday);
-    const [showDisqualified, setShowDisqualified] = useState(false);
+    const [customDate, setCustomDate] = useState(localToday);    const [showDisqualified, setShowDisqualified] = useState(false);
     const [stats, setStats] = useState({ qualified_today: 0, unassigned_today: 0, no_response_today: 0 });
     const [showCalendar, setShowCalendar] = useState(false);
+    const [cualificacionTab, setCualificacionTab] = useState('pendientes'); // 'pendientes' | 'procesados'
 
     // Cargar leads de la cola activa
     const fetchLeads = async () => {
@@ -173,10 +173,11 @@ const SetterWorkflowPage = () => {
         const proc = [];
         filteredLeads.forEach(l => {
             if (!l) return;
-            if (!l.result || l.result === 'null' || l.result === '') {
-                porProc.push(l);
-            } else {
+            const resVal = String(l.result || '').toLowerCase();
+            if (l.processed || resVal === 'yes_confirmed' || resVal === 'confirmed' || resVal === 'no' || resVal === 'false' || resVal === 'descualificado') {
                 proc.push(l);
+            } else {
+                porProc.push(l);
             }
         });
         return { leadsPorProcesar: porProc, leadsProcesados: proc };
@@ -190,8 +191,6 @@ const SetterWorkflowPage = () => {
         setLeads(prev => prev.map(item => item.id === lead.id ? { ...item, unread_comment: false } : item));
     };
 
-
-
     // Procesar acción individual (de un solo clic)
     const handleQuickAction = async (leadId, nextResult, e) => {
         if (e) e.stopPropagation();
@@ -200,18 +199,19 @@ const SetterWorkflowPage = () => {
             if (activeStep === 'cualificacion') {
                 if (nextResult === 'Cualificado') {
                     await api.post(`/setter/deck/confirm-qualified/${leadId}`);
-                    toast.success("Lead confirmado y pasado a Link de Agenda");
+                    toast.success("Lead confirmado (Movido a Procesados)");
+                    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, result: 'yes_confirmed', processed: true } : l));
                 } else if (nextResult === 'Descualificado') {
                     await api.post(`/setter/deck/disqualify/${leadId}`);
-                    toast.success("Lead descalificado correctamente");
+                    toast.success("Lead descualificado (Movido a Procesados)");
+                    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, result: 'false', processed: true } : l));
                 }
             } else {
                 await api.post(`/setter/deck/${leadId}`, { result: nextResult });
                 toast.success("Lead actualizado correctamente");
+                setLeads(prev => prev.filter(l => l.id !== leadId));
             }
             
-            // Animación de salida optimizada
-            setLeads(prev => prev.filter(l => l.id !== leadId));
             if (selectedLead?.id === leadId) {
                 setSelectedLead(null);
             }
@@ -809,70 +809,119 @@ const SetterWorkflowPage = () => {
                     {/* Contenedor de la Lista */}
                     <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl space-y-4">
                         
-                        <div className="flex justify-between items-center border-b border-slate-900 pb-4">
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    checked={filteredLeads.length > 0 && selectedIds.size === filteredLeads.length}
-                                    onChange={toggleSelectAll}
-                                    className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4"
-                                />
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Seleccionar Todos
+                        {/* Selector de Pestañas para Paso de Cualificación */}
+                        {activeStep === 'cualificacion' ? (
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-900 pb-4">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <button
+                                        onClick={() => setCualificacionTab('pendientes')}
+                                        className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                            cualificacionTab === 'pendientes'
+                                                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-lg shadow-amber-500/10'
+                                                : 'bg-slate-950 text-slate-400 border border-slate-900 hover:text-white hover:border-slate-800'
+                                        }`}
+                                    >
+                                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                        Leads Cualificados Pendientes
+                                        <span className="ml-1 px-2 py-0.5 rounded-full text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                                            {leadsPorProcesar.length}
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setCualificacionTab('procesados')}
+                                        className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                            cualificacionTab === 'procesados'
+                                                ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30 shadow-lg shadow-violet-500/10'
+                                                : 'bg-slate-950 text-slate-400 border border-slate-900 hover:text-white hover:border-slate-800'
+                                        }`}
+                                    >
+                                        <span className="w-2 h-2 rounded-full bg-violet-400"></span>
+                                        Pestaña Procesados
+                                        <span className="ml-1 px-2 py-0.5 rounded-full text-[9px] bg-violet-500/20 text-violet-300 border border-violet-500/30 font-bold">
+                                            {leadsProcesados.length}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={filteredLeads.length > 0 && selectedIds.size === filteredLeads.length}
+                                        onChange={toggleSelectAll}
+                                        className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4"
+                                    />
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Seleccionar Todos
+                                    </span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex justify-between items-center border-b border-slate-900 pb-4">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={filteredLeads.length > 0 && selectedIds.size === filteredLeads.length}
+                                        onChange={toggleSelectAll}
+                                        className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4"
+                                    />
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Seleccionar Todos
+                                    </span>
+                                </div>
+                                <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
+                                    {filteredLeads.length} Leads
                                 </span>
                             </div>
-                            <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
-                                {filteredLeads.length} Leads
-                            </span>
-                        </div>
+                        )}
 
                         {loading ? (
                             <div className="flex flex-col items-center justify-center py-20 gap-3">
                                 <Loader2 className="animate-spin text-violet-500" size={32} />
                                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cargando leads de la cola...</span>
                             </div>
-                        ) : filteredLeads.length === 0 ? (
-                            <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide">
-                                👏 ¡No tienes leads pendientes en este paso!
-                            </div>
                         ) : (
                             <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-1 custom-scrollbar">
                                 {activeStep === 'cualificacion' ? (
-                                    <>
-                                        {/* SECCIÓN 1: LEADS POR PROCESAR */}
-                                        <div className="space-y-3">
-                                            <h3 className="text-xs font-black text-amber-400 uppercase tracking-widest pl-1 mb-2 flex items-center gap-2">
-                                                <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
-                                                Leads por procesar ({leadsPorProcesar.length})
-                                            </h3>
-                                            {leadsPorProcesar.length === 0 ? (
-                                                <div className="text-center py-8 bg-slate-950/20 border border-dashed border-slate-900 rounded-2xl text-slate-500 text-xs italic">
-                                                    Sin leads pendientes por calificar
+                                    cualificacionTab === 'pendientes' ? (
+                                        leadsPorProcesar.length === 0 ? (
+                                            <div className="text-center py-16 space-y-3">
+                                                <div className="text-emerald-400 text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2">
+                                                    <Check size={18} />
+                                                    <span>¡No tienes leads cualificados pendientes por evaluar!</span>
                                                 </div>
-                                            ) : (
-                                                <AnimatePresence initial={false}>
-                                                    {leadsPorProcesar.map((l) => renderLeadRow(l))}
-                                                </AnimatePresence>
-                                            )}
-                                        </div>
-
-                                        {/* SECCIÓN 2: LEADS PROCESADOS */}
-                                        <div className="space-y-3 pt-4 border-t border-slate-900">
-                                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 flex items-center gap-2">
-                                                <span className="w-2 h-2 bg-slate-500 rounded-full"></span>
-                                                Leads procesados ({leadsProcesados.length})
-                                            </h3>
-                                            {leadsProcesados.length === 0 ? (
-                                                <div className="text-center py-8 bg-slate-950/20 border border-dashed border-slate-900 rounded-2xl text-slate-500 text-xs italic">
-                                                    Aún no has procesado leads en este periodo
-                                                </div>
-                                            ) : (
-                                                <AnimatePresence initial={false}>
-                                                    {leadsProcesados.map((l) => renderLeadRow(l))}
-                                                </AnimatePresence>
-                                            )}
-                                        </div>
-                                    </>
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                                    Todos los leads cualificados de este periodo han sido procesados.
+                                                </p>
+                                                {leadsProcesados.length > 0 && (
+                                                    <button
+                                                        onClick={() => setCualificacionTab('procesados')}
+                                                        className="mt-2 px-4 py-2 bg-slate-900 border border-slate-800 hover:border-violet-500/30 text-violet-400 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                                                    >
+                                                        Ver pestaña de procesados ({leadsProcesados.length})
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <AnimatePresence initial={false}>
+                                                {leadsPorProcesar.map((l) => renderLeadRow(l))}
+                                            </AnimatePresence>
+                                        )
+                                    ) : (
+                                        leadsProcesados.length === 0 ? (
+                                            <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                                Aún no has procesado ningún lead en este periodo.
+                                            </div>
+                                        ) : (
+                                            <AnimatePresence initial={false}>
+                                                {leadsProcesados.map((l) => renderLeadRow(l))}
+                                            </AnimatePresence>
+                                        )
+                                    )
+                                ) : filteredLeads.length === 0 ? (
+                                    <div className="text-center py-16 text-slate-500 text-xs font-bold uppercase tracking-wide">
+                                        👏 ¡No tienes leads pendientes en este paso!
+                                    </div>
                                 ) : (
                                     <AnimatePresence initial={false}>
                                         {filteredLeads.map((l) => renderLeadRow(l))}
