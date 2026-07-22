@@ -694,6 +694,16 @@
       - Se reemplazaron todos los `window.prompt` y `window.confirm` por un modal nativo en React (`ReasonModal`), capturando el motivo de cancelación, reagendamiento o calificación de No Lead con una interfaz uniforme y sin alertas emergentes del navegador.
       - Se agregó un selector de **Fecha del Próximo Cobro** (`fecha_cobro`) en el **Paso 2** del formulario de declaración de venta. Al guardar, dicha fecha se auto-persiste como `fecha_seguimiento_cobro` en la cita de la base de datos, y luego el sistema muestra el `TriageFollowUpModal` en modo `isSaleFollowUp: true` para que el closer pueda ajustar o complementar las fechas de seguimiento (cobro y onboarding) antes de cerrar el flujo.
 
+- **22 de Julio de 2026**:
+  - **Rediseño y Modulación de la Vista Ejecutiva de Workshops para CEO (`/admin/ventas?tab=workshop`)**:
+    - **Interfaz Frontend ([WorkshopDashboardPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx) [MODIFY], [WorkshopKpiCards.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/components/WorkshopKpiCards.jsx) [NEW], [WorkshopCardsView.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/components/WorkshopCardsView.jsx) [NEW], [WorkshopTableView.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/components/WorkshopTableView.jsx) [NEW], [WorkshopFunnelView.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/components/WorkshopFunnelView.jsx) [NEW], [WorkshopFormModal.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/components/WorkshopFormModal.jsx) [NEW])**:
+      - Se refactorizó la vista de workshops de un monolito de 1,116 líneas dividiéndolo en 5 componentes atómicos para cumplir estrictamente con el límite de 500 líneas por archivo.
+      - Se implementó un panel ejecutivo de KPIs para CEO que incluye: Inversión Ads, Cash Collected, Beneficio Neto (Profit), Margen de Ganancia %, ROAS Global con insignia de estado de salud (Sobresaliente, Saludable, En Riesgo), CPL (Costo por Lead), CPA (Costo por Agenda) y CAC (Costo de Adquisición de Cliente).
+      - Se agregaron tarjetas de talleres con desglose financiero detallado y selector de vistas (Tarjetas vs Tabla comparativa ejecutiva).
+      - Se perfeccionó el visor gráfico de embudo de conversión (Funnel) mostrando retención paso a paso y resincronización directa en tiempo real con la base de datos de NeurOPS.
+      - Se integró el modal en 3 pasos (Tráfico, Asistencia/Retención y Validación NeurOPS) para la creación y edición de talleres con cálculo de ratios en vivo.
+
+
 
 
 
