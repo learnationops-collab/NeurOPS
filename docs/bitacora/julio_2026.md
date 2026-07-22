@@ -1,5 +1,15 @@
 # Bitácora - Julio 2026
 
+- **21 de Julio de 2026**:
+  - **Refactorización del Conteo de Ventas y Cash Collect en Pestaña Workshop (/admin/ventas)**:
+    - **Backend API ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/workshop.py) [MODIFY])**:
+      - Se implementó la función helper `is_valid_workshop_sale` para filtrar las ventas de workshop considerando únicamente transacciones válidas de **Seña**, **Split Pay / Parcial** y **Pago Completo**.
+      - Se excluyeron explícitamente las transacciones de **Cuota**, **Renovación** y **Upsell** tanto del conteo de ventas como del Cash Collect.
+      - Se reestructuró la lógica de agregación en `prefill_workshop_metrics` para contabilizar la cantidad de ventas por **Cliente/Lead comprador único** de ese workshop.
+      - Se aseguró que la recaudación (`cash_collected`) agregue los montos de todas las ventas válidas (seña, split/parcial y completo) de los prospectos del workshop sin duplicar ventas por lead.
+    - **Frontend React ([WorkshopDashboardPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/admin/workshop/WorkshopDashboardPage.jsx) [MODIFY])**:
+      - Se actualizaron los textos explicativos, etiquetas y tooltips del embudo (funnel), tarjetas KPI y modal de precarga/validación en 3 pasos para clarificar que la métrica de Ventas representa Leads compradores únicos y el Cash Collect excluye cuotas, renovaciones y upsells.
+
 - **16 de Julio de 2026**:
   - **Manejo Robusto de Bloqueos de Base de Datos en Decks (Robustness & Bugfix)**:
     - **Backend API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
