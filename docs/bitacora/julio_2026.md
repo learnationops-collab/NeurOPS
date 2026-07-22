@@ -1,6 +1,13 @@
 # Bitácora - Julio 2026
 
 - **21 de Julio de 2026**:
+  - **Deduplicación Estricta por Instagram Único y Conteo por Prospectos Únicos en Cualificación y Anuncios**:
+    - **Backend Setter API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - Se implementó la deduplicación por Instagram único (`seen_igs`) en `get_setter_deck`, evitando que múltiples respuestas del mismo prospecto generen filas repetidas en el mazo de cualificación.
+      - Se actualizaron los conteos de cualificación en `get_cualificacion_stats` utilizando `COUNT(DISTINCT lead_id)`, garantizando métricas de cualificados y pendientes 100% exactas por prospecto/lead único.
+    - **Backend Marketing & Services ([marketing.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/marketing.py), [marketing_service.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/services/marketing_service.py) [MODIFY])**:
+      - En `force_manual_attribution_agenda`, se reutiliza/actualiza la interacción de `LeadAnswer` existente en lugar de insertar registros duplicados si el prospecto ya contaba con un registro previo.
+      - En `get_ad_performance_data`, se configuró el conteo de leads por anuncio mediante `COUNT(DISTINCT lead_id)`, impidiendo distorsiones en la tasa de cualificación y métricas conversacionales del rendimiento de anuncios.
   - **Atribución de Agendas Desatribuidas de Fuente Elias en el Workspace del Setter**:
     - **Backend Marketing API ([marketing.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/marketing.py) [MODIFY])**:
       - En `get_unattributed_leads` (endpoint `/public/marketing/unattributed-leads`), se restringió el listado de agendas desatribuidas para filtrar únicamente aquellas cuyo origen o fuente sea **"Elias"** (`agenda.nombre` o `raw_data.fuente`), garantizando consistencia con la clasificación comercial.
