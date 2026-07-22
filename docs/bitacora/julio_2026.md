@@ -1,6 +1,15 @@
 # Bitácora - Julio 2026
 
 - **21 de Julio de 2026**:
+  - **Atribución de Agendas Desatribuidas de Fuente Elias en el Workspace del Setter**:
+    - **Backend Marketing API ([marketing.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/public/marketing.py) [MODIFY])**:
+      - En `get_unattributed_leads` (endpoint `/public/marketing/unattributed-leads`), se restringió el listado de agendas desatribuidas para filtrar únicamente aquellas cuyo origen o fuente sea **"Elias"** (`agenda.nombre` o `raw_data.fuente`), garantizando consistencia con la clasificación comercial.
+    - **Backend Setter API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - Se implementó la ruta `GET /api/setter/deck/unattributed-agendas` para consultar las agendas desatribuidas de la fuente Elias en el mazo del setter.
+      - Se implementó la ruta `POST /api/setter/deck/assign-unattributed-ad` que reutiliza el pipeline de atribución manual (`force_manual_attribution_agenda`) creando o asociando el prospecto (`ManychatLead`) y su interacción de anuncio (`LeadAnswer`).
+    - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
+      - Se integró la sección destacada **"Agendas Desatribuidas (Fuente Elias)"** dentro del espacio de trabajo del Setter en el paso de cualificación (`/setter/deck?step=cualificacion`).
+      - Permite a los setters seleccionar interactivamente el anuncio de Meta (Ad/Keyword) correspondiente a cada agenda sin atribución y procesar la asignación en tiempo real.
   - **Refactorización del Conteo de Ventas y Cash Collect en Pestaña Workshop (/admin/ventas)**:
     - **Backend API ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/workshop.py) [MODIFY])**:
       - Se implementó la función helper `is_valid_workshop_sale` para filtrar las ventas de workshop considerando únicamente transacciones válidas de **Seña**, **Split Pay / Parcial** y **Pago Completo**.
