@@ -22,7 +22,7 @@ const UnattributedAgendasSection = ({
                             <Link2 size={16} />
                         </span>
                         <h3 className="text-sm font-black text-white italic tracking-wider uppercase">
-                            Agendas Desatribuidas (Fuente Elias)
+                            Agendas Desatribuidas
                         </h3>
                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
                             {unattributedAgendas.length} pendientes

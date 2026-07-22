@@ -161,9 +161,9 @@ const SetterWorkflowPage = () => {
     useEffect(() => {
         fetchLeads();
         fetchKeywords();
+        fetchUnattributedAgendas();
         if (activeStep === 'cualificacion') {
             fetchCualificacionStats();
-            fetchUnattributedAgendas();
         }
     }, [activeStep, dateRange, customDate, showDisqualified]);
 
@@ -353,23 +353,21 @@ const SetterWorkflowPage = () => {
                         />
                     )}
 
-                    {/* Sección Agendas Desatribuidas (Fuente Elias) */}
-                    {activeStep === 'cualificacion' && (
-                        <UnattributedAgendasSection
-                            unattributedAgendas={unattributedAgendas}
-                            loadingUnattributed={loadingUnattributed}
-                            fetchUnattributedAgendas={fetchUnattributedAgendas}
-                            agendaIgMap={agendaIgMap}
-                            setAgendaIgMap={setAgendaIgMap}
-                            selectedAdsMap={selectedAdsMap}
-                            setSelectedAdsMap={setSelectedAdsMap}
-                            availableKeywords={availableKeywords}
-                            handleAssignAdToAgenda={handleAssignAdToAgenda}
-                            assigningId={assigningId}
-                        />
-                    )}
+                    {/* Sección Agendas Desatribuidas */}
+                    <UnattributedAgendasSection
+                        unattributedAgendas={unattributedAgendas}
+                        loadingUnattributed={loadingUnattributed}
+                        fetchUnattributedAgendas={fetchUnattributedAgendas}
+                        agendaIgMap={agendaIgMap}
+                        setAgendaIgMap={setAgendaIgMap}
+                        selectedAdsMap={selectedAdsMap}
+                        setSelectedAdsMap={setSelectedAdsMap}
+                        availableKeywords={availableKeywords}
+                        handleAssignAdToAgenda={handleAssignAdToAgenda}
+                        assigningId={assigningId}
+                    />
 
-                    {/* Contenedor de la Lista */}
+                    {/* Contenedor de la Lista / Agendas Atribuidas */}
                     <div className="bg-[#111219]/95 border border-slate-900 rounded-[2rem] p-6 shadow-xl space-y-4">
                         
                         {/* Selector de Sub-Pestañas para Paso de Cualificación */}
@@ -420,17 +418,17 @@ const SetterWorkflowPage = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex justify-between items-center border-b border-slate-900 pb-4">
-                                <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap justify-between items-center border-b border-slate-900 pb-4 gap-2">
+                                <div className="flex items-center gap-3">
                                     <input
                                         type="checkbox"
                                         checked={filteredLeads.length > 0 && selectedIds.size === filteredLeads.length}
                                         onChange={toggleSelectAll}
                                         className="rounded bg-slate-950 border-slate-800 text-violet-500 focus:ring-0 cursor-pointer w-4 h-4"
                                     />
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        Seleccionar Todos
-                                    </span>
+                                    <h3 className="text-xs font-black text-white italic uppercase tracking-wider">
+                                        Agendas Atribuidas
+                                    </h3>
                                 </div>
                                 <span className="text-[10px] font-black bg-slate-900 text-slate-350 border border-slate-800 px-3 py-1 rounded-xl">
                                     {filteredLeads.length} Agendas
