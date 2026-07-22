@@ -821,13 +821,18 @@ def get_setter_deck():
                 if not client:
                     client = Client.query.filter(func.lower(func.replace(Client.instagram, '@', '')) == ig_clean).first()
                 if not client:
-                    client = Client(
-                        full_name=lead.name or "Sin Nombre",
-                        instagram=lead.ig,
-                        created_at=datetime.utcnow()
-                    )
-                    db.session.add(client)
-                    db.session.commit()
+                    try:
+                        client = Client(
+                            full_name=lead.name or "Sin Nombre",
+                            instagram=lead.ig,
+                            created_at=datetime.utcnow()
+                        )
+                        db.session.add(client)
+                        db.session.commit()
+                    except Exception as ex:
+                        db.session.rollback()
+                        import logging
+                        logging.error(f"Error registrando cliente implícito en deck setter: {ex}")
             
             has_unread = client.id in unread_client_ids if client else False
             if ig_clean and ig_clean in booked_igs and not has_unread:

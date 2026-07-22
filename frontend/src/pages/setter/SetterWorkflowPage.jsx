@@ -53,14 +53,16 @@ const SetterWorkflowPage = () => {
                 }
             }
             const res = await api.get(url);
-            setLeads(res.data || []);
+            const data = Array.isArray(res.data) ? res.data : [];
+            setLeads(data);
             setSelectedIds(new Set());
-            if (selectedLead && !res.data.some(l => l.id === selectedLead.id)) {
+            if (selectedLead && !data.some(l => l && l.id === selectedLead.id)) {
                 setSelectedLead(null);
             }
         } catch (err) {
             console.error("Error al cargar leads del paso:", err);
             toast.error("Error al cargar la cola de trabajo");
+            setLeads([]);
         } finally {
             setLoading(false);
         }
@@ -78,13 +80,14 @@ const SetterWorkflowPage = () => {
     const fetchKeywords = async () => {
         try {
             const res = await api.get('/marketing/ads');
-            const ads = res.data || [];
+            const ads = Array.isArray(res.data) ? res.data : [];
             setAvailableKeywords(ads
-                .filter(a => a.keyword)
-                .map(a => ({ id: a.id, name: a.name, slug: a.keyword }))
+                .filter(a => a && (a.keyword || a.name))
+                .map(a => ({ id: a.id, name: a.name || 'Sin Nombre', slug: a.keyword || a.name }))
             );
         } catch (err) {
             console.error("Error al cargar anuncios:", err);
+            setAvailableKeywords([]);
         }
     };
 
@@ -98,9 +101,10 @@ const SetterWorkflowPage = () => {
         setLoadingUnattributed(true);
         try {
             const res = await api.get('/setter/deck/unattributed-agendas');
-            setUnattributedAgendas(res.data || []);
+            setUnattributedAgendas(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error("Error al cargar agendas desatribuidas:", err);
+            setUnattributedAgendas([]);
         } finally {
             setLoadingUnattributed(false);
         }
@@ -122,7 +126,7 @@ const SetterWorkflowPage = () => {
                 instagram: igInput
             });
             toast.success(`Anuncio asignado a ${agenda.cliente}`, { id: toastId });
-            setUnattributedAgendas(prev => prev.filter(item => item.id !== agenda.id));
+            setUnattributedAgendas(prev => (Array.isArray(prev) ? prev : []).filter(item => item.id !== agenda.id));
             if (activeStep === 'cualificacion') {
                 fetchCualificacionStats();
             }
@@ -145,21 +149,26 @@ const SetterWorkflowPage = () => {
 
     // Filtrar localmente por búsqueda
     const filteredLeads = useMemo(() => {
+        if (!Array.isArray(leads)) return [];
         const query = searchQuery.toLowerCase().trim();
         if (!query) return leads;
         return leads.filter(l => 
-            (l.lead_name && l.lead_name.toLowerCase().includes(query)) ||
-            (l.instagram && l.instagram.toLowerCase().includes(query)) ||
-            (l.email && l.email.toLowerCase().includes(query))
+            l && (
+                (l.lead_name && l.lead_name.toLowerCase().includes(query)) ||
+                (l.instagram && l.instagram.toLowerCase().includes(query)) ||
+                (l.email && l.email.toLowerCase().includes(query))
+            )
         );
     }, [leads, searchQuery]);
 
     // Dividir listas de cualificación: Por Procesar vs Procesados
     const { leadsPorProcesar, leadsProcesados } = useMemo(() => {
+        if (!Array.isArray(filteredLeads)) return { leadsPorProcesar: [], leadsProcesados: [] };
         if (activeStep !== 'cualificacion') return { leadsPorProcesar: filteredLeads, leadsProcesados: [] };
         const porProc = [];
         const proc = [];
         filteredLeads.forEach(l => {
+            if (!l) return;
             if (!l.result || l.result === 'null' || l.result === '') {
                 porProc.push(l);
             } else {

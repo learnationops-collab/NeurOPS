@@ -7,10 +7,11 @@
     - **Backend Setter API ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
       - Se implementó la ruta `GET /api/setter/deck/unattributed-agendas` para consultar las agendas desatribuidas de la fuente Elias en el mazo del setter.
       - Se implementó la ruta `POST /api/setter/deck/assign-unattributed-ad` que reutiliza el pipeline de atribución manual (`force_manual_attribution_agenda`) creando o asociando el prospecto (`ManychatLead`) y su interacción de anuncio (`LeadAnswer`).
+      - Se envolvió la creación implícita de `Client` en el endpoint `GET /api/setter/deck` dentro de un bloque `try-except` con `db.session.rollback()`, garantizando que bloqueos temporales de SQLite no interrumpan la lectura de la cola.
     - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
       - Se integró la sección destacada **"Agendas Desatribuidas (Fuente Elias)"** dentro del espacio de trabajo del Setter en el paso de cualificación (`/setter/deck?step=cualificacion`).
       - Permite a los setters seleccionar interactivamente el anuncio de Meta (Ad/Keyword) correspondiente a cada agenda sin atribución y procesar la asignación en tiempo real.
-      - **Bugfix**: Se agregó la importación faltante del icono `RefreshCw` desde `lucide-react`, solucionando el error de `ReferenceError` que provocaba que la pantalla mostrara únicamente el contenedor de fondo sin renderizar el mazo.
+      - **Bugfix & Robustez**: Se agregó la importación del icono `RefreshCw` de `lucide-react` y se reforzó el manejo defensivo de estados con `Array.isArray(...)` en todas las consultas y filtrados, garantizando la recuperación ante cualquier respuesta inesperada sin romper el árbol de React.
   - **Refactorización del Conteo de Ventas y Cash Collect en Pestaña Workshop (/admin/ventas)**:
     - **Backend API ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/workshop.py) [MODIFY])**:
       - Se implementó la función helper `is_valid_workshop_sale` para filtrar las ventas de workshop considerando únicamente transacciones válidas de **Seña**, **Split Pay / Parcial** y **Pago Completo**.
