@@ -662,7 +662,7 @@ def get_available_links():
 @bp.route('/deck', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_setter_deck():
-    from app.models import Appointment
+    from app.models import Appointment, CommentNotification, Comment
     from datetime import date, timedelta, datetime
     
     date_range = request.args.get('date_range', 'all')
