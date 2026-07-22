@@ -374,7 +374,7 @@ const WorkshopDashboardPage = () => {
             { label: 'Aplicaciones Calendly', value: e.aplicaciones_form, rate: pct(e.aplicaciones_form), sub: 'Tasa Aplicación', detail: 'Llenaron formulario Calendly' },
             { label: 'Agendas Exitosas', value: e.agendas_exitosas, rate: pct(e.agendas_exitosas), sub: 'Aplicación a Agenda', detail: 'Agendaron cita con closer' },
             { label: 'Show up Sales Call', value: e.show_up_sales_call, rate: pct(e.show_up_sales_call), sub: 'Show Up en Cita', detail: 'Asistieron a la llamada de ventas' },
-            { label: 'Ventas (Sales)', value: e.sales, rate: pct(e.sales), sub: 'Close Rate', detail: 'Cierres de venta completados' }
+            { label: 'Ventas (Leads)', value: e.sales, rate: pct(e.sales), sub: 'Close Rate', detail: 'Leads compradores únicos (Seña, Split Pay o Completo). Excluye cuotas, renovaciones y upsells.' }
         ];
     }, [selectedEventForFunnel]);
 
@@ -1001,13 +1001,14 @@ const WorkshopDashboardPage = () => {
                                                     />
                                                 </div>
                                                 <div className="space-y-1.5">
-                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Ventas Cerradas</label>
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Ventas por Lead (Compradores Únicos)</label>
                                                     <input
                                                         type="number"
                                                         value={formData.sales}
                                                         onChange={(e) => setFormData(prev => ({ ...prev, sales: e.target.value }))}
                                                         className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white focus:border-indigo-500 outline-none font-bold"
                                                     />
+                                                    <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">1 venta por lead (Seña, Split Pay o Completo)</p>
                                                 </div>
                                             </div>
 
@@ -1023,6 +1024,7 @@ const WorkshopDashboardPage = () => {
                                                         className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-8 p-3 text-xs text-emerald-400 border-emerald-500/20 bg-emerald-500/5 focus:border-emerald-500 outline-none font-bold"
                                                     />
                                                 </div>
+                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Sin cuotas, renovaciones ni upsells</p>
                                             </div>
 
                                             {/* Agenda Breakdown visual details */}
