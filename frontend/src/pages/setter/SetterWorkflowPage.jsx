@@ -95,6 +95,7 @@ const SetterWorkflowPage = () => {
     const [unattributedAgendas, setUnattributedAgendas] = useState([]);
     const [loadingUnattributed, setLoadingUnattributed] = useState(false);
     const [selectedAdsMap, setSelectedAdsMap] = useState({});
+    const [agendaIgMap, setAgendaIgMap] = useState({});
     const [assigningId, setAssigningId] = useState(null);
 
     const fetchUnattributedAgendas = async () => {
@@ -120,16 +121,22 @@ const SetterWorkflowPage = () => {
             toast.error("Por favor selecciona un anuncio para esta agenda.");
             return;
         }
-        const igInput = agenda.instagram && agenda.instagram !== 'N/A' ? agenda.instagram : `@lead_${agenda.id}`;
+        const igRaw = agendaIgMap[agenda.id] ?? agenda.instagram;
+        const igInput = (igRaw && igRaw !== 'N/A') ? igRaw.trim() : '';
+        if (!igInput) {
+            toast.error("Por favor escribe el Instagram del Lead para conectar la agenda con ManyChat.");
+            return;
+        }
+
         setAssigningId(agenda.id);
-        const toastId = toast.loading("Asignando anuncio a la agenda...");
+        const toastId = toast.loading("Asignando anuncio y conectando agenda...");
         try {
             await api.post('/setter/deck/assign-unattributed-ad', {
                 agenda_id: agenda.id,
                 ad_id: parseInt(adId),
                 instagram: igInput
             });
-            toast.success(`Anuncio asignado a ${agenda.cliente}`, { id: toastId });
+            toast.success(`Anuncio asignado a ${agenda.cliente} (@${igInput.replace('@', '')})`, { id: toastId });
             setUnattributedAgendas(prev => (Array.isArray(prev) ? prev : []).filter(item => item.id !== agenda.id));
             if (activeStep === 'cualificacion') {
                 fetchCualificacionStats();
@@ -772,11 +779,25 @@ const SetterWorkflowPage = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
+                                            <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto shrink-0">
+                                                {/* Input editable de Instagram del Lead */}
+                                                <div className="relative w-full sm:w-44">
+                                                    <Instagram size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400/80" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="@instagram_lead"
+                                                        value={agendaIgMap[agenda.id] ?? (agenda.instagram !== 'N/A' ? agenda.instagram : '')}
+                                                        onChange={(e) => setAgendaIgMap(prev => ({ ...prev, [agenda.id]: e.target.value }))}
+                                                        className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-amber-500/50"
+                                                        title="Escribe o verifica el Instagram del Lead para vincular con ManyChat"
+                                                    />
+                                                </div>
+
+                                                {/* Selector de anuncio (Meta Ad) */}
                                                 <select
                                                     value={selectedAdsMap[agenda.id] || ''}
                                                     onChange={(e) => setSelectedAdsMap(prev => ({ ...prev, [agenda.id]: e.target.value }))}
-                                                    className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-amber-500/50 flex-1 md:w-64 cursor-pointer"
+                                                    className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-amber-500/50 w-full sm:w-56 cursor-pointer"
                                                 >
                                                     <option value="">Seleccionar anuncio (Meta Ad)...</option>
                                                     {availableKeywords.map(ad => (
@@ -786,10 +807,11 @@ const SetterWorkflowPage = () => {
                                                     ))}
                                                 </select>
 
+                                                {/* Botón Asignar Anuncio */}
                                                 <button
                                                     onClick={() => handleAssignAdToAgenda(agenda)}
                                                     disabled={assigningId === agenda.id || !selectedAdsMap[agenda.id]}
-                                                    className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-50 text-slate-950 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-amber-500/10 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                                                    className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 disabled:opacity-50 text-slate-950 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-amber-500/10 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer w-full sm:w-auto"
                                                 >
                                                     {assigningId === agenda.id ? (
                                                         <Loader2 size={14} className="animate-spin" />
