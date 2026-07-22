@@ -706,6 +706,7 @@
       - Se optimizó la función `prefill_workshop_metrics` para ignorar identificadores genéricos de Instagram y Mail (`'no tengo'`, `'n/a'`, `'ninguno'`) evitando atribuciones erróneas a ventas anónimas.
       - Se añadió restricción temporal a las ventas consultadas, requiriendo que la fecha de compra sea igual o posterior al evento del taller para no atribuir ventas históricas de meses anteriores.
       - Se amplió la ventana horario de consulta de agendas en `prefill_workshop_metrics` a +8 horas en el límite nocturno UTC para capturar agendas registradas en la madrugada pos-taller (garantizando paridad total del 100% entre la vista de Workshops y el Registro de Agendas).
+      - Se unificó el conteo de ventas por lead único (comprador), deduplicando prospectos con múltiples pagos para contar exactamente 1 venta por cliente, y verificando tanto ventas registradas (`FinancialSale`) como estados de cierre de agenda (`FinancialAgenda.estado`), asegurando que solo los pagos iniciales válidos (Seña, Split Pay / Parcial, Completo) sumen al `cash_collected`.
 
 
 

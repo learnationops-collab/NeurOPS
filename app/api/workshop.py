@@ -414,34 +414,42 @@ def prefill_workshop_metrics():
     for a in workshop_agendas:
         ig_raw = (a.instagram or '').strip().replace('@', '').lower()
         mail_raw = (a.mail or '').strip().lower()
+        lead_raw = (a.lead or '').strip().lower()
         
         ig_clean = ig_raw if ig_raw and ig_raw not in INVALID_HANDLES else None
         mail_clean = mail_raw if mail_raw and mail_raw not in INVALID_HANDLES else None
+        lead_clean = lead_raw if lead_raw and len(lead_raw) > 2 else None
         
-        if not ig_clean and not mail_clean:
+        if not ig_clean and not mail_clean and not lead_clean:
             continue
             
-        client_key = ig_clean or mail_clean or f"agenda_{a.id}"
+        client_key = ig_clean or mail_clean or lead_clean or f"agenda_{a.id}"
         
+        # 1. Chequear estado de venta en FinancialAgenda
+        estado_agenda = (a.estado or '').lower().strip()
+        is_sale_agenda = any(st in estado_agenda for st in ['cierre', 'seña', 'sena', 'completo', 'ganado', 'venta', 'vendido', 'completado'])
+
+        # 2. Chequear ventas en FinancialSale
         filters = []
         if ig_clean:
             filters.append(func.lower(func.replace(FinancialSale.instagram, '@', '')) == ig_clean)
         if mail_clean:
             filters.append(func.lower(FinancialSale.mail_cliente) == mail_clean)
+        if lead_clean:
+            filters.append(func.lower(FinancialSale.nombre_cliente) == lead_clean)
             
+        sales = []
         if filters:
             sales = FinancialSale.query.filter(or_(*filters)).all()
-            for s in sales:
-                if is_valid_workshop_sale(s):
-                    # Verificar que la venta sea igual o posterior al dia anterior del workshop
-                    if s.created_at:
-                        sale_dt = s.created_at.date()
-                        if sale_dt >= (dt - dt_module.timedelta(days=1)):
-                            lead_buyers_set.add(client_key)
-                            all_workshop_sales.add(s)
-                    else:
-                        lead_buyers_set.add(client_key)
-                        all_workshop_sales.add(s)
+            
+        valid_sales = [s for s in sales if is_valid_workshop_sale(s)]
+        
+        if valid_sales:
+            lead_buyers_set.add(client_key)
+            for s in valid_sales:
+                all_workshop_sales.add(s)
+        elif is_sale_agenda:
+            lead_buyers_set.add(client_key)
                 
     sales_count = len(lead_buyers_set)
     cash_collected = sum(s.monto or 0.0 for s in all_workshop_sales)
