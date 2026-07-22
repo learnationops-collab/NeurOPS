@@ -1617,10 +1617,49 @@ def update_qualified_lead(answer_id):
 @bp.route('/deck/unattributed-agendas', methods=['GET'])
 @role_required(ROLE_SETTER)
 def get_unattributed_agendas_for_setter():
-    """Retorna las agendas desatribuidas (fuente Elias y sin anuncio) para el mazo de cualificación del setter."""
-    from app.models import FinancialAgenda, ManychatLead, LeadAnswer
+    """Retorna las agendas desatribuidas (fuente Elias y sin anuncio) para el mazo del setter filtradas por el rango de fechas seleccionado."""
+    from app.models import FinancialAgenda, ManychatLead, LeadAnswer, Client
+    from datetime import date as dt_date, timedelta, datetime
+    from sqlalchemy import or_
 
-    agendas = FinancialAgenda.query.order_by(FinancialAgenda.date.desc()).all()
+    date_range = request.args.get('date_range', 'today')
+    target_date_str = request.args.get('date')
+    today = dt_date.today()
+
+    start_dt = None
+    end_dt = None
+
+    if date_range == 'today':
+        start_dt = datetime.combine(today, datetime.min.time())
+        end_dt = datetime.combine(today, datetime.max.time())
+    elif date_range == 'yesterday':
+        yesterday = today - timedelta(days=1)
+        start_dt = datetime.combine(yesterday, datetime.min.time())
+        end_dt = datetime.combine(yesterday, datetime.max.time())
+    elif date_range == 'week':
+        start_dt = datetime.combine(today - timedelta(days=7), datetime.min.time())
+        end_dt = datetime.combine(today, datetime.max.time())
+    elif date_range == 'month':
+        start_dt = datetime.combine(today - timedelta(days=30), datetime.min.time())
+        end_dt = datetime.combine(today, datetime.max.time())
+    elif date_range == 'custom' and target_date_str:
+        try:
+            t_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+            start_dt = datetime.combine(t_date, datetime.min.time())
+            end_dt = datetime.combine(t_date, datetime.max.time())
+        except ValueError:
+            pass
+
+    query = FinancialAgenda.query
+    if start_dt and end_dt:
+        query = query.filter(
+            or_(
+                FinancialAgenda.date.between(start_dt, end_dt),
+                FinancialAgenda.created_at.between(start_dt, end_dt)
+            )
+        )
+
+    agendas = query.order_by(FinancialAgenda.date.desc()).all()
     unattributed_agendas = []
     seen_keys = set()
 
@@ -1651,6 +1690,8 @@ def get_unattributed_agendas_for_setter():
             continue
 
         matched_lead = None
+        matched_client = None
+
         if ig_norm:
             matched_lead = ManychatLead.query.filter(
                 db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
@@ -1661,6 +1702,12 @@ def get_unattributed_agendas_for_setter():
                 db.func.lower(ManychatLead.name) == nombre_norm
             ).first()
 
+        if nombre_norm:
+            matched_client = Client.query.filter(
+                db.func.lower(Client.full_name) == nombre_norm
+            ).first()
+
+        # Determinar si cuenta con anuncio atribuido
         has_attribution = False
         if matched_lead:
             closest = LeadAnswer.query.filter(
@@ -1675,14 +1722,26 @@ def get_unattributed_agendas_for_setter():
             if lead_key:
                 seen_keys.add(lead_key)
 
+            # Corregir el Instagram preferiendo la conversación registrada en ManychatLead o Client
+            resolved_ig = None
+            if matched_lead and matched_lead.ig:
+                resolved_ig = matched_lead.ig
+            elif matched_client and matched_client.instagram:
+                resolved_ig = matched_client.instagram
+            elif agenda.instagram:
+                resolved_ig = agenda.instagram
+
+            if not resolved_ig or resolved_ig.strip().lower() in ('n/a', 'none', ''):
+                resolved_ig = f"@{nombre_norm.replace(' ', '_')}" if nombre_norm else 'N/A'
+
             unattributed_agendas.append({
                 "id": agenda.id,
                 "date": agenda.date.isoformat() if agenda.date else (agenda.created_at.isoformat() if agenda.created_at else None),
                 "cliente": agenda.lead or 'Desconocido',
-                "instagram": agenda.instagram or 'N/A',
+                "instagram": resolved_ig,
                 "setter": agenda.nombre or 'Elias',
                 "closer": agenda.closer or 'Sin asignar',
-                "whatsapp": agenda.whatsapp or 'N/A',
+                "whatsapp": agenda.whatsapp or (matched_client.phone if matched_client else 'N/A'),
                 "fecha_meet": agenda.fecha_meet or 'N/A'
             })
 

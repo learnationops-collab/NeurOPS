@@ -100,7 +100,11 @@ const SetterWorkflowPage = () => {
     const fetchUnattributedAgendas = async () => {
         setLoadingUnattributed(true);
         try {
-            const res = await api.get('/setter/deck/unattributed-agendas');
+            let url = `/setter/deck/unattributed-agendas?date_range=${dateRange}`;
+            if (dateRange === 'custom' && customDate) {
+                url += `&date=${customDate}`;
+            }
+            const res = await api.get(url);
             setUnattributedAgendas(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error("Error al cargar agendas desatribuidas:", err);
