@@ -293,10 +293,11 @@ def prefill_workshop_metrics():
     # Se busca con el dia actual y el dia anterior para cubrir posibles desfases
     import datetime as dt_module
     prev_date_str = (dt - dt_module.timedelta(days=1)).strftime("%Y-%m-%d")
+    utc_end_extended_agendas = utc_end + dt_module.timedelta(hours=8)
     
     agendas = FinancialAgenda.query.filter(
         or_(
-            (FinancialAgenda.created_at >= utc_start) & (FinancialAgenda.created_at <= utc_end),
+            (FinancialAgenda.created_at >= utc_start) & (FinancialAgenda.created_at <= utc_end_extended_agendas),
             FinancialAgenda.registro.like(f"{date_str}%"),
             FinancialAgenda.registro.like(f"{prev_date_str}%")
         )
