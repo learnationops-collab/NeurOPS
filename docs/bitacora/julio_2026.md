@@ -10,6 +10,8 @@
       - Se implementó la ruta `POST /api/setter/deck/assign-unattributed-ad` que reutiliza el pipeline de atribución manual (`force_manual_attribution_agenda`) creando o asociando el prospecto (`ManychatLead`) y su interacción de anuncio (`LeadAnswer`).
       - Se envolvió la creación implícita de `Client` en el endpoint `GET /api/setter/deck` dentro de un bloque `try-except` con `db.session.rollback()`, garantizando que bloqueos temporales de SQLite no interrumpan la lectura de la cola.
     - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
+      - Se implementó la sub-navegación por pestañas **"Leads Cualificados Pendientes"** y **"Pestaña Procesados"** en el mazo de cualificación (`/setter/deck?step=cualificacion`).
+      - Al hacer clic en **"Confirmar cualificado"** o **"Descualificar"**, los leads se actualizan localmente y se transfieren dinámicamente de la pestaña de pendientes a la pestaña de **Procesados**, manteniendo el registro visual de los leads atendidos en la jornada.
       - Se vinculó el envío de `date_range` y `customDate` en la consulta de agendas desatribuidas (`fetchUnattributedAgendas`), de forma que al cambiar la fecha en la barra superior se actualicen dinámicamente las agendas desatribuidas visibles.
       - Se integró la sección destacada **"Agendas Desatribuidas (Fuente Elias)"** dentro del espacio de trabajo del Setter en el paso de cualificación (`/setter/deck?step=cualificacion`).
       - Permite a los setters seleccionar interactivamente el anuncio de Meta (Ad/Keyword) correspondiente a cada agenda sin atribución y procesar la asignación en tiempo real.
