@@ -1609,4 +1609,88 @@ def update_qualified_lead(answer_id):
     return jsonify({"status": "success", "message": "Lead actualizado correctamente"}), 200
 
 
+@bp.route('/deck/unattributed-agendas', methods=['GET'])
+@role_required(ROLE_SETTER)
+def get_unattributed_agendas_for_setter():
+    """Retorna las agendas desatribuidas (fuente Elias y sin anuncio) para el mazo de cualificación del setter."""
+    from app.models import FinancialAgenda, ManychatLead, LeadAnswer
+
+    agendas = FinancialAgenda.query.order_by(FinancialAgenda.date.desc()).all()
+    unattributed_agendas = []
+    seen_keys = set()
+
+    def normalize_ig(ig_str):
+        if not ig_str or not isinstance(ig_str, str) or ig_str.lower() in ('n/a', ''):
+            return None
+        return ig_str.strip().lstrip('@').lower()
+
+    for agenda in agendas:
+        # Filtrar únicamente fuente "Elias"
+        nombre_val = str(agenda.nombre or '').strip().lower()
+        raw = agenda.raw_data or {}
+        fuente_raw = str(raw.get('fuente') or raw.get('fuente_form') or raw.get('setter') or '').strip().lower()
+        if 'elias' not in nombre_val and 'elias' not in fuente_raw:
+            continue
+
+        ig_val = agenda.instagram or raw.get('instagram') or raw.get('ig')
+        ig_norm = normalize_ig(ig_val)
+        nombre_norm = (agenda.lead or '').strip().lower()
+
+        lead_key = None
+        if ig_norm:
+            lead_key = f"ig:{ig_norm}"
+        elif nombre_norm:
+            lead_key = f"nombre:{nombre_norm}"
+
+        if lead_key and lead_key in seen_keys:
+            continue
+
+        matched_lead = None
+        if ig_norm:
+            matched_lead = ManychatLead.query.filter(
+                db.func.lower(db.func.replace(ManychatLead.ig, '@', '')) == ig_norm
+            ).first()
+
+        if not matched_lead and nombre_norm:
+            matched_lead = ManychatLead.query.filter(
+                db.func.lower(ManychatLead.name) == nombre_norm
+            ).first()
+
+        has_attribution = False
+        if matched_lead:
+            closest = LeadAnswer.query.filter(
+                LeadAnswer.lead_id == matched_lead.id,
+                LeadAnswer.ad_id != None
+            ).first()
+
+            if closest and closest.ad_id:
+                has_attribution = True
+
+        if not has_attribution:
+            if lead_key:
+                seen_keys.add(lead_key)
+
+            unattributed_agendas.append({
+                "id": agenda.id,
+                "date": agenda.date.isoformat() if agenda.date else (agenda.created_at.isoformat() if agenda.created_at else None),
+                "cliente": agenda.lead or 'Desconocido',
+                "instagram": agenda.instagram or 'N/A',
+                "setter": agenda.nombre or 'Elias',
+                "closer": agenda.closer or 'Sin asignar',
+                "whatsapp": agenda.whatsapp or 'N/A',
+                "fecha_meet": agenda.fecha_meet or 'N/A'
+            })
+
+    return jsonify(unattributed_agendas), 200
+
+
+@bp.route('/deck/assign-unattributed-ad', methods=['POST'])
+@role_required(ROLE_SETTER)
+def assign_unattributed_ad_setter():
+    """Asigna un anuncio a una agenda desatribuida desde el mazo del setter."""
+    from app.api.public.marketing import force_manual_attribution_agenda
+    return force_manual_attribution_agenda()
+
+
+
 

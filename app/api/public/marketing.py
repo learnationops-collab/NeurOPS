@@ -839,7 +839,7 @@ def get_unattributed_leads():
             else:
                 unattributed_sales.append(sale_data)
 
-    # 2. Buscar agendas sin anuncio
+    # 2. Buscar agendas sin anuncio (Solo agendas de la fuente Elias)
     if lead_type in ('all', 'agendas'):
         agendas = FinancialAgenda.query.filter(
             FinancialAgenda.date >= start_dt,
@@ -847,9 +847,16 @@ def get_unattributed_leads():
         ).order_by(FinancialAgenda.date.desc()).all()
 
         for agenda in agendas:
-            ig_val = agenda.instagram or (agenda.raw_data or {}).get('instagram') or (agenda.raw_data or {}).get('ig')
+            # Las agendas desatribuidas deben ser las que tengan como fuente "Elias"
+            nombre_val = str(agenda.nombre or '').strip().lower()
+            raw = agenda.raw_data or {}
+            fuente_raw = str(raw.get('fuente') or raw.get('fuente_form') or raw.get('setter') or '').strip().lower()
+            if 'elias' not in nombre_val and 'elias' not in fuente_raw:
+                continue
+
+            ig_val = agenda.instagram or raw.get('instagram') or raw.get('ig')
             ig_norm = normalize_ig(ig_val)
-            nombre_norm = (agenda.nombre or '').strip().lower()
+            nombre_norm = (agenda.lead or '').strip().lower()
 
             lead_key = None
             if ig_norm:
