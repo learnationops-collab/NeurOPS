@@ -900,10 +900,10 @@ def get_setter_deck():
         query = Appointment.query.filter(
             or_(Appointment.result == None, Appointment.result == '', Appointment.result == 'Pendiente')
         )
-    elif step == 'link-agenda':
-        # Leads cualificados a la espera de agendamiento/envío de link
+    elif step == 'agendas':
         query = Appointment.query.filter(
-            Appointment.result == 'Cualificado'
+            or_(Appointment.result == 'Agendado', Appointment.result == None, Appointment.result == ''),
+            Appointment.setter_processed == False
         )
     else:
         # Consulta por defecto para mantener compatibilidad
@@ -920,18 +920,25 @@ def get_setter_deck():
         
     appointments = query.order_by(Appointment.start_time.asc()).all()
 
+    unread_client_ids = {n.client_id for n in CommentNotification.query.filter_by(user_id=current_user.id, is_read=False).all()}
+
     return jsonify([{
         "id": a.id,
         "lead_name": a.client.full_name or "Sin Nombre" if a.client else "Sin Cliente",
         "email": a.client.email if a.client else "",
         "phone": a.client.phone if a.client else "",
         "instagram": a.client.instagram if a.client else "",
-        "start_time": a.start_time.isoformat(),
-        "origin": a.origin,
-        "result": a.result or "Pendiente",
+        "start_time": a.start_time.isoformat() if a.start_time else None,
+        "created_at": a.created_at.isoformat() if a.created_at else None,
+        "origin": a.origin or "Agendamiento",
+        "result": a.result or "Agendado",
         "ig_chat_link": a.ig_chat_link or "",
         "keyword": a.keyword or "",
-        "setter_notes": a.setter_notes or ""
+        "ad_name": a.keyword or "Agenda Directa",
+        "setter_notes": a.setter_notes or "",
+        "client_id": a.client_id,
+        "comments_count": Comment.query.filter(Comment.comment_type == 'client', Comment.associated_id == a.client_id).count() if a.client_id else 0,
+        "unread_comment": a.client_id in unread_client_ids if (a.client_id and unread_client_ids) else False
     } for a in appointments]), 200
 
 
