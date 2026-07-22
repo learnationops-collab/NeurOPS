@@ -10,6 +10,7 @@
     - **Frontend React ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY])**:
       - Se integró la sección destacada **"Agendas Desatribuidas (Fuente Elias)"** dentro del espacio de trabajo del Setter en el paso de cualificación (`/setter/deck?step=cualificacion`).
       - Permite a los setters seleccionar interactivamente el anuncio de Meta (Ad/Keyword) correspondiente a cada agenda sin atribución y procesar la asignación en tiempo real.
+      - **Bugfix**: Se agregó la importación faltante del icono `RefreshCw` desde `lucide-react`, solucionando el error de `ReferenceError` que provocaba que la pantalla mostrara únicamente el contenedor de fondo sin renderizar el mazo.
   - **Refactorización del Conteo de Ventas y Cash Collect en Pestaña Workshop (/admin/ventas)**:
     - **Backend API ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/workshop.py) [MODIFY])**:
       - Se implementó la función helper `is_valid_workshop_sale` para filtrar las ventas de workshop considerando únicamente transacciones válidas de **Seña**, **Split Pay / Parcial** y **Pago Completo**.
