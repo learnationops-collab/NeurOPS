@@ -702,19 +702,10 @@
       - Se agregaron tarjetas de talleres con desglose financiero detallado y selector de vistas (Tarjetas vs Tabla comparativa ejecutiva).
       - Se perfeccionó el visor gráfico de embudo de conversión (Funnel) mostrando retención paso a paso y resincronización directa en tiempo real con la base de datos de NeurOPS.
       - Se integró el modal en 3 pasos (Tráfico, Asistencia/Retención y Validación NeurOPS) para la creación y edición de talleres con cálculo de ratios en vivo.
-    - **API Backend ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/workshop.py) [MODIFY])**:
-      - Se optimizó la función `prefill_workshop_metrics` para ignorar identificadores genéricos de Instagram y Mail (`'no tengo'`, `'n/a'`, `'ninguno'`) evitando atribuciones erróneas a ventas anónimas.
-      - Se añadió restricción temporal a las ventas consultadas, requiriendo que la fecha de compra sea igual o posterior al evento del taller para no atribuir ventas históricas de meses anteriores.
-      - Se amplió la ventana horario de consulta de agendas en `prefill_workshop_metrics` a +8 horas en el límite nocturno UTC para capturar agendas registradas en la madrugada pos-taller (garantizando paridad total del 100% entre la vista de Workshops y el Registro de Agendas).
-      - Se unificó el conteo de ventas por lead único (comprador), deduplicando prospectos con múltiples pagos para contar exactamente 1 venta por cliente, y verificando tanto ventas registradas (`FinancialSale`) como estados de cierre de agenda (`FinancialAgenda.estado`), asegurando que solo los pagos iniciales válidos (Seña, Split Pay / Parcial, Completo) sumen al `cash_collected`.
-
-
-
-
-
-
-
-
-
-
-
+  - **Rediseño del Espacio de Trabajo de Setter con Pestañas y Navegación Directa a Instagram (`/setter/deck?step=cualificacion`)**:
+    - **API Backend ([setter.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/setter.py) [MODIFY])**:
+      - Se enriqueció el endpoint `GET /setter/deck` para el paso `agendas` serializando los campos `client_id`, `comments_count`, `unread_comment`, `ad_name`, `created_at` e `instagram` para garantizar paridad de datos en la vista de agendas.
+    - **Interfaz Frontend y Modulación ([SetterWorkflowPage.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/SetterWorkflowPage.jsx) [MODIFY], [SetterHeader.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/components/SetterHeader.jsx) [NEW], [SetterLeadRow.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/components/SetterLeadRow.jsx) [NEW], [SetterCualificacionFilters.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/components/SetterCualificacionFilters.jsx) [NEW], [UnattributedAgendasSection.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/components/UnattributedAgendasSection.jsx) [NEW], [SetterBulkActionBar.jsx](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/frontend/src/pages/setter/components/SetterBulkActionBar.jsx) [NEW])**:
+      - Se refactorizó la vista principal del mazo de setters dividiéndola en 5 submódulos atómicos para cumplir con el estándar de máximo 500 líneas por archivo.
+      - Se implementó la barra superior de pestañas dividiendo la navegación operativa en: **Leads cualificados** (`step=cualificacion`) y **Agendas** (`step=agendas`), imitando la estructura por pestañas del mazo de closers.
+      - Se agregó la funcionalidad para ingresar directamente al perfil de Instagram del cliente en cada tarjeta de agenda (`Perfil IG` con ícono de Instagram y apertura directa en pestaña externa), permitiendo al setter acceder al perfil sin pasos intermedios.
