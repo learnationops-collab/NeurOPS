@@ -15,8 +15,7 @@
       - Se implementó la sub-navegación por pestañas **"Leads Cualificados Pendientes"** y **"Procesados"** (sin la palabra "Pestaña"), mostrando en "Procesados" únicamente los leads cuya cualificación fue confirmada por el setter.
       - Al hacer clic en **"Confirmar cualificado"**, los leads se actualizan localmente y se transfieren dinámicamente a la pestaña de **Procesados**.
       - Se vinculó el envío de `date_range` y `customDate` en la consulta de agendas desatribuidas (`fetchUnattributedAgendas`), de forma que al cambiar la fecha en la barra superior se actualicen dinámicamente las agendas desatribuidas visibles.
-      - Se integró la sección destacada **"Agendas Desatribuidas (Fuente Elias)"** dentro del espacio de trabajo del Setter en el paso de cualificación (`/setter/deck?step=cualificacion`).
-      - Permite a los setters seleccionar interactivamente el anuncio de Meta (Ad/Keyword) correspondiente a cada agenda sin atribución y procesar la asignación en tiempo real.
+      - Se integró la sección destacada **"Agendas Desatribuidas (Fuente Elias)"** dentro del espacio de trabajo del Setter en el paso de cualificación (`/setter/deck?step=cualificacion`), con un campo de texto editable de Instagram para que el setter escriba o verifique el handle del lead y lo conecte con el anuncio de Meta y la conversación de ManyChat en tiempo real.
       - **Bugfix & Robustez**: Se agregó la importación del icono `RefreshCw` de `lucide-react` y se reforzó el manejo defensivo de estados con `Array.isArray(...)` en todas las consultas y filtrados, garantizando la recuperación ante cualquier respuesta inesperada sin romper el árbol de React.
   - **Refactorización del Conteo de Ventas y Cash Collect en Pestaña Workshop (/admin/ventas)**:
     - **Backend API ([workshop.py](file:///c:/Users/EQUIPO%20DELL/Documents/GitHub/NeurOPS/app/api/workshop.py) [MODIFY])**:
